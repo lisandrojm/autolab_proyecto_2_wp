@@ -18,6 +18,7 @@ import { Modal } from "../components/Modal";
 import AdditionalStaffFiltersModal, { AdditionalStaffFilterValues } from "../components/AdditionalStaffFiltersModal";
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { InfoModal } from "../../../../components/ui/InfoModal";
+import { overtimeUtils, splitOvertime } from "../../../../utils/overtimeUtils";
 
 interface EmployeeOption {
   id: string;
@@ -41,7 +42,11 @@ interface LocalAttendanceRecord {
   replacementId?: string;
   replacementName?: string;
   overtimeHours?: number;
+  overtimeHours50?: number;
+  overtimeHours100?: number;
   replacementOvertimeHours?: number;
+  replacementOvertimeHours50?: number;
+  replacementOvertimeHours100?: number;
   replacementInTime?: string;
   replacementOutTime?: string;
   outTime?: string;
@@ -54,7 +59,11 @@ interface WizardEntry {
   typeId?: string; // If absent or overtime
   replacementId?: string;
   overtimeHours?: number;
+  overtimeHours50?: number;
+  overtimeHours100?: number;
   replacementOvertimeHours?: number;
+  replacementOvertimeHours50?: number;
+  replacementOvertimeHours100?: number;
   replacementInTime?: string;
   replacementOutTime?: string;
   outTime?: string;
@@ -286,7 +295,7 @@ const getDurationText = (start: string | null | undefined, end: string | null | 
 const TIME_OPTIONS = (() => {
   const options = [];
   for (let h = 0; h < 24; h++) {
-    for (let m = 0; m < 60; m += 15) {
+    for (let m = 0; m < 60; m += 30) {
       const hh = h.toString().padStart(2, "0");
       const mm = m.toString().padStart(2, "0");
       const val = `${hh}:${mm}`;
@@ -360,12 +369,17 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [draftTypeId, setDraftTypeId] = useState<string>("");
   const [draftReplacementId, setDraftReplacementId] = useState<string>("");
   const [draftOvertimeHours, setDraftOvertimeHours] = useState<number>(0);
+  const [draftOvertimeHours50, setDraftOvertimeHours50] = useState<number>(0);
+  const [draftOvertimeHours100, setDraftOvertimeHours100] = useState<number>(0);
   const [draftReplacementOvertimeHours, setDraftReplacementOvertimeHours] = useState<number>(0);
+  const [draftReplacementOvertimeHours50, setDraftReplacementOvertimeHours50] = useState<number>(0);
+  const [draftReplacementOvertimeHours100, setDraftReplacementOvertimeHours100] = useState<number>(0);
   const [hasDraftReplacementOvertime, setHasDraftReplacementOvertime] = useState<boolean>(false);
   const [draftReplacementInTime, setDraftReplacementInTime] = useState<string>("");
   const [draftReplacementOutTime, setDraftReplacementOutTime] = useState<string>("");
   const [draftOutTime, setDraftOutTime] = useState<string>("");
   const [draftInTime, setDraftInTime] = useState<string>("");
+  const glossary = useMemo(() => overtimeUtils.getGlossary(), []);
   const [attendanceStatus, setAttendanceStatus] = useState<"present" | "absent" | null>(null);
   const [showOvertimeForm, setShowOvertimeForm] = useState<boolean>(false);
   const [noveltyCategory, setNoveltyCategory] = useState<"absence" | "overtime" | null>(null);
@@ -391,6 +405,64 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     setEntries((prev) =>
       prev.map((e) => (e.tempId === tempId ? { ...e, ...updates } : e))
     );
+  };
+
+  const updateEntryOvertimeTimes = (entry: LocalAttendanceRecord, inTime: string, outTime: string) => {
+    let totalOvertime = 0;
+    let contractedMinutes = 0;
+    const project = userProjects.find((p) => p._id === selectedProjectId);
+
+    if (project) {
+      const empOption = employees.find((e) => e.id === entry.employeeId);
+      const endTime = getEmployeeEndTime(project, entry.employeeId, reportDate, empOption);
+      const startTime = getEmployeeStartTime(project, entry.employeeId, reportDate, empOption);
+
+      if (startTime && endTime) {
+        const [sH, sM] = startTime.split(":").map(Number);
+        let startTotal = sH * 60 + sM;
+        const [eH, eM] = endTime.split(":").map(Number);
+        let endTotal = eH * 60 + eM;
+        if (endTotal < startTotal) {
+          endTotal += 24 * 60;
+        }
+        contractedMinutes = endTotal - startTotal;
+      }
+
+      if (inTime && outTime) {
+        const [inH, inM] = inTime.split(":").map(Number);
+        let inTotal = inH * 60 + inM;
+        const [outH, outM] = outTime.split(":").map(Number);
+        let outTotal = outH * 60 + outM;
+
+        if (outTotal < inTotal) {
+          outTotal += 24 * 60;
+        }
+
+        let workedMinutes = outTotal - inTotal;
+        if (workedMinutes > contractedMinutes) {
+          totalOvertime = (workedMinutes - contractedMinutes) / 60;
+        }
+      }
+
+      const calculatedTotal = parseFloat(totalOvertime.toFixed(2));
+      const { h50, h100 } = splitOvertime(
+        reportDate,
+        inTime,
+        outTime,
+        calculatedTotal,
+        glossary,
+        startTime || undefined,
+        endTime || undefined
+      );
+
+      updateEntryOvertime(entry.tempId, {
+        inTime,
+        outTime,
+        overtimeHours: calculatedTotal,
+        overtimeHours50: h50,
+        overtimeHours100: h100,
+      });
+    }
   };
 
   // Replacement Modal State
@@ -967,10 +1039,22 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           }
         }
 
-        setDraftOvertimeHours(parseFloat(totalOvertime.toFixed(2)));
+        let calculatedTotal = parseFloat(totalOvertime.toFixed(2));
+        const { h50, h100 } = splitOvertime(
+          reportDate,
+          draftInTime,
+          draftOutTime,
+          calculatedTotal,
+          glossary,
+          startTime || undefined,
+          endTime || undefined
+        );
+        setDraftOvertimeHours50(h50);
+        setDraftOvertimeHours100(h100);
+        setDraftOvertimeHours(calculatedTotal);
       }
     }
-  }, [draftOutTime, draftInTime, draftTypeId, selectedProjectId, reportDate, userProjects, logTypes, selectedEmployee]);
+  }, [draftOutTime, draftInTime, draftTypeId, selectedProjectId, reportDate, userProjects, logTypes, selectedEmployee, glossary]);
 
   // Fast-entry REPLACEMENT OT calculation
   useEffect(() => {
@@ -1010,10 +1094,23 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             totalOvertime = (workedMinutes - contractedMinutes) / 60;
           }
         }
-        setDraftReplacementOvertimeHours(parseFloat(totalOvertime.toFixed(2)));
+        
+        let calculatedTotal = parseFloat(totalOvertime.toFixed(2));
+        const { h50, h100 } = splitOvertime(
+          reportDate,
+          draftReplacementInTime,
+          draftReplacementOutTime,
+          calculatedTotal,
+          glossary,
+          startTime || undefined,
+          endTime || undefined
+        );
+        setDraftReplacementOvertimeHours50(h50);
+        setDraftReplacementOvertimeHours100(h100);
+        setDraftReplacementOvertimeHours(calculatedTotal);
       }
     }
-  }, [draftReplacementOutTime, draftReplacementInTime, draftReplacementId, draftTypeId, selectedProjectId, reportDate, userProjects]);
+  }, [draftReplacementOutTime, draftReplacementInTime, draftReplacementId, draftTypeId, selectedProjectId, reportDate, userProjects, glossary]);
 
   // Pre-fill Out/In Time for Overtime when employee or type changes
   useEffect(() => {
@@ -1074,9 +1171,27 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       }
 
       const finalVal = parseFloat(totalOvertime.toFixed(2));
+      const { h50, h100 } = splitOvertime(
+        reportDate,
+        data.inTime || "",
+        data.outTime || "",
+        finalVal,
+        glossary,
+        startTime || undefined,
+        endTime || undefined
+      );
+
       // Only update if it's different to avoid infinite loops
-      if (finalVal !== data.overtimeHours) {
-        updateWizardEntry(currentEmp.id, { overtimeHours: finalVal });
+      if (
+        finalVal !== data.overtimeHours ||
+        h50 !== data.overtimeHours50 ||
+        h100 !== data.overtimeHours100
+      ) {
+        updateWizardEntry(currentEmp.id, {
+          overtimeHours: finalVal,
+          overtimeHours50: h50,
+          overtimeHours100: h100,
+        });
       }
     }
 
@@ -1116,11 +1231,29 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       }
 
       const finalVal = parseFloat(totalOvertime.toFixed(2));
-      if (finalVal !== data.replacementOvertimeHours) {
-        updateWizardEntry(currentEmp.id, { replacementOvertimeHours: finalVal });
+      const { h50, h100 } = splitOvertime(
+        reportDate,
+        data.replacementInTime || "",
+        data.replacementOutTime || "",
+        finalVal,
+        glossary,
+        startTime || undefined,
+        endTime || undefined
+      );
+
+      if (
+        finalVal !== data.replacementOvertimeHours ||
+        h50 !== data.replacementOvertimeHours50 ||
+        h100 !== data.replacementOvertimeHours100
+      ) {
+        updateWizardEntry(currentEmp.id, {
+          replacementOvertimeHours: finalVal,
+          replacementOvertimeHours50: h50,
+          replacementOvertimeHours100: h100,
+        });
       }
     }
-  }, [wizardIndex, wizardData, selectedProject, reportDate]);
+  }, [wizardIndex, wizardData, selectedProject, reportDate, glossary]);
 
   // Derived state to check if Fast Entry is enabled for the current project
   // Derived state to check if Fast Entry is enabled for the current project
@@ -1226,7 +1359,11 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       replacementId: replacementId || undefined,
       replacementName: replacement?.name,
       overtimeHours: type.name.toLowerCase().includes("horas extra") ? overtimeHours : undefined,
+      overtimeHours50: type.name.toLowerCase().includes("horas extra") ? draftOvertimeHours50 : undefined,
+      overtimeHours100: type.name.toLowerCase().includes("horas extra") ? draftOvertimeHours100 : undefined,
       replacementOvertimeHours: hasDraftReplacementOvertime ? draftReplacementOvertimeHours : undefined,
+      replacementOvertimeHours50: hasDraftReplacementOvertime ? draftReplacementOvertimeHours50 : undefined,
+      replacementOvertimeHours100: hasDraftReplacementOvertime ? draftReplacementOvertimeHours100 : undefined,
       outTime: type.name.toLowerCase().includes("horas extra") ? draftOutTime : undefined,
       inTime: type.name.toLowerCase().includes("horas extra") ? draftInTime : undefined,
       replacementInTime: hasDraftReplacementOvertime ? draftReplacementInTime : undefined,
@@ -1245,7 +1382,11 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     setDraftTypeId("");
     setDraftReplacementId("");
     setDraftOvertimeHours(0);
+    setDraftOvertimeHours50(0);
+    setDraftOvertimeHours100(0);
     setDraftReplacementOvertimeHours(0);
+    setDraftReplacementOvertimeHours50(0);
+    setDraftReplacementOvertimeHours100(0);
     setHasDraftReplacementOvertime(false);
     setDraftReplacementInTime("");
     setDraftReplacementOutTime("");
@@ -1321,6 +1462,12 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           initData[emp.id] = {
             status: "present",
             overtimeHours: entry.overtimeHours,
+            overtimeHours50: entry.overtimeHours50,
+            overtimeHours100: entry.overtimeHours100,
+            replacementOvertimeHours: entry.replacementOvertimeHours,
+            replacementOvertimeHours50: entry.replacementOvertimeHours50,
+            replacementOvertimeHours100: entry.replacementOvertimeHours100,
+            inTime: entry.inTime,
             outTime: entry.outTime,
             notes: entry.notes,
           };
@@ -1534,7 +1681,11 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             absenceReason: entry.typeName.toLowerCase().includes("horas extra") ? undefined : entry.typeName,
             replacementId: entry.replacementId,
             overtimeHours: entry.overtimeHours,
+            overtimeHours50: entry.overtimeHours50,
+            overtimeHours100: entry.overtimeHours100,
             replacementOvertimeHours: entry.replacementOvertimeHours,
+            replacementOvertimeHours50: entry.replacementOvertimeHours50,
+            replacementOvertimeHours100: entry.replacementOvertimeHours100,
             notes: entry.notes,
             inTime: entry.inTime, // Real Entry
             outTime: entry.outTime, // Real Exit
@@ -1550,6 +1701,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               employeeId: emp.id,
               status: "present",
               overtimeHours: 0,
+              overtimeHours50: 0,
+              overtimeHours100: 0,
               scheduleInTime: schedIn,
               scheduleOutTime: schedOut,
             });
@@ -1570,7 +1723,11 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           absenceReason: entry.typeName || "Presente (Adicional)",
           replacementId: entry.replacementId,
           overtimeHours: entry.overtimeHours || 0,
+          overtimeHours50: entry.overtimeHours50 || 0,
+          overtimeHours100: entry.overtimeHours100 || 0,
           replacementOvertimeHours: entry.replacementOvertimeHours,
+          replacementOvertimeHours50: entry.replacementOvertimeHours50,
+          replacementOvertimeHours100: entry.replacementOvertimeHours100,
           notes: entry.notes || "Personal adicional agregado al reporte",
           inTime: entry.inTime, // Real Entry
           outTime: entry.outTime, // Real Exit
@@ -1682,7 +1839,13 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             replacementId: repId,
             replacementName: rep ? rep.name : undefined,
             overtimeHours: att.overtimeHours,
+            overtimeHours50: att.overtimeHours50,
+            overtimeHours100: att.overtimeHours100,
             replacementOvertimeHours: att.replacementOvertimeHours,
+            replacementOvertimeHours50: att.replacementOvertimeHours50,
+            replacementOvertimeHours100: att.replacementOvertimeHours100,
+            inTime: att.inTime,
+            outTime: att.outTime,
             replacementInTime: att.replacementInTime,
             replacementOutTime: att.replacementOutTime,
             notes: att.notes,
@@ -2879,7 +3042,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                         <span>{entry.typeName}</span>
                                         {entry.overtimeHours ? (
                                           <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-[10px] dark:bg-blue-900/30 dark:text-blue-400 font-bold">
-                                            {entry.overtimeHours} h Extra
+                                            {entry.overtimeHours} h Extra {((entry.overtimeHours50 || 0) > 0 || (entry.overtimeHours100 || 0) > 0) ? `(${entry.overtimeHours50 || 0}h al 50% / ${entry.overtimeHours100 || 0}h al 100%)` : ""}
                                           </span>
                                         ) : (
                                           <button
@@ -3182,11 +3345,26 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cantidad de Horas Extras</label>
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cantidad de Horas Extras al 50%</label>
                     <div className="flex gap-2 items-center">
-                      <input type="number" step="0.5" className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 font-bold text-blue-600 dark:text-blue-400" value={data?.overtimeHours || 0} onChange={(e) => updateWizardEntry(currentEmp.id, { overtimeHours: parseFloat(e.target.value) })} />
+                      <input type="number" step="0.5" className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 font-bold text-blue-600 dark:text-blue-400" value={data?.overtimeHours50 || 0} onChange={(e) => {
+                        const val50 = parseFloat(e.target.value) || 0;
+                        const val100 = data?.overtimeHours100 || 0;
+                        updateWizardEntry(currentEmp.id, { overtimeHours50: val50, overtimeHours: val50 + val100 });
+                      }} />
                     </div>
-                    <p className="text-[10px] text-slate-400 italic mt-1">Este valor se puede ajustar manualmente.</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cantidad de Horas Extras al 100%</label>
+                    <div className="flex gap-2 items-center">
+                      <input type="number" step="0.5" className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 font-bold text-blue-600 dark:text-blue-400" value={data?.overtimeHours100 || 0} onChange={(e) => {
+                        const val100 = parseFloat(e.target.value) || 0;
+                        const val50 = data?.overtimeHours50 || 0;
+                        updateWizardEntry(currentEmp.id, { overtimeHours100: val100, overtimeHours: val50 + val100 });
+                      }} />
+                    </div>
+                    <p className="text-[10px] text-slate-400 italic mt-1">Estos valores se calculan automáticamente, pero puedes ajustarlos si es necesario.</p>
                   </div>
                 </div>
               );
@@ -3277,11 +3455,26 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cantidad de Horas Extras</label>
+                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cantidad de Horas Extras al 50%</label>
                       <div className="flex gap-2 items-center">
-                        <input type="number" step="0.5" className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all font-bold text-blue-600 dark:text-blue-400" value={draftOvertimeHours} onChange={(e) => setDraftOvertimeHours(parseFloat(e.target.value))} />
+                        <input type="number" step="0.5" className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all font-bold text-blue-600 dark:text-blue-400" value={draftOvertimeHours50} onChange={(e) => {
+                          const val50 = parseFloat(e.target.value) || 0;
+                          setDraftOvertimeHours50(val50);
+                          setDraftOvertimeHours(val50 + draftOvertimeHours100);
+                        }} />
                       </div>
-                      <p className="text-[10px] text-slate-400 mt-1 italic">Este valor se calcula automáticamente, pero puedes ajustarlo si es necesario.</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cantidad de Horas Extras al 100%</label>
+                      <div className="flex gap-2 items-center">
+                        <input type="number" step="0.5" className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all font-bold text-blue-600 dark:text-blue-400" value={draftOvertimeHours100} onChange={(e) => {
+                          const val100 = parseFloat(e.target.value) || 0;
+                          setDraftOvertimeHours100(val100);
+                          setDraftOvertimeHours(draftOvertimeHours50 + val100);
+                        }} />
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1 italic">Estos valores se calculan automáticamente, pero puedes ajustarlos si es necesario.</p>
                     </div>
                   </div>
                 );
@@ -3339,7 +3532,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         <select
                           className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider appearance-none cursor-pointer"
                           value={entry.inTime || ""}
-                          onChange={(e) => updateEntryOvertime(entry.tempId, { inTime: e.target.value })}
+                          onChange={(e) => updateEntryOvertimeTimes(entry, e.target.value, entry.outTime || "")}
                         >
                           <option value="">--:--</option>
                           {TIME_OPTIONS.map((opt) => (
@@ -3360,7 +3553,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         <select
                           className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider appearance-none cursor-pointer"
                           value={entry.outTime || ""}
-                          onChange={(e) => updateEntryOvertime(entry.tempId, { outTime: e.target.value })}
+                          onChange={(e) => updateEntryOvertimeTimes(entry, entry.inTime || "", e.target.value)}
                         >
                           <option value="">--:--</option>
                           {TIME_OPTIONS.map((opt) => (
@@ -3383,17 +3576,38 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cantidad de Horas Extras</label>
+                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cantidad de Horas Extras al 50%</label>
                       <div className="flex gap-2 items-center">
                         <input
                           type="number"
                           step="0.5"
                           className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all font-bold text-blue-600 dark:text-blue-400"
-                          value={entry.overtimeHours || 0}
-                          onChange={(e) => updateEntryOvertime(entry.tempId, { overtimeHours: parseFloat(e.target.value) })}
+                          value={entry.overtimeHours50 || 0}
+                          onChange={(e) => {
+                            const val50 = parseFloat(e.target.value) || 0;
+                            const val100 = entry.overtimeHours100 || 0;
+                            updateEntryOvertime(entry.tempId, { overtimeHours50: val50, overtimeHours: val50 + val100 });
+                          }}
                         />
                       </div>
-                      <p className="text-[10px] text-slate-400 mt-1 italic">Este valor se puede ajustar manualmente.</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cantidad de Horas Extras al 100%</label>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="number"
+                          step="0.5"
+                          className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all font-bold text-blue-600 dark:text-blue-400"
+                          value={entry.overtimeHours100 || 0}
+                          onChange={(e) => {
+                            const val100 = parseFloat(e.target.value) || 0;
+                            const val50 = entry.overtimeHours50 || 0;
+                            updateEntryOvertime(entry.tempId, { overtimeHours100: val100, overtimeHours: val50 + val100 });
+                          }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1 italic">Estos valores se calculan automáticamente, pero puedes ajustarlos si es necesario.</p>
                     </div>
                   </div>
                 );
@@ -3518,11 +3732,26 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cantidad de Horas Extras</label>
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cantidad de Horas Extras al 50%</label>
                     <div className="flex gap-2 items-center">
-                      <input type="number" step="0.5" className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 font-bold text-blue-600 dark:text-blue-400" value={data?.replacementOvertimeHours || 0} onChange={(e) => updateWizardEntry(currentEmp.id, { replacementOvertimeHours: parseFloat(e.target.value) })} />
+                      <input type="number" step="0.5" className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 font-bold text-blue-600 dark:text-blue-400" value={data?.replacementOvertimeHours50 || 0} onChange={(e) => {
+                        const val50 = parseFloat(e.target.value) || 0;
+                        const val100 = data?.replacementOvertimeHours100 || 0;
+                        updateWizardEntry(currentEmp.id, { replacementOvertimeHours50: val50, replacementOvertimeHours: val50 + val100 });
+                      }} />
                     </div>
-                    <p className="text-[10px] text-slate-400 italic mt-1">Este valor se puede ajustar manualmente.</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cantidad de Horas Extras al 100%</label>
+                    <div className="flex gap-2 items-center">
+                      <input type="number" step="0.5" className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 font-bold text-blue-600 dark:text-blue-400" value={data?.replacementOvertimeHours100 || 0} onChange={(e) => {
+                        const val100 = parseFloat(e.target.value) || 0;
+                        const val50 = data?.replacementOvertimeHours50 || 0;
+                        updateWizardEntry(currentEmp.id, { replacementOvertimeHours100: val100, replacementOvertimeHours: val50 + val100 });
+                      }} />
+                    </div>
+                    <p className="text-[10px] text-slate-400 italic mt-1">Estos valores se calculan automáticamente, pero puedes ajustarlos si es necesario.</p>
                   </div>
                 </div>
               );
@@ -3614,11 +3843,26 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cantidad de Horas Extras</label>
+                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cantidad de Horas Extras al 50%</label>
                       <div className="flex gap-2 items-center">
-                        <input type="number" step="0.5" className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all font-bold text-blue-600 dark:text-blue-400" value={draftReplacementOvertimeHours} onChange={(e) => setDraftReplacementOvertimeHours(parseFloat(e.target.value))} />
+                        <input type="number" step="0.5" className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all font-bold text-blue-600 dark:text-blue-400" value={draftReplacementOvertimeHours50} onChange={(e) => {
+                          const val50 = parseFloat(e.target.value) || 0;
+                          setDraftReplacementOvertimeHours50(val50);
+                          setDraftReplacementOvertimeHours(val50 + draftReplacementOvertimeHours100);
+                        }} />
                       </div>
-                      <p className="text-[10px] text-slate-400 mt-1 italic">Este valor se calcula automáticamente, pero puedes ajustarlo si es necesario.</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cantidad de Horas Extras al 100%</label>
+                      <div className="flex gap-2 items-center">
+                        <input type="number" step="0.5" className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all font-bold text-blue-600 dark:text-blue-400" value={draftReplacementOvertimeHours100} onChange={(e) => {
+                          const val100 = parseFloat(e.target.value) || 0;
+                          setDraftReplacementOvertimeHours100(val100);
+                          setDraftReplacementOvertimeHours(draftReplacementOvertimeHours50 + val100);
+                        }} />
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1 italic">Estos valores se calculan automáticamente, pero puedes ajustarlos si es necesario.</p>
                     </div>
                   </div>
                 );
