@@ -20,6 +20,7 @@ export default function Home({ onNavigate }: HomeProps) {
 
   // FIX: Check permissions directly to avoid Admin global override
   const isMobileCoordinator = user?.permissions?.includes("mobile_coordinator:view");
+  const isMobileCollaborator = user?.permissions?.includes("mobile_collaborator:view");
 
   const latestNotification = notifications.find((n) => !n.isRead);
 
@@ -124,7 +125,7 @@ export default function Home({ onNavigate }: HomeProps) {
     quickActions.push(novedadesAction);
   }
 
-  if (hasActiveContract(profile)) {
+  if (hasActiveContract(profile) || isMobileCollaborator) {
     quickActions.push(ordersAction);
   } else {
     quickActions.push({
@@ -134,12 +135,8 @@ export default function Home({ onNavigate }: HomeProps) {
     });
   }
 
-  // Only show vacations if enabled
-  // We need to check useProfile for vacationsEnabled or pass it down
-  // For now, let's assume we can access it via a hook or just render it if enabled.
-  // Since we are inside the component loop, we can conditionally push.
-
-  if (profile?.vacationsEnabled !== false && hasActiveContract(profile)) {
+  // Only show vacations if enabled or mobile collaborator
+  if (isMobileCollaborator || (profile?.vacationsEnabled !== false && hasActiveContract(profile))) {
     quickActions.push(vacationsAction);
   } else {
     // Show disabled if no active contract or globally disabled
@@ -147,7 +144,7 @@ export default function Home({ onNavigate }: HomeProps) {
       ...vacationsAction,
       disabled: true,
       description: hasActiveContract(profile) ? "Módulo deshabilitado" : "Sin contrato activo",
-      title: hasActiveContract(profile) ? "Vacaciones" : "Vacaciones",
+      title: "Vacaciones",
     });
   }
 

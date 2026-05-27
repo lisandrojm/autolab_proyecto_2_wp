@@ -2601,7 +2601,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                     </span>
                                                   )}
                                                   {shiftName && (
-                                                    <span className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap">
+                                                    <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30 flex items-center gap-1 font-bold uppercase tracking-wider whitespace-nowrap">
+                                                      <FontAwesomeIcon icon={faClock} className="text-[8px]" />
                                                       {shiftName}
                                                     </span>
                                                   )}
