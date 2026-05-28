@@ -1201,7 +1201,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         });
 
       if (!isExplicitlyAssigned) {
-        console.log(`DEBUG: Employee ${e.name} rejected: not explicitly assigned.`);
         return false;
       }
 
@@ -1214,7 +1213,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         });
 
         if (!hasMatch) {
-          console.log(`DEBUG: Employee ${e.name} rejected: area/shift mismatch. Has combinations:`, employeeCombinations);
           return false;
         }
       } else {
@@ -1227,72 +1225,101 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         if (!isAdmin && !noRestrictions) {
           const isMine = employeeCombinations.some((combo) => myCoordinatedCombinations.some((myCombo) => myCombo.areaId === combo.areaId && (myCombo.shiftId === combo.shiftId || !myCombo.shiftId || !combo.shiftId)));
           if (!isMine) {
-            console.log(`DEBUG: Employee ${e.name} rejected: not in myCoordinatedCombinations.`);
             return false;
           }
         }
       }
 
-      console.log(`DEBUG: Employee ${e.name} ACCEPTED!`);
       return true;
     });
 
+    // --- SORTING BY SHIFT ORDER ---
+    // Strategy: use resolveEmployeeAreaAndShift (same function that renders badges correctly)
+    // to get each employee's shift name, then sort by shift order.
+
+    // Helper: extract a sort priority from a shift name using keywords
+    const getShiftPriorityByName = (shiftName: string): number => {
+      const n = (shiftName || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // remove accents
+      if (n.includes("manana") || n.includes("mañana") || n.startsWith("ma")) return 0;
+      if (n.includes("tarde")) return 1;
+      if (n.includes("noche")) return 2;
+      if (n.includes("oficina")) return 3;
+      return 50; // unknown shift names go last
+    };
+
+    // Pre-compute sort keys for all filtered employees (avoids calling resolveEmployeeAreaAndShift in comparator)
+    const empSortKeys = new Map<string, { shiftOrder: number; shiftName: string }>();
+    
+    for (const emp of filtered) {
+      const resolved = resolveEmployeeAreaAndShift(emp);
+      let shiftOrder = 99999;
+      let shiftName = resolved.shiftName || "";
+
+      // Strategy 1: Find shift in allShifts by ID and use its order field
+      if (resolved.shiftId) {
+        const shiftById = allShifts.find((s) => String(s._id) === String(resolved.shiftId));
+        if (shiftById) {
+          shiftName = shiftName || shiftById.name;
+          if (shiftById.order !== undefined && shiftById.order !== null) {
+            shiftOrder = shiftById.order;
+          } else {
+            shiftOrder = allShifts.indexOf(shiftById);
+          }
+        }
+      }
+
+      // Strategy 2: Find shift in allShifts by name match
+      if (shiftOrder === 99999 && shiftName) {
+        const norm = (s: string) => (s || "").toLowerCase().trim();
+        const shiftByName = allShifts.find((s) => {
+          const sn = norm(s.name);
+          const rn = norm(shiftName);
+          return sn === rn || sn.includes(rn) || rn.includes(sn);
+        });
+        if (shiftByName) {
+          if (shiftByName.order !== undefined && shiftByName.order !== null) {
+            shiftOrder = shiftByName.order;
+          } else {
+            shiftOrder = allShifts.indexOf(shiftByName);
+          }
+        }
+      }
+
+      // Strategy 3: Use shift start time to determine order (earlier start = lower order)
+      if (shiftOrder === 99999 && resolved.shiftId) {
+        const shiftObj = allShifts.find((s) => String(s._id) === String(resolved.shiftId));
+        if (shiftObj && shiftObj.startTime) {
+          const [h, m] = shiftObj.startTime.split(":").map(Number);
+          shiftOrder = h * 60 + m; // Minutes from midnight
+        }
+      }
+
+      // Strategy 4: Parse keywords from the shift name (mañana/tarde/noche/oficina)
+      if (shiftOrder === 99999 && shiftName) {
+        shiftOrder = getShiftPriorityByName(shiftName) * 1000; // multiply to separate from DB orders
+      }
+
+      empSortKeys.set(emp.id, { shiftOrder, shiftName });
+      console.log(`SORT_DEBUG: ${emp.name} → shiftId=${resolved.shiftId} shiftName="${shiftName}" order=${shiftOrder}`);
+    }
+
     const sorted = [...filtered].sort((a, b) => {
-      const resA = resolveEmployeeAreaAndShift(a);
-      const resB = resolveEmployeeAreaAndShift(b);
+      const keyA = empSortKeys.get(a.id) || { shiftOrder: 99999, shiftName: "" };
+      const keyB = empSortKeys.get(b.id) || { shiftOrder: 99999, shiftName: "" };
 
-      const norm = (str: any) => String(str || "").toLowerCase().trim();
-      
-      const isFuzzyMatch = (name1: string, name2: string) => {
-         if (!name1 || !name2) return false;
-         const n1 = norm(name1);
-         const n2 = norm(name2);
-         return n1 === n2 || n1.includes(n2) || n2.includes(n1);
-      };
-
-      const shiftA = allShifts.find((s) => String(s._id || s.id) === String(resA.shiftId) || isFuzzyMatch(s.name, resA.shiftName));
-      const shiftB = allShifts.find((s) => String(s._id || s.id) === String(resB.shiftId) || isFuzzyMatch(s.name, resB.shiftName));
-
-      // Priority 1: order property from the database
-      let valA = shiftA?.order !== undefined && shiftA.order !== 0 ? shiftA.order : -1;
-      let valB = shiftB?.order !== undefined && shiftB.order !== 0 ? shiftB.order : -1;
-
-      // Priority 2: index in allShifts (which is sorted by the backend)
-      if (valA === -1) valA = shiftA ? allShifts.indexOf(shiftA) : -1;
-      if (valB === -1) valB = shiftB ? allShifts.indexOf(shiftB) : -1;
-
-      // Priority 3: Fallback to the order within the specific area's configuration
-      if (valA === -1 && selectedProject?.areasConfig?.length > 0) {
-        const areaConfigA = selectedProject.areasConfig.find((ac: any) => String(ac.areaId?._id || ac.areaId) === resA.areaId || isFuzzyMatch(ac.areaId?.name, resA.areaName));
-        if (areaConfigA && areaConfigA.shiftIds) {
-          valA = areaConfigA.shiftIds.findIndex((s: any) => String(s?._id || s) === String(resA.shiftId) || isFuzzyMatch(s?.name, resA.shiftName));
-          if (valA !== -1) valA += 1000; 
-        }
-      }
-      
-      if (valB === -1 && selectedProject?.areasConfig?.length > 0) {
-        const areaConfigB = selectedProject.areasConfig.find((ac: any) => String(ac.areaId?._id || ac.areaId) === resB.areaId || isFuzzyMatch(ac.areaId?.name, resB.areaName));
-        if (areaConfigB && areaConfigB.shiftIds) {
-          valB = areaConfigB.shiftIds.findIndex((s: any) => String(s?._id || s) === String(resB.shiftId) || isFuzzyMatch(s?.name, resB.shiftName));
-          if (valB !== -1) valB += 1000;
-        }
+      if (keyA.shiftOrder !== keyB.shiftOrder) {
+        return keyA.shiftOrder - keyB.shiftOrder;
       }
 
-      valA = valA === -1 ? 9999 : valA;
-      valB = valB === -1 ? 9999 : valB;
-
-      if (valA !== valB) {
-        return valA - valB;
-      }
-
-      if (resA.shiftName !== resB.shiftName) {
-         return norm(resA.shiftName).localeCompare(norm(resB.shiftName));
-      }
-
+      // Tiebreaker: sort by name within the same shift
       return a.name.localeCompare(b.name);
     });
 
-    console.log("DEBUG projectEmployees - Total accepted & sorted:", sorted.length);
+    console.log("DEBUG projectEmployees - Final sorted order:");
+    sorted.forEach((e, i) => {
+      const key = empSortKeys.get(e.id);
+      console.log(`  ${i + 1}. ${e.name}: shift="${key?.shiftName}" order=${key?.shiftOrder}`);
+    });
     return sorted;
   }, [employees, selectedProjectId, selectedAreaId, selectedShiftId, myCoordinatedCombinations, profile, selectedProject, allShifts]);
 
@@ -2840,9 +2867,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                   <span>{currentEmp.name}</span>
                                                   {renderVacationBadge(currentEmp.id, currentEmp.name)}
                                                 </div>
-                                                <span className="text-[10px] text-red-500 bg-red-100 px-1 py-0.5 rounded break-all whitespace-normal">
-                                                  DEBUG_SORT: [{(currentEmp as any)._debugShiftName || "EMPTY"}] - VAL: {(currentEmp as any)._debugSortVal}
-                                                </span>
                                               </h3>
                                             </div>
                                           </h3>
