@@ -334,50 +334,256 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [showForm, setShowForm] = useState(false);
 
   const resolveEmployeeAreaAndShift = (emp: EmployeeOption) => {
-    let areaId = "";
-    let shiftId = "";
+    let areaId = selectedAreaId || "";
+    let shiftId = selectedShiftId || "";
 
+    let areaName = "";
+    let shiftName = "";
+
+    // 1. Check project teamConfig
     const teamConfigMember = selectedProject?.teamConfig?.find((c: any) => {
-      const cUserId = typeof c.userId === "object" ? c.userId?._id : c.userId;
-      return String(cUserId) === String(emp.id);
+      const cUserId = typeof c.userId === "object" ? c.userId?._id || c.userId?.id : c.userId;
+      if (cUserId && String(cUserId) === String(emp.id)) return true;
+      
+      // Fallback 1: Match by email if userId is an object
+      if (typeof c.userId === "object" && c.userId?.email && emp.email) {
+        if (String(c.userId.email).toLowerCase() === String(emp.email).toLowerCase()) return true;
+      }
+      
+      // Fallback 2: Match by name if userId is an object
+      if (typeof c.userId === "object" && emp.name) {
+        const cName = `${c.userId.firstName || ""} ${c.userId.lastName || ""}`.trim() || c.userId.name || c.userId.nombre;
+        if (cName && String(cName).toLowerCase() === String(emp.name).toLowerCase()) return true;
+      }
+      
+      return false;
     });
 
     if (teamConfigMember) {
-      if (teamConfigMember.areaId) {
+      if (!areaId && teamConfigMember.areaId) {
         areaId = String(teamConfigMember.areaId?._id || teamConfigMember.areaId);
+        if (!areaName && teamConfigMember.areaId?.name) areaName = teamConfigMember.areaId.name;
       }
-      if (teamConfigMember.shiftId) {
+      if (!shiftId && teamConfigMember.shiftId) {
         shiftId = String(teamConfigMember.shiftId?._id || teamConfigMember.shiftId);
+        if (!shiftName && teamConfigMember.shiftId?.name) shiftName = teamConfigMember.shiftId.name;
       }
-      if ((!areaId || !shiftId) && teamConfigMember.areaShiftAssignments?.length > 0) {
-        const firstAsa = teamConfigMember.areaShiftAssignments[0];
-        if (!areaId) {
-          areaId = String(firstAsa.areaId?._id || firstAsa.areaId || "");
-        }
-        if (!shiftId && firstAsa.shiftIds && firstAsa.shiftIds.length > 0) {
-          shiftId = String(firstAsa.shiftIds[0]?._id || firstAsa.shiftIds[0] || "");
+      if (teamConfigMember.areaShiftAssignments?.length > 0) {
+        // Try to match existing selected areaId or default to first
+        let asa = teamConfigMember.areaShiftAssignments.find((a: any) => {
+          const aId = String(a.areaId?._id || a.areaId || "");
+          return areaId ? aId === String(areaId) : true;
+        });
+        if (!asa && !areaId) asa = teamConfigMember.areaShiftAssignments[0];
+        
+        if (asa) {
+          if (!areaId) {
+            areaId = String(asa.areaId?._id || asa.areaId || "");
+          }
+          if (!areaName && asa.areaId?.name) {
+            areaName = asa.areaId.name;
+          }
+          
+          let matchingShift = asa.shiftIds?.find((s: any) => {
+            const sId = String(s?._id || s || "");
+            return shiftId ? sId === String(shiftId) : true;
+          });
+          if (!matchingShift && !shiftId && asa.shiftIds && asa.shiftIds.length > 0) {
+            matchingShift = asa.shiftIds[0];
+          }
+
+          if (matchingShift) {
+            if (!shiftId) {
+              shiftId = String(matchingShift?._id || matchingShift || "");
+            }
+            if (!shiftName && matchingShift?.name) {
+              shiftName = matchingShift.name;
+            }
+          }
         }
       }
     }
 
-    const projMeta = emp.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId));
-    if (projMeta) {
-      if (!areaId) {
-        areaId = String((projMeta.areaId as any)?._id || projMeta.areaId || "");
-      }
-      if (!shiftId) {
-        shiftId = String((projMeta.shiftId as any)?._id || projMeta.shiftId || "");
-      }
-      if (!shiftId && projMeta.contractStartTime && projMeta.contractEndTime) {
-        const matchingShift = allShifts.find((s) => s.startTime === projMeta.contractStartTime && s.endTime === projMeta.contractEndTime);
-        if (matchingShift) {
-          shiftId = String(matchingShift._id || matchingShift.id);
+    // 2. Check coordinatorAssignments (crucial for coordinators like Agustin Barbona)
+    if (!areaId || !shiftId || !areaName || !shiftName) {
+      if (selectedProject?.coordinatorAssignments) {
+        const myAsm = selectedProject.coordinatorAssignments.find((asm: any) => {
+          const uid = typeof asm.userId === "object" ? asm.userId?._id || asm.userId?.id || asm.userId?.userId || asm.userId?.metadata?.id : asm.userId;
+          const empIds = [emp.id, (emp as any).userId, (emp as any).metadata?.id].filter(Boolean).map((id) => String(id));
+
+          let isMatch = uid && empIds.includes(String(uid));
+          if (!isMatch) {
+            const asmEmail = typeof asm.userId === "object" ? asm.userId?.email || asm.userId?.correo : null;
+            const empEmail = emp.email;
+            if (asmEmail && empEmail && String(asmEmail).toLowerCase() === String(empEmail).toLowerCase()) isMatch = true;
+          }
+          if (!isMatch) {
+            const asmName = typeof asm.userId === "object" ? (asm.userId?.firstName && asm.userId?.lastName ? `${asm.userId.firstName} ${asm.userId.lastName}` : asm.userId?.name || asm.userId?.nombre) : null;
+            const empName = emp.name;
+            if (asmName && empName && asmName.toLowerCase().includes(empName.toLowerCase())) isMatch = true;
+          }
+          // Only use this assignment if it matches our selectedAreaId (if any)
+          if (isMatch && areaId) {
+            const asmAreaId = String(asm.areaId?._id || asm.areaId || "");
+            if (asmAreaId !== String(areaId)) isMatch = false;
+          }
+          return isMatch;
+        });
+
+        if (myAsm) {
+          if (!areaId) {
+            areaId = String(myAsm.areaId?._id || myAsm.areaId || "");
+          }
+          if (!areaName && myAsm.areaId?.name) areaName = myAsm.areaId.name;
+          
+          if (!shiftId) {
+            shiftId = String(myAsm.shiftId?._id || myAsm.shiftId || "");
+          }
+          if (!shiftName && myAsm.shiftId?.name) shiftName = myAsm.shiftId.name;
         }
       }
     }
 
-    const areaName = allAreas.find((a) => String(a._id) === areaId)?.name || "";
-    const shiftName = allShifts.find((s) => String(s._id || s.id) === shiftId)?.name || "";
+    // 3. Fallback to employee metadataProjects
+    if (!areaId || !shiftId || !areaName || !shiftName) {
+      const projMeta = emp.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId));
+      if (projMeta) {
+        const pAreaId = String((projMeta.areaId as any)?._id || projMeta.areaId || "");
+        if (!areaId || pAreaId === String(areaId)) {
+          if (!areaId) areaId = pAreaId;
+          if (!areaName && (projMeta.areaId as any)?.name) areaName = (projMeta.areaId as any).name;
+          
+          if (!shiftId) {
+            shiftId = String((projMeta.shiftId as any)?._id || projMeta.shiftId || "");
+          }
+          if (!shiftName && (projMeta.shiftId as any)?.name) shiftName = (projMeta.shiftId as any).name;
+          
+          if (!shiftName && shiftId && projMeta.contractStartTime && projMeta.contractEndTime) {
+            const matchingShift = allShifts.find((s) => String(s._id || s.id) === shiftId || (s.startTime === projMeta.contractStartTime && s.endTime === projMeta.contractEndTime));
+            if (matchingShift) {
+              shiftId = String(matchingShift._id || matchingShift.id);
+              if (!shiftName) shiftName = matchingShift.name || "";
+            }
+          }
+        }
+      }
+    }
+
+    // 4. Final Fallback: Infer from project config if still missing
+    if (!areaId || !shiftId) {
+      let inferredAreaId = areaId;
+      let inferredAreaName = areaName;
+      let inferredShiftId = shiftId;
+      let inferredShiftName = shiftName;
+
+      // Try extraction from areasConfig
+      if (selectedProject?.areasConfig && selectedProject.areasConfig.length > 0) {
+        if (!inferredAreaId) {
+          const firstArea = selectedProject.areasConfig[0];
+          inferredAreaId = String(firstArea.areaId?._id || firstArea.areaId || "");
+          if (firstArea.areaId?.name) inferredAreaName = firstArea.areaId.name;
+        }
+        if (!inferredShiftId && inferredAreaId) {
+          const areaConfig = selectedProject.areasConfig.find((ac: any) => String(ac.areaId?._id || ac.areaId) === inferredAreaId);
+          if (areaConfig && areaConfig.shiftIds && areaConfig.shiftIds.length > 0) {
+            inferredShiftId = String(areaConfig.shiftIds[0]?._id || areaConfig.shiftIds[0] || "");
+            if (!inferredShiftName && areaConfig.shiftIds[0]?.name) inferredShiftName = areaConfig.shiftIds[0].name;
+          }
+        }
+      }
+
+      // Try extraction from coordinatorAssignments (crucial for legacy projects without areasConfig)
+      if ((!inferredAreaId || !inferredShiftId) && selectedProject?.coordinatorAssignments?.length > 0) {
+        if (!inferredAreaId) {
+          const firstAsm = selectedProject.coordinatorAssignments.find((a: any) => a.areaId?._id || a.areaId);
+          if (firstAsm) {
+            inferredAreaId = String(firstAsm.areaId?._id || firstAsm.areaId || "");
+            if (firstAsm.areaId?.name) inferredAreaName = firstAsm.areaId.name;
+          }
+        }
+        if (!inferredShiftId && inferredAreaId) {
+          const asm = selectedProject.coordinatorAssignments.find((a: any) => String(a.areaId?._id || a.areaId) === inferredAreaId && (a.shiftId?._id || a.shiftId));
+          if (asm) {
+            inferredShiftId = String(asm.shiftId?._id || asm.shiftId || "");
+            if (!inferredShiftName && asm.shiftId?.name) inferredShiftName = asm.shiftId.name;
+          }
+        }
+      }
+
+      // Try extraction from teamConfig
+      if ((!inferredAreaId || !inferredShiftId) && selectedProject?.teamConfig?.length > 0) {
+        if (!inferredAreaId) {
+          const firstTeam = selectedProject.teamConfig.find((t: any) => t.areaId?._id || t.areaId);
+          if (firstTeam) {
+            inferredAreaId = String(firstTeam.areaId?._id || firstTeam.areaId || "");
+            if (firstTeam.areaId?.name) inferredAreaName = firstTeam.areaId.name;
+          }
+        }
+        if (!inferredShiftId && inferredAreaId) {
+          const team = selectedProject.teamConfig.find((t: any) => String(t.areaId?._id || t.areaId) === inferredAreaId && t.areaShiftAssignments?.length > 0);
+          if (team) {
+            const asa = team.areaShiftAssignments[0];
+            if (asa.shiftIds && asa.shiftIds.length > 0) {
+              inferredShiftId = String(asa.shiftIds[0]?._id || asa.shiftIds[0] || "");
+              if (!inferredShiftName && asa.shiftIds[0]?.name) inferredShiftName = asa.shiftIds[0].name;
+            }
+          }
+        }
+      }
+
+      areaId = inferredAreaId;
+      areaName = inferredAreaName;
+      shiftId = inferredShiftId;
+      shiftName = inferredShiftName;
+    }
+
+    // --- ROBUST NAME LOOKUP ---
+    // If we have the IDs but still lack the formatted names, search everywhere in the project configs!
+    if (!areaName && areaId) {
+      let found = selectedProject?.areasConfig?.find((ac: any) => String(ac.areaId?._id || ac.areaId) === areaId);
+      if (found && found.areaId?.name) areaName = found.areaId.name;
+      
+      if (!areaName) {
+        found = selectedProject?.coordinatorAssignments?.find((a: any) => String(a.areaId?._id || a.areaId) === areaId);
+        if (found && found.areaId?.name) areaName = found.areaId.name;
+      }
+      
+      if (!areaName) {
+        found = selectedProject?.teamConfig?.find((t: any) => String(t.areaId?._id || t.areaId) === areaId);
+        if (found && found.areaId?.name) areaName = found.areaId.name;
+        if (!areaName) {
+          selectedProject?.teamConfig?.forEach((t: any) => {
+            const asa = t.areaShiftAssignments?.find((a: any) => String(a.areaId?._id || a.areaId) === areaId);
+            if (asa && asa.areaId?.name) areaName = asa.areaId.name;
+          });
+        }
+      }
+    }
+
+    if (!shiftName && shiftId) {
+      let foundArea = selectedProject?.areasConfig?.find((ac: any) => ac.shiftIds?.some((s: any) => String(s?._id || s) === shiftId));
+      if (foundArea) {
+        const s = foundArea.shiftIds.find((s: any) => String(s?._id || s) === shiftId);
+        if (s && s.name) shiftName = s.name;
+      }
+
+      if (!shiftName) {
+        const foundAsm = selectedProject?.coordinatorAssignments?.find((a: any) => String(a.shiftId?._id || a.shiftId) === shiftId);
+        if (foundAsm && foundAsm.shiftId?.name) shiftName = foundAsm.shiftId.name;
+      }
+
+      if (!shiftName) {
+        selectedProject?.teamConfig?.forEach((t: any) => {
+          t.areaShiftAssignments?.forEach((asa: any) => {
+            const s = asa.shiftIds?.find((s: any) => String(s?._id || s) === shiftId);
+            if (s && s.name) shiftName = s.name;
+          });
+        });
+      }
+    }
+
+    areaName = areaName || allAreas.find((a) => String(a._id) === areaId)?.name || "";
+    shiftName = shiftName || allShifts.find((s) => String(s._id || s.id) === shiftId)?.name || "";
 
     return { areaId, shiftId, areaName, shiftName };
   };
@@ -1032,18 +1238,57 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     });
 
     const sorted = [...filtered].sort((a, b) => {
-      const shiftIdA = resolveEmployeeAreaAndShift(a).shiftId;
-      const shiftIdB = resolveEmployeeAreaAndShift(b).shiftId;
+      const resA = resolveEmployeeAreaAndShift(a);
+      const resB = resolveEmployeeAreaAndShift(b);
 
-      const indexA = allShifts.findIndex((s) => String(s._id || s.id) === shiftIdA);
-      const indexB = allShifts.findIndex((s) => String(s._id || s.id) === shiftIdB);
+      const norm = (str: any) => String(str || "").toLowerCase().trim();
+      
+      const isFuzzyMatch = (name1: string, name2: string) => {
+         if (!name1 || !name2) return false;
+         const n1 = norm(name1);
+         const n2 = norm(name2);
+         return n1 === n2 || n1.includes(n2) || n2.includes(n1);
+      };
 
-      const valA = indexA === -1 ? 9999 : indexA;
-      const valB = indexB === -1 ? 9999 : indexB;
+      const shiftA = allShifts.find((s) => String(s._id || s.id) === String(resA.shiftId) || isFuzzyMatch(s.name, resA.shiftName));
+      const shiftB = allShifts.find((s) => String(s._id || s.id) === String(resB.shiftId) || isFuzzyMatch(s.name, resB.shiftName));
+
+      // Priority 1: order property from the database
+      let valA = shiftA?.order !== undefined && shiftA.order !== 0 ? shiftA.order : -1;
+      let valB = shiftB?.order !== undefined && shiftB.order !== 0 ? shiftB.order : -1;
+
+      // Priority 2: index in allShifts (which is sorted by the backend)
+      if (valA === -1) valA = shiftA ? allShifts.indexOf(shiftA) : -1;
+      if (valB === -1) valB = shiftB ? allShifts.indexOf(shiftB) : -1;
+
+      // Priority 3: Fallback to the order within the specific area's configuration
+      if (valA === -1 && selectedProject?.areasConfig?.length > 0) {
+        const areaConfigA = selectedProject.areasConfig.find((ac: any) => String(ac.areaId?._id || ac.areaId) === resA.areaId || isFuzzyMatch(ac.areaId?.name, resA.areaName));
+        if (areaConfigA && areaConfigA.shiftIds) {
+          valA = areaConfigA.shiftIds.findIndex((s: any) => String(s?._id || s) === String(resA.shiftId) || isFuzzyMatch(s?.name, resA.shiftName));
+          if (valA !== -1) valA += 1000; 
+        }
+      }
+      
+      if (valB === -1 && selectedProject?.areasConfig?.length > 0) {
+        const areaConfigB = selectedProject.areasConfig.find((ac: any) => String(ac.areaId?._id || ac.areaId) === resB.areaId || isFuzzyMatch(ac.areaId?.name, resB.areaName));
+        if (areaConfigB && areaConfigB.shiftIds) {
+          valB = areaConfigB.shiftIds.findIndex((s: any) => String(s?._id || s) === String(resB.shiftId) || isFuzzyMatch(s?.name, resB.shiftName));
+          if (valB !== -1) valB += 1000;
+        }
+      }
+
+      valA = valA === -1 ? 9999 : valA;
+      valB = valB === -1 ? 9999 : valB;
 
       if (valA !== valB) {
         return valA - valB;
       }
+
+      if (resA.shiftName !== resB.shiftName) {
+         return norm(resA.shiftName).localeCompare(norm(resB.shiftName));
+      }
+
       return a.name.localeCompare(b.name);
     });
 
@@ -2588,41 +2833,48 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                             </div>
                                           </div>
                                           <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
-                                            <div className="w-8 h-8 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm">{currentEmp.name.charAt(0)}</div>
-                                            <span>{currentEmp.name}</span>
-                                            {renderVacationBadge(currentEmp.id, currentEmp.name)}
-                                            {(() => {
-                                              const { areaName, shiftName } = resolveEmployeeAreaAndShift(currentEmp);
-                                              return (
-                                                <>
-                                                  {areaName && (
-                                                    <span className="bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap">
-                                                      {areaName}
-                                                    </span>
-                                                  )}
-                                                  {shiftName && (
-                                                    <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30 flex items-center gap-1 font-bold uppercase tracking-wider whitespace-nowrap">
-                                                      <FontAwesomeIcon icon={faClock} className="text-[8px]" />
-                                                      {shiftName}
-                                                    </span>
-                                                  )}
-                                                </>
-                                              );
-                                            })()}
+                                            <div className="flex flex-col flex-1 w-full min-w-0">
+                                              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate pb-2 flex flex-col items-start gap-1">
+                                                <div className="flex items-center gap-2">
+                                                  <div className="w-8 h-8 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm">{currentEmp.name.charAt(0)}</div>
+                                                  <span>{currentEmp.name}</span>
+                                                  {renderVacationBadge(currentEmp.id, currentEmp.name)}
+                                                </div>
+                                                <span className="text-[10px] text-red-500 bg-red-100 px-1 py-0.5 rounded break-all whitespace-normal">
+                                                  DEBUG_SORT: [{(currentEmp as any)._debugShiftName || "EMPTY"}] - VAL: {(currentEmp as any)._debugSortVal}
+                                                </span>
+                                              </h3>
+                                            </div>
                                           </h3>
-                                          <div className="flex flex-wrap items-center gap-2 mt-1 ml-10">
+                                          {(() => {
+                                            const { areaName, shiftName } = resolveEmployeeAreaAndShift(currentEmp);
+                                            if (!areaName && !shiftName) return null;
+                                            return (
+                                              <div className="flex flex-wrap items-center gap-2 mt-1.5 ml-10">
+                                                {areaName && (
+                                                  <span className="bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-wider whitespace-nowrap">
+                                                    <FontAwesomeIcon icon={faLayerGroup} className="text-[8px]" />
+                                                    {areaName}
+                                                  </span>
+                                                )}
+                                                {shiftName && (
+                                                  <span className="bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800/50 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-wider whitespace-nowrap">
+                                                    <FontAwesomeIcon icon={faClock} className="text-[8px]" />
+                                                    {shiftName}
+                                                  </span>
+                                                )}
+                                              </div>
+                                            );
+                                          })()}
+                                          <div className="flex flex-wrap items-center gap-2 mt-1.5 ml-10">
                                             <span className="text-xs text-slate-500 dark:text-gray-400">{currentEmp.positionName || "Colaborador"}</span>
                                             {(() => {
                                               const projMeta = currentEmp.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId));
                                               const roleFrame = projMeta?.roleFrame;
-                                              const empArea = projMeta?.areaId?.name || allAreas.find((a) => String(a._id) === String(projMeta?.areaId?._id || projMeta?.areaId || ""))?.name;
-                                              const empShift = projMeta?.shiftId?.name || allShifts.find((s) => String(s._id) === String(projMeta?.shiftId?._id || projMeta?.shiftId || ""))?.name;
 
                                               return (
                                                 <>
                                                   {roleFrame && <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider">{roleFrame}</span>}
-                                                  {empArea && <span className="bg-slate-100 text-slate-600 text-[10px] font-medium px-2 py-0.5 rounded dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">{empArea}</span>}
-                                                  {empShift && <span className="bg-slate-100 text-slate-600 text-[10px] font-medium px-2 py-0.5 rounded dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">{empShift}</span>}
                                                 </>
                                               );
                                             })()}
@@ -2727,8 +2979,27 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                     <div className="flex items-center gap-1.5 flex-wrap">
                                                       <div className="font-bold text-slate-900 dark:text-white text-sm">{histEmp.name}</div>
                                                       {renderVacationBadge(histEmp.id, histEmp.name)}
+                                                      {(() => {
+                                                        const { areaName: resolvedArea, shiftName: resolvedShift } = resolveEmployeeAreaAndShift(histEmp);
+                                                        return (
+                                                          <>
+                                                            {resolvedArea && (
+                                                              <span className="bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 uppercase tracking-wider">
+                                                                <FontAwesomeIcon icon={faLayerGroup} className="text-[7px]" />
+                                                                {resolvedArea}
+                                                              </span>
+                                                            )}
+                                                            {resolvedShift && (
+                                                              <span className="bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800/50 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 uppercase tracking-wider">
+                                                                <FontAwesomeIcon icon={faClock} className="text-[7px]" />
+                                                                {resolvedShift}
+                                                              </span>
+                                                            )}
+                                                          </>
+                                                        );
+                                                      })()}
                                                     </div>
-                                                    <div className={`text-xs font-medium ${histIsPresent ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>{histIsPresent ? (histData?.overtimeHours ? `Presente + ${histData.overtimeHours}h Extra` : "Presente") : `${histType?.name || "Ausente"}${repString}`}</div>
+                                                    <div className={`text-xs font-medium ${histIsPresent ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"} mt-0.5`}>{histIsPresent ? (histData?.overtimeHours ? `Presente + ${histData.overtimeHours}h Extra` : "Presente") : `${histType?.name || "Ausente"}${repString}`}</div>
                                                   </div>
                                                   <button onClick={() => setWizardIndex(projectEmployees.findIndex((e) => e.id === histEmp.id))} className="text-xs text-blue-500 hover:underline">
                                                     Editar
@@ -2912,10 +3183,34 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                             <div className="font-medium text-slate-800 dark:text-white truncate">{emp.name}</div>
                                                             {renderVacationBadge(emp.id, emp.name)}
                                                           </div>
-                                                          {(() => {
-                                                            const roleFrame = emp.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId))?.roleFrame;
-                                                            return roleFrame ? <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider whitespace-nowrap">{roleFrame}</span> : null;
-                                                          })()}
+                                                          <div className="flex flex-wrap items-center gap-1.5">
+                                                            <span className="text-[10px] text-slate-400">{emp.positionName || "Colaborador"}</span>
+                                                            {(() => {
+                                                              const projMeta = emp.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId));
+                                                              const roleFrame = projMeta?.roleFrame;
+                                                              const { areaName: resolvedArea, shiftName: resolvedShift } = resolveEmployeeAreaAndShift(emp);
+                                                              const empArea = resolvedArea || projMeta?.areaId?.name || allAreas.find((a) => String(a._id) === String(projMeta?.areaId?._id || projMeta?.areaId || ""))?.name;
+                                                              const empShift = resolvedShift || projMeta?.shiftId?.name || allShifts.find((s) => String(s._id) === String(projMeta?.shiftId?._id || projMeta?.shiftId || ""))?.name;
+
+                                                              return (
+                                                                <>
+                                                                  {roleFrame && <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider whitespace-nowrap">{roleFrame}</span>}
+                                                                  {empArea && (
+                                                                    <span className="bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50 text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 uppercase tracking-wider">
+                                                                      <FontAwesomeIcon icon={faLayerGroup} className="text-[8px]" />
+                                                                      {empArea}
+                                                                    </span>
+                                                                  )}
+                                                                  {empShift && (
+                                                                    <span className="bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800/50 text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 uppercase tracking-wider">
+                                                                      <FontAwesomeIcon icon={faClock} className="text-[8px]" />
+                                                                      {empShift}
+                                                                    </span>
+                                                                  )}
+                                                                </>
+                                                              );
+                                                            })()}
+                                                          </div>
                                                         </div>
                                                       </div>
                                                     ))}
@@ -2999,7 +3294,38 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                       <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-2">
                                         <div>
                                           <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-0.5 uppercase">Colaborador</label>
-                                          <h3 className="font-bold text-slate-800 dark:text-white text-lg">{selectedEmployee.name}</h3>
+                                          <h3 className="font-bold text-slate-800 dark:text-white text-lg flex items-center gap-2 flex-wrap">
+                                            {selectedEmployee.name}
+                                            {renderVacationBadge(selectedEmployee.id, selectedEmployee.name)}
+                                          </h3>
+                                          <div className="flex flex-wrap items-center gap-2 mt-1">
+                                            <span className="text-xs text-slate-500 dark:text-gray-400">{selectedEmployee.positionName || "Colaborador"}</span>
+                                            {(() => {
+                                              const projMeta = selectedEmployee.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId));
+                                              const roleFrame = projMeta?.roleFrame;
+                                              const { areaName: resolvedArea, shiftName: resolvedShift } = resolveEmployeeAreaAndShift(selectedEmployee);
+                                              const empArea = resolvedArea || projMeta?.areaId?.name || allAreas.find((a) => String(a._id) === String(projMeta?.areaId?._id || projMeta?.areaId || ""))?.name;
+                                              const empShift = resolvedShift || projMeta?.shiftId?.name || allShifts.find((s) => String(s._id) === String(projMeta?.shiftId?._id || projMeta?.shiftId || ""))?.name;
+
+                                              return (
+                                                <>
+                                                  {roleFrame && <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider">{roleFrame}</span>}
+                                                  {empArea && (
+                                                    <span className="bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-wider">
+                                                      <FontAwesomeIcon icon={faLayerGroup} className="text-[8px]" />
+                                                      {empArea}
+                                                    </span>
+                                                  )}
+                                                  {empShift && (
+                                                    <span className="bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800/50 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-wider">
+                                                      <FontAwesomeIcon icon={faClock} className="text-[8px]" />
+                                                      {empShift}
+                                                    </span>
+                                                  )}
+                                                </>
+                                              );
+                                            })()}
+                                          </div>
                                         </div>
                                         <button onClick={() => setSelectedEmployee(null)} className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors">
                                           <FontAwesomeIcon icon={faTimes} />
@@ -4325,6 +4651,25 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-medium text-gray-700 dark:text-slate-200 text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{emp.name}</span>
                         {renderVacationBadge(emp.id, emp.name)}
+                        {(() => {
+                          const { areaName: resolvedArea, shiftName: resolvedShift } = resolveEmployeeAreaAndShift(emp);
+                          return (
+                            <>
+                              {resolvedArea && (
+                                <span className="bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 uppercase tracking-wider">
+                                  <FontAwesomeIcon icon={faLayerGroup} className="text-[7px]" />
+                                  {resolvedArea}
+                                </span>
+                              )}
+                              {resolvedShift && (
+                                <span className="bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800/50 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 uppercase tracking-wider">
+                                  <FontAwesomeIcon icon={faClock} className="text-[7px]" />
+                                  {resolvedShift}
+                                </span>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 uppercase tracking-wide border border-blue-200 dark:border-blue-900/50">Presente</span>
                     </div>
@@ -4604,6 +4949,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         roles: emp ? emp.roles : typeof user === "object" ? user.roles : [],
                         firstName: emp ? emp.name.split(" ")[0] : typeof user === "object" ? user.firstName : "",
                         lastName: emp ? emp.name.split(" ").slice(1).join(" ") : typeof user === "object" ? user.lastName : "",
+                        originalEmp: emp,
                       };
                     });
 
@@ -4625,8 +4971,29 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                             users.map((u) => (
                               <div key={u.id} className="p-3 flex items-center gap-3">
                                 <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-sm shrink-0">{u.name.charAt(0).toUpperCase()}</div>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{u.name}</p>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{u.name}</p>
+                                    {u.originalEmp && (() => {
+                                      const { areaName: resolvedArea, shiftName: resolvedShift } = resolveEmployeeAreaAndShift(u.originalEmp);
+                                      return (
+                                        <>
+                                          {resolvedArea && (
+                                            <span className="bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 uppercase tracking-wider">
+                                              <FontAwesomeIcon icon={faLayerGroup} className="text-[7px]" />
+                                              {resolvedArea}
+                                            </span>
+                                          )}
+                                          {resolvedShift && (
+                                            <span className="bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800/50 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 uppercase tracking-wider">
+                                              <FontAwesomeIcon icon={faClock} className="text-[7px]" />
+                                              {resolvedShift}
+                                            </span>
+                                          )}
+                                        </>
+                                      );
+                                    })()}
+                                  </div>
                                   <p className="text-[10px] text-slate-400 font-medium truncate uppercase tracking-tighter">{u.positionName || (title === "COORDINADORES" ? "COORDINADOR" : "COLABORADOR")}</p>
                                 </div>
                               </div>
@@ -4687,8 +5054,29 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 return (
                   <div key={emp.id} className="bg-white dark:bg-slate-800/50 rounded-xl p-3 flex justify-between items-center border border-slate-100 dark:border-slate-700 shadow-sm">
                     <div>
-                      <div className="font-bold text-slate-700 dark:text-slate-200 text-sm">{emp.name}</div>
-                      <div className={`text-xs font-medium ${isPresent ? (isOvertime ? "text-blue-600" : "text-blue-600") : "text-red-500"}`}>{typeName}</div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <div className="font-bold text-slate-700 dark:text-slate-200 text-sm">{emp.name}</div>
+                        {(() => {
+                          const { areaName: resolvedArea, shiftName: resolvedShift } = resolveEmployeeAreaAndShift(emp);
+                          return (
+                            <>
+                              {resolvedArea && (
+                                <span className="bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 uppercase tracking-wider">
+                                  <FontAwesomeIcon icon={faLayerGroup} className="text-[7px]" />
+                                  {resolvedArea}
+                                </span>
+                              )}
+                              {resolvedShift && (
+                                <span className="bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800/50 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 uppercase tracking-wider">
+                                  <FontAwesomeIcon icon={faClock} className="text-[7px]" />
+                                  {resolvedShift}
+                                </span>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </div>
+                      <div className={`text-xs font-medium ${isPresent ? (isOvertime ? "text-blue-600" : "text-blue-600") : "text-red-500"} mt-0.5`}>{typeName}</div>
                     </div>
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center shadow-inner ${isPresent ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" : "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"}`}>
                       <FontAwesomeIcon icon={isPresent ? faCheck : faTimes} className="text-sm" />
