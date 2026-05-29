@@ -340,6 +340,31 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     let areaName = "";
     let shiftName = "";
 
+    // 0. If employee is a coordinator, prioritize their own personal assignment in metadataProjects (since they coordinate multiple shifts/areas)
+    const isCoord = 
+      emp.roles?.some((r: any) => r.name?.toLowerCase()?.includes("coordinador")) || 
+      emp.role?.toLowerCase()?.includes("coordinador") ||
+      (selectedProject?.coordinatorAssignments?.some((asm: any) => {
+        const uid = typeof asm.userId === "object" ? asm.userId?._id || asm.userId?.id : asm.userId;
+        return uid && String(uid) === String(emp.id);
+      }));
+
+    if (isCoord) {
+      const projMeta = emp.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId));
+      if (projMeta) {
+        const pAreaId = String((projMeta.areaId as any)?._id || projMeta.areaId || "");
+        const pShiftId = String((projMeta.shiftId as any)?._id || projMeta.shiftId || "");
+        if (pAreaId) {
+          areaId = pAreaId;
+          areaName = (projMeta.areaId as any)?.name || allAreas.find((a) => String(a._id || a.id) === pAreaId)?.name || "";
+        }
+        if (pShiftId) {
+          shiftId = pShiftId;
+          shiftName = (projMeta.shiftId as any)?.name || allShifts.find((s) => String(s._id || s.id) === pShiftId)?.name || "";
+        }
+      }
+    }
+
     // 1. Check project teamConfig
     const teamConfigMember = selectedProject?.teamConfig?.find((c: any) => {
       const cUserId = typeof c.userId === "object" ? c.userId?._id || c.userId?.id : c.userId;
@@ -426,6 +451,11 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           if (isMatch && areaId) {
             const asmAreaId = String(asm.areaId?._id || asm.areaId || "");
             if (asmAreaId !== String(areaId)) isMatch = false;
+          }
+          // Only use this assignment if it matches our selectedShiftId (if any)
+          if (isMatch && shiftId) {
+            const asmShiftId = String(asm.shiftId?._id || asm.shiftId || "");
+            if (asmShiftId !== String(shiftId)) isMatch = false;
           }
           return isMatch;
         });
@@ -1118,8 +1148,46 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 isActive: au.metadata?.activo !== false,
                 projectIds: [selectedProjectId],
                 hasActiveContract: true, // Optimistic assumption
-                metadataProjects: [], // Area/Shift will fallback to teamConfig
-                roles: [],
+                roles: au.roles || [],
+                metadataProjects:
+                  au.metadata?.projects?.map((p: any) => {
+                    const pId = typeof p.projectId === "string" ? p.projectId : p.projectId?._id;
+
+                    let activeContract = undefined;
+                    const hasActive =
+                      p.contracts?.some((c: any) => {
+                        if (!c.fecha_baja_contrato) {
+                          if (!activeContract) activeContract = c;
+                          return true;
+                        }
+                        let endDate = new Date(c.fecha_baja_contrato);
+                        if (isNaN(endDate.getTime()) && typeof c.fecha_baja_contrato === "string") {
+                          const parts = c.fecha_baja_contrato.split(/[-/]/);
+                          if (parts.length === 3 && parts[2].length === 4) {
+                            endDate = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+                          }
+                        }
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const isActive = endDate >= today;
+                        if (isActive && !activeContract) activeContract = c;
+                        return isActive;
+                      }) ?? false;
+
+                    if (!activeContract && p.contracts && p.contracts.length > 0) {
+                      activeContract = p.contracts[p.contracts.length - 1];
+                    }
+
+                    return {
+                      projectId: pId,
+                      roleFrame: p.nombre_rol_frame,
+                      hasActiveContract: hasActive,
+                      contractStartTime: activeContract?.hora_inicio || undefined,
+                      contractEndTime: activeContract?.hora_fin || undefined,
+                      areaId: p.areaId || activeContract?.areaId || undefined,
+                      shiftId: p.shiftId || activeContract?.shiftId || undefined,
+                    };
+                  }) || [],
                 positionName: typeof au.positionId === "object" ? au.positionId?.name : undefined,
               }),
             );
@@ -1143,6 +1211,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       });
 
       const isCoordGlobal = e.roles?.some((r) => r.name?.toLowerCase()?.includes("coordinador"));
+      const hasPersonalContractShift = projMeta && (projMeta.areaId || projMeta.shiftId || (projMeta.contractStartTime && projMeta.contractEndTime));
 
       if (teamConfigMember && teamConfigMember.areaShiftAssignments?.length > 0) {
         teamConfigMember.areaShiftAssignments.forEach((asa: any) => {
@@ -1155,7 +1224,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             employeeCombinations.push({ areaId: aId, shiftId: "" });
           }
         });
-      } else if (isCoordGlobal && selectedProject?.coordinatorAssignments) {
+      } else if (isCoordGlobal && !hasPersonalContractShift && selectedProject?.coordinatorAssignments) {
         selectedProject.coordinatorAssignments.forEach((asm: any) => {
           const uid = typeof asm.userId === "object" ? asm.userId?._id || asm.userId?.id || asm.userId?.userId || asm.userId?.metadata?.id : asm.userId;
           const empIds = [e.id, (e as any).userId, (e as any).metadata?.id].filter(Boolean).map((id) => String(id));
