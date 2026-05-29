@@ -1674,16 +1674,14 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   }, [nonProjectEmployees]);
 
   const replacementAvailableRoles = useMemo(() => {
-    if (!selectedProjectId) return [];
     const roles = new Set<string>();
-    employees
-      .filter((e) => e.projectIds?.includes(selectedProjectId))
-      .forEach((e) => {
-        const role = e.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId))?.roleFrame;
-        if (role) roles.add(role.trim());
+    employees.forEach((e) => {
+      e.metadataProjects?.forEach((m) => {
+        if (m.roleFrame) roles.add(m.roleFrame.trim());
       });
+    });
     return Array.from(roles).sort();
-  }, [employees, selectedProjectId]);
+  }, [employees]);
 
   const addRecordInternal = (employee: EmployeeOption, type: RequestConfig, replacementId?: string, overtimeHours?: number, notes?: string) => {
     const replacement = employees.find((e) => e.id === replacementId);
@@ -5169,8 +5167,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         title={`Seleccionar Reemplazo (${(() => {
           const filteredByProject = selectedProjectId
             ? employees.filter((e) => {
-                if (!e.projectIds?.includes(selectedProjectId)) return false;
-
                 // 1. Status Filter
                 let matchesStatus = true;
                 if (replacementStatusFilter === "active") {
@@ -5182,8 +5178,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 // 2. Contract Active Filter
                 let matchesContract = true;
                 if (replacementFilterContractActive) {
-                  const projMeta = e.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId));
-                  matchesContract = projMeta ? projMeta.hasActiveContract : false;
+                  matchesContract = e.hasActiveContract;
                 }
 
                 return matchesStatus && matchesContract;
@@ -5195,9 +5190,12 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
           // Role Filtering
           if (selectedReplacementRoleFilters.length > 0) {
-            results = results.filter((e) => {
-              const roleFrame = e.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId))?.roleFrame;
-              return roleFrame && selectedReplacementRoleFilters.includes(roleFrame);
+            results = results.filter((emp) => {
+              return emp.metadataProjects?.some((m) => {
+                if (!m.roleFrame) return false;
+                const normalizedRole = m.roleFrame.trim().toLowerCase();
+                return selectedReplacementRoleFilters.some((f) => f.trim().toLowerCase() === normalizedRole);
+              });
             });
           }
 
@@ -5288,8 +5286,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             {(() => {
               const filteredByProject = selectedProjectId
                 ? employees.filter((e) => {
-                    if (!e.projectIds?.includes(selectedProjectId)) return false;
-
                     // 1. Status Filter
                     let matchesStatus = true;
                     if (replacementStatusFilter === "active") {
@@ -5301,8 +5297,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                     // 2. Contract Active Filter
                     let matchesContract = true;
                     if (replacementFilterContractActive) {
-                      const projMeta = e.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId));
-                      matchesContract = projMeta ? projMeta.hasActiveContract : false;
+                      matchesContract = e.hasActiveContract;
                     }
 
                     return matchesStatus && matchesContract;
@@ -5314,9 +5309,12 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
               // Role Filtering
               if (selectedReplacementRoleFilters.length > 0) {
-                results = results.filter((e) => {
-                  const roleFrame = e.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId))?.roleFrame;
-                  return roleFrame && selectedReplacementRoleFilters.includes(roleFrame);
+                results = results.filter((emp) => {
+                  return emp.metadataProjects?.some((m) => {
+                    if (!m.roleFrame) return false;
+                    const normalizedRole = m.roleFrame.trim().toLowerCase();
+                    return selectedReplacementRoleFilters.some((f) => f.trim().toLowerCase() === normalizedRole);
+                  });
                 });
               }
 
@@ -5356,7 +5354,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                           </div>
                           <div className="flex flex-wrap items-center gap-1.5">
                             {(() => {
-                              const roleFrame = emp.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId))?.roleFrame;
+                              const roleFrame = emp.metadataProjects?.find((m) => m.roleFrame)?.roleFrame;
                               return roleFrame ? <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider whitespace-nowrap">{roleFrame}</span> : null;
                             })()}
                             {emp.isActive === false ? <span className="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-red-900/30 dark:text-red-400 tracking-wider uppercase whitespace-nowrap">Inactivo</span> : <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-400 tracking-wider uppercase whitespace-nowrap">Activo</span>}
