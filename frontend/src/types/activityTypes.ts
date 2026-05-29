@@ -33,6 +33,8 @@ export interface ActivityReport {
   signatureUrl?: string;
   comments: string; // Comentarios generales
   attendance: AttendanceRecord[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AreaOption {

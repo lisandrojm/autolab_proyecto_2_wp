@@ -10,7 +10,7 @@ import { areasAPI, Area } from "../../../../api/areas";
 import { shiftsAPI, Shift } from "../../../../api/shifts";
 import { vacationsAPI } from "../../../../api/vacations";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faArrowLeft, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText, faUserPlus, faUserSlash, faSearch, faFilter, faExclamationTriangle, faUmbrellaBeach } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faArrowLeft, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText, faUserPlus, faUserSlash, faSearch, faFilter, faExclamationTriangle, faUmbrellaBeach, faPen } from "@fortawesome/free-solid-svg-icons";
 import { useProfile } from "../hooks/useProfile";
 import { ViewType } from "../types";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -3618,11 +3618,29 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             <LoadingSpinner size="md" message="Cargando novedades..." />
           ) : (
             <>
-              {filteredReports.map((report) => (
-                <div key={report._id} onClick={() => handleViewReport(report)} className="bg-white border dark:border-slate-700 dark:bg-slate-900/70 rounded-xl p-4 shadow-sm cursor-pointer opacity-80 hover:opacity-100 transition-opacity">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="inline-block px-2 py-0.5 text-[12px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded">{report.reportNumber || `#${report._id.slice(-6).toUpperCase()}`}</span>
-                  </div>
+              {filteredReports.map((report) => {
+                const isEdited = report.createdAt && report.updatedAt && (new Date(report.updatedAt).getTime() - new Date(report.createdAt).getTime() > 1000);
+                return (
+                  <div key={report._id} onClick={() => handleViewReport(report)} className="bg-white border dark:border-slate-700 dark:bg-slate-900/70 rounded-xl p-4 shadow-sm cursor-pointer opacity-80 hover:opacity-100 transition-opacity">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="inline-block px-2 py-0.5 text-[12px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded">{report.reportNumber || `#${report._id.slice(-6).toUpperCase()}`}</span>
+                      {isEdited && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded shadow-sm">
+                          <FontAwesomeIcon icon={faPen} className="text-[9px]" />
+                          EDITADO ({(() => {
+                            try {
+                              const d = new Date(report.updatedAt!);
+                              const day = String(d.getDate()).padStart(2, "0");
+                              const month = String(d.getMonth() + 1).padStart(2, "0");
+                              const year = d.getFullYear();
+                              return `${day}/${month}/${year}`;
+                            } catch {
+                              return "";
+                            }
+                          })()})
+                        </span>
+                      )}
+                    </div>
                   <h4 className="font-semibold text-slate-800 dark:text-white mb-1">
                     {(() => {
                       const p = report.projectId;
@@ -3665,8 +3683,9 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                     </span>
                     <span>{new Date(report.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                   </div>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
               {filteredReports.length === 0 && <div className="text-center text-gray-500 py-8">No has enviado novedades recientes.</div>}
             </>
           )}
@@ -4767,12 +4786,32 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               </div>
             </div>
 
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-900/50 text-xs text-blue-800 dark:text-blue-200 flex items-start gap-2.5">
-              <FontAwesomeIcon icon={faInfoCircle} className="mt-0.5 text-blue-500 flex-shrink-0" />
-              <div>
-                EDITAR: Solo se puede editar hasta 48hs después de la fecha de la novedad.
-              </div>
-            </div>
+            {(() => {
+              const isReportEdited = viewingReport.createdAt && viewingReport.updatedAt && (new Date(viewingReport.updatedAt).getTime() - new Date(viewingReport.createdAt).getTime() > 1000);
+              if (!isReportEdited) return null;
+              return (
+                <div className="bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg border border-amber-100 dark:border-amber-900/50 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2.5 shadow-sm">
+                  <FontAwesomeIcon icon={faPen} className="mt-0.5 text-amber-500 flex-shrink-0" />
+                  <div>
+                    <span className="font-bold block mb-0.5">Novedad Editada</span>
+                    <span>Última edición: {new Date(viewingReport.updatedAt!).toLocaleString()}</span>
+                  </div>
+                </div>
+              );
+            })()}
+
+             {(() => {
+               const submittedDate = new Date(viewingReport.submittedAt);
+               const limitDate = new Date(submittedDate.getTime() + 48 * 60 * 60 * 1000);
+               return (
+                 <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-900/50 text-xs text-blue-800 dark:text-blue-200 flex items-start gap-2.5">
+                   <FontAwesomeIcon icon={faInfoCircle} className="mt-0.5 text-blue-500 flex-shrink-0" />
+                   <div>
+                     EDITAR: Solo se puede editar hasta 48hs después de la fecha de la novedad (hasta el {limitDate.toLocaleString()}).
+                   </div>
+                 </div>
+               );
+             })()}
 
             <div className="space-y-2">
               <h4 className="font-medium text-sm text-gray-900 dark:text-white border-b pb-1 dark:border-gray-700">Novedades: {viewingReport.hasActivity ? "SÍ" : "NO"}</h4>

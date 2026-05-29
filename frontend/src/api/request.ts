@@ -31,6 +31,8 @@ export interface ActivityReport {
   submittedAt: string;
   userId?: any;
   tenantId: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export const activityReportsAPI = {

@@ -4,7 +4,7 @@ import { fuzzyMatch } from "../utils/searchHelpers";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileText, faFilter, faSearch, faUser, faCalendar, faTrash, faUserSlash, faGrip, faTable, faBriefcase, faChartSimple, faClock, faChevronDown, faChevronUp, faFileLines, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { faFileText, faFilter, faSearch, faUser, faCalendar, faTrash, faUserSlash, faGrip, faTable, faBriefcase, faChartSimple, faClock, faChevronDown, faChevronUp, faFileLines, faLayerGroup, faPen } from "@fortawesome/free-solid-svg-icons";
 import { NewsReportsModal } from "../components/orders/news/NewsReportsModal";
 import { PageLayout } from "../components/ui/PageLayout";
 import { CardItemGeneric } from "../components/ui/CardItemGeneric";
@@ -303,6 +303,8 @@ export const RequestsPage: React.FC = () => {
         status: "sent" as "sent", // Default status for now
         submittedBy: `${r.userId?.firstName || ""} ${r.userId?.lastName || ""}`.trim(),
         submittedAt: r.createdAt || r.submittedAt,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
         comments: r.comments,
         attendance: r.attendance
           ? r.attendance.map((att: any, idx: number) => ({
@@ -677,11 +679,31 @@ export const RequestsPage: React.FC = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredReports.map((report) => {
+          const isEdited = report.createdAt && report.updatedAt && (new Date(report.updatedAt).getTime() - new Date(report.createdAt).getTime() > 1000);
           const badgesTop = [
             <span key="id" className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
               {report.reportNumber || "Pendiente"}
             </span>,
           ];
+
+          if (isEdited) {
+            badgesTop.push(
+              <span key="edited" className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-sm whitespace-nowrap">
+                <FontAwesomeIcon icon={faPen} className="text-[8px]" />
+                EDITADO ({(() => {
+                  try {
+                    const d = new Date(report.updatedAt!);
+                    const day = String(d.getDate()).padStart(2, "0");
+                    const month = String(d.getMonth() + 1).padStart(2, "0");
+                    const year = d.getFullYear();
+                    return `${day}/${month}/${year}`;
+                  } catch {
+                    return "";
+                  }
+                })()})
+              </span>
+            );
+          }
 
           return (
             <CardItemGeneric
@@ -819,6 +841,20 @@ export const RequestsPage: React.FC = () => {
               </div>
             </div>
           </Modal>
+
+          {(() => {
+            const isReportEdited = selectedReport.createdAt && selectedReport.updatedAt && (new Date(selectedReport.updatedAt).getTime() - new Date(selectedReport.createdAt).getTime() > 1000);
+            if (!isReportEdited) return null;
+            return (
+              <div className="mb-4 bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg border border-amber-100 dark:border-amber-900/50 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2.5 shadow-sm">
+                <FontAwesomeIcon icon={faPen} className="mt-0.5 text-amber-500 flex-shrink-0" />
+                <div>
+                  <span className="font-bold block mb-0.5">Novedad Editada</span>
+                  <span>Última edición: {new Date(selectedReport.updatedAt!).toLocaleString()}</span>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Area/Turno Badges above Tabs */}
           <div className="mb-4 bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm border border-gray-100 dark:border-gray-700/50">
@@ -1089,7 +1125,29 @@ export const RequestsPage: React.FC = () => {
                 {filteredReports.map((report) => (
                   <tr key={report.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onClick={() => handleViewDetail(report)}>
                     <td className="py-3 px-4">
-                      <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{report.reportNumber || "Pendiente"}</span>
+                      <div className="flex flex-col gap-1 items-start">
+                        <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{report.reportNumber || "Pendiente"}</span>
+                        {(() => {
+                          const isEdited = report.createdAt && report.updatedAt && (new Date(report.updatedAt).getTime() - new Date(report.createdAt).getTime() > 1000);
+                          if (!isEdited) return null;
+                          return (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded shadow-sm whitespace-nowrap">
+                              <FontAwesomeIcon icon={faPen} className="text-[8px]" />
+                              EDITADO ({(() => {
+                                try {
+                                  const d = new Date(report.updatedAt!);
+                                  const day = String(d.getDate()).padStart(2, "0");
+                                  const month = String(d.getMonth() + 1).padStart(2, "0");
+                                  const year = d.getFullYear();
+                                  return `${day}/${month}/${year}`;
+                                } catch {
+                                  return "";
+                                }
+                              })()})
+                            </span>
+                          );
+                        })()}
+                      </div>
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400">
                       {(() => {
