@@ -195,7 +195,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
             .populate({
             path: "metadata.projects",
             model: UserProject,
-            select: "projectId positionId levelId areaId nombre_rol_frame nombre_proyecto contracts.fecha_baja_contrato contracts.nombre_contrato contracts.hora_inicio contracts.hora_fin",
+            select: "projectId positionId levelId areaId nombre_rol_frame nombre_proyecto contracts",
             populate: [
                 { path: "positionId", select: "name", model: Position },
                 { path: "levelId", select: "name", model: Level },
