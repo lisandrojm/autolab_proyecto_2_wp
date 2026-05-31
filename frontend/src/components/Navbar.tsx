@@ -153,6 +153,7 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("config_orders:view")) base.push({ path: "/order-types", icon: faShoppingCart, label: "Pedidos", scope: "global" });
       if (hasPermission("admin_users:view")) base.push({ path: "/shifts", icon: faClock, label: "Turnos", scope: "global" });
       if (hasPermission("config_vacations:view")) base.push({ path: "/vacations-rules", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
+      if (hasPermission("config_holidays:view")) base.push({ path: "/holidays", icon: faCalendar, label: "Feriados", scope: "global" });
       if (hasPermission("config_pdf_templates:view")) base.push({ path: "/pdfs", icon: faFilePdf, label: "Plantillas PDF", scope: "global" });
     }
 
@@ -213,7 +214,7 @@ export const MobileNavbar: React.FC = () => {
 
     const generalAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/tenants", "/clients"].includes(item.path)) : adminItems.filter((item) => ["/clients", "/admin/projects", "/admin/sedes", "/admin/contracts", "/orders", "/vacations", "/requests", "/calendar-events", "/employee-profiles", "/documents"].includes(item.path));
 
-    const configItems = adminItems.filter((item) => ["/order-types", "/pdfs", "/vacations-rules", "/requests/config", "/shifts"].includes(item.path));
+    const configItems = adminItems.filter((item) => ["/order-types", "/pdfs", "/vacations-rules", "/requests/config", "/shifts", "/holidays"].includes(item.path));
 
     const renderMenuItem = (item: any) => {
       if (item.external) {

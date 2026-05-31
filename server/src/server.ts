@@ -64,6 +64,7 @@ import { RequestConfigRoutes } from "./routes/requestConfig.js";
 import { RequestRoutes } from "./routes/activityReports.js";
 import { ProjectPdfConfigRoutes } from "./routes/projectPdfConfig.js";
 import { shiftRoutes } from "./routes/shifts.js";
+import { holidayRoutes } from "./routes/holidays.js";
 
 import { userProjectRoutes } from "./routes/userProjects.js";
 
@@ -181,6 +182,7 @@ app.use("/api/v1/vacations", vacationsRoutes);
 app.use("/api/v1/request-config", RequestConfigRoutes);
 app.use("/api/v1/activity-reports", RequestRoutes);
 app.use("/api/v1/shifts", shiftRoutes);
+app.use("/api/v1/holidays", holidayRoutes);
 
 app.use("/api/v1/user-projects", userProjectRoutes);
 

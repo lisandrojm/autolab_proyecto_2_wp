@@ -38,6 +38,7 @@ import { VacationsPage } from "./pages/VacationsPage";
 import { VacationsRulesPage } from "./pages/VacationsRulesPage";
 import { VacationsCalendarPage } from "./pages/VacationsCalendarPage";
 import { PdfTemplatesPage } from "./pages/PdfTemplatesPage";
+import { HolidaysPage } from "./pages/HolidaysPage";
 
 const AppMobile = lazy(() => import("./apps/mobile/src/App"));
 
@@ -391,6 +392,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <PdfTemplatesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/holidays"
+                element={
+                  <ProtectedRoute>
+                    <HolidaysPage />
                   </ProtectedRoute>
                 }
               />
