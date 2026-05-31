@@ -133,7 +133,6 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("admin_areas:view")) base.push({ path: "/areas", icon: faLayerGroup, label: "Áreas", scope: "global", count: adminCounts.areas });
       if (hasPermission("admin_positions:view")) base.push({ path: "/positions", icon: faUserTie, label: "Cargos", scope: "global", count: adminCounts.positions });
       if (hasPermission("admin_levels:view")) base.push({ path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels });
-      if (hasPermission("admin_users:view")) base.push({ path: "/shifts", icon: faClock, label: "Turnos", scope: "global" });
       if (hasPermission("admin_users:view")) base.push({ path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users });
 
       // Admin GENERAL Items
@@ -152,6 +151,7 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("config_activity_logs:view")) base.push({ path: "/requests/config", icon: faFileText, label: "Novedades", scope: "global" });
 
       if (hasPermission("config_orders:view")) base.push({ path: "/order-types", icon: faShoppingCart, label: "Pedidos", scope: "global" });
+      if (hasPermission("admin_users:view")) base.push({ path: "/shifts", icon: faClock, label: "Turnos", scope: "global" });
       if (hasPermission("config_vacations:view")) base.push({ path: "/vacations-rules", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
       if (hasPermission("config_pdf_templates:view")) base.push({ path: "/pdfs", icon: faFilePdf, label: "Plantillas PDF", scope: "global" });
     }
@@ -209,11 +209,11 @@ export const MobileNavbar: React.FC = () => {
     const isSuperAdminTenant = user?.tenantSlug === "superadmin";
 
     // Partición de items: Admin Usuarios, Admin General, Configuración y GESTIÓN
-    const userAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/users", "/roles", "/admin/roles-frame", "/areas", "/positions", "/levels", "/shifts"].includes(item.path)) : adminItems.filter((item) => ["/roles", "/admin/roles-frame", "/areas", "/positions", "/levels", "/users", "/shifts"].includes(item.path));
+    const userAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/users", "/roles", "/admin/roles-frame", "/areas", "/positions", "/levels"].includes(item.path)) : adminItems.filter((item) => ["/roles", "/admin/roles-frame", "/areas", "/positions", "/levels", "/users"].includes(item.path));
 
     const generalAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/tenants", "/clients"].includes(item.path)) : adminItems.filter((item) => ["/clients", "/admin/projects", "/admin/sedes", "/admin/contracts", "/orders", "/vacations", "/requests", "/calendar-events", "/employee-profiles", "/documents"].includes(item.path));
 
-    const configItems = adminItems.filter((item) => ["/order-types", "/pdfs", "/vacations-rules", "/requests/config"].includes(item.path));
+    const configItems = adminItems.filter((item) => ["/order-types", "/pdfs", "/vacations-rules", "/requests/config", "/shifts"].includes(item.path));
 
     const renderMenuItem = (item: any) => {
       if (item.external) {
