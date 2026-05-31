@@ -437,20 +437,57 @@ export const ProjectTeamPage: React.FC = () => {
 
 
   const availableCategoriasSat = useMemo(() => {
-    if (!wizardData.rol_frame_id) return [];
-    const selectedRF = allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id));
-    if (selectedRF && Array.isArray(selectedRF.data?.categoriasSat)) {
-      return selectedRF.data.categoriasSat;
+    let list: any[] = [];
+    if (wizardData.rol_frame_id) {
+      const selectedRF = allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id));
+      if (selectedRF && Array.isArray(selectedRF.data?.categoriasSat)) {
+        list = [...selectedRF.data.categoriasSat];
+      }
     }
-    return [];
-  }, [allRoleFrames, wizardData.rol_frame_id]);
+
+    // Fallback: If list is empty but we have allCategoriasSat, use allCategoriasSat as options
+    if (list.length === 0 && allCategoriasSat.length > 0) {
+      list = allCategoriasSat.map((c) => ({
+        id: c.data?.id,
+        nombre: c.name,
+        numeroCategoria: c.data?.numeroCategoria || c.data?.id
+      }));
+    }
+
+    // Ensure the currently selected category is in the list
+    if (wizardData.categoria_sat_id) {
+      const alreadyInList = list.some((c) => String(c.id) === String(wizardData.categoria_sat_id));
+      if (!alreadyInList) {
+        // Find it in global list
+        const globalCat = allCategoriasSat.find((c) => String(c.data?.id) === String(wizardData.categoria_sat_id));
+        if (globalCat) {
+          list.push({
+            id: globalCat.data?.id,
+            nombre: globalCat.name,
+            numeroCategoria: globalCat.data?.numeroCategoria || globalCat.data?.id
+          });
+        }
+      }
+    }
+
+    return list;
+  }, [allRoleFrames, allCategoriasSat, wizardData.rol_frame_id, wizardData.categoria_sat_id]);
 
   const userAssignedRoleFrames = useMemo(() => {
     if (!selectedUserForWizard) return [];
 
     const assignedNames = selectedUserForWizard.externalInfo?.rolFrames || [];
     const projectsRFNames = (selectedUserForWizard.metadata?.projects || []).map((p) => p.nombre_rol_frame).filter(Boolean);
-    const allAssignedNames = Array.from(new Set([...assignedNames, ...projectsRFNames]));
+    
+    // Add names from all contracts in projects as well!
+    const contractRFNames: string[] = [];
+    (selectedUserForWizard.metadata?.projects || []).forEach((p: any) => {
+      (p.contracts || []).forEach((c: any) => {
+        if (c.nombre_rol_frame) contractRFNames.push(c.nombre_rol_frame);
+      });
+    });
+
+    const allAssignedNames = Array.from(new Set([...assignedNames, ...projectsRFNames, ...contractRFNames]));
 
     let filtered = allRoleFrames.filter((rf) => allAssignedNames.includes(rf.name));
 
@@ -458,6 +495,19 @@ export const ProjectTeamPage: React.FC = () => {
     if (filtered.length === 0 && selectedUserForWizard.metadata?.roleFrameId) {
       const rfId = String(selectedUserForWizard.metadata.roleFrameId);
       filtered = allRoleFrames.filter((rf) => String(rf.data?.rol?.id) === rfId);
+    }
+    
+    // Check contracts' rol_frame_id
+    if (filtered.length === 0) {
+      const contractRFIds: string[] = [];
+      (selectedUserForWizard.metadata?.projects || []).forEach((p: any) => {
+        (p.contracts || []).forEach((c: any) => {
+          if (c.rol_frame_id) contractRFIds.push(String(c.rol_frame_id));
+        });
+      });
+      if (contractRFIds.length > 0) {
+        filtered = allRoleFrames.filter((rf) => contractRFIds.includes(String(rf.data?.rol?.id)));
+      }
     }
 
     // If STILL empty (e.g. editing existing member with no rolFrame history), show all role frames
@@ -660,23 +710,43 @@ export const ProjectTeamPage: React.FC = () => {
       }
     } else if (!initialCatId && user.metadata?.categoriaSatId) {
       initialCatId = String(user.metadata.categoriaSatId);
+    } else if (!initialCatId && (user.metadata as any)?.categoria_sat_id) {
+      initialCatId = String((user.metadata as any).categoria_sat_id);
     }
 
     let initialTipoContratoId = lastContract?.tipo_contrato_id ? String(lastContract.tipo_contrato_id) : "";
     if (!initialTipoContratoId && lastContract?.nombre_contrato) {
       initialTipoContratoId = String(allTiposContrato.find((t) => t.name === lastContract.nombre_contrato)?.data.id || "");
     }
+    if (!initialTipoContratoId && (user.metadata as any)?.tipoContratoId) {
+      initialTipoContratoId = String((user.metadata as any).tipoContratoId);
+    }
+    if (!initialTipoContratoId && (user.metadata as any)?.tipo_contrato_id) {
+      initialTipoContratoId = String((user.metadata as any).tipo_contrato_id);
+    }
 
-    let initialEstadoId = lastContract?.estado_id ? String(lastContract.estado_id) : String(activoEstado?.data.id || "");
+    let initialEstadoId = lastContract?.estado_id ? String(lastContract.estado_id) : "";
     if (!initialEstadoId && lastContract?.nombre_estado_empleado) {
       const foundEstado = allEstados.find((e) => e.name === lastContract.nombre_estado_empleado);
       if (foundEstado) initialEstadoId = String(foundEstado.data.id);
+    }
+    if (!initialEstadoId && user.metadata?.estadoId) {
+      initialEstadoId = String(user.metadata.estadoId);
+    }
+    if (!initialEstadoId && (user.metadata as any)?.estado_id) {
+      initialEstadoId = String((user.metadata as any).estado_id);
+    }
+    if (!initialEstadoId) {
+      initialEstadoId = String(activoEstado?.data.id || "");
     }
 
     let initialSedeId = lastContract?.sede_id ? String(lastContract.sede_id) : project?.metadata?.sedeId ? String(project.metadata.sedeId) : "";
     if (!initialSedeId && lastContract?.nombre_sede) {
       const foundSede = allSedes.find((s) => s.name === lastContract.nombre_sede);
       if (foundSede) initialSedeId = String(foundSede.data.id);
+    }
+    if (!initialSedeId && (user.metadata as any)?.sedeId) {
+      initialSedeId = String((user.metadata as any).sedeId);
     }
 
     let initialRolFrameId = lastContract?.rol_frame_id ? String(lastContract.rol_frame_id) : "";
@@ -1786,25 +1856,79 @@ export const ProjectTeamPage: React.FC = () => {
           </Modal>
 
           {/* Wizard Modal */}
-          <Modal isOpen={!!selectedUserForWizard} onClose={() => setSelectedUserForWizard(null)} title={teamMembers.some((m) => m._id === selectedUserForWizard?._id) ? "Configurar Miembro" : "Agregar Miembro"} subtitle={project?.name} size="xl">
-            <div className="space-y-6">
-              {/* Stepper Header (Sticky) */}
-              <div className="sticky -top-6 z-30 bg-white dark:bg-gray-800 -mx-6 px-6 py-4 border-b border-gray-100 dark:border-gray-700 shadow-sm mb-4">
+          <Modal
+            isOpen={!!selectedUserForWizard}
+            onClose={() => setSelectedUserForWizard(null)}
+            title={teamMembers.some((m) => m._id === selectedUserForWizard?._id) ? "Configurar Miembro" : "Agregar Miembro"}
+            subtitle={project?.name}
+            size="xl"
+            footer={
+              <div className="flex gap-3 w-full">
+                {wizardStep > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setWizardStep((wizardStep - 1) as any)}
+                    className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-all uppercase tracking-wider"
+                  >
+                    ANTERIOR
+                  </button>
+                )}
+                {wizardStep < 3 ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Validate step 1: at least one area/shift must be selected
+                      if (wizardStep === 1 && (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0)) {
+                        sweetAlert.error("Campo requerido", "Debes seleccionar al menos un área y turno para el miembro.");
+                        return;
+                      }
+                      setWizardStep((wizardStep + 1) as any);
+                    }}
+                    className="flex-1 py-3 rounded-xl bg-blue-500 text-white font-bold hover:bg-blue-600 shadow-lg shadow-blue-500/20 transition-all active:scale-95 uppercase tracking-wider"
+                  >
+                    SIGUIENTE
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleSaveWizard}
+                    className="flex-1 py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 shadow-lg shadow-green-600/20 transition-all active:scale-95 uppercase tracking-wider"
+                  >
+                    GUARDAR
+                  </button>
+                )}
+              </div>
+            }
+          >
+            <div className="flex flex-col h-[520px]">
+              {/* Stepper Header (Fixed/Sticky at the top of the flex container) */}
+              <div className="bg-white dark:bg-gray-800 pb-4 border-b border-gray-100 dark:border-gray-700 shrink-0 mb-4">
                 <div className="flex items-center bg-gray-50 dark:bg-gray-900/50 rounded-lg p-1">
                   {[
                     { step: 1, label: "Contrato" },
                     { step: 2, label: "Sueldo" },
                     { step: 3, label: "Extras" },
                   ].map((s) => (
-                    <button key={s.step} onClick={() => s.step < wizardStep && setWizardStep(s.step as any)} className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${wizardStep === s.step ? "bg-white dark:bg-gray-800 text-blue-600 shadow-sm border border-gray-100 dark:border-gray-700" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+                    <button
+                      key={s.step}
+                      type="button"
+                      onClick={() => s.step < wizardStep && setWizardStep(s.step as any)}
+                      className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                        wizardStep === s.step
+                          ? "bg-white dark:bg-gray-800 text-blue-600 shadow-sm border border-gray-100 dark:border-gray-700"
+                          : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                      }`}
+                    >
                       {s.label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Step 1: Contrato */}
-              {wizardStep === 1 && (
+              {/* Step Content (Scrollable) */}
+              <div className="flex-1 overflow-y-auto pr-1 space-y-6">
+                {/* Step 1: Contrato */}
+                {wizardStep === 1 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2 space-y-1.5">
                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empleado *</label>
@@ -2178,32 +2302,6 @@ export const ProjectTeamPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Wizard Footer */}
-              <div className="flex gap-3 pt-6 border-t border-gray-100 dark:border-gray-700">
-                {wizardStep > 1 && (
-                  <button onClick={() => setWizardStep((wizardStep - 1) as any)} className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
-                    ANTERIOR
-                  </button>
-                )}
-                {wizardStep < 3 ? (
-                  <button
-                    onClick={() => {
-                      // Validate step 1: at least one area/shift must be selected
-                      if (wizardStep === 1 && (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0)) {
-                        sweetAlert.error("Campo requerido", "Debes seleccionar al menos un área y turno para el miembro.");
-                        return;
-                      }
-                      setWizardStep((wizardStep + 1) as any);
-                    }}
-                    className="flex-1 py-3 rounded-xl bg-blue-500 text-white font-bold hover:bg-blue-600 shadow-lg shadow-blue-500/20 transition-all active:scale-95 uppercase tracking-wider"
-                  >
-                    SIGUIENTE
-                  </button>
-                ) : (
-                  <button onClick={handleSaveWizard} className="flex-1 py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 shadow-lg shadow-green-600/20 transition-all active:scale-95 uppercase tracking-wider">
-                    GUARDAR
-                  </button>
-                )}
               </div>
             </div>
           </Modal>
