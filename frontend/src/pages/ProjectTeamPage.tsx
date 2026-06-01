@@ -695,20 +695,48 @@ export const ProjectTeamPage: React.FC = () => {
     const activoEstado = allEstados.find((e) => e.name.toLowerCase().includes("activo"));
 
     // Prioritize IDs from last contract if they exist (numeric IDs stored in UserProject)
-    let initialCatId = lastContract?.categoria_sat_id ? String(lastContract.categoria_sat_id) : "";
-    if (!initialCatId && lastContract?.nombre_categoria_sat) {
-      // Fallback: Find within the specific Role Frame categories if possible
-      const foundRF = allRoleFrames.find((rf) => rf.name === lastProject?.nombre_rol_frame);
-      const rfCats = foundRF?.data?.categoriasSat || [];
-      const catInRF = rfCats.find((c: any) => c.nombre === lastContract.nombre_categoria_sat);
+    let initialCatId = "";
+    if (lastContract) {
+      const catIdFromDb = lastContract.categoria_sat_id;
+      const catNameFromDb = lastContract.nombre_categoria_sat;
 
-      if (catInRF) {
-        initialCatId = String(catInRF.id);
-      } else {
-        // Fallback to global list
-        initialCatId = String(allCategoriasSat.find((c) => c.name === lastContract.nombre_categoria_sat)?.data.id || "");
+      // Try to find the category in the global list first by numeric ID, MongoDB ID, or Name
+      let matchedCat = allCategoriasSat.find((c) => {
+        const numericIdMatch = catIdFromDb && String(c.data?.id) === String(catIdFromDb);
+        const mongoIdMatch = catIdFromDb && String(c._id) === String(catIdFromDb);
+        const nameMatch = catNameFromDb && (
+          c.name?.toLowerCase() === catNameFromDb.toLowerCase() ||
+          c.data?.nombre?.toLowerCase() === catNameFromDb.toLowerCase()
+        );
+        return numericIdMatch || mongoIdMatch || nameMatch;
+      });
+
+      // Fallback: If not found, try to look up in the current Role Frame's categories
+      if (!matchedCat) {
+        const foundRF = allRoleFrames.find((rf) => rf.name === lastProject?.nombre_rol_frame);
+        const rfCats = foundRF?.data?.categoriasSat || [];
+        const matchedInRF = rfCats.find((c: any) => {
+          const numericIdMatch = catIdFromDb && String(c.id) === String(catIdFromDb);
+          const nameMatch = catNameFromDb && c.nombre?.toLowerCase() === catNameFromDb.toLowerCase();
+          return numericIdMatch || nameMatch;
+        });
+
+        if (matchedInRF) {
+          // Find global category matching that name
+          matchedCat = allCategoriasSat.find((c) => 
+            c.name?.toLowerCase() === matchedInRF.nombre?.toLowerCase() ||
+            c.data?.nombre?.toLowerCase() === matchedInRF.nombre?.toLowerCase()
+          );
+        }
       }
-    } else if (!initialCatId && user.metadata?.categoriaSatId) {
+
+      if (matchedCat) {
+        initialCatId = String(matchedCat.data?.id || matchedCat._id);
+      }
+    }
+
+    // Secondary Fallbacks: User Metadata
+    if (!initialCatId && user.metadata?.categoriaSatId) {
       initialCatId = String(user.metadata.categoriaSatId);
     } else if (!initialCatId && (user.metadata as any)?.categoria_sat_id) {
       initialCatId = String((user.metadata as any).categoria_sat_id);
@@ -1983,8 +2011,54 @@ export const ProjectTeamPage: React.FC = () => {
                     </select>
                   </div>
 
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Cargo *</label>
+                    <select className="input-field w-full" value={wizardData.positionId} onChange={(e) => setWizardData((prev) => ({ ...prev, positionId: e.target.value, levelId: "" }))} required>
+                      <option value="">Selecciona cargo...</option>
+                      {allPositions.map((p) => (
+                        <option key={p._id} value={p._id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Nivel *</label>
+                    <select className="input-field w-full" value={wizardData.levelId} onChange={(e) => setWizardData((prev) => ({ ...prev, levelId: e.target.value }))} disabled={!wizardData.positionId} required>
+                      <option value="">{wizardData.positionId ? "Selecciona nivel..." : "Primero selecciona cargo"}</option>
+                      {allLevels
+                        .filter((l) => String(typeof l.positionId === "object" ? (l.positionId as any)?._id : l.positionId) === String(wizardData.positionId))
+                        .map((l) => (
+                          <option key={l._id} value={l._id}>
+                            {l.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Hora inicio - HH:MM</label>
+                    <input type="time" className="input-field w-full" value={wizardData.hora_inicio} onChange={(e) => setWizardData((prev) => ({ ...prev, hora_inicio: e.target.value }))} />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Hora fin - HH:MM</label>
+                    <input type="time" className="input-field w-full" value={wizardData.hora_fin} onChange={(e) => setWizardData((prev) => ({ ...prev, hora_fin: e.target.value }))} />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha alta contrato</label>
+                    <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_alta_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_alta_contrato: e.target.value }))} />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha baja contrato</label>
+                    <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_baja_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_baja_contrato: e.target.value }))} />
+                  </div>
+
                   {/* --- CONFIGURACIÓN POR ÁREA (visual toggle) --- */}
-                  <div className="md:col-span-2 space-y-3">
+                  <div className="md:col-span-2 space-y-3 pt-6 border-t border-gray-100 dark:border-gray-700">
                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
                       <FontAwesomeIcon icon={faLayerGroup} className="mr-1" />
                       Asignación por Área y Turno *
@@ -2159,52 +2233,6 @@ export const ProjectTeamPage: React.FC = () => {
                   </div>
 
                     {wizardData.areaShiftAssignments.length === 0 && (project?.areasConfig || []).length > 0 && <p className="text-[11px] text-amber-500 dark:text-amber-400 ml-1">⚠ Debes seleccionar al menos un área y turno.</p>}
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Cargo *</label>
-                    <select className="input-field w-full" value={wizardData.positionId} onChange={(e) => setWizardData((prev) => ({ ...prev, positionId: e.target.value, levelId: "" }))} required>
-                      <option value="">Selecciona cargo...</option>
-                      {allPositions.map((p) => (
-                        <option key={p._id} value={p._id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Nivel *</label>
-                    <select className="input-field w-full" value={wizardData.levelId} onChange={(e) => setWizardData((prev) => ({ ...prev, levelId: e.target.value }))} disabled={!wizardData.positionId} required>
-                      <option value="">{wizardData.positionId ? "Selecciona nivel..." : "Primero selecciona cargo"}</option>
-                      {allLevels
-                        .filter((l) => String(typeof l.positionId === "object" ? (l.positionId as any)?._id : l.positionId) === String(wizardData.positionId))
-                        .map((l) => (
-                          <option key={l._id} value={l._id}>
-                            {l.name}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Hora inicio - HH:MM</label>
-                    <input type="time" className="input-field w-full" value={wizardData.hora_inicio} onChange={(e) => setWizardData((prev) => ({ ...prev, hora_inicio: e.target.value }))} />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Hora fin - HH:MM</label>
-                    <input type="time" className="input-field w-full" value={wizardData.hora_fin} onChange={(e) => setWizardData((prev) => ({ ...prev, hora_fin: e.target.value }))} />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha alta contrato</label>
-                    <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_alta_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_alta_contrato: e.target.value }))} />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha baja contrato</label>
-                    <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_baja_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_baja_contrato: e.target.value }))} />
                   </div>
                 </div>
               )}
