@@ -32,6 +32,118 @@ import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
 
 const HELP_KEY = "projectTeam" as const;
 
+function numeroALetras(num: number): string {
+  const Unidades = (num: number): string => {
+    switch (num) {
+      case 1: return "UN";
+      case 2: return "DOS";
+      case 3: return "TRES";
+      case 4: return "CUATRO";
+      case 5: return "CINCO";
+      case 6: return "SEIS";
+      case 7: return "SIETE";
+      case 8: return "OCHO";
+      case 9: return "NUEVE";
+      default: return "";
+    }
+  };
+
+  const Decenas = (num: number): string => {
+    const unidad = num % 10;
+    const decena = Math.floor(num / 10);
+    switch (decena) {
+      case 1:
+        switch (unidad) {
+          case 0: return "DIEZ";
+          case 1: return "ONCE";
+          case 2: return "DOCE";
+          case 3: return "TRECE";
+          case 4: return "CATORCE";
+          case 5: return "QUINCE";
+          default: return "DIECI" + Unidades(unidad);
+        }
+      case 2:
+        if (unidad === 0) return "VEINTE";
+        return "VEINTI" + Unidades(unidad);
+      case 3: return "TREINTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
+      case 4: return "CUARENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
+      case 5: return "CINCUENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
+      case 6: return "SESENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
+      case 7: return "SETENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
+      case 8: return "OCHENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
+      case 9: return "NOVENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
+      default: return Unidades(num);
+    }
+  };
+
+  const Centenas = (num: number): string => {
+    const decenas = num % 100;
+    const centenaDigito = Math.floor(num / 100);
+    switch (centenaDigito) {
+      case 1:
+        if (decenas === 0) return "CIEN";
+        return "CIENTO " + Decenas(decenas);
+      case 2: return "DOSCIENTOS " + Decenas(decenas);
+      case 3: return "TRESCIENTOS " + Decenas(decenas);
+      case 4: return "CUATROCIENTOS " + Decenas(decenas);
+      case 5: return "QUINIENTOS " + Decenas(decenas);
+      case 6: return "SEISCIENTOS " + Decenas(decenas);
+      case 7: return "SETECIENTOS " + Decenas(decenas);
+      case 8: return "OCHOCIENTOS " + Decenas(decenas);
+      case 9: return "NOVECIENTOS " + Decenas(decenas);
+      default: return Decenas(num);
+    }
+  };
+
+  const Seccion = (num: number, divisor: number, strSingular: string, strPlural: string): string => {
+    const cientos = Math.floor(num / divisor);
+    let letras = "";
+
+    if (cientos > 0) {
+      if (cientos > 1) {
+        letras = Centenas(cientos) + " " + strPlural;
+      } else {
+        letras = strSingular;
+      }
+    }
+
+    return letras;
+  };
+
+  const Miles = (num: number): string => {
+    const divisor = 1000;
+    const resto = num % divisor;
+    let strMiles = Seccion(num, divisor, "MIL", "MIL");
+    let strCentenas = Centenas(resto);
+
+    if (strMiles === "") return strCentenas;
+    if (strMiles === "UN MIL") strMiles = "MIL";
+    if (strCentenas === "") return strMiles;
+    return strMiles + " " + strCentenas;
+  };
+
+  const Millones = (num: number): string => {
+    const divisor = 1000000;
+    const resto = num % divisor;
+    let strMillones = Seccion(num, divisor, "UN MILLÓN", "MILLONES");
+    let strMiles = Miles(resto);
+
+    if (strMillones === "") return strMiles;
+    if (strMiles === "") return strMillones;
+    return strMillones + " " + strMiles;
+  };
+
+  const entero = Math.floor(num);
+  const centavosVal = Math.round((num - entero) * 100);
+  const centavosStr = centavosVal.toString().padStart(2, "0") + "/100";
+
+  if (entero === 0) {
+    return "CERO " + centavosStr;
+  }
+
+  return (Millones(entero) + " " + centavosStr).replace(/\s+/g, " ").trim();
+}
+
 export const ProjectTeamPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
@@ -135,22 +247,31 @@ export const ProjectTeamPage: React.FC = () => {
   /* -------------------------- Auto-Calculations --------------------------- */
   useEffect(() => {
     const sueldo_mano = wizardData.sueldo_jornada * wizardData.cantidad_jornadas_laborales;
-    const sueldo_diario_neto = Number((wizardData.sueldo_neto / 30).toFixed(2));
+    const sueldo_neto = Number((sueldo_mano * 1.69894164).toFixed(2));
+    const sueldo_bruto = Number((sueldo_neto / 0.81).toFixed(2));
+    const sueldo_diario_neto = Number((sueldo_neto / 30).toFixed(2));
     const diferencia_diaria_neto = Number((wizardData.sueldo_jornada - sueldo_diario_neto).toFixed(2));
+    const sueldo_mano_texto = numeroALetras(sueldo_mano);
 
     if (
       sueldo_mano !== wizardData.sueldo_mano ||
+      sueldo_neto !== wizardData.sueldo_neto ||
+      sueldo_bruto !== wizardData.sueldo_bruto ||
       sueldo_diario_neto !== wizardData.sueldo_diario_neto ||
-      diferencia_diaria_neto !== wizardData.diferencia_diaria_neto
+      diferencia_diaria_neto !== wizardData.diferencia_diaria_neto ||
+      sueldo_mano_texto !== wizardData.sueldo_mano_texto
     ) {
       setWizardData((prev) => ({
         ...prev,
         sueldo_mano,
+        sueldo_neto,
+        sueldo_bruto,
         sueldo_diario_neto,
         diferencia_diaria_neto,
+        sueldo_mano_texto,
       }));
     }
-  }, [wizardData.sueldo_jornada, wizardData.cantidad_jornadas_laborales, wizardData.sueldo_neto]);
+  }, [wizardData.sueldo_jornada, wizardData.cantidad_jornadas_laborales]);
 
   /* ------------------------------ Fetchers ------------------------------- */
 
@@ -1928,7 +2049,18 @@ export const ProjectTeamPage: React.FC = () => {
             isOpen={!!selectedUserForWizard}
             onClose={() => setSelectedUserForWizard(null)}
             title={teamMembers.some((m) => m._id === selectedUserForWizard?._id) ? "Configurar Miembro" : "Agregar Miembro"}
-            subtitle={project?.name}
+            subtitle={
+              selectedUserForWizard ? (
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{project?.name}</span>
+                  <p className="text-base font-black text-blue-600 dark:text-blue-400 uppercase tracking-tight">
+                    {selectedUserForWizard.firstName} {selectedUserForWizard.lastName}
+                  </p>
+                </div>
+              ) : (
+                project?.name
+              )
+            }
             size="xl"
             footer={
               <div className="flex gap-3 w-full">
@@ -1980,7 +2112,13 @@ export const ProjectTeamPage: React.FC = () => {
                     <button
                       key={s.step}
                       type="button"
-                      onClick={() => s.step < wizardStep && setWizardStep(s.step as any)}
+                      onClick={() => {
+                        if (wizardStep === 1 && s.step > 1 && (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0)) {
+                          sweetAlert.error("Campo requerido", "Debes seleccionar al menos un área y turno para el miembro.");
+                          return;
+                        }
+                        setWizardStep(s.step as any);
+                      }}
                       className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
                         wizardStep === s.step
                           ? "bg-white dark:bg-gray-800 text-blue-600 shadow-sm border border-gray-100 dark:border-gray-700"
@@ -2293,12 +2431,12 @@ export const ProjectTeamPage: React.FC = () => {
 
                   <div className="space-y-1.5 pt-2 border-t border-gray-100 dark:border-gray-700">
                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo en mano</label>
-                    <input type="number" className="input-field w-full" value={wizardData.sueldo_mano} onChange={(e) => setWizardData((prev) => ({ ...prev, sueldo_mano: Number(e.target.value) }))} />
+                    <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_mano} readOnly />
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo en mano texto *</label>
-                    <input type="text" className="input-field w-full" placeholder="Ej: Cincuenta mil pesos" value={wizardData.sueldo_mano_texto} onChange={(e) => setWizardData((prev) => ({ ...prev, sueldo_mano_texto: e.target.value }))} />
+                    <input type="text" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" placeholder="Ej: Cincuenta mil pesos" value={wizardData.sueldo_mano_texto} readOnly />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2308,18 +2446,25 @@ export const ProjectTeamPage: React.FC = () => {
                     </div>
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Diferencia diaria neto</label>
-                      <input type="number" step="0.01" className={`input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed ${wizardData.diferencia_diaria_neto < 0 ? "text-red-500 font-bold" : "text-green-500 font-bold"}`} value={wizardData.diferencia_diaria_neto} readOnly />
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed font-bold"
+                        style={{ color: wizardData.diferencia_diaria_neto < 0 ? "#ef4444" : "#22c55e" }}
+                        value={wizardData.diferencia_diaria_neto}
+                        readOnly
+                      />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-100 dark:border-gray-700">
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo neto</label>
-                      <input type="number" className="input-field w-full" value={wizardData.sueldo_neto} onChange={(e) => setWizardData((prev) => ({ ...prev, sueldo_neto: Number(e.target.value) }))} />
+                      <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_neto} readOnly />
                     </div>
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo bruto</label>
-                      <input type="number" className="input-field w-full" value={wizardData.sueldo_bruto} onChange={(e) => setWizardData((prev) => ({ ...prev, sueldo_bruto: Number(e.target.value) }))} />
+                      <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_bruto} readOnly />
                     </div>
                   </div>
                 </div>

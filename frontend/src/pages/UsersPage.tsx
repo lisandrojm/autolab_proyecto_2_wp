@@ -614,7 +614,7 @@ export const UsersPage: React.FC = () => {
       codigoPostal: user.metadata?.codigoPostal || "",
       localidad: user.metadata?.localidad || "",
       paisId: user.metadata?.paisId,
-      nacionalidadId: user.metadata?.nacionalidadId,
+      nacionalidadId: user.metadata?.nacionalidadId || user.metadata?.paisId,
       nivelEstudioId: user.metadata?.nivelEstudioId,
       osId: user.metadata?.osId,
       osPrepaga: user.metadata?.osPrepaga || false,
@@ -1119,13 +1119,19 @@ export const UsersPage: React.FC = () => {
                     </div>
                   )}
 
-                  {viewUser.metadata?.nacionalidadId && (
+                  {(viewUser.metadata?.nacionalidadId || viewUser.metadata?.paisId) && (
                     <div className="space-y-1">
                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                         <FontAwesomeIcon icon={faPassport} className="text-gray-300" />
                         Nacionalidad
                       </label>
-                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{nationalities.find((n) => n.data.id === viewUser.metadata?.nacionalidadId)?.name || "—"}</p>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                        {(() => {
+                          const targetId = viewUser.metadata?.nacionalidadId || viewUser.metadata?.paisId;
+                          const list = nationalities.length > 0 ? nationalities : countries;
+                          return list.find((n) => n.data.id === targetId)?.name || "—";
+                        })()}
+                      </p>
                     </div>
                   )}
 
@@ -1628,7 +1634,7 @@ export const UsersPage: React.FC = () => {
                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nacionalidad</label>
                         <select value={formData.nacionalidadId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, nacionalidadId: parseInt(e.target.value) || undefined }))} className="input-field">
                           <option value="">Seleccionar...</option>
-                          {nationalities.map((it) => (
+                          {(nationalities.length > 0 ? nationalities : countries).map((it) => (
                             <option key={it._id} value={it.data.id}>
                               {it.name}
                             </option>

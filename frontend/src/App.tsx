@@ -39,6 +39,7 @@ import { VacationsRulesPage } from "./pages/VacationsRulesPage";
 import { VacationsCalendarPage } from "./pages/VacationsCalendarPage";
 import { PdfTemplatesPage } from "./pages/PdfTemplatesPage";
 import { HolidaysPage } from "./pages/HolidaysPage";
+import { CategoriasSatPage } from "./pages/CategoriasSatPage";
 
 const AppMobile = lazy(() => import("./apps/mobile/src/App"));
 
@@ -400,6 +401,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <HolidaysPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/categorias-sat"
+                element={
+                  <ProtectedRoute>
+                    <CategoriasSatPage />
                   </ProtectedRoute>
                 }
               />

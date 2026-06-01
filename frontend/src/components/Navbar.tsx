@@ -5,7 +5,7 @@ import { ClientSelector } from "./ClientSelector";
 import { ClientContextMenu } from "./ClientContextMenu";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck } from "@fortawesome/free-solid-svg-icons";
 import { Logo } from "../components/ui/Logo";
 import axios from "../api/axiosConfig";
 import { SettingsModal } from "./SettingsModal";
@@ -126,7 +126,7 @@ export const MobileNavbar: React.FC = () => {
     }> = [];
 
     if (isSuperAdminTenant) {
-      base.push({ path: "/tenants", icon: faBuilding, label: "Tenants", scope: "global", count: adminCounts.tenants }, { path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users }, { path: "/shifts", icon: faClock, label: "Turnos", scope: "global" }, { path: "/roles", icon: faUserShield, label: "Roles", scope: "global", count: adminCounts.roles }, { path: "/admin/roles-frame", icon: faUserShield, label: "Roles Frame", scope: "global" }, { path: "/areas", icon: faLayerGroup, label: "Áreas", scope: "global", count: adminCounts.areas }, { path: "/positions", icon: faUserTie, label: "Cargos", scope: "global", count: adminCounts.positions }, { path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels }, { path: "/clients", icon: faUsers, label: "Clientes", scope: "global", count: adminCounts.clients });
+      base.push({ path: "/tenants", icon: faBuilding, label: "Tenants", scope: "global", count: adminCounts.tenants }, { path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users }, { path: "/shifts", icon: faClock, label: "Turnos", scope: "global" }, { path: "/roles", icon: faUserShield, label: "Roles", scope: "global", count: adminCounts.roles }, { path: "/admin/roles-frame", icon: faUserShield, label: "Roles Frame", scope: "global" }, { path: "/areas", icon: faLayerGroup, label: "Áreas", scope: "global", count: adminCounts.areas }, { path: "/positions", icon: faUserTie, label: "Cargos", scope: "global", count: adminCounts.positions }, { path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels }, { path: "/clients", icon: faUsers, label: "Clientes", scope: "global", count: adminCounts.clients }, { path: "/categorias-sat", icon: faListCheck, label: "Categorías SAT", scope: "global" });
     } else {
       if (hasPermission("admin_roles:view")) base.push({ path: "/roles", icon: faUserShield, label: "Roles", scope: "global", count: adminCounts.roles });
       if (hasPermission("admin_roles:view")) base.push({ path: "/admin/roles-frame", icon: faUserShield, label: "Roles Frame", scope: "global" });
@@ -155,6 +155,7 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("config_vacations:view")) base.push({ path: "/vacations-rules", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
       if (hasPermission("config_holidays:view")) base.push({ path: "/holidays", icon: faCalendar, label: "Feriados", scope: "global" });
       if (hasPermission("config_pdf_templates:view")) base.push({ path: "/pdfs", icon: faFilePdf, label: "Plantillas PDF", scope: "global" });
+      base.push({ path: "/categorias-sat", icon: faListCheck, label: "Categorías SAT", scope: "global" });
     }
 
     return base;
@@ -214,7 +215,7 @@ export const MobileNavbar: React.FC = () => {
 
     const generalAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/tenants", "/clients"].includes(item.path)) : adminItems.filter((item) => ["/clients", "/admin/projects", "/admin/sedes", "/admin/contracts", "/orders", "/vacations", "/requests", "/calendar-events", "/employee-profiles", "/documents"].includes(item.path));
 
-    const configItems = adminItems.filter((item) => ["/order-types", "/pdfs", "/vacations-rules", "/requests/config", "/shifts", "/holidays"].includes(item.path));
+    const configItems = adminItems.filter((item) => ["/order-types", "/pdfs", "/vacations-rules", "/requests/config", "/shifts", "/holidays", "/categorias-sat"].includes(item.path));
 
     const renderMenuItem = (item: any) => {
       if (item.external) {
