@@ -28,6 +28,19 @@ export interface Contract {
   nombre_categoria_sat?: string;
   nombre_turno?: string;
   nombre_area?: string;
+  // Numeric IDs from UserProject collection
+  categoria_sat_id?: number;
+  estado_id?: number;
+  tipo_contrato_id?: number;
+  sede_id?: number;
+  rol_frame_id?: number;
+  sueldo_diario_neto?: number;
+  diferencia_diaria_neto?: number;
+  sueldo_neto?: number;
+  sueldo_bruto?: number;
+  sueldo_mano_texto?: string;
+  reemplazo?: boolean;
+  empleado_id_reemplezado?: number;
   areaShiftAssignments?: {
     areaId: string | any;
     shiftIds: string[] | any[];

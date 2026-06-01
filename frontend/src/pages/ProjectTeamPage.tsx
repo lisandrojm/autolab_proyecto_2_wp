@@ -691,20 +691,26 @@ export const ProjectTeamPage: React.FC = () => {
     const lastProject = currentProjectMeta || (metadataProjects.length > 0 ? metadataProjects[metadataProjects.length - 1] : null);
     const lastContract = lastProject?.contracts?.length ? lastProject.contracts[lastProject.contracts.length - 1] : null;
 
+    console.log("[Wizard] user:", user._id, "lastProject:", lastProject?._id, "lastContract keys:", lastContract ? Object.keys(lastContract) : "null");
+    console.log("[Wizard] lastContract:", lastContract ? JSON.stringify({ categoria_sat_id: (lastContract as any).categoria_sat_id, nombre_categoria_sat: (lastContract as any).nombre_categoria_sat, estado_id: (lastContract as any).estado_id, nombre_estado_empleado: (lastContract as any).nombre_estado_empleado }) : "null");
+
     // Default statuses and IDs
     const activoEstado = allEstados.find((e) => e.name.toLowerCase().includes("activo"));
 
     // Prioritize IDs from last contract if they exist (numeric IDs stored in UserProject)
     let initialCatId = "";
     if (lastContract) {
-      const catIdFromDb = lastContract.categoria_sat_id;
-      const catNameFromDb = lastContract.nombre_categoria_sat;
+      const catIdFromDb = (lastContract as any).categoria_sat_id;
+      const catNameFromDb = (lastContract as any).nombre_categoria_sat;
+
+      console.log("[Wizard] lastContract categoria_sat_id:", catIdFromDb, "nombre_categoria_sat:", catNameFromDb);
+      console.log("[Wizard] allCategoriasSat count:", allCategoriasSat.length, "sample:", allCategoriasSat.slice(0, 3).map(c => ({ _id: c._id, dataId: c.data?.id, name: c.name })));
 
       // Try to find the category in the global list first by numeric ID, MongoDB ID, or Name
       let matchedCat = allCategoriasSat.find((c) => {
-        const numericIdMatch = catIdFromDb && String(c.data?.id) === String(catIdFromDb);
-        const mongoIdMatch = catIdFromDb && String(c._id) === String(catIdFromDb);
-        const nameMatch = catNameFromDb && (
+        const numericIdMatch = catIdFromDb != null && catIdFromDb !== "" && String(c.data?.id) === String(catIdFromDb);
+        const mongoIdMatch = catIdFromDb != null && catIdFromDb !== "" && String(c._id) === String(catIdFromDb);
+        const nameMatch = catNameFromDb && catNameFromDb !== "Sin categoria" && (
           c.name?.toLowerCase() === catNameFromDb.toLowerCase() ||
           c.data?.nombre?.toLowerCase() === catNameFromDb.toLowerCase()
         );
@@ -716,8 +722,8 @@ export const ProjectTeamPage: React.FC = () => {
         const foundRF = allRoleFrames.find((rf) => rf.name === lastProject?.nombre_rol_frame);
         const rfCats = foundRF?.data?.categoriasSat || [];
         const matchedInRF = rfCats.find((c: any) => {
-          const numericIdMatch = catIdFromDb && String(c.id) === String(catIdFromDb);
-          const nameMatch = catNameFromDb && c.nombre?.toLowerCase() === catNameFromDb.toLowerCase();
+          const numericIdMatch = catIdFromDb != null && catIdFromDb !== "" && String(c.id) === String(catIdFromDb);
+          const nameMatch = catNameFromDb && catNameFromDb !== "Sin categoria" && c.nombre?.toLowerCase() === catNameFromDb.toLowerCase();
           return numericIdMatch || nameMatch;
         });
 
@@ -731,7 +737,15 @@ export const ProjectTeamPage: React.FC = () => {
       }
 
       if (matchedCat) {
-        initialCatId = String(matchedCat.data?.id || matchedCat._id);
+        initialCatId = String(matchedCat.data?.id ?? matchedCat._id);
+        console.log("[Wizard] Matched cat:", matchedCat.name, "-> initialCatId:", initialCatId);
+      } else {
+        console.log("[Wizard] No matched cat found. catIdFromDb:", catIdFromDb, "catNameFromDb:", catNameFromDb);
+        // Last resort: if we have a numeric catIdFromDb, just use it directly
+        if (catIdFromDb != null && catIdFromDb !== "" && catIdFromDb !== 0) {
+          initialCatId = String(catIdFromDb);
+          console.log("[Wizard] Using catIdFromDb directly as initialCatId:", initialCatId);
+        }
       }
     }
 
@@ -741,6 +755,8 @@ export const ProjectTeamPage: React.FC = () => {
     } else if (!initialCatId && (user.metadata as any)?.categoria_sat_id) {
       initialCatId = String((user.metadata as any).categoria_sat_id);
     }
+
+    console.log("[Wizard] FINAL initialCatId:", initialCatId);
 
     let initialTipoContratoId = lastContract?.tipo_contrato_id ? String(lastContract.tipo_contrato_id) : "";
     if (!initialTipoContratoId && lastContract?.nombre_contrato) {
@@ -753,10 +769,33 @@ export const ProjectTeamPage: React.FC = () => {
       initialTipoContratoId = String((user.metadata as any).tipo_contrato_id);
     }
 
-    let initialEstadoId = lastContract?.estado_id ? String(lastContract.estado_id) : "";
-    if (!initialEstadoId && lastContract?.nombre_estado_empleado) {
-      const foundEstado = allEstados.find((e) => e.name === lastContract.nombre_estado_empleado);
-      if (foundEstado) initialEstadoId = String(foundEstado.data.id);
+    let initialEstadoId = "";
+    if (lastContract) {
+      const estadoIdFromDb = (lastContract as any).estado_id;
+      const estadoNameFromDb = (lastContract as any).nombre_estado_empleado;
+      console.log("[Wizard] lastContract estado_id:", estadoIdFromDb, "nombre_estado_empleado:", estadoNameFromDb);
+      console.log("[Wizard] allEstados count:", allEstados.length, "sample:", allEstados.slice(0, 3).map(e => ({ _id: e._id, dataId: e.data?.id, name: e.name })));
+
+      // Match by numeric ID first
+      if (estadoIdFromDb != null && estadoIdFromDb !== "" && estadoIdFromDb !== 0) {
+        const matchedEstado = allEstados.find((e) => String(e.data?.id) === String(estadoIdFromDb) || String(e._id) === String(estadoIdFromDb));
+        if (matchedEstado) {
+          initialEstadoId = String(matchedEstado.data?.id ?? matchedEstado._id);
+          console.log("[Wizard] Matched estado by ID:", matchedEstado.name, "-> initialEstadoId:", initialEstadoId);
+        } else {
+          // Use the numeric ID directly as fallback
+          initialEstadoId = String(estadoIdFromDb);
+          console.log("[Wizard] Using estadoIdFromDb directly:", initialEstadoId);
+        }
+      }
+      // Match by name as fallback
+      if (!initialEstadoId && estadoNameFromDb && estadoNameFromDb !== "Activo") {
+        const matchedEstado = allEstados.find((e) => e.name?.toLowerCase() === estadoNameFromDb.toLowerCase());
+        if (matchedEstado) {
+          initialEstadoId = String(matchedEstado.data?.id ?? matchedEstado._id);
+          console.log("[Wizard] Matched estado by name:", matchedEstado.name, "-> initialEstadoId:", initialEstadoId);
+        }
+      }
     }
     if (!initialEstadoId && user.metadata?.estadoId) {
       initialEstadoId = String(user.metadata.estadoId);
@@ -765,8 +804,9 @@ export const ProjectTeamPage: React.FC = () => {
       initialEstadoId = String((user.metadata as any).estado_id);
     }
     if (!initialEstadoId) {
-      initialEstadoId = String(activoEstado?.data.id || "");
+      initialEstadoId = String(activoEstado?.data?.id || "");
     }
+    console.log("[Wizard] FINAL initialEstadoId:", initialEstadoId);
 
     let initialSedeId = lastContract?.sede_id ? String(lastContract.sede_id) : project?.metadata?.sedeId ? String(project.metadata.sedeId) : "";
     if (!initialSedeId && lastContract?.nombre_sede) {
