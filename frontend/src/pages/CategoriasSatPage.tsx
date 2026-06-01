@@ -7,7 +7,8 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faListCheck, faChevronUp, faChevronDown, faDownload, faUpload, faFileExcel, faArrowLeft } from "@fortawesome/free-solid-svg-icons";
+import { faListCheck, faChevronUp, faChevronDown, faDownload, faUpload, faFileExcel, faArrowLeft, faPlus, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { useAuthStore } from "../stores/authStore";
 
 type SortField = "numeroCategoria" | "nombre" | "sueldoBruto" | "neto" | "codigoAfip" | "presentismo" | "sueldoBasico" | "sueldoAdicional" | "fechaActualizacion";
 type SortDir = "asc" | "desc";
@@ -33,11 +34,124 @@ export const CategoriasSatPage: React.FC = () => {
   const [sortField, setSortField] = useState<SortField>("numeroCategoria");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
+  const { hasPermission } = useAuthStore();
+  const canManage = hasPermission("config_holidays:view");
+
+  // ABM Modal
+  const [showModal, setShowModal] = useState(false);
+  const [editingCategoria, setEditingCategoria] = useState<CategoriaSatItem | null>(null);
+  const [formData, setFormData] = useState({
+    numeroCategoria: "",
+    nombre: "",
+    sueldoBasico: "",
+    sueldoAdicional: "",
+    sueldoBruto: "",
+    sueldoBrutoLetras: "",
+    presentismo: "",
+    neto: "",
+    sueldoNetoLetras: "",
+    codigoAfip: "",
+    fechaActualizacion: "",
+  });
+
   // Bulk Import Modal
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [importErrors, setImportErrors] = useState<string[]>([]);
+
+  const openCreate = () => {
+    setEditingCategoria(null);
+    setFormData({
+      numeroCategoria: "",
+      nombre: "",
+      sueldoBasico: "",
+      sueldoAdicional: "",
+      sueldoBruto: "",
+      sueldoBrutoLetras: "",
+      presentismo: "",
+      neto: "",
+      sueldoNetoLetras: "",
+      codigoAfip: "",
+      fechaActualizacion: new Date().toISOString().split("T")[0],
+    });
+    setShowModal(true);
+  };
+
+  const openEdit = (cat: CategoriaSatItem) => {
+    setEditingCategoria(cat);
+    setFormData({
+      numeroCategoria: String(cat.data?.numeroCategoria ?? ""),
+      nombre: cat.data?.nombre || cat.name || "",
+      sueldoBasico: String(cat.data?.sueldoBasico ?? ""),
+      sueldoAdicional: String(cat.data?.sueldoAdicional ?? ""),
+      sueldoBruto: String(cat.data?.sueldoBruto ?? ""),
+      sueldoBrutoLetras: cat.data?.sueldoBrutoLetras || "",
+      presentismo: String(cat.data?.presentismo ?? ""),
+      neto: String(cat.data?.neto ?? ""),
+      sueldoNetoLetras: cat.data?.sueldoNetoLetras || "",
+      codigoAfip: String(cat.data?.codigoAfip ?? ""),
+      fechaActualizacion: cat.data?.fechaActualizacion
+        ? new Date(cat.data.fechaActualizacion).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
+    });
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingCategoria(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        numeroCategoria: Number(formData.numeroCategoria),
+        nombre: formData.nombre.trim(),
+        sueldoBasico: Number(formData.sueldoBasico || 0),
+        sueldoAdicional: Number(formData.sueldoAdicional || 0),
+        sueldoBruto: Number(formData.sueldoBruto || 0),
+        sueldoBrutoLetras: formData.sueldoBrutoLetras.trim(),
+        presentismo: Number(formData.presentismo || 0),
+        neto: Number(formData.neto || 0),
+        sueldoNetoLetras: formData.sueldoNetoLetras.trim(),
+        codigoAfip: Number(formData.codigoAfip || 0),
+        fechaActualizacion: formData.fechaActualizacion,
+      };
+
+      if (editingCategoria) {
+        await categoriaSatAPI.update(editingCategoria._id, payload);
+        sweetAlert.success("Categoría actualizada", "Los cambios se han guardado correctamente");
+      } else {
+        await categoriaSatAPI.create(payload);
+        sweetAlert.success("Categoría creada", "La categoría se ha creado correctamente");
+      }
+      closeModal();
+      fetchCategorias();
+    } catch (error: any) {
+      const message = error.response?.data?.error || "Error al guardar la categoría";
+      sweetAlert.error("Error", message);
+    }
+  };
+
+  const handleDelete = async (cat: CategoriaSatItem) => {
+    const name = cat.data?.nombre || cat.name || "Categoría";
+    const result = await sweetAlert.confirm(
+      "¿Eliminar categoría?",
+      `¿Estás seguro de que quieres eliminar la categoría "${name}" (Nº ${cat.data?.numeroCategoria})?`
+    );
+    if (result.isConfirmed) {
+      try {
+        await categoriaSatAPI.remove(cat._id);
+        sweetAlert.success("Categoría eliminada", "La categoría ha sido eliminada correctamente");
+        fetchCategorias();
+      } catch (error: any) {
+        const message = error.response?.data?.error || "Error al eliminar la categoría";
+        sweetAlert.error("Error", message);
+      }
+    }
+  };
 
   useEffect(() => {
     fetchCategorias();
@@ -160,6 +274,15 @@ export const CategoriasSatPage: React.FC = () => {
       shouldShowInfo={false}
       headerActions={
         <div className="flex items-center gap-3">
+          {canManage && (
+            <button
+              onClick={openCreate}
+              className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center gap-2 text-sm font-semibold shadow-md shadow-blue-500/20 active:scale-95"
+              title="Nueva Categoría"
+            >
+              <FontAwesomeIcon icon={faPlus} className="h-4 w-4" />
+            </button>
+          )}
           <button
             onClick={handleDownloadTemplate}
             className="px-3 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all flex items-center gap-2 text-sm font-semibold active:scale-95"
@@ -191,6 +314,160 @@ export const CategoriasSatPage: React.FC = () => {
           />
         </div>
       }
+      modal={{
+        isOpen: showModal,
+        onClose: closeModal,
+        title: editingCategoria ? "Editar Categoría SAT" : "Nueva Categoría SAT",
+        subtitle: editingCategoria ? "Modifica los datos de la categoría" : "Agrega una categoría de forma manual",
+        size: "lg",
+        actions: [
+          {
+            label: editingCategoria ? "Actualizar" : "Crear",
+            onClick: () => {
+              const form = document.querySelector<HTMLFormElement>("#categoria-sat-form");
+              form?.requestSubmit();
+            },
+            variant: "primary",
+          },
+          {
+            label: "Cancelar",
+            onClick: closeModal,
+            variant: "ghost",
+          },
+        ],
+        content: (
+          <form id="categoria-sat-form" onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nº Categoría *</label>
+                <input
+                  type="number"
+                  required
+                  value={formData.numeroCategoria}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, numeroCategoria: e.target.value }))}
+                  className="input-field"
+                  placeholder="Ej: 1"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre *</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.nombre}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, nombre: e.target.value }))}
+                  className="input-field"
+                  placeholder="Ej: Director de Programas"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sueldo Básico</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.sueldoBasico}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, sueldoBasico: e.target.value }))}
+                  className="input-field"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sueldo Adicional</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.sueldoAdicional}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, sueldoAdicional: e.target.value }))}
+                  className="input-field"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sueldo Bruto</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.sueldoBruto}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, sueldoBruto: e.target.value }))}
+                  className="input-field"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sueldo Bruto Letras</label>
+                <input
+                  type="text"
+                  value={formData.sueldoBrutoLetras}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, sueldoBrutoLetras: e.target.value }))}
+                  className="input-field"
+                  placeholder="Ej: UN MILLÓN OCHOCIENTOS..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Presentismo</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.presentismo}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, presentismo: e.target.value }))}
+                  className="input-field"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Neto</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.neto}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, neto: e.target.value }))}
+                  className="input-field"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sueldo Neto Letras</label>
+                <input
+                  type="text"
+                  value={formData.sueldoNetoLetras}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, sueldoNetoLetras: e.target.value }))}
+                  className="input-field"
+                  placeholder="Ej: UN MILLÓN CUATROCIENTOS..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Código AFIP</label>
+                <input
+                  type="number"
+                  value={formData.codigoAfip}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, codigoAfip: e.target.value }))}
+                  className="input-field"
+                  placeholder="Ej: 35283"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Actualización</label>
+                <input
+                  type="date"
+                  value={formData.fechaActualizacion}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, fechaActualizacion: e.target.value }))}
+                  className="input-field"
+                />
+              </div>
+            </div>
+          </form>
+        ),
+      }}
     >
       {loading ? (
         <div className="flex justify-center items-center py-20">
@@ -201,6 +478,15 @@ export const CategoriasSatPage: React.FC = () => {
           icon={faListCheck}
           title="No hay categorías SAT"
           description={searchTerm ? "No se encontraron categorías que coincidan con la búsqueda." : "No se encontraron categorías SAT en la base de datos."}
+          action={
+            canManage && !searchTerm
+              ? {
+                  label: "Nueva Categoría",
+                  onClick: openCreate,
+                  icon: faPlus,
+                }
+              : undefined
+          }
         />
       ) : (
         <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm mx-0.5 lg:mx-0">
@@ -235,6 +521,7 @@ export const CategoriasSatPage: React.FC = () => {
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none hidden lg:table-cell" onClick={() => handleSort("fechaActualizacion")}>
                     <div className="flex items-center">Actualización<SortIcon field="fechaActualizacion" /></div>
                   </th>
+                  {canManage && <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
@@ -281,6 +568,26 @@ export const CategoriasSatPage: React.FC = () => {
                     <td className="px-4 py-3 hidden lg:table-cell">
                       <span className="text-xs text-gray-500 dark:text-gray-400">{formatDate(cat.data?.fechaActualizacion)}</span>
                     </td>
+                    {canManage && (
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => openEdit(cat)}
+                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                            title="Editar"
+                          >
+                            <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(cat)}
+                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                            title="Eliminar"
+                          >
+                            <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

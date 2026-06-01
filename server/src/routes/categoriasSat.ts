@@ -181,4 +181,131 @@ router.post("/import", authenticateToken, upload.single("file"), async (req: Aut
   }
 });
 
+/**
+ * POST /api/v1/categorias-sat
+ * Crear una nueva categoría SAT manualmente
+ */
+router.post("/", authenticateToken, async (req: AuthenticatedRequest, res) => {
+  try {
+    const {
+      numeroCategoria,
+      nombre,
+      sueldoBasico,
+      sueldoAdicional,
+      sueldoBruto,
+      sueldoBrutoLetras,
+      presentismo,
+      neto,
+      sueldoNetoLetras,
+      codigoAfip,
+      fechaActualizacion,
+    } = req.body;
+
+    if (numeroCategoria === undefined || numeroCategoria === null) {
+      return res.status(400).json({ error: "El Nº de categoría es obligatorio" });
+    }
+    if (!nombre || !nombre.trim()) {
+      return res.status(400).json({ error: "El nombre es obligatorio" });
+    }
+
+    const newItem = new CategoriaSat({
+      name: nombre.trim(),
+      externalId: String(codigoAfip || numeroCategoria),
+      data: {
+        id: Number(numeroCategoria),
+        numeroCategoria: Number(numeroCategoria),
+        nombre: nombre.trim(),
+        sueldoBasico: Number(sueldoBasico || 0),
+        sueldoAdicional: Number(sueldoAdicional || 0),
+        sueldoBruto: Number(sueldoBruto || 0),
+        sueldoBrutoLetras: String(sueldoBrutoLetras || "").trim(),
+        presentismo: Number(presentismo || 0),
+        neto: Number(neto || 0),
+        sueldoNetoLetras: String(sueldoNetoLetras || "").trim(),
+        codigoAfip: Number(codigoAfip || 0),
+        fechaActualizacion: fechaActualizacion || new Date().toISOString().split("T")[0],
+      },
+    });
+
+    await newItem.save();
+    res.status(201).json(newItem);
+  } catch (error) {
+    console.error("Create CategoriaSat error:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
+
+/**
+ * PUT /api/v1/categorias-sat/:id
+ * Modificar una categoría SAT existente
+ */
+router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      numeroCategoria,
+      nombre,
+      sueldoBasico,
+      sueldoAdicional,
+      sueldoBruto,
+      sueldoBrutoLetras,
+      presentismo,
+      neto,
+      sueldoNetoLetras,
+      codigoAfip,
+      fechaActualizacion,
+    } = req.body;
+
+    const item = await CategoriaSat.findById(id);
+    if (!item) {
+      return res.status(404).json({ error: "Categoría no encontrada" });
+    }
+
+    if (nombre !== undefined) {
+      item.name = nombre.trim();
+      item.data.nombre = nombre.trim();
+    }
+    if (numeroCategoria !== undefined) {
+      item.data.numeroCategoria = Number(numeroCategoria);
+      item.data.id = Number(numeroCategoria);
+    }
+    if (sueldoBasico !== undefined) item.data.sueldoBasico = Number(sueldoBasico);
+    if (sueldoAdicional !== undefined) item.data.sueldoAdicional = Number(sueldoAdicional);
+    if (sueldoBruto !== undefined) item.data.sueldoBruto = Number(sueldoBruto);
+    if (sueldoBrutoLetras !== undefined) item.data.sueldoBrutoLetras = String(sueldoBrutoLetras).trim();
+    if (presentismo !== undefined) item.data.presentismo = Number(presentismo);
+    if (neto !== undefined) item.data.neto = Number(neto);
+    if (sueldoNetoLetras !== undefined) item.data.sueldoNetoLetras = String(sueldoNetoLetras).trim();
+    if (codigoAfip !== undefined) {
+      item.data.codigoAfip = Number(codigoAfip);
+      item.externalId = String(codigoAfip || item.data.numeroCategoria);
+    }
+    if (fechaActualizacion !== undefined) item.data.fechaActualizacion = fechaActualizacion;
+
+    await item.save();
+    res.json(item);
+  } catch (error) {
+    console.error("Update CategoriaSat error:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
+
+/**
+ * DELETE /api/v1/categorias-sat/:id
+ * Eliminar una categoría SAT
+ */
+router.delete("/:id", authenticateToken, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const result = await CategoriaSat.deleteOne({ _id: id });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: "Categoría no encontrada" });
+    }
+    res.json({ message: "Categoría eliminada correctamente" });
+  } catch (error) {
+    console.error("Delete CategoriaSat error:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
+
 export { router as categoriasSatRoutes };

@@ -46,6 +46,21 @@ class CategoriaSatAPI {
     });
     return data;
   }
+
+  async create(data: any): Promise<CategoriaSatItem> {
+    const response = await axios.post("/categorias-sat", data);
+    return response.data;
+  }
+
+  async update(id: string, data: any): Promise<CategoriaSatItem> {
+    const response = await axios.put(`/categorias-sat/${id}`, data);
+    return response.data;
+  }
+
+  async remove(id: string): Promise<{ message: string }> {
+    const response = await axios.delete(`/categorias-sat/${id}`);
+    return response.data;
+  }
 }
 
 export const categoriaSatAPI = new CategoriaSatAPI();
