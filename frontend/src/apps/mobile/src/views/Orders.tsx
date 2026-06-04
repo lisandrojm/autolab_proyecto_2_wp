@@ -366,16 +366,26 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
       const isDocumentType = selectedCategory?.futureActionType === "documento";
 
+      const parseLocalDate = (dateVal: any): Date => {
+        if (typeof dateVal === "string" && dateVal.includes("-")) {
+          const [year, month, day] = dateVal.split("-").map(Number);
+          return new Date(year, month - 1, day);
+        }
+        return new Date(dateVal);
+      };
+
       const calculateRequestedDays = (): number => {
         if (!selectedCategory || selectedCategory.categoryType !== "fecha") return 0;
 
         let start: Date;
         let end: Date;
 
-        if (selectedCategory.dateMode === "range") {
+        const isRange = selectedCategory.dateMode === "range" || (validDynamicValue && typeof validDynamicValue === "object" && "fechaDesde" in validDynamicValue && "fechaHasta" in validDynamicValue);
+
+        if (isRange) {
           if (!validDynamicValue?.fechaDesde || !validDynamicValue?.fechaHasta) return 0;
-          start = new Date(validDynamicValue.fechaDesde);
-          end = new Date(validDynamicValue.fechaHasta);
+          start = parseLocalDate(validDynamicValue.fechaDesde);
+          end = parseLocalDate(validDynamicValue.fechaHasta);
 
           let count = 0;
           let curr = new Date(start);
@@ -397,14 +407,14 @@ export default function Orders({ onNavigate }: OrdersProps) {
           if (Array.isArray(validDynamicValue)) {
             let count = 0;
             for (const d of validDynamicValue) {
-              const dt = new Date(d);
+              const dt = parseLocalDate(d);
               if (!isNaN(dt.getTime()) && validateDate(dt).valid) {
                 count++;
               }
             }
             return count;
           } else {
-            start = new Date(validDynamicValue);
+            start = parseLocalDate(validDynamicValue);
             return validateDate(start).valid ? 1 : 0;
           }
         }

@@ -72,7 +72,9 @@ export async function recalculateUserOrderBalance(
     let pending = 0;
 
     for (const o of orders) {
-      if (o.status === "approved" || o.status === "delivered") {
+      const isSigned = o.signatureStatus === "signed";
+      const isDelivered = o.status === "delivered";
+      if (isDelivered || isSigned || (o.status === "approved" && (o.signatureStatus === "not_required" || !o.signatureStatus))) {
         taken += o.daysRequested || 0;
       } else {
         pending += o.daysRequested || 0;
