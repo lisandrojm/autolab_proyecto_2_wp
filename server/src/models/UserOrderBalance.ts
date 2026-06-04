@@ -4,6 +4,7 @@ export interface IUserOrderBalance extends Document {
   tenantId: Types.ObjectId;
   userId: Types.ObjectId;
   orderConfigId: Types.ObjectId;
+  subtypeId?: string; // Optional subcategory ID
   year: number;
   totalAnnual?: number;
   taken?: number;
@@ -18,6 +19,7 @@ const userOrderBalanceSchema = new Schema<IUserOrderBalance>(
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     orderConfigId: { type: Schema.Types.ObjectId, ref: "OrderConfig", required: true, index: true },
+    subtypeId: { type: String, index: true },
     year: { type: Number, required: true, index: true },
     totalAnnual: { type: Number },
     taken: { type: Number },
@@ -27,7 +29,7 @@ const userOrderBalanceSchema = new Schema<IUserOrderBalance>(
   { timestamps: true, collection: "user_order_balances" }
 );
 
-// Compound index to ensure uniqueness per user/tenant/order type/year
-userOrderBalanceSchema.index({ tenantId: 1, userId: 1, orderConfigId: 1, year: 1 }, { unique: true });
+// Compound unique index per user, tenant, order category, specific option subtype, and year
+userOrderBalanceSchema.index({ tenantId: 1, userId: 1, orderConfigId: 1, subtypeId: 1, year: 1 }, { unique: true });
 
 export const UserOrderBalance = mongoose.model<IUserOrderBalance>("UserOrderBalance", userOrderBalanceSchema);

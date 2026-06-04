@@ -27,21 +27,32 @@ export async function getNextOrderNumber(tenantId, prefix) {
     const paddedNumber = nextSequence.toString().padStart(6, "0");
     return `${prefix}-ORD-${paddedNumber}`;
 }
-export async function recalculateUserOrderBalance(tenantId, userId, orderConfigId, year) {
+export async function recalculateUserOrderBalance(tenantId, userId, orderConfigId, year, subtypeId) {
     try {
-        const override = await UserOrderBalance.findOne({ tenantId, userId, orderConfigId, year });
+        const overrideQuery = { tenantId, userId, orderConfigId, year };
+        if (subtypeId) {
+            overrideQuery.subtypeId = subtypeId;
+        }
+        else {
+            overrideQuery.subtypeId = { $in: [null, undefined] };
+        }
+        const override = await UserOrderBalance.findOne(overrideQuery);
         if (!override)
             return;
         const Order = mongoose.models.Order || mongoose.model("Order");
         const startOfYear = new Date(year, 0, 1);
         const endOfYear = new Date(year, 11, 31, 23, 59, 59, 999);
-        const orders = await Order.find({
+        const orderFilter = {
             tenantId,
             userId,
             categoryId: orderConfigId,
             status: { $nin: ["rejected", "cancelled"] },
             requestedAt: { $gte: startOfYear, $lte: endOfYear }
-        }).lean();
+        };
+        if (subtypeId) {
+            orderFilter.subcategories = subtypeId;
+        }
+        const orders = await Order.find(orderFilter).lean();
         let taken = 0;
         let pending = 0;
         for (const o of orders) {
@@ -56,7 +67,7 @@ export async function recalculateUserOrderBalance(tenantId, userId, orderConfigI
         override.pending = pending;
         override.available = Math.max(0, (override.totalAnnual ?? 0) - taken - pending);
         await override.save();
-        console.log(`[ORDER BALANCE] Recalculated for user ${userId}, year ${year}, category ${orderConfigId}: taken=${taken}, pending=${pending}, available=${override.available}`);
+        console.log(`[ORDER BALANCE] Recalculated for user ${userId}, year ${year}, category ${orderConfigId}, subtype ${subtypeId}: taken=${taken}, pending=${pending}, available=${override.available}`);
     }
     catch (error) {
         console.error("Error recalculating user order balance:", error);

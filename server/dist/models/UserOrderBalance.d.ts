@@ -3,6 +3,7 @@ export interface IUserOrderBalance extends Document {
     tenantId: Types.ObjectId;
     userId: Types.ObjectId;
     orderConfigId: Types.ObjectId;
+    subtypeId?: string;
     year: number;
     totalAnnual?: number;
     taken?: number;

@@ -45,6 +45,10 @@ export const UserOrderManagementTab: React.FC = () => {
   const [selectedOrderConfigId, setSelectedOrderConfigId] = useState<string>("");
   const [loadingConfigs, setLoadingConfigs] = useState(true);
 
+  // Order Subtypes/Options
+  const [subtypes, setSubtypes] = useState<any[]>([]);
+  const [selectedSubtypeId, setSelectedSubtypeId] = useState<string>("");
+
   // Balance values
   const [balances, setBalances] = useState<UserOrderBalance[]>([]);
   const [filteredBalances, setFilteredBalances] = useState<UserOrderBalance[]>([]);
@@ -70,12 +74,32 @@ export const UserOrderManagementTab: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const activeConfig = orderConfigs.find((c) => c._id === selectedOrderConfigId);
+    const activeSubtypes = activeConfig?.config?.subtipos || [];
+    setSubtypes(activeSubtypes);
+    if (activeSubtypes.length > 0) {
+      setSelectedSubtypeId(activeSubtypes[0].id);
+    } else {
+      setSelectedSubtypeId("");
+    }
+  }, [selectedOrderConfigId, orderConfigs]);
+
+  useEffect(() => {
     if (selectedOrderConfigId) {
+      const activeConfig = orderConfigs.find((c) => c._id === selectedOrderConfigId);
+      const activeSubtypes = activeConfig?.config?.subtipos || [];
+      if (activeSubtypes.length > 0) {
+        const isValidSubtype = activeSubtypes.some((s) => s.id === selectedSubtypeId);
+        if (!isValidSubtype) {
+          // Wait for selectedSubtypeId to be updated to a valid subtype of the new category
+          return;
+        }
+      }
       loadBalances();
     } else {
       setBalances([]);
     }
-  }, [selectedYear, selectedOrderConfigId]);
+  }, [selectedYear, selectedOrderConfigId, selectedSubtypeId, orderConfigs]);
 
   useEffect(() => {
     filterBalances();
@@ -109,7 +133,7 @@ export const UserOrderManagementTab: React.FC = () => {
   const loadBalances = async () => {
     setLoading(true);
     try {
-      const data = await orderConfigAPI.getUsersBalance(selectedYear, selectedOrderConfigId);
+      const data = await orderConfigAPI.getUsersBalance(selectedYear, selectedOrderConfigId, selectedSubtypeId || undefined);
       setBalances(data);
 
       const contractsSet = new Set<string>();
@@ -273,6 +297,7 @@ export const UserOrderManagementTab: React.FC = () => {
           return {
             userId,
             orderConfigId: selectedOrderConfigId,
+            subtypeId: selectedSubtypeId || undefined,
             year: selectedYear,
             totalAnnual: edits.totalAnnual ?? balance.display.totalAnnual,
             taken: edits.taken ?? balance.display.taken,
@@ -343,6 +368,25 @@ export const UserOrderManagementTab: React.FC = () => {
               )}
             </select>
           </div>
+
+          {/* Subtype Option Config Dropdown */}
+          {subtypes.length > 0 && (
+            <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700 p-2 rounded border border-gray-200 dark:border-gray-700">
+              <FontAwesomeIcon icon={faClipboardList} className="text-blue-500 dark:text-blue-400" />
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Opción del Pedido:</span>
+              <select
+                value={selectedSubtypeId}
+                onChange={(e) => setSelectedSubtypeId(e.target.value)}
+                className="bg-transparent border-none text-sm font-bold text-blue-600 dark:text-blue-400 focus:ring-0 focus:outline-none"
+              >
+                {subtypes.map((sub) => (
+                  <option key={sub.id} value={sub.id} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                    {sub.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Year Dropdown */}
           <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700 p-2 rounded border border-gray-200 dark:border-gray-700">

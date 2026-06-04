@@ -172,7 +172,11 @@ orderSchema.pre("validate", async function (next) {
 orderSchema.post("save", async function (doc) {
   if (doc.categoryId && doc.requestedAt) {
     const year = doc.requestedAt.getFullYear();
+    const subtypeId = doc.subcategories && doc.subcategories.length > 0 ? doc.subcategories[0] : undefined;
     const { recalculateUserOrderBalance } = await import("../utils/orderHelpers.js");
+    if (subtypeId) {
+      await recalculateUserOrderBalance(doc.tenantId, doc.userId, doc.categoryId, year, subtypeId);
+    }
     await recalculateUserOrderBalance(doc.tenantId, doc.userId, doc.categoryId, year);
   }
 });
@@ -180,7 +184,11 @@ orderSchema.post("save", async function (doc) {
 orderSchema.post("findOneAndDelete", async function (doc) {
   if (doc && doc.categoryId && doc.requestedAt) {
     const year = doc.requestedAt.getFullYear();
+    const subtypeId = doc.subcategories && doc.subcategories.length > 0 ? doc.subcategories[0] : undefined;
     const { recalculateUserOrderBalance } = await import("../utils/orderHelpers.js");
+    if (subtypeId) {
+      await recalculateUserOrderBalance(doc.tenantId, doc.userId, doc.categoryId, year, subtypeId);
+    }
     await recalculateUserOrderBalance(doc.tenantId, doc.userId, doc.categoryId, year);
   }
 });

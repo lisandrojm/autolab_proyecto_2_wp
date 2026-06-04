@@ -120,9 +120,9 @@ export const orderConfigAPI = {
     return data;
   },
 
-  getUsersBalance: async (year: number, categoryId: string): Promise<any[]> => {
+  getUsersBalance: async (year: number, categoryId: string, subtypeId?: string): Promise<any[]> => {
     const { data } = await axios.get<any[]>("/orders/users-balance", {
-      params: { year, categoryId },
+      params: { year, categoryId, subtypeId },
     });
     return data;
   },
