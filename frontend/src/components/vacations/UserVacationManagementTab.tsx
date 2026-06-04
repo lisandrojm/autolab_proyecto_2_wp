@@ -52,6 +52,7 @@ export const UserVacationManagementTab: React.FC = () => {
   const [selectedProject, setSelectedProject] = useState<string>("");
   const [selectedRoleFrame, setSelectedRoleFrame] = useState<string>("");
   const [selectedContract, setSelectedContract] = useState<string>("");
+  const [selectedStatus, setSelectedStatus] = useState<string>("active");
 
   // Editing state: userId -> edited fields
   const [editedValues, setEditedValues] = useState<Record<string, { totalAnnual?: number; taken?: number; pending?: number; available?: number }>>({});
@@ -67,7 +68,7 @@ export const UserVacationManagementTab: React.FC = () => {
 
   useEffect(() => {
     filterBalances();
-  }, [balances, searchTerm, selectedProject, selectedRoleFrame, selectedContract]);
+  }, [balances, searchTerm, selectedProject, selectedRoleFrame, selectedContract, selectedStatus]);
 
   const loadFilters = async () => {
     try {
@@ -123,6 +124,29 @@ export const UserVacationManagementTab: React.FC = () => {
     return contractType;
   };
 
+  const getActiveRoleFrame = (balance: UserVacationBalance): string => {
+    let roleFrame = "Sin rol frame";
+    if (balance.metadata?.projects) {
+      const now = new Date().getTime();
+      balance.metadata.projects.forEach((p: any) => {
+        if (p.contracts) {
+          p.contracts.forEach((c: any) => {
+            const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
+            if (endDate) endDate.setHours(23, 59, 59, 999);
+            const isActive = !endDate || endDate.getTime() >= now;
+            if (isActive && c.nombre_rol_frame) {
+              roleFrame = c.nombre_rol_frame;
+            }
+          });
+        }
+        if (roleFrame === "Sin rol frame" && p.nombre_rol_frame) {
+          roleFrame = p.nombre_rol_frame;
+        }
+      });
+    }
+    return roleFrame;
+  };
+
   const filterBalances = () => {
     let result = balances;
 
@@ -160,6 +184,15 @@ export const UserVacationManagementTab: React.FC = () => {
     if (selectedContract) {
       result = result.filter((b) => {
         return getActiveContractType(b) === selectedContract;
+      });
+    }
+
+    if (selectedStatus) {
+      result = result.filter((b) => {
+        const isUserActive = b.metadata?.activo !== false;
+        if (selectedStatus === "active") return isUserActive;
+        if (selectedStatus === "inactive") return !isUserActive;
+        return true; // "all"
       });
     }
 
@@ -282,7 +315,7 @@ export const UserVacationManagementTab: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <div className="relative">
           <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
@@ -341,6 +374,19 @@ export const UserVacationManagementTab: React.FC = () => {
             ))}
           </select>
         </div>
+
+        <div className="relative">
+          <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <select
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none"
+          >
+            <option value="active">Solo Activos</option>
+            <option value="inactive">Solo Inactivos</option>
+            <option value="all">Todos (Activos e Inactivos)</option>
+          </select>
+        </div>
       </div>
 
       {/* Table */}
@@ -350,6 +396,8 @@ export const UserVacationManagementTab: React.FC = () => {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Usuario</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ingreso / Antigüedad</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rol Frame</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contrato</th>
               <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">Total Anual</th>
               <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">Tomados (Gozados)</th>
               <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">Pendientes</th>
@@ -370,8 +418,13 @@ export const UserVacationManagementTab: React.FC = () => {
                 return (
                   <tr key={balance.userId} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 ${isModified ? "bg-amber-50/10 dark:bg-amber-900/5" : ""}`}>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        {balance.firstName} {balance.lastName}
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {balance.firstName} {balance.lastName}
+                        </div>
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] uppercase font-bold ${balance.metadata?.activo !== false ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>
+                          {balance.metadata?.activo !== false ? "Activo" : "Inactivo"}
+                        </span>
                       </div>
                       <div className="text-xs text-gray-500">{balance.email}</div>
                     </td>
@@ -382,6 +435,12 @@ export const UserVacationManagementTab: React.FC = () => {
                       <div className="mt-0.5">
                         Antigüedad: <span className="font-semibold text-gray-750 dark:text-gray-300">{balance.seniority}</span>
                       </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300">
+                      {getActiveRoleFrame(balance)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300">
+                      {getActiveContractType(balance) || "Sin contrato"}
                     </td>
                     {/* Total Annual */}
                     <td className="px-4 py-4 text-center">
@@ -448,7 +507,7 @@ export const UserVacationManagementTab: React.FC = () => {
               })
             ) : (
               <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                   No se encontraron usuarios con los filtros seleccionados
                 </td>
               </tr>
