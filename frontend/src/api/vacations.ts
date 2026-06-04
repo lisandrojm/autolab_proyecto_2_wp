@@ -133,4 +133,14 @@ export const vacationsAPI = {
     const response = await axios.post(`/vacations/${id}/regenerate-pdf`);
     return response.data;
   },
+
+  getUsersBalance: async (year: number): Promise<any[]> => {
+    const response = await axios.get("/vacations/users-balance", { params: { year } });
+    return response.data;
+  },
+
+  saveUsersBalance: async (updates: any[]): Promise<void> => {
+    await axios.post("/vacations/users-balance", { updates });
+  },
 };
+

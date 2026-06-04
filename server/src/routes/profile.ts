@@ -627,13 +627,28 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
       }
     }
 
+    const { UserVacationBalance } = await import("../models/UserVacationBalance.js");
+    const override = await UserVacationBalance.findOne({ tenantId, userId, year: currentYear }).lean();
+
+    let displayTotal = annualDays;
+    let displayUsed = daysUsed;
+    let displayPending = daysPending;
+    let displayAvailable = daysAvailable;
+
+    if (override) {
+      if (override.totalAnnual !== undefined) displayTotal = override.totalAnnual;
+      if (override.taken !== undefined) displayUsed = override.taken;
+      if (override.pending !== undefined) displayPending = override.pending;
+      if (override.available !== undefined) displayAvailable = override.available;
+    }
+
     res.json({
       daysWorked,
       vacations: {
-        total: annualDays,
-        used: daysUsed, // Gozados
-        pending: daysPending, // Pendientes
-        available: daysAvailable,
+        total: displayTotal,
+        used: displayUsed, // Gozados
+        pending: displayPending, // Pendientes
+        available: displayAvailable,
       },
       project: projectName,
       projectVacationConfig: effectiveVacationConfig,

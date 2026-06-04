@@ -24,6 +24,51 @@ const router = express.Router();
 // Apply authentication to all routes
 router.use(authenticateToken);
 
+async function adjustBalanceOnRequestChange(
+  tenantId: any,
+  userId: any,
+  year: number,
+  days: number,
+  type: "create" | "approve" | "reject" | "cancel" | "deliver" | "sign"
+) {
+  try {
+    const { UserVacationBalance } = await import("../models/UserVacationBalance.js");
+    const override = await UserVacationBalance.findOne({ tenantId, userId, year });
+    if (!override) return;
+
+    let totalAnnual = override.totalAnnual ?? 0;
+    let taken = override.taken ?? 0;
+    let pending = override.pending ?? 0;
+    let available = override.available ?? 0;
+
+    if (type === "create") {
+      pending += days;
+      available = Math.max(0, available - days);
+    } else if (type === "approve" || type === "sign" || type === "deliver") {
+      // Move from pending to taken
+      pending = Math.max(0, pending - days);
+      taken += days;
+    } else if (type === "reject" || type === "cancel") {
+      if (pending >= days) {
+        pending -= days;
+      } else {
+        const rest = days - pending;
+        pending = 0;
+        taken = Math.max(0, taken - rest);
+      }
+      available += days;
+    }
+
+    override.taken = taken;
+    override.pending = pending;
+    override.available = available;
+    await override.save();
+  } catch (error) {
+    console.error("Error adjusting overridden user vacation balance:", error);
+  }
+}
+
+
 // POST /api/vacations/:id/regenerate-pdf - Regenerate a vacation PDF
 router.post("/:id/regenerate-pdf", async (req: any, res) => {
   console.log("[VACATIONS] Regenerate PDF request for ID:", req.params.id);
@@ -443,6 +488,261 @@ router.get("/availability", async (req, res) => {
   } catch (error: any) {
     console.error("Error fetching availability:", error);
     res.status(500).json({ error: "Error al obtener disponibilidad de vacaciones" });
+  }
+});
+
+// GET /api/vacations/users-balance - Get vacation balances (calculated & overrides) for all users for a specific year
+router.get("/users-balance", async (req: any, res) => {
+  try {
+    const tenantId = req.tenantId;
+    const yearStr = req.query.year;
+    const selectedYear = yearStr ? parseInt(yearStr as string) : new Date().getFullYear();
+
+    if (isNaN(selectedYear)) {
+      return res.status(400).json({ error: "Año inválido" });
+    }
+
+    // 1. Get all active, non-system users in the tenant
+    const users = await User.find({ tenantId, isSystem: { $ne: true } })
+      .select("firstName lastName email hireDate extraVacationDays carryOverVacationDays metadata projectIds")
+      .populate({
+        path: "metadata.projects",
+        populate: {
+          path: "projectId",
+          select: "name",
+        }
+      });
+
+    // 2. Fetch all overrides for the selected year
+    const { UserVacationBalance } = await import("../models/UserVacationBalance.js");
+    const overrides = await UserVacationBalance.find({ tenantId, year: selectedYear }).lean();
+    const overridesMap = new Map(overrides.map((o) => [o.userId.toString(), o]));
+
+    // 3. Fetch all active vacations for the selected year to compute used/pending
+    const startOfYear = new Date(selectedYear, 0, 1);
+    const endOfYear = new Date(selectedYear, 11, 31, 23, 59, 59, 999);
+    const allVacations = await Vacation.find({
+      tenantId,
+      status: { $nin: ["rejected", "cancelled"] },
+      startDate: { $gte: startOfYear, $lte: endOfYear }
+    }).lean();
+
+    // Map vacations by user
+    const userVacationsMap = new Map<string, typeof allVacations>();
+    for (const v of allVacations) {
+      const uIdStr = v.userId.toString();
+      if (!userVacationsMap.has(uIdStr)) {
+        userVacationsMap.set(uIdStr, []);
+      }
+      userVacationsMap.get(uIdStr)!.push(v);
+    }
+
+    // Get global vacation config for benefit days & carry over settings
+    const globalConfig = await VacationConfig.findOne({ tenantId });
+    const globalBenefitDays = globalConfig?.diasBeneficio || 0;
+    const isArrastreEnabled = globalConfig?.permiteArrastre || false;
+
+    // Helper: calculate seniority text
+    const { differenceInYears, differenceInMonths, differenceInDays } = await import("date-fns");
+    const calculateSeniorityText = (hireDate?: Date, contractsDays: number = 0): string => {
+      if (contractsDays > 0) {
+        const years = Math.floor(contractsDays / 365);
+        const remainingAfterYears = contractsDays % 365;
+        const months = Math.floor(remainingAfterYears / 30);
+        const days = remainingAfterYears % 30;
+
+        const parts = [];
+        if (years > 0) parts.push(`${years} ${years === 1 ? "año" : "años"}`);
+        if (months > 0) parts.push(`${months} ${months === 1 ? "mes" : "meses"}`);
+        if (days > 0) parts.push(`${days} ${days === 1 ? "día" : "días"}`);
+        return parts.length > 0 ? parts.join(", ") : "0 días";
+      }
+
+      if (!hireDate) return "—";
+
+      const now = new Date();
+      const years = differenceInYears(now, hireDate);
+      const months = differenceInMonths(now, hireDate) % 12;
+      const tempDate = new Date(hireDate);
+      tempDate.setFullYear(tempDate.getFullYear() + years);
+      tempDate.setMonth(tempDate.getMonth() + months);
+      const days = differenceInDays(now, tempDate);
+
+      const parts = [];
+      if (years > 0) parts.push(`${years} ${years === 1 ? "año" : "años"}`);
+      if (months > 0) parts.push(`${months} ${months === 1 ? "mes" : "meses"}`);
+      if (days > 0) parts.push(`${days} ${days === 1 ? "día" : "días"}`);
+      return parts.length > 0 ? parts.join(", ") : "0 días";
+    };
+
+    const responseData = [];
+
+    for (const user of users) {
+      const uIdStr = user._id.toString();
+
+      // A. Calculate seniority days from contracts (if any)
+      let contractsDays = 0;
+      if (user.metadata?.projects && Array.isArray(user.metadata.projects)) {
+        contractsDays = user.metadata.projects.reduce((acc: number, p: any) => {
+          if (!p || !p.contracts || !Array.isArray(p.contracts)) return acc;
+          return (
+            acc +
+            p.contracts.reduce((cAcc: number, c: any) => {
+              if (!c.fecha_alta_contrato) return cAcc;
+              const start = new Date(c.fecha_alta_contrato);
+              const end = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : new Date();
+              end.setHours(23, 59, 59, 999);
+              const diffTime = end.getTime() - start.getTime();
+              const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              return cAcc + Math.max(0, days);
+            }, 0)
+          );
+        }, 0);
+      }
+
+      // B. Seniority Text (relative to today)
+      const seniorityText = calculateSeniorityText(user.hireDate, contractsDays);
+
+      // C. LCT days based on seniority at Dec 31 of selectedYear
+      let projectedTotalDays = contractsDays;
+      if (contractsDays > 0 && user.metadata?.activo !== false) {
+        const now = new Date();
+        const yearEnd = new Date(selectedYear, 11, 31, 23, 59, 59, 999);
+        if (yearEnd > now) {
+          const daysToYearEnd = Math.max(0, Math.ceil((yearEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+          projectedTotalDays += daysToYearEnd;
+        }
+      }
+
+      let seniorityYears = projectedTotalDays / 365;
+      if (contractsDays === 0 && user.hireDate) {
+        seniorityYears = differenceInYears(new Date(selectedYear, 11, 31), new Date(user.hireDate));
+      }
+
+      let lawDays = 0;
+      if (seniorityYears < 0.5) {
+        // Less than 6 months: 1 day per 20 worked (approx)
+        lawDays = Math.floor(projectedTotalDays / 20) || 0;
+      } else if (seniorityYears < 5) {
+        lawDays = 14;
+      } else if (seniorityYears < 10) {
+        lawDays = 21;
+      } else if (seniorityYears < 20) {
+        lawDays = 28;
+      } else {
+        lawDays = 35;
+      }
+
+      // D. Total Dynamic allowed days
+      const extraDays = user.extraVacationDays || 0;
+      const carryOverDays = user.carryOverVacationDays || 0;
+      const calculatedTotalAnnual = lawDays + extraDays + globalBenefitDays + (isArrastreEnabled ? carryOverDays : 0);
+
+      // E. Taken / Pending from vacations list
+      let calculatedTaken = 0;
+      let calculatedPending = 0;
+
+      const userVacations = userVacationsMap.get(uIdStr) || [];
+      for (const v of userVacations) {
+        const isSigned = v.signatureStatus === "signed";
+        const isDelivered = v.status === "delivered";
+        if (isDelivered || isSigned || (v.status === "approved" && !v.requiresSignature)) {
+          calculatedTaken += v.daysRequested;
+        } else {
+          calculatedPending += v.daysRequested;
+        }
+      }
+
+      const calculatedAvailable = Math.max(0, calculatedTotalAnnual - calculatedTaken - calculatedPending);
+
+      // F. Fetch overrides
+      const override = overridesMap.get(uIdStr);
+
+      const displayTotalAnnual = override?.totalAnnual ?? calculatedTotalAnnual;
+      const displayTaken = override?.taken ?? calculatedTaken;
+      const displayPending = override?.pending ?? calculatedPending;
+      const displayAvailable = override?.available ?? Math.max(0, displayTotalAnnual - displayTaken - displayPending);
+
+      responseData.push({
+        userId: uIdStr,
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        email: user.email,
+        hireDate: user.hireDate ? user.hireDate.toISOString().split("T")[0] : null,
+        seniority: seniorityText,
+        calculated: {
+          totalAnnual: calculatedTotalAnnual,
+          taken: calculatedTaken,
+          pending: calculatedPending,
+          available: calculatedAvailable,
+        },
+        override: override
+          ? {
+              totalAnnual: override.totalAnnual,
+              taken: override.taken,
+              pending: override.pending,
+              available: override.available,
+            }
+          : undefined,
+        display: {
+          totalAnnual: displayTotalAnnual,
+          taken: displayTaken,
+          pending: displayPending,
+          available: displayAvailable,
+        },
+        // Meta field for filters in frontend
+        projectIds: user.projectIds?.map((p: any) => typeof p === "string" ? p : p._id) || [],
+        metadata: user.metadata,
+      });
+    }
+
+    res.json(responseData);
+  } catch (error: any) {
+    console.error("Error fetching users vacation balance:", error);
+    res.status(500).json({ error: "Error al obtener la gestión de vacaciones de los usuarios" });
+  }
+});
+
+// POST /api/vacations/users-balance - Save/override user vacation balances
+router.post("/users-balance", async (req: any, res) => {
+  try {
+    const tenantId = req.tenantId;
+    const { updates } = req.body;
+
+    if (!Array.isArray(updates)) {
+      return res.status(400).json({ error: "Formato de actualización inválido" });
+    }
+
+    const { UserVacationBalance } = await import("../models/UserVacationBalance.js");
+
+    const promises = updates.map(async (update: any) => {
+      const { userId, year, totalAnnual, taken, pending, available } = update;
+
+      if (!userId || !year) {
+        throw new Error("userId y year son requeridos para cada actualización");
+      }
+
+      // Upsert the override record
+      return UserVacationBalance.findOneAndUpdate(
+        { tenantId, userId, year },
+        {
+          $set: {
+            totalAnnual,
+            taken,
+            pending,
+            available,
+          },
+        },
+        { new: true, upsert: true }
+      );
+    });
+
+    await Promise.all(promises);
+
+    res.json({ message: "Balances de vacaciones guardados correctamente" });
+  } catch (error: any) {
+    console.error("Error saving user vacation balances:", error);
+    res.status(500).json({ error: "Error al guardar los balances de vacaciones", details: error.message });
   }
 });
 
@@ -1008,8 +1308,17 @@ router.post("/", async (req, res) => {
     }
 
     // Balance available BEFORE this request
-    const totalAnnualDays = user.vacationDays?.totalDays || 0;
-    const currentAvailable = totalAnnualDays - daysUsed - daysPending;
+    const requestYear = start.getFullYear();
+    const { UserVacationBalance } = await import("../models/UserVacationBalance.js");
+    const override = await UserVacationBalance.findOne({ tenantId, userId, year: requestYear }).lean();
+
+    let totalAnnualDays = user.vacationDays?.totalDays || 0;
+    let currentAvailable = totalAnnualDays - daysUsed - daysPending;
+
+    if (override && override.available !== undefined) {
+      currentAvailable = override.available;
+      totalAnnualDays = override.totalAnnual ?? totalAnnualDays;
+    }
 
     // New Balance (Remaining)
     const newBalance = currentAvailable - daysRequested;
@@ -1047,6 +1356,10 @@ router.post("/", async (req, res) => {
 
     const newVacation = new Vacation(vacationData);
     await newVacation.save();
+
+    // Trigger sync for overridden balance if any
+    await adjustBalanceOnRequestChange(tenantId, userId, requestYear, daysRequested, "create");
+
 
     res.status(201).json(newVacation);
   } catch (error: any) {
@@ -1222,6 +1535,8 @@ router.put("/:id/approve", async (req: any, res) => {
 
     await vacation.save();
 
+    await adjustBalanceOnRequestChange(tenantId, vacation.userId, vacation.startDate.getFullYear(), vacation.daysRequested, "approve");
+
     if (requiresSignature) {
       await Notification.create({
         tenantId,
@@ -1270,6 +1585,8 @@ router.put("/:id/reject", async (req: any, res) => {
     vacation.status = "rejected";
     await vacation.save();
 
+    await adjustBalanceOnRequestChange(tenantId, vacation.userId, vacation.startDate.getFullYear(), vacation.daysRequested, "reject");
+
     await Notification.create({
       tenantId,
       userId: vacation.userId,
@@ -1308,6 +1625,8 @@ router.put("/:id/cancel", async (req: any, res) => {
     vacation.cancelledAt = new Date();
     await vacation.save();
 
+    await adjustBalanceOnRequestChange(tenantId, vacation.userId, vacation.startDate.getFullYear(), vacation.daysRequested, "cancel");
+
     res.json(vacation);
   } catch (error: any) {
     console.error("Cancel vacation error:", error);
@@ -1336,6 +1655,8 @@ router.put("/:id/deliver", async (req: any, res) => {
     vacation.status = "delivered";
     vacation.deliveredAt = new Date();
     await vacation.save();
+
+    await adjustBalanceOnRequestChange(tenantId, vacation.userId, vacation.startDate.getFullYear(), vacation.daysRequested, "deliver");
 
     await Notification.create({
       tenantId,
@@ -1456,6 +1777,8 @@ router.put("/:id/mark-signed", async (req: any, res) => {
     vacation.signedAt = new Date();
     vacation.signedBy = new Types.ObjectId(signerId);
     await vacation.save();
+
+    await adjustBalanceOnRequestChange(tenantId, vacation.userId, vacation.startDate.getFullYear(), vacation.daysRequested, "sign");
 
     // Notify the approver (Supervisor/Admin)
     if (vacation.approvedBy) {
