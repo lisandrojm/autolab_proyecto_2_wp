@@ -156,6 +156,233 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
   }
 });
 
+// GET /api/v1/orders/users-balance - Get user balances (calculated & overrides) for a specific year and category
+router.get("/users-balance", async (req: any, res) => {
+  try {
+    const tenantId = req.tenantId;
+    const yearStr = req.query.year;
+    const categoryId = req.query.categoryId;
+    const selectedYear = yearStr ? parseInt(yearStr as string) : new Date().getFullYear();
+
+    if (isNaN(selectedYear)) {
+      return res.status(400).json({ error: "Año inválido" });
+    }
+    if (!categoryId) {
+      return res.status(400).json({ error: "categoryId es requerido" });
+    }
+
+    const orderConfig = await OrderConfig.findOne({ _id: categoryId, tenantId });
+    if (!orderConfig) {
+      return res.status(404).json({ error: "Configuración de pedido no encontrada" });
+    }
+
+    // 1. Get all active, non-system users in the tenant
+    const users = await User.find({ tenantId, isSystem: { $ne: true } })
+      .select("firstName lastName email hireDate extraVacationDays carryOverVacationDays metadata projectIds")
+      .populate({
+        path: "metadata.projects",
+        populate: {
+          path: "projectId",
+          select: "name",
+        }
+      });
+
+    // 2. Fetch all overrides for the selected year and category
+    const { UserOrderBalance } = await import("../models/UserOrderBalance.js");
+    const overrides = await UserOrderBalance.find({ tenantId, year: selectedYear, orderConfigId: categoryId }).lean();
+    const overridesMap = new Map(overrides.map((o) => [o.userId.toString(), o]));
+
+    // 3. Fetch all active orders for the selected year and category to compute used/pending
+    const startOfYear = new Date(selectedYear, 0, 1);
+    const endOfYear = new Date(selectedYear, 11, 31, 23, 59, 59, 999);
+    const allOrders = await Order.find({
+      tenantId,
+      categoryId,
+      status: { $nin: ["rejected", "cancelled"] },
+      requestedAt: { $gte: startOfYear, $lte: endOfYear }
+    }).lean();
+
+    // Map orders by user
+    const userOrdersMap = new Map<string, typeof allOrders>();
+    for (const o of allOrders) {
+      const uIdStr = o.userId.toString();
+      if (!userOrdersMap.has(uIdStr)) {
+        userOrdersMap.set(uIdStr, []);
+      }
+      userOrdersMap.get(uIdStr)!.push(o);
+    }
+
+    // Helper: calculate seniority text
+    const { differenceInYears, differenceInMonths, differenceInDays } = await import("date-fns");
+    const calculateSeniorityText = (hireDate?: Date, contractsDays: number = 0): string => {
+      if (contractsDays > 0) {
+        const years = Math.floor(contractsDays / 365);
+        const remainingAfterYears = contractsDays % 365;
+        const months = Math.floor(remainingAfterYears / 30);
+        const days = remainingAfterYears % 30;
+
+        const parts = [];
+        if (years > 0) parts.push(`${years} ${years === 1 ? "año" : "años"}`);
+        if (months > 0) parts.push(`${months} ${months === 1 ? "mes" : "meses"}`);
+        if (days > 0) parts.push(`${days} ${days === 1 ? "día" : "días"}`);
+        return parts.length > 0 ? parts.join(", ") : "0 días";
+      }
+
+      if (!hireDate) return "—";
+
+      const now = new Date();
+      const years = differenceInYears(now, hireDate);
+      const months = differenceInMonths(now, hireDate) % 12;
+      const tempDate = new Date(hireDate);
+      tempDate.setFullYear(tempDate.getFullYear() + years);
+      tempDate.setMonth(tempDate.getMonth() + months);
+      const days = differenceInDays(now, tempDate);
+
+      const parts = [];
+      if (years > 0) parts.push(`${years} ${years === 1 ? "año" : "años"}`);
+      if (months > 0) parts.push(`${months} ${months === 1 ? "mes" : "meses"}`);
+      if (days > 0) parts.push(`${days} ${days === 1 ? "día" : "días"}`);
+      return parts.length > 0 ? parts.join(", ") : "0 días";
+    };
+
+    const responseData = [];
+
+    for (const user of users) {
+      const uIdStr = user._id.toString();
+
+      // A. Calculate seniority days from contracts (if any)
+      let contractsDays = 0;
+      if (user.metadata?.projects && Array.isArray(user.metadata.projects)) {
+        contractsDays = user.metadata.projects.reduce((acc: number, p: any) => {
+          if (!p || !p.contracts || !Array.isArray(p.contracts)) return acc;
+          return (
+            acc +
+            p.contracts.reduce((cAcc: number, c: any) => {
+              if (!c.fecha_alta_contrato) return cAcc;
+              const start = new Date(c.fecha_alta_contrato);
+              const end = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : new Date();
+              end.setHours(23, 59, 59, 999);
+              const diffTime = end.getTime() - start.getTime();
+              const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              return cAcc + Math.max(0, days);
+            }, 0)
+          );
+        }, 0);
+      }
+
+      // B. Seniority Text (relative to today)
+      const seniorityText = calculateSeniorityText(user.hireDate, contractsDays);
+
+      // C. Total Dynamic allowed days: from OrderConfig maxDays
+      const calculatedTotalAnnual = orderConfig.maxDays || 0;
+
+      // D. Taken / Pending from orders list
+      let calculatedTaken = 0;
+      let calculatedPending = 0;
+
+      const userOrders = userOrdersMap.get(uIdStr) || [];
+      for (const o of userOrders) {
+        if (o.status === "approved" || o.status === "delivered") {
+          calculatedTaken += o.daysRequested || 0;
+        } else {
+          calculatedPending += o.daysRequested || 0;
+        }
+      }
+
+      const calculatedAvailable = Math.max(0, calculatedTotalAnnual - calculatedTaken - calculatedPending);
+
+      // E. Fetch overrides
+      const override = overridesMap.get(uIdStr);
+
+      const displayTotalAnnual = override?.totalAnnual ?? calculatedTotalAnnual;
+      const displayTaken = override?.taken ?? calculatedTaken;
+      const displayPending = override?.pending ?? calculatedPending;
+      const displayAvailable = override?.available ?? Math.max(0, displayTotalAnnual - displayTaken - displayPending);
+
+      responseData.push({
+        userId: uIdStr,
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        email: user.email,
+        hireDate: user.hireDate ? user.hireDate.toISOString().split("T")[0] : null,
+        seniority: seniorityText,
+        calculated: {
+          totalAnnual: calculatedTotalAnnual,
+          taken: calculatedTaken,
+          pending: calculatedPending,
+          available: calculatedAvailable,
+        },
+        override: override
+          ? {
+              totalAnnual: override.totalAnnual,
+              taken: override.taken,
+              pending: override.pending,
+              available: override.available,
+            }
+          : undefined,
+        display: {
+          totalAnnual: displayTotalAnnual,
+          taken: displayTaken,
+          pending: displayPending,
+          available: displayAvailable,
+        },
+        // Meta field for filters in frontend
+        projectIds: user.projectIds?.map((p: any) => typeof p === "string" ? p : p._id) || [],
+        metadata: user.metadata,
+      });
+    }
+
+    res.json(responseData);
+  } catch (error: any) {
+    console.error("Error fetching users order balance:", error);
+    res.status(500).json({ error: "Error al obtener la gestión de pedidos de los usuarios" });
+  }
+});
+
+// POST /api/v1/orders/users-balance - Save/override user order balances
+router.post("/users-balance", async (req: any, res) => {
+  try {
+    const tenantId = req.tenantId;
+    const { updates } = req.body;
+
+    if (!Array.isArray(updates)) {
+      return res.status(400).json({ error: "Formato de actualización inválido" });
+    }
+
+    const { UserOrderBalance } = await import("../models/UserOrderBalance.js");
+
+    const promises = updates.map(async (update: any) => {
+      const { userId, orderConfigId, year, totalAnnual, taken, pending, available } = update;
+
+      if (!userId || !orderConfigId || !year) {
+        throw new Error("userId, orderConfigId y year son requeridos para cada actualización");
+      }
+
+      // Upsert the override record
+      return UserOrderBalance.findOneAndUpdate(
+        { tenantId, userId, orderConfigId, year },
+        {
+          $set: {
+            totalAnnual,
+            taken,
+            pending,
+            available,
+          },
+        },
+        { new: true, upsert: true }
+      );
+    });
+
+    await Promise.all(promises);
+
+    res.json({ message: "Balances de pedidos guardados correctamente" });
+  } catch (error: any) {
+    console.error("Error saving user order balances:", error);
+    res.status(500).json({ error: "Error al guardar los balances de pedidos", details: error.message });
+  }
+});
+
+
 router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const userId = req.user!.userId;
@@ -325,45 +552,59 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
         const now = new Date();
         const startOfYear = new Date(Date.UTC(now.getFullYear(), 0, 1));
         const endOfYear = new Date(Date.UTC(now.getFullYear(), 11, 31, 23, 59, 59));
+        const requestYear = now.getFullYear();
 
-        const checkLimit = async (subId: string | null, max: number, label: string) => {
-          const query: any = {
-            tenantId: req.tenantObjectId,
-            userId,
-            categoryId: data.categoryId,
-            status: { $in: ["pending", "approved", "delivered", "pre_approved"] },
-            requestedAt: { $gte: startOfYear, $lte: endOfYear },
+        // Check if there is an override for this user/category/year
+        const { UserOrderBalance } = await import("../models/UserOrderBalance.js");
+        const override = await UserOrderBalance.findOne({ tenantId: req.tenantObjectId, userId, orderConfigId: data.categoryId, year: requestYear }).lean();
+
+        if (override && override.available !== undefined) {
+          if (data.daysRequested > override.available) {
+            res.status(400).json({ error: `El pedido excede el límite de días disponibles. Disponibles: ${override.available}, Solicitados: ${data.daysRequested}` });
+            return;
+          }
+        } else {
+          const checkLimit = async (subId: string | null, max: number, label: string) => {
+            const query: any = {
+              tenantId: req.tenantObjectId,
+              userId,
+              categoryId: data.categoryId,
+              status: { $in: ["pending", "approved", "delivered", "pre_approved"] },
+              requestedAt: { $gte: startOfYear, $lte: endOfYear },
+            };
+
+            if (subId) {
+              query.subcategories = subId;
+            }
+
+            const existingOrders = await Order.find(query).select("daysRequested");
+            const used = existingOrders.reduce((sum, o) => sum + (o.daysRequested || 0), 0);
+
+            if (used + (data.daysRequested || 0) > max) {
+              res.status(400).json({ error: `El pedido excede el límite de días para "${label}". Máximo: ${max}, Usados: ${used}, Solicitados: ${data.daysRequested}` });
+              return true; // Indica que hubo error
+            }
+            return false;
           };
 
-          if (subId) {
-            query.subcategories = subId;
-          }
-
-          const existingOrders = await Order.find(query).select("daysRequested");
-          const used = existingOrders.reduce((sum, o) => sum + (o.daysRequested || 0), 0);
-
-          if (used + (data.daysRequested || 0) > max) {
-            res.status(400).json({ error: `El pedido excede el límite de días para "${label}". Máximo: ${max}, Usados: ${used}, Solicitados: ${data.daysRequested}` });
-            return true; // Indica que hubo error
-          }
-          return false;
-        };
-
-        // 1. Check Subtype limits
-        if (data.subcategories && data.subcategories.length > 0 && category.config?.subtipos) {
-          for (const subId of data.subcategories) {
-            const subtype = category.config.subtipos.find((st: any) => st.id === subId);
-            if (subtype && subtype.maxDays) {
-              const hasError = await checkLimit(subId, subtype.maxDays, subtype.label);
-              if (hasError) return;
+          // 1. Check Subtype limits
+          if (data.subcategories && data.subcategories.length > 0 && category.config?.subtipos) {
+            let hasError = false;
+            for (const subId of data.subcategories) {
+              const subtype = category.config.subtipos.find((st: any) => st.id === subId);
+              if (subtype && subtype.maxDays) {
+                hasError = await checkLimit(subId, subtype.maxDays, subtype.label);
+                if (hasError) break;
+              }
             }
+            if (hasError) return;
           }
-        }
 
-        // 2. Check Global Category limit
-        if (category.maxDays) {
-          const hasError = await checkLimit(null, category.maxDays, category.name);
-          if (hasError) return;
+          // 2. Check Global Category limit
+          if (category.maxDays) {
+            const hasError = await checkLimit(null, category.maxDays, category.name);
+            if (hasError) return;
+          }
         }
       }
       // -------------------------------

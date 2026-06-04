@@ -6,6 +6,7 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { OrderTypesTab } from "../components/orders/OrderTypesTab";
 import { OrderContractDaysTab } from "../components/orders/OrderContractDaysTab";
+import { UserOrderManagementTab } from "../components/orders/UserOrderManagementTab";
 
 const HELP_KEY = "orderTypes";
 
@@ -13,7 +14,7 @@ export const OrderTypesPage: React.FC = () => {
   const navigate = useNavigate();
   const helpEntry = getHelp(HELP_KEY) || getHelp("orderCategories");
   const [showMainInfo, setShowMainInfo] = useState(false);
-  const [activeTab, setActiveTab] = useState<"types" | "contract_days">("types");
+  const [activeTab, setActiveTab] = useState<"types" | "contract_days" | "users_management">("types");
 
   return (
     <PageLayout
@@ -48,12 +49,16 @@ export const OrderTypesPage: React.FC = () => {
             <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === "contract_days" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`} onClick={() => setActiveTab("contract_days")}>
               Días por Tipo de Contrato
             </button>
+            <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === "users_management" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`} onClick={() => setActiveTab("users_management")}>
+              Gestión por Usuario
+            </button>
           </div>
 
           {/* Tab Content */}
           <div className="animate-in fade-in duration-300">
             {activeTab === "types" && <OrderTypesTab />}
             {activeTab === "contract_days" && <OrderContractDaysTab />}
+            {activeTab === "users_management" && <UserOrderManagementTab />}
           </div>
         </div>
       }
@@ -61,3 +66,4 @@ export const OrderTypesPage: React.FC = () => {
     />
   );
 };
+

@@ -119,4 +119,16 @@ export const orderConfigAPI = {
     const { data } = await axios.put("/order-config/settings", settings);
     return data;
   },
+
+  getUsersBalance: async (year: number, categoryId: string): Promise<any[]> => {
+    const { data } = await axios.get<any[]>("/orders/users-balance", {
+      params: { year, categoryId },
+    });
+    return data;
+  },
+
+  saveUsersBalance: async (updates: any[]): Promise<void> => {
+    await axios.post("/orders/users-balance", { updates });
+  },
 };
+
