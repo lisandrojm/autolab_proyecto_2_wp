@@ -11,6 +11,7 @@ import { OrderConfig } from "../models/OrderConfig.js";
 import { Notification } from "../models/Notification.js";
 import { User } from "../models/User.js";
 import { Role } from "../models/Role.js";
+import { UserOrderBalance } from "../models/UserOrderBalance.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { getPlainOrderNumber } from "../utils/orderHelpers.js";
@@ -159,7 +160,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
 // GET /api/v1/orders/users-balance - Get user balances (calculated & overrides) for a specific year and category
 router.get("/users-balance", async (req: any, res) => {
   try {
-    const tenantId = req.tenantId;
+    const tenantId = req.tenantObjectId;
     const yearStr = req.query.year;
     const categoryId = req.query.categoryId;
     const selectedYear = yearStr ? parseInt(yearStr as string) : new Date().getFullYear();
@@ -188,7 +189,6 @@ router.get("/users-balance", async (req: any, res) => {
       });
 
     // 2. Fetch all overrides for the selected year and category
-    const { UserOrderBalance } = await import("../models/UserOrderBalance.js");
     const overrides = await UserOrderBalance.find({ tenantId, year: selectedYear, orderConfigId: categoryId }).lean();
     const overridesMap = new Map(overrides.map((o) => [o.userId.toString(), o]));
 
@@ -342,14 +342,12 @@ router.get("/users-balance", async (req: any, res) => {
 // POST /api/v1/orders/users-balance - Save/override user order balances
 router.post("/users-balance", async (req: any, res) => {
   try {
-    const tenantId = req.tenantId;
+    const tenantId = req.tenantObjectId;
     const { updates } = req.body;
 
     if (!Array.isArray(updates)) {
       return res.status(400).json({ error: "Formato de actualización inválido" });
     }
-
-    const { UserOrderBalance } = await import("../models/UserOrderBalance.js");
 
     const promises = updates.map(async (update: any) => {
       const { userId, orderConfigId, year, totalAnnual, taken, pending, available } = update;

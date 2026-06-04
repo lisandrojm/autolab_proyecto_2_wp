@@ -1,4 +1,5 @@
 import mongoose, { Types } from "mongoose";
+import { UserOrderBalance } from "../models/UserOrderBalance.js";
 
 export function getPlainOrderNumber(orderNumber: string | undefined | null): string {
   if (!orderNumber) return "";
@@ -39,7 +40,6 @@ export async function recalculateUserOrderBalance(
   year: number
 ) {
   try {
-    const { UserOrderBalance } = await import("../models/UserOrderBalance.js");
     const override = await UserOrderBalance.findOne({ tenantId, userId, orderConfigId, year });
     if (!override) return;
 

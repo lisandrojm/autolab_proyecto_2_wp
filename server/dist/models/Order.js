@@ -107,4 +107,18 @@ orderSchema.pre("validate", async function (next) {
     }
     return next(new Error("Failed to generate unique order number after multiple attempts"));
 });
+orderSchema.post("save", async function (doc) {
+    if (doc.categoryId && doc.requestedAt) {
+        const year = doc.requestedAt.getFullYear();
+        const { recalculateUserOrderBalance } = await import("../utils/orderHelpers.js");
+        await recalculateUserOrderBalance(doc.tenantId, doc.userId, doc.categoryId, year);
+    }
+});
+orderSchema.post("findOneAndDelete", async function (doc) {
+    if (doc && doc.categoryId && doc.requestedAt) {
+        const year = doc.requestedAt.getFullYear();
+        const { recalculateUserOrderBalance } = await import("../utils/orderHelpers.js");
+        await recalculateUserOrderBalance(doc.tenantId, doc.userId, doc.categoryId, year);
+    }
+});
 export const Order = mongoose.model("Order", orderSchema);
