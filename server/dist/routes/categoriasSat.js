@@ -192,6 +192,49 @@ router.post("/", authenticateToken, async (req, res) => {
     }
 });
 /**
+ * PUT /api/v1/categorias-sat/global/:numeroCategoria
+ * Actualizar los valores salariales de todos los ítems con un número de categoría específico
+ */
+router.put("/global/:numeroCategoria", authenticateToken, async (req, res) => {
+    try {
+        const { numeroCategoria } = req.params;
+        const { sueldoBasico, sueldoAdicional, sueldoBruto, sueldoBrutoLetras, presentismo, neto, sueldoNetoLetras, fechaActualizacion, } = req.body;
+        const num = Number(numeroCategoria);
+        if (isNaN(num)) {
+            return res.status(400).json({ error: "Número de categoría inválido" });
+        }
+        const updateData = {};
+        if (sueldoBasico !== undefined)
+            updateData["data.sueldoBasico"] = Number(sueldoBasico);
+        if (sueldoAdicional !== undefined)
+            updateData["data.sueldoAdicional"] = Number(sueldoAdicional);
+        if (sueldoBruto !== undefined)
+            updateData["data.sueldoBruto"] = Number(sueldoBruto);
+        if (sueldoBrutoLetras !== undefined)
+            updateData["data.sueldoBrutoLetras"] = String(sueldoBrutoLetras).trim();
+        if (presentismo !== undefined)
+            updateData["data.presentismo"] = Number(presentismo);
+        if (neto !== undefined)
+            updateData["data.neto"] = Number(neto);
+        if (sueldoNetoLetras !== undefined)
+            updateData["data.sueldoNetoLetras"] = String(sueldoNetoLetras).trim();
+        if (fechaActualizacion !== undefined)
+            updateData["data.fechaActualizacion"] = fechaActualizacion;
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({ error: "No se proporcionaron valores para actualizar" });
+        }
+        const result = await CategoriaSat.updateMany({ "data.numeroCategoria": num }, { $set: updateData });
+        res.json({
+            message: `Categoría ${num} actualizada globalmente.`,
+            modifiedCount: result.modifiedCount
+        });
+    }
+    catch (error) {
+        console.error("Update global CategoriaSat error:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+/**
  * PUT /api/v1/categorias-sat/:id
  * Modificar una categoría SAT existente
  */
