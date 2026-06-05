@@ -250,18 +250,36 @@ export const UserOrderManagementTab: React.FC = () => {
     const numValue = value === "" ? 0 : parseInt(value);
     if (isNaN(numValue) || numValue < 0) return;
 
+    const balance = balances.find((b) => b.userId === userId);
+    if (!balance) return;
+
+    const t = balance.display.totalAnnual;
+
+    if (field === "taken") {
+      const p = editedValues[userId]?.pending ?? balance.display.pending;
+      if (numValue + p > t) {
+        sweetAlert.warning("Límite excedido", "La suma de Tomados y Pendientes no puede superar el Total Anual.");
+        return;
+      }
+    }
+
+    if (field === "pending") {
+      const tk = editedValues[userId]?.taken ?? balance.display.taken;
+      if (numValue + tk > t) {
+        sweetAlert.warning("Límite excedido", "La suma de Tomados y Pendientes no puede superar el Total Anual.");
+        return;
+      }
+    }
+
     setEditedValues((prev) => {
       const userEdits = { ...(prev[userId] || {}) };
       userEdits[field] = numValue;
 
       // Auto-calculate available if totalAnnual, taken, or pending changes
-      const balance = balances.find((b) => b.userId === userId);
-      if (balance && field !== "available") {
-        const t = userEdits.totalAnnual ?? balance.display.totalAnnual;
-        const tk = userEdits.taken ?? balance.display.taken;
-        const p = userEdits.pending ?? balance.display.pending;
-        userEdits.available = Math.max(0, t - tk - p);
-      }
+      const t = userEdits.totalAnnual ?? balance.display.totalAnnual;
+      const tk = userEdits.taken ?? balance.display.taken;
+      const p = userEdits.pending ?? balance.display.pending;
+      userEdits.available = Math.max(0, t - tk - p);
 
       return { ...prev, [userId]: userEdits };
     });
@@ -542,19 +560,8 @@ export const UserOrderManagementTab: React.FC = () => {
                           {getActiveContractType(balance) || "Sin contrato"}
                         </td>
                         {/* Total Annual */}
-                        <td className="px-4 py-4 text-center">
-                          <input
-                            type="number"
-                            min="0"
-                            value={totalValue}
-                            onChange={(e) => handleFieldChange(balance.userId, "totalAnnual", e.target.value)}
-                            className={`w-20 px-2 py-1 text-center border rounded text-sm focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:text-white
-                              ${edits.totalAnnual !== undefined && edits.totalAnnual !== balance.display.totalAnnual
-                                ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20 font-bold"
-                                : "border-gray-300 dark:border-gray-600"
-                              }
-                            `}
-                          />
+                        <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          {totalValue}
                         </td>
                         {/* Tomados */}
                         <td className="px-4 py-4 text-center">
@@ -587,19 +594,8 @@ export const UserOrderManagementTab: React.FC = () => {
                           />
                         </td>
                         {/* Disponibles */}
-                        <td className="px-4 py-4 text-center">
-                          <input
-                            type="number"
-                            min="0"
-                            value={availableValue}
-                            onChange={(e) => handleFieldChange(balance.userId, "available", e.target.value)}
-                            className={`w-20 px-2 py-1 text-center border rounded text-sm focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:text-white
-                              ${edits.available !== undefined && edits.available !== balance.display.available
-                                ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20 font-bold"
-                                : "border-gray-300 dark:border-gray-600"
-                              }
-                            `}
-                          />
+                        <td className="px-4 py-4 text-center text-sm font-semibold text-gray-750 dark:text-gray-300">
+                          {availableValue}
                         </td>
                       </tr>
                     );

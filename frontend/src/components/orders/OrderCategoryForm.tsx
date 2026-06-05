@@ -298,7 +298,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                     }}
                     className="flex-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2 py-1 text-sm text-gray-900 dark:text-white"
                   />
-                  {formData.categoryType === "fecha" && formData.dateMode === "range" && (
+                  {formData.categoryType === "fecha" && (
                     <div className="flex items-center gap-1 w-32 flex-shrink-0">
                       <span className="text-xs text-gray-500 whitespace-nowrap">Max:</span>
                       <input

@@ -60,6 +60,102 @@ export const CategoriasSatPage: React.FC = () => {
   const [importing, setImporting] = useState(false);
   const [importErrors, setImportErrors] = useState<string[]>([]);
 
+  // Global Update Modal State
+  const [showGlobalModal, setShowGlobalModal] = useState(false);
+  const [selectedGlobalCat, setSelectedGlobalCat] = useState<number | "">("");
+  const [globalFormData, setGlobalFormData] = useState({
+    sueldoBasico: "",
+    sueldoAdicional: "",
+    sueldoBruto: "",
+    sueldoBrutoLetras: "",
+    presentismo: "",
+    neto: "",
+    sueldoNetoLetras: "",
+    fechaActualizacion: "",
+  });
+
+  const handleGlobalCategorySelect = (catNumVal: string) => {
+    if (!catNumVal) {
+      setSelectedGlobalCat("");
+      setGlobalFormData({
+        sueldoBasico: "",
+        sueldoAdicional: "",
+        sueldoBruto: "",
+        sueldoBrutoLetras: "",
+        presentismo: "",
+        neto: "",
+        sueldoNetoLetras: "",
+        fechaActualizacion: new Date().toISOString().split("T")[0],
+      });
+      return;
+    }
+
+    const num = Number(catNumVal);
+    setSelectedGlobalCat(num);
+
+    const match = categorias.find((c) => c.data?.numeroCategoria === num);
+    if (match) {
+      setGlobalFormData({
+        sueldoBasico: String(match.data?.sueldoBasico ?? ""),
+        sueldoAdicional: String(match.data?.sueldoAdicional ?? ""),
+        sueldoBruto: String(match.data?.sueldoBruto ?? ""),
+        sueldoBrutoLetras: match.data?.sueldoBrutoLetras || "",
+        presentismo: String(match.data?.presentismo ?? ""),
+        neto: String(match.data?.neto ?? ""),
+        sueldoNetoLetras: match.data?.sueldoNetoLetras || "",
+        fechaActualizacion: match.data?.fechaActualizacion
+          ? new Date(match.data.fechaActualizacion).toISOString().split("T")[0]
+          : new Date().toISOString().split("T")[0],
+      });
+    }
+  };
+
+  const handleGlobalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedGlobalCat === "") {
+      sweetAlert.error("Error", "Debe seleccionar un Nº de categoría");
+      return;
+    }
+    try {
+      const payload = {
+        sueldoBasico: Number(globalFormData.sueldoBasico || 0),
+        sueldoAdicional: Number(globalFormData.sueldoAdicional || 0),
+        sueldoBruto: Number(globalFormData.sueldoBruto || 0),
+        sueldoBrutoLetras: globalFormData.sueldoBrutoLetras.trim(),
+        presentismo: Number(globalFormData.presentismo || 0),
+        neto: Number(globalFormData.neto || 0),
+        sueldoNetoLetras: globalFormData.sueldoNetoLetras.trim(),
+        fechaActualizacion: globalFormData.fechaActualizacion,
+      };
+
+      await categoriaSatAPI.updateGlobal(selectedGlobalCat, payload);
+      sweetAlert.success(
+        "Categoría actualizada",
+        `Los valores salariales se aplicaron globalmente a todos los ítems de la Categoría Nº ${selectedGlobalCat}`
+      );
+      setShowGlobalModal(false);
+      fetchCategorias();
+    } catch (error: any) {
+      const message = error.response?.data?.error || "Error al actualizar la categoría globalmente";
+      sweetAlert.error("Error", message);
+    }
+  };
+
+  const openGlobalEdit = () => {
+    setSelectedGlobalCat("");
+    setGlobalFormData({
+      sueldoBasico: "",
+      sueldoAdicional: "",
+      sueldoBruto: "",
+      sueldoBrutoLetras: "",
+      presentismo: "",
+      neto: "",
+      sueldoNetoLetras: "",
+      fechaActualizacion: new Date().toISOString().split("T")[0],
+    });
+    setShowGlobalModal(true);
+  };
+
   const openCreate = () => {
     setEditingCategoria(null);
     setFormData({
@@ -122,7 +218,10 @@ export const CategoriasSatPage: React.FC = () => {
 
       if (editingCategoria) {
         await categoriaSatAPI.update(editingCategoria._id, payload);
-        sweetAlert.success("Categoría actualizada", "Los cambios se han guardado correctamente");
+        sweetAlert.success(
+          "Categoría actualizada",
+          `Los cambios se han guardado y aplicado de manera global a todos los ítems con la Categoría Nº ${formData.numeroCategoria}`
+        );
       } else {
         await categoriaSatAPI.create(payload);
         sweetAlert.success("Categoría creada", "La categoría se ha creado correctamente");
@@ -265,6 +364,10 @@ export const CategoriasSatPage: React.FC = () => {
     }
   };
 
+  const distinctCategoryNumbers = Array.from(
+    new Set(categorias.map((c) => c.data?.numeroCategoria).filter((n) => n != null))
+  ).sort((a, b) => a - b);
+
   return (
     <PageLayout
       title="Categorías SAT"
@@ -303,6 +406,16 @@ export const CategoriasSatPage: React.FC = () => {
             <FontAwesomeIcon icon={faUpload} className="h-4 w-4" />
             <span className="hidden md:block">Carga Masiva</span>
           </button>
+          {canManage && (
+            <button
+              onClick={openGlobalEdit}
+              className="px-3 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition-all flex items-center gap-2 text-sm font-semibold shadow-md shadow-indigo-500/20 active:scale-95"
+              title="Actualizar Valores de Categoría"
+            >
+              <FontAwesomeIcon icon={faEdit} className="h-4 w-4 animate-pulse" />
+              <span className="hidden md:block">Actualizar Valores</span>
+            </button>
+          )}
         </div>
       }
       searchAndFilters={
@@ -668,6 +781,168 @@ export const CategoriasSatPage: React.FC = () => {
                   className="flex-1 rounded-lg h-10 bg-green-600 hover:bg-green-700 text-white font-semibold shadow-md shadow-green-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
                 >
                   {importing ? "Importando..." : "Subir e Importar"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
+      {/* Global Update Modal */}
+      {showGlobalModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/30">
+              <div className="flex items-center gap-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
+                  <FontAwesomeIcon icon={faEdit} className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-gray-900 dark:text-white">Actualización Global</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Modifica sueldos masivamente por Nº Categoría</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowGlobalModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors h-8 w-8 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Form Content */}
+            <form onSubmit={handleGlobalSubmit} className="flex-1 overflow-y-auto p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Seleccionar Nº Categoría *
+                </label>
+                <select
+                  required
+                  value={selectedGlobalCat}
+                  onChange={(e) => handleGlobalCategorySelect(e.target.value)}
+                  className="input-field w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">-- Seleccionar categoría --</option>
+                  {distinctCategoryNumbers.map((num) => (
+                    <option key={num} value={num}>
+                      Categoría Nº {num}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedGlobalCat !== "" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slideDown">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sueldo Básico</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={globalFormData.sueldoBasico}
+                      onChange={(e) => setGlobalFormData((prev) => ({ ...prev, sueldoBasico: e.target.value }))}
+                      className="input-field"
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sueldo Adicional</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={globalFormData.sueldoAdicional}
+                      onChange={(e) => setGlobalFormData((prev) => ({ ...prev, sueldoAdicional: e.target.value }))}
+                      className="input-field"
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sueldo Bruto</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={globalFormData.sueldoBruto}
+                      onChange={(e) => setGlobalFormData((prev) => ({ ...prev, sueldoBruto: e.target.value }))}
+                      className="input-field"
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sueldo Bruto Letras</label>
+                    <input
+                      type="text"
+                      value={globalFormData.sueldoBrutoLetras}
+                      onChange={(e) => setGlobalFormData((prev) => ({ ...prev, sueldoBrutoLetras: e.target.value }))}
+                      className="input-field"
+                      placeholder="Ej: UN MILLÓN..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Presentismo</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={globalFormData.presentismo}
+                      onChange={(e) => setGlobalFormData((prev) => ({ ...prev, presentismo: e.target.value }))}
+                      className="input-field"
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Neto</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={globalFormData.neto}
+                      onChange={(e) => setGlobalFormData((prev) => ({ ...prev, neto: e.target.value }))}
+                      className="input-field"
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sueldo Neto Letras</label>
+                    <input
+                      type="text"
+                      value={globalFormData.sueldoNetoLetras}
+                      onChange={(e) => setGlobalFormData((prev) => ({ ...prev, sueldoNetoLetras: e.target.value }))}
+                      className="input-field"
+                      placeholder="Ej: UN MILLÓN..."
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Actualización</label>
+                    <input
+                      type="date"
+                      value={globalFormData.fechaActualizacion}
+                      onChange={(e) => setGlobalFormData((prev) => ({ ...prev, fechaActualizacion: e.target.value }))}
+                      className="input-field"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 sticky bottom-0 animate-fadeIn">
+                <button
+                  type="button"
+                  onClick={() => setShowGlobalModal(false)}
+                  className="flex-1 rounded-lg h-10 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-semibold bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={selectedGlobalCat === ""}
+                  className="flex-1 rounded-lg h-10 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-md shadow-indigo-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                >
+                  Guardar Cambios
                 </button>
               </div>
             </form>

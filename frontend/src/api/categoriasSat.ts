@@ -57,6 +57,11 @@ class CategoriaSatAPI {
     return response.data;
   }
 
+  async updateGlobal(numeroCategoria: number, data: any): Promise<{ message: string; modifiedCount: number }> {
+    const response = await axios.put(`/categorias-sat/global/${numeroCategoria}`, data);
+    return response.data;
+  }
+
   async remove(id: string): Promise<{ message: string }> {
     const response = await axios.delete(`/categorias-sat/${id}`);
     return response.data;

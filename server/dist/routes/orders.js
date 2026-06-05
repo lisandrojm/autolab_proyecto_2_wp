@@ -12,6 +12,8 @@ import { Notification } from "../models/Notification.js";
 import { User } from "../models/User.js";
 import { Role } from "../models/Role.js";
 import { UserOrderBalance } from "../models/UserOrderBalance.js";
+import { Holiday } from "../models/Holiday.js";
+import { OrderGeneralConfig } from "../models/OrderGeneralConfig.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { getPlainOrderNumber } from "../utils/orderHelpers.js";
@@ -278,7 +280,9 @@ router.get("/users-balance", async (req, res) => {
             let calculatedPending = 0;
             const userOrders = userOrdersMap.get(uIdStr) || [];
             for (const o of userOrders) {
-                if (o.status === "approved" || o.status === "delivered") {
+                const isSigned = o.signatureStatus === "signed";
+                const isDelivered = o.status === "delivered";
+                if (isDelivered || isSigned || (o.status === "approved" && (o.signatureStatus === "not_required" || !o.signatureStatus))) {
                     calculatedTaken += o.daysRequested || 0;
                 }
                 else {
@@ -451,6 +455,133 @@ router.get("/:id", async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
+async function calculateDaysRequestedBackend(tenantId, userId, category, dynamicValue) {
+    if (!category || category.categoryType !== "fecha" || !dynamicValue) {
+        return 0;
+    }
+    // 1. Fetch user to find active contract
+    const user = await User.findById(userId).populate("metadata.projects").lean();
+    let userContractTypeId = null;
+    if (user?.metadata?.projects) {
+        for (const up of user.metadata.projects) {
+            if (up && Array.isArray(up.contracts)) {
+                const sorted = [...up.contracts].sort((a, b) => {
+                    const endA = a.fecha_baja_contrato ? new Date(a.fecha_baja_contrato).getTime() : Infinity;
+                    const endB = b.fecha_baja_contrato ? new Date(b.fecha_baja_contrato).getTime() : Infinity;
+                    const now = Date.now();
+                    const activeA = endA >= now;
+                    const activeB = endB >= now;
+                    if (activeA && !activeB)
+                        return -1;
+                    if (!activeA && activeB)
+                        return 1;
+                    return 0;
+                });
+                for (const c of sorted) {
+                    const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
+                    if (endDate)
+                        endDate.setHours(23, 59, 59, 999);
+                    const isActive = !endDate || endDate.getTime() >= Date.now();
+                    if (isActive && c.tipo_contrato_id) {
+                        userContractTypeId = c.tipo_contrato_id;
+                        break;
+                    }
+                }
+            }
+            if (userContractTypeId)
+                break;
+        }
+    }
+    // 2. Fetch contract rule
+    let rule = null;
+    const config = await OrderGeneralConfig.getOrCreateDefault(tenantId);
+    if (config && userContractTypeId !== null) {
+        rule = config.contractRules?.find((r) => r.contractId === userContractTypeId);
+    }
+    // Helper to check if a UTC date is holiday
+    const holidays = await Holiday.find({ tenantId }).lean();
+    const holidaySet = new Set(holidays.map((h) => {
+        const d = new Date(h.date);
+        const month = (d.getUTCMonth() + 1).toString().padStart(2, "0");
+        const day = d.getUTCDate().toString().padStart(2, "0");
+        return `${month}-${day}`;
+    }));
+    const isHoliday = (date) => {
+        const month = (date.getUTCMonth() + 1).toString().padStart(2, "0");
+        const day = date.getUTCDate().toString().padStart(2, "0");
+        const formatted = `${month}-${day}`;
+        return holidaySet.has(formatted);
+    };
+    const validateDate = (date) => {
+        const day = date.getUTCDay();
+        const isSat = day === 6;
+        const isSun = day === 0;
+        const isHol = isHoliday(date);
+        if (rule) {
+            if (isSat && !rule.saturday)
+                return false;
+            if (isSun && !rule.sunday)
+                return false;
+            if (isHol && !rule.holiday)
+                return false;
+        }
+        else {
+            // Default: Block weekends and holidays
+            if (isSat)
+                return false;
+            if (isSun)
+                return false;
+            if (isHol)
+                return false;
+        }
+        return true;
+    };
+    const parseUTCDate = (dateStr) => {
+        const [year, month, day] = dateStr.split("-").map(Number);
+        return new Date(Date.UTC(year, month - 1, day));
+    };
+    const isRange = category.dateMode === "range" || (dynamicValue && typeof dynamicValue === "object" && "fechaDesde" in dynamicValue && "fechaHasta" in dynamicValue);
+    if (isRange) {
+        const fechaDesde = dynamicValue?.fechaDesde;
+        const fechaHasta = dynamicValue?.fechaHasta;
+        if (!fechaDesde || !fechaHasta)
+            return 0;
+        const start = parseUTCDate(fechaDesde);
+        const end = parseUTCDate(fechaHasta);
+        let count = 0;
+        let curr = new Date(start);
+        const MAX_DAYS = 365;
+        let loops = 0;
+        while (curr <= end && loops < MAX_DAYS) {
+            if (validateDate(curr)) {
+                count++;
+            }
+            curr.setUTCDate(curr.getUTCDate() + 1);
+            loops++;
+        }
+        return count;
+    }
+    else {
+        // Single or Multiple discrete dates
+        if (Array.isArray(dynamicValue)) {
+            let count = 0;
+            for (const d of dynamicValue) {
+                if (typeof d !== "string")
+                    continue;
+                const dt = parseUTCDate(d);
+                if (!isNaN(dt.getTime()) && validateDate(dt)) {
+                    count++;
+                }
+            }
+            return count;
+        }
+        else if (typeof dynamicValue === "string") {
+            const dt = parseUTCDate(dynamicValue);
+            return (!isNaN(dt.getTime()) && validateDate(dt)) ? 1 : 0;
+        }
+    }
+    return 0;
+}
 router.post("/", uploadOrderImage, async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -505,6 +636,9 @@ router.post("/", uploadOrderImage, async (req, res) => {
             if (!category) {
                 res.status(400).json({ error: "Invalid or inactive category" });
                 return;
+            }
+            if (category.categoryType === "fecha" && (!data.daysRequested || data.daysRequested === 0)) {
+                data.daysRequested = await calculateDaysRequestedBackend(req.tenantObjectId, userId, category, data.dynamicValue);
             }
             if (data.subcategories && data.subcategories.length > 0 && category.config?.subtipos) {
                 const validSubtypes = category.config.subtipos.map((st) => st.id);

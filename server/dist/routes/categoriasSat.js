@@ -114,7 +114,9 @@ router.post("/import", authenticateToken, upload.single("file"), async (req, res
         }
         const bulkOps = parsedItems.map((item) => ({
             updateOne: {
-                filter: { "data.numeroCategoria": item.numeroCategoria },
+                filter: item.codigoAfip
+                    ? { "data.codigoAfip": item.codigoAfip }
+                    : { name: item.nombre },
                 update: {
                     $set: {
                         name: item.nombre,
@@ -230,6 +232,24 @@ router.put("/:id", authenticateToken, async (req, res) => {
         if (fechaActualizacion !== undefined)
             item.data.fechaActualizacion = fechaActualizacion;
         await item.save();
+        // Actualizar de manera global todos los ítems que compartan el mismo Nº de categoría
+        if (item.data.numeroCategoria !== undefined && item.data.numeroCategoria !== null) {
+            await CategoriaSat.updateMany({
+                "data.numeroCategoria": item.data.numeroCategoria,
+                _id: { $ne: item._id }
+            }, {
+                $set: {
+                    "data.sueldoBasico": item.data.sueldoBasico,
+                    "data.sueldoAdicional": item.data.sueldoAdicional,
+                    "data.sueldoBruto": item.data.sueldoBruto,
+                    "data.sueldoBrutoLetras": item.data.sueldoBrutoLetras,
+                    "data.presentismo": item.data.presentismo,
+                    "data.neto": item.data.neto,
+                    "data.sueldoNetoLetras": item.data.sueldoNetoLetras,
+                    "data.fechaActualizacion": item.data.fechaActualizacion,
+                }
+            });
+        }
         res.json(item);
     }
     catch (error) {
