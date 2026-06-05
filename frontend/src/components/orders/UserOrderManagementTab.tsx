@@ -579,19 +579,8 @@ export const UserOrderManagementTab: React.FC = () => {
                           />
                         </td>
                         {/* Pendientes */}
-                        <td className="px-4 py-4 text-center">
-                          <input
-                            type="number"
-                            min="0"
-                            value={pendingValue}
-                            onChange={(e) => handleFieldChange(balance.userId, "pending", e.target.value)}
-                            className={`w-20 px-2 py-1 text-center border rounded text-sm focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:text-white
-                              ${edits.pending !== undefined && edits.pending !== balance.display.pending
-                                ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20 font-bold"
-                                : "border-gray-300 dark:border-gray-600"
-                              }
-                            `}
-                          />
+                        <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          {pendingValue}
                         </td>
                         {/* Disponibles */}
                         <td className="px-4 py-4 text-center text-sm font-semibold text-gray-750 dark:text-gray-300">
