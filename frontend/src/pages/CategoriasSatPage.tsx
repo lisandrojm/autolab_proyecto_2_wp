@@ -103,9 +103,7 @@ export const CategoriasSatPage: React.FC = () => {
         presentismo: String(match.data?.presentismo ?? ""),
         neto: String(match.data?.neto ?? ""),
         sueldoNetoLetras: match.data?.sueldoNetoLetras || "",
-        fechaActualizacion: match.data?.fechaActualizacion
-          ? new Date(match.data.fechaActualizacion).toISOString().split("T")[0]
-          : new Date().toISOString().split("T")[0],
+        fechaActualizacion: match.data?.fechaActualizacion ? new Date(match.data.fechaActualizacion).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
       });
     }
   };
@@ -129,10 +127,7 @@ export const CategoriasSatPage: React.FC = () => {
       };
 
       await categoriaSatAPI.updateGlobal(selectedGlobalCat, payload);
-      sweetAlert.success(
-        "Categoría actualizada",
-        `Los valores salariales se aplicaron globalmente a todos los ítems de la Categoría Nº ${selectedGlobalCat}`
-      );
+      sweetAlert.success("Categoría actualizada", `Los valores salariales se aplicaron globalmente a todos los ítems de la Categoría Nº ${selectedGlobalCat}`);
       setShowGlobalModal(false);
       fetchCategorias();
     } catch (error: any) {
@@ -187,9 +182,7 @@ export const CategoriasSatPage: React.FC = () => {
       neto: String(cat.data?.neto ?? ""),
       sueldoNetoLetras: cat.data?.sueldoNetoLetras || "",
       codigoAfip: String(cat.data?.codigoAfip ?? ""),
-      fechaActualizacion: cat.data?.fechaActualizacion
-        ? new Date(cat.data.fechaActualizacion).toISOString().split("T")[0]
-        : new Date().toISOString().split("T")[0],
+      fechaActualizacion: cat.data?.fechaActualizacion ? new Date(cat.data.fechaActualizacion).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
     });
     setShowModal(true);
   };
@@ -218,10 +211,7 @@ export const CategoriasSatPage: React.FC = () => {
 
       if (editingCategoria) {
         await categoriaSatAPI.update(editingCategoria._id, payload);
-        sweetAlert.success(
-          "Categoría actualizada",
-          `Los cambios se han guardado y aplicado de manera global a todos los ítems con la Categoría Nº ${formData.numeroCategoria}`
-        );
+        sweetAlert.success("Categoría actualizada", `Los cambios se han guardado y aplicado de manera global a todos los ítems con la Categoría Nº ${formData.numeroCategoria}`);
       } else {
         await categoriaSatAPI.create(payload);
         sweetAlert.success("Categoría creada", "La categoría se ha creado correctamente");
@@ -236,10 +226,7 @@ export const CategoriasSatPage: React.FC = () => {
 
   const handleDelete = async (cat: CategoriaSatItem) => {
     const name = cat.data?.nombre || cat.name || "Categoría";
-    const result = await sweetAlert.confirm(
-      "¿Eliminar categoría?",
-      `¿Estás seguro de que quieres eliminar la categoría "${name}" (Nº ${cat.data?.numeroCategoria})?`
-    );
+    const result = await sweetAlert.confirm("¿Eliminar categoría?", `¿Estás seguro de que quieres eliminar la categoría "${name}" (Nº ${cat.data?.numeroCategoria})?`);
     if (result.isConfirmed) {
       try {
         await categoriaSatAPI.remove(cat._id);
@@ -286,14 +273,7 @@ export const CategoriasSatPage: React.FC = () => {
     .filter((c) => {
       const q = searchTerm.trim().toLowerCase();
       if (q.length === 0) return true;
-      return (
-        fuzzyMatch(c.name || "", q) ||
-        fuzzyMatch(c.data?.nombre || "", q) ||
-        fuzzyMatch(String(c.data?.numeroCategoria ?? ""), q) ||
-        fuzzyMatch(String(c.data?.codigoAfip ?? ""), q) ||
-        fuzzyMatch(c.data?.sueldoBrutoLetras || "", q) ||
-        fuzzyMatch(c.data?.sueldoNetoLetras || "", q)
-      );
+      return fuzzyMatch(c.name || "", q) || fuzzyMatch(c.data?.nombre || "", q) || fuzzyMatch(String(c.data?.numeroCategoria ?? ""), q) || fuzzyMatch(String(c.data?.codigoAfip ?? ""), q) || fuzzyMatch(c.data?.sueldoBrutoLetras || "", q) || fuzzyMatch(c.data?.sueldoNetoLetras || "", q);
     })
     .sort((a, b) => {
       const valA = a.data?.[sortField];
@@ -304,9 +284,7 @@ export const CategoriasSatPage: React.FC = () => {
       if (typeof valA === "number" && typeof valB === "number") {
         return sortDir === "asc" ? valA - valB : valB - valA;
       }
-      return sortDir === "asc"
-        ? String(valA).localeCompare(String(valB))
-        : String(valB).localeCompare(String(valA));
+      return sortDir === "asc" ? String(valA).localeCompare(String(valB)) : String(valB).localeCompare(String(valA));
     });
 
   const handleDownloadTemplate = async () => {
@@ -342,10 +320,7 @@ export const CategoriasSatPage: React.FC = () => {
       setImporting(true);
       setImportErrors([]);
       const res = await categoriaSatAPI.importExcel(importFile);
-      sweetAlert.success(
-        "Importación completada",
-        `Se han procesado correctamente ${res.count} categorías.`
-      );
+      sweetAlert.success("Importación completada", `Se han procesado correctamente ${res.count} categorías.`);
       setShowImportModal(false);
       setImportFile(null);
       fetchCategorias();
@@ -364,9 +339,7 @@ export const CategoriasSatPage: React.FC = () => {
     }
   };
 
-  const distinctCategoryNumbers = Array.from(
-    new Set(categorias.map((c) => c.data?.numeroCategoria).filter((n) => n != null))
-  ).sort((a, b) => a - b);
+  const distinctCategoryNumbers = Array.from(new Set(categorias.map((c) => c.data?.numeroCategoria).filter((n) => n != null))).sort((a, b) => a - b);
 
   return (
     <PageLayout
@@ -378,19 +351,11 @@ export const CategoriasSatPage: React.FC = () => {
       headerActions={
         <div className="flex items-center gap-3">
           {canManage && (
-            <button
-              onClick={openCreate}
-              className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center gap-2 text-sm font-semibold shadow-md shadow-blue-500/20 active:scale-95"
-              title="Nueva Categoría"
-            >
+            <button onClick={openCreate} className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center gap-2 text-sm font-semibold shadow-md shadow-blue-500/20 active:scale-95" title="Nueva Categoría">
               <FontAwesomeIcon icon={faPlus} className="h-4 w-4" />
             </button>
           )}
-          <button
-            onClick={handleDownloadTemplate}
-            className="px-3 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all flex items-center gap-2 text-sm font-semibold active:scale-95"
-            title="Descargar Plantilla"
-          >
+          <button onClick={handleDownloadTemplate} className="px-3 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all flex items-center gap-2 text-sm font-semibold active:scale-95" title="Descargar Plantilla">
             <FontAwesomeIcon icon={faDownload} className="h-4 w-4 text-green-600 dark:text-green-400" />
             <span className="hidden md:block">Descargar Plantilla</span>
           </button>
@@ -407,24 +372,16 @@ export const CategoriasSatPage: React.FC = () => {
             <span className="hidden md:block">Carga Masiva</span>
           </button>
           {canManage && (
-            <button
-              onClick={openGlobalEdit}
-              className="px-3 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition-all flex items-center gap-2 text-sm font-semibold shadow-md shadow-indigo-500/20 active:scale-95"
-              title="Actualizar Valores de Categoría"
-            >
+            <button onClick={openGlobalEdit} className="px-3 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition-all flex items-center gap-2 text-sm font-semibold shadow-md shadow-indigo-500/20 active:scale-95" title="Actualizar Valores de Categoría">
               <FontAwesomeIcon icon={faEdit} className="h-4 w-4 animate-pulse" />
-              <span className="hidden md:block">Actualizar Valores</span>
+              <span className="hidden md:block">Actualizar por Categoría</span>
             </button>
           )}
         </div>
       }
       searchAndFilters={
         <div className="flex-1 w-full">
-          <SearchAndFilters
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            searchPlaceholder="Buscar por nombre, categoría, código AFIP..."
-          />
+          <SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar por nombre, categoría, código AFIP..." />
         </div>
       }
       modal={{
@@ -453,129 +410,57 @@ export const CategoriasSatPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nº Categoría *</label>
-                <input
-                  type="number"
-                  required
-                  value={formData.numeroCategoria}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, numeroCategoria: e.target.value }))}
-                  className="input-field"
-                  placeholder="Ej: 1"
-                />
+                <input type="number" required value={formData.numeroCategoria} onChange={(e) => setFormData((prev) => ({ ...prev, numeroCategoria: e.target.value }))} className="input-field" placeholder="Ej: 1" />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.nombre}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, nombre: e.target.value }))}
-                  className="input-field"
-                  placeholder="Ej: Director de Programas"
-                />
+                <input type="text" required value={formData.nombre} onChange={(e) => setFormData((prev) => ({ ...prev, nombre: e.target.value }))} className="input-field" placeholder="Ej: Director de Programas" />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sueldo Básico</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.sueldoBasico}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, sueldoBasico: e.target.value }))}
-                  className="input-field"
-                  placeholder="0.00"
-                />
+                <input type="number" step="0.01" value={formData.sueldoBasico} onChange={(e) => setFormData((prev) => ({ ...prev, sueldoBasico: e.target.value }))} className="input-field" placeholder="0.00" />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sueldo Adicional</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.sueldoAdicional}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, sueldoAdicional: e.target.value }))}
-                  className="input-field"
-                  placeholder="0.00"
-                />
+                <input type="number" step="0.01" value={formData.sueldoAdicional} onChange={(e) => setFormData((prev) => ({ ...prev, sueldoAdicional: e.target.value }))} className="input-field" placeholder="0.00" />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sueldo Bruto</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.sueldoBruto}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, sueldoBruto: e.target.value }))}
-                  className="input-field"
-                  placeholder="0.00"
-                />
+                <input type="number" step="0.01" value={formData.sueldoBruto} onChange={(e) => setFormData((prev) => ({ ...prev, sueldoBruto: e.target.value }))} className="input-field" placeholder="0.00" />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sueldo Bruto Letras</label>
-                <input
-                  type="text"
-                  value={formData.sueldoBrutoLetras}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, sueldoBrutoLetras: e.target.value }))}
-                  className="input-field"
-                  placeholder="Ej: UN MILLÓN OCHOCIENTOS..."
-                />
+                <input type="text" value={formData.sueldoBrutoLetras} onChange={(e) => setFormData((prev) => ({ ...prev, sueldoBrutoLetras: e.target.value }))} className="input-field" placeholder="Ej: UN MILLÓN OCHOCIENTOS..." />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Presentismo</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.presentismo}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, presentismo: e.target.value }))}
-                  className="input-field"
-                  placeholder="0.00"
-                />
+                <input type="number" step="0.01" value={formData.presentismo} onChange={(e) => setFormData((prev) => ({ ...prev, presentismo: e.target.value }))} className="input-field" placeholder="0.00" />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Neto</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.neto}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, neto: e.target.value }))}
-                  className="input-field"
-                  placeholder="0.00"
-                />
+                <input type="number" step="0.01" value={formData.neto} onChange={(e) => setFormData((prev) => ({ ...prev, neto: e.target.value }))} className="input-field" placeholder="0.00" />
               </div>
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sueldo Neto Letras</label>
-                <input
-                  type="text"
-                  value={formData.sueldoNetoLetras}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, sueldoNetoLetras: e.target.value }))}
-                  className="input-field"
-                  placeholder="Ej: UN MILLÓN CUATROCIENTOS..."
-                />
+                <input type="text" value={formData.sueldoNetoLetras} onChange={(e) => setFormData((prev) => ({ ...prev, sueldoNetoLetras: e.target.value }))} className="input-field" placeholder="Ej: UN MILLÓN CUATROCIENTOS..." />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Código AFIP</label>
-                <input
-                  type="number"
-                  value={formData.codigoAfip}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, codigoAfip: e.target.value }))}
-                  className="input-field"
-                  placeholder="Ej: 35283"
-                />
+                <input type="number" value={formData.codigoAfip} onChange={(e) => setFormData((prev) => ({ ...prev, codigoAfip: e.target.value }))} className="input-field" placeholder="Ej: 35283" />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Actualización</label>
-                <input
-                  type="date"
-                  value={formData.fechaActualizacion}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, fechaActualizacion: e.target.value }))}
-                  className="input-field"
-                />
+                <input type="date" value={formData.fechaActualizacion} onChange={(e) => setFormData((prev) => ({ ...prev, fechaActualizacion: e.target.value }))} className="input-field" />
               </div>
             </div>
           </form>
@@ -608,31 +493,58 @@ export const CategoriasSatPage: React.FC = () => {
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none" onClick={() => handleSort("numeroCategoria")}>
-                    <div className="flex items-center">Nº Cat.<SortIcon field="numeroCategoria" /></div>
+                    <div className="flex items-center">
+                      Nº Cat.
+                      <SortIcon field="numeroCategoria" />
+                    </div>
                   </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none" onClick={() => handleSort("nombre")}>
-                    <div className="flex items-center">Nombre<SortIcon field="nombre" /></div>
+                    <div className="flex items-center">
+                      Nombre
+                      <SortIcon field="nombre" />
+                    </div>
                   </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none" onClick={() => handleSort("sueldoBasico")}>
-                    <div className="flex items-center">Sueldo Básico<SortIcon field="sueldoBasico" /></div>
+                    <div className="flex items-center">
+                      Sueldo Básico
+                      <SortIcon field="sueldoBasico" />
+                    </div>
                   </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none" onClick={() => handleSort("sueldoAdicional")}>
-                    <div className="flex items-center">Adicional<SortIcon field="sueldoAdicional" /></div>
+                    <div className="flex items-center">
+                      Adicional
+                      <SortIcon field="sueldoAdicional" />
+                    </div>
                   </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none" onClick={() => handleSort("sueldoBruto")}>
-                    <div className="flex items-center">Sueldo Bruto<SortIcon field="sueldoBruto" /></div>
+                    <div className="flex items-center">
+                      Sueldo Bruto
+                      <SortIcon field="sueldoBruto" />
+                    </div>
                   </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none hidden xl:table-cell" onClick={() => handleSort("presentismo")}>
-                    <div className="flex items-center">Presentismo<SortIcon field="presentismo" /></div>
+                    <div className="flex items-center">
+                      Presentismo
+                      <SortIcon field="presentismo" />
+                    </div>
                   </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none" onClick={() => handleSort("neto")}>
-                    <div className="flex items-center">Neto<SortIcon field="neto" /></div>
+                    <div className="flex items-center">
+                      Neto
+                      <SortIcon field="neto" />
+                    </div>
                   </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none hidden lg:table-cell" onClick={() => handleSort("codigoAfip")}>
-                    <div className="flex items-center">Cód. AFIP<SortIcon field="codigoAfip" /></div>
+                    <div className="flex items-center">
+                      Cód. AFIP
+                      <SortIcon field="codigoAfip" />
+                    </div>
                   </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none hidden lg:table-cell" onClick={() => handleSort("fechaActualizacion")}>
-                    <div className="flex items-center">Actualización<SortIcon field="fechaActualizacion" /></div>
+                    <div className="flex items-center">
+                      Actualización
+                      <SortIcon field="fechaActualizacion" />
+                    </div>
                   </th>
                   {canManage && <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>}
                 </tr>
@@ -641,9 +553,7 @@ export const CategoriasSatPage: React.FC = () => {
                 {filtered.map((cat) => (
                   <tr key={cat._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                     <td className="px-4 py-3">
-                      <span className="inline-flex items-center justify-center h-7 w-10 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-bold">
-                        {cat.data?.numeroCategoria ?? "—"}
-                      </span>
+                      <span className="inline-flex items-center justify-center h-7 w-10 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-bold">{cat.data?.numeroCategoria ?? "—"}</span>
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{cat.data?.nombre || cat.name || "—"}</span>
@@ -674,9 +584,7 @@ export const CategoriasSatPage: React.FC = () => {
                       )}
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                        {cat.data?.codigoAfip ?? "—"}
-                      </span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{cat.data?.codigoAfip ?? "—"}</span>
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
                       <span className="text-xs text-gray-500 dark:text-gray-400">{formatDate(cat.data?.fechaActualizacion)}</span>
@@ -684,18 +592,10 @@ export const CategoriasSatPage: React.FC = () => {
                     {canManage && (
                       <td className="px-4 py-3 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => openEdit(cat)}
-                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
-                            title="Editar"
-                          >
+                          <button onClick={() => openEdit(cat)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Editar">
                             <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
                           </button>
-                          <button
-                            onClick={() => handleDelete(cat)}
-                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
-                            title="Eliminar"
-                          >
+                          <button onClick={() => handleDelete(cat)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors" title="Eliminar">
                             <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
                           </button>
                         </div>
@@ -724,10 +624,7 @@ export const CategoriasSatPage: React.FC = () => {
                 <FontAwesomeIcon icon={faFileExcel} className="text-green-600 dark:text-green-400 h-5 w-5" />
                 <h3 className="font-bold text-lg text-gray-900 dark:text-white">Carga Masiva de Categorías SAT</h3>
               </div>
-              <button
-                onClick={() => setShowImportModal(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors h-8 w-8 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
+              <button onClick={() => setShowImportModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors h-8 w-8 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700">
                 <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
               </button>
             </div>
@@ -737,24 +634,18 @@ export const CategoriasSatPage: React.FC = () => {
                 <p className="font-semibold mb-1">Instrucciones de Carga:</p>
                 <ol className="list-decimal list-inside space-y-1 text-xs">
                   <li>Descarga la plantilla de Excel provista.</li>
-                  <li>Completa las columnas obligatorias: <strong>Nº Categoría</strong> y <strong>Nombre</strong>.</li>
+                  <li>
+                    Completa las columnas obligatorias: <strong>Nº Categoría</strong> y <strong>Nombre</strong>.
+                  </li>
                   <li>Sube tu archivo completado en esta ventana.</li>
                   <li>Si un Nº Categoría ya existe, la carga masiva actualizará sus datos automáticamente (upsert).</li>
                 </ol>
               </div>
 
               <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-8 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900/20 hover:border-blue-500 dark:hover:border-blue-500 transition-all cursor-pointer relative group">
-                <input
-                  type="file"
-                  accept=".xlsx, .xls"
-                  required
-                  onChange={handleFileChange}
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                />
+                <input type="file" accept=".xlsx, .xls" required onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
                 <FontAwesomeIcon icon={faFileExcel} className="h-10 w-10 text-green-500 dark:text-green-400 mb-3 group-hover:scale-110 transition-transform" />
-                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  {importFile ? importFile.name : "Selecciona o arrastra tu archivo Excel"}
-                </span>
+                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{importFile ? importFile.name : "Selecciona o arrastra tu archivo Excel"}</span>
                 <span className="text-xs text-gray-500 mt-1">Soporta archivos .xlsx y .xls</span>
               </div>
 
@@ -768,18 +659,10 @@ export const CategoriasSatPage: React.FC = () => {
               )}
 
               <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowImportModal(false)}
-                  className="flex-1 rounded-lg h-10 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-semibold bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
+                <button type="button" onClick={() => setShowImportModal(false)} className="flex-1 rounded-lg h-10 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-semibold bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                   Cancelar
                 </button>
-                <button
-                  type="submit"
-                  disabled={importing || !importFile}
-                  className="flex-1 rounded-lg h-10 bg-green-600 hover:bg-green-700 text-white font-semibold shadow-md shadow-green-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
-                >
+                <button type="submit" disabled={importing || !importFile} className="flex-1 rounded-lg h-10 bg-green-600 hover:bg-green-700 text-white font-semibold shadow-md shadow-green-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">
                   {importing ? "Importando..." : "Subir e Importar"}
                 </button>
               </div>
@@ -787,7 +670,7 @@ export const CategoriasSatPage: React.FC = () => {
           </div>
         </div>
       )}
-      
+
       {/* Global Update Modal */}
       {showGlobalModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fadeIn">
@@ -803,10 +686,7 @@ export const CategoriasSatPage: React.FC = () => {
                   <p className="text-xs text-gray-500 dark:text-gray-400">Modifica sueldos masivamente por Nº Categoría</p>
                 </div>
               </div>
-              <button
-                onClick={() => setShowGlobalModal(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors h-8 w-8 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
+              <button onClick={() => setShowGlobalModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors h-8 w-8 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700">
                 <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
               </button>
             </div>
@@ -814,15 +694,8 @@ export const CategoriasSatPage: React.FC = () => {
             {/* Form Content */}
             <form onSubmit={handleGlobalSubmit} className="flex-1 overflow-y-auto p-5 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Seleccionar Nº Categoría *
-                </label>
-                <select
-                  required
-                  value={selectedGlobalCat}
-                  onChange={(e) => handleGlobalCategorySelect(e.target.value)}
-                  className="input-field w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500"
-                >
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Seleccionar Nº Categoría *</label>
+                <select required value={selectedGlobalCat} onChange={(e) => handleGlobalCategorySelect(e.target.value)} className="input-field w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500">
                   <option value="">-- Seleccionar categoría --</option>
                   {distinctCategoryNumbers.map((num) => (
                     <option key={num} value={num}>
@@ -836,112 +709,52 @@ export const CategoriasSatPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slideDown">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sueldo Básico</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={globalFormData.sueldoBasico}
-                      onChange={(e) => setGlobalFormData((prev) => ({ ...prev, sueldoBasico: e.target.value }))}
-                      className="input-field"
-                      placeholder="0.00"
-                    />
+                    <input type="number" step="0.01" value={globalFormData.sueldoBasico} onChange={(e) => setGlobalFormData((prev) => ({ ...prev, sueldoBasico: e.target.value }))} className="input-field" placeholder="0.00" />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sueldo Adicional</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={globalFormData.sueldoAdicional}
-                      onChange={(e) => setGlobalFormData((prev) => ({ ...prev, sueldoAdicional: e.target.value }))}
-                      className="input-field"
-                      placeholder="0.00"
-                    />
+                    <input type="number" step="0.01" value={globalFormData.sueldoAdicional} onChange={(e) => setGlobalFormData((prev) => ({ ...prev, sueldoAdicional: e.target.value }))} className="input-field" placeholder="0.00" />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sueldo Bruto</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={globalFormData.sueldoBruto}
-                      onChange={(e) => setGlobalFormData((prev) => ({ ...prev, sueldoBruto: e.target.value }))}
-                      className="input-field"
-                      placeholder="0.00"
-                    />
+                    <input type="number" step="0.01" value={globalFormData.sueldoBruto} onChange={(e) => setGlobalFormData((prev) => ({ ...prev, sueldoBruto: e.target.value }))} className="input-field" placeholder="0.00" />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sueldo Bruto Letras</label>
-                    <input
-                      type="text"
-                      value={globalFormData.sueldoBrutoLetras}
-                      onChange={(e) => setGlobalFormData((prev) => ({ ...prev, sueldoBrutoLetras: e.target.value }))}
-                      className="input-field"
-                      placeholder="Ej: UN MILLÓN..."
-                    />
+                    <input type="text" value={globalFormData.sueldoBrutoLetras} onChange={(e) => setGlobalFormData((prev) => ({ ...prev, sueldoBrutoLetras: e.target.value }))} className="input-field" placeholder="Ej: UN MILLÓN..." />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Presentismo</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={globalFormData.presentismo}
-                      onChange={(e) => setGlobalFormData((prev) => ({ ...prev, presentismo: e.target.value }))}
-                      className="input-field"
-                      placeholder="0.00"
-                    />
+                    <input type="number" step="0.01" value={globalFormData.presentismo} onChange={(e) => setGlobalFormData((prev) => ({ ...prev, presentismo: e.target.value }))} className="input-field" placeholder="0.00" />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Neto</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={globalFormData.neto}
-                      onChange={(e) => setGlobalFormData((prev) => ({ ...prev, neto: e.target.value }))}
-                      className="input-field"
-                      placeholder="0.00"
-                    />
+                    <input type="number" step="0.01" value={globalFormData.neto} onChange={(e) => setGlobalFormData((prev) => ({ ...prev, neto: e.target.value }))} className="input-field" placeholder="0.00" />
                   </div>
 
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sueldo Neto Letras</label>
-                    <input
-                      type="text"
-                      value={globalFormData.sueldoNetoLetras}
-                      onChange={(e) => setGlobalFormData((prev) => ({ ...prev, sueldoNetoLetras: e.target.value }))}
-                      className="input-field"
-                      placeholder="Ej: UN MILLÓN..."
-                    />
+                    <input type="text" value={globalFormData.sueldoNetoLetras} onChange={(e) => setGlobalFormData((prev) => ({ ...prev, sueldoNetoLetras: e.target.value }))} className="input-field" placeholder="Ej: UN MILLÓN..." />
                   </div>
 
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Actualización</label>
-                    <input
-                      type="date"
-                      value={globalFormData.fechaActualizacion}
-                      onChange={(e) => setGlobalFormData((prev) => ({ ...prev, fechaActualizacion: e.target.value }))}
-                      className="input-field"
-                    />
+                    <input type="date" value={globalFormData.fechaActualizacion} onChange={(e) => setGlobalFormData((prev) => ({ ...prev, fechaActualizacion: e.target.value }))} className="input-field" />
                   </div>
                 </div>
               )}
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 sticky bottom-0 animate-fadeIn">
-                <button
-                  type="button"
-                  onClick={() => setShowGlobalModal(false)}
-                  className="flex-1 rounded-lg h-10 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-semibold bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
+                <button type="button" onClick={() => setShowGlobalModal(false)} className="flex-1 rounded-lg h-10 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-semibold bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                   Cancelar
                 </button>
-                <button
-                  type="submit"
-                  disabled={selectedGlobalCat === ""}
-                  className="flex-1 rounded-lg h-10 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-md shadow-indigo-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
-                >
+                <button type="submit" disabled={selectedGlobalCat === ""} className="flex-1 rounded-lg h-10 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-md shadow-indigo-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">
                   Guardar Cambios
                 </button>
               </div>
