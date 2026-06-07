@@ -297,10 +297,48 @@ router.get("/users-balance", async (req: any, res) => {
       // C. Total Dynamic allowed: from OrderConfig or subtype config
       let calculatedTotalAnnual = 0;
       if (orderConfig.categoryType === "dinero") {
-        calculatedTotalAnnual = orderConfig.montoMaximo || 0;
-        if (subtypeId && orderConfig.config?.subtipos) {
-          const subtype = orderConfig.config.subtipos.find((st: any) => st.id === subtypeId);
-          calculatedTotalAnnual = subtype?.montoMaximo ?? orderConfig.montoMaximo ?? 0;
+        if (orderConfig.limitType === "monto") {
+          calculatedTotalAnnual = orderConfig.montoMaximo || 0;
+          if (subtypeId && orderConfig.config?.subtipos) {
+            const subtype = orderConfig.config.subtipos.find((st: any) => st.id === subtypeId);
+            calculatedTotalAnnual = subtype?.montoMaximo ?? orderConfig.montoMaximo ?? 0;
+          }
+        } else if (orderConfig.limitType === "porcentaje") {
+          let sueldoMano = 0;
+          if (user.metadata?.projects && Array.isArray(user.metadata.projects)) {
+            for (const up of user.metadata.projects as any[]) {
+              if (up && Array.isArray(up.contracts)) {
+                const sortedContracts = [...up.contracts].sort((a, b) => {
+                  const endA = a.fecha_baja_contrato ? new Date(a.fecha_baja_contrato).getTime() : Infinity;
+                  const endB = b.fecha_baja_contrato ? new Date(b.fecha_baja_contrato).getTime() : Infinity;
+                  const now = Date.now();
+                  const activeA = endA >= now;
+                  const activeB = endB >= now;
+                  if (activeA && !activeB) return -1;
+                  if (!activeA && activeB) return 1;
+                  return 0;
+                });
+                for (const c of sortedContracts) {
+                  const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
+                  if (endDate) endDate.setHours(23, 59, 59, 999);
+                  const isActive = !endDate || endDate.getTime() >= Date.now();
+                  if (isActive && c.sueldo_mano) {
+                    const rawSalary = String(c.sueldo_mano).replace(/[,.]/g, "");
+                    const num = parseFloat(rawSalary);
+                    if (!isNaN(num)) {
+                      sueldoMano = num;
+                      break;
+                    }
+                  }
+                }
+              }
+              if (sueldoMano > 0) break;
+            }
+          }
+          const percentage = orderConfig.porcentajeMaximo || 0;
+          calculatedTotalAnnual = Math.floor(((sueldoMano * percentage) / 100) / 50000) * 50000;
+        } else {
+          calculatedTotalAnnual = 0;
         }
       } else {
         calculatedTotalAnnual = orderConfig.maxDays || 0;
@@ -333,6 +371,58 @@ router.get("/users-balance", async (req: any, res) => {
         } else {
           calculatedPending += cost;
         }
+      }
+
+      // D2. Calculate installments information if categoryType === "dinero"
+      let installmentsInfo = undefined;
+      if (orderConfig.categoryType === "dinero") {
+        let totalInst = 0;
+        let passedInst = 0;
+        let remainingInst = 0;
+
+        for (const o of userOrders) {
+          let inst = o.installments;
+          if (!inst) {
+            if (o.subcategories && o.subcategories.length > 0 && orderConfig.config?.subtipos) {
+              const subId = o.subcategories[0];
+              const subtype = orderConfig.config.subtipos.find((st: any) => st.id === subId);
+              if (subtype?.repayment?.installments) {
+                inst = subtype.repayment.installments;
+              }
+            }
+            if (!inst && orderConfig.config?.repayment?.installments) {
+              inst = orderConfig.config.repayment.installments;
+            }
+          }
+          const numInstallments = inst || 1;
+          const baseDateStr = o.approvedAt || o.preApprovedAt || o.deliveredAt || o.requestedAt;
+
+          if (baseDateStr) {
+            const baseDate = new Date(baseDateStr);
+            if (!isNaN(baseDate.getTime())) {
+              const startYear = baseDate.getFullYear();
+              const startMonth = baseDate.getMonth();
+
+              totalInst += numInstallments;
+              const now = new Date();
+              for (let i = 0; i < numInstallments; i++) {
+                const discountDate = new Date(startYear, startMonth + i + 1, 0); // last day of month
+                discountDate.setHours(23, 59, 59, 999);
+                if (discountDate.getTime() <= now.getTime()) {
+                  passedInst++;
+                } else {
+                  remainingInst++;
+                }
+              }
+            }
+          }
+        }
+
+        installmentsInfo = {
+          total: totalInst,
+          passed: passedInst,
+          remaining: remainingInst
+        };
       }
 
       const calculatedAvailable = Math.max(0, calculatedTotalAnnual - calculatedTaken - calculatedPending);
@@ -372,6 +462,7 @@ router.get("/users-balance", async (req: any, res) => {
           pending: displayPending,
           available: displayAvailable,
         },
+        installmentsInfo,
         // Meta field for filters in frontend
         projectIds: user.projectIds?.map((p: any) => (p._id || p).toString()) || [],
         metadata: user.metadata,

@@ -34,6 +34,11 @@ interface UserOrderBalance {
   };
   projectIds: string[];
   metadata?: any;
+  installmentsInfo?: {
+    total: number;
+    passed: number;
+    remaining: number;
+  };
 }
 
 export const UserOrderManagementTab: React.FC = () => {
@@ -71,6 +76,32 @@ export const UserOrderManagementTab: React.FC = () => {
 
   const activeConfig = orderConfigs.find((c) => c._id === selectedOrderConfigId);
   const isDinero = activeConfig?.categoryType === "dinero";
+
+  const getHeaderLabel = (column: "total" | "taken" | "pending" | "available") => {
+    const categoryType = activeConfig?.categoryType || "fecha";
+    if (categoryType === "dinero") {
+      switch (column) {
+        case "total": return "Límite";
+        case "taken": return "Monto Tomado";
+        case "pending": return "Monto Pendiente";
+        case "available": return "Monto Disponible";
+      }
+    } else if (categoryType === "objeto" || categoryType === "otros") {
+      switch (column) {
+        case "total": return "Límite";
+        case "taken": return "Pedidos Tomados";
+        case "pending": return "Pedidos Pendientes";
+        case "available": return "Pedidos Disponibles";
+      }
+    } else {
+      switch (column) {
+        case "total": return "Total Anual";
+        case "taken": return "Tomados (Gozados)";
+        case "pending": return "Pendientes";
+        case "available": return "Disponibles";
+      }
+    }
+  };
 
   useEffect(() => {
     loadInitialData();
@@ -363,7 +394,11 @@ export const UserOrderManagementTab: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Gestión de Pedidos por Usuario ({filteredBalances.length})</h3>
-          <p className="text-xs text-gray-500 mt-1">Configura y edita los días correspondientes, gozados, pendientes y disponibles por tipo de pedido para cada año.</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {isDinero
+              ? "Configura y edita los montos correspondientes, tomados, pendientes y disponibles por tipo de pedido para cada año."
+              : "Configura y edita los días/unidades correspondientes, tomados, pendientes y disponibles por tipo de pedido para cada año."}
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -518,10 +553,13 @@ export const UserOrderManagementTab: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ingreso / Antigüedad</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rol Frame</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contrato</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">Total Anual</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">Tomados (Gozados)</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">Pendientes</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">Disponibles</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">{getHeaderLabel("total")}</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">{getHeaderLabel("taken")}</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">{getHeaderLabel("pending")}</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">{getHeaderLabel("available")}</th>
+                  {isDinero && (
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">Cuotas</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
@@ -564,7 +602,9 @@ export const UserOrderManagementTab: React.FC = () => {
                         </td>
                         {/* Total Annual */}
                         <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                          {isDinero ? `$ ${totalValue.toLocaleString("es-AR")}` : totalValue}
+                          {isDinero ? (
+                            !activeConfig?.limitType ? "Sin límite" : `$ ${totalValue.toLocaleString("es-AR")}`
+                          ) : totalValue}
                         </td>
                         {/* Tomados */}
                         <td className="px-4 py-4 text-center">
@@ -590,14 +630,30 @@ export const UserOrderManagementTab: React.FC = () => {
                         </td>
                         {/* Disponibles */}
                         <td className="px-4 py-4 text-center text-sm font-semibold text-gray-750 dark:text-gray-300 whitespace-nowrap">
-                          {isDinero ? `$ ${availableValue.toLocaleString("es-AR")}` : availableValue}
+                          {isDinero ? (
+                            !activeConfig?.limitType ? "Sin límite" : `$ ${availableValue.toLocaleString("es-AR")}`
+                          ) : availableValue}
                         </td>
+                        {/* Installments info (Dinero only) */}
+                        {isDinero && (
+                          <td className="px-4 py-4 whitespace-nowrap text-xs text-gray-750 dark:text-gray-300 text-center">
+                            {balance.installmentsInfo && balance.installmentsInfo.total > 0 ? (
+                              <div className="inline-block text-left text-[11px] leading-relaxed">
+                                <div>Totales: <span className="font-semibold text-gray-900 dark:text-white">{balance.installmentsInfo.total}</span></div>
+                                <div className="text-[10px] text-green-600 dark:text-green-400 font-medium">Pasadas: {balance.installmentsInfo.passed}</div>
+                                <div className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">Restantes: {balance.installmentsInfo.remaining}</div>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 dark:text-gray-600">—</span>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={isDinero ? 9 : 8} className="px-6 py-8 text-center text-gray-500">
                       No se encontraron usuarios con los filtros seleccionados
                     </td>
                   </tr>

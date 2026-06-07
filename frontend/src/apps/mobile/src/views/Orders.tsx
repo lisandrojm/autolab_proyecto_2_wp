@@ -455,7 +455,16 @@ export default function Orders({ onNavigate }: OrdersProps) {
         subcategories: subcategories ? [subcategories] : undefined,
         dynamicValue: validDynamicValue,
         amount: selectedCategory?.categoryType === "dinero" ? amount : undefined,
-        installments: selectedCategory?.categoryType === "dinero" ? installments : undefined,
+        installments: selectedCategory?.categoryType === "dinero" 
+          ? (installments ?? (() => {
+              let defaultInst = selectedCategory.config?.repayment?.installments;
+              if (selectedCategory.config?.subtipos && subcategories) {
+                const st = selectedCategory.config.subtipos.find((s: any) => s.id === subcategories);
+                if (st?.repayment?.installments) defaultInst = st.repayment.installments;
+              }
+              return defaultInst ?? 1;
+            })())
+          : undefined,
         actionCompleted: selectedCategory?.requiresAction ? (selectedCategory?.requiresUserConfirmation ? actionCompleted : true) : undefined,
         futureActionPlazoDias: futureActionPlazoDias || undefined,
         futureActionFechaLimite: futureActionFechaLimite || undefined,

@@ -68,24 +68,45 @@ export async function recalculateUserOrderBalance(
 
     const orders = await Order.find(orderFilter).lean();
 
+    const OrderConfig = mongoose.models.OrderConfig || mongoose.model("OrderConfig");
+    const category = await OrderConfig.findById(orderConfigId).lean() as any;
+    if (!category) {
+      console.warn(`[ORDER BALANCE] Category not found: ${orderConfigId}`);
+      return;
+    }
+
     let taken = 0;
     let pending = 0;
 
     for (const o of orders) {
       const isSigned = o.signatureStatus === "signed";
       const isDelivered = o.status === "delivered";
-      if (isDelivered || isSigned || (o.status === "approved" && (o.signatureStatus === "not_required" || !o.signatureStatus))) {
-        taken += o.daysRequested || 0;
+      
+      let cost = 0;
+      if (category.categoryType === "dinero") {
+        cost = o.amount || 0;
+      } else if (category.categoryType === "fecha") {
+        cost = o.daysRequested || 0;
       } else {
-        pending += o.daysRequested || 0;
+        cost = 1; // for objeto/otros
+      }
+
+      if (isDelivered || isSigned || (o.status === "approved" && (o.signatureStatus === "not_required" || !o.signatureStatus))) {
+        taken += cost;
+      } else {
+        pending += cost;
       }
     }
 
     override.taken = taken;
     override.pending = pending;
-    override.available = Math.max(0, (override.totalAnnual ?? 0) - taken - pending);
+    if (override.totalAnnual !== undefined) {
+      override.available = Math.max(0, override.totalAnnual - taken - pending);
+    } else {
+      override.available = undefined;
+    }
     await override.save();
-    console.log(`[ORDER BALANCE] Recalculated for user ${userId}, year ${year}, category ${orderConfigId}, subtype ${subtypeId}: taken=${taken}, pending=${pending}, available=${override.available}`);
+    console.log(`[ORDER BALANCE] Recalculated for user ${userId}, year ${year}, category ${orderConfigId}, subtype ${subtypeId}: categoryType=${category.categoryType}, taken=${taken}, pending=${pending}, available=${override.available}`);
   } catch (error) {
     console.error("Error recalculating user order balance:", error);
   }
