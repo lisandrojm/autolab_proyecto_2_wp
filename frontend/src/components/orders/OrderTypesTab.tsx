@@ -55,64 +55,89 @@ const SortableRow: React.FC<SortableRowProps> = ({ orderConfig, index, isReorder
   const expectedCode = getExpectedTemplateCode();
   const matchingTemplate = pdfTemplates?.find((t) => t.code === expectedCode && t.isActive);
 
-  return (
-    <tr ref={setNodeRef} style={style} {...(isReorderMode ? { ...attributes, ...listeners } : {})} className={`border-b border-gray-100 dark:border-gray-700 ${isReorderMode ? "bg-blue-50 dark:bg-blue-900/20 cursor-grab active:cursor-grabbing" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"}`}>
-      <td
-        className={`py-3 px-4 ${!isReorderMode ? "cursor-pointer" : ""}`}
-        onClick={(e) => {
-          if (!isReorderMode) {
-            e.preventDefault();
-            e.stopPropagation();
-            onEnableReorder();
-          }
-        }}
-        title={!isReorderMode ? "Clic para activar modo ordenar" : ""}
-      >
-        <div className={`flex items-center justify-center ${isReorderMode ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-600 hover:text-blue-500"}`}>
-          <FontAwesomeIcon icon={faGripVertical} className="h-5 w-5" />
-        </div>
-      </td>
-      <td className="py-3 px-4">
-        <span className="text-sm font-medium">{index + 1}</span>
-      </td>
-      <td className="py-3 px-4">
-        <div className="font-medium text-gray-900 dark:text-gray-100">{orderConfig.name}</div>
-      </td>
-      <td className="py-3 px-4">
-        <div className="flex flex-col items-start gap-1">
-          <div className="flex items-center gap-1 flex-wrap">
-            <span className={`px-2 py-1 rounded text-xs font-medium ${orderConfig.categoryType === "fecha" ? "bg-blue-100 text-blue-800 dark:bg-blue-500/30 dark:text-blue-200" : orderConfig.categoryType === "dinero" ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : orderConfig.categoryType === "objeto" ? "bg-purple-100 text-purple-800 dark:bg-purple-500/30 dark:text-purple-200" : "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200"}`}>{categoryTypeLabels[orderConfig.categoryType] || orderConfig.categoryType}</span>
+  const subtipos = orderConfig.config?.subtipos || [];
+  const rowCount = subtipos.length > 0 ? subtipos.length : 1;
+  const generalResetDate = orderConfig.config?.resetDate;
+  const rowClass = `border-b border-gray-100 dark:border-gray-700 ${isReorderMode ? "bg-blue-50 dark:bg-blue-900/20 cursor-grab active:cursor-grabbing" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"}`;
 
-            {orderConfig.categoryType === "fecha" && <span className={`px-2 py-1 rounded text-xs font-medium ${orderConfig.dateMode === "range" ? "bg-indigo-100 text-indigo-800 dark:bg-indigo-500/30 dark:text-indigo-200" : "bg-sky-100 text-sky-800 dark:bg-sky-500/30 dark:text-sky-200"}`}>{orderConfig.dateMode === "range" ? "Rango de Fechas" : "Fechas Múltiples"}</span>}
-            {orderConfig.categoryType === "dinero" && <span className={`px-2 py-1 rounded text-xs font-medium ${!orderConfig.limitType ? "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200" : "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/30 dark:text-emerald-200"}`}>{!orderConfig.limitType ? "Sin límite" : orderConfig.limitType === "monto" ? `Máximo por monto: $${orderConfig.montoMaximo ? orderConfig.montoMaximo.toLocaleString("es-ES") : 0}` : `Máximo por porcentaje de sueldo: ${orderConfig.porcentajeMaximo ?? 0}%`}</span>}
+  // Shared cells that span all subtipo rows
+  const sharedCells = (isFirst: boolean) =>
+    isFirst ? (
+      <>
+        <td
+          className={`py-3 px-4 ${!isReorderMode ? "cursor-pointer" : ""}`}
+          rowSpan={rowCount}
+          onClick={(e) => {
+            if (!isReorderMode) {
+              e.preventDefault();
+              e.stopPropagation();
+              onEnableReorder();
+            }
+          }}
+          title={!isReorderMode ? "Clic para activar modo ordenar" : ""}
+        >
+          <div className={`flex items-center justify-center ${isReorderMode ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-600 hover:text-blue-500"}`}>
+            <FontAwesomeIcon icon={faGripVertical} className="h-5 w-5" />
           </div>
+        </td>
+        <td className="py-3 px-4" rowSpan={rowCount}>
+          <span className="text-sm font-medium">{index + 1}</span>
+        </td>
+        <td className="py-3 px-4" rowSpan={rowCount}>
+          <div className="font-medium text-gray-900 dark:text-gray-100">{orderConfig.name}</div>
+        </td>
+        <td className="py-3 px-4" rowSpan={rowCount}>
+          <div className="flex flex-col items-start gap-1">
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className={`px-2 py-1 rounded text-xs font-medium ${orderConfig.categoryType === "fecha" ? "bg-blue-100 text-blue-800 dark:bg-blue-500/30 dark:text-blue-200" : orderConfig.categoryType === "dinero" ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : orderConfig.categoryType === "objeto" ? "bg-purple-100 text-purple-800 dark:bg-purple-500/30 dark:text-purple-200" : "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200"}`}>{categoryTypeLabels[orderConfig.categoryType] || orderConfig.categoryType}</span>
 
-          {orderConfig.categoryType === "fecha" && orderConfig.dateMode === "range" && orderConfig.maxDays && <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">Max: {orderConfig.maxDays} días</span>}
-        </div>
-      </td>
-      <td className="py-3 px-4">
-        <span className={`px-2 py-1 rounded text-xs font-medium ${orderConfig.config?.subtipos?.length ? "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{orderConfig.config?.subtipos?.length ? "Sí" : "No"}</span>
-      </td>
-      <td className="py-3 px-4">{orderConfig.requiresAction ? <div className="flex justify-start items-center gap-1">{orderConfig.futureActionType && <span className={`px-2 py-1 rounded text-xs font-medium ${orderConfig.futureActionType === "documento" ? "bg-teal-100 text-teal-800 dark:bg-teal-500/30 dark:text-teal-200" : "bg-amber-100 text-amber-800 dark:bg-amber-500/30 dark:text-amber-200"}`}>{tipoAccionFuturaLabels[orderConfig.futureActionType]}</span>}</div> : <span className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 p-1">No</span>}</td>
-      <td className="py-3 px-4">
-        <span className={`px-2 py-1 rounded text-xs font-medium ${(orderConfig.requiresSignature ?? true) ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{(orderConfig.requiresSignature ?? true) ? "Sí" : "No"}</span>
-      </td>
-      <td className="py-3 px-4">
-        {matchingTemplate ? (
-          <button onClick={() => onPreviewPdf(matchingTemplate.content, matchingTemplate.code)} disabled={isReorderMode} className={`text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 transition-colors ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`} title={`Previsualizar: ${matchingTemplate.name}`}>
-            <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
+              {orderConfig.categoryType === "fecha" && <span className={`px-2 py-1 rounded text-xs font-medium ${orderConfig.dateMode === "range" ? "bg-indigo-100 text-indigo-800 dark:bg-indigo-500/30 dark:text-indigo-200" : "bg-sky-100 text-sky-800 dark:bg-sky-500/30 dark:text-sky-200"}`}>{orderConfig.dateMode === "range" ? "Rango de Fechas" : "Fechas Múltiples"}</span>}
+              {orderConfig.categoryType === "dinero" && <span className={`px-2 py-1 rounded text-xs font-medium ${!orderConfig.limitType ? "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200" : "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/30 dark:text-emerald-200"}`}>{!orderConfig.limitType ? "Sin límite" : orderConfig.limitType === "monto" ? `Máximo por monto: $${orderConfig.montoMaximo ? orderConfig.montoMaximo.toLocaleString("es-ES") : 0}` : `Máximo por porcentaje de sueldo: ${orderConfig.porcentajeMaximo ?? 0}%`}</span>}
+              {orderConfig.categoryType === "dinero" && orderConfig.config?.repayment && (
+                <span className="px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-500/30 dark:text-amber-200 ml-2">
+                  {orderConfig.config.repayment.installments ? `${orderConfig.config.repayment.installments} cuotas` : "Devolución"}
+                  {orderConfig.config.repayment.startOnApproval ? ` · inicia al aprobarse` : ""}
+                </span>
+              )}
+            </div>
+
+            {orderConfig.categoryType === "fecha" && orderConfig.dateMode === "range" && orderConfig.maxDays && <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">Max: {orderConfig.maxDays} días</span>}
+          </div>
+        </td>
+      </>
+    ) : null;
+
+  // Shared trailing cells (after Opción and Fecha de Reset)
+  const sharedTrailingCells = (isFirst: boolean) =>
+    isFirst ? (
+      <>
+        <td className="py-3 px-4" rowSpan={rowCount}>
+          {orderConfig.requiresAction ? <div className="flex justify-start items-center gap-1">{orderConfig.futureActionType && <span className={`px-2 py-1 rounded text-xs font-medium ${orderConfig.futureActionType === "documento" ? "bg-teal-100 text-teal-800 dark:bg-teal-500/30 dark:text-teal-200" : "bg-amber-100 text-amber-800 dark:bg-amber-500/30 dark:text-amber-200"}`}>{tipoAccionFuturaLabels[orderConfig.futureActionType]}</span>}</div> : <span className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 p-1">No</span>}
+        </td>
+        <td className="py-3 px-4" rowSpan={rowCount}>
+          <span className={`px-2 py-1 rounded text-xs font-medium ${(orderConfig.requiresSignature ?? true) ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{(orderConfig.requiresSignature ?? true) ? "Sí" : "No"}</span>
+        </td>
+        <td className="py-3 px-4" rowSpan={rowCount}>
+          {matchingTemplate ? (
+            <button onClick={() => onPreviewPdf(matchingTemplate.content, matchingTemplate.code)} disabled={isReorderMode} className={`text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 transition-colors ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`} title={`Previsualizar: ${matchingTemplate.name}`}>
+              <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
+            </button>
+          ) : (
+            <span className="text-gray-400 dark:text-gray-600 text-xs">-</span>
+          )}
+        </td>
+        <td className="py-3 px-4" rowSpan={rowCount}>
+          <button onClick={() => onToggleActive(orderConfig)} disabled={isReorderMode} className={`px-3 py-1 rounded text-xs font-medium transition-colors flex items-center flex-nowrap ${orderConfig.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 text-now flex flex-nowrap"} ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`}>
+            <FontAwesomeIcon icon={orderConfig.isActive ? faToggleOn : faToggleOff} className="mr-1" />
+            {orderConfig.isActive ? "Activa" : "Inactiva"}
           </button>
-        ) : (
-          <span className="text-gray-400 dark:text-gray-600 text-xs">-</span>
-        )}
-      </td>
-      <td className="py-3 px-4">
-        <button onClick={() => onToggleActive(orderConfig)} disabled={isReorderMode} className={`px-3 py-1 rounded text-xs font-medium transition-colors flex items-center flex-nowrap ${orderConfig.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 text-now flex flex-nowrap"} ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`}>
-          <FontAwesomeIcon icon={orderConfig.isActive ? faToggleOn : faToggleOff} className="mr-1" />
-          {orderConfig.isActive ? "Activa" : "Inactiva"}
-        </button>
-      </td>
-      <td className="py-3 px-4">
+        </td>
+      </>
+    ) : null;
+
+  const actionCells = (isFirst: boolean) =>
+    isFirst ? (
+      <td className="py-3 px-4" rowSpan={rowCount}>
         <div className="flex items-center gap-2">
           <button onClick={() => onEdit(orderConfig)} disabled={isReorderMode} className={`p-1.5 rounded text-gray-600 dark:text-gray-400 transition-colors hover:text-gray-800 dark:hover:text-gray-300 ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`} title="Editar">
             <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
@@ -122,7 +147,51 @@ const SortableRow: React.FC<SortableRowProps> = ({ orderConfig, index, isReorder
           </button>
         </div>
       </td>
-    </tr>
+    ) : null;
+
+  // No subtipos: single row
+  if (subtipos.length === 0) {
+    return (
+      <tr ref={setNodeRef} style={style} {...(isReorderMode ? { ...attributes, ...listeners } : {})} className={rowClass}>
+        {sharedCells(true)}
+        {sharedTrailingCells(true)}
+        <td className="py-3 px-4">
+          <span className="text-xs text-gray-400 dark:text-gray-600">-</span>
+        </td>
+        <td className="py-3 px-4">{generalResetDate ? <span className="px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-500/30 dark:text-orange-200">{generalResetDate}</span> : <span className="text-xs text-gray-400 dark:text-gray-600">-</span>}</td>
+        {actionCells(true)}
+      </tr>
+    );
+  }
+
+  // With subtipos: one row per subtipo
+  return (
+    <>
+      {subtipos.map((subtipo, subIndex) => {
+        const isFirst = subIndex === 0;
+        const borderClass = isFirst ? rowClass : `border-b border-gray-50 dark:border-gray-800 ${isReorderMode ? "bg-blue-50 dark:bg-blue-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"}`;
+        return (
+          <tr key={`${orderConfig._id}-sub-${subIndex}`} ref={isFirst ? setNodeRef : undefined} style={isFirst ? style : undefined} {...(isFirst && isReorderMode ? { ...attributes, ...listeners } : {})} className={borderClass}>
+            {sharedCells(isFirst)}
+            {sharedTrailingCells(isFirst)}
+            <td className="py-2 px-4">
+              <span className="text-sm text-gray-700 dark:text-gray-300">{subtipo.label}</span>
+              {subtipo.maxDays && <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">(Max: {subtipo.maxDays}d)</span>}
+              {subtipo.repayment && (
+                <div className="mt-1">
+                  <span className="px-2 py-1 rounded text-[11px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-500/30 dark:text-amber-200">
+                    {subtipo.repayment.installments ? `${subtipo.repayment.installments} cuotas` : "Devolución"}
+                    {subtipo.repayment.startOnApproval ? ` · inicia al aprobarse` : ""}
+                  </span>
+                </div>
+              )}
+            </td>
+            <td className="py-2 px-4">{subtipo.resetDate ? <span className="px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-500/30 dark:text-orange-200">{subtipo.resetDate}</span> : generalResetDate && isFirst ? <span className="px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-500/30 dark:text-orange-200">{generalResetDate}</span> : <span className="text-xs text-gray-400 dark:text-gray-600">-</span>}</td>
+            {actionCells(isFirst)}
+          </tr>
+        );
+      })}
+    </>
   );
 };
 
@@ -149,6 +218,7 @@ export const OrderTypesTab: React.FC = () => {
     futureActionType: TipoAccionFutura | "";
     deadlineMode?: DeadlineMode;
     subtipos: Subtype[];
+    resetDate?: string;
     plazoDias?: number;
     fechaLimite?: string;
     documentoRequerido?: string;
@@ -173,6 +243,7 @@ export const OrderTypesTab: React.FC = () => {
     futureActionType: "",
     deadlineMode: "none",
     subtipos: [],
+    resetDate: undefined,
     plazoDias: undefined,
     fechaLimite: undefined,
     documentoRequerido: undefined,
@@ -180,6 +251,7 @@ export const OrderTypesTab: React.FC = () => {
     requiresUserConfirmation: false,
     pdfId: undefined,
     pdfText: "",
+    repayment: undefined,
   });
   const [submitting, setSubmitting] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
@@ -259,6 +331,7 @@ export const OrderTypesTab: React.FC = () => {
       futureActionType: "",
       deadlineMode: "none",
       subtipos: [],
+      resetDate: undefined,
       plazoDias: undefined,
       fechaLimite: undefined,
       documentoRequerido: undefined,
@@ -288,6 +361,26 @@ export const OrderTypesTab: React.FC = () => {
       futureActionType: orderType.futureActionType || "",
       deadlineMode: orderType.deadlineMode || "none",
       subtipos: orderType.config?.subtipos ?? [],
+      repayment: orderType.config?.repayment ?? undefined,
+      resetDate: (() => {
+        const raw = orderType.config?.resetDate;
+        if (!raw) return undefined;
+        if (typeof raw === "string") {
+          if (raw.includes("/")) return raw;
+          const parsed = new Date(raw);
+          if (!isNaN(parsed.getTime())) {
+            const day = String(parsed.getDate()).padStart(2, "0");
+            const month = String(parsed.getMonth() + 1).padStart(2, "0");
+            return `${day}/${month}`;
+          }
+        }
+        if (raw instanceof Date && !isNaN(raw.getTime())) {
+          const day = String(raw.getDate()).padStart(2, "0");
+          const month = String(raw.getMonth() + 1).padStart(2, "0");
+          return `${day}/${month}`;
+        }
+        return undefined;
+      })(),
       plazoDias: orderType.plazoDias,
       fechaLimite: orderType.fechaLimite,
       documentoRequerido: orderType.documentoRequerido,
@@ -375,7 +468,7 @@ export const OrderTypesTab: React.FC = () => {
         categoryType: formData.categoryType,
         dateMode: formData.categoryType === "fecha" ? formData.dateMode : undefined,
         maxDays: formData.categoryType === "fecha" && formData.dateMode === "range" ? (formData.maxDays ?? null) : undefined,
-        limitType: formData.categoryType === "dinero" ? (formData.limitType || null) : null,
+        limitType: formData.categoryType === "dinero" ? formData.limitType || null : null,
         montoMaximo: formData.categoryType === "dinero" && formData.limitType === "monto" && formData.montoMaximo ? formData.montoMaximo : null,
         porcentajeMaximo: formData.categoryType === "dinero" && formData.limitType === "porcentaje" && formData.porcentajeMaximo ? formData.porcentajeMaximo : null,
         requiresAction: formData.requiresAction,
@@ -387,8 +480,29 @@ export const OrderTypesTab: React.FC = () => {
         pdfId: formData.requiresSignature && formData.pdfId ? formData.pdfId : undefined,
         pdfText: formData.pdfText || "",
         requiresUserConfirmation: formData.requiresAction ? formData.requiresUserConfirmation : false,
-        config: validSubtipos.length > 0 ? { subtipos: validSubtipos } : undefined,
+        config: undefined,
       };
+
+      // Build config object with support for repayment when categoryType === 'dinero'
+      if (validSubtipos.length > 0) {
+        // Ensure subtipos include repayment if provided in formData
+        payload.config = { subtipos: validSubtipos };
+      } else {
+        const cfg: any = {};
+        if (formData.resetDate) cfg.resetDate = formData.resetDate;
+        if (formData.categoryType === "dinero" && formData.repayment) {
+          cfg.repayment = { ...(formData.repayment || {}), startOnApproval: formData.repayment.startOnApproval ?? true };
+        }
+        payload.config = Object.keys(cfg).length ? cfg : undefined;
+      }
+
+      // If there are subtipos and category is dinero, copy any repayment fields from formData.subtipos into payload
+      if (validSubtipos.length > 0 && formData.categoryType === "dinero") {
+        payload.config.subtipos = validSubtipos.map((s: any) => ({
+          ...s,
+          repayment: s.repayment ? { ...(s.repayment || {}), startOnApproval: s.repayment.startOnApproval ?? true } : undefined,
+        }));
+      }
 
       if (!formData.requiresSignature) {
         payload.pdfId = undefined;
@@ -558,11 +672,12 @@ export const OrderTypesTab: React.FC = () => {
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-16">Orden</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Nombre</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo de Dato</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Opciones</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acción Futura</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Plantilla PDF</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Opción</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Fecha de Reset</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
                     </tr>
                   </thead>

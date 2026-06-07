@@ -172,8 +172,8 @@ export const UserVacationManagementTab: React.FC = () => {
         const rf = roleFrames.find((r) => r._id === selectedRoleFrame);
         if (rf) {
           return userMetaProjects.some((mp: any) => 
-            mp.rol_frame_id === rf.externalId || 
-            mp.rol_frame_id === rf.data?.rol?.id || 
+            mp.rol_frame_id == rf.externalId || 
+            mp.rol_frame_id == rf.data?.rol?.id || 
             mp.nombre_rol_frame === rf.name
           );
         }

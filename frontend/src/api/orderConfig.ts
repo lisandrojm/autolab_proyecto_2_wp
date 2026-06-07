@@ -11,12 +11,23 @@ export interface Subtype {
   label: string;
   requiere_certificado?: boolean;
   maxDays?: number; // Added
+  resetDate?: string;
+  repayment?: RepaymentConfig;
   [key: string]: any;
 }
 
 export interface TypeConfig {
   subtipos?: Subtype[];
+  resetDate?: string;
+  repayment?: RepaymentConfig;
   [key: string]: any;
+}
+
+export interface RepaymentConfig {
+  method?: "sueldo" | "otro";
+  installments?: number; // número de cuotas/meses
+  startOnApproval?: boolean; // si la devolución comienza en la fecha de aprobación
+  resetOnPaid?: boolean; // si al completarse se resetea el monto a cero
 }
 
 export type CategoryType = "fecha" | "dinero" | "objeto" | "otros";
@@ -131,4 +142,3 @@ export const orderConfigAPI = {
     await axios.post("/orders/users-balance", { updates });
   },
 };
-

@@ -82,6 +82,7 @@ const createOrderSchema = z.object({
   categoryId: z.string().optional(),
   subcategories: z.array(z.string()).default([]),
   amount: z.number().min(0).optional(),
+  installments: z.number().min(1).optional(),
   photoUrl: z.string().optional(),
 });
 
@@ -90,6 +91,7 @@ const updateOrderSchema = z.object({
   description: z.string().min(1).optional(),
   category: z.string().optional(),
   amount: z.number().min(0).optional(),
+  installments: z.number().min(1).optional(),
   status: z.enum(["pending", "pre_approved", "approved", "rejected", "delivered", "cancelled"]).optional(),
   photoUrl: z.string().optional(),
   customTextBlock: z.string().optional(),
@@ -318,6 +320,7 @@ router.post("/orders", uploadOrderImage, async (req: AuthenticatedRequest & Tena
     const data = createOrderSchema.parse({
       ...req.body,
       amount: req.body.amount ? parseFloat(req.body.amount) : undefined,
+      installments: req.body.installments ? parseInt(req.body.installments) : undefined,
       photoUrl,
     });
 
@@ -433,6 +436,7 @@ router.put("/orders/:id", uploadOrderImage, async (req: AuthenticatedRequest & T
     const data = updateOrderSchema.parse({
       ...req.body,
       amount: req.body.amount ? parseFloat(req.body.amount) : undefined,
+      installments: req.body.installments ? parseInt(req.body.installments) : undefined,
       photoUrl,
     });
 

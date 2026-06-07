@@ -1102,13 +1102,39 @@ export const OrdersPage: React.FC = () => {
                   </p>
                 </div>
               )}
-              <div className="flex gap-10">
+              <div className="flex gap-10 flex-wrap">
                 {selectedOrder.amount && (
                   <div>
                     <p className="text-sm text-slate-500 dark:text-slate-400">Importe</p>
                     <p className="font-medium text-slate-800 dark:text-slate-100">$ {selectedOrder.amount.toFixed(2)}</p>
                   </div>
                 )}
+                {(() => {
+                  const isDinero = (selectedOrder.categoryId && typeof selectedOrder.categoryId === "object" && (selectedOrder.categoryId as any).categoryType === "dinero") || selectedOrder.category === "dinero";
+                  if (!isDinero) return null;
+
+                  let installments = selectedOrder.installments;
+                  if (!installments && typeof selectedOrder.categoryId === "object" && selectedOrder.categoryId) {
+                    const category = selectedOrder.categoryId as any;
+                    if (selectedOrder.subcategories && selectedOrder.subcategories.length > 0 && category.config?.subtipos) {
+                      const subId = selectedOrder.subcategories[0];
+                      const subtype = category.config.subtipos.find((st: any) => st.id === subId);
+                      if (subtype?.repayment?.installments) {
+                        installments = subtype.repayment.installments;
+                      }
+                    }
+                    if (!installments && category.config?.repayment?.installments) {
+                      installments = category.config.repayment.installments;
+                    }
+                  }
+
+                  return (
+                    <div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Cuotas</p>
+                      <p className="font-medium text-slate-800 dark:text-slate-100">{installments || 1}</p>
+                    </div>
+                  );
+                })()}
                 {typeof selectedOrder.dynamicValue === "string" && !/^\d{4}-\d{2}-\d{2}/.test(selectedOrder.dynamicValue) && (
                   <div>
                     <p className="text-sm text-slate-500 dark:text-slate-400">{(selectedOrder.categoryId as any)?.categoryType === "otros" ? "Detalle" : "Objeto Especificado"}</p>
@@ -1140,6 +1166,61 @@ export const OrdersPage: React.FC = () => {
                   </div>
                 )}
               </div>
+              
+              {(() => {
+                const isDinero = (selectedOrder.categoryId && typeof selectedOrder.categoryId === "object" && (selectedOrder.categoryId as any).categoryType === "dinero") || selectedOrder.category === "dinero";
+                if (!isDinero) return null;
+
+                let installments = selectedOrder.installments;
+                if (!installments && typeof selectedOrder.categoryId === "object" && selectedOrder.categoryId) {
+                  const category = selectedOrder.categoryId as any;
+                  if (selectedOrder.subcategories && selectedOrder.subcategories.length > 0 && category.config?.subtipos) {
+                    const subId = selectedOrder.subcategories[0];
+                    const subtype = category.config.subtipos.find((st: any) => st.id === subId);
+                    if (subtype?.repayment?.installments) {
+                      installments = subtype.repayment.installments;
+                    }
+                  }
+                  if (!installments && category.config?.repayment?.installments) {
+                    installments = category.config.repayment.installments;
+                  }
+                }
+
+                const numInstallments = installments || 1;
+                const baseDateStr = selectedOrder.approvedAt || selectedOrder.preApprovedAt || selectedOrder.deliveredAt || selectedOrder.requestedAt;
+                if (!baseDateStr) return null;
+
+                const baseDate = new Date(baseDateStr);
+                if (isNaN(baseDate.getTime())) return null;
+
+                const dates: Date[] = [];
+                const startYear = baseDate.getFullYear();
+                const startMonth = baseDate.getMonth();
+                for (let i = 0; i < numInstallments; i++) {
+                  dates.push(new Date(startYear, startMonth + i + 1, 0));
+                }
+
+                const toISODateString = (date: Date): string => {
+                  const y = date.getFullYear();
+                  const m = String(date.getMonth() + 1).padStart(2, "0");
+                  const d = String(date.getDate()).padStart(2, "0");
+                  return `${y}-${m}-${d}`;
+                };
+
+                return (
+                  <div className="w-full mt-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded p-4 text-sm text-slate-700 dark:text-slate-300">
+                    <p className="font-semibold text-slate-800 dark:text-slate-200 mb-2">Fechas estimadas de descuento de sueldo:</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {dates.map((d, index) => (
+                        <div key={index} className="bg-white dark:bg-slate-800/80 px-3 py-2 rounded border border-slate-200 dark:border-slate-700 flex justify-between items-center shadow-sm">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium text-xs">Cuota {index + 1} de {numInstallments}</span>
+                          <span className="text-slate-800 dark:text-slate-200 font-bold text-xs">{formatDateShort(toISODateString(d))}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {selectedOrder.description && selectedOrder.description.trim() !== "" && (

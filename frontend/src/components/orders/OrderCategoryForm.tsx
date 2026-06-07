@@ -6,7 +6,7 @@ import Swal from "sweetalert2";
 import { pdfPreviewAPI } from "../../api/pdfPreview";
 import { Pdf } from "../../api/pdf";
 
-import { CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../../api/orderConfig";
+import { CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode, RepaymentConfig } from "../../api/orderConfig";
 import { InfoModal } from "../ui/InfoModal";
 import { tipoAccionFuturaLabels, deadlineModeLabels } from "../../types/orderFutureAction";
 
@@ -28,6 +28,7 @@ interface OrderCategoryFormProps {
     futureActionType: TipoAccionFutura | "";
     deadlineMode?: DeadlineMode;
     subtipos: Subtype[];
+    resetDate?: string;
     plazoDias?: number;
     fechaLimite?: string;
     documentoRequerido?: string;
@@ -35,6 +36,7 @@ interface OrderCategoryFormProps {
     requiresUserConfirmation?: boolean;
     pdfId?: string;
     pdfText?: string;
+    repayment?: RepaymentConfig;
   };
   setFormData: React.Dispatch<React.SetStateAction<any>>;
   onSubmit: (e: React.FormEvent) => void;
@@ -296,25 +298,71 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                       newSubtipos[index].label = e.target.value;
                       setFormData({ ...formData, subtipos: newSubtipos });
                     }}
-                    className="flex-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2 py-1 text-sm text-gray-900 dark:text-white"
+                    className="flex-1 min-w-0 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2 py-1 text-sm text-gray-900 dark:text-white"
                   />
                   {formData.categoryType === "fecha" && (
-                    <div className="flex items-center gap-1 w-32 flex-shrink-0">
-                      <span className="text-xs text-gray-500 whitespace-nowrap">Max:</span>
-                      <input
-                        type="number"
-                        min="1"
-                        placeholder="∞"
-                        value={subtipo.maxDays || ""}
-                        onChange={(e) => {
-                          const newSubtipos = [...formData.subtipos];
-                          newSubtipos[index].maxDays = e.target.value ? parseInt(e.target.value) : undefined;
-                          setFormData({ ...formData, subtipos: newSubtipos });
-                        }}
-                        className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2 py-1 text-sm text-gray-900 dark:text-white text-center"
-                        title="Días máximos permitidos para esta opción"
-                      />
-                    </div>
+                    <>
+                      <div className="flex items-center gap-1 w-28 flex-shrink-0">
+                        <span className="text-xs text-gray-500 whitespace-nowrap">Max:</span>
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder="∞"
+                          value={subtipo.maxDays || ""}
+                          onChange={(e) => {
+                            const newSubtipos = [...formData.subtipos];
+                            newSubtipos[index].maxDays = e.target.value ? parseInt(e.target.value) : undefined;
+                            setFormData({ ...formData, subtipos: newSubtipos });
+                          }}
+                          className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2 py-1 text-sm text-gray-900 dark:text-white text-center"
+                          title="Días máximos permitidos para esta opción"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1 w-36 flex-shrink-0">
+                        <span className="text-xs text-gray-500 whitespace-nowrap">F.Reset:</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="^([0-2][0-9]|3[0-1])/(0[1-9]|1[0-2])$"
+                          placeholder="dd/mm"
+                          value={subtipo.resetDate || ""}
+                          onChange={(e) => {
+                            const newSubtipos = [...formData.subtipos];
+                            newSubtipos[index].resetDate = e.target.value || undefined;
+                            setFormData({ ...formData, subtipos: newSubtipos });
+                          }}
+                          className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2 py-1 text-sm text-gray-900 dark:text-white"
+                          title="Fecha de reset para esta opción (dd/mm)"
+                        />
+                      </div>
+                    </>
+                  )}
+                  {formData.categoryType === "dinero" && (
+                    <>
+                      <div className="flex items-center gap-1 w-40 flex-shrink-0">
+                        <label className="text-xs text-gray-500 mr-2">Cuotas</label>
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder="Ej: 6"
+                          value={subtipo.repayment?.installments || ""}
+                          onChange={(e) => {
+                            const newSubtipos = [...formData.subtipos];
+                            newSubtipos[index].repayment = {
+                              ...(newSubtipos[index].repayment || {}),
+                              installments: e.target.value ? parseInt(e.target.value) : undefined,
+                              method: "sueldo",
+                              startOnApproval: true,
+                            };
+                            setFormData({ ...formData, subtipos: newSubtipos });
+                          }}
+                          className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2 py-1 text-sm text-gray-900 dark:text-white text-center"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1 w-44 flex-shrink-0">
+                        <span className="text-xs text-gray-700 dark:text-gray-200">Comienza al aprobarse</span>
+                      </div>
+                    </>
                   )}
                   <button
                     type="button"
@@ -367,6 +415,14 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                 <label className="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-1">Días Máximos Permitidos {/* Visible confirmaton */}</label>
                 <input type="number" min="1" value={formData.maxDays || ""} onChange={(e) => setFormData({ ...formData, maxDays: e.target.value ? parseInt(e.target.value) : undefined })} className="w-full rounded border border-gray-400 dark:border-gray-500 bg-white dark:bg-gray-800 px-4 py-2 text-gray-900 dark:text-white" placeholder="Ej: 5 (Opcional)" />
                 <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">Si se deja vacío, no habrá límite general.</p>
+              </div>
+            )}
+
+            {!formData.subtipos.length && (
+              <div className="mt-3 p-3 bg-slate-100 dark:bg-slate-700 rounded border border-slate-300 dark:border-slate-600">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha de reset</label>
+                <input type="text" inputMode="numeric" pattern="^([0-2][0-9]|3[0-1])/(0[1-9]|1[0-2])$" placeholder="dd/mm" value={formData.resetDate || ""} onChange={(e) => setFormData({ ...formData, resetDate: e.target.value || undefined })} className="w-full rounded border border-gray-400 dark:border-gray-500 bg-white dark:bg-gray-800 px-4 py-2 text-gray-900 dark:text-white" />
+                <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">Fecha en la que Tomados (Gozados) debe resetearse a cero para este tipo de pedido. Solo día y mes.</p>
               </div>
             )}
           </div>
@@ -443,6 +499,32 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">El límite se calculará según el sueldo en mano del usuario al momento de crear el pedido.</p>
               </div>
             )}
+            {!formData.subtipos.length && (
+              <div className="mt-4 p-3 rounded border border-slate-300 dark:border-slate-600">
+                <label className="block text-sm font-medium text-gray-700 dark:text-white mb-2">Devolución</label>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" checked={(formData.repayment?.method || "sueldo") === "sueldo"} onChange={(e) => setFormData({ ...formData, repayment: { ...(formData.repayment || {}), method: e.target.checked ? "sueldo" : "otro" } })} className="w-4 h-4 text-blue-600" />
+                    <label className="text-sm text-gray-700 dark:text-gray-300">Devolver con sueldo</label>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-700 dark:text-gray-200">Cantidad de cuotas</label>
+                    <input type="number" min="1" value={formData.repayment?.installments || ""} onChange={(e) => setFormData({ ...formData, repayment: { ...(formData.repayment || {}), installments: e.target.value ? parseInt(e.target.value) : undefined, method: "sueldo", startOnApproval: true } })} className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2 py-1 text-sm text-gray-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-700 dark:text-gray-200">Inicio</label>
+                    <div className="text-sm text-gray-700 dark:text-gray-200">La devolución comienza en la fecha de aprobación del pedido.</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" checked={formData.repayment?.resetOnPaid ?? true} onChange={(e) => setFormData({ ...formData, repayment: { ...(formData.repayment || {}), resetOnPaid: e.target.checked } })} className="w-4 h-4 text-blue-600" />
+                    <label className="text-sm text-gray-700 dark:text-white">Resetear monto a cero al completarse</label>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -467,17 +549,13 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
             </label>
           </div>
 
-          {(formData.requiresSignature ?? true) && (
-            <p className="pt-3 text-sm text-gray-700 dark:text-gray-300">Cuando se apruebe este pedido, se enviará automáticamente para firma del usuario.</p>
-          )}
+          {(formData.requiresSignature ?? true) && <p className="pt-3 text-sm text-gray-700 dark:text-gray-300">Cuando se apruebe este pedido, se enviará automáticamente para firma del usuario.</p>}
         </div>
 
         {/* Plantilla PDF */}
         <div className="border border-gray-200 dark:border-blue-600 p-4 rounded space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Plantilla PDF Asociada
-            </label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Plantilla PDF Asociada</label>
             {(() => {
               const expectedCode = getExpectedTemplateCode();
               const matchingTemplate = pdfTemplates?.find((t) => t.code === expectedCode && t.isActive);
@@ -514,19 +592,9 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
 
           {/* Texto adicional para el PDF */}
           <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Texto Adicional para el PDF (Opcional)
-            </label>
-            <textarea
-              value={formData.pdfText || ""}
-              onChange={(e) => setFormData({ ...formData, pdfText: e.target.value })}
-              rows={4}
-              className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm mb-3"
-              placeholder="Escriba aquí el bloque de texto plano que se imprimirá al final del PDF, entre el cuerpo del pedido y las firmas..."
-            />
-            <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400 mb-4">
-              Este texto es plano (no soporta variables) y se incluirá únicamente en los PDFs generados para este tipo de pedido.
-            </p>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Texto Adicional para el PDF (Opcional)</label>
+            <textarea value={formData.pdfText || ""} onChange={(e) => setFormData({ ...formData, pdfText: e.target.value })} rows={4} className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm mb-3" placeholder="Escriba aquí el bloque de texto plano que se imprimirá al final del PDF, entre el cuerpo del pedido y las firmas..." />
+            <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400 mb-4">Este texto es plano (no soporta variables) y se incluirá únicamente en los PDFs generados para este tipo de pedido.</p>
 
             {(() => {
               const expectedCode = getExpectedTemplateCode();
@@ -534,12 +602,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
               if (matchingTemplate) {
                 return (
                   <div className="flex justify-end pt-3 border-t border-gray-100 dark:border-gray-700">
-                    <button
-                      type="button"
-                      onClick={() => handlePreview(matchingTemplate.code, matchingTemplate.content)}
-                      className="px-4 py-2 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 text-sm font-medium rounded transition-colors flex items-center gap-1.5"
-                      title="Previsualizar plantilla con el texto adicional"
-                    >
+                    <button type="button" onClick={() => handlePreview(matchingTemplate.code, matchingTemplate.content)} className="px-4 py-2 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 text-sm font-medium rounded transition-colors flex items-center gap-1.5" title="Previsualizar plantilla con el texto adicional">
                       <FontAwesomeIcon icon={faEye} /> Visualizar
                     </button>
                   </div>

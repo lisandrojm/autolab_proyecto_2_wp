@@ -195,6 +195,7 @@ export interface OrderData {
   dynamicValue?: any;
   actionCompleted?: boolean;
   amount?: number;
+  installments?: number;
   photoUrl?: string;
   daysRequested?: number;
   status: "pending" | "pre_approved" | "approved" | "rejected" | "delivered" | "cancelled";
@@ -285,7 +286,7 @@ export const personnelAPI = {
     return data;
   },
 
-  createOrder: async (orderData: { description?: string; category?: string; categoryId?: string; subcategories?: string[]; dynamicValue?: any; actionCompleted?: boolean; amount?: number; photo?: File | null; document?: File | null; futureActionPlazoDias?: number; futureActionFechaLimite?: string; futureActionDocumento?: string; daysRequested?: number }): Promise<OrderData> => {
+  createOrder: async (orderData: { description?: string; category?: string; categoryId?: string; subcategories?: string[]; dynamicValue?: any; actionCompleted?: boolean; amount?: number; installments?: number; photo?: File | null; document?: File | null; futureActionPlazoDias?: number; futureActionFechaLimite?: string; futureActionDocumento?: string; daysRequested?: number }): Promise<OrderData> => {
     const formData = new FormData();
     if (orderData.description) formData.append("description", orderData.description);
     if (orderData.category) formData.append("category", orderData.category);
@@ -294,6 +295,7 @@ export const personnelAPI = {
     if (orderData.dynamicValue !== undefined) formData.append("dynamicValue", JSON.stringify(orderData.dynamicValue));
     if (orderData.actionCompleted !== undefined) formData.append("actionCompleted", orderData.actionCompleted.toString());
     if (orderData.amount !== undefined) formData.append("amount", orderData.amount.toString());
+    if ((orderData as any).installments !== undefined) formData.append("installments", String((orderData as any).installments));
     if (orderData.futureActionPlazoDias !== undefined) formData.append("futureActionPlazoDias", orderData.futureActionPlazoDias.toString());
     if (orderData.futureActionFechaLimite) formData.append("futureActionFechaLimite", orderData.futureActionFechaLimite);
     if (orderData.futureActionDocumento) formData.append("futureActionDocumento", orderData.futureActionDocumento);

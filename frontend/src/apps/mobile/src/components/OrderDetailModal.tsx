@@ -320,6 +320,32 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                   <p className="font-medium text-slate-800 dark:text-slate-100">$ {monto.toLocaleString("es-AR")}</p>
                 </div>
               )}
+              {(() => {
+                const isDinero = (order.categoryId && typeof order.categoryId === "object" && (order.categoryId as any).categoryType === "dinero") || order.category === "dinero";
+                if (!isDinero) return null;
+
+                let installments = order.installments;
+                if (!installments && typeof order.categoryId === "object" && order.categoryId) {
+                  const category = order.categoryId as any;
+                  if (order.subcategories && order.subcategories.length > 0 && category.config?.subtipos) {
+                    const subId = order.subcategories[0];
+                    const subtype = category.config.subtipos.find((st: any) => st.id === subId);
+                    if (subtype?.repayment?.installments) {
+                      installments = subtype.repayment.installments;
+                    }
+                  }
+                  if (!installments && category.config?.repayment?.installments) {
+                    installments = category.config.repayment.installments;
+                  }
+                }
+
+                return (
+                  <div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Cuotas</p>
+                    <p className="font-medium text-slate-800 dark:text-slate-100">{installments || 1}</p>
+                  </div>
+                );
+              })()}
               {order.dynamicValue?.fechaDesde && (
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Inicio</p>
@@ -374,6 +400,61 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                 </div>
               )}
             </div>
+            
+            {(() => {
+              const isDinero = (order.categoryId && typeof order.categoryId === "object" && (order.categoryId as any).categoryType === "dinero") || order.category === "dinero";
+              if (!isDinero) return null;
+
+              let installments = order.installments;
+              if (!installments && typeof order.categoryId === "object" && order.categoryId) {
+                const category = order.categoryId as any;
+                if (order.subcategories && order.subcategories.length > 0 && category.config?.subtipos) {
+                  const subId = order.subcategories[0];
+                  const subtype = category.config.subtipos.find((st: any) => st.id === subId);
+                  if (subtype?.repayment?.installments) {
+                    installments = subtype.repayment.installments;
+                  }
+                }
+                if (!installments && category.config?.repayment?.installments) {
+                  installments = category.config.repayment.installments;
+                }
+              }
+
+              const numInstallments = installments || 1;
+              const baseDateStr = order.approvedAt || order.preApprovedAt || order.deliveredAt || order.requestedAt;
+              if (!baseDateStr) return null;
+
+              const baseDate = new Date(baseDateStr);
+              if (isNaN(baseDate.getTime())) return null;
+
+              const dates: Date[] = [];
+              const startYear = baseDate.getFullYear();
+              const startMonth = baseDate.getMonth();
+              for (let i = 0; i < numInstallments; i++) {
+                dates.push(new Date(startYear, startMonth + i + 1, 0));
+              }
+
+              const toISODateString = (date: Date): string => {
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, "0");
+                const d = String(date.getDate()).padStart(2, "0");
+                return `${y}-${m}-${d}`;
+              };
+
+              return (
+                <div className="w-full mt-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded p-3 text-sm text-slate-700 dark:text-slate-300">
+                  <p className="font-semibold text-slate-800 dark:text-slate-200 mb-2">Fechas estimadas de descuento de sueldo:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {dates.map((d, index) => (
+                      <div key={index} className="bg-white dark:bg-slate-800/80 px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 flex justify-between items-center shadow-sm">
+                        <span className="text-slate-500 dark:text-slate-400 text-xs">Cuota {index + 1} de {numInstallments}</span>
+                        <span className="text-slate-800 dark:text-slate-200 font-bold text-xs">{formatDateShort(toISODateString(d))}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Descripción */}

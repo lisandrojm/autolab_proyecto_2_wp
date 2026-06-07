@@ -29,9 +29,11 @@ interface DynamicCategoryInputProps {
   getNextWorkingDay?: (date: Date) => Date;
   remainingDays?: number;
   userSalary?: number;
+  installments?: number | undefined;
+  onInstallmentsChange?: (value: number) => void;
 }
 
-export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ category, subcategories, onSubcategoriesChange, dynamicValue, onDynamicValueChange, amount, onAmountChange, actionCompleted, onActionCompletedChange, futureActionPlazoDias, onOrderFutureActionPlazoDiasChange, futureActionFechaLimite, onOrderFutureActionFechaLimiteChange, futureActionDocumento, onOrderFutureActionDocumentoChange, document, onDocumentChange, documentPreview, onDocumentPreviewChange, validateDate, getNextWorkingDay, remainingDays, userSalary }) => {
+export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ category, subcategories, onSubcategoriesChange, dynamicValue, onDynamicValueChange, amount, onAmountChange, actionCompleted, onActionCompletedChange, futureActionPlazoDias, onOrderFutureActionPlazoDiasChange, futureActionFechaLimite, onOrderFutureActionFechaLimiteChange, futureActionDocumento, onOrderFutureActionDocumentoChange, document, onDocumentChange, documentPreview, onDocumentPreviewChange, validateDate, getNextWorkingDay, remainingDays, userSalary, installments, onInstallmentsChange }) => {
   if (!category) return null;
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -237,6 +239,10 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
         let currentMonto = typeof amount === "number" ? amount : 0;
         if (currentMonto > maxMonto) currentMonto = maxMonto;
 
+        // Determine repayment/installments limits from subtype or category config
+        const selectedSubtype = subcategories && category.config?.subtipos ? category.config.subtipos.find((s) => s.id === subcategories) : undefined;
+        const maxInstallments = selectedSubtype?.repayment?.installments ?? category.config?.repayment?.installments;
+
         return (
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Monto ($)</label>
@@ -252,12 +258,37 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
               </div>
 
               <div className="space-y-2">
-                <input type="range" min="0" max={maxMonto} step={stepMonto} value={currentMonto} onChange={(e) => onAmountChange?.(parseFloat(e.target.value))} className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded appearance-none cursor-pointer slider-thumb" required disabled={maxMonto === 0} />
+                <input type="range" min={stepMonto} max={maxMonto} step={stepMonto} value={currentMonto} onChange={(e) => onAmountChange?.(parseFloat(e.target.value))} className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded appearance-none cursor-pointer slider-thumb" required disabled={maxMonto === 0} />
 
                 <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
-                  <span>$ 0</span>
+                  <span>$ {stepMonto.toLocaleString("es-ES")}</span>
                   <span>$ {maxMonto.toLocaleString("es-ES")}</span>
                 </div>
+              </div>
+              {currentMonto <= 0 && maxMonto > 0 && <p className="text-xs text-red-600 dark:text-red-400 mt-2">Debes seleccionar un monto mayor a $0.</p>}
+            </div>
+            {/* Installments selector and remaining balance */}
+            <div className="flex items-center justify-between">
+              <div className="w-1/2">
+                <label className="text-xs text-slate-700 dark:text-slate-200">Cuotas</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={maxInstallments ?? 36}
+                  value={installments ?? 1}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value) || 1;
+                    const final = maxInstallments ? Math.min(v, maxInstallments) : v;
+                    onInstallmentsChange?.(final);
+                  }}
+                  className="w-full mt-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+                />
+                {maxInstallments && <div className="text-[11px] text-slate-500 mt-1">Máx: {maxInstallments} cuotas (configuración)</div>}
+              </div>
+              <div className="w-1/2 text-right">
+                <label className="text-xs text-slate-700 dark:text-slate-200">Disponible</label>
+                <div className="mt-1 text-sm font-bold text-slate-900 dark:text-slate-100">$ {Math.max(0, maxMonto - currentMonto).toLocaleString("es-ES")}</div>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400">Límite: $ {maxMonto.toLocaleString("es-ES")}</div>
               </div>
             </div>
             {limitWarning}

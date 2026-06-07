@@ -58,6 +58,7 @@ export interface IOrder extends Document {
   approvedAt?: Date;
   deliveredAt?: Date;
   amount?: number;
+  installments?: number;
   photoUrl?: string;
   documentoUrl?: string;
   actionCompleted?: boolean;
@@ -101,6 +102,7 @@ const orderSchema = new Schema<IOrder>(
     approvedAt: { type: Date },
     deliveredAt: { type: Date },
     amount: { type: Number, min: 0 },
+    installments: { type: Number, min: 1 },
     photoUrl: { type: String, trim: true },
     documentoUrl: { type: String, trim: true },
     actionCompleted: { type: Boolean },

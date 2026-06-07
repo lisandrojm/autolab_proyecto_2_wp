@@ -69,6 +69,9 @@ export const UserOrderManagementTab: React.FC = () => {
   const [editedValues, setEditedValues] = useState<Record<string, { totalAnnual?: number; taken?: number; pending?: number; available?: number }>>({});
   const [submitting, setSubmitting] = useState(false);
 
+  const activeConfig = orderConfigs.find((c) => c._id === selectedOrderConfigId);
+  const isDinero = activeConfig?.categoryType === "dinero";
+
   useEffect(() => {
     loadInitialData();
   }, []);
@@ -114,7 +117,7 @@ export const UserOrderManagementTab: React.FC = () => {
         roleFrameAPI.list(),
       ]);
 
-      const dateConfigs = configs.filter((c) => c.categoryType === "fecha");
+      const dateConfigs = configs.filter((c) => ["fecha", "dinero", "objeto", "otros"].includes(c.categoryType));
       setOrderConfigs(dateConfigs);
       setProjects(projectsData);
       setRoleFrames(roleFramesData);
@@ -219,8 +222,8 @@ export const UserOrderManagementTab: React.FC = () => {
         const rf = roleFrames.find((r) => r._id === selectedRoleFrame);
         if (rf) {
           return userMetaProjects.some((mp: any) => 
-            mp.rol_frame_id === rf.externalId || 
-            mp.rol_frame_id === rf.data?.rol?.id || 
+            mp.rol_frame_id == rf.externalId || 
+            mp.rol_frame_id == rf.data?.rol?.id || 
             mp.nombre_rol_frame === rf.name
           );
         }
@@ -258,7 +261,7 @@ export const UserOrderManagementTab: React.FC = () => {
     if (field === "taken") {
       const p = editedValues[userId]?.pending ?? balance.display.pending;
       if (numValue + p > t) {
-        sweetAlert.warning("Límite excedido", "La suma de Tomados y Pendientes no puede superar el Total Anual.");
+        sweetAlert.warning("Límite excedido", isDinero ? "La suma de Tomados y Pendientes no puede superar el límite anual." : "La suma de Tomados y Pendientes no puede superar el Total Anual.");
         return;
       }
     }
@@ -266,7 +269,7 @@ export const UserOrderManagementTab: React.FC = () => {
     if (field === "pending") {
       const tk = editedValues[userId]?.taken ?? balance.display.taken;
       if (numValue + tk > t) {
-        sweetAlert.warning("Límite excedido", "La suma de Tomados y Pendientes no puede superar el Total Anual.");
+        sweetAlert.warning("Límite excedido", isDinero ? "La suma de Tomados y Pendientes no puede superar el límite anual." : "La suma de Tomados y Pendientes no puede superar el Total Anual.");
         return;
       }
     }
@@ -381,7 +384,7 @@ export const UserOrderManagementTab: React.FC = () => {
                 ))
               ) : (
                 <option value="" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
-                  Ningún tipo Fecha creado
+                  Ningún tipo de pedido creado
                 </option>
               )}
             </select>
@@ -560,31 +563,34 @@ export const UserOrderManagementTab: React.FC = () => {
                           {getActiveContractType(balance) || "Sin contrato"}
                         </td>
                         {/* Total Annual */}
-                        <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">
-                          {totalValue}
+                        <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                          {isDinero ? `$ ${totalValue.toLocaleString("es-AR")}` : totalValue}
                         </td>
                         {/* Tomados */}
                         <td className="px-4 py-4 text-center">
-                          <input
-                            type="number"
-                            min="0"
-                            value={takenValue}
-                            onChange={(e) => handleFieldChange(balance.userId, "taken", e.target.value)}
-                            className={`w-20 px-2 py-1 text-center border rounded text-sm focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:text-white
-                              ${edits.taken !== undefined && edits.taken !== balance.display.taken
-                                ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20 font-bold"
-                                : "border-gray-300 dark:border-gray-600"
-                              }
-                            `}
-                          />
+                          <div className="flex items-center justify-center gap-1">
+                            {isDinero && <span className="text-gray-500 text-sm">$</span>}
+                            <input
+                              type="number"
+                              min="0"
+                              value={takenValue}
+                              onChange={(e) => handleFieldChange(balance.userId, "taken", e.target.value)}
+                              className={`${isDinero ? "w-28" : "w-20"} px-2 py-1 text-center border rounded text-sm focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:text-white
+                                ${edits.taken !== undefined && edits.taken !== balance.display.taken
+                                  ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20 font-bold"
+                                  : "border-gray-300 dark:border-gray-600"
+                                }
+                              `}
+                            />
+                          </div>
                         </td>
                         {/* Pendientes */}
-                        <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">
-                          {pendingValue}
+                        <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                          {isDinero ? `$ ${pendingValue.toLocaleString("es-AR")}` : pendingValue}
                         </td>
                         {/* Disponibles */}
-                        <td className="px-4 py-4 text-center text-sm font-semibold text-gray-750 dark:text-gray-300">
-                          {availableValue}
+                        <td className="px-4 py-4 text-center text-sm font-semibold text-gray-750 dark:text-gray-300 whitespace-nowrap">
+                          {isDinero ? `$ ${availableValue.toLocaleString("es-AR")}` : availableValue}
                         </td>
                       </tr>
                     );
@@ -622,7 +628,7 @@ export const UserOrderManagementTab: React.FC = () => {
         </>
       ) : (
         <div className="text-center py-20 text-gray-500">
-          No hay tipos de pedidos de tipo Fecha disponibles para gestionar.
+          No hay tipos de pedidos disponibles para gestionar.
         </div>
       )}
     </div>

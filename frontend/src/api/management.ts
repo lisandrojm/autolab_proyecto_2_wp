@@ -113,6 +113,7 @@ export interface Order {
   approvedAt?: string;
   deliveredAt?: string;
   amount?: number;
+  installments?: number;
   photoUrl?: string;
   documentoUrl?: string;
   actionCompleted?: boolean;

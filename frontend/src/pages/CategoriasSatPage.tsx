@@ -7,7 +7,7 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faListCheck, faChevronUp, faChevronDown, faDownload, faUpload, faFileExcel, faArrowLeft, faPlus, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faListCheck, faChevronUp, faChevronDown, faDownload, faUpload, faFileExcel, faTimes, faPlus, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { useAuthStore } from "../stores/authStore";
 
 type SortField = "numeroCategoria" | "nombre" | "sueldoBruto" | "neto" | "codigoAfip" | "presentismo" | "sueldoBasico" | "sueldoAdicional" | "fechaActualizacion";
@@ -687,7 +687,7 @@ export const CategoriasSatPage: React.FC = () => {
                 </div>
               </div>
               <button onClick={() => setShowGlobalModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors h-8 w-8 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700">
-                <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
+                <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
               </button>
             </div>
 

@@ -117,6 +117,7 @@ const createOrderSchema = z.object({
   actionCompleted: z.boolean().optional(),
   dynamicValue: z.any().optional(),
   amount: z.number().min(0).optional(),
+  installments: z.number().min(1).optional(),
   photoUrl: z.string().optional(),
   documentoUrl: z.string().optional(),
   futureActionPlazoDias: z.number().min(1).max(365).optional(),
@@ -129,6 +130,7 @@ const updateOrderSchema = z.object({
   description: z.string().min(1).optional(),
   category: z.string().optional(),
   amount: z.number().min(0).optional(),
+  installments: z.number().min(1).optional(),
   status: z.enum(["pending", "approved", "rejected", "delivered", "cancelled"]).optional(),
   photoUrl: z.string().optional(),
 });
@@ -292,11 +294,20 @@ router.get("/users-balance", async (req: any, res) => {
       // B. Seniority Text (relative to today)
       const seniorityText = calculateSeniorityText(user.hireDate, contractsDays);
 
-      // C. Total Dynamic allowed days: from OrderConfig maxDays or subtype.maxDays
-      let calculatedTotalAnnual = orderConfig.maxDays || 0;
-      if (subtypeId && orderConfig.config?.subtipos) {
-        const subtype = orderConfig.config.subtipos.find((st: any) => st.id === subtypeId);
-        calculatedTotalAnnual = subtype?.maxDays || 0;
+      // C. Total Dynamic allowed: from OrderConfig or subtype config
+      let calculatedTotalAnnual = 0;
+      if (orderConfig.categoryType === "dinero") {
+        calculatedTotalAnnual = orderConfig.montoMaximo || 0;
+        if (subtypeId && orderConfig.config?.subtipos) {
+          const subtype = orderConfig.config.subtipos.find((st: any) => st.id === subtypeId);
+          calculatedTotalAnnual = subtype?.montoMaximo ?? orderConfig.montoMaximo ?? 0;
+        }
+      } else {
+        calculatedTotalAnnual = orderConfig.maxDays || 0;
+        if (subtypeId && orderConfig.config?.subtipos) {
+          const subtype = orderConfig.config.subtipos.find((st: any) => st.id === subtypeId);
+          calculatedTotalAnnual = subtype?.maxDays || 0;
+        }
       }
 
       // D. Taken / Pending from orders list
@@ -307,10 +318,20 @@ router.get("/users-balance", async (req: any, res) => {
       for (const o of userOrders) {
         const isSigned = o.signatureStatus === "signed";
         const isDelivered = o.status === "delivered";
-        if (isDelivered || isSigned || (o.status === "approved" && (o.signatureStatus === "not_required" || !o.signatureStatus))) {
-          calculatedTaken += o.daysRequested || 0;
+        
+        let cost = 0;
+        if (orderConfig.categoryType === "dinero") {
+          cost = o.amount || 0;
+        } else if (orderConfig.categoryType === "fecha") {
+          cost = o.daysRequested || 0;
         } else {
-          calculatedPending += o.daysRequested || 0;
+          cost = 1; // for objeto/otros
+        }
+
+        if (isDelivered || isSigned || (o.status === "approved" && (o.signatureStatus === "not_required" || !o.signatureStatus))) {
+          calculatedTaken += cost;
+        } else {
+          calculatedPending += cost;
         }
       }
 
@@ -352,7 +373,7 @@ router.get("/users-balance", async (req: any, res) => {
           available: displayAvailable,
         },
         // Meta field for filters in frontend
-        projectIds: user.projectIds?.map((p: any) => typeof p === "string" ? p : p._id) || [],
+        projectIds: user.projectIds?.map((p: any) => (p._id || p).toString()) || [],
         metadata: user.metadata,
       });
     }
@@ -684,6 +705,7 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
     const data = createOrderSchema.parse({
       ...req.body,
       amount: req.body.amount ? parseFloat(req.body.amount) : undefined,
+      installments: req.body.installments ? parseInt(req.body.installments) : undefined,
       actionCompleted: req.body.actionCompleted === "true" || req.body.actionCompleted === true,
       futureActionPlazoDias: req.body.futureActionPlazoDias ? parseInt(req.body.futureActionPlazoDias) : undefined,
       dynamicValue: parsedDynamicValue,

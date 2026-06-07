@@ -54,6 +54,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
   const [subcategories, setSubcategories] = useState<string>("");
   const [dynamicValue, setDynamicValue] = useState<any>("");
   const [amount, setAmount] = useState<number>(0);
+  const [installments, setInstallments] = useState<number | undefined>(undefined);
   const [actionCompleted, setActionCompleted] = useState(false);
   const [futureActionPlazoDias, setOrderFutureActionPlazoDias] = useState<number | undefined>(undefined);
   const [futureActionFechaLimite, setOrderFutureActionFechaLimite] = useState("");
@@ -93,6 +94,39 @@ export default function Orders({ onNavigate }: OrdersProps) {
     fetchSettings();
   }, []);
 
+  const getUserSalary = useCallback((): number | undefined => {
+    if (!profile?.metadata?.projects) return undefined;
+
+    for (const project of profile.metadata.projects) {
+      if (project.contracts && project.contracts.length > 0) {
+        // Sort contracts: active ones first
+        const sortedContracts = [...project.contracts].sort((a, b) => {
+          const endA = a.fecha_baja_contrato ? new Date(a.fecha_baja_contrato).getTime() : Infinity;
+          const endB = b.fecha_baja_contrato ? new Date(b.fecha_baja_contrato).getTime() : Infinity;
+          const now = new Date().getTime();
+          const activeA = endA >= now;
+          const activeB = endB >= now;
+          if (activeA && !activeB) return -1;
+          if (!activeA && activeB) return 1;
+          return 0;
+        });
+
+        for (const contract of sortedContracts) {
+          const endDate = contract.fecha_baja_contrato ? new Date(contract.fecha_baja_contrato) : null;
+          if (endDate) endDate.setHours(23, 59, 59, 999);
+          const isActive = !endDate || endDate.getTime() >= new Date().getTime();
+
+          if (isActive && contract.sueldo_mano) {
+            const rawSalary = String(contract.sueldo_mano).replace(/[,.]/g, ""); // Convert things like "1.000,00" or similar to parsing ready if needed. Assuming it's typically a number, just safely parse
+            const num = parseFloat(rawSalary);
+            if (!isNaN(num)) return num;
+          }
+        }
+      }
+    }
+    return undefined;
+  }, [profile]);
+
   useEffect(() => {
     setSubcategories("");
 
@@ -101,7 +135,20 @@ export default function Orders({ onNavigate }: OrdersProps) {
     } else if (selectedCategory?.categoryType === "fecha") {
       setDynamicValue("");
     } else if (selectedCategory?.categoryType === "dinero") {
-      setAmount(0);
+      const stepAmount = 50000;
+      let initialAmount = 0;
+      if (selectedCategory.limitType === "monto" && selectedCategory.montoMaximo) {
+        initialAmount = Math.min(stepAmount, selectedCategory.montoMaximo);
+      } else if (selectedCategory.limitType === "porcentaje" && selectedCategory.porcentajeMaximo) {
+        const salary = getUserSalary();
+        if (salary && salary > 0) {
+          const maxAmountBySalary = Math.floor((salary * selectedCategory.porcentajeMaximo) / 100 / stepAmount) * stepAmount;
+          initialAmount = Math.min(stepAmount, maxAmountBySalary);
+        }
+      } else if (selectedCategory.montoMaximo) {
+        initialAmount = Math.min(stepAmount, selectedCategory.montoMaximo);
+      }
+      setAmount(initialAmount);
       setDynamicValue("");
     } else {
       setDynamicValue("");
@@ -117,6 +164,17 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
     setOrderFutureActionFechaLimite("");
     setOrderFutureActionDocumento("");
+    // init installments from category or subtype default repayment when switching category / subtype
+    if (selectedCategory?.categoryType === "dinero") {
+      let defaultInstallments = selectedCategory.config?.repayment?.installments;
+      if (selectedCategory.config?.subtipos && subcategories) {
+        const st = selectedCategory.config.subtipos.find((s) => s.id === subcategories);
+        if (st?.repayment?.installments) defaultInstallments = st.repayment.installments;
+      }
+      setInstallments(defaultInstallments ?? 1);
+    } else {
+      setInstallments(undefined);
+    }
 
     if (selectedCategory && selectedCategory.categoryType !== "objeto" && selectedCategory.categoryType !== "otros") {
       setPhoto(null);
@@ -127,7 +185,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
     setDocument(null);
     setDocumentPreview(null);
-  }, [selectedCategoryId, selectedCategory]);
+  }, [selectedCategoryId, selectedCategory, subcategories, getUserSalary]);
 
   const [detectedContractName, setDetectedContractName] = useState<string | null>(null);
 
@@ -201,38 +259,6 @@ export default function Orders({ onNavigate }: OrdersProps) {
     return null;
   }, [profile, orderSettings]);
 
-  const getUserSalary = useCallback((): number | undefined => {
-    if (!profile?.metadata?.projects) return undefined;
-
-    for (const project of profile.metadata.projects) {
-      if (project.contracts && project.contracts.length > 0) {
-        // Sort contracts: active ones first
-        const sortedContracts = [...project.contracts].sort((a, b) => {
-          const endA = a.fecha_baja_contrato ? new Date(a.fecha_baja_contrato).getTime() : Infinity;
-          const endB = b.fecha_baja_contrato ? new Date(b.fecha_baja_contrato).getTime() : Infinity;
-          const now = new Date().getTime();
-          const activeA = endA >= now;
-          const activeB = endB >= now;
-          if (activeA && !activeB) return -1;
-          if (!activeA && activeB) return 1;
-          return 0;
-        });
-
-        for (const contract of sortedContracts) {
-          const endDate = contract.fecha_baja_contrato ? new Date(contract.fecha_baja_contrato) : null;
-          if (endDate) endDate.setHours(23, 59, 59, 999);
-          const isActive = !endDate || endDate.getTime() >= new Date().getTime();
-
-          if (isActive && contract.sueldo_mano) {
-            const rawSalary = String(contract.sueldo_mano).replace(/[,.]/g, ""); // Convert things like "1.000,00" or similar to parsing ready if needed. Assuming it's typically a number, just safely parse
-            const num = parseFloat(rawSalary);
-            if (!isNaN(num)) return num;
-          }
-        }
-      }
-    }
-    return undefined;
-  }, [profile]);
 
   // Update detected name when dependencies change
   useEffect(() => {
@@ -429,6 +455,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
         subcategories: subcategories ? [subcategories] : undefined,
         dynamicValue: validDynamicValue,
         amount: selectedCategory?.categoryType === "dinero" ? amount : undefined,
+        installments: selectedCategory?.categoryType === "dinero" ? installments : undefined,
         actionCompleted: selectedCategory?.requiresAction ? (selectedCategory?.requiresUserConfirmation ? actionCompleted : true) : undefined,
         futureActionPlazoDias: futureActionPlazoDias || undefined,
         futureActionFechaLimite: futureActionFechaLimite || undefined,
@@ -437,6 +464,28 @@ export default function Orders({ onNavigate }: OrdersProps) {
         document: isDocumentType ? document : null,
         daysRequested: daysRequested > 0 ? daysRequested : undefined,
       };
+
+      if (selectedCategory?.categoryType === "dinero" && (!amount || amount <= 0)) {
+        sweetAlert.error("Monto inválido", "Debes seleccionar un monto mayor a $0 para pedidos de dinero.");
+        setSubmitting(false);
+        return;
+      }
+
+      // Validate installments against config (if dinero)
+      if (selectedCategory?.categoryType === "dinero") {
+        const allowedInstallments = selectedCategory.config?.repayment?.installments;
+        let subtypeAllowed: number | undefined = undefined;
+        if (selectedCategory.config?.subtipos && subcategories) {
+          const st = selectedCategory.config.subtipos.find((s) => s.id === subcategories);
+          subtypeAllowed = st?.repayment?.installments;
+        }
+        const maxAllowed = subtypeAllowed ?? allowedInstallments;
+        if (maxAllowed && (installments ?? 1) > maxAllowed) {
+          sweetAlert.error("Cuotas inválidas", `La cantidad de cuotas no puede superar las ${maxAllowed} definidas en la configuración.`);
+          setSubmitting(false);
+          return;
+        }
+      }
 
       if (selectedCategory?.informacion?.trim()) {
         setSubmitting(false);
@@ -594,7 +643,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
                           }
                         }
 
-                        return <DynamicCategoryInput category={selectedCategory} subcategories={subcategories} onSubcategoriesChange={setSubcategories} dynamicValue={dynamicValue} onDynamicValueChange={setDynamicValue} amount={amount} onAmountChange={setAmount} actionCompleted={actionCompleted} onActionCompletedChange={setActionCompleted} futureActionPlazoDias={futureActionPlazoDias} onOrderFutureActionPlazoDiasChange={setOrderFutureActionPlazoDias} futureActionFechaLimite={futureActionFechaLimite} onOrderFutureActionFechaLimiteChange={setOrderFutureActionFechaLimite} futureActionDocumento={futureActionDocumento} onOrderFutureActionDocumentoChange={setOrderFutureActionDocumento} document={document} onDocumentChange={setDocument} documentPreview={documentPreview} onDocumentPreviewChange={setDocumentPreview} validateDate={validateDate} getNextWorkingDay={getNextWorkingDay} remainingDays={remainingDays} userSalary={getUserSalary()} />;
+                        return <DynamicCategoryInput category={selectedCategory} subcategories={subcategories} onSubcategoriesChange={setSubcategories} dynamicValue={dynamicValue} onDynamicValueChange={setDynamicValue} amount={amount} onAmountChange={setAmount} actionCompleted={actionCompleted} onActionCompletedChange={setActionCompleted} futureActionPlazoDias={futureActionPlazoDias} onOrderFutureActionPlazoDiasChange={setOrderFutureActionPlazoDias} futureActionFechaLimite={futureActionFechaLimite} onOrderFutureActionFechaLimiteChange={setOrderFutureActionFechaLimite} futureActionDocumento={futureActionDocumento} onOrderFutureActionDocumentoChange={setOrderFutureActionDocumento} document={document} onDocumentChange={setDocument} documentPreview={documentPreview} onDocumentPreviewChange={setDocumentPreview} validateDate={validateDate} getNextWorkingDay={getNextWorkingDay} remainingDays={remainingDays} userSalary={getUserSalary()} installments={installments} onInstallmentsChange={setInstallments} />;
                       })()}
                     </div>
 
@@ -696,8 +745,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
                       )}
                     </div>
                   )}
-
-                  </div>
+                </div>
               </form>
               <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex-shrink-0">
                 <div className="flex gap-3">
