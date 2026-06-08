@@ -31,9 +31,10 @@ interface DynamicCategoryInputProps {
   userSalary?: number;
   installments?: number | undefined;
   onInstallmentsChange?: (value: number) => void;
+  availableLimit?: number;
 }
 
-export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ category, subcategories, onSubcategoriesChange, dynamicValue, onDynamicValueChange, amount, onAmountChange, actionCompleted, onActionCompletedChange, futureActionPlazoDias, onOrderFutureActionPlazoDiasChange, futureActionFechaLimite, onOrderFutureActionFechaLimiteChange, futureActionDocumento, onOrderFutureActionDocumentoChange, document, onDocumentChange, documentPreview, onDocumentPreviewChange, validateDate, getNextWorkingDay, remainingDays, userSalary, installments, onInstallmentsChange }) => {
+export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ category, subcategories, onSubcategoriesChange, dynamicValue, onDynamicValueChange, amount, onAmountChange, actionCompleted, onActionCompletedChange, futureActionPlazoDias, onOrderFutureActionPlazoDiasChange, futureActionFechaLimite, onOrderFutureActionFechaLimiteChange, futureActionDocumento, onOrderFutureActionDocumentoChange, document, onDocumentChange, documentPreview, onDocumentPreviewChange, validateDate, getNextWorkingDay, remainingDays, userSalary, installments, onInstallmentsChange, availableLimit }) => {
   if (!category) return null;
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -217,25 +218,30 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
         }
 
       case "dinero":
-        let maxMonto = 10000000; // default large number
+        let limitMonto = 10000000; // default large number
         let limitWarning = null;
 
         if (category.limitType === "monto" && category.montoMaximo) {
-          maxMonto = category.montoMaximo;
+          limitMonto = category.montoMaximo;
         } else if (category.limitType === "porcentaje" && category.porcentajeMaximo) {
           if (userSalary && userSalary > 0) {
-            maxMonto = (userSalary * category.porcentajeMaximo) / 100;
-            maxMonto = Math.floor(maxMonto / 50000) * 50000;
+            limitMonto = (userSalary * category.porcentajeMaximo) / 100;
+            limitMonto = Math.floor(limitMonto / 50000) * 50000;
           } else {
             limitWarning = <p className="text-xs text-red-500 mt-2">No se pudo calcular el monto máximo por sueldo. Comunicate con RRHH.</p>;
-            maxMonto = 0; // Prevent selection if salary is unknown
+            limitMonto = 0; // Prevent selection if salary is unknown
           }
         } else if (category.montoMaximo) {
           // Fallback for older data that doesn't use limitType
-          maxMonto = category.montoMaximo;
+          limitMonto = category.montoMaximo;
         }
 
         const stepMonto = 50000;
+        let maxMonto = typeof availableLimit === "number" ? availableLimit : limitMonto;
+        if (maxMonto < stepMonto) {
+          maxMonto = 0;
+        }
+
         let currentMonto = typeof amount === "number" ? amount : 0;
         if (currentMonto > maxMonto) currentMonto = maxMonto;
 
@@ -258,14 +264,18 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
               </div>
 
               <div className="space-y-2">
-                <input type="range" min={stepMonto} max={maxMonto} step={stepMonto} value={currentMonto} onChange={(e) => onAmountChange?.(parseFloat(e.target.value))} className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded appearance-none cursor-pointer slider-thumb" required disabled={maxMonto === 0} />
+                <input type="range" min={stepMonto} max={maxMonto || stepMonto} step={stepMonto} value={currentMonto} onChange={(e) => onAmountChange?.(parseFloat(e.target.value))} className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded appearance-none cursor-pointer slider-thumb" required disabled={maxMonto === 0} />
 
                 <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
                   <span>$ {stepMonto.toLocaleString("es-ES")}</span>
                   <span>$ {maxMonto.toLocaleString("es-ES")}</span>
                 </div>
               </div>
-              {currentMonto <= 0 && maxMonto > 0 && <p className="text-xs text-red-600 dark:text-red-400 mt-2">Debes seleccionar un monto mayor a $0.</p>}
+              {maxMonto <= 0 ? (
+                <p className="text-xs text-red-650 dark:text-red-400 mt-2 font-semibold">No tienes monto disponible en tu límite para realizar este pedido.</p>
+              ) : (
+                currentMonto <= 0 && <p className="text-xs text-red-600 dark:text-red-400 mt-2">Debes seleccionar un monto mayor a $0.</p>
+              )}
             </div>
             {/* Installments selector and remaining balance */}
             <div className="flex items-center justify-between">
@@ -288,7 +298,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
               <div className="w-1/2 text-right">
                 <label className="text-xs text-slate-700 dark:text-slate-200">Disponible</label>
                 <div className="mt-1 text-sm font-bold text-slate-900 dark:text-slate-100">$ {Math.max(0, maxMonto - currentMonto).toLocaleString("es-ES")}</div>
-                <div className="text-[11px] text-slate-500 dark:text-slate-400">Límite: $ {maxMonto.toLocaleString("es-ES")}</div>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400">Límite: $ {limitMonto.toLocaleString("es-ES")}</div>
               </div>
             </div>
             {limitWarning}

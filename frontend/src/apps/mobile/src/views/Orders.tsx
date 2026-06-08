@@ -127,6 +127,109 @@ export default function Orders({ onNavigate }: OrdersProps) {
     return undefined;
   }, [profile]);
 
+  const getAvailableLimit = useCallback((category: OrderConfig, subId?: string): number => {
+    if (category.categoryType !== "dinero") return 0;
+
+    let maxMonto = 10000000;
+    const effectiveLimitType = category.limitType || (category.montoMaximo ? "monto" : null);
+    if (effectiveLimitType === "monto") {
+      maxMonto = category.montoMaximo || 0;
+      if (subId && category.config?.subtipos) {
+        const subtype = category.config.subtipos.find((st: any) => st.id === subId);
+        maxMonto = subtype?.montoMaximo ?? category.montoMaximo ?? 0;
+      }
+    } else if (effectiveLimitType === "porcentaje" && category.porcentajeMaximo) {
+      const salary = getUserSalary();
+      if (salary && salary > 0) {
+        maxMonto = (salary * category.porcentajeMaximo) / 100;
+        maxMonto = Math.floor(maxMonto / 50000) * 50000;
+      } else {
+        maxMonto = 0;
+      }
+    } else if (category.montoMaximo) {
+      maxMonto = category.montoMaximo;
+    }
+
+    let taken = 0;
+    let pending = 0;
+
+    const catOrders = orders.filter((o) => {
+      const oCatId = typeof o.categoryId === "object" && o.categoryId ? o.categoryId._id : o.categoryId;
+      const matchesCat = oCatId === category._id;
+      const matchesSub = subId ? o.subcategories?.includes(subId) : true;
+      const isActive = ["pending", "approved", "delivered", "pre_approved"].includes(o.status);
+      return matchesCat && matchesSub && isActive;
+    });
+
+    for (const o of catOrders) {
+      const baseCost = o.amount || 0;
+      const isApproved = o.status === "delivered" || o.signatureStatus === "signed" || (o.status === "approved" && (o.signatureStatus === "not_required" || !o.signatureStatus));
+
+      let cost = baseCost;
+      if (isApproved) {
+        let inst = o.installments;
+        let resetOnPaid = true;
+
+        if (!inst) {
+          if (o.subcategories && o.subcategories.length > 0 && category.config?.subtipos) {
+            const subtype = category.config.subtipos.find((st: any) => st.id === o.subcategories![0]);
+            if (subtype?.repayment?.installments) {
+              inst = subtype.repayment.installments;
+              resetOnPaid = subtype.repayment.resetOnPaid ?? true;
+            }
+          }
+          if (!inst && category.config?.repayment?.installments) {
+            inst = category.config.repayment.installments;
+            resetOnPaid = category.config.repayment.resetOnPaid ?? true;
+          }
+        } else {
+          if (o.subcategories && o.subcategories.length > 0 && category.config?.subtipos) {
+            const subtype = category.config.subtipos.find((st: any) => st.id === o.subcategories![0]);
+            if (subtype?.repayment) {
+              resetOnPaid = subtype.repayment.resetOnPaid ?? true;
+            }
+          }
+          if (category.config?.repayment) {
+            resetOnPaid = category.config.repayment.resetOnPaid ?? true;
+          }
+        }
+
+        if (inst) {
+          const numInstallments = inst || 1;
+          const baseDateStr = o.approvedAt || o.preApprovedAt || o.deliveredAt || o.requestedAt;
+          if (baseDateStr) {
+            const baseDate = new Date(baseDateStr);
+            if (!isNaN(baseDate.getTime())) {
+              const startYear = baseDate.getFullYear();
+              const startMonth = baseDate.getMonth();
+              let passedInst = 0;
+              const now = new Date();
+              for (let i = 0; i < numInstallments; i++) {
+                const discountDate = new Date(startYear, startMonth + i + 1, 0);
+                discountDate.setHours(23, 59, 59, 999);
+                if (discountDate.getTime() <= now.getTime()) {
+                  passedInst++;
+                }
+              }
+              if (resetOnPaid) {
+                const remainingFraction = Math.max(0, 1 - passedInst / numInstallments);
+                cost = baseCost * remainingFraction;
+              }
+            }
+          }
+        }
+      }
+
+      if (isApproved) {
+        taken += cost;
+      } else {
+        pending += cost;
+      }
+    }
+
+    return Math.max(0, maxMonto - taken - pending);
+  }, [orders, getUserSalary]);
+
   useEffect(() => {
     setSubcategories("");
 
@@ -136,18 +239,8 @@ export default function Orders({ onNavigate }: OrdersProps) {
       setDynamicValue("");
     } else if (selectedCategory?.categoryType === "dinero") {
       const stepAmount = 50000;
-      let initialAmount = 0;
-      if (selectedCategory.limitType === "monto" && selectedCategory.montoMaximo) {
-        initialAmount = Math.min(stepAmount, selectedCategory.montoMaximo);
-      } else if (selectedCategory.limitType === "porcentaje" && selectedCategory.porcentajeMaximo) {
-        const salary = getUserSalary();
-        if (salary && salary > 0) {
-          const maxAmountBySalary = Math.floor((salary * selectedCategory.porcentajeMaximo) / 100 / stepAmount) * stepAmount;
-          initialAmount = Math.min(stepAmount, maxAmountBySalary);
-        }
-      } else if (selectedCategory.montoMaximo) {
-        initialAmount = Math.min(stepAmount, selectedCategory.montoMaximo);
-      }
+      const avail = getAvailableLimit(selectedCategory, subcategories);
+      const initialAmount = avail > 0 ? Math.min(stepAmount, avail) : 0;
       setAmount(initialAmount);
       setDynamicValue("");
     } else {
@@ -185,7 +278,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
     setDocument(null);
     setDocumentPreview(null);
-  }, [selectedCategoryId, selectedCategory, subcategories, getUserSalary]);
+  }, [selectedCategoryId, selectedCategory, subcategories, getUserSalary, getAvailableLimit]);
 
   const [detectedContractName, setDetectedContractName] = useState<string | null>(null);
 
@@ -652,7 +745,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
                           }
                         }
 
-                        return <DynamicCategoryInput category={selectedCategory} subcategories={subcategories} onSubcategoriesChange={setSubcategories} dynamicValue={dynamicValue} onDynamicValueChange={setDynamicValue} amount={amount} onAmountChange={setAmount} actionCompleted={actionCompleted} onActionCompletedChange={setActionCompleted} futureActionPlazoDias={futureActionPlazoDias} onOrderFutureActionPlazoDiasChange={setOrderFutureActionPlazoDias} futureActionFechaLimite={futureActionFechaLimite} onOrderFutureActionFechaLimiteChange={setOrderFutureActionFechaLimite} futureActionDocumento={futureActionDocumento} onOrderFutureActionDocumentoChange={setOrderFutureActionDocumento} document={document} onDocumentChange={setDocument} documentPreview={documentPreview} onDocumentPreviewChange={setDocumentPreview} validateDate={validateDate} getNextWorkingDay={getNextWorkingDay} remainingDays={remainingDays} userSalary={getUserSalary()} installments={installments} onInstallmentsChange={setInstallments} />;
+                        return <DynamicCategoryInput category={selectedCategory} subcategories={subcategories} onSubcategoriesChange={setSubcategories} dynamicValue={dynamicValue} onDynamicValueChange={setDynamicValue} amount={amount} onAmountChange={setAmount} actionCompleted={actionCompleted} onActionCompletedChange={setActionCompleted} futureActionPlazoDias={futureActionPlazoDias} onOrderFutureActionPlazoDiasChange={setOrderFutureActionPlazoDias} futureActionFechaLimite={futureActionFechaLimite} onOrderFutureActionFechaLimiteChange={setOrderFutureActionFechaLimite} futureActionDocumento={futureActionDocumento} onOrderFutureActionDocumentoChange={setOrderFutureActionDocumento} document={document} onDocumentChange={setDocument} documentPreview={documentPreview} onDocumentPreviewChange={setDocumentPreview} validateDate={validateDate} getNextWorkingDay={getNextWorkingDay} remainingDays={remainingDays} userSalary={getUserSalary()} installments={installments} onInstallmentsChange={setInstallments} availableLimit={selectedCategory ? getAvailableLimit(selectedCategory, subcategories) : undefined} />;
                       })()}
                     </div>
 
