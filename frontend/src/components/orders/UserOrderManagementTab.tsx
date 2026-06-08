@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSearch, faFilter, faSpinner, faSave, faCalendarAlt, faClipboardList } from "@fortawesome/free-solid-svg-icons";
+import { faSearch, faFilter, faSpinner, faSave, faCalendarAlt, faClipboardList, faUndo } from "@fortawesome/free-solid-svg-icons";
 import { orderConfigAPI, OrderConfig } from "../../api/orderConfig";
 import { projectsAPI, Project } from "../../api/projects";
 import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
 import { sweetAlert } from "../../utils/sweetAlert";
+import axios from "../../api/axiosConfig";
 
 interface UserOrderBalance {
   userId: string;
@@ -370,6 +371,35 @@ export const UserOrderManagementTab: React.FC = () => {
     }
   };
 
+  const handleReset = async (balance: UserOrderBalance) => {
+    const confirm = await sweetAlert.confirm(
+      "¿Reiniciar balance?",
+      `Esto cancelará todas las solicitudes de ${balance.firstName} ${balance.lastName} para este tipo de pedido en el año ${selectedYear}, restableciendo el monto tomado y las cuotas a cero. ¿Deseas continuar?`,
+      "Sí, reiniciar",
+      "Cancelar"
+    );
+
+    if (!confirm.isConfirmed) return;
+
+    setLoading(true);
+    try {
+      await axios.post("/orders/users-balance/reset", {
+        userId: balance.userId,
+        orderConfigId: selectedOrderConfigId,
+        subtypeId: selectedSubtypeId || undefined,
+        year: selectedYear,
+      });
+
+      await sweetAlert.success("¡Reiniciado!", "El balance y las cuotas se han restablecido a cero.");
+      await loadBalances();
+    } catch (error: any) {
+      console.error("Error resetting balance:", error);
+      sweetAlert.error("Error", error.response?.data?.error || "No se pudo reiniciar el balance");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "N/A";
     try {
@@ -560,6 +590,7 @@ export const UserOrderManagementTab: React.FC = () => {
                   {isDinero && (
                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">Cuotas</th>
                   )}
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-28">Acciones</th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
@@ -607,22 +638,8 @@ export const UserOrderManagementTab: React.FC = () => {
                           ) : totalValue}
                         </td>
                         {/* Tomados */}
-                        <td className="px-4 py-4 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            {isDinero && <span className="text-gray-500 text-sm">$</span>}
-                            <input
-                              type="number"
-                              min="0"
-                              value={takenValue}
-                              onChange={(e) => handleFieldChange(balance.userId, "taken", e.target.value)}
-                              className={`${isDinero ? "w-28" : "w-20"} px-2 py-1 text-center border rounded text-sm focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:text-white
-                                ${edits.taken !== undefined && edits.taken !== balance.display.taken
-                                  ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20 font-bold"
-                                  : "border-gray-300 dark:border-gray-600"
-                                }
-                              `}
-                            />
-                          </div>
+                        <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                          {isDinero ? `$ ${takenValue.toLocaleString("es-AR")}` : takenValue}
                         </td>
                         {/* Pendientes */}
                         <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
@@ -648,12 +665,23 @@ export const UserOrderManagementTab: React.FC = () => {
                             )}
                           </td>
                         )}
+                        {/* Acciones */}
+                        <td className="px-4 py-4 whitespace-nowrap text-center text-xs font-medium">
+                          <button
+                            type="button"
+                            onClick={() => handleReset(balance)}
+                            className="px-2.5 py-1 bg-red-50 text-red-650 hover:bg-red-100 hover:text-red-800 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-900/30 dark:hover:text-red-300 rounded border border-red-200 dark:border-red-900/40 transition-colors font-medium"
+                          >
+                            <FontAwesomeIcon icon={faUndo} className="mr-1" />
+                            Resetear
+                          </button>
+                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={isDinero ? 9 : 8} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={isDinero ? 10 : 9} className="px-6 py-8 text-center text-gray-500">
                       No se encontraron usuarios con los filtros seleccionados
                     </td>
                   </tr>

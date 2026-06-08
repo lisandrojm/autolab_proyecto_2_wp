@@ -16,7 +16,7 @@ import { Holiday } from "../models/Holiday.js";
 import { OrderGeneralConfig } from "../models/OrderGeneralConfig.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
-import { getPlainOrderNumber, getOrderRemainingCost } from "../utils/orderHelpers.js";
+import { getPlainOrderNumber, getOrderRemainingCost, recalculateUserOrderBalance } from "../utils/orderHelpers.js";
 import UserProject from "../models/UserProject.js";
 import "../models/Position.js";
 
@@ -520,6 +520,48 @@ router.post("/users-balance", async (req: any, res) => {
     res.status(500).json({ error: "Error al guardar los balances de pedidos", details: error.message });
   }
 });
+
+// POST /api/v1/orders/users-balance/reset - Reset user order balance and cancel orders
+router.post("/users-balance/reset", async (req: any, res) => {
+  try {
+    const tenantId = req.tenantObjectId;
+    const { userId, orderConfigId, subtypeId, year } = req.body;
+
+    if (!userId || !orderConfigId || !year) {
+      return res.status(400).json({ error: "userId, orderConfigId y year son requeridos" });
+    }
+
+    const startOfYear = new Date(year, 0, 1);
+    const endOfYear = new Date(year, 11, 31, 23, 59, 59, 999);
+
+    const orderQuery: any = {
+      tenantId,
+      userId,
+      categoryId: orderConfigId,
+      requestedAt: { $gte: startOfYear, $lte: endOfYear }
+    };
+    if (subtypeId) {
+      orderQuery.subcategories = subtypeId;
+    }
+
+    // Cancel all orders of this user/category/year
+    await Order.updateMany(
+      orderQuery,
+      {
+        $set: { status: "cancelled" }
+      }
+    );
+
+    // Recalculate balance for override if exists
+    await recalculateUserOrderBalance(tenantId, userId, orderConfigId, year, subtypeId);
+
+    res.json({ message: "Balance y cuotas reiniciados a cero correctamente" });
+  } catch (error: any) {
+    console.error("Error resetting user order balance:", error);
+    res.status(500).json({ error: "Error al reiniciar el balance de pedidos", details: error.message });
+  }
+});
+
 
 
 router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
