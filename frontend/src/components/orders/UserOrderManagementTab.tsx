@@ -639,7 +639,22 @@ export const UserOrderManagementTab: React.FC = () => {
                         </td>
                         {/* Tomados */}
                         <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                          {isDinero ? `$ ${takenValue.toLocaleString("es-AR")}` : takenValue}
+                          {activeConfig?.categoryType === "fecha" ? (
+                            <input
+                              type="number"
+                              min="0"
+                              value={takenValue}
+                              onChange={(e) => handleFieldChange(balance.userId, "taken", e.target.value)}
+                              className={`w-20 px-2 py-1 text-center border rounded text-sm focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:text-white
+                                ${edits.taken !== undefined && edits.taken !== balance.display.taken
+                                  ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20 font-bold"
+                                  : "border-gray-300 dark:border-gray-600"
+                                }
+                              `}
+                            />
+                          ) : (
+                            isDinero ? `$ ${takenValue.toLocaleString("es-AR")}` : takenValue
+                          )}
                         </td>
                         {/* Pendientes */}
                         <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
