@@ -53,6 +53,7 @@ const orderSchema = new Schema({
     approvedAt: { type: Date },
     deliveredAt: { type: Date },
     amount: { type: Number, min: 0 },
+    installments: { type: Number, min: 1 },
     photoUrl: { type: String, trim: true },
     documentoUrl: { type: String, trim: true },
     actionCompleted: { type: Boolean },

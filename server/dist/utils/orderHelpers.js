@@ -27,6 +27,75 @@ export async function getNextOrderNumber(tenantId, prefix) {
     const paddedNumber = nextSequence.toString().padStart(6, "0");
     return `${prefix}-ORD-${paddedNumber}`;
 }
+export function getOrderRemainingCost(o, category) {
+    if (category.categoryType !== "dinero") {
+        return category.categoryType === "fecha" ? (o.daysRequested || 0) : 1;
+    }
+    const baseCost = o.amount || 0;
+    // Enforce that pending orders don't have installments subtracted yet
+    const isApproved = o.status === "delivered" || o.signatureStatus === "signed" || (o.status === "approved" && (o.signatureStatus === "not_required" || !o.signatureStatus));
+    if (!isApproved) {
+        return baseCost;
+    }
+    // Find installments configuration
+    let inst = o.installments;
+    let resetOnPaid = true;
+    if (!inst) {
+        if (o.subcategories && o.subcategories.length > 0 && category.config?.subtipos) {
+            const subId = o.subcategories[0];
+            const subtype = category.config.subtipos.find((st) => st.id === subId);
+            if (subtype?.repayment?.installments) {
+                inst = subtype.repayment.installments;
+                resetOnPaid = subtype.repayment.resetOnPaid ?? true;
+            }
+        }
+        if (!inst && category.config?.repayment?.installments) {
+            inst = category.config.repayment.installments;
+            resetOnPaid = category.config.repayment.resetOnPaid ?? true;
+        }
+    }
+    else {
+        // If installments is explicitly set on the order, we check category for resetOnPaid
+        if (o.subcategories && o.subcategories.length > 0 && category.config?.subtipos) {
+            const subId = o.subcategories[0];
+            const subtype = category.config.subtipos.find((st) => st.id === subId);
+            if (subtype?.repayment) {
+                resetOnPaid = subtype.repayment.resetOnPaid ?? true;
+            }
+        }
+        if (category.config?.repayment) {
+            resetOnPaid = category.config.repayment.resetOnPaid ?? true;
+        }
+    }
+    if (!inst) {
+        return baseCost;
+    }
+    const numInstallments = inst || 1;
+    const baseDateStr = o.approvedAt || o.preApprovedAt || o.deliveredAt || o.requestedAt;
+    if (!baseDateStr) {
+        return baseCost;
+    }
+    const baseDate = new Date(baseDateStr);
+    if (isNaN(baseDate.getTime())) {
+        return baseCost;
+    }
+    const startYear = baseDate.getFullYear();
+    const startMonth = baseDate.getMonth();
+    let passedInst = 0;
+    const now = new Date();
+    for (let i = 0; i < numInstallments; i++) {
+        const discountDate = new Date(startYear, startMonth + i + 1, 0); // last day of month
+        discountDate.setHours(23, 59, 59, 999);
+        if (discountDate.getTime() <= now.getTime()) {
+            passedInst++;
+        }
+    }
+    if (resetOnPaid) {
+        const remainingFraction = Math.max(0, 1 - passedInst / numInstallments);
+        return baseCost * remainingFraction;
+    }
+    return baseCost;
+}
 export async function recalculateUserOrderBalance(tenantId, userId, orderConfigId, year, subtypeId) {
     try {
         const overrideQuery = { tenantId, userId, orderConfigId, year };
@@ -53,23 +122,35 @@ export async function recalculateUserOrderBalance(tenantId, userId, orderConfigI
             orderFilter.subcategories = subtypeId;
         }
         const orders = await Order.find(orderFilter).lean();
+        const OrderConfig = mongoose.models.OrderConfig || mongoose.model("OrderConfig");
+        const category = await OrderConfig.findById(orderConfigId).lean();
+        if (!category) {
+            console.warn(`[ORDER BALANCE] Category not found: ${orderConfigId}`);
+            return;
+        }
         let taken = 0;
         let pending = 0;
         for (const o of orders) {
+            const cost = getOrderRemainingCost(o, category);
             const isSigned = o.signatureStatus === "signed";
             const isDelivered = o.status === "delivered";
             if (isDelivered || isSigned || (o.status === "approved" && (o.signatureStatus === "not_required" || !o.signatureStatus))) {
-                taken += o.daysRequested || 0;
+                taken += cost;
             }
             else {
-                pending += o.daysRequested || 0;
+                pending += cost;
             }
         }
         override.taken = taken;
         override.pending = pending;
-        override.available = Math.max(0, (override.totalAnnual ?? 0) - taken - pending);
+        if (override.totalAnnual !== undefined) {
+            override.available = Math.max(0, override.totalAnnual - taken - pending);
+        }
+        else {
+            override.available = undefined;
+        }
         await override.save();
-        console.log(`[ORDER BALANCE] Recalculated for user ${userId}, year ${year}, category ${orderConfigId}, subtype ${subtypeId}: taken=${taken}, pending=${pending}, available=${override.available}`);
+        console.log(`[ORDER BALANCE] Recalculated for user ${userId}, year ${year}, category ${orderConfigId}, subtype ${subtypeId}: categoryType=${category.categoryType}, taken=${taken}, pending=${pending}, available=${override.available}`);
     }
     catch (error) {
         console.error("Error recalculating user order balance:", error);

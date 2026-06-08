@@ -16,6 +16,7 @@ export interface IOrder extends Document {
     approvedAt?: Date;
     deliveredAt?: Date;
     amount?: number;
+    installments?: number;
     photoUrl?: string;
     documentoUrl?: string;
     actionCompleted?: boolean;

@@ -16,7 +16,7 @@ import { Holiday } from "../models/Holiday.js";
 import { OrderGeneralConfig } from "../models/OrderGeneralConfig.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
-import { getPlainOrderNumber } from "../utils/orderHelpers.js";
+import { getPlainOrderNumber, getOrderRemainingCost } from "../utils/orderHelpers.js";
 import UserProject from "../models/UserProject.js";
 import "../models/Position.js";
 
@@ -297,13 +297,14 @@ router.get("/users-balance", async (req: any, res) => {
       // C. Total Dynamic allowed: from OrderConfig or subtype config
       let calculatedTotalAnnual = 0;
       if (orderConfig.categoryType === "dinero") {
-        if (orderConfig.limitType === "monto") {
+        const effectiveLimitType = orderConfig.limitType || (orderConfig.montoMaximo ? "monto" : null);
+        if (effectiveLimitType === "monto") {
           calculatedTotalAnnual = orderConfig.montoMaximo || 0;
           if (subtypeId && orderConfig.config?.subtipos) {
             const subtype = orderConfig.config.subtipos.find((st: any) => st.id === subtypeId);
             calculatedTotalAnnual = subtype?.montoMaximo ?? orderConfig.montoMaximo ?? 0;
           }
-        } else if (orderConfig.limitType === "porcentaje") {
+        } else if (effectiveLimitType === "porcentaje") {
           let sueldoMano = 0;
           if (user.metadata?.projects && Array.isArray(user.metadata.projects)) {
             for (const up of user.metadata.projects as any[]) {
@@ -354,17 +355,9 @@ router.get("/users-balance", async (req: any, res) => {
 
       const userOrders = userOrdersMap.get(uIdStr) || [];
       for (const o of userOrders) {
+        const cost = getOrderRemainingCost(o, orderConfig);
         const isSigned = o.signatureStatus === "signed";
         const isDelivered = o.status === "delivered";
-        
-        let cost = 0;
-        if (orderConfig.categoryType === "dinero") {
-          cost = o.amount || 0;
-        } else if (orderConfig.categoryType === "fecha") {
-          cost = o.daysRequested || 0;
-        } else {
-          cost = 1; // for objeto/otros
-        }
 
         if (isDelivered || isSigned || (o.status === "approved" && (o.signatureStatus === "not_required" || !o.signatureStatus))) {
           calculatedTaken += cost;
@@ -944,10 +937,93 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
         }
       }
 
-      if (category.categoryType === "dinero" && category.montoMaximo) {
+      if (category.categoryType === "dinero") {
         const montoSolicitado = data.amount || 0;
-        if (montoSolicitado > category.montoMaximo) {
+
+        if (category.montoMaximo && montoSolicitado > category.montoMaximo) {
           res.status(400).json({ error: `El monto solicitado ($${montoSolicitado.toLocaleString("es-ES")}) excede el máximo permitido ($${category.montoMaximo.toLocaleString("es-ES")})` });
+          return;
+        }
+
+        const now = new Date();
+        const startOfYear = new Date(Date.UTC(now.getFullYear(), 0, 1));
+        const endOfYear = new Date(Date.UTC(now.getFullYear(), 11, 31, 23, 59, 59));
+        const requestYear = now.getFullYear();
+
+        const globalOverride = await UserOrderBalance.findOne({
+          tenantId: req.tenantObjectId,
+          userId,
+          orderConfigId: data.categoryId,
+          subtypeId: { $in: [null, undefined] },
+          year: requestYear
+        }).lean();
+
+        let available = 0;
+
+        if (globalOverride && globalOverride.available !== undefined) {
+          available = globalOverride.available;
+        } else {
+          let limit = 0;
+          const effectiveLimitType = category.limitType || (category.montoMaximo ? "monto" : null);
+          if (effectiveLimitType === "monto") {
+            limit = category.montoMaximo || 0;
+          } else if (effectiveLimitType === "porcentaje") {
+            let sueldoMano = 0;
+            const user = await User.findById(userId).populate("metadata.projects").lean();
+            if (user?.metadata?.projects && Array.isArray(user.metadata.projects)) {
+              for (const up of user.metadata.projects) {
+                const typedUp = up as any;
+                if (typedUp && Array.isArray(typedUp.contracts)) {
+                  for (const c of typedUp.contracts) {
+                    const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
+                    if (endDate) endDate.setHours(23, 59, 59, 999);
+                    const isActive = !endDate || endDate.getTime() >= Date.now();
+                    if (isActive && c.sueldo_mano) {
+                      const rawSalary = String(c.sueldo_mano).replace(/[,.]/g, "");
+                      const num = parseFloat(rawSalary);
+                      if (!isNaN(num)) {
+                        sueldoMano = num;
+                        break;
+                      }
+                    }
+                  }
+                }
+                if (sueldoMano > 0) break;
+              }
+            }
+            const percentage = category.porcentajeMaximo || 0;
+            limit = Math.floor(((sueldoMano * percentage) / 100) / 50000) * 50000;
+          }
+
+          const existingOrders = await Order.find({
+            tenantId: req.tenantObjectId,
+            userId,
+            categoryId: data.categoryId,
+            status: { $nin: ["rejected", "cancelled"] },
+            requestedAt: { $gte: startOfYear, $lte: endOfYear }
+          }).lean();
+
+          let taken = 0;
+          let pending = 0;
+
+          for (const o of existingOrders) {
+            const cost = getOrderRemainingCost(o, category);
+            const isSigned = o.signatureStatus === "signed";
+            const isDelivered = o.status === "delivered";
+            if (isDelivered || isSigned || (o.status === "approved" && (o.signatureStatus === "not_required" || !o.signatureStatus))) {
+              taken += cost;
+            } else {
+              pending += cost;
+            }
+          }
+
+          available = Math.max(0, limit - taken - pending);
+        }
+
+        if (montoSolicitado > available) {
+          res.status(400).json({
+            error: `El pedido excede el monto disponible. Disponible: $${available.toLocaleString("es-ES")}, Solicitado: $${montoSolicitado.toLocaleString("es-ES")}`
+          });
           return;
         }
       }

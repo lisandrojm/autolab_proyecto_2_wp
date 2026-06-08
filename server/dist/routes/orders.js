@@ -16,7 +16,7 @@ import { Holiday } from "../models/Holiday.js";
 import { OrderGeneralConfig } from "../models/OrderGeneralConfig.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
-import { getPlainOrderNumber } from "../utils/orderHelpers.js";
+import { getPlainOrderNumber, getOrderRemainingCost } from "../utils/orderHelpers.js";
 import "../models/Position.js";
 const router = Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -108,6 +108,7 @@ const createOrderSchema = z.object({
     actionCompleted: z.boolean().optional(),
     dynamicValue: z.any().optional(),
     amount: z.number().min(0).optional(),
+    installments: z.number().min(1).optional(),
     photoUrl: z.string().optional(),
     documentoUrl: z.string().optional(),
     futureActionPlazoDias: z.number().min(1).max(365).optional(),
@@ -119,6 +120,7 @@ const updateOrderSchema = z.object({
     description: z.string().min(1).optional(),
     category: z.string().optional(),
     amount: z.number().min(0).optional(),
+    installments: z.number().min(1).optional(),
     status: z.enum(["pending", "approved", "rejected", "delivered", "cancelled"]).optional(),
     photoUrl: z.string().optional(),
 });
@@ -269,25 +271,129 @@ router.get("/users-balance", async (req, res) => {
             }
             // B. Seniority Text (relative to today)
             const seniorityText = calculateSeniorityText(user.hireDate, contractsDays);
-            // C. Total Dynamic allowed days: from OrderConfig maxDays or subtype.maxDays
-            let calculatedTotalAnnual = orderConfig.maxDays || 0;
-            if (subtypeId && orderConfig.config?.subtipos) {
-                const subtype = orderConfig.config.subtipos.find((st) => st.id === subtypeId);
-                calculatedTotalAnnual = subtype?.maxDays || 0;
+            // C. Total Dynamic allowed: from OrderConfig or subtype config
+            let calculatedTotalAnnual = 0;
+            if (orderConfig.categoryType === "dinero") {
+                const effectiveLimitType = orderConfig.limitType || (orderConfig.montoMaximo ? "monto" : null);
+                if (effectiveLimitType === "monto") {
+                    calculatedTotalAnnual = orderConfig.montoMaximo || 0;
+                    if (subtypeId && orderConfig.config?.subtipos) {
+                        const subtype = orderConfig.config.subtipos.find((st) => st.id === subtypeId);
+                        calculatedTotalAnnual = subtype?.montoMaximo ?? orderConfig.montoMaximo ?? 0;
+                    }
+                }
+                else if (effectiveLimitType === "porcentaje") {
+                    let sueldoMano = 0;
+                    if (user.metadata?.projects && Array.isArray(user.metadata.projects)) {
+                        for (const up of user.metadata.projects) {
+                            if (up && Array.isArray(up.contracts)) {
+                                const sortedContracts = [...up.contracts].sort((a, b) => {
+                                    const endA = a.fecha_baja_contrato ? new Date(a.fecha_baja_contrato).getTime() : Infinity;
+                                    const endB = b.fecha_baja_contrato ? new Date(b.fecha_baja_contrato).getTime() : Infinity;
+                                    const now = Date.now();
+                                    const activeA = endA >= now;
+                                    const activeB = endB >= now;
+                                    if (activeA && !activeB)
+                                        return -1;
+                                    if (!activeA && activeB)
+                                        return 1;
+                                    return 0;
+                                });
+                                for (const c of sortedContracts) {
+                                    const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
+                                    if (endDate)
+                                        endDate.setHours(23, 59, 59, 999);
+                                    const isActive = !endDate || endDate.getTime() >= Date.now();
+                                    if (isActive && c.sueldo_mano) {
+                                        const rawSalary = String(c.sueldo_mano).replace(/[,.]/g, "");
+                                        const num = parseFloat(rawSalary);
+                                        if (!isNaN(num)) {
+                                            sueldoMano = num;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            if (sueldoMano > 0)
+                                break;
+                        }
+                    }
+                    const percentage = orderConfig.porcentajeMaximo || 0;
+                    calculatedTotalAnnual = Math.floor(((sueldoMano * percentage) / 100) / 50000) * 50000;
+                }
+                else {
+                    calculatedTotalAnnual = 0;
+                }
+            }
+            else {
+                calculatedTotalAnnual = orderConfig.maxDays || 0;
+                if (subtypeId && orderConfig.config?.subtipos) {
+                    const subtype = orderConfig.config.subtipos.find((st) => st.id === subtypeId);
+                    calculatedTotalAnnual = subtype?.maxDays || 0;
+                }
             }
             // D. Taken / Pending from orders list
             let calculatedTaken = 0;
             let calculatedPending = 0;
             const userOrders = userOrdersMap.get(uIdStr) || [];
             for (const o of userOrders) {
+                const cost = getOrderRemainingCost(o, orderConfig);
                 const isSigned = o.signatureStatus === "signed";
                 const isDelivered = o.status === "delivered";
                 if (isDelivered || isSigned || (o.status === "approved" && (o.signatureStatus === "not_required" || !o.signatureStatus))) {
-                    calculatedTaken += o.daysRequested || 0;
+                    calculatedTaken += cost;
                 }
                 else {
-                    calculatedPending += o.daysRequested || 0;
+                    calculatedPending += cost;
                 }
+            }
+            // D2. Calculate installments information if categoryType === "dinero"
+            let installmentsInfo = undefined;
+            if (orderConfig.categoryType === "dinero") {
+                let totalInst = 0;
+                let passedInst = 0;
+                let remainingInst = 0;
+                for (const o of userOrders) {
+                    let inst = o.installments;
+                    if (!inst) {
+                        if (o.subcategories && o.subcategories.length > 0 && orderConfig.config?.subtipos) {
+                            const subId = o.subcategories[0];
+                            const subtype = orderConfig.config.subtipos.find((st) => st.id === subId);
+                            if (subtype?.repayment?.installments) {
+                                inst = subtype.repayment.installments;
+                            }
+                        }
+                        if (!inst && orderConfig.config?.repayment?.installments) {
+                            inst = orderConfig.config.repayment.installments;
+                        }
+                    }
+                    const numInstallments = inst || 1;
+                    const baseDateStr = o.approvedAt || o.preApprovedAt || o.deliveredAt || o.requestedAt;
+                    if (baseDateStr) {
+                        const baseDate = new Date(baseDateStr);
+                        if (!isNaN(baseDate.getTime())) {
+                            const startYear = baseDate.getFullYear();
+                            const startMonth = baseDate.getMonth();
+                            totalInst += numInstallments;
+                            const now = new Date();
+                            for (let i = 0; i < numInstallments; i++) {
+                                const discountDate = new Date(startYear, startMonth + i + 1, 0); // last day of month
+                                discountDate.setHours(23, 59, 59, 999);
+                                if (discountDate.getTime() <= now.getTime()) {
+                                    passedInst++;
+                                }
+                                else {
+                                    remainingInst++;
+                                }
+                            }
+                        }
+                    }
+                }
+                installmentsInfo = {
+                    total: totalInst,
+                    passed: passedInst,
+                    remaining: remainingInst
+                };
             }
             const calculatedAvailable = Math.max(0, calculatedTotalAnnual - calculatedTaken - calculatedPending);
             // E. Fetch overrides
@@ -323,8 +429,9 @@ router.get("/users-balance", async (req, res) => {
                     pending: displayPending,
                     available: displayAvailable,
                 },
+                installmentsInfo,
                 // Meta field for filters in frontend
-                projectIds: user.projectIds?.map((p) => typeof p === "string" ? p : p._id) || [],
+                projectIds: user.projectIds?.map((p) => (p._id || p).toString()) || [],
                 metadata: user.metadata,
             });
         }
@@ -619,6 +726,7 @@ router.post("/", uploadOrderImage, async (req, res) => {
         const data = createOrderSchema.parse({
             ...req.body,
             amount: req.body.amount ? parseFloat(req.body.amount) : undefined,
+            installments: req.body.installments ? parseInt(req.body.installments) : undefined,
             actionCompleted: req.body.actionCompleted === "true" || req.body.actionCompleted === true,
             futureActionPlazoDias: req.body.futureActionPlazoDias ? parseInt(req.body.futureActionPlazoDias) : undefined,
             dynamicValue: parsedDynamicValue,
@@ -745,10 +853,88 @@ router.post("/", uploadOrderImage, async (req, res) => {
                     }
                 }
             }
-            if (category.categoryType === "dinero" && category.montoMaximo) {
+            if (category.categoryType === "dinero") {
                 const montoSolicitado = data.amount || 0;
-                if (montoSolicitado > category.montoMaximo) {
+                if (category.montoMaximo && montoSolicitado > category.montoMaximo) {
                     res.status(400).json({ error: `El monto solicitado ($${montoSolicitado.toLocaleString("es-ES")}) excede el máximo permitido ($${category.montoMaximo.toLocaleString("es-ES")})` });
+                    return;
+                }
+                const now = new Date();
+                const startOfYear = new Date(Date.UTC(now.getFullYear(), 0, 1));
+                const endOfYear = new Date(Date.UTC(now.getFullYear(), 11, 31, 23, 59, 59));
+                const requestYear = now.getFullYear();
+                const globalOverride = await UserOrderBalance.findOne({
+                    tenantId: req.tenantObjectId,
+                    userId,
+                    orderConfigId: data.categoryId,
+                    subtypeId: { $in: [null, undefined] },
+                    year: requestYear
+                }).lean();
+                let available = 0;
+                if (globalOverride && globalOverride.available !== undefined) {
+                    available = globalOverride.available;
+                }
+                else {
+                    let limit = 0;
+                    const effectiveLimitType = category.limitType || (category.montoMaximo ? "monto" : null);
+                    if (effectiveLimitType === "monto") {
+                        limit = category.montoMaximo || 0;
+                    }
+                    else if (effectiveLimitType === "porcentaje") {
+                        let sueldoMano = 0;
+                        const user = await User.findById(userId).populate("metadata.projects").lean();
+                        if (user?.metadata?.projects && Array.isArray(user.metadata.projects)) {
+                            for (const up of user.metadata.projects) {
+                                const typedUp = up;
+                                if (typedUp && Array.isArray(typedUp.contracts)) {
+                                    for (const c of typedUp.contracts) {
+                                        const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
+                                        if (endDate)
+                                            endDate.setHours(23, 59, 59, 999);
+                                        const isActive = !endDate || endDate.getTime() >= Date.now();
+                                        if (isActive && c.sueldo_mano) {
+                                            const rawSalary = String(c.sueldo_mano).replace(/[,.]/g, "");
+                                            const num = parseFloat(rawSalary);
+                                            if (!isNaN(num)) {
+                                                sueldoMano = num;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                                if (sueldoMano > 0)
+                                    break;
+                            }
+                        }
+                        const percentage = category.porcentajeMaximo || 0;
+                        limit = Math.floor(((sueldoMano * percentage) / 100) / 50000) * 50000;
+                    }
+                    const existingOrders = await Order.find({
+                        tenantId: req.tenantObjectId,
+                        userId,
+                        categoryId: data.categoryId,
+                        status: { $nin: ["rejected", "cancelled"] },
+                        requestedAt: { $gte: startOfYear, $lte: endOfYear }
+                    }).lean();
+                    let taken = 0;
+                    let pending = 0;
+                    for (const o of existingOrders) {
+                        const cost = getOrderRemainingCost(o, category);
+                        const isSigned = o.signatureStatus === "signed";
+                        const isDelivered = o.status === "delivered";
+                        if (isDelivered || isSigned || (o.status === "approved" && (o.signatureStatus === "not_required" || !o.signatureStatus))) {
+                            taken += cost;
+                        }
+                        else {
+                            pending += cost;
+                        }
+                    }
+                    available = Math.max(0, limit - taken - pending);
+                }
+                if (montoSolicitado > available) {
+                    res.status(400).json({
+                        error: `El pedido excede el monto disponible. Disponible: $${available.toLocaleString("es-ES")}, Solicitado: $${montoSolicitado.toLocaleString("es-ES")}`
+                    });
                     return;
                 }
             }

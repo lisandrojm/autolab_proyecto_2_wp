@@ -614,7 +614,7 @@ router.get("/users-balance", async (req, res) => {
                     available: displayAvailable,
                 },
                 // Meta field for filters in frontend
-                projectIds: user.projectIds?.map((p) => typeof p === "string" ? p : p._id) || [],
+                projectIds: user.projectIds?.map((p) => (p._id || p).toString()) || [],
                 metadata: user.metadata,
             });
         }
