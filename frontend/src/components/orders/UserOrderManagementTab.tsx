@@ -685,10 +685,10 @@ export const UserOrderManagementTab: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => handleReset(balance)}
+                            title="Resetear"
                             className="px-2.5 py-1 bg-red-50 text-red-650 hover:bg-red-100 hover:text-red-800 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-900/30 dark:hover:text-red-300 rounded border border-red-200 dark:border-red-900/40 transition-colors font-medium"
                           >
-                            <FontAwesomeIcon icon={faUndo} className="mr-1" />
-                            Resetear
+                            <FontAwesomeIcon icon={faUndo} />
                           </button>
                         </td>
                       </tr>
