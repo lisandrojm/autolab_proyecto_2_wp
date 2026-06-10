@@ -126,10 +126,10 @@ export const MobileNavbar: React.FC = () => {
     }> = [];
 
     if (isSuperAdminTenant) {
-      base.push({ path: "/tenants", icon: faBuilding, label: "Tenants", scope: "global", count: adminCounts.tenants }, { path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users }, { path: "/shifts", icon: faClock, label: "Turnos", scope: "global" }, { path: "/roles", icon: faUserShield, label: "Roles", scope: "global", count: adminCounts.roles }, { path: "/admin/roles-frame", icon: faUserShield, label: "Roles Frame", scope: "global" }, { path: "/areas", icon: faLayerGroup, label: "Áreas", scope: "global", count: adminCounts.areas }, { path: "/positions", icon: faUserTie, label: "Cargos", scope: "global", count: adminCounts.positions }, { path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels }, { path: "/clients", icon: faUsers, label: "Clientes", scope: "global", count: adminCounts.clients }, { path: "/categorias-sat", icon: faListCheck, label: "Categorías SAT", scope: "global" });
+      base.push({ path: "/tenants", icon: faBuilding, label: "Tenants", scope: "global", count: adminCounts.tenants }, { path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users }, { path: "/shifts", icon: faClock, label: "Turnos", scope: "global" }, { path: "/roles", icon: faUserShield, label: "Roles", scope: "global", count: adminCounts.roles }, { path: "/funciones-frame", icon: faUserShield, label: "Funciones FRAME", scope: "global" }, { path: "/areas", icon: faLayerGroup, label: "Áreas", scope: "global", count: adminCounts.areas }, { path: "/positions", icon: faUserTie, label: "Cargos", scope: "global", count: adminCounts.positions }, { path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels }, { path: "/clients", icon: faUsers, label: "Clientes", scope: "global", count: adminCounts.clients }, { path: "/categorias-sat", icon: faListCheck, label: "Categorías SAT", scope: "global" });
     } else {
       if (hasPermission("admin_roles:view")) base.push({ path: "/roles", icon: faUserShield, label: "Roles", scope: "global", count: adminCounts.roles });
-      if (hasPermission("admin_roles:view")) base.push({ path: "/admin/roles-frame", icon: faUserShield, label: "Roles Frame", scope: "global" });
+      if (hasPermission("admin_roles:view")) base.push({ path: "/funciones-frame", icon: faUserShield, label: "Funciones FRAME", scope: "global" });
       if (hasPermission("admin_areas:view")) base.push({ path: "/areas", icon: faLayerGroup, label: "Áreas", scope: "global", count: adminCounts.areas });
       if (hasPermission("admin_positions:view")) base.push({ path: "/positions", icon: faUserTie, label: "Cargos", scope: "global", count: adminCounts.positions });
       if (hasPermission("admin_levels:view")) base.push({ path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels });
@@ -211,11 +211,14 @@ export const MobileNavbar: React.FC = () => {
     const isSuperAdminTenant = user?.tenantSlug === "superadmin";
 
     // Partición de items: Admin Usuarios, Admin General, Configuración y GESTIÓN
-    const userAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/users", "/roles", "/admin/roles-frame", "/areas", "/positions", "/levels"].includes(item.path)) : adminItems.filter((item) => ["/roles", "/admin/roles-frame", "/areas", "/positions", "/levels", "/users"].includes(item.path));
+    const userAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/users", "/roles", "/areas", "/positions", "/levels"].includes(item.path)) : adminItems.filter((item) => ["/roles", "/areas", "/positions", "/levels", "/users"].includes(item.path));
 
     const generalAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/tenants", "/clients"].includes(item.path)) : adminItems.filter((item) => ["/clients", "/admin/projects", "/admin/sedes", "/admin/contracts", "/orders", "/vacations", "/requests", "/calendar-events", "/employee-profiles", "/documents"].includes(item.path));
 
-    const configItems = adminItems.filter((item) => ["/order-types", "/pdfs", "/vacations-rules", "/requests/config", "/shifts", "/holidays", "/categorias-sat"].includes(item.path));
+    const configOrder = ["/requests/config", "/order-types", "/shifts", "/vacations-rules", "/holidays", "/pdfs", "/categorias-sat", "/funciones-frame"];
+    const configItems = adminItems
+      .filter((item) => configOrder.includes(item.path))
+      .sort((a, b) => configOrder.indexOf(a.path) - configOrder.indexOf(b.path));
 
     const renderMenuItem = (item: any) => {
       if (item.external) {

@@ -283,6 +283,14 @@ function App() {
                 }
               />
               <Route
+                path="/funciones-frame"
+                element={
+                  <ProtectedRoute>
+                    <RolesFramePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/admin/roles-frame"
                 element={
                   <ProtectedRoute>
