@@ -34,4 +34,14 @@ export const activityLogTypesAPI = {
   reorder: async (items: { id: string; order: number }[]) => {
     await axiosClient.patch("/request-config/reorder", { items });
   },
+
+  getGeneralSettings: async () => {
+    const response = await axiosClient.get<{ allowedPastDays: number }>("/request-config/settings");
+    return response.data;
+  },
+
+  updateGeneralSettings: async (data: { allowedPastDays: number }) => {
+    const response = await axiosClient.put<{ allowedPastDays: number }>("/request-config/settings", data);
+    return response.data;
+  },
 };

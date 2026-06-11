@@ -3,7 +3,7 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { ProjectHeaderSelector } from "../components/activity_logs_config/ProjectHeaderSelector";
 import { SortableActivityTypeRow, RequestConfig as RequestConfigType } from "../components/activity_logs_config/SortableActivityTypeRow";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faCog, faPlus, faGripVertical, faInfoCircle, faGlobe, faUsers, faToggleOn, faToggleOff, faCircleInfo, faSpinner, faBriefcase, faMobileAlt, faUserPlus, faStar, faClipboardList, faCalendarAlt, faFileInvoiceDollar, faSave } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faCog, faPlus, faGripVertical, faInfoCircle, faGlobe, faUsers, faToggleOn, faToggleOff, faCircleInfo, faSpinner, faBriefcase, faMobileAlt, faUserPlus, faCalendarAlt, faFileInvoiceDollar, faSave } from "@fortawesome/free-solid-svg-icons";
 import { overtimeUtils, OvertimeSettings } from "../utils/overtimeUtils";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ReportSchedule } from "../types/activityTypes";
@@ -80,8 +80,9 @@ export const RequestsConfigPage: React.FC = () => {
   const [savingFrequency, setSavingFrequency] = useState(false);
 
   // Allowed Past Days Config State
-  const [allowedPastDays, setAllowedPastDays] = useState<number>(3);
-  const [savingAllowedDays, setSavingAllowedDays] = useState(false);
+  const [globalAllowedPastDays, setGlobalAllowedPastDays] = useState<number>(3);
+  const [savingGlobalAllowedDays, setSavingGlobalAllowedDays] = useState(false);
+  const [projectSpecificDays, setProjectSpecificDays] = useState<Record<string, number>>({});
 
   // ABM State
   const [activityTypes, setActivityTypes] = useState<RequestConfigType[]>([]);
@@ -101,7 +102,17 @@ export const RequestsConfigPage: React.FC = () => {
   useEffect(() => {
     fetchTypes();
     loadProjects();
+    fetchGeneralSettings();
   }, []);
+
+  const fetchGeneralSettings = async () => {
+    try {
+      const data = await activityLogTypesAPI.getGeneralSettings();
+      setGlobalAllowedPastDays(data.allowedPastDays ?? 3);
+    } catch (e) {
+      console.error("Error fetching general allowed past days settings", e);
+    }
+  };
 
   const fetchTypes = async () => {
     try {
@@ -141,9 +152,6 @@ export const RequestsConfigPage: React.FC = () => {
         setType("daily");
         setSelectedDays([0, 1, 2, 3, 4, 5, 6]);
       }
-
-      const currentAllowedDays = selectedProject.activityLogConfig?.allowedPastDays;
-      setAllowedPastDays(currentAllowedDays !== undefined ? currentAllowedDays : 3);
     }
   }, [selectedProject?._id, selectedProject?.activityLogConfig]);
 
@@ -185,27 +193,93 @@ export const RequestsConfigPage: React.FC = () => {
     }
   };
 
-  const handleSaveAllowedDays = async () => {
-    if (!selectedProject) return;
-    setSavingAllowedDays(true);
+  const handleToggleUseGlobal = async (project: Project) => {
     try {
+      const conf = project.activityLogConfig;
+      const currentUseGlobal = conf?.useGlobalConfig !== false;
+      const newUseGlobal = !currentUseGlobal;
+      const currentCustomDays = conf?.allowedPastDays ?? globalAllowedPastDays;
+
       const newConfig = sanitizeActivityLogConfig({
-        useGlobalConfig: false,
-        ...selectedProject.activityLogConfig,
-        allowedPastDays,
+        ...conf,
+        useGlobalConfig: newUseGlobal,
+        allowedPastDays: newUseGlobal ? globalAllowedPastDays : currentCustomDays,
       });
 
-      await projectsAPI.updateProject(selectedProject._id, { activityLogConfig: newConfig });
+      // Optimistic UI
+      setAllProjects((prev) =>
+        prev.map((p) => (p._id === project._id ? { ...p, activityLogConfig: newConfig } : p))
+      );
 
-      setSelectedProject((prev: any) => (prev ? { ...prev, activityLogConfig: newConfig } : prev));
-      setAllProjects((prev) => prev.map((p) => (p._id === selectedProject._id ? { ...p, activityLogConfig: newConfig } : p)));
-
-      sweetAlert.success("Configuración Guardada", `Se han actualizado los días permitidos para ${selectedProject.name}`);
+      await projectsAPI.updateProject(project._id, { activityLogConfig: newConfig });
     } catch (error) {
-      console.error("Error saving allowed past days:", error);
+      console.error("Error toggling global config:", error);
+      sweetAlert.error("Error", "No se pudo actualizar el proyecto.");
+      loadProjects(); // Revert
+    }
+  };
+
+  const handleSaveProjectDays = async (project: Project, days: number) => {
+    try {
+      const conf = project.activityLogConfig;
+      const newConfig = sanitizeActivityLogConfig({
+        ...conf,
+        useGlobalConfig: false,
+        allowedPastDays: days,
+      });
+
+      // Optimistic UI
+      setAllProjects((prev) =>
+        prev.map((p) => (p._id === project._id ? { ...p, activityLogConfig: newConfig } : p))
+      );
+
+      await projectsAPI.updateProject(project._id, { activityLogConfig: newConfig });
+    } catch (error) {
+      console.error("Error saving custom allowed days:", error);
       sweetAlert.error("Error", "No se pudo guardar la configuración");
+      loadProjects(); // Revert
+    }
+  };
+
+  const handleSaveGlobalAllowedDays = async () => {
+    setSavingGlobalAllowedDays(true);
+    try {
+      await activityLogTypesAPI.updateGeneralSettings({ allowedPastDays: globalAllowedPastDays });
+      
+      // Update all projects optimistically if they use global config
+      setAllProjects((prev) =>
+        prev.map((p) => {
+          if (p.activityLogConfig?.useGlobalConfig !== false) {
+            return {
+              ...p,
+              activityLogConfig: {
+                ...p.activityLogConfig,
+                useGlobalConfig: true,
+                allowedPastDays: globalAllowedPastDays,
+              },
+            };
+          }
+          return p;
+        })
+      );
+      
+      if (selectedProject && selectedProject.activityLogConfig?.useGlobalConfig !== false) {
+        setSelectedProject((prev: any) => ({
+          ...prev,
+          activityLogConfig: {
+            ...prev.activityLogConfig,
+            useGlobalConfig: true,
+            allowedPastDays: globalAllowedPastDays,
+          },
+        }));
+      }
+
+      sweetAlert.success("Configuración Guardada", "Se ha actualizado la cantidad de días permitidos global");
+    } catch (error) {
+      console.error("Error saving global allowed past days:", error);
+      sweetAlert.error("Error", "No se pudo guardar la configuración general");
     } finally {
-      setSavingAllowedDays(false);
+      setSavingGlobalAllowedDays(false);
     }
   };
 
@@ -282,7 +356,7 @@ export const RequestsConfigPage: React.FC = () => {
     try {
       const newStatus = item.status === "Activa" ? "Inactiva" : "Activa";
       setActivityTypes((prev) => prev.map((p) => (p.id === item.id ? { ...p, status: newStatus } : p)));
-      await activityLogTypesAPI.update(item.id, { isActive: newStatus === "Activa", status: newStatus });
+      await activityLogTypesAPI.update(item.id, { isActive: newStatus === "Activa" });
     } catch (error) {
       fetchTypes();
     }
@@ -728,71 +802,138 @@ export const RequestsConfigPage: React.FC = () => {
             {/* ===================== DÍAS PERMITIDOS TAB ===================== */}
             {activeTab === "allowedDays" && (
               <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <div className="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Seleccionar Proyecto</h3>
-                  <ProjectHeaderSelector onSelectProject={handleSelectProject} selectedProjectId={selectedProject?._id} />
-                </div>
-
-                {!selectedProject && (
-                  <div className="text-center py-12">
-                    <FontAwesomeIcon icon={faCog} className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
-                    <p className="text-gray-500 dark:text-gray-400">Selecciona un proyecto para configurar la cantidad de días permitidos para reportar hacia atrás</p>
-                  </div>
-                )}
-
-                {selectedProject && (
-                  <div className="space-y-6">
-                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-4">
-                      <div className="flex gap-3">
-                        <FontAwesomeIcon icon={faCircleInfo} className="text-blue-500 mt-1" />
-                        <div>
-                          <h4 className="font-medium text-blue-900 dark:text-blue-300">Días Permitidos para Reporte de Novedades</h4>
-                          <p className="text-sm text-blue-800 dark:text-blue-200">
-                            Define cuántos días hacia atrás (incluyendo el día de hoy) estará habilitado el calendario en la aplicación móvil para reportar novedades en el proyecto <strong>{selectedProject.name}</strong>.
-                          </p>
+                <div className="space-y-8">
+                  {/* Global Config Header/Intro */}
+                  <div>
+                    <div className="flex items-start gap-4">
+                      <div className="mt-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <FontAwesomeIcon icon={faGlobe} size="lg" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Días Permitidos (Configuración Global)</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-3">
+                          Define cuántos días hacia atrás se permite registrar o modificar novedades de forma predeterminada para todos los proyectos de la plataforma.
+                        </p>
+                        
+                        <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4 max-w-xl">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Días permitidos por defecto (hacia atrás)</span>
+                            <span className="text-[10px] text-gray-400">Se aplica si el proyecto no tiene días personalizados configurados.</span>
+                          </div>
+                          <div className="flex items-center gap-3 ml-auto">
+                            <input
+                              type="number"
+                              min="1"
+                              max="30"
+                              value={globalAllowedPastDays}
+                              onChange={(e) => setGlobalAllowedPastDays(Math.max(1, parseInt(e.target.value) || 1))}
+                              className="w-20 p-2 rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-center font-semibold text-gray-900 dark:text-white text-sm"
+                            />
+                            <button
+                              onClick={handleSaveGlobalAllowedDays}
+                              disabled={savingGlobalAllowedDays}
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium flex items-center gap-2 disabled:opacity-50 transition-colors text-sm"
+                            >
+                              {savingGlobalAllowedDays ? <FontAwesomeIcon icon={faSpinner} spin /> : <FontAwesomeIcon icon={faCheck} />}
+                              <span>Guardar</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
+                  </div>
 
-                    <div className="max-w-md">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Cantidad de días permitidos (hacia atrás):
-                      </label>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="number"
-                          min="1"
-                          max="30"
-                          value={allowedPastDays}
-                          onChange={(e) => setAllowedPastDays(Math.max(1, parseInt(e.target.value) || 1))}
-                          className="w-24 p-2.5 rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-center font-semibold text-gray-900 dark:text-white"
-                        />
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          días permitidos (por defecto: 3)
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-400 mt-2">
-                        Ejemplo: Si configuras "3", los coordinadores podrán reportar hoy y hasta los 2 días anteriores activos.
-                      </p>
+                  {/* Projects List Section */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                        <FontAwesomeIcon icon={faBriefcase} />
+                        Listado de Proyectos
+                      </h4>
+                      <span className="text-xs text-gray-400">Total: {allProjects.length}</span>
                     </div>
 
-                    <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
-                      <button onClick={handleSaveAllowedDays} disabled={savingAllowedDays} className="px-6 py-2.5 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium flex items-center gap-2 disabled:opacity-50 transition-colors">
-                        {savingAllowedDays ? (
-                          <>
-                            <FontAwesomeIcon icon={faSpinner} spin />
-                            Guardando...
-                          </>
-                        ) : (
-                          <>
-                            <FontAwesomeIcon icon={faCheck} />
-                            Guardar Configuración
-                          </>
-                        )}
-                      </button>
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                      {allProjects.map((project) => {
+                        const conf = project.activityLogConfig;
+                        const usesGlobal = conf?.useGlobalConfig !== false;
+                        const effectiveDays = conf?.allowedPastDays !== undefined ? conf.allowedPastDays : globalAllowedPastDays;
+
+                        return (
+                          <div key={project._id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded flex items-center justify-center font-bold text-sm bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300`}>
+                                  {project.name.charAt(0)}
+                                </div>
+                                <span className="font-semibold text-gray-900 dark:text-white">{project.name}</span>
+                              </div>
+                            </div>
+
+                            {/* Configuration Options Grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-13 ml-10">
+                              {/* Usar Configuración Global Toggle */}
+                              <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3">
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Usar Configuración Global</span>
+                                  <span className="text-[10px] text-gray-400">
+                                    {usesGlobal ? `Hereda los ${globalAllowedPastDays} días configurados de forma global` : "Configuración de días personalizada"}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={() => handleToggleUseGlobal(project)}
+                                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${usesGlobal ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}
+                                  title={usesGlobal ? "Desactivar Configuración Global" : "Activar Configuración Global"}
+                                >
+                                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${usesGlobal ? "translate-x-5" : "translate-x-0"}`} />
+                                </button>
+                              </div>
+
+                              {/* Custom Allowed Days Config */}
+                              <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3">
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Días Permitidos</span>
+                                  <span className="text-[10px] text-gray-400">
+                                    {usesGlobal 
+                                      ? `Heredado de la configuración global` 
+                                      : `Permite reportar hoy y hasta los ${effectiveDays - 1} días anteriores`}
+                                  </span>
+                                </div>
+                                {usesGlobal ? (
+                                  <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 font-semibold text-sm rounded px-3 py-1 border border-gray-200 dark:border-gray-600">
+                                    {globalAllowedPastDays} días
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      max="30"
+                                      value={projectSpecificDays[project._id] ?? effectiveDays}
+                                      onChange={(e) => {
+                                        const val = Math.max(1, parseInt(e.target.value) || 1);
+                                        setProjectSpecificDays((prev) => ({ ...prev, [project._id]: val }));
+                                      }}
+                                      onBlur={() => handleSaveProjectDays(project, projectSpecificDays[project._id] ?? effectiveDays)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          handleSaveProjectDays(project, projectSpecificDays[project._id] ?? effectiveDays);
+                                          (e.target as HTMLInputElement).blur();
+                                        }
+                                      }}
+                                      className="w-16 p-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-center font-semibold text-gray-900 dark:text-white text-sm"
+                                    />
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">días</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                )}
+                </div>
               </div>
             )}
 

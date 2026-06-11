@@ -15,6 +15,31 @@ import { Position } from "../models/Position.js";
 import { Level } from "../models/Level.js";
 import { Shift } from "../models/Shift.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
+import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
+
+async function resolveProjectGlobalConfig(project: any, tenantId: any) {
+  if (!project) return;
+  if (!project.activityLogConfig) {
+    project.activityLogConfig = { useGlobalConfig: true };
+  }
+  if (project.activityLogConfig.useGlobalConfig !== false) {
+    const generalConfig = await ActivityLogGeneralConfig.getOrCreateDefault(tenantId);
+    project.activityLogConfig.allowedPastDays = generalConfig.allowedPastDays;
+  }
+}
+
+async function resolveProjectsGlobalConfig(projects: any[], tenantId: any) {
+  if (!projects || projects.length === 0) return;
+  const generalConfig = await ActivityLogGeneralConfig.getOrCreateDefault(tenantId);
+  for (const project of projects) {
+    if (!project.activityLogConfig) {
+      project.activityLogConfig = { useGlobalConfig: true };
+    }
+    if (project.activityLogConfig.useGlobalConfig !== false) {
+      project.activityLogConfig.allowedPastDays = generalConfig.allowedPastDays;
+    }
+  }
+}
 
 const router = Router();
 
@@ -254,6 +279,8 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
 
     console.log(`[PROJECTS] Found ${projects.length} projects for filter`);
 
+    await resolveProjectsGlobalConfig(projects, req.tenantObjectId);
+
     res.json({
       projects,
       pagination: {
@@ -314,6 +341,8 @@ router.get("/miniprojects", requireTenant, authenticateToken, async (req: Authen
         }
       });
     }
+
+    await resolveProjectsGlobalConfig(projects, req.tenantObjectId);
 
     res.json(projects);
   } catch (error) {
@@ -479,6 +508,8 @@ router.get(
         });
       }
 
+      await resolveProjectsGlobalConfig(projects, req.tenantObjectId);
+
       res.json({
         projects,
         pagination: {
@@ -555,7 +586,9 @@ router.post("/clients/:clientId/projects", requireTenant, authenticateToken, req
     // Actualizar el usuario creador para incluir el proyecto
     await User.findByIdAndUpdate(req.user!.userId, { $addToSet: { projectIds: project._id } });
 
-    res.status(201).json(project);
+    const projectObj = project.toObject();
+    await resolveProjectGlobalConfig(projectObj, req.tenantObjectId);
+    res.status(201).json(projectObj);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: "Invalid data", details: error.errors });
@@ -679,6 +712,8 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
       }
     }
 
+    await resolveProjectGlobalConfig(project, req.tenantObjectId);
+
     res.json(project);
   } catch (error) {
     console.error("Get project error:", error);
@@ -761,7 +796,9 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
 
     await currentProject.save();
 
-    res.json(currentProject);
+    const projectObj = currentProject.toObject();
+    await resolveProjectGlobalConfig(projectObj, req.tenantObjectId);
+    res.json(projectObj);
   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: "Invalid data", details: error.errors });
