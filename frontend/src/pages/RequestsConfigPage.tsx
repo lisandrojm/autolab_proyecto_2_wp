@@ -26,10 +26,39 @@ const DAYS_OF_WEEK = [
   { id: 6, label: "Sábado", short: "S" },
 ];
 
+const sanitizeActivityLogConfig = (config: any) => {
+  if (!config) return undefined;
+  
+  const sanitized: any = {
+    useGlobalConfig: config.useGlobalConfig ?? true,
+  };
+
+  if (config.enableFastEntry !== undefined) {
+    sanitized.enableFastEntry = !!config.enableFastEntry;
+  }
+  
+  if (config.allowsAdditionalStaff !== undefined) {
+    sanitized.allowsAdditionalStaff = !!config.allowsAdditionalStaff;
+  }
+  
+  if (config.allowedPastDays !== undefined) {
+    sanitized.allowedPastDays = Number(config.allowedPastDays);
+  }
+
+  if (config.schedule && config.schedule.type) {
+    sanitized.schedule = {
+      type: config.schedule.type,
+      days: Array.isArray(config.schedule.days) ? config.schedule.days.map(Number) : [],
+    };
+  }
+
+  return sanitized;
+};
+
 export const RequestsConfigPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<"general" | "types" | "project" | "reports" | "glossary">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "types" | "project" | "allowedDays" | "reports" | "glossary">("general");
 
   useEffect(() => {
     if (location.state && (location.state as any).activeTab) {
@@ -49,6 +78,10 @@ export const RequestsConfigPage: React.FC = () => {
   const [type, setType] = useState<ReportSchedule["type"]>("daily");
   const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [savingFrequency, setSavingFrequency] = useState(false);
+
+  // Allowed Past Days Config State
+  const [allowedPastDays, setAllowedPastDays] = useState<number>(3);
+  const [savingAllowedDays, setSavingAllowedDays] = useState(false);
 
   // ABM State
   const [activityTypes, setActivityTypes] = useState<RequestConfigType[]>([]);
@@ -108,6 +141,9 @@ export const RequestsConfigPage: React.FC = () => {
         setType("daily");
         setSelectedDays([0, 1, 2, 3, 4, 5, 6]);
       }
+
+      const currentAllowedDays = selectedProject.activityLogConfig?.allowedPastDays;
+      setAllowedPastDays(currentAllowedDays !== undefined ? currentAllowedDays : 3);
     }
   }, [selectedProject?._id, selectedProject?.activityLogConfig]);
 
@@ -126,14 +162,14 @@ export const RequestsConfigPage: React.FC = () => {
     if (!selectedProject) return;
     setSavingFrequency(true);
     try {
-      const newConfig = {
+      const newConfig = sanitizeActivityLogConfig({
         useGlobalConfig: false,
         ...selectedProject.activityLogConfig,
         schedule: {
           type,
           days: selectedDays,
         },
-      };
+      });
 
       await projectsAPI.updateProject(selectedProject._id, { activityLogConfig: newConfig });
 
@@ -146,6 +182,30 @@ export const RequestsConfigPage: React.FC = () => {
       sweetAlert.error("Error", "No se pudo guardar la configuración");
     } finally {
       setSavingFrequency(false);
+    }
+  };
+
+  const handleSaveAllowedDays = async () => {
+    if (!selectedProject) return;
+    setSavingAllowedDays(true);
+    try {
+      const newConfig = sanitizeActivityLogConfig({
+        useGlobalConfig: false,
+        ...selectedProject.activityLogConfig,
+        allowedPastDays,
+      });
+
+      await projectsAPI.updateProject(selectedProject._id, { activityLogConfig: newConfig });
+
+      setSelectedProject((prev: any) => (prev ? { ...prev, activityLogConfig: newConfig } : prev));
+      setAllProjects((prev) => prev.map((p) => (p._id === selectedProject._id ? { ...p, activityLogConfig: newConfig } : p)));
+
+      sweetAlert.success("Configuración Guardada", `Se han actualizado los días permitidos para ${selectedProject.name}`);
+    } catch (error) {
+      console.error("Error saving allowed past days:", error);
+      sweetAlert.error("Error", "No se pudo guardar la configuración");
+    } finally {
+      setSavingAllowedDays(false);
     }
   };
 
@@ -315,6 +375,9 @@ export const RequestsConfigPage: React.FC = () => {
             <button className={tabClass(activeTab === "project")} onClick={() => setActiveTab("project")}>
               Frecuencia
             </button>
+            <button className={tabClass(activeTab === "allowedDays")} onClick={() => setActiveTab("allowedDays")}>
+              Días Permitidos
+            </button>
             <button className={tabClass(activeTab === "reports")} onClick={() => setActiveTab("reports")}>
               Reportes de Novedades
             </button>
@@ -407,12 +470,12 @@ export const RequestsConfigPage: React.FC = () => {
                         const handleToggle = async () => {
                           try {
                             const newState = !isActive;
-                            const newConfig = {
+                            const newConfig = sanitizeActivityLogConfig({
                               ...conf,
                               useGlobalConfig: false,
                               enableFastEntry: newState,
                               allowsAdditionalStaff: conf?.allowsAdditionalStaff ?? false,
-                            };
+                            });
 
                             // Optimistic UI
                             setAllProjects((prev) => prev.map((p) => (p._id === project._id ? { ...p, activityLogConfig: newConfig } : p)));
@@ -428,12 +491,12 @@ export const RequestsConfigPage: React.FC = () => {
                         const handleToggleAdditionalStaff = async () => {
                           try {
                             const newState = !allowsAdditionalStaff;
-                            const newConfig = {
+                            const newConfig = sanitizeActivityLogConfig({
                               ...conf,
                               useGlobalConfig: false,
                               enableFastEntry: conf?.enableFastEntry ?? true,
                               allowsAdditionalStaff: newState,
-                            };
+                            });
 
                             // Optimistic UI
                             setAllProjects((prev) => prev.map((p) => (p._id === project._id ? { ...p, activityLogConfig: newConfig } : p)));
@@ -653,6 +716,77 @@ export const RequestsConfigPage: React.FC = () => {
                           <>
                             <FontAwesomeIcon icon={faCheck} />
                             Guardar Frecuencia
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ===================== DÍAS PERMITIDOS TAB ===================== */}
+            {activeTab === "allowedDays" && (
+              <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <div className="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Seleccionar Proyecto</h3>
+                  <ProjectHeaderSelector onSelectProject={handleSelectProject} selectedProjectId={selectedProject?._id} />
+                </div>
+
+                {!selectedProject && (
+                  <div className="text-center py-12">
+                    <FontAwesomeIcon icon={faCog} className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
+                    <p className="text-gray-500 dark:text-gray-400">Selecciona un proyecto para configurar la cantidad de días permitidos para reportar hacia atrás</p>
+                  </div>
+                )}
+
+                {selectedProject && (
+                  <div className="space-y-6">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-4">
+                      <div className="flex gap-3">
+                        <FontAwesomeIcon icon={faCircleInfo} className="text-blue-500 mt-1" />
+                        <div>
+                          <h4 className="font-medium text-blue-900 dark:text-blue-300">Días Permitidos para Reporte de Novedades</h4>
+                          <p className="text-sm text-blue-800 dark:text-blue-200">
+                            Define cuántos días hacia atrás (incluyendo el día de hoy) estará habilitado el calendario en la aplicación móvil para reportar novedades en el proyecto <strong>{selectedProject.name}</strong>.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="max-w-md">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Cantidad de días permitidos (hacia atrás):
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="number"
+                          min="1"
+                          max="30"
+                          value={allowedPastDays}
+                          onChange={(e) => setAllowedPastDays(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="w-24 p-2.5 rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-center font-semibold text-gray-900 dark:text-white"
+                        />
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          días permitidos (por defecto: 3)
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-2">
+                        Ejemplo: Si configuras "3", los coordinadores podrán reportar hoy y hasta los 2 días anteriores activos.
+                      </p>
+                    </div>
+
+                    <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <button onClick={handleSaveAllowedDays} disabled={savingAllowedDays} className="px-6 py-2.5 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium flex items-center gap-2 disabled:opacity-50 transition-colors">
+                        {savingAllowedDays ? (
+                          <>
+                            <FontAwesomeIcon icon={faSpinner} spin />
+                            Guardando...
+                          </>
+                        ) : (
+                          <>
+                            <FontAwesomeIcon icon={faCheck} />
+                            Guardar Configuración
                           </>
                         )}
                       </button>

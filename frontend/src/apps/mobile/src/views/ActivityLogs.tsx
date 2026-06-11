@@ -255,13 +255,16 @@ const isDayAllowedForReporting = (project: Project, day: Date): boolean => {
   const today = startOfDay(new Date());
   if (isAfter(day, today)) return false;
 
-  // Compute the last 3 active reporting days from today going backward
+  const allowedPastDays = project.activityLogConfig?.allowedPastDays ?? 3;
+
+  // Compute the last allowedPastDays active reporting days from today going backward
   const allowedDates: string[] = [];
   let current = startOfDay(new Date());
-  for (let i = 0; i < 30; i++) {
+  const maxSearchDays = Math.max(30, allowedPastDays * 10);
+  for (let i = 0; i < maxSearchDays; i++) {
     if (isDayInFrequency(project, current)) {
       allowedDates.push(format(current, "yyyy-MM-dd"));
-      if (allowedDates.length === 3) break;
+      if (allowedDates.length === allowedPastDays) break;
     }
     current = subDays(current, 1);
   }
@@ -2268,11 +2271,14 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
   const handleEditFromDetail = () => {
     if (viewingReport) {
+      const projId = typeof viewingReport.projectId === "object" && viewingReport.projectId ? (viewingReport.projectId as any)._id : viewingReport.projectId;
+      const project = userProjects.find((p) => p._id === projId);
+      const allowedPastDays = project?.activityLogConfig?.allowedPastDays ?? 3;
       const reportDate = startOfDay(parseISO(viewingReport.date));
       const today = startOfDay(new Date());
       const diffDays = Math.round((today.getTime() - reportDate.getTime()) / (1000 * 60 * 60 * 24));
-      if (diffDays > 2) {
-        sweetAlert.error("Atención", "El máximo para editar son 48 horas de realizado el reporte.");
+      if (diffDays > (allowedPastDays - 1)) {
+        sweetAlert.error("Atención", `El máximo para editar son ${(allowedPastDays - 1) * 24} horas de realizado el reporte.`);
         return;
       }
       setShowDetailModal(false);

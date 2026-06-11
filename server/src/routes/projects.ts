@@ -71,6 +71,7 @@ const createProjectSchema = z.object({
       useGlobalConfig: z.boolean(),
       enableFastEntry: z.boolean().optional(),
       allowsAdditionalStaff: z.boolean().optional(),
+      allowedPastDays: z.number().optional(),
       schedule: z
         .object({
           type: z.enum(["daily", "workdays", "custom"]),

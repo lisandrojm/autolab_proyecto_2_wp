@@ -74,6 +74,7 @@ export interface IProject extends Document {
     useGlobalConfig: boolean;
     enableFastEntry?: boolean;
     allowsAdditionalStaff?: boolean;
+    allowedPastDays?: number;
     schedule?: {
       type: "daily" | "workdays" | "custom";
       days: number[];
@@ -152,6 +153,7 @@ const projectSchema = new Schema<IProject>(
       useGlobalConfig: { type: Boolean, default: true },
       enableFastEntry: { type: Boolean },
       allowsAdditionalStaff: { type: Boolean },
+      allowedPastDays: { type: Number },
       schedule: {
         type: { type: String, enum: ["daily", "workdays", "custom"] },
         days: [{ type: Number }],

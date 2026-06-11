@@ -49,6 +49,7 @@ export interface Project {
     useGlobalConfig: boolean;
     enableFastEntry?: boolean;
     allowsAdditionalStaff?: boolean;
+    allowedPastDays?: number;
     schedule?: {
       type: "daily" | "workdays" | "custom";
       days: number[];
@@ -284,6 +285,7 @@ class ProjectsAPI {
         useGlobalConfig: boolean;
         enableFastEntry?: boolean;
         allowsAdditionalStaff?: boolean;
+        allowedPastDays?: number;
         schedule?: {
           type: "daily" | "workdays" | "custom";
           days: number[];
