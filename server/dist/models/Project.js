@@ -46,6 +46,7 @@ const projectSchema = new Schema({
         useGlobalConfig: { type: Boolean, default: true },
         enableFastEntry: { type: Boolean },
         allowsAdditionalStaff: { type: Boolean },
+        allowedPastDays: { type: Number },
         schedule: {
             type: { type: String, enum: ["daily", "workdays", "custom"] },
             days: [{ type: Number }],

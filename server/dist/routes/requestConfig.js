@@ -2,8 +2,39 @@ import { Router } from "express";
 import { RequestConfig } from "../models/RequestConfig.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
+import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
 const router = Router();
 router.use(requireTenant, authenticateToken);
+// GET /api/v1/request-config/settings
+router.get("/settings", async (req, res) => {
+    try {
+        const config = await ActivityLogGeneralConfig.getOrCreateDefault(req.tenantObjectId);
+        res.json(config);
+    }
+    catch (error) {
+        console.error("Get activity log general settings error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// PUT /api/v1/request-config/settings
+router.put("/settings", async (req, res) => {
+    try {
+        const { allowedPastDays } = req.body;
+        if (allowedPastDays !== undefined && (typeof allowedPastDays !== "number" || allowedPastDays < 1)) {
+            return res.status(400).json({ error: "allowedPastDays must be a positive number" });
+        }
+        const config = await ActivityLogGeneralConfig.findOneAndUpdate({ tenantId: req.tenantObjectId }, {
+            $set: {
+                allowedPastDays: allowedPastDays !== undefined ? allowedPastDays : 3,
+            },
+        }, { new: true, upsert: true, setDefaultsOnInsert: true });
+        res.json(config);
+    }
+    catch (error) {
+        console.error("Update activity log general settings error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 // GET /api/v1/activity-log-types
 router.get("/", async (req, res) => {
     try {

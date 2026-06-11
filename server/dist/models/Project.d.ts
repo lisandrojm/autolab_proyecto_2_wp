@@ -69,6 +69,7 @@ export interface IProject extends Document {
         useGlobalConfig: boolean;
         enableFastEntry?: boolean;
         allowsAdditionalStaff?: boolean;
+        allowedPastDays?: number;
         schedule?: {
             type: "daily" | "workdays" | "custom";
             days: number[];

@@ -14,6 +14,31 @@ import { Position } from "../models/Position.js";
 import { Level } from "../models/Level.js";
 import { Shift } from "../models/Shift.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
+import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
+async function resolveProjectGlobalConfig(project, tenantId) {
+    if (!project)
+        return;
+    if (!project.activityLogConfig) {
+        project.activityLogConfig = { useGlobalConfig: true };
+    }
+    if (project.activityLogConfig.useGlobalConfig !== false) {
+        const generalConfig = await ActivityLogGeneralConfig.getOrCreateDefault(tenantId);
+        project.activityLogConfig.allowedPastDays = generalConfig.allowedPastDays;
+    }
+}
+async function resolveProjectsGlobalConfig(projects, tenantId) {
+    if (!projects || projects.length === 0)
+        return;
+    const generalConfig = await ActivityLogGeneralConfig.getOrCreateDefault(tenantId);
+    for (const project of projects) {
+        if (!project.activityLogConfig) {
+            project.activityLogConfig = { useGlobalConfig: true };
+        }
+        if (project.activityLogConfig.useGlobalConfig !== false) {
+            project.activityLogConfig.allowedPastDays = generalConfig.allowedPastDays;
+        }
+    }
+}
 const router = Router();
 const createProjectSchema = z.object({
     name: z.string().min(1),
@@ -70,6 +95,7 @@ const createProjectSchema = z.object({
         useGlobalConfig: z.boolean(),
         enableFastEntry: z.boolean().optional(),
         allowsAdditionalStaff: z.boolean().optional(),
+        allowedPastDays: z.number().optional(),
         schedule: z
             .object({
             type: z.enum(["daily", "workdays", "custom"]),
@@ -227,6 +253,7 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
             });
         }
         console.log(`[PROJECTS] Found ${projects.length} projects for filter`);
+        await resolveProjectsGlobalConfig(projects, req.tenantObjectId);
         res.json({
             projects,
             pagination: {
@@ -284,6 +311,7 @@ router.get("/miniprojects", requireTenant, authenticateToken, async (req, res) =
                 }
             });
         }
+        await resolveProjectsGlobalConfig(projects, req.tenantObjectId);
         res.json(projects);
     }
     catch (error) {
@@ -425,6 +453,7 @@ async (req, res) => {
                 }
             });
         }
+        await resolveProjectsGlobalConfig(projects, req.tenantObjectId);
         res.json({
             projects,
             pagination: {
@@ -490,7 +519,9 @@ router.post("/clients/:clientId/projects", requireTenant, authenticateToken, req
         await Client.findByIdAndUpdate(clientObjectId, { $push: { proyectos: project._id } });
         // Actualizar el usuario creador para incluir el proyecto
         await User.findByIdAndUpdate(req.user.userId, { $addToSet: { projectIds: project._id } });
-        res.status(201).json(project);
+        const projectObj = project.toObject();
+        await resolveProjectGlobalConfig(projectObj, req.tenantObjectId);
+        res.status(201).json(projectObj);
     }
     catch (error) {
         if (error instanceof z.ZodError) {
@@ -601,6 +632,7 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
                 project.metadataUserCount = userCount;
             }
         }
+        await resolveProjectGlobalConfig(project, req.tenantObjectId);
         res.json(project);
     }
     catch (error) {
@@ -674,7 +706,9 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
             }
         }
         await currentProject.save();
-        res.json(currentProject);
+        const projectObj = currentProject.toObject();
+        await resolveProjectGlobalConfig(projectObj, req.tenantObjectId);
+        res.json(projectObj);
     }
     catch (error) {
         if (error instanceof z.ZodError) {
