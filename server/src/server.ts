@@ -20,6 +20,8 @@ import { seedOnStart, ensureSuperAdmin } from "./scripts/seedOnStart.js";
 import { ensureAllTenantsHaveDefaultRoles } from "./services/roleInitService.js";
 import { ensureAllTenantsHaveDefaultShifts } from "./services/shiftInitService.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import { initCronScheduler } from "./services/cronService.js";
+
 
 
 
@@ -219,6 +221,14 @@ connectDB()
     } catch (error) {
       console.error("❌ Shift verification failed:", error);
     }
+
+    // Initialize the Import Users Background Scheduler
+    try {
+      initCronScheduler();
+    } catch (error) {
+      console.error("❌ Failed to initialize background scheduler:", error);
+    }
+
 
 
 

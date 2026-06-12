@@ -28,6 +28,10 @@ import "../models/Level.js";
 import "../models/Area.js";
 import "../models/Client.js";
 
+import { ImportConfig } from "../models/ImportConfig.js";
+import { ImportHistory } from "../models/ImportHistory.js";
+import { ExternalApiService } from "../services/externalApiService.js";
+
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
@@ -876,6 +880,144 @@ router.delete("/:id", requireTenant, authenticateToken, requirePermission("admin
   } catch (error) {
     console.error("Delete user error:", error);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+const externalApi = new ExternalApiService();
+
+// GET /users/import/config - Obtener configuración de auto-importación
+router.get("/import/config", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    let config = await ImportConfig.findOne({ tenantId: req.tenantObjectId });
+    if (!config) {
+      config = await ImportConfig.create({
+        tenantId: req.tenantObjectId,
+        isEnabled: false,
+        intervalHours: 24,
+        syncProjects: true
+      });
+    }
+    res.json(config);
+  } catch (error) {
+    console.error("Get import config error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /users/import/config - Guardar configuración de auto-importación
+router.post("/import/config", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { isEnabled, intervalHours, syncProjects, sinceDays } = req.body;
+    
+    let config = await ImportConfig.findOne({ tenantId: req.tenantObjectId });
+    
+    const wasEnabled = config?.isEnabled === true;
+
+    if (!config) {
+      config = new ImportConfig({
+        tenantId: req.tenantObjectId
+      });
+    }
+
+    config.isEnabled = isEnabled === true;
+    config.intervalHours = Number(intervalHours) || 24;
+    config.syncProjects = syncProjects === true;
+    config.sinceDays = sinceDays !== undefined ? Number(sinceDays) : undefined;
+
+    if (config.isEnabled && (!wasEnabled || config.isModified("intervalHours"))) {
+      // Recalculate next run
+      const nextRunTime = new Date();
+      // Sync immediately in 1 minute on enable
+      nextRunTime.setMinutes(nextRunTime.getMinutes() + 1);
+      config.nextRun = nextRunTime;
+    } else if (!config.isEnabled) {
+      config.nextRun = undefined;
+    }
+
+    await config.save();
+    res.json(config);
+  } catch (error) {
+    console.error("Save import config error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /users/import/history - Obtener historial completo de importaciones
+router.get("/import/history", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const history = await ImportHistory.find({ tenantId: req.tenantObjectId })
+      .sort({ createdAt: -1 })
+      .limit(100);
+    res.json(history);
+  } catch (error) {
+    console.error("Get import history error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /users/import/history/latest - Obtener último registro de importación
+router.get("/import/history/latest", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const latest = await ImportHistory.findOne({ tenantId: req.tenantObjectId })
+      .sort({ createdAt: -1 });
+    res.json(latest || null);
+  } catch (error) {
+    console.error("Get latest import history error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /users/import/check - Pre-chequear importación de usuarios
+router.post("/import/check", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { sinceDays } = req.body;
+    if (sinceDays === undefined || isNaN(Number(sinceDays))) {
+      res.status(400).json({ error: "sinceDays parameter is required and must be a number" });
+      return;
+    }
+
+    const result = await externalApi.checkImportUsers(Number(sinceDays));
+    res.json(result);
+  } catch (error) {
+    console.error("Check import error:", error);
+    res.status(500).json({ error: "Failed to check import users" });
+  }
+});
+
+// POST /users/import/trigger - Disparar importación manual de usuarios
+router.post("/import/trigger", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { syncProjects, sinceDays } = req.body;
+    const limitDays = sinceDays !== undefined && !isNaN(Number(sinceDays)) ? Number(sinceDays) : undefined;
+    
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const stats = await externalApi.importUsers(
+      req.tenantObjectId.toString(),
+      new Types.ObjectId(userId),
+      syncProjects === true,
+      limitDays
+    );
+
+    // Fetch the latest history record created by the sync to return addedUsers and addedProjects
+    const latestRun = await ImportHistory.findOne({
+      tenantId: req.tenantObjectId,
+      status: "success"
+    }).sort({ createdAt: -1 });
+
+    res.json({
+      message: "Import completed successfully",
+      stats,
+      addedUsers: latestRun?.addedUsers || [],
+      addedProjects: latestRun?.addedProjects || []
+    });
+  } catch (error: any) {
+    console.error("Trigger import error:", error);
+    res.status(500).json({ error: error.message || "Failed to import users" });
   }
 });
 

@@ -16,6 +16,7 @@ import { AreasPage } from "./pages/AreasPage";
 import { ShiftsPage } from "./pages/ShiftsPage";
 
 import { UsersPage } from "./pages/UsersPage";
+import { ImportUsersWpPage } from "./pages/ImportUsersWpPage";
 import { ProjectsPage } from "./pages/ProjectsPage";
 import { SedesPage } from "./pages/SedesPage";
 import { TenantsPage } from "./pages/TenantsPage";
@@ -335,6 +336,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <UsersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/users/import-wp"
+                element={
+                  <ProtectedRoute>
+                    <ImportUsersWpPage />
                   </ProtectedRoute>
                 }
               />
