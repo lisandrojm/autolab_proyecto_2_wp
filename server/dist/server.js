@@ -18,6 +18,7 @@ import { seedOnStart, ensureSuperAdmin } from "./scripts/seedOnStart.js";
 import { ensureAllTenantsHaveDefaultRoles } from "./services/roleInitService.js";
 import { ensureAllTenantsHaveDefaultShifts } from "./services/shiftInitService.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import { initCronScheduler } from "./services/cronService.js";
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
 import { authRoutes } from "./routes/auth.js";
 import { secureRoutes } from "./routes/secure.js";
@@ -184,6 +185,13 @@ connectDB()
     }
     catch (error) {
         console.error("❌ Shift verification failed:", error);
+    }
+    // Initialize the Import Users Background Scheduler
+    try {
+        initCronScheduler();
+    }
+    catch (error) {
+        console.error("❌ Failed to initialize background scheduler:", error);
     }
     if (String(env.SEED_ON_START) === "true") {
         try {
