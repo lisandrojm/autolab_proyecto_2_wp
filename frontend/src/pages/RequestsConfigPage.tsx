@@ -3,7 +3,7 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { ProjectHeaderSelector } from "../components/activity_logs_config/ProjectHeaderSelector";
 import { SortableActivityTypeRow, RequestConfig as RequestConfigType } from "../components/activity_logs_config/SortableActivityTypeRow";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faCog, faPlus, faGripVertical, faInfoCircle, faGlobe, faUsers, faToggleOn, faToggleOff, faCircleInfo, faSpinner, faBriefcase, faMobileAlt, faUserPlus, faCalendarAlt, faFileInvoiceDollar, faSave } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faCog, faPlus, faGripVertical, faInfoCircle, faGlobe, faUsers, faToggleOn, faToggleOff, faCircleInfo, faSpinner, faBriefcase, faMobileAlt, faUserPlus, faFileInvoiceDollar, faSave } from "@fortawesome/free-solid-svg-icons";
 import { overtimeUtils, OvertimeSettings } from "../utils/overtimeUtils";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ReportSchedule } from "../types/activityTypes";
@@ -58,7 +58,7 @@ const sanitizeActivityLogConfig = (config: any) => {
 export const RequestsConfigPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<"general" | "types" | "project" | "allowedDays" | "reports" | "glossary">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "types" | "project" | "allowedDays" | "glossary">("general");
 
   useEffect(() => {
     if (location.state && (location.state as any).activeTab) {
@@ -451,9 +451,6 @@ export const RequestsConfigPage: React.FC = () => {
             </button>
             <button className={tabClass(activeTab === "allowedDays")} onClick={() => setActiveTab("allowedDays")}>
               Días Permitidos
-            </button>
-            <button className={tabClass(activeTab === "reports")} onClick={() => setActiveTab("reports")}>
-              Reportes de Novedades
             </button>
             <button className={tabClass(activeTab === "glossary")} onClick={() => setActiveTab("glossary")}>
               Glosario de Extras
@@ -933,19 +930,6 @@ export const RequestsConfigPage: React.FC = () => {
                       })}
                     </div>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* ===================== REPORTES DE NOVEDADES TAB ===================== */}
-            {activeTab === "reports" && (
-              <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <div className="text-center py-12">
-                  <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FontAwesomeIcon icon={faCalendarAlt} size="2x" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Configuración de Reportes</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">Esta sección permitirá configurar formatos y envíos automáticos de los reportes de novedades por correo electrónico (Próximamente).</p>
                 </div>
               </div>
             )}
