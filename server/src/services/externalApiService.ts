@@ -122,7 +122,7 @@ export class ExternalApiService {
     ): Promise<{ created: number; updated: number; skipped: number; errors: number }> {
         console.log(`[EXTERNAL API] Starting user import (syncProjects=${syncProjects}, sinceDays=${sinceDays})...`);
 
-        const addedUsers: Array<{ name: string; email: string }> = [];
+        const addedUsers: Array<{ name: string; email: string; dni: string }> = [];
         const addedProjectsMap = new Map<number, string>(); // Use map to keep projects unique
 
         let created = 0;
@@ -242,7 +242,8 @@ export class ExternalApiService {
                     // Only brand-new users are inserted, using the current model schema.
                     const userDoc = await User.create(userPayload);
                     created++;
-                    addedUsers.push({ name: userPayload.name, email: userPayload.email });
+                    // `password` here is the DNI (or the fallback when there is no valid documento).
+                    addedUsers.push({ name: userPayload.name, email: userPayload.email, dni: password });
 
                     // Sync Projects only for this newly created user.
                     if (syncProjects) {

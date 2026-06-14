@@ -13,6 +13,7 @@ export interface IImportHistory extends Document {
   addedUsers: Array<{
     name: string;
     email: string;
+    dni?: string;
   }>;
   addedProjects: Array<{
     name: string;
@@ -40,7 +41,8 @@ const importHistorySchema = new Schema<IImportHistory>(
     addedUsers: [
       {
         name: { type: String, required: true },
-        email: { type: String, required: true }
+        email: { type: String, required: true },
+        dni: { type: String }
       }
     ],
     addedProjects: [

@@ -28,6 +28,7 @@ interface SyncStats {
 interface AddedUser {
   name: string;
   email: string;
+  dni?: string;
   _id?: string;
 }
 
@@ -524,7 +525,7 @@ export const ImportUsersWpPage: React.FC = () => {
                         <tr>
                           <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre Completo</th>
                           <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Correo Electrónico</th>
-                          <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contraseña Temporal</th>
+                          <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contraseña (DNI)</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
@@ -532,7 +533,7 @@ export const ImportUsersWpPage: React.FC = () => {
                           <tr key={u._id || i} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
                             <td className="px-5 py-4 text-sm font-semibold text-gray-900 dark:text-white">{u.name}</td>
                             <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">{u.email}</td>
-                            <td className="px-5 py-4 text-sm text-gray-500 dark:text-gray-400 font-mono">ChangeMe123!</td>
+                            <td className="px-5 py-4 text-sm text-gray-500 dark:text-gray-400 font-mono">{u.dni || "—"}</td>
                           </tr>
                         ))}
                       </tbody>
