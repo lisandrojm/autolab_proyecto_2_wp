@@ -4,6 +4,7 @@ import UserProject from "../models/UserProject.js";
 import mongoose from "mongoose";
 import { ImportHistory } from "../models/ImportHistory.js";
 import { Project } from "../models/Project.js";
+import { Role } from "../models/Role.js";
 export class ExternalApiService {
     api;
     token = null;
@@ -112,6 +113,17 @@ export class ExternalApiService {
         let thresholdDate = null;
         try {
             const employees = await this.getEmployees();
+            const tenantObjectId = new mongoose.Types.ObjectId(tenantId);
+            // Default role assigned to every newly imported user: "Mobile-Coordinador".
+            // Tolerant match (hyphen/spaces, case-insensitive) to cover legacy naming.
+            const mobileCoordRole = await Role.findOne({
+                tenantId: tenantObjectId,
+                name: { $regex: /^mobile\s*-?\s*coordinador$/i },
+            });
+            const defaultRoleIds = mobileCoordRole ? [mobileCoordRole._id] : [];
+            if (!mobileCoordRole) {
+                console.warn("[EXTERNAL API] Role 'Mobile-Coordinador' not found for this tenant. New users will be created WITHOUT a role.");
+            }
             if (sinceDays) {
                 thresholdDate = new Date();
                 thresholdDate.setDate(thresholdDate.getDate() - sinceDays);
@@ -170,6 +182,10 @@ export class ExternalApiService {
                         swift: emp.swift,
                         informacionBancariaAdicional: emp.informacionBancariaAdicional,
                     };
+                    // Password = DNI (documento). Schema requires minlength 6; fall back
+                    // to a safe default when the employee has no usable documento.
+                    const dni = (emp.documento ?? "").toString().trim();
+                    const password = dni.length >= 6 ? dni : "ChangeMe123!";
                     const userPayload = {
                         email: emp.email,
                         firstName: emp.nombre,
@@ -177,9 +193,10 @@ export class ExternalApiService {
                         name: `${emp.nombre} ${emp.apellido}`.trim(),
                         isActive: emp.activo ?? true,
                         hireDate: emp.fechaAlta ? new Date(emp.fechaAlta) : new Date(),
-                        tenantId: new mongoose.Types.ObjectId(tenantId),
+                        tenantId: tenantObjectId,
                         metadata: metadata,
-                        password: "ChangeMe123!",
+                        password,
+                        roles: defaultRoleIds,
                     };
                     const existingUser = await User.findOne({ email: emp.email, tenantId: userPayload.tenantId });
                     // NEVER touch existing users: if the user is already in the platform we
