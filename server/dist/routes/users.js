@@ -846,6 +846,55 @@ router.get("/import/history/latest", requireTenant, authenticateToken, requirePe
         res.status(500).json({ error: "Internal server error" });
     }
 });
+// GET /users/import/last-added-details - Usuarios del último import con sus proyectos,
+// rol frame y contratos (desde users_&_projects), para la tabla "Nuevos Usuarios".
+router.get("/import/last-added-details", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
+    try {
+        const latest = await ImportHistory.findOne({
+            tenantId: req.tenantObjectId,
+            status: "success",
+            "addedUsers.0": { $exists: true },
+        }).sort({ createdAt: -1 });
+        if (!latest) {
+            res.json([]);
+            return;
+        }
+        const emails = latest.addedUsers.map((u) => u.email).filter(Boolean);
+        const users = await User.find({ tenantId: req.tenantObjectId, email: { $in: emails } })
+            .select("_id email name firstName lastName metadata.documento");
+        const userIds = users.map((u) => u._id);
+        const relations = await UserProject.find({ userId: { $in: userIds } })
+            .select("userId nombre_proyecto nombre_rol_frame contracts");
+        // Agrupar relaciones por usuario
+        const relByUser = new Map();
+        for (const r of relations) {
+            const key = r.userId.toString();
+            if (!relByUser.has(key))
+                relByUser.set(key, []);
+            relByUser.get(key).push({
+                nombre_proyecto: r.nombre_proyecto || "",
+                nombre_rol_frame: r.nombre_rol_frame || "",
+                contracts: (r.contracts || []).map((c) => ({
+                    nombre_contrato: c.nombre_contrato || "",
+                    nombre_rol_frame: c.nombre_rol_frame || "",
+                    fecha_alta_contrato: c.fecha_alta_contrato || "",
+                    fecha_baja_contrato: c.fecha_baja_contrato || "",
+                })),
+            });
+        }
+        const result = users.map((u) => ({
+            name: u.name || `${u.firstName || ""} ${u.lastName || ""}`.trim(),
+            email: u.email,
+            dni: u.metadata?.documento || "",
+            projects: relByUser.get(u._id.toString()) || [],
+        }));
+        res.json(result);
+    }
+    catch (error) {
+        console.error("Get last added details error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 // POST /users/import/check - Pre-chequear importación de usuarios
 router.post("/import/check", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
     try {

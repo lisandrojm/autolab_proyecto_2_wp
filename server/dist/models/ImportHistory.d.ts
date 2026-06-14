@@ -12,6 +12,7 @@ export interface IImportHistory extends Document {
     addedUsers: Array<{
         name: string;
         email: string;
+        dni?: string;
     }>;
     addedProjects: Array<{
         name: string;

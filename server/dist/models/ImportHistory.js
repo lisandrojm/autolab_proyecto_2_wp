@@ -15,7 +15,8 @@ const importHistorySchema = new Schema({
     addedUsers: [
         {
             name: { type: String, required: true },
-            email: { type: String, required: true }
+            email: { type: String, required: true },
+            dni: { type: String }
         }
     ],
     addedProjects: [

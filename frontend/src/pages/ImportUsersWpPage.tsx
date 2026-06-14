@@ -38,6 +38,26 @@ interface AddedProject {
   _id?: string;
 }
 
+interface ContractInfo {
+  nombre_contrato: string;
+  nombre_rol_frame: string;
+  fecha_alta_contrato: string;
+  fecha_baja_contrato: string;
+}
+
+interface UserProjectInfo {
+  nombre_proyecto: string;
+  nombre_rol_frame: string;
+  contracts: ContractInfo[];
+}
+
+interface AddedUserDetail {
+  name: string;
+  email: string;
+  dni: string;
+  projects: UserProjectInfo[];
+}
+
 interface HistoryItem {
   _id: string;
   status: "success" | "failed";
@@ -66,6 +86,7 @@ export const ImportUsersWpPage: React.FC = () => {
 
   // States for stats and sync
   const [latestSync, setLatestSync] = useState<HistoryItem | null>(null);
+  const [addedUsersDetails, setAddedUsersDetails] = useState<AddedUserDetail[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [sinceDays, setSinceDays] = useState<number>(7);
   const [isIncremental, setIsIncremental] = useState<boolean>(true);
@@ -97,6 +118,10 @@ export const ImportUsersWpPage: React.FC = () => {
       // 1. Fetch latest import run info
       const latestRes = await axios.get("/users/import/history/latest");
       setLatestSync(latestRes.data);
+
+      // 1b. Fetch project/contract/rol-frame details for the last added users
+      const detailsRes = await axios.get("/users/import/last-added-details");
+      setAddedUsersDetails(detailsRes.data || []);
 
       // 2. Fetch full history list
       const historyRes = await axios.get("/users/import/history");
@@ -526,16 +551,52 @@ export const ImportUsersWpPage: React.FC = () => {
                           <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre Completo</th>
                           <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Correo Electrónico</th>
                           <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contraseña (DNI)</th>
+                          <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Proyectos · Rol Frame · Contrato</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
-                        {latestSync.addedUsers.map((u, i) => (
-                          <tr key={u._id || i} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
-                            <td className="px-5 py-4 text-sm font-semibold text-gray-900 dark:text-white">{u.name}</td>
-                            <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">{u.email}</td>
-                            <td className="px-5 py-4 text-sm text-gray-500 dark:text-gray-400 font-mono">{u.dni || "—"}</td>
-                          </tr>
-                        ))}
+                        {(() => {
+                          const detailsByEmail = new Map(addedUsersDetails.map((d) => [d.email, d]));
+                          return latestSync.addedUsers.map((u, i) => {
+                            const detail = detailsByEmail.get(u.email);
+                            const projects = detail?.projects || [];
+                            return (
+                              <tr key={u._id || i} className="hover:bg-gray-50 dark:hover:bg-gray-900/20 align-top">
+                                <td className="px-5 py-4 text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{u.name}</td>
+                                <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{u.email}</td>
+                                <td className="px-5 py-4 text-sm text-gray-500 dark:text-gray-400 font-mono whitespace-nowrap">{u.dni || "—"}</td>
+                                <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">
+                                  {projects.length === 0 ? (
+                                    <span className="text-gray-400">Sin proyectos</span>
+                                  ) : (
+                                    <div className="space-y-2">
+                                      {projects.map((p, pi) => (
+                                        <div key={pi} className="rounded-md border border-gray-200 dark:border-gray-700 px-3 py-2">
+                                          <div className="font-semibold text-gray-900 dark:text-white">{p.nombre_proyecto || "—"}</div>
+                                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                                            Rol Frame: <span className="font-medium text-gray-700 dark:text-gray-200">{p.nombre_rol_frame || "—"}</span>
+                                          </div>
+                                          {p.contracts.length > 0 && (
+                                            <ul className="mt-1 space-y-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                              {p.contracts.map((c, ci) => (
+                                                <li key={ci}>
+                                                  Contrato: <span className="font-medium text-gray-700 dark:text-gray-200">{c.nombre_contrato || "—"}</span>
+                                                  {c.fecha_alta_contrato && (
+                                                    <span> ({c.fecha_alta_contrato}{c.fecha_baja_contrato ? ` → ${c.fecha_baja_contrato}` : ""})</span>
+                                                  )}
+                                                </li>
+                                              ))}
+                                            </ul>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          });
+                        })()}
                       </tbody>
                     </table>
                   </div>

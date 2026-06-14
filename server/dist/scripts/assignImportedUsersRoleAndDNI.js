@@ -139,6 +139,43 @@ async function assignImportedUsersRoleAndDNI() {
         console.log(`   - Sin cambios: ${skipped}`);
         if (dryRun)
             console.log("   (DRY_RUN: no se persistió ningún cambio)");
+        // --- Backfill del DNI en el historial de importaciones ---
+        // Para que la pantalla "Nuevos Usuarios" muestre el DNI (no "ChangeMe123!" ni "—")
+        // en los registros ya existentes, completamos addedUsers[].dni con el documento real.
+        console.log("\n🔁 Backfill de DNI en ImportHistory.addedUsers...");
+        const frameUsers = await User.find({ "metadata.id": { $exists: true } }, { email: 1, tenantId: 1, "metadata.documento": 1 });
+        const dniByKey = new Map(); // `${tenantId}:${email}` -> documento
+        for (const u of frameUsers) {
+            const doc = u.metadata?.documento?.toString().trim();
+            if (doc && doc.length >= 6)
+                dniByKey.set(`${u.tenantId}:${u.email}`, doc);
+        }
+        const histories = await ImportHistory.find({ "addedUsers.0": { $exists: true } });
+        let historyUpdated = 0;
+        let addedUsersFilled = 0;
+        for (const h of histories) {
+            let changed = false;
+            for (const au of h.addedUsers) {
+                if (!au.dni) {
+                    const dni = dniByKey.get(`${h.tenantId}:${au.email}`);
+                    if (dni) {
+                        au.dni = dni;
+                        changed = true;
+                        addedUsersFilled++;
+                    }
+                }
+            }
+            if (changed) {
+                if (!dryRun) {
+                    h.markModified("addedUsers");
+                    await h.save();
+                }
+                historyUpdated++;
+            }
+        }
+        console.log(`   - Registros de historial actualizados: ${historyUpdated} (${addedUsersFilled} usuarios con DNI completado)`);
+        if (dryRun)
+            console.log("   (DRY_RUN: backfill no persistido)");
     }
     catch (error) {
         console.error("❌ Error durante el proceso:", error);

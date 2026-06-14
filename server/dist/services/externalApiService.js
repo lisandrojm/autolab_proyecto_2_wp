@@ -209,7 +209,8 @@ export class ExternalApiService {
                     // Only brand-new users are inserted, using the current model schema.
                     const userDoc = await User.create(userPayload);
                     created++;
-                    addedUsers.push({ name: userPayload.name, email: userPayload.email });
+                    // `password` here is the DNI (or the fallback when there is no valid documento).
+                    addedUsers.push({ name: userPayload.name, email: userPayload.email, dni: password });
                     // Sync Projects only for this newly created user.
                     if (syncProjects) {
                         try {
