@@ -17,6 +17,7 @@ export declare class ExternalApiService {
     importUsers(tenantId: string, executedBy: mongoose.Types.ObjectId | "system", syncProjects?: boolean, sinceDays?: number): Promise<{
         created: number;
         updated: number;
+        skipped: number;
         errors: number;
     }>;
 }

@@ -21,6 +21,7 @@ import {
 interface SyncStats {
   createdUsers: number;
   updatedUsers: number;
+  skippedUsers?: number;
   errorsUsers: number;
 }
 
@@ -273,10 +274,10 @@ export const ImportUsersWpPage: React.FC = () => {
                       </span>
                     </div>
                     <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800/40">
-                      <span className="block text-2xl font-bold text-emerald-600 dark:text-emerald-400">{latestSync.stats.updatedUsers}</span>
+                      <span className="block text-2xl font-bold text-emerald-600 dark:text-emerald-400">{latestSync.stats.skippedUsers ?? 0}</span>
                       <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1 mt-1">
                         <FontAwesomeIcon icon={faUserCheck} className="text-emerald-500" />
-                        Actualizados
+                        Omitidos (ya existían)
                       </span>
                     </div>
                     <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800/40">
@@ -597,7 +598,7 @@ export const ImportUsersWpPage: React.FC = () => {
                           <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ejecutor</th>
                           <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
                           <th className="px-5 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Creados</th>
-                          <th className="px-5 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actualizados</th>
+                          <th className="px-5 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Omitidos</th>
                           <th className="px-5 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Errores</th>
                           <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Detalles</th>
                         </tr>
@@ -617,7 +618,7 @@ export const ImportUsersWpPage: React.FC = () => {
                               </span>
                             </td>
                             <td className="px-5 py-4 text-sm text-center text-blue-600 dark:text-blue-400 font-bold">{h.stats.createdUsers}</td>
-                            <td className="px-5 py-4 text-sm text-center text-emerald-600 dark:text-emerald-400 font-bold">{h.stats.updatedUsers}</td>
+                            <td className="px-5 py-4 text-sm text-center text-emerald-600 dark:text-emerald-400 font-bold">{h.stats.skippedUsers ?? 0}</td>
                             <td className="px-5 py-4 text-sm text-center text-rose-600 dark:text-rose-400 font-bold">{h.stats.errorsUsers}</td>
                             <td className="px-5 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate" title={h.errorDetails}>
                               {h.errorDetails || "-"}

@@ -7,6 +7,7 @@ export interface IImportHistory extends Document {
   stats: {
     createdUsers: number;
     updatedUsers: number;
+    skippedUsers: number;
     errorsUsers: number;
   };
   addedUsers: Array<{
@@ -33,6 +34,7 @@ const importHistorySchema = new Schema<IImportHistory>(
     stats: {
       createdUsers: { type: Number, default: 0 },
       updatedUsers: { type: Number, default: 0 },
+      skippedUsers: { type: Number, default: 0 },
       errorsUsers: { type: Number, default: 0 }
     },
     addedUsers: [

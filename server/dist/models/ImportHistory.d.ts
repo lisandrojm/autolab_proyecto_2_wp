@@ -6,6 +6,7 @@ export interface IImportHistory extends Document {
     stats: {
         createdUsers: number;
         updatedUsers: number;
+        skippedUsers: number;
         errorsUsers: number;
     };
     addedUsers: Array<{

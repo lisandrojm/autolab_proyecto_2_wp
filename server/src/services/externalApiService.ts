@@ -116,16 +116,19 @@ export class ExternalApiService {
     async importUsers(
         tenantId: string, 
         executedBy: mongoose.Types.ObjectId | "system",
-        syncProjects: boolean = false, 
+        syncProjects: boolean = false,
         sinceDays?: number
-    ): Promise<{ created: number; updated: number; errors: number }> {
+    ): Promise<{ created: number; updated: number; skipped: number; errors: number }> {
         console.log(`[EXTERNAL API] Starting user import (syncProjects=${syncProjects}, sinceDays=${sinceDays})...`);
-        
+
         const addedUsers: Array<{ name: string; email: string }> = [];
         const addedProjectsMap = new Map<number, string>(); // Use map to keep projects unique
-        
+
         let created = 0;
+        // INSERT-ONLY IMPORT: existing documents are never modified. `updated`
+        // stays 0 and is kept only for backward compatibility of the result shape.
         let updated = 0;
+        let skipped = 0;
         let errors = 0;
         let thresholdDate: Date | null = null;
 
@@ -206,28 +209,23 @@ export class ExternalApiService {
                         password: "ChangeMe123!",
                     };
 
-                    let userDoc = await User.findOne({ email: emp.email, tenantId: userPayload.tenantId });
+                    const existingUser = await User.findOne({ email: emp.email, tenantId: userPayload.tenantId });
 
-                    if (userDoc) {
-                        userDoc.firstName = userPayload.firstName;
-                        userDoc.lastName = userPayload.lastName;
-                        userDoc.name = userPayload.name;
-                        (userDoc as any).isActive = userPayload.isActive;
-                        if (!sinceDays && userDoc.metadata && userDoc.metadata.projects) {
-                            metadata.projects = userDoc.metadata.projects;
-                        }
-                        userDoc.metadata = metadata;
-                        userDoc.markModified('metadata');
-                        await userDoc.save();
-                        updated++;
-                    } else {
-                        userDoc = await User.create(userPayload);
-                        created++;
-                        addedUsers.push({ name: userPayload.name, email: userPayload.email });
+                    // NEVER touch existing users: if the user is already in the platform we
+                    // leave it completely untouched (firstName, lastName, isActive, metadata,
+                    // relations, etc. are preserved) and move on to the next employee.
+                    if (existingUser) {
+                        skipped++;
+                        continue;
                     }
 
-                    // Sync Projects if requested
-                    if (syncProjects && userDoc) {
+                    // Only brand-new users are inserted, using the current model schema.
+                    const userDoc = await User.create(userPayload);
+                    created++;
+                    addedUsers.push({ name: userPayload.name, email: userPayload.email });
+
+                    // Sync Projects only for this newly created user.
+                    if (syncProjects) {
                         try {
                             const projectsValues = await this.getEmployeeProjects(emp.id);
                             if (projectsValues && projectsValues.length > 0) {
@@ -269,24 +267,22 @@ export class ExternalApiService {
                                         externalEmployeeId: emp.id
                                     };
 
-                                    // Check if this project relationship is new
-                                    const existingUserProject = await UserProject.findOne(query);
-                                    if (!existingUserProject) {
+                                    // INSERT-ONLY: never overwrite an existing relation. If the
+                                    // user-project relation already exists we leave it untouched
+                                    // and only reuse its id; otherwise we create a new one.
+                                    let savedProj = await UserProject.findOne(query);
+                                    if (!savedProj) {
+                                        savedProj = await UserProject.create({
+                                            externalProjectId: extProjId,
+                                            externalEmployeeId: emp.id,
+                                            nombre_proyecto: projectName,
+                                            projectId: internalProject._id,
+                                            userId: userDoc._id,
+                                            contracts: contracts,
+                                            nombre_rol_frame: contracts.length > 0 ? contracts[0].nombre_rol_frame : ""
+                                        });
                                         addedProjectsMap.set(extProjId, projectName);
                                     }
-
-                                    const update = {
-                                        externalProjectId: extProjId,
-                                        externalEmployeeId: emp.id,
-                                        nombre_proyecto: projectName,
-                                        projectId: internalProject._id,
-                                        userId: userDoc._id,
-                                        contracts: contracts,
-                                        nombre_rol_frame: contracts.length > 0 ? contracts[0].nombre_rol_frame : ""
-                                    };
-                                    const options = { upsert: true, new: true, setDefaultsOnInsert: true };
-
-                                    const savedProj = await UserProject.findOneAndUpdate(query, update, options);
                                     if (savedProj) {
                                         projectIds.push(savedProj._id as Types.ObjectId);
                                     }
@@ -317,6 +313,7 @@ export class ExternalApiService {
                 stats: {
                     createdUsers: created,
                     updatedUsers: updated,
+                    skippedUsers: skipped,
                     errorsUsers: errors
                 },
                 addedUsers,
@@ -336,6 +333,7 @@ export class ExternalApiService {
                 stats: {
                     createdUsers: created,
                     updatedUsers: updated,
+                    skippedUsers: skipped,
                     errorsUsers: errors + 1
                 },
                 addedUsers,
@@ -348,7 +346,7 @@ export class ExternalApiService {
             throw globalError;
         }
 
-        console.log(`[EXTERNAL API] Import finished. Created: ${created}, Updated: ${updated}, Errors: ${errors}`);
-        return { created, updated, errors };
+        console.log(`[EXTERNAL API] Import finished. Created: ${created}, Skipped (existing, untouched): ${skipped}, Errors: ${errors}`);
+        return { created, updated, skipped, errors };
     }
 }

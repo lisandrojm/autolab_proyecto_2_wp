@@ -9,6 +9,7 @@ const importHistorySchema = new Schema({
     stats: {
         createdUsers: { type: Number, default: 0 },
         updatedUsers: { type: Number, default: 0 },
+        skippedUsers: { type: Number, default: 0 },
         errorsUsers: { type: Number, default: 0 }
     },
     addedUsers: [
