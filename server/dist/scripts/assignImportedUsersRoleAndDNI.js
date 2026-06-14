@@ -3,9 +3,11 @@ import { connectDB, disconnectDB } from "../config/db.js";
 import { User } from "../models/User.js";
 import { Role } from "../models/Role.js";
 import { ImportHistory } from "../models/ImportHistory.js";
+import { Types } from "mongoose";
 /**
  * Ajusta los usuarios IMPORTADOS desde FRAME (los que tienen `metadata.id`):
- *   1. Les asigna el rol "Mobile-Coordinador" (sin quitar otros roles que ya tengan).
+ *   1. Les asigna el rol "Mobile-Colaborador" y, si lo tuvieran por error, les quita
+ *      "Mobile-Coordinador" (sin tocar otros roles que ya tengan).
  *   2. Les setea la contraseña = su DNI (metadata.documento). El pre-save hook de
  *      models/User.ts se encarga de hashearla.
  *
@@ -62,22 +64,27 @@ async function assignImportedUsersRoleAndDNI() {
             });
         }
         console.log(`📋 Se encontraron ${users.length} usuarios para procesar.`);
-        // Cache de rol "Mobile-Coordinador" por tenant (búsqueda tolerante a guión/espacios).
+        // Cache de roles por tenant: el que se debe AGREGAR (Mobile-Colaborador) y el
+        // que se debe QUITAR (Mobile-Coordinador, asignado por error previamente).
+        // Búsqueda tolerante a guión/espacios y mayúsculas.
         const roleCache = new Map();
-        const getMobileCoordRoleId = async (tenantId) => {
+        const getTenantRoles = async (tenantId) => {
             const key = tenantId.toString();
             if (roleCache.has(key))
                 return roleCache.get(key);
-            const role = await Role.findOne({
-                tenantId,
-                name: { $regex: /^mobile\s*-?\s*coordinador$/i },
-            });
-            const id = role ? role._id : null;
-            if (!role) {
-                console.warn(`⚠️ Tenant ${key}: no existe el rol "Mobile-Coordinador".`);
+            const [collab, coord] = await Promise.all([
+                Role.findOne({ tenantId, name: { $regex: /^mobile\s*-?\s*colaborador$/i } }),
+                Role.findOne({ tenantId, name: { $regex: /^mobile\s*-?\s*coordinador$/i } }),
+            ]);
+            if (!collab) {
+                console.warn(`⚠️ Tenant ${key}: no existe el rol "Mobile-Colaborador".`);
             }
-            roleCache.set(key, id);
-            return id;
+            const value = {
+                add: collab ? collab._id : null,
+                remove: coord ? coord._id : null,
+            };
+            roleCache.set(key, value);
+            return value;
         };
         let roleAssigned = 0;
         let passwordsUpdated = 0;
@@ -85,16 +92,23 @@ async function assignImportedUsersRoleAndDNI() {
         for (const user of users) {
             let changed = false;
             const changes = [];
-            // 1) Rol Mobile-Coordinador (sin duplicar ni quitar otros)
-            const roleId = await getMobileCoordRoleId(user.tenantId);
-            if (roleId) {
-                const already = (user.roles || []).some((r) => r.toString() === roleId.toString());
-                if (!already) {
-                    user.roles = [...(user.roles || []), roleId];
-                    changes.push("rol +Mobile-Coordinador");
-                    changed = true;
-                    roleAssigned++;
-                }
+            const { add: collabId, remove: coordId } = await getTenantRoles(user.tenantId);
+            let roles = (user.roles || []).map((r) => r.toString());
+            // 1a) Quitar Mobile-Coordinador si fue asignado por error.
+            if (coordId && roles.includes(coordId.toString())) {
+                roles = roles.filter((r) => r !== coordId.toString());
+                changes.push("rol -Mobile-Coordinador");
+                changed = true;
+            }
+            // 1b) Agregar Mobile-Colaborador (sin duplicar ni quitar otros roles).
+            if (collabId && !roles.includes(collabId.toString())) {
+                roles.push(collabId.toString());
+                changes.push("rol +Mobile-Colaborador");
+                changed = true;
+                roleAssigned++;
+            }
+            if (changed) {
+                user.roles = roles.map((r) => new Types.ObjectId(r));
             }
             // 2) Password = DNI
             const documento = user.metadata?.documento?.toString().trim();

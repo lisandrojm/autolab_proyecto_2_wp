@@ -138,15 +138,15 @@ export class ExternalApiService {
 
             const tenantObjectId = new mongoose.Types.ObjectId(tenantId);
 
-            // Default role assigned to every newly imported user: "Mobile-Coordinador".
+            // Default role assigned to every newly imported user: "Mobile-Colaborador".
             // Tolerant match (hyphen/spaces, case-insensitive) to cover legacy naming.
-            const mobileCoordRole = await Role.findOne({
+            const mobileCollabRole = await Role.findOne({
                 tenantId: tenantObjectId,
-                name: { $regex: /^mobile\s*-?\s*coordinador$/i },
+                name: { $regex: /^mobile\s*-?\s*colaborador$/i },
             });
-            const defaultRoleIds = mobileCoordRole ? [mobileCoordRole._id] : [];
-            if (!mobileCoordRole) {
-                console.warn("[EXTERNAL API] Role 'Mobile-Coordinador' not found for this tenant. New users will be created WITHOUT a role.");
+            const defaultRoleIds = mobileCollabRole ? [mobileCollabRole._id] : [];
+            if (!mobileCollabRole) {
+                console.warn("[EXTERNAL API] Role 'Mobile-Colaborador' not found for this tenant. New users will be created WITHOUT a role.");
             }
 
             if (sinceDays) {
