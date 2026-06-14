@@ -2,6 +2,7 @@ import "dotenv/config";
 import { connectDB, disconnectDB } from "../config/db.js";
 import { User } from "../models/User.js";
 import { Role } from "../models/Role.js";
+import { ImportHistory } from "../models/ImportHistory.js";
 import { Types } from "mongoose";
 
 /**
@@ -14,9 +15,13 @@ import { Types } from "mongoose";
  *
  * Variables de entorno opcionales:
  *   DRY_RUN=true   -> solo muestra lo que haría, sin escribir en la base.
+ *   SCOPE=last     -> (DEFAULT) solo los usuarios creados en la ÚLTIMA importación
+ *                     exitosa (ImportHistory.addedUsers del run más reciente).
+ *   SCOPE=all      -> TODOS los usuarios importados de FRAME (metadata.id), todos los tenants.
  */
 async function assignImportedUsersRoleAndDNI() {
   const dryRun = String(process.env.DRY_RUN).toLowerCase() === "true";
+  const scope = (process.env.SCOPE || "last").toLowerCase();
 
   console.log("🌱 Conectando a la base de datos...");
   await connectDB();
@@ -31,14 +36,43 @@ async function assignImportedUsersRoleAndDNI() {
   ];
 
   if (dryRun) console.log("🔎 DRY_RUN activo: no se escribirá nada en la base.");
+  console.log(`🎯 SCOPE=${scope}`);
 
   try {
-    // Solo usuarios provenientes de FRAME (tienen metadata.id) y que no sean seed.
-    const users = await User.find({
-      "metadata.id": { $exists: true },
-      email: { $nin: seedEmails },
-    });
-    console.log(`📋 Se encontraron ${users.length} usuarios importados para procesar.`);
+    let users: Array<InstanceType<typeof User>>;
+
+    if (scope === "all") {
+      // Todos los usuarios provenientes de FRAME (tienen metadata.id) y que no sean seed.
+      users = await User.find({
+        "metadata.id": { $exists: true },
+        email: { $nin: seedEmails },
+      });
+    } else {
+      // Solo los creados en la última importación exitosa con usuarios nuevos.
+      const latestRun = await ImportHistory.findOne({
+        status: "success",
+        "addedUsers.0": { $exists: true },
+      }).sort({ createdAt: -1 });
+
+      if (!latestRun) {
+        console.log("ℹ️ No se encontró una importación exitosa con usuarios creados. Nada que hacer.");
+        await disconnectDB();
+        process.exit(0);
+      }
+
+      const emails = latestRun.addedUsers.map((u) => u.email).filter(Boolean);
+      console.log(
+        `📅 Última importación: ${new Date(latestRun.createdAt).toLocaleString("es-AR")} ` +
+          `(tenant ${latestRun.tenantId}) — ${emails.length} usuarios creados en ese run.`,
+      );
+
+      users = await User.find({
+        tenantId: latestRun.tenantId,
+        email: { $in: emails, $nin: seedEmails },
+      });
+    }
+
+    console.log(`📋 Se encontraron ${users.length} usuarios para procesar.`);
 
     // Cache de rol "Mobile-Coordinador" por tenant (búsqueda tolerante a guión/espacios).
     const roleCache = new Map<string, Types.ObjectId | null>();
