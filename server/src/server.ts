@@ -45,6 +45,10 @@ import { profileRoutes } from "./routes/profile.js";
 import { infoRoutes } from "./routes/info.js";
 import { roleFrameRoutes } from "./routes/roleFrames.js";
 import { categoriasSatRoutes } from "./routes/categoriasSat.js";
+import { bancoRoutes } from "./routes/bancos.js";
+import { obraSocialRoutes } from "./routes/obrasSociales.js";
+import { centroCostoRoutes } from "./routes/centrosCosto.js";
+import { contratoFrameRoutes } from "./routes/contratosFrame.js";
 
 import { orderRoutes } from "./routes/orders.js";
 import { orderConfigRoutes } from "./routes/orderConfig.js";
@@ -162,6 +166,10 @@ app.use("/api/v1/profile", profileRoutes);
 app.use("/api/v1/info", infoRoutes);
 app.use("/api/v1/role-frames", roleFrameRoutes);
 app.use("/api/v1/categorias-sat", categoriasSatRoutes);
+app.use("/api/v1/bancos", bancoRoutes);
+app.use("/api/v1/obras-sociales", obraSocialRoutes);
+app.use("/api/v1/centros-costo", centroCostoRoutes);
+app.use("/api/v1/contratos-frame", contratoFrameRoutes);
 
 app.use("/api/v1/orders", orderRoutes);
 app.use("/api/v1/order-config", orderConfigRoutes);

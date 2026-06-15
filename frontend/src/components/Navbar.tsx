@@ -5,7 +5,7 @@ import { ClientSelector } from "./ClientSelector";
 import { ClientContextMenu } from "./ClientContextMenu";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank } from "@fortawesome/free-solid-svg-icons";
 import { Logo } from "../components/ui/Logo";
 import axios from "../api/axiosConfig";
 import { SettingsModal } from "./SettingsModal";
@@ -157,6 +157,10 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("config_holidays:view")) base.push({ path: "/holidays", icon: faCalendar, label: "Feriados", scope: "global" });
       if (hasPermission("config_pdf_templates:view")) base.push({ path: "/pdfs", icon: faFilePdf, label: "Plantillas PDF", scope: "global" });
       base.push({ path: "/categorias-sat", icon: faListCheck, label: "Categorías SAT", scope: "global" });
+      base.push({ path: "/bancos", icon: faBuildingColumns, label: "Bancos", scope: "global" });
+      base.push({ path: "/obras-sociales", icon: faBriefcaseMedical, label: "Obras Sociales", scope: "global" });
+      base.push({ path: "/centros-costo", icon: faPiggyBank, label: "Centros de Costos", scope: "global" });
+      base.push({ path: "/contratos-frame", icon: faFileContract, label: "Contratos", scope: "global" });
     }
 
     return base;
@@ -214,9 +218,9 @@ export const MobileNavbar: React.FC = () => {
     // Partición de items: Admin Usuarios, Admin General, Configuración y GESTIÓN
     const userAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/users", "/roles", "/areas", "/positions", "/levels", "/users/import-wp"].includes(item.path)) : adminItems.filter((item) => ["/roles", "/areas", "/positions", "/levels", "/users", "/users/import-wp"].includes(item.path));
 
-    const generalAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/tenants", "/clients"].includes(item.path)) : adminItems.filter((item) => ["/clients", "/admin/projects", "/admin/sedes", "/admin/contracts", "/orders", "/vacations", "/requests", "/calendar-events", "/employee-profiles", "/documents"].includes(item.path));
+    const generalAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/tenants"].includes(item.path)) : adminItems.filter((item) => ["/admin/projects", "/admin/sedes", "/admin/contracts", "/orders", "/vacations", "/requests", "/calendar-events", "/employee-profiles", "/documents"].includes(item.path));
 
-    const configOrder = ["/requests/config", "/order-types", "/shifts", "/vacations-rules", "/holidays", "/pdfs", "/categorias-sat", "/funciones-frame"];
+    const configOrder = ["/requests/config", "/order-types", "/shifts", "/vacations-rules", "/holidays", "/pdfs", "/funciones-frame", "/categorias-sat", "/clients", "/contratos-frame", "/centros-costo", "/bancos", "/obras-sociales"];
     const configItems = adminItems
       .filter((item) => configOrder.includes(item.path))
       .sort((a, b) => configOrder.indexOf(a.path) - configOrder.indexOf(b.path));

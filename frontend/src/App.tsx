@@ -41,6 +41,10 @@ import { VacationsCalendarPage } from "./pages/VacationsCalendarPage";
 import { PdfTemplatesPage } from "./pages/PdfTemplatesPage";
 import { HolidaysPage } from "./pages/HolidaysPage";
 import { CategoriasSatPage } from "./pages/CategoriasSatPage";
+import { BancosPage } from "./pages/BancosPage";
+import { ObrasSocialesPage } from "./pages/ObrasSocialesPage";
+import { CentrosCostoPage } from "./pages/CentrosCostoPage";
+import { ContratosFramePage } from "./pages/ContratosFramePage";
 
 const AppMobile = lazy(() => import("./apps/mobile/src/App"));
 
@@ -426,6 +430,38 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <CategoriasSatPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/bancos"
+                element={
+                  <ProtectedRoute>
+                    <BancosPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/obras-sociales"
+                element={
+                  <ProtectedRoute>
+                    <ObrasSocialesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/centros-costo"
+                element={
+                  <ProtectedRoute>
+                    <CentrosCostoPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/contratos-frame"
+                element={
+                  <ProtectedRoute>
+                    <ContratosFramePage />
                   </ProtectedRoute>
                 }
               />
