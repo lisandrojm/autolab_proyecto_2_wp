@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS `rol_frame` (
 -- ---------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS `empleado` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL AUTO_INCREMENT,quisiera 
   `nombre` text,
   `apellido` text,
   `genero_id` int(11) DEFAULT NULL,

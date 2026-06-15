@@ -1,0 +1,322 @@
+{
+	"info": {
+		"_postman_id": "f39a3496-21f3-414c-8633-f5110747f72a",
+		"name": "FRAME",
+		"description": "Colección FRAME: endpoints del sistema de gestión de empleados, proyectos y otros recursos.\n\nEsta colección agrupa las operaciones principales de la API FRAME utilizadas por la aplicación web interna. Incluye:\n\n- Gestión de empleados (búsqueda, detalle, proyectos asociados, etc.)\n    \n- Gestión de proyectos\n    \n- Otros recursos relacionados\n    \n\nAutenticación\n\n- Tipo: Bearer Token (JWT)\n    \n- Enviar el token en el encabezado `Authorization: Bearer`\n    \n\nUso general\n\n- Los endpoints siguen la convención REST sobre HTTPS.\n    \n- Los cuerpos de las peticiones se envían en formato `application/json`.\n    \n- Las fechas se devuelven en formato ISO 8601 (`YYYY-MM-DDTHH:mm:ss.sssZ`).\n    \n\nRecomendaciones\n\n- Configurar una variable de entorno `baseUrl` (por ejemplo, `https://frame.weprodu.com/api`) para reutilizarla en todos los requests.\n    \n- Guardar ejemplos de respuesta en cada request para facilitar pruebas y documentación.\n    \n\nPara detalles específicos de cada operación, revisar la descripción de cada request dentro de sus carpetas (por ejemplo, carpeta **Empleados**).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "4359593"
+	},
+	"item": [
+		{
+			"name": "Empleados",
+			"item": [
+				{
+					"name": "Get empleados",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://frame.weprodu.com/api/empleado",
+							"protocol": "https",
+							"host": [
+								"frame",
+								"weprodu",
+								"com"
+							],
+							"path": [
+								"api",
+								"empleado"
+							]
+						},
+						"description": "**Description**  \nReturns the full list of empleados (employees) registered in the FRAME system.\n\n**HTTP Request**  \n`GET https://frame.weprodu.com/api/empleado`\n\n**Behavior**  \n- Fetches all active employee records.  \n- No request body is required.  \n- Typical use: listing employees for HR/admin systems, populating dropdowns, or performing client-side filtering.\n\n**Response**  \n- Status: `200 OK` on success.  \n- Body: JSON array of employee objects, e.g.:  \n  ```json\n  [\n    {\n      \"id\": 1231,\n      \"nombre\": \"Cris\",\n      \"apellido\": \"Tapia Marchiori\",\n      \"generoId\": 1,\n      \"tipoDocumentoId\": 1,\n      \"documento\": \"31087428\",\n      \"cuit\": \"20310874281\",\n      \"estadoCivil\": \"Soltero\",\n      \"calle\": \"Los incas\",\n      \"codigoPostal\": \"1426\",\n      \"nacionalidadId\": 2,\n      \"altura\": \"3518\",\n      \"pisoDepto\": \"5C\",\n      \"paisId\": 2,\n      \"nivelEstudioId\": 1,\n      \"osPrepaga\": false,\n      \"fechaNac\": \"1985-03-11T03:00:00.000Z\",\n      \"fechaAlta\": \"2025-03-26T00:00:00.000Z\",\n      \"osId\": null,\n      \"telefono\": \"2477314244\",\n      \"telefono2\": null,\n      \"visa\": true,\n      \"localidad\": \"CABA\",\n      \"activo\": true,\n      \"bancoId\": 72,\n      \"cbu\": \"0720112388000036533554\",\n      \"tipoDeCuentaBancaria\": \"Caja de ahorro $\",\n      \"nroDeCuentaBancaria\": \"112365335/5\",\n      \"aliasBancario\": \"GRADA.PILETA.ALMA\",\n      \"email\": \"cristian.tapia.marchiori@gmail.com\",\n      \"estadoId\": null,\n      \"inHouse\": null,\n      \"numeroLegajoTango\": null,\n      \"afiliadoAlSindicato\": null,\n      \"rutaImagen\": null,\n      \"bancoReceptor\": null,\n      \"swift\": null,\n      \"informacionBancariaAdicional\": null\n    }\n  ]\n  ```\n\n**Field summary (per employee object)**  \n- `id` (number): Unique employee identifier.  \n- `nombre` (string): First name.  \n- `apellido` (string): Last name(s).  \n- `generoId` (number|null): Gender identifier (foreign key).  \n- `tipoDocumentoId` (number): Document type identifier.  \n- `documento` (string): Document/ID number.  \n- `cuit` (string): Tax identification number.  \n- `estadoCivil` (string|null): Marital status.  \n- `calle` (string): Street name.  \n- `altura` (string): Street number.  \n- `pisoDepto` (string|null): Floor and apartment.  \n- `codigoPostal` (string|null): Postal code.  \n- `localidad` (string|null): City/locality.  \n- `paisId` (number): Country identifier.  \n- `nacionalidadId` (number): Nationality identifier.  \n- `nivelEstudioId` (number): Education level identifier.  \n- `osId` (number|null): Health insurance/obra social identifier.  \n- `osPrepaga` (boolean|null): Whether the employee has private/prepaid health insurance.  \n- `fechaNac` (string): Date of birth (ISO 8601).  \n- `fechaAlta` (string): Start/registration date in the system (ISO 8601).  \n- `telefono` (string): Primary phone number.  \n- `telefono2` (string|null): Secondary phone number.  \n- `visa` (boolean|null): Indicates if the employee has a visa (likely work/travel).  \n- `activo` (boolean): Whether the employee is currently active.  \n- `bancoId` (number|null): Bank identifier.  \n- `cbu` (string|null): Bank CBU (Argentinian bank account identifier).  \n- `tipoDeCuentaBancaria` (string|null): Bank account type (e.g., `Caja de ahorro $`).  \n- `nroDeCuentaBancaria` (string|null): Bank account number.  \n- `aliasBancario` (string|null): Bank account alias.  \n- `email` (string): Employee email address.  \n- `estadoId` (number|null): Status identifier (additional state).  \n- `inHouse` (boolean|null): Internal/in-house flag (if used).  \n- `numeroLegajoTango` (string|null): Tango HR/Payroll employee file number.  \n- `afiliadoAlSindicato` (boolean|null): Whether the employee is union-affiliated.  \n- `rutaImagen` (string|null): Path or filename of the employee image.  \n- `bancoReceptor` (string|null): Receiving bank (for external transfers).  \n- `swift` (string|null): SWIFT/BIC code for international transfers.  \n- `informacionBancariaAdicional` (string|null): Extra bank-related notes.\n\n**Notes**  \n- This endpoint is read-only and does not modify data.  \n- The array may include both active and inactive employees depending on backend rules, but `activo` indicates current status.  \n- Some fields can be `null` or empty strings depending on the employee record.\n"
+					},
+					"response": []
+				},
+				{
+					"name": "Get empleado por id",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://frame.weprodu.com/api/empleado/{id}",
+							"protocol": "https",
+							"host": [
+								"frame",
+								"weprodu",
+								"com"
+							],
+							"path": [
+								"api",
+								"empleado",
+								"{id}"
+							]
+						},
+						"description": "Retrieves a single employee by unique identifier.\n\nPath parameters:\n\n- `id` (integer, required): Unique identifier of the employee to fetch.\n    \n\nSuccessful response (200):  \nReturns a JSON object with the employee’s core personal, contact, and banking details, including (non‑exhaustive):\n\n- `id`: Employee ID.\n    \n- `nombre`, `apellido`: First name and last name.\n    \n- `generoId`: Gender identifier.\n    \n- `tipoDocumentoId`, `documento`, `cuit`: Document type, document number, and tax ID.\n    \n- `estadoCivil`: Marital status.\n    \n- `calle`, `altura`, `pisoDepto`, `codigoPostal`, `localidad`, `paisId`, `nacionalidadId`: Address and location.\n    \n- `telefono`, `telefono2`, `email`: Contact details.\n    \n- `fechaNac`, `fechaAlta`: Birth date and hire/start date.\n    \n- `osId`, `osPrepaga`: Health/medical coverage identifiers.\n    \n- `nivelEstudioId`: Education level identifier.\n    \n- `bancoId`, `cbu`, `tipoDeCuentaBancaria`, `nroDeCuentaBancaria`, `aliasBancario`, `bancoReceptor`, `swift`, `informacionBancariaAdicional`: Banking information.\n    \n- `estadoId`, `activo`: Employment status flags.\n    \n- `visa`: Indicates if the employee has a visa.\n    \n- `numeroLegajoTango`: Internal employee record number.\n    \n- `afiliadoAlSindicato`: Union affiliation flag.\n    \n\nUse this endpoint when you need the full record of a specific employee for HR or payroll operations."
+					},
+					"response": []
+				},
+				{
+					"name": "Get empleados paginados",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"texto\": \"\",\r\n    \"offset\": 0\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://frame.weprodu.com/api/empleado/paginado",
+							"protocol": "https",
+							"host": [
+								"frame",
+								"weprodu",
+								"com"
+							],
+							"path": [
+								"api",
+								"empleado",
+								"paginado"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Proyectos",
+			"item": [
+				{
+					"name": "Get proyectos",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://frame.weprodu.com/api/proyecto",
+							"protocol": "https",
+							"host": [
+								"frame",
+								"weprodu",
+								"com"
+							],
+							"path": [
+								"api",
+								"proyecto"
+							]
+						},
+						"description": "Obtiene el listado de proyectos registrados en FRAME.\n\nRespuesta\n- Devuelve un arreglo de objetos de proyecto en formato JSON.\n- Campos principales de cada proyecto:\n  - `id`: identificador numérico del proyecto.\n  - `nombre`: nombre o código del proyecto.\n  - `descripcion`: detalle breve del proyecto.\n  - `responsableId`: ID del responsable interno asignado.\n  - `clienteId`: ID del cliente asociado.\n  - `fechaInicio`: fecha de inicio del proyecto (ISO 8601).\n  - `fechaFin`: fecha estimada/real de finalización (ISO 8601).\n  - `fechaAlta`: fecha de alta del proyecto en el sistema (ISO 8601).\n  - `sedeId`: ID de la sede asociada.\n  - `activo`: indica si el proyecto está activo (true/false).\n  - `centroCostoId`: ID del centro de costo vinculado.\n\nNotas de uso\n- Endpoint de solo lectura; no requiere cuerpo en la petición.\n- Útil para poblar listados, seleccionar proyectos por ID y obtener metadatos básicos antes de consultar detalles en otros endpoints.\n- Verificar paginación o filtros en la documentación general del API si la respuesta crece demasiado."
+					},
+					"response": []
+				},
+				{
+					"name": "Get proyecto por id",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://frame.weprodu.com/api/proyecto/{id}",
+							"protocol": "https",
+							"host": [
+								"frame",
+								"weprodu",
+								"com"
+							],
+							"path": [
+								"api",
+								"proyecto",
+								"{id}"
+							]
+						},
+						"description": "## Get proyecto por ID\n\nRetrieve detailed information for a single **proyecto** by its unique identifier.\n\n### HTTP Request\n\n`GET https://frame.weprodu.com/api/proyecto/{id}`\n\n### Path parameters\n\n- `id` (number, required): Unique identifier of the proyecto to retrieve.\n\nExample:\n```http\nGET https://frame.weprodu.com/api/proyecto/715\n```\n\n### Successful response (200 OK)\n\nReturns a JSON object with the proyecto details. Example shape (from a recent successful response):\n\n```json\n{\n  \"id\": 715,\n  \"nombre\": \"685_GM_QUE_PREFERIS_COPRO\",\n  \"descripcion\": \"Aporte por coproducción con productora G...\",\n  \"responsableId\": 28,\n  \"clienteId\": 7,\n  \"fechaInicio\": \"2024-10-14T00:00:00.000Z\",\n  \"fechaFin\": \"2024-12-06T00:00:00.000Z\",\n  \"fechaAlta\": \"2024-10-16T00:00:00.000Z\",\n  \"sedeId\": 3,\n  \"activo\": true,\n  \"centroCostoId\": 10\n}\n```\n\n### Key response fields\n\n- `id`: Numeric ID of the proyecto.\n- `nombre`: Human-readable name or code of the proyecto.\n- `descripcion`: Short description or summary of the proyecto.\n- `responsableId`: ID of the responsible user/owner of the proyecto.\n- `clienteId`: ID of the associated client.\n- `fechaInicio`: Start date of the proyecto (ISO 8601 string).\n- `fechaFin`: End date of the proyecto (ISO 8601 string).\n- `fechaAlta`: Creation or registration date of the proyecto (ISO 8601 string).\n- `sedeId`: ID of the associated location/branch.\n- `activo`: Boolean flag indicating whether the proyecto is currently active.\n- `centroCostoId`: ID of the associated cost center."
+					},
+					"response": []
+				},
+				{
+					"name": "Get proyectos de un determinado empleado",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://frame.weprodu.com/api/proyecto-empleado/empleado/v2/{id}",
+							"protocol": "https",
+							"host": [
+								"frame",
+								"weprodu",
+								"com"
+							],
+							"path": [
+								"api",
+								"proyecto-empleado",
+								"empleado",
+								"v2",
+								"{id}"
+							]
+						},
+						"description": "## Descripción\n\nObtiene todos los proyectos asociados a un empleado específico.\n\nEste endpoint devuelve un arreglo de contratos/proyectos en los que participa el empleado indicado por su ID. Cada elemento del arreglo representa una participación del empleado en un proyecto, con información de fechas, honorarios y datos descriptivos del proyecto.\n\n## Método y URL\n\n- **Método:** `GET`\n    \n- **URL:** `https://frame.weprodu.com/api/proyecto-empleado/empleado/v2/{empleado_id}`\n    \n\n## Parámetros de ruta\n\n- `empleado_id` (number, requerido): Identificador único del empleado. En este ejemplo, se está consultando el empleado `544`.\n    \n\n## Respuesta 200 – OK\n\nDevuelve un arreglo (`Array`) de objetos JSON con, entre otros, los siguientes campos relevantes por participación:\n\n- `proyecto_id` (number): ID del proyecto.\n    \n- `empleado_id` (number): ID del empleado consultado.\n    \n- `estado_id` (number): Estado interno del empleado en el proyecto.\n    \n- `categoria_sat_id` (number): Categoría SAT asociada al rol del empleado.\n    \n- `fecha_alta_contrato` (string, ISO 8601): Fecha de alta del contrato.\n    \n- `fecha_baja_contrato` (string, ISO 8601): Fecha de baja del contrato.\n    \n- `tipo_contrato_id` (number): Tipo de contrato (por ejemplo, plazo fijo, jornada, etc.).\n    \n- `cantidad_jornadas_laborales` (number): Cantidad de jornadas laborales contratadas.\n    \n- `sueldo_jornada` (number): Importe por jornada.\n    \n- `sueldo_mano` (number): Importe total correspondiente a la participación.\n    \n- `sueldo_mano_texto` (string): Importe total expresado en letras.\n    \n- `reemplazo` (boolean | null): Indica si el empleado actúa como reemplazo de otra persona.\n    \n- `empleado_id_reemplezado` (number | null): ID del empleado reemplazado (si aplica).\n    \n- `observaciones` (string): Comentarios u observaciones administrativas (por ejemplo, indicaciones de facturación).\n    \n- `sede_id` (number): Identificador de la sede asociada al proyecto.\n    \n- `rol_frame_id` (number): Rol interno del empleado dentro del proyecto.\n    \n- `hora_inicio` (string, HH:mm): Hora de inicio de la jornada.\n    \n- `hora_fin` (string, HH:mm): Hora de fin de la jornada.\n    \n- `puede_renovar_contrato` (boolean): Indica si el contrato puede renovarse.\n    \n\nCampos descriptivos derivados:\n\n- `nombre_proyecto` (string): Nombre del proyecto (por ejemplo, `\"426_LN+\"`).\n    \n- `nombre_estado_empleado` (string): Nombre legible del estado del empleado (por ejemplo, `\"Disponible\"`).\n    \n- `nombre_categoria_sat` (string): Nombre de la categoría SAT (por ejemplo, `\"Director de Programas\"`, `\"Mezclador de Control Central\"`).\n    \n- `nombre_contrato` (string): Tipo de contrato en texto (por ejemplo, `\"Plazo fijo 6x6\"`, `\"Jornada\"`).\n    \n- `nombre_sede` (string): Nombre de la sede (por ejemplo, `\"La corte\"`).\n    \n- `nombre_rol_frame` (string): Nombre del rol asignado en FRAME.\n    \n\n## Notas de uso\n\n- Utilice este endpoint para listar todas las participaciones/contratos vigentes e históricos de un empleado dentro de un proyecto determinado.\n    \n- Puede combinarse con otros endpoints de empleados o proyectos dentro de la colección FRAME para obtener más detalle de cada entidad."
+					},
+					"response": []
+				},
+				{
+					"name": "Get proyectos paginados",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"filtro\": {\r\n        \"offset\": 0,\r\n        \"activo\": true\r\n    }\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://frame.weprodu.com/api/proyecto/find-con-paginacion",
+							"protocol": "https",
+							"host": [
+								"frame",
+								"weprodu",
+								"com"
+							],
+							"path": [
+								"api",
+								"proyecto",
+								"find-con-paginacion"
+							]
+						},
+						"description": "Este endpoint obtiene la lista de proyectos activos desde el backend de FRAME utilizando paginación.\n\n- URL: `https://frame.weprodu.com/api/proyecto/find-con-paginacion`\n    \n- Método: `POST`\n    \n- Cuerpo de la solicitud (JSON básico esperado):\n    \n\n``` json\n{\n  \"filtro\": {\n    \"offset\": <número_entero_de_desplazamiento>,\n    \"activo\": <true_o_false>\n  }\n}\n\n ```\n\n`filtro.offset` indica el desplazamiento (paginación) a partir del cual se devuelven los proyectos, y `filtro.activo` permite filtrar los proyectos por su estado de actividad."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Login",
+			"item": [
+				{
+					"name": "Post para el login",
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "correo electronico",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"texto\": \"\",\r\n    \"offset\": 0\r\n}"
+						},
+						"url": {
+							"raw": "https://frame.weprodu.com/api/sesion",
+							"protocol": "https",
+							"host": [
+								"frame",
+								"weprodu",
+								"com"
+							],
+							"path": [
+								"api",
+								"sesion"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get para validar la sesion",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
