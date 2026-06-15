@@ -5,11 +5,12 @@ import { ClientSelector } from "./ClientSelector";
 import { ClientContextMenu } from "./ClientContextMenu";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard } from "@fortawesome/free-solid-svg-icons";
 import { Logo } from "../components/ui/Logo";
 import axios from "../api/axiosConfig";
 import { SettingsModal } from "./SettingsModal";
 import { useClientContextStore } from "../stores/clientContextStore";
+import { useProfileModalStore } from "../stores/profileModalStore";
 
 interface AdminCounts {
   clients: number;
@@ -214,16 +215,20 @@ export const MobileNavbar: React.FC = () => {
   const NavMenu: React.FC<{ onItemClick?: () => void }> = ({ onItemClick }) => {
     const adminItems = menuItems;
     const isSuperAdminTenant = user?.tenantSlug === "superadmin";
+    const openProfile = useProfileModalStore((s) => s.open);
+
+    // Orden alfabético (respeta español: ignora acentos y mayúsculas)
+    const byLabel = (a: { label: string }, b: { label: string }) => a.label.localeCompare(b.label, "es", { sensitivity: "base" });
 
     // Partición de items: Admin Usuarios, Admin General, Configuración y GESTIÓN
-    const userAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/users", "/roles", "/areas", "/positions", "/levels", "/users/import-wp"].includes(item.path)) : adminItems.filter((item) => ["/roles", "/areas", "/positions", "/levels", "/users", "/users/import-wp"].includes(item.path));
+    const userAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ["/users", "/roles", "/areas", "/positions", "/levels", "/users/import-wp"].includes(item.path)) : adminItems.filter((item) => ["/roles", "/areas", "/positions", "/levels", "/users", "/users/import-wp"].includes(item.path))).sort(byLabel);
 
-    const generalAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/tenants"].includes(item.path)) : adminItems.filter((item) => ["/admin/projects", "/admin/sedes", "/admin/contracts", "/orders", "/vacations", "/requests", "/calendar-events", "/employee-profiles", "/documents"].includes(item.path));
+    const generalAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ["/tenants"].includes(item.path)) : adminItems.filter((item) => ["/admin/projects", "/admin/sedes", "/admin/contracts", "/orders", "/vacations", "/requests", "/calendar-events", "/employee-profiles", "/documents"].includes(item.path))).sort(byLabel);
 
-    const configOrder = ["/requests/config", "/order-types", "/shifts", "/vacations-rules", "/holidays", "/pdfs", "/funciones-frame", "/categorias-sat", "/clients", "/contratos-frame", "/centros-costo", "/bancos", "/obras-sociales"];
-    const configItems = adminItems
-      .filter((item) => configOrder.includes(item.path))
-      .sort((a, b) => configOrder.indexOf(a.path) - configOrder.indexOf(b.path));
+    const configPaths = ["/requests/config", "/order-types", "/shifts", "/vacations-rules", "/holidays", "/pdfs", "/funciones-frame", "/categorias-sat", "/clients", "/contratos-frame", "/centros-costo", "/bancos", "/obras-sociales"];
+    // "Mi Perfil" se incluye como un item más para que entre en el orden alfabético
+    const profileItem = { path: "__profile__", icon: faIdCard, label: "Mi Perfil", scope: "global" as const };
+    const configItems = [...adminItems.filter((item) => configPaths.includes(item.path)), profileItem].sort(byLabel);
 
     const renderMenuItem = (item: any) => {
       if (item.external) {
@@ -263,6 +268,26 @@ export const MobileNavbar: React.FC = () => {
               <span className="font-medium truncate">{item.label}</span>
             </div>
             {SHOW_MENU_COUNTS && item.count !== undefined && <span className={`ml-2 flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${item.count > 0 ? "bg-slate-500/20 text-slate-500 dark:bg-white/20 dark:text-white" : "bg-red-500/20 text-red-700 dark:bg-red-500/20 dark:text-red-400"}`}>{item.count}</span>}
+          </button>
+        );
+      }
+
+      if (item.path === "__profile__") {
+        return (
+          <button
+            key={item.path}
+            onClick={() => {
+              openProfile();
+              onItemClick?.();
+            }}
+            className="group relative flex items-center justify-between px-2 py-2 rounded transition-all w-full text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/50"
+          >
+            <div className="flex items-center space-x-3 flex-1 min-w-0">
+              <div className="h-8 w-8 flex items-center justify-center rounded-md bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 group-hover:bg-gray-300 dark:group-hover:bg-blue-800">
+                <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
+              </div>
+              <span className="font-medium truncate">{item.label}</span>
+            </div>
           </button>
         );
       }

@@ -27,6 +27,7 @@ import { ProjectDetailPage } from "./pages/ProjectDetailPage";
 import { ProjectTeamPage } from "./pages/ProjectTeamPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { MobileNavbar } from "./components/Navbar";
+import { ProfileModalHost } from "./components/users/ProfileModalHost";
 import { ServerStatusCard } from "./components/ServerStatusCard";
 import { LoadingSpinner } from "./components/ui/LoadingSpinner";
 
@@ -78,6 +79,7 @@ const AppLayout: React.FC = () => {
   return (
     <>
       {isAuthenticated && <MobileNavbar />}
+      {isAuthenticated && <ProfileModalHost />}
       <Outlet />
     </>
   );
