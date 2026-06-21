@@ -1162,19 +1162,28 @@ export const UsersPage: React.FC = () => {
                                       <FontAwesomeIcon icon={faGrip} className="text-blue-500 text-[10px]" />
                                       {(() => {
                                         const shifts: string[] = [];
+                                        // 1. Check areaShiftAssignments on the contract
                                         if (c.areaShiftAssignments && Array.isArray(c.areaShiftAssignments)) {
                                           c.areaShiftAssignments.forEach((asa: any) => {
                                             if (asa.shiftIds && Array.isArray(asa.shiftIds)) {
                                               asa.shiftIds.forEach((sId: any) => {
                                                 const id = typeof sId === "object" ? sId?._id : sId;
-                                                const sName = typeof sId === "object" && sId.name ? sId.name : allShifts.find((s) => s._id === id)?.name;
+                                                const sName = typeof sId === "object" && sId.name ? sId.name : allShifts.find((s) => String(s._id) === String(id))?.name;
                                                 if (sName) shifts.push(sName);
                                               });
                                             }
                                           });
                                         }
                                         if (shifts.length > 0) return Array.from(new Set(shifts)).join(", ");
-                                        return c.nombre_turno && !c.nombre_turno.includes(":") ? c.nombre_turno : "Sin asignar";
+                                        // 2. Fallback: Check shiftId on the contract (single shift ref)
+                                        if (c.shiftId) {
+                                          const sid = typeof c.shiftId === "object" ? c.shiftId?._id : c.shiftId;
+                                          const shiftObj = allShifts.find((s) => String(s._id) === String(sid));
+                                          if (shiftObj) return shiftObj.name;
+                                        }
+                                        // 3. Fallback: nombre_turno string
+                                        if (c.nombre_turno) return c.nombre_turno;
+                                        return "Sin asignar";
                                       })()}
                                     </div>
                                   </div>
