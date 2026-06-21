@@ -511,6 +511,8 @@ export const UsersPage: React.FC = () => {
     }
   };
 
+  // Unused local helpers commented out to prevent TS6133 compile errors
+  /*
   const getActiveContractType = (user: User): string | null => {
     let contractType: string | null = null;
     if (user.metadata?.projects) {
@@ -559,6 +561,7 @@ export const UsersPage: React.FC = () => {
     }
     return schedule;
   };
+  */
 
   const projectMap = React.useMemo(() => new Map(allProjects.map((p) => [p._id, p])), [allProjects]);
 
@@ -1105,7 +1108,8 @@ export const UsersPage: React.FC = () => {
                 {viewUser.metadata?.projects && viewUser.metadata.projects.length > 0 ? (
                   viewUser.metadata.projects.map((up: any, upIdx: number) => {
                     const pId = typeof up.projectId === "object" ? up.projectId?._id : up.projectId;
-                    const project = projectMap.get(pId);
+                    const populatedProject = typeof up.projectId === "object" ? up.projectId : null;
+                    const project = { ...projectMap.get(pId), ...populatedProject };
                     const clientId = typeof project?.clientId === "object" ? project?.clientId?._id : project?.clientId;
                     const client = allClients.find((c) => c._id === clientId);
 
@@ -1130,79 +1134,179 @@ export const UsersPage: React.FC = () => {
                         {/* Contracts List */}
                         <div className="p-4 space-y-3">
                           {up.contracts && up.contracts.length > 0 ? (
-                            up.contracts.map((c: any, cIdx: number) => (
-                              <div key={cIdx} className="bg-white dark:bg-gray-800/50 rounded-lg p-3 border border-gray-100 dark:border-gray-700/50 shadow-sm transition-all hover:border-blue-200 dark:hover:border-blue-800">
-                                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                                  <div className="flex items-center gap-2">
-                                    <FontAwesomeIcon icon={faFileContract} className="text-blue-500 text-xs" />
-                                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{c.nombre_contrato || "Contrato"}</span>
-                                  </div>
-                                  <div className="flex gap-2">
-                                    {c.nombre_sede && (
-                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 border border-gray-200 dark:border-gray-600">
-                                        {c.nombre_sede}
-                                      </span>
-                                    )}
-                                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${c.nombre_estado_empleado === "Activo" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800" : "bg-gray-50 text-gray-600 dark:bg-gray-900/20 dark:text-gray-400 border border-gray-100 dark:border-gray-800"}`}>
-                                      {c.nombre_estado_empleado || "Estado"}
-                                    </span>
-                                  </div>
-                                </div>
+                            up.contracts.map((c: any, cIdx: number) => {
+                              // Resolve standard assignments
+                              const standardAssignments: { areaName: string; shiftNames: string[] }[] = [];
 
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[11px]">
-                                  <div className="space-y-0.5">
-                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Periodo</label>
-                                    <p className="font-semibold text-gray-600 dark:text-gray-400">
-                                      {c.fecha_alta_contrato ? new Date(c.fecha_alta_contrato).toLocaleDateString() : "?"} - {c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato).toLocaleDateString() : "Indef."}
-                                    </p>
-                                  </div>
-                                  <div className="space-y-0.5">
-                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Turno</label>
-                                    <div className="flex flex-wrap items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-400">
-                                      <FontAwesomeIcon icon={faGrip} className="text-blue-500 text-[10px]" />
-                                      {(() => {
-                                        const shifts: string[] = [];
-                                        // 1. Check areaShiftAssignments on the contract
-                                        if (c.areaShiftAssignments && Array.isArray(c.areaShiftAssignments)) {
-                                          c.areaShiftAssignments.forEach((asa: any) => {
-                                            if (asa.shiftIds && Array.isArray(asa.shiftIds)) {
-                                              asa.shiftIds.forEach((sId: any) => {
-                                                const id = typeof sId === "object" ? sId?._id : sId;
-                                                const sName = typeof sId === "object" && sId.name ? sId.name : allShifts.find((s) => String(s._id) === String(id))?.name;
-                                                if (sName) shifts.push(sName);
-                                              });
-                                            }
-                                          });
-                                        }
-                                        if (shifts.length > 0) return Array.from(new Set(shifts)).join(", ");
-                                        // 2. Fallback: Check shiftId on the contract (single shift ref)
-                                        if (c.shiftId) {
-                                          const sid = typeof c.shiftId === "object" ? c.shiftId?._id : c.shiftId;
-                                          const shiftObj = allShifts.find((s) => String(s._id) === String(sid));
-                                          if (shiftObj) return shiftObj.name;
-                                        }
-                                        // 3. Fallback: nombre_turno string
-                                        if (c.nombre_turno) return c.nombre_turno;
-                                        return "Sin asignar";
-                                      })()}
+                              // 1. Check areaShiftAssignments on the contract
+                              if (c.areaShiftAssignments && Array.isArray(c.areaShiftAssignments) && c.areaShiftAssignments.length > 0) {
+                                c.areaShiftAssignments.forEach((asa: any) => {
+                                  const aId = typeof asa.areaId === "object" ? asa.areaId?._id : asa.areaId;
+                                  const aName = typeof asa.areaId === "object" ? asa.areaId?.name : (areas.find((a) => String(a._id) === String(aId))?.name || c.nombre_area || "Área");
+                                  const shiftNames: string[] = [];
+                                  if (asa.shiftIds && Array.isArray(asa.shiftIds)) {
+                                    asa.shiftIds.forEach((sId: any) => {
+                                      const id = typeof sId === "object" ? sId?._id : sId;
+                                      const sName = typeof sId === "object" && sId.name ? sId.name : allShifts.find((s) => String(s._id) === String(id))?.name;
+                                      if (sName) shiftNames.push(sName);
+                                    });
+                                  }
+                                  if (shiftNames.length > 0) {
+                                    standardAssignments.push({ areaName: aName, shiftNames });
+                                  }
+                                });
+                              }
+
+                              // 2. Fallback: Check project teamConfig for the user
+                              if (standardAssignments.length === 0 && project) {
+                                const userConfig = project.teamConfig?.find((tc: any) => String(tc.userId) === String(viewUser?._id));
+                                const tcAssignments = userConfig?.areaShiftAssignments;
+                                if (tcAssignments && Array.isArray(tcAssignments) && tcAssignments.length > 0) {
+                                  tcAssignments.forEach((asa: any) => {
+                                    const aId = typeof asa.areaId === "object" ? asa.areaId?._id : asa.areaId;
+                                    const aName = typeof asa.areaId === "object" ? asa.areaId?.name : (areas.find((a) => String(a._id) === String(aId))?.name || c.nombre_area || "Área");
+                                    const shiftNames: string[] = [];
+                                    if (asa.shiftIds && Array.isArray(asa.shiftIds)) {
+                                      asa.shiftIds.forEach((sId: any) => {
+                                        const id = typeof sId === "object" ? sId?._id : sId;
+                                        const sName = typeof sId === "object" && sId.name ? sId.name : allShifts.find((s) => String(s._id) === String(id))?.name;
+                                        if (sName) shiftNames.push(sName);
+                                      });
+                                    }
+                                    if (shiftNames.length > 0) {
+                                      standardAssignments.push({ areaName: aName, shiftNames });
+                                    }
+                                  });
+                                }
+                              }
+
+                              // 3. Fallback: single contract shiftId/nombre_turno/nombre_area
+                              if (standardAssignments.length === 0) {
+                                const shiftNames: string[] = [];
+                                if (c.shiftId) {
+                                  const sid = typeof c.shiftId === "object" ? c.shiftId?._id : c.shiftId;
+                                  const shiftObj = allShifts.find((s) => String(s._id) === String(sid));
+                                  if (shiftObj) shiftNames.push(shiftObj.name);
+                                } else if (c.nombre_turno) {
+                                  shiftNames.push(c.nombre_turno);
+                                }
+
+                                if (shiftNames.length > 0 || c.nombre_area) {
+                                  standardAssignments.push({
+                                    areaName: c.nombre_area || "Área sin especificar",
+                                    shiftNames: shiftNames.length > 0 ? shiftNames : ["Sin turno asignado"]
+                                  });
+                                }
+                              }
+
+                              // 4. Final Fallback: Sin asignar
+                              if (standardAssignments.length === 0) {
+                                standardAssignments.push({
+                                  areaName: "Área sin especificar",
+                                  shiftNames: ["Sin asignar"]
+                                });
+                              }
+
+                              // Resolve coordinated assignments
+                              const coordinatedAssignments: { areaName: string; shiftNames: string[] }[] = [];
+                              if (project && project.coordinatorAssignments) {
+                                const myCoordinated = project.coordinatorAssignments.filter((asm: any) => {
+                                  const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
+                                  return String(uid) === String(viewUser?._id);
+                                }) || [];
+
+                                const coordGroups: { [key: string]: { areaName: string; shiftNames: string[] } } = {};
+                                myCoordinated.forEach((asm: any) => {
+                                  const aId = typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId;
+                                  const aName = typeof asm.areaId === "object" ? asm.areaId?.name : (areas.find((a) => String(a._id) === String(aId))?.name || "Área Coordinada");
+                                  const sId = typeof asm.shiftId === "object" ? asm.shiftId?._id : asm.shiftId;
+                                  const sName = typeof asm.shiftId === "object" ? asm.shiftId?.name : allShifts.find((s) => String(s._id) === String(sId))?.name;
+
+                                  if (aId && sName) {
+                                    const key = String(aId);
+                                    if (!coordGroups[key]) {
+                                      coordGroups[key] = { areaName: aName, shiftNames: [] };
+                                    }
+                                    if (!coordGroups[key].shiftNames.includes(sName)) {
+                                      coordGroups[key].shiftNames.push(sName);
+                                    }
+                                  }
+                                });
+
+                                Object.values(coordGroups).forEach((group) => {
+                                  coordinatedAssignments.push(group);
+                                });
+                              }
+
+                              return (
+                                <div key={cIdx} className="bg-white dark:bg-gray-800/50 rounded-lg p-3 border border-gray-100 dark:border-gray-700/50 shadow-sm transition-all hover:border-blue-200 dark:hover:border-blue-800">
+                                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                                    <div className="flex items-center gap-2">
+                                      <FontAwesomeIcon icon={faFileContract} className="text-blue-500 text-xs" />
+                                      <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{c.nombre_contrato || "Contrato"}</span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      {c.nombre_sede && (
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 border border-gray-200 dark:border-gray-600">
+                                          {c.nombre_sede}
+                                        </span>
+                                      )}
+                                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${c.nombre_estado_empleado === "Activo" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800" : "bg-gray-50 text-gray-600 dark:bg-gray-900/20 dark:text-gray-400 border border-gray-100 dark:border-gray-800"}`}>
+                                        {c.nombre_estado_empleado || "Estado"}
+                                      </span>
                                     </div>
                                   </div>
-                                  <div className="space-y-0.5">
-                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Horario</label>
-                                    <div className="flex items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-400">
-                                      <FontAwesomeIcon icon={faClock} className="text-amber-500 text-[10px]" />
-                                      {c.hora_inicio && c.hora_fin ? `${c.hora_inicio} - ${c.hora_fin}` : "Sin horario"}
+
+                                  <div className="space-y-3 pt-2 mt-2 border-t border-gray-100 dark:border-gray-700/50">
+                                    <div className="grid grid-cols-2 gap-3 text-[11px]">
+                                      <div className="space-y-0.5">
+                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Periodo</label>
+                                        <p className="font-semibold text-gray-600 dark:text-gray-400">
+                                          {c.fecha_alta_contrato ? new Date(c.fecha_alta_contrato).toLocaleDateString() : "?"} - {c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato).toLocaleDateString() : "Indef."}
+                                        </p>
+                                      </div>
+                                      <div className="space-y-0.5">
+                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Horario General</label>
+                                        <div className="flex items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-400">
+                                          <FontAwesomeIcon icon={faClock} className="text-amber-500 text-[10px]" />
+                                          {c.hora_inicio && c.hora_fin ? `${c.hora_inicio} - ${c.hora_fin}` : "Sin horario"}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="space-y-2 text-[11px] bg-slate-50/50 dark:bg-slate-900/30 p-2 rounded-lg border border-slate-100 dark:border-slate-800/50">
+                                      <div>
+                                        <label className="text-[9px] font-black text-blue-500 uppercase tracking-widest block mb-1">Área / Turno</label>
+                                        <div className="flex flex-wrap gap-1.5 items-center">
+                                          <FontAwesomeIcon icon={faGrip} className="text-blue-500 text-[10px] shrink-0" />
+                                          {standardAssignments.map((sa, idx) => (
+                                            <span key={idx} className="inline-flex flex-wrap items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-100 dark:border-blue-800/50">
+                                              <span className="font-bold mr-1">{sa.areaName}:</span>
+                                              <span>{sa.shiftNames.join(", ")}</span>
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+
+                                      {coordinatedAssignments.length > 0 && (
+                                        <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800/50">
+                                          <label className="text-[9px] font-black text-amber-500 uppercase tracking-widest block mb-1">Área / Turno Coordinado</label>
+                                          <div className="flex flex-wrap gap-1.5 items-center">
+                                            <FontAwesomeIcon icon={faGrip} className="text-amber-500 text-[10px] shrink-0" />
+                                            {coordinatedAssignments.map((ca, idx) => (
+                                              <span key={idx} className="inline-flex flex-wrap items-center px-1.5 py-0.5 rounded text-[10px] bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300 border border-amber-100 dark:border-amber-800/50">
+                                                <span className="font-bold mr-1">{ca.areaName}:</span>
+                                                <span>{ca.shiftNames.join(", ")}</span>
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
-                                  {c.nombre_area && (
-                                    <div className="space-y-0.5">
-                                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Área</label>
-                                      <p className="font-semibold text-gray-600 dark:text-gray-400">{c.nombre_area}</p>
-                                    </div>
-                                  )}
                                 </div>
-                              </div>
-                            ))
+                              );
+                            })
                           ) : (
                             <div className="text-center py-4 text-xs text-gray-400 italic">No hay contratos registrados para este proyecto.</div>
                           )}

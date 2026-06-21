@@ -228,7 +228,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
           { path: "positionId", select: "name", model: Position },
           { path: "levelId", select: "name", model: Level },
           { path: "areaId", select: "name", model: Area },
-          { path: "projectId", select: "name status", model: Project },
+          { path: "projectId", select: "name status teamConfig coordinatorAssignments clientId", model: Project },
         ],
       })
       .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame })
@@ -484,7 +484,7 @@ router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_us
           { path: "positionId", select: "name description", model: Position },
           { path: "levelId", select: "name description", model: Level },
           { path: "areaId", select: "name description", model: Area },
-          { path: "projectId", select: "name status", model: "Project" },
+          { path: "projectId", select: "name status teamConfig coordinatorAssignments clientId", model: "Project" },
         ],
       })
       .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame })

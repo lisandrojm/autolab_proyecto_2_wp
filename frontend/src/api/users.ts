@@ -104,6 +104,7 @@ export interface User {
     documento?: string;
     fullName?: string;
     isSolicitud?: boolean;
+    activo?: boolean;
     roleFrameId?: string;
     categoriaSatId?: string;
     startDate?: string;
