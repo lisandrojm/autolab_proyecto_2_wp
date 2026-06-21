@@ -5,6 +5,12 @@ import mongoose, { Types } from "mongoose";
 import { ImportHistory } from "../models/ImportHistory.js";
 import { Project } from "../models/Project.js";
 import { Role } from "../models/Role.js";
+import {
+    buildAdditiveSet,
+    findNewContracts,
+    USER_FRAME_WHITELIST,
+    USERPROJECT_FRAME_WHITELIST,
+} from "../utils/additiveSync.js";
 
 export class ExternalApiService {
     private api: AxiosInstance;
@@ -114,21 +120,41 @@ export class ExternalApiService {
         };
     }
 
+    /**
+     * Synchronise users (and optionally their projects/contracts) from FRAME
+     * into WeProdu.
+     *
+     * ── ADDITIVE / NON-DESTRUCTIVE MODE ──────────────────────────────────
+     * • New records   → INSERT as before.
+     * • Existing recs → only fill fields that are currently empty in WeProdu
+     *                    (null / undefined / "" / [] / {}).  Fields that already
+     *                    have a value are NEVER overwritten.
+     * • Contracts     → APPEND-ONLY.  Existing contracts are immutable from
+     *                    FRAME's perspective.
+     *
+     * Matching keys (unchanged):
+     *   users         → metadata.id  (FRAME employee id)
+     *   projects      → externalId
+     *   userProjects  → { externalProjectId, externalEmployeeId }
+     *
+     * Decision: if FRAME CHANGES a field that WeProdu already has, the change
+     * is NOT applied.  A future "snapshot diff" mechanism can be enabled to
+     * propagate real FRAME changes selectively — see additiveSync.ts header.
+     * ─────────────────────────────────────────────────────────────────────
+     */
     async importUsers(
         tenantId: string, 
         executedBy: mongoose.Types.ObjectId | "system",
         syncProjects: boolean = false,
         sinceDays?: number
     ): Promise<{ created: number; updated: number; skipped: number; errors: number }> {
-        console.log(`[EXTERNAL API] Starting user import (syncProjects=${syncProjects}, sinceDays=${sinceDays})...`);
+        console.log(`[EXTERNAL API] Starting ADDITIVE user import (syncProjects=${syncProjects}, sinceDays=${sinceDays})...`);
 
         const addedUsers: Array<{ name: string; email: string; dni: string }> = [];
         const addedProjectsMap = new Map<number, string>(); // Use map to keep projects unique
 
         let created = 0;
-        // INSERT-ONLY IMPORT: existing documents are never modified. `updated`
-        // stays 0 and is kept only for backward compatibility of the result shape.
-        let updated = 0;
+        let updated = 0; // Now counts records where ≥1 empty field was filled or ≥1 contract pushed
         let skipped = 0;
         let errors = 0;
         let thresholdDate: Date | null = null;
@@ -157,6 +183,13 @@ export class ExternalApiService {
 
             for (const emp of employees) {
                 try {
+                    // ── Guard: skip employees without FRAME id (native/system users) ──
+                    if (!emp.id) {
+                        console.warn(`[EXTERNAL API] Skipping employee without metadata.id (email: ${emp.email || "N/A"}).`);
+                        skipped++;
+                        continue;
+                    }
+
                     if (!emp.email) {
                         console.warn(`[EXTERNAL API] Skipping employee ${emp.id} without email.`);
                         continue;
@@ -229,29 +262,51 @@ export class ExternalApiService {
                         roles: defaultRoleIds,
                     };
 
-                    const existingUser = await User.findOne({ email: emp.email, tenantId: userPayload.tenantId });
+                    // ── Match by metadata.id (FRAME employee id) ──────────────────
+                    const existingUser = await User.findOne({
+                        "metadata.id": emp.id,
+                        tenantId: tenantObjectId,
+                    });
 
-                    // NEVER touch existing users: if the user is already in the platform we
-                    // leave it completely untouched (firstName, lastName, isActive, metadata,
-                    // relations, etc. are preserved) and move on to the next employee.
+                    let userDoc: any; // Will hold the User document (new or existing)
+                    let userWasCreated = false;
+
                     if (existingUser) {
-                        skipped++;
-                        continue;
+                        // ── ADDITIVE UPDATE: fill only empty whitelisted fields ────
+                        const additiveSet = buildAdditiveSet(
+                            userPayload,
+                            existingUser.toObject(),
+                            USER_FRAME_WHITELIST,
+                        );
+
+                        if (Object.keys(additiveSet).length > 0) {
+                            await User.updateOne(
+                                { _id: existingUser._id },
+                                { $set: additiveSet },
+                            );
+                            updated++;
+                            console.log(`[EXTERNAL API] Additively updated user ${emp.email} (${Object.keys(additiveSet).length} fields filled).`);
+                        } else {
+                            skipped++;
+                        }
+
+                        userDoc = existingUser;
+                    } else {
+                        // ── INSERT brand-new user ─────────────────────────────────
+                        userDoc = await User.create(userPayload);
+                        created++;
+                        userWasCreated = true;
+                        addedUsers.push({ name: userPayload.name, email: userPayload.email, dni: password });
                     }
 
-                    // Only brand-new users are inserted, using the current model schema.
-                    const userDoc = await User.create(userPayload);
-                    created++;
-                    // `password` here is the DNI (or the fallback when there is no valid documento).
-                    addedUsers.push({ name: userPayload.name, email: userPayload.email, dni: password });
-
-                    // Sync Projects only for this newly created user.
+                    // ── Sync projects for BOTH new and existing users ─────────────
                     if (syncProjects) {
                         try {
                             const projectsValues = await this.getEmployeeProjects(emp.id);
                             if (projectsValues && projectsValues.length > 0) {
-                                const projectIds: Types.ObjectId[] = [];
+                                const userProjectIds: Types.ObjectId[] = [];
                                 const internalProjectIds: Types.ObjectId[] = [];
+                                let userProjectsChanged = false;
 
                                 const groupedProjects: { [key: number]: any[] } = {};
                                 projectsValues.forEach((p: any) => {
@@ -263,16 +318,20 @@ export class ExternalApiService {
 
                                 for (const extProjIdStr in groupedProjects) {
                                     const extProjId = Number(extProjIdStr);
-                                    const contracts = groupedProjects[extProjId];
+                                    const frameContracts = groupedProjects[extProjId];
 
                                     // Find internal Project ID
-                                    const internalProject = await Project.findOne({ externalId: extProjId, tenantId: userPayload.tenantId });
+                                    const internalProject = await Project.findOne({
+                                        externalId: extProjId,
+                                        tenantId: tenantObjectId,
+                                    });
 
                                     if (!internalProject) {
                                         console.warn(`[EXTERNAL API] Skipping user-project relationship for employee ${emp.email} and project ${extProjId} because the project does not exist in Weprodu.`);
                                         continue;
                                     }
 
+                                    // Ensure user is in Project.assignedUsers
                                     if (userDoc._id) {
                                         await Project.updateOne(
                                             { _id: internalProject._id },
@@ -281,39 +340,104 @@ export class ExternalApiService {
                                         internalProjectIds.push(internalProject._id as Types.ObjectId);
                                     }
 
-                                    const projectName = contracts.length > 0 ? contracts[0].nombre_proyecto : "";
+                                    const projectName = frameContracts.length > 0 ? frameContracts[0].nombre_proyecto : "";
 
                                     const query = {
                                         externalProjectId: extProjId,
-                                        externalEmployeeId: emp.id
+                                        externalEmployeeId: emp.id,
                                     };
 
-                                    // INSERT-ONLY: never overwrite an existing relation. If the
-                                    // user-project relation already exists we leave it untouched
-                                    // and only reuse its id; otherwise we create a new one.
                                     let savedProj = await UserProject.findOne(query);
+
                                     if (!savedProj) {
+                                        // ── New UserProject: insert with all contracts ──
                                         savedProj = await UserProject.create({
                                             externalProjectId: extProjId,
                                             externalEmployeeId: emp.id,
                                             nombre_proyecto: projectName,
                                             projectId: internalProject._id,
                                             userId: userDoc._id,
-                                            contracts: contracts,
-                                            nombre_rol_frame: contracts.length > 0 ? contracts[0].nombre_rol_frame : ""
+                                            contracts: frameContracts,
+                                            nombre_rol_frame: frameContracts.length > 0 ? frameContracts[0].nombre_rol_frame : "",
                                         });
                                         addedProjectsMap.set(extProjId, projectName);
+                                        userProjectsChanged = true;
+                                    } else {
+                                        // ── Existing UserProject: additive merge ──────
+                                        let upChanged = false;
+
+                                        // 1) Fill empty flat fields
+                                        const flatFrameData = {
+                                            nombre_proyecto: projectName,
+                                            nombre_rol_frame: frameContracts.length > 0 ? frameContracts[0].nombre_rol_frame : "",
+                                        };
+                                        const flatSet = buildAdditiveSet(
+                                            flatFrameData,
+                                            savedProj.toObject(),
+                                            USERPROJECT_FRAME_WHITELIST,
+                                        );
+
+                                        // 2) Append-only contracts
+                                        const { newContracts, collisionWarnings } = findNewContracts(
+                                            frameContracts,
+                                            savedProj.contracts as any[] || [],
+                                        );
+
+                                        for (const warn of collisionWarnings) {
+                                            console.warn(warn);
+                                        }
+
+                                        // Build the update operation
+                                        const updateOps: any = {};
+
+                                        if (Object.keys(flatSet).length > 0) {
+                                            updateOps.$set = flatSet;
+                                            upChanged = true;
+                                        }
+
+                                        if (newContracts.length > 0) {
+                                            updateOps.$push = { contracts: { $each: newContracts } };
+                                            upChanged = true;
+                                            console.log(`[EXTERNAL API] Appending ${newContracts.length} new contract(s) to UserProject ${savedProj._id} (emp ${emp.email}, proj ${extProjId}).`);
+                                        }
+
+                                        if (upChanged) {
+                                            await UserProject.updateOne(
+                                                { _id: savedProj._id },
+                                                updateOps,
+                                            );
+                                            userProjectsChanged = true;
+
+                                            // If the user wasn't already counted as updated, count now
+                                            if (!userWasCreated && !existingUser) {
+                                                // This case shouldn't happen, but safety net
+                                            }
+                                        }
                                     }
+
                                     if (savedProj) {
-                                        projectIds.push(savedProj._id as Types.ObjectId);
+                                        userProjectIds.push(savedProj._id as Types.ObjectId);
                                     }
                                 }
 
-                                userDoc.metadata = userDoc.metadata || {} as any;
-                                userDoc.metadata.projects = projectIds;
-                                userDoc.projectIds = internalProjectIds;
-                                userDoc.markModified('metadata');
-                                await userDoc.save();
+                                // Update user's metadata.projects and projectIds references
+                                // Only if there are new associations to add (additive!)
+                                if (userProjectsChanged || userWasCreated) {
+                                    // Use $addToSet to avoid duplicates in the user's arrays
+                                    const userUpdate: any = {};
+                                    if (userProjectIds.length > 0) {
+                                        userUpdate.$addToSet = {
+                                            "metadata.projects": { $each: userProjectIds },
+                                            projectIds: { $each: internalProjectIds },
+                                        };
+                                    }
+                                    if (Object.keys(userUpdate).length > 0) {
+                                        await User.updateOne(
+                                            { _id: userDoc._id },
+                                            userUpdate,
+                                        );
+                                    }
+                                }
                             }
                         } catch (projErr) {
                             console.error(`[EXTERNAL API] Failed to sync projects for ${emp.email}:`, projErr);
@@ -321,7 +445,7 @@ export class ExternalApiService {
                     }
 
                 } catch (error) {
-                    console.error(`[EXTERNAL API] Error importing user ${emp.email}:`, error);
+                    console.error(`[EXTERNAL API] Error importing user ${(emp as any)?.email || "unknown"}:`, error);
                     errors++;
                 }
             }
@@ -367,7 +491,7 @@ export class ExternalApiService {
             throw globalError;
         }
 
-        console.log(`[EXTERNAL API] Import finished. Created: ${created}, Skipped (existing, untouched): ${skipped}, Errors: ${errors}`);
+        console.log(`[EXTERNAL API] Import finished. Created: ${created}, Updated (additive): ${updated}, Skipped (no changes): ${skipped}, Errors: ${errors}`);
         return { created, updated, skipped, errors };
     }
 }

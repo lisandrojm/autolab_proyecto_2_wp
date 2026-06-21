@@ -18,7 +18,8 @@
     "fix:imported-users:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/assignImportedUsersRoleAndDNI.ts",
     "fix:imported-users": "dotenv -e .env.production -- tsx src/scripts/assignImportedUsersRoleAndDNI.ts",
     "fix:imported-users:all:dry": "dotenv -e .env.production -v DRY_RUN=true -v SCOPE=all -- tsx src/scripts/assignImportedUsersRoleAndDNI.ts",
-    "fix:imported-users:all": "dotenv -e .env.production -v SCOPE=all -- tsx src/scripts/assignImportedUsersRoleAndDNI.ts"
+    "fix:imported-users:all": "dotenv -e .env.production -v SCOPE=all -- tsx src/scripts/assignImportedUsersRoleAndDNI.ts",
+    "test:additive": "tsx --test src/utils/additiveSync.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",
