@@ -1138,6 +1138,14 @@ export const UsersPage: React.FC = () => {
                               // Build standard area data list
                               let standardAreaData: { id: string; name: string }[] = [];
 
+                              console.log('DEBUG RESOLUTION:', {
+                                pId,
+                                projectExists: !!project,
+                                projectKeys: project ? Object.keys(project) : [],
+                                teamConfig: project?.teamConfig,
+                                coordinatorAssignments: project?.coordinatorAssignments,
+                              });
+
                               const userConfig = project?.teamConfig?.find((tc: any) => String(tc.userId) === String(viewUser?._id));
 
                               // 1. Priority: Detailed project team configuration (areaShiftAssignments) on the contract or config
