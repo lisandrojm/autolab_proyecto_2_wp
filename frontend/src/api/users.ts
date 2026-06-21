@@ -62,6 +62,8 @@ export interface User {
   lastName?: string;
   role?: "admin" | "user" | "manager" | "client";
   primaryRole?: string;
+  areaId?: string | { _id: string; name: string };
+  turnos?: (string | { _id: string; name: string })[];
   roles: {
     _id: string;
     name: string;

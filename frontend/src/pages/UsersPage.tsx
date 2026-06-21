@@ -1135,74 +1135,115 @@ export const UsersPage: React.FC = () => {
                         <div className="p-4 space-y-3">
                           {up.contracts && up.contracts.length > 0 ? (
                             up.contracts.map((c: any, cIdx: number) => {
-                              // Resolve standard assignments
+                              // Build standard area data list
+                              let standardAreaData: { id: string; name: string }[] = [];
+
+                              const userConfig = project?.teamConfig?.find((tc: any) => String(tc.userId) === String(viewUser?._id));
+
+                              // 1. Priority: Detailed project team configuration (areaShiftAssignments) on the contract or config
+                              if (c.areaShiftAssignments && Array.isArray(c.areaShiftAssignments) && c.areaShiftAssignments.length > 0) {
+                                standardAreaData = c.areaShiftAssignments
+                                  .map((asa: any) => {
+                                    const aId = typeof asa.areaId === "object" ? asa.areaId?._id : asa.areaId;
+                                    const aName = typeof asa.areaId === "object" ? asa.areaId?.name : areas.find((a) => String(a._id) === String(aId))?.name;
+                                    return aName ? { id: String(aId), name: aName } : null;
+                                  })
+                                  .filter(Boolean) as { id: string; name: string }[];
+                              } else if (userConfig?.areaShiftAssignments && userConfig.areaShiftAssignments.length > 0) {
+                                standardAreaData = userConfig.areaShiftAssignments
+                                  .map((asa: any) => {
+                                    const aId = typeof asa.areaId === "object" ? asa.areaId?._id : asa.areaId;
+                                    const aName = typeof asa.areaId === "object" ? asa.areaId?.name : areas.find((a) => String(a._id) === String(aId))?.name;
+                                    return aName ? { id: String(aId), name: aName } : null;
+                                  })
+                                  .filter(Boolean) as { id: string; name: string }[];
+                              }
+
+                              // 2. Fallback: If coordinator and no detailed config, check coordinatorAssignments
+                              const isCoord = (viewUser?.roles && viewUser.roles.some((r) => r.name.toLowerCase().includes("coordinador"))) ||
+                                              viewUser?.firstName?.toLowerCase().includes("coordinador") ||
+                                              viewUser?.lastName?.toLowerCase().includes("coordinador") ||
+                                              (c.nombre_rol_frame && String(c.nombre_rol_frame).toLowerCase().includes("coordinador"));
+
+                              if (standardAreaData.length === 0 && isCoord && project?.coordinatorAssignments) {
+                                const myAssignments = project.coordinatorAssignments.filter((asm: any) => {
+                                  const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
+                                  return String(uid) === String(viewUser?._id);
+                                });
+                                const areaIds = Array.from(new Set(myAssignments.map((asm: any) => (typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId))));
+                                standardAreaData = areaIds
+                                  .map((id) => {
+                                    const a = areas.find((area) => String(area._id) === String(id));
+                                    return a ? { id: String(a._id), name: a.name } : null;
+                                  })
+                                  .filter(Boolean) as { id: string; name: string }[];
+                              }
+
+                              // 3. Fallback: Global user area (legacy/basic) or contract nombre_area
+                              if (standardAreaData.length === 0) {
+                                const userAreaId = typeof viewUser?.areaId === "object" ? viewUser?.areaId?._id : viewUser?.areaId;
+                                const userAreaName = typeof viewUser?.areaId === "object" ? viewUser?.areaId?.name : areas.find((a) => String(a._id) === String(userAreaId))?.name;
+                                const areaName = userAreaName || c.nombre_area;
+                                if (areaName) {
+                                  standardAreaData = [{ id: String(userAreaId || ""), name: areaName }];
+                                }
+                              }
+
+                              // Resolve standard assignments list of { areaName, shiftNames }
                               const standardAssignments: { areaName: string; shiftNames: string[] }[] = [];
 
-                              // 1. Check areaShiftAssignments on the contract
-                              if (c.areaShiftAssignments && Array.isArray(c.areaShiftAssignments) && c.areaShiftAssignments.length > 0) {
-                                c.areaShiftAssignments.forEach((asa: any) => {
-                                  const aId = typeof asa.areaId === "object" ? asa.areaId?._id : asa.areaId;
-                                  const aName = typeof asa.areaId === "object" ? asa.areaId?.name : (areas.find((a) => String(a._id) === String(aId))?.name || c.nombre_area || "Área");
-                                  const shiftNames: string[] = [];
-                                  if (asa.shiftIds && Array.isArray(asa.shiftIds)) {
-                                    asa.shiftIds.forEach((sId: any) => {
-                                      const id = typeof sId === "object" ? sId?._id : sId;
-                                      const sName = typeof sId === "object" && sId.name ? sId.name : allShifts.find((s) => String(s._id) === String(id))?.name;
-                                      if (sName) shiftNames.push(sName);
-                                    });
-                                  }
-                                  if (shiftNames.length > 0) {
-                                    standardAssignments.push({ areaName: aName, shiftNames });
-                                  }
-                                });
-                              }
+                              standardAreaData.forEach((ad) => {
+                                // Resolve shifts for this area
+                                let shiftsForArea: string[] = [];
 
-                              // 2. Fallback: Check project teamConfig for the user
-                              if (standardAssignments.length === 0 && project) {
-                                const userConfig = project.teamConfig?.find((tc: any) => String(tc.userId) === String(viewUser?._id));
-                                const tcAssignments = userConfig?.areaShiftAssignments;
-                                if (tcAssignments && Array.isArray(tcAssignments) && tcAssignments.length > 0) {
-                                  tcAssignments.forEach((asa: any) => {
-                                    const aId = typeof asa.areaId === "object" ? asa.areaId?._id : asa.areaId;
-                                    const aName = typeof asa.areaId === "object" ? asa.areaId?.name : (areas.find((a) => String(a._id) === String(aId))?.name || c.nombre_area || "Área");
-                                    const shiftNames: string[] = [];
-                                    if (asa.shiftIds && Array.isArray(asa.shiftIds)) {
-                                      asa.shiftIds.forEach((sId: any) => {
-                                        const id = typeof sId === "object" ? sId?._id : sId;
-                                        const sName = typeof sId === "object" && sId.name ? sId.name : allShifts.find((s) => String(s._id) === String(id))?.name;
-                                        if (sName) shiftNames.push(sName);
-                                      });
-                                    }
-                                    if (shiftNames.length > 0) {
-                                      standardAssignments.push({ areaName: aName, shiftNames });
-                                    }
+                                // Helper to get coordinated shift IDs for exclusion (same as ProjectTeamPage)
+                                const getCoordinatedShiftIds = () => {
+                                  if (!project?.coordinatorAssignments) return [];
+                                  return project.coordinatorAssignments
+                                    .filter((asm: any) => {
+                                      const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
+                                      const aid = typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId;
+                                      return String(uid) === String(viewUser?._id) && String(aid) === String(ad.id);
+                                    })
+                                    .map((asm: any) => typeof asm.shiftId === "object" ? asm.shiftId?._id : asm.shiftId);
+                                };
+                                const coordShiftIds = getCoordinatedShiftIds().map((id: any) => String(id));
+
+                                // Find assignments in contract or config
+                                const contractAssign = c.areaShiftAssignments?.find((a: any) => String(typeof a.areaId === "object" ? a.areaId?._id : a.areaId) === String(ad.id));
+                                const configAssign = userConfig?.areaShiftAssignments?.find((a: any) => String(typeof a.areaId === "object" ? a.areaId?._id : a.areaId) === String(ad.id));
+                                const areaAssign = contractAssign || configAssign;
+
+                                if (areaAssign) {
+                                  const sids = areaAssign.shiftIds || [];
+                                  sids.forEach((sid: any) => {
+                                    const actualSid = typeof sid === "object" ? sid?._id : sid;
+                                    if (coordShiftIds.includes(String(actualSid))) return;
+                                    const shift = allShifts.find((s) => String(s._id) === String(actualSid));
+                                    if (shift) shiftsForArea.push(shift.name);
                                   });
                                 }
-                              }
 
-                              // 3. Fallback: single contract shiftId/nombre_turno/nombre_area
-                              if (standardAssignments.length === 0) {
-                                const shiftNames: string[] = [];
-                                if (c.shiftId) {
-                                  const sid = typeof c.shiftId === "object" ? c.shiftId?._id : c.shiftId;
-                                  const shiftObj = allShifts.find((s) => String(s._id) === String(sid));
-                                  if (shiftObj) shiftNames.push(shiftObj.name);
-                                } else if (c.nombre_turno) {
-                                  shiftNames.push(c.nombre_turno);
+                                // Fallback standard shift
+                                if (shiftsForArea.length === 0) {
+                                  const shiftIdFromUser = viewUser?.turnos && viewUser.turnos.length > 0 ? (typeof viewUser.turnos[0] === "object" ? viewUser.turnos[0]._id : viewUser.turnos[0]) : undefined;
+                                  const finalShiftId = c.shiftId || userConfig?.shiftId || shiftIdFromUser;
+                                  const shift = allShifts.find((sh) => String(sh._id) === String(finalShiftId));
+                                  if (shift) {
+                                    shiftsForArea.push(shift.name);
+                                  } else if (c.nombre_turno) {
+                                    shiftsForArea.push(c.nombre_turno);
+                                  }
                                 }
 
-                                if (shiftNames.length > 0 || c.nombre_area) {
-                                  standardAssignments.push({
-                                    areaName: c.nombre_area || "Área sin especificar",
-                                    shiftNames: shiftNames.length > 0 ? shiftNames : ["Sin turno asignado"]
-                                  });
+                                if (shiftsForArea.length > 0) {
+                                  standardAssignments.push({ areaName: ad.name, shiftNames: shiftsForArea });
                                 }
-                              }
+                              });
 
-                              // 4. Final Fallback: Sin asignar
                               if (standardAssignments.length === 0) {
                                 standardAssignments.push({
-                                  areaName: "Área sin especificar",
+                                  areaName: c.nombre_area || "Área sin especificar",
                                   shiftNames: ["Sin asignar"]
                                 });
                               }
