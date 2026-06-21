@@ -1160,10 +1160,18 @@ export const UsersPage: React.FC = () => {
                               }
 
                               // 2. Fallback: If coordinator and no detailed config, check coordinatorAssignments
-                              const isCoord = (viewUser?.roles && viewUser.roles.some((r) => r.name.toLowerCase().includes("coordinador"))) ||
+                              const hasCoordAssignments = project?.coordinatorAssignments?.some((asm: any) => {
+                                const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
+                                return String(uid) === String(viewUser?._id);
+                              }) || false;
+
+                              const isCoord = hasCoordAssignments ||
+                                              (viewUser?.roles && viewUser.roles.some((r) => r.name.toLowerCase().includes("coordinador"))) ||
                                               viewUser?.firstName?.toLowerCase().includes("coordinador") ||
                                               viewUser?.lastName?.toLowerCase().includes("coordinador") ||
-                                              (c.nombre_rol_frame && String(c.nombre_rol_frame).toLowerCase().includes("coordinador"));
+                                              (up.nombre_rol_frame && String(up.nombre_rol_frame).toLowerCase().includes("coordinador")) ||
+                                              (c.nombre_rol_frame && String(c.nombre_rol_frame).toLowerCase().includes("coordinador")) ||
+                                              (viewUser?.externalInfo?.rolFrames && viewUser.externalInfo.rolFrames.some((rf: string) => rf.toLowerCase().includes("coordinador")));
 
                               if (standardAreaData.length === 0 && isCoord && project?.coordinatorAssignments) {
                                 const myAssignments = project.coordinatorAssignments.filter((asm: any) => {
@@ -1220,7 +1228,10 @@ export const UsersPage: React.FC = () => {
                                     const actualSid = typeof sid === "object" ? sid?._id : sid;
                                     if (coordShiftIds.includes(String(actualSid))) return;
                                     const shift = allShifts.find((s) => String(s._id) === String(actualSid));
-                                    if (shift) shiftsForArea.push(shift.name);
+                                    if (shift) {
+                                      const timeStr = shift.startTime && shift.endTime ? ` (${shift.startTime} - ${shift.endTime})` : "";
+                                      shiftsForArea.push(`${shift.name}${timeStr}`);
+                                    }
                                   });
                                 }
 
@@ -1230,7 +1241,8 @@ export const UsersPage: React.FC = () => {
                                   const finalShiftId = c.shiftId || userConfig?.shiftId || shiftIdFromUser;
                                   const shift = allShifts.find((sh) => String(sh._id) === String(finalShiftId));
                                   if (shift) {
-                                    shiftsForArea.push(shift.name);
+                                    const timeStr = shift.startTime && shift.endTime ? ` (${shift.startTime} - ${shift.endTime})` : "";
+                                    shiftsForArea.push(`${shift.name}${timeStr}`);
                                   } else if (c.nombre_turno) {
                                     shiftsForArea.push(c.nombre_turno);
                                   }
@@ -1261,7 +1273,10 @@ export const UsersPage: React.FC = () => {
                                   const aId = typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId;
                                   const aName = typeof asm.areaId === "object" ? asm.areaId?.name : (areas.find((a) => String(a._id) === String(aId))?.name || "Área Coordinada");
                                   const sId = typeof asm.shiftId === "object" ? asm.shiftId?._id : asm.shiftId;
-                                  const sName = typeof asm.shiftId === "object" ? asm.shiftId?.name : allShifts.find((s) => String(s._id) === String(sId))?.name;
+                                  const shift = allShifts.find((s) => String(s._id) === String(sId));
+                                  const sName = shift 
+                                    ? `${shift.name}${shift.startTime && shift.endTime ? ` (${shift.startTime} - ${shift.endTime})` : ""}`
+                                    : (typeof asm.shiftId === "object" ? asm.shiftId?.name : undefined);
 
                                   if (aId && sName) {
                                     const key = String(aId);
