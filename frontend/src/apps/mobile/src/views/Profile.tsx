@@ -195,6 +195,22 @@ export default function Profile() {
     // Sort standard detailedShifts list by order
     detailedShifts.sort((a, b) => (a.order || 0) - (b.order || 0));
 
+    // Fallback: if no standard shifts found but coordinator assignments exist,
+    // use coordinator assignments as the standard area/turno display
+    if (detailedShifts.length === 0 && coordinatedShiftsGrouped.length > 0) {
+      coordinatedShiftsGrouped.forEach((group: any) => {
+        group.shifts.forEach((s: any) => {
+          detailedShifts.push({
+            name: s.name,
+            time: s.time,
+            area: group.areaName,
+            order: s.order || 0,
+          });
+          shiftNames.push(s.name);
+        });
+      });
+    }
+
     const uniqueShiftNames = Array.from(new Set(shiftNames)).join(", ");
 
     return {
@@ -553,36 +569,30 @@ export default function Profile() {
                 )}
               </div>
 
-              {/* Coordinated Shifts - Only for coordinators */}
-              {isMobileCoordinator && (
+              {/* Coordinated Shifts - Show when coordinator assignments exist */}
+              {selectedProjectInfo.coordinatedShifts.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest text-center">Area / Turno Coordinada</p>
-                  {selectedProjectInfo.coordinatedShifts.length > 0 ? (
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800">
-                      <div className="space-y-3">
-                        {selectedProjectInfo.coordinatedShifts.map((group: any, gidx: number) => (
-                          <div key={gidx} className="space-y-1.5">
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="text-[9px] bg-amber-500/15 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded border border-amber-500/20 flex items-center gap-1 font-black uppercase tracking-widest">
-                                <FontAwesomeIcon icon={faLayerGroup} className="text-[8px]" />
-                                {group.areaName}
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800">
+                    <div className="space-y-3">
+                      {selectedProjectInfo.coordinatedShifts.map((group: any, gidx: number) => (
+                        <div key={gidx} className="space-y-1.5">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-[9px] bg-amber-500/15 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded border border-amber-500/20 flex items-center gap-1 font-black uppercase tracking-widest">
+                              <FontAwesomeIcon icon={faLayerGroup} className="text-[8px]" />
+                              {group.areaName}
+                            </span>
+                            {group.shifts.map((s: any, sidx: number) => (
+                              <span key={sidx} className="text-[9px] bg-amber-500/10 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded border border-amber-500/15 flex items-center gap-1 font-bold uppercase">
+                                <FontAwesomeIcon icon={faClock} className="text-[8px] opacity-70" />
+                                {s.name}{s.time && s.time !== "Sin horario" ? ` (${s.time})` : ""}
                               </span>
-                              {group.shifts.map((s: any, sidx: number) => (
-                                <span key={sidx} className="text-[9px] bg-amber-500/10 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded border border-amber-500/15 flex items-center gap-1 font-bold uppercase">
-                                  <FontAwesomeIcon icon={faClock} className="text-[8px] opacity-70" />
-                                  {s.name}{s.time && s.time !== "Sin horario" ? ` (${s.time})` : ""}
-                                </span>
-                              ))}
-                            </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      ))}
                     </div>
-                  ) : (
-                    <div className="p-3 rounded-lg border border-dashed border-slate-200 dark:border-slate-700 text-center">
-                      <p className="text-[10px] text-slate-400 italic font-medium">Sin turnos coordinados</p>
-                    </div>
-                  )}
+                  </div>
                 </div>
               )}
             </div>
