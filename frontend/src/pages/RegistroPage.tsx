@@ -4,7 +4,7 @@ import { useSearchParams } from "react-router-dom";
 type Tab = "general" | "domicilio" | "bancarios";
 
 interface InfoOption {
-  id: number;
+  id: number | string;
   name: string;
 }
 
@@ -20,10 +20,10 @@ interface RegistroForm {
   fechaNac: string;
   generoId: string;
   nivelEstudioId: string;
-  nacionalidad: string;
-  obraSocial: string;
+  nacionalidadId: string;
+  osId: string;
   estadoCivil: string;
-  rolFrame: string;
+  rolFrameId: string;
   // Domicilio
   pais: string;
   localidad: string;
@@ -54,10 +54,10 @@ const emptyForm: RegistroForm = {
   fechaNac: "",
   generoId: "",
   nivelEstudioId: "",
-  nacionalidad: "",
-  obraSocial: "",
+  nacionalidadId: "",
+  osId: "",
   estadoCivil: "",
-  rolFrame: "",
+  rolFrameId: "",
   pais: "",
   localidad: "",
   calle: "",
@@ -86,6 +86,9 @@ export const RegistroPage: React.FC = () => {
   const [generos, setGeneros] = useState<InfoOption[]>([]);
   const [tiposDocumento, setTiposDocumento] = useState<InfoOption[]>([]);
   const [nivelesEstudio, setNivelesEstudio] = useState<InfoOption[]>([]);
+  const [nacionalidades, setNacionalidades] = useState<InfoOption[]>([]);
+  const [obrasSociales, setObrasSociales] = useState<InfoOption[]>([]);
+  const [rolesFrame, setRolesFrame] = useState<InfoOption[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [invalidToken, setInvalidToken] = useState(false);
@@ -115,6 +118,9 @@ export const RegistroPage: React.FC = () => {
         setGeneros(data.generos || []);
         setTiposDocumento(data.tiposDocumento || []);
         setNivelesEstudio(data.nivelesEstudio || []);
+        setNacionalidades(data.nacionalidades || []);
+        setObrasSociales(data.obrasSociales || []);
+        setRolesFrame(data.rolesFrame || []);
       } catch {
         if (!cancelled) setInvalidToken(true);
       } finally {
@@ -185,10 +191,10 @@ export const RegistroPage: React.FC = () => {
         fechaNac: form.fechaNac,
         generoId: form.generoId,
         nivelEstudioId: form.nivelEstudioId,
-        nacionalidad: form.nacionalidad,
-        obraSocial: form.obraSocial,
+        nacionalidadId: form.nacionalidadId,
+        osId: form.osId,
         estadoCivil: form.estadoCivil,
-        rolFrame: form.rolFrame,
+        rolFrameId: form.rolFrameId,
         pais: form.pais,
         localidad: form.localidad,
         calle: form.calle,
@@ -254,7 +260,7 @@ export const RegistroPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 pb-28">
+    <div className="min-h-screen bg-gray-900 text-gray-100 pb-10">
       <div className="max-w-5xl mx-auto px-6 pt-8">
         <h1 className="text-3xl font-light text-gray-100">Registro</h1>
         <p className="text-center text-sm text-red-400 -mt-6 mb-6">Los campos marcados con '*' son obligatorios</p>
@@ -359,13 +365,27 @@ export const RegistroPage: React.FC = () => {
                 </div>
                 <div>
                   <label className={labelClass}>Nacionalidad</label>
-                  <input className={fieldClass} autoComplete="off" value={form.nacionalidad} onChange={(e) => set("nacionalidad", e.target.value)} />
+                  <select className={fieldClass} value={form.nacionalidadId} onChange={(e) => set("nacionalidadId", e.target.value)}>
+                    <option value="">Seleccionar...</option>
+                    {nacionalidades.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className={labelClass}>Obra social</label>
-                  <input className={fieldClass} autoComplete="off" value={form.obraSocial} onChange={(e) => set("obraSocial", e.target.value)} />
+                  <select className={fieldClass} value={form.osId} onChange={(e) => set("osId", e.target.value)}>
+                    <option value="">Seleccionar...</option>
+                    {obrasSociales.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className={labelClass}>Estado civil</label>
@@ -382,7 +402,14 @@ export const RegistroPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className={labelClass}>Rol frame</label>
-                  <input className={fieldClass} autoComplete="off" value={form.rolFrame} onChange={(e) => set("rolFrame", e.target.value)} />
+                  <select className={fieldClass} value={form.rolFrameId} onChange={(e) => set("rolFrameId", e.target.value)}>
+                    <option value="">Seleccionar...</option>
+                    {rolesFrame.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
@@ -475,17 +502,16 @@ export const RegistroPage: React.FC = () => {
             </div>
           )}
         </form>
-      </div>
 
-      {/* Botón fijo inferior */}
-      <button
-        type="button"
-        onClick={handleNext}
-        disabled={submitting}
-        className="fixed bottom-0 left-0 right-0 py-4 text-center text-white font-medium tracking-wide uppercase bg-blue-600 hover:bg-blue-700 disabled:opacity-60 transition-colors"
-      >
-        {submitting ? "Enviando…" : activeTab === "bancarios" ? "Registrarse" : "Siguiente"}
-      </button>
+        <button
+          type="button"
+          onClick={handleNext}
+          disabled={submitting}
+          className="w-full mt-8 py-4 rounded-lg text-center text-white font-medium tracking-wide uppercase bg-blue-600 hover:bg-blue-700 disabled:opacity-60 transition-colors"
+        >
+          {submitting ? "Enviando…" : activeTab === "bancarios" ? "Registrarse" : "Siguiente"}
+        </button>
+      </div>
     </div>
   );
 };

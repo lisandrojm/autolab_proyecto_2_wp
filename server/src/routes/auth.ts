@@ -5,6 +5,7 @@ import { Role } from "../models/Role.js";
 import { Client } from "../models/Client.js";
 import { Tenant } from "../models/Tenant.js";
 import { Info } from "../models/Info.js";
+import { RoleFrame } from "../models/RoleFrame.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { validate } from "../middleware/validate.js";
 import { registerSchema, loginSchema } from "../validators/authSchemas.js";
@@ -599,15 +600,20 @@ router.get("/registro-info", async (req, res) => {
       return;
     }
 
-    const types = ["genero", "tipo-documento", "nivel-estudio"];
+    const types = ["genero", "tipo-documento", "nivel-estudio", "nacionalidad", "pais", "obra-social"];
     const items = await Info.find({ type: { $in: types } }).sort({ name: 1 }).lean();
     const pick = (t: string) => items.filter((i) => i.type === t).map((i) => ({ id: i.data?.id, name: i.name }));
+    const nacionalidades = pick("nacionalidad").length > 0 ? pick("nacionalidad") : pick("pais");
+    const rolesFrame = (await RoleFrame.find().select("name").sort({ name: 1 }).lean()).map((r) => ({ id: String(r._id), name: r.name }));
 
     res.json({
       tenantSlug: payload.tenantSlug,
       generos: pick("genero"),
       tiposDocumento: pick("tipo-documento"),
       nivelesEstudio: pick("nivel-estudio"),
+      nacionalidades,
+      obrasSociales: pick("obra-social"),
+      rolesFrame,
     });
   } catch (error) {
     console.error("registro-info error:", error);
@@ -657,18 +663,22 @@ router.post("/registro", async (req, res) => {
     const mobileRole = await Role.findOne({ tenantId, name: { $regex: /^mobile-colaborador$/i } }).select("_id");
     const roles = [defaultRole?._id, mobileRole?._id].filter(Boolean) as Types.ObjectId[];
 
+    const num = (v: any) => (v != null && v !== "" ? Number(v) : undefined);
+    const rolFrameId = body.rolFrameId && Types.ObjectId.isValid(body.rolFrameId) ? String(body.rolFrameId) : undefined;
+
     const metadata: Record<string, any> = {
       activo: true,
       cuit: body.cuit || undefined,
-      tipoDocumentoId: body.tipoDocumentoId != null && body.tipoDocumentoId !== "" ? Number(body.tipoDocumentoId) : undefined,
+      tipoDocumentoId: num(body.tipoDocumentoId),
       documento: body.documento || undefined,
       fechaNac: body.fechaNac || undefined,
-      generoId: body.generoId != null && body.generoId !== "" ? Number(body.generoId) : undefined,
-      nivelEstudioId: body.nivelEstudioId != null && body.nivelEstudioId !== "" ? Number(body.nivelEstudioId) : undefined,
-      nacionalidad: body.nacionalidad || undefined,
-      obraSocial: body.obraSocial || undefined,
+      generoId: num(body.generoId),
+      nivelEstudioId: num(body.nivelEstudioId),
+      nacionalidadId: num(body.nacionalidadId),
+      osId: num(body.osId),
       estadoCivil: body.estadoCivil || undefined,
-      rolFrame: body.rolFrame || undefined,
+      roles_frame: rolFrameId ? [rolFrameId] : [],
+      rolesFrameIds: rolFrameId ? [rolFrameId] : [],
       // Domicilio
       pais: body.pais || undefined,
       localidad: body.localidad || undefined,
