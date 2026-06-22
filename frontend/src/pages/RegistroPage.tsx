@@ -356,31 +356,31 @@ export const RegistroPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className={labelClass}>Nombre como figura en el DNI *</label>
-                  <input className={fieldClass} autoComplete="off" value={form.firstName} onChange={(e) => set("firstName", e.target.value)} />
+                  <input className={fieldClass} autoComplete="off" placeholder="Ej: Juan" value={form.firstName} onChange={(e) => set("firstName", e.target.value)} />
                 </div>
                 <div>
                   <label className={labelClass}>Apellido como figura en el DNI *</label>
-                  <input className={fieldClass} autoComplete="off" value={form.lastName} onChange={(e) => set("lastName", e.target.value)} />
+                  <input className={fieldClass} autoComplete="off" placeholder="Ej: Pérez" value={form.lastName} onChange={(e) => set("lastName", e.target.value)} />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className={labelClass}>Email *</label>
-                  <input type="email" className={fieldClass} autoComplete="off" value={form.email} onChange={(e) => set("email", e.target.value)} />
+                  <input type="email" className={fieldClass} autoComplete="off" placeholder="usuario@ejemplo.com" value={form.email} onChange={(e) => set("email", e.target.value)} />
                 </div>
                 <div>
                   <label className={labelClass}>Cuil *</label>
-                  <input className={fieldClass} autoComplete="off" value={form.cuit} onChange={(e) => set("cuit", e.target.value)} />
+                  <input className={fieldClass} autoComplete="off" placeholder="20-XXXXXXXX-X" value={form.cuit} onChange={(e) => set("cuit", e.target.value)} />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className={labelClass}>Contraseña *</label>
-                  <input type="password" className={fieldClass} autoComplete="new-password" value={form.password} onChange={(e) => set("password", e.target.value)} />
+                  <input type="password" className={fieldClass} autoComplete="new-password" placeholder="••••••••" minLength={6} value={form.password} onChange={(e) => set("password", e.target.value)} />
                 </div>
                 <div>
                   <label className={labelClass}>Repetir contraseña *</label>
-                  <input type="password" className={fieldClass} autoComplete="new-password" value={form.passwordRepeat} onChange={(e) => set("passwordRepeat", e.target.value)} />
+                  <input type="password" className={fieldClass} autoComplete="new-password" placeholder="••••••••" minLength={6} value={form.passwordRepeat} onChange={(e) => set("passwordRepeat", e.target.value)} />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -397,7 +397,7 @@ export const RegistroPage: React.FC = () => {
                 </div>
                 <div>
                   <label className={labelClass}>Documento *</label>
-                  <input className={fieldClass} autoComplete="off" value={form.documento} onChange={(e) => set("documento", e.target.value)} />
+                  <input className={fieldClass} autoComplete="off" placeholder="DNI / Pasaporte" value={form.documento} onChange={(e) => set("documento", e.target.value)} />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -466,41 +466,41 @@ export const RegistroPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className={labelClass}>Pais *</label>
-                  <input className={fieldClass} autoComplete="off" value={form.pais} onChange={(e) => set("pais", e.target.value)} />
+                  <input className={fieldClass} autoComplete="off" placeholder="Ej: Argentina" value={form.pais} onChange={(e) => set("pais", e.target.value)} />
                 </div>
                 <div>
                   <label className={labelClass}>Localidad *</label>
-                  <input className={fieldClass} autoComplete="off" value={form.localidad} onChange={(e) => set("localidad", e.target.value)} />
+                  <input className={fieldClass} autoComplete="off" placeholder="Ej: CABA" value={form.localidad} onChange={(e) => set("localidad", e.target.value)} />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className={labelClass}>Calle *</label>
-                  <input className={fieldClass} autoComplete="off" value={form.calle} onChange={(e) => set("calle", e.target.value)} />
+                  <input className={fieldClass} autoComplete="off" placeholder="Ej: Av. Libertador" value={form.calle} onChange={(e) => set("calle", e.target.value)} />
                 </div>
                 <div>
                   <label className={labelClass}>Altura *</label>
-                  <input className={fieldClass} autoComplete="off" value={form.altura} onChange={(e) => set("altura", e.target.value)} />
+                  <input className={fieldClass} autoComplete="off" placeholder="Ej: 1234" value={form.altura} onChange={(e) => set("altura", e.target.value)} />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className={labelClass}>Piso / Depto *</label>
-                  <input className={fieldClass} autoComplete="off" value={form.pisoDepto} onChange={(e) => set("pisoDepto", e.target.value)} />
+                  <input className={fieldClass} autoComplete="off" placeholder="Ej: 4B" value={form.pisoDepto} onChange={(e) => set("pisoDepto", e.target.value)} />
                 </div>
                 <div>
                   <label className={labelClass}>Codigo postal</label>
-                  <input className={fieldClass} autoComplete="off" value={form.codigoPostal} onChange={(e) => set("codigoPostal", e.target.value)} />
+                  <input className={fieldClass} autoComplete="off" placeholder="Ej: 1425" value={form.codigoPostal} onChange={(e) => set("codigoPostal", e.target.value)} />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className={labelClass}>Telefono *</label>
-                  <input className={fieldClass} autoComplete="off" value={form.telefono} onChange={(e) => set("telefono", e.target.value)} />
+                  <input className={fieldClass} autoComplete="off" placeholder="Ej: 11 1234-5678" value={form.telefono} onChange={(e) => set("telefono", e.target.value)} />
                 </div>
                 <div>
                   <label className={labelClass}>Telefono de emergencia</label>
-                  <input className={fieldClass} autoComplete="off" value={form.telefono2} onChange={(e) => set("telefono2", e.target.value)} />
+                  <input className={fieldClass} autoComplete="off" placeholder="Ej: 11 8765-4321" value={form.telefono2} onChange={(e) => set("telefono2", e.target.value)} />
                 </div>
               </div>
               <label className="flex items-center gap-2 cursor-pointer text-gray-200">
@@ -531,17 +531,17 @@ export const RegistroPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className={labelClass}>CBU *</label>
-                  <input className={fieldClass} autoComplete="off" value={form.cbu} onChange={(e) => set("cbu", e.target.value)} />
+                  <input className={fieldClass} autoComplete="off" placeholder="22 dígitos" minLength={22} maxLength={22} value={form.cbu} onChange={(e) => set("cbu", e.target.value)} />
                 </div>
                 <div>
                   <label className={labelClass}>Alias *</label>
-                  <input className={fieldClass} autoComplete="off" value={form.aliasBancario} onChange={(e) => set("aliasBancario", e.target.value)} />
+                  <input className={fieldClass} autoComplete="off" placeholder="Ej: LUNES.MALETA.CUNA" value={form.aliasBancario} onChange={(e) => set("aliasBancario", e.target.value)} />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className={labelClass}>Nro. de cuenta *</label>
-                  <input className={fieldClass} autoComplete="off" value={form.nroDeCuentaBancaria} onChange={(e) => set("nroDeCuentaBancaria", e.target.value)} />
+                  <input className={fieldClass} autoComplete="off" placeholder="Ej: 347-333020/7" value={form.nroDeCuentaBancaria} onChange={(e) => set("nroDeCuentaBancaria", e.target.value)} />
                 </div>
               </div>
             </div>
