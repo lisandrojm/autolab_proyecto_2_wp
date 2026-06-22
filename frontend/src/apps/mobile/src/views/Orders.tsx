@@ -230,19 +230,14 @@ export default function Orders({ onNavigate }: OrdersProps) {
     return Math.max(0, maxMonto - taken - pending);
   }, [orders, getUserSalary]);
 
+  // Reset the form ONLY when the category changes. This must NOT depend on
+  // `subcategories`, otherwise selecting an "Opciones" subtype would re-run the
+  // effect and immediately reset it back to "" (making the select unusable).
   useEffect(() => {
     setSubcategories("");
 
     if (selectedCategory?.categoryType === "fecha" && selectedCategory.dateMode === "range") {
       setDynamicValue({ fechaDesde: "", fechaHasta: "" });
-    } else if (selectedCategory?.categoryType === "fecha") {
-      setDynamicValue("");
-    } else if (selectedCategory?.categoryType === "dinero") {
-      const stepAmount = 50000;
-      const avail = getAvailableLimit(selectedCategory, subcategories);
-      const initialAmount = avail > 0 ? Math.min(stepAmount, avail) : 0;
-      setAmount(initialAmount);
-      setDynamicValue("");
     } else {
       setDynamicValue("");
     }
@@ -257,17 +252,6 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
     setOrderFutureActionFechaLimite("");
     setOrderFutureActionDocumento("");
-    // init installments from category or subtype default repayment when switching category / subtype
-    if (selectedCategory?.categoryType === "dinero") {
-      let defaultInstallments = selectedCategory.config?.repayment?.installments;
-      if (selectedCategory.config?.subtipos && subcategories) {
-        const st = selectedCategory.config.subtipos.find((s) => s.id === subcategories);
-        if (st?.repayment?.installments) defaultInstallments = st.repayment.installments;
-      }
-      setInstallments(defaultInstallments ?? 1);
-    } else {
-      setInstallments(undefined);
-    }
 
     if (selectedCategory && selectedCategory.categoryType !== "objeto" && selectedCategory.categoryType !== "otros") {
       setPhoto(null);
@@ -278,7 +262,28 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
     setDocument(null);
     setDocumentPreview(null);
-  }, [selectedCategoryId, selectedCategory, subcategories, getUserSalary, getAvailableLimit]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategoryId]);
+
+  // Recompute amount & installments when the category OR the selected subtype
+  // changes. Reacts to `subcategories` but never resets it.
+  useEffect(() => {
+    if (selectedCategory?.categoryType === "dinero") {
+      const stepAmount = 50000;
+      const avail = getAvailableLimit(selectedCategory, subcategories);
+      const initialAmount = avail > 0 ? Math.min(stepAmount, avail) : 0;
+      setAmount(initialAmount);
+
+      let defaultInstallments = selectedCategory.config?.repayment?.installments;
+      if (selectedCategory.config?.subtipos && subcategories) {
+        const st = selectedCategory.config.subtipos.find((s) => s.id === subcategories);
+        if (st?.repayment?.installments) defaultInstallments = st.repayment.installments;
+      }
+      setInstallments(defaultInstallments ?? 1);
+    } else {
+      setInstallments(undefined);
+    }
+  }, [selectedCategoryId, subcategories, selectedCategory, getAvailableLimit]);
 
   const [detectedContractName, setDetectedContractName] = useState<string | null>(null);
 

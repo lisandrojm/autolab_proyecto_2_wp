@@ -14,6 +14,28 @@ export declare class ExternalApiService {
             fechaAlta?: string;
         }>;
     }>;
+    /**
+     * Synchronise users (and optionally their projects/contracts) from FRAME
+     * into WeProdu.
+     *
+     * ── ADDITIVE / NON-DESTRUCTIVE MODE ──────────────────────────────────
+     * • New records   → INSERT as before.
+     * • Existing recs → only fill fields that are currently empty in WeProdu
+     *                    (null / undefined / "" / [] / {}).  Fields that already
+     *                    have a value are NEVER overwritten.
+     * • Contracts     → APPEND-ONLY.  Existing contracts are immutable from
+     *                    FRAME's perspective.
+     *
+     * Matching keys (unchanged):
+     *   users         → metadata.id  (FRAME employee id)
+     *   projects      → externalId
+     *   userProjects  → { externalProjectId, externalEmployeeId }
+     *
+     * Decision: if FRAME CHANGES a field that WeProdu already has, the change
+     * is NOT applied.  A future "snapshot diff" mechanism can be enabled to
+     * propagate real FRAME changes selectively — see additiveSync.ts header.
+     * ─────────────────────────────────────────────────────────────────────
+     */
     importUsers(tenantId: string, executedBy: mongoose.Types.ObjectId | "system", syncProjects?: boolean, sinceDays?: number): Promise<{
         created: number;
         updated: number;
