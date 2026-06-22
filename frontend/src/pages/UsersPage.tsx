@@ -1236,7 +1236,24 @@ export const UsersPage: React.FC = () => {
                                   });
                                 }
 
-                                // Fallback standard shift
+                                // Fallback: if no areaAssign found, check coordinator assignments for shifts in this area
+                                if (shiftsForArea.length === 0 && project?.coordinatorAssignments) {
+                                  const coordForArea = project.coordinatorAssignments.filter((asm: any) => {
+                                    const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
+                                    const aid = typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId;
+                                    return String(uid) === String(viewUser?._id) && String(aid) === String(ad.id);
+                                  });
+                                  coordForArea.forEach((asm: any) => {
+                                    const sId = typeof asm.shiftId === "object" ? asm.shiftId?._id : asm.shiftId;
+                                    const shift = allShifts.find((s) => String(s._id) === String(sId));
+                                    if (shift) {
+                                      const timeStr = shift.startTime && shift.endTime ? ` (${shift.startTime} - ${shift.endTime})` : "";
+                                      shiftsForArea.push(`${shift.name}${timeStr}`);
+                                    }
+                                  });
+                                }
+
+                                // Last resort fallback: single shift fields
                                 if (shiftsForArea.length === 0) {
                                   const shiftIdFromUser = viewUser?.turnos && viewUser.turnos.length > 0 ? (typeof viewUser.turnos[0] === "object" ? viewUser.turnos[0]._id : viewUser.turnos[0]) : undefined;
                                   const finalShiftId = c.shiftId || userConfig?.shiftId || shiftIdFromUser;
