@@ -1219,20 +1219,7 @@ export const UsersPage: React.FC = () => {
                                 // Resolve shifts for this area
                                 let shiftsForArea: string[] = [];
 
-                                // Helper to get coordinated shift IDs for exclusion (same as ProjectTeamPage)
-                                const getCoordinatedShiftIds = () => {
-                                  if (!project?.coordinatorAssignments) return [];
-                                  return project.coordinatorAssignments
-                                    .filter((asm: any) => {
-                                      const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
-                                      const aid = typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId;
-                                      return String(uid) === String(viewUser?._id) && String(aid) === String(ad.id);
-                                    })
-                                    .map((asm: any) => typeof asm.shiftId === "object" ? asm.shiftId?._id : asm.shiftId);
-                                };
-                                const coordShiftIds = getCoordinatedShiftIds().map((id: any) => String(id));
-
-                                // Find assignments in contract or config
+                                // Find assignments in contract or config (no exclusion of coordinated shifts)
                                 const contractAssign = c.areaShiftAssignments?.find((a: any) => String(typeof a.areaId === "object" ? a.areaId?._id : a.areaId) === String(ad.id));
                                 const configAssign = userConfig?.areaShiftAssignments?.find((a: any) => String(typeof a.areaId === "object" ? a.areaId?._id : a.areaId) === String(ad.id));
                                 const areaAssign = contractAssign || configAssign;
@@ -1241,7 +1228,6 @@ export const UsersPage: React.FC = () => {
                                   const sids = areaAssign.shiftIds || [];
                                   sids.forEach((sid: any) => {
                                     const actualSid = typeof sid === "object" ? sid?._id : sid;
-                                    if (coordShiftIds.includes(String(actualSid))) return;
                                     const shift = allShifts.find((s) => String(s._id) === String(actualSid));
                                     if (shift) {
                                       const timeStr = shift.startTime && shift.endTime ? ` (${shift.startTime} - ${shift.endTime})` : "";
