@@ -21,7 +21,7 @@ import { UserFormModal } from "../components/users/UserFormModal";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faLayerGroup, faHourglassHalf, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faLayerGroup, faHourglassHalf, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faUserPlus, faCopy, faCheck } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate, useParams } from "react-router-dom";
 import { getImageUrl } from "../utils/imageHelpers";
@@ -85,6 +85,9 @@ export const UsersPage: React.FC = () => {
 
   // modal create/edit/password
   const [showModal, setShowModal] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [registroLinkUrl, setRegistroLinkUrl] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [modalMode, setModalMode] = useState<ModalMode>("edit");
   const [editingUser, setEditingUser] = useState<User | null>(null);
 
@@ -468,19 +471,25 @@ export const UsersPage: React.FC = () => {
     setShowModal(true);
   };
 
-  // Generar y copiar el link público de registro
-  const handleCopyRegistroLink = async () => {
+  // Generar el link público de registro y abrir el modal para compartirlo
+  const handleOpenLinkModal = async () => {
     try {
       const url = await usersAPI.generateRegistroLink(clientId);
-      try {
-        await navigator.clipboard.writeText(url);
-        sweetAlert.success("Link copiado", "El link de registro se copió al portapapeles. Compartilo para que el usuario se registre.");
-      } catch {
-        // Fallback si el portapapeles no está disponible (http / permisos)
-        sweetAlert.warningAlert("Link de registro", url);
-      }
+      setRegistroLinkUrl(url);
+      setLinkCopied(false);
+      setShowLinkModal(true);
     } catch (error) {
       sweetAlert.error("Error", "No se pudo generar el link de registro");
+    }
+  };
+
+  const copyRegistroLink = async () => {
+    if (!registroLinkUrl) return;
+    try {
+      await navigator.clipboard.writeText(registroLinkUrl);
+      setLinkCopied(true);
+    } catch {
+      /* el usuario puede copiarlo manualmente desde el campo */
     }
   };
 
@@ -614,7 +623,7 @@ export const UsersPage: React.FC = () => {
             </button>
           )}
           {canManage && (
-            <button onClick={handleCopyRegistroLink} title="Copiar link de registro" className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+            <button onClick={handleOpenLinkModal} title="Link de registro" className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
               <FontAwesomeIcon icon={faLink} className="h-3 w-3 lg:h-4 lg:w-4" />
               <span className="hidden lg:block">Link</span>
             </button>
@@ -1704,6 +1713,23 @@ export const UsersPage: React.FC = () => {
       )}
 
       <UserFormModal isOpen={showModal} onClose={closeModal} user={editingUser} mode={modalMode} onSaved={() => fetchUsers({ silent: true })} />
+
+      <InfoModal isOpen={showLinkModal} onClose={() => setShowLinkModal(false)} title="Registrar persona" size="md">
+        <div className="flex flex-col items-center text-center gap-4 py-2">
+          <div className="w-14 h-14 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+            <FontAwesomeIcon icon={faUserPlus} className="text-blue-600 dark:text-blue-400 text-xl" />
+          </div>
+          <p className="text-gray-700 dark:text-gray-300">Comparta este link a la persona que desee registrar</p>
+          <div className="w-full flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-3 py-2">
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Link</span>
+            <input readOnly value={registroLinkUrl ?? ""} onFocus={(e) => e.currentTarget.select()} className="flex-1 bg-transparent text-sm text-gray-700 dark:text-gray-200 outline-none truncate" />
+            <button type="button" onClick={copyRegistroLink} title="Copiar" className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors shrink-0">
+              <FontAwesomeIcon icon={linkCopied ? faCheck : faCopy} className="h-4 w-4" />
+            </button>
+          </div>
+          {linkCopied && <span className="text-xs font-medium text-emerald-500">¡Link copiado!</span>}
+        </div>
+      </InfoModal>
     </PageLayout>
   );
 };

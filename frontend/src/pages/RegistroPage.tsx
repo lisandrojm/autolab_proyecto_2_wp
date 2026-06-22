@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 
 type Tab = "general" | "domicilio" | "bancarios";
@@ -76,6 +77,64 @@ const emptyForm: RegistroForm = {
 
 const labelClass = "block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2";
 const fieldClass = "w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-colors";
+
+/** Selector con modal y buscador, para listas largas (Nacionalidad, Obra social, Rol frame). */
+const SearchableSelect: React.FC<{
+  title: string;
+  value: string;
+  options: InfoOption[];
+  onChange: (id: string) => void;
+}> = ({ title, value, options, onChange }) => {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const selected = options.find((o) => String(o.id) === String(value));
+  const term = search.trim().toLowerCase();
+  const filtered = term ? options.filter((o) => o.name.toLowerCase().includes(term)) : options;
+
+  const pick = (id: string) => {
+    onChange(id);
+    setOpen(false);
+  };
+
+  return (
+    <>
+      <button type="button" onClick={() => { setSearch(""); setOpen(true); }} className={`${fieldClass} flex items-center justify-between text-left`}>
+        <span className={selected ? "text-gray-100" : "text-gray-400"}>{selected ? selected.name : "Seleccionar..."}</span>
+        <svg className="h-4 w-4 text-gray-400 shrink-0 ml-2" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+        </svg>
+      </button>
+
+      {open &&
+        createPortal(
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={() => setOpen(false)}>
+            <div className="w-full max-w-lg max-h-[80vh] flex flex-col rounded-xl border border-gray-700 bg-gray-800 shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-200">{title}</h3>
+                <button type="button" onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-200 text-lg leading-none">✕</button>
+              </div>
+              <div className="p-3 border-b border-gray-700">
+                <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar..." className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-2 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+              </div>
+              <div className="overflow-y-auto">
+                <button type="button" onClick={() => pick("")} className="w-full text-left px-4 py-3 text-sm text-gray-400 hover:bg-gray-700/50">
+                  Seleccionar...
+                </button>
+                {filtered.map((o) => (
+                  <button key={o.id} type="button" onClick={() => pick(String(o.id))} className={`w-full text-left px-4 py-3 text-sm hover:bg-gray-700/50 ${String(o.id) === String(value) ? "text-blue-400 bg-blue-500/10" : "text-gray-200"}`}>
+                    {o.name}
+                  </button>
+                ))}
+                {filtered.length === 0 && <div className="px-4 py-6 text-center text-sm text-gray-500">Sin resultados</div>}
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+};
 
 export const RegistroPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -365,27 +424,13 @@ export const RegistroPage: React.FC = () => {
                 </div>
                 <div>
                   <label className={labelClass}>Nacionalidad</label>
-                  <select className={fieldClass} value={form.nacionalidadId} onChange={(e) => set("nacionalidadId", e.target.value)}>
-                    <option value="">Seleccionar...</option>
-                    {nacionalidades.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.name}
-                      </option>
-                    ))}
-                  </select>
+                  <SearchableSelect title="Nacionalidad" value={form.nacionalidadId} options={nacionalidades} onChange={(v) => set("nacionalidadId", v)} />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className={labelClass}>Obra social</label>
-                  <select className={fieldClass} value={form.osId} onChange={(e) => set("osId", e.target.value)}>
-                    <option value="">Seleccionar...</option>
-                    {obrasSociales.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.name}
-                      </option>
-                    ))}
-                  </select>
+                  <SearchableSelect title="Obra social" value={form.osId} options={obrasSociales} onChange={(v) => set("osId", v)} />
                 </div>
                 <div>
                   <label className={labelClass}>Estado civil</label>
@@ -402,14 +447,7 @@ export const RegistroPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className={labelClass}>Rol frame</label>
-                  <select className={fieldClass} value={form.rolFrameId} onChange={(e) => set("rolFrameId", e.target.value)}>
-                    <option value="">Seleccionar...</option>
-                    {rolesFrame.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.name}
-                      </option>
-                    ))}
-                  </select>
+                  <SearchableSelect title="Rol frame" value={form.rolFrameId} options={rolesFrame} onChange={(v) => set("rolFrameId", v)} />
                 </div>
               </div>
             </div>
