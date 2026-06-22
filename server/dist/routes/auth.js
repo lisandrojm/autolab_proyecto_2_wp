@@ -579,10 +579,9 @@ router.post("/registro", async (req, res) => {
             res.status(409).json({ error: "El email ya se encuentra registrado" });
             return;
         }
-        // Roles por defecto: rol default del tenant + mobile-colaborador (igual que el alta del panel)
-        const defaultRole = await Role.findOne({ tenantId, isDefault: true }).select("_id");
+        // Rol por defecto: únicamente mobile-colaborador
         const mobileRole = await Role.findOne({ tenantId, name: { $regex: /^mobile-colaborador$/i } }).select("_id");
-        const roles = [defaultRole?._id, mobileRole?._id].filter(Boolean);
+        const roles = [mobileRole?._id].filter(Boolean);
         const num = (v) => (v != null && v !== "" ? Number(v) : undefined);
         const rolFrameId = body.rolFrameId && Types.ObjectId.isValid(body.rolFrameId) ? String(body.rolFrameId) : undefined;
         const metadata = {
