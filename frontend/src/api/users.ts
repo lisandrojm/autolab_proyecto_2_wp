@@ -320,6 +320,12 @@ class UsersAPI {
     return user;
   }
 
+  /** Genera un token de invitación y devuelve la URL pública de registro. */
+  async generateRegistroLink(clientId?: string): Promise<string> {
+    const { data } = await axios.post(`/auth/registro-link`, { clientId }, { headers: this.getHeaders() });
+    return `${window.location.origin}/registro?token=${data.token}`;
+  }
+
   async update(
     id: string,
     data: {

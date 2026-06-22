@@ -6,6 +6,7 @@ import { useThemeStore } from "./stores/themeStore";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { RegisterClientPage } from "./pages/RegisterClientPage";
+import { RegistroPage } from "./pages/RegistroPage";
 import { ClientsPage } from "./pages/ClientsPage";
 
 import { RolesPage } from "./pages/RolesPage";
@@ -177,6 +178,7 @@ function App() {
 
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/register-client" element={<RegisterClientPage />} />
+              <Route path="/registro" element={<RegistroPage />} />
             </Route>
 
             {/* Rutas protegidas (CON MobileNavbar) */}

@@ -21,7 +21,7 @@ import { UserFormModal } from "../components/users/UserFormModal";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faLayerGroup, faHourglassHalf, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faLayerGroup, faHourglassHalf, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate, useParams } from "react-router-dom";
 import { getImageUrl } from "../utils/imageHelpers";
@@ -468,6 +468,22 @@ export const UsersPage: React.FC = () => {
     setShowModal(true);
   };
 
+  // Generar y copiar el link público de registro
+  const handleCopyRegistroLink = async () => {
+    try {
+      const url = await usersAPI.generateRegistroLink(clientId);
+      try {
+        await navigator.clipboard.writeText(url);
+        sweetAlert.success("Link copiado", "El link de registro se copió al portapapeles. Compartilo para que el usuario se registre.");
+      } catch {
+        // Fallback si el portapapeles no está disponible (http / permisos)
+        sweetAlert.warningAlert("Link de registro", url);
+      }
+    } catch (error) {
+      sweetAlert.error("Error", "No se pudo generar el link de registro");
+    }
+  };
+
   const openEdit = (user: User) => {
     setEditingUser(user);
     setModalMode("edit");
@@ -595,6 +611,12 @@ export const UsersPage: React.FC = () => {
           {canManage && (
             <button onClick={openCreate} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
               <FontAwesomeIcon icon={faPlus} className="h-3 w-3 lg:h-4 lg:w-4" />
+            </button>
+          )}
+          {canManage && (
+            <button onClick={handleCopyRegistroLink} title="Copiar link de registro" className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+              <FontAwesomeIcon icon={faLink} className="h-3 w-3 lg:h-4 lg:w-4" />
+              <span className="hidden lg:block">Link</span>
             </button>
           )}
           <button onClick={() => navigate("/roles")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">

@@ -1,8 +1,10 @@
 import { Router } from "express";
+import jwt from "jsonwebtoken";
 import { User } from "../models/User.js";
 import { Role } from "../models/Role.js";
 import { Client } from "../models/Client.js";
 import { Tenant } from "../models/Tenant.js";
+import { Info } from "../models/Info.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { validate } from "../middleware/validate.js";
 import { registerSchema, loginSchema } from "../validators/authSchemas.js";
@@ -531,6 +533,196 @@ router.post("/register", async (req, res) => {
       return;
     }
 
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ───────────────────────── Registro público con token de invitación ─────────────────────────
+
+const REGISTRO_TOKEN_PURPOSE = "registro";
+
+interface RegistroTokenPayload {
+  purpose: string;
+  tenantId: string;
+  tenantSlug?: string;
+  clientId?: string;
+}
+
+function verifyRegistroToken(token: string): RegistroTokenPayload | null {
+  try {
+    const payload = jwt.verify(token, env.JWT_SECRET) as RegistroTokenPayload;
+    if (!payload || payload.purpose !== REGISTRO_TOKEN_PURPOSE || !payload.tenantId) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+// POST /auth/registro-link - Generar token de invitación de registro (requiere auth)
+router.post("/registro-link", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const tenant = await Tenant.findById(req.tenantObjectId).select("_id slug");
+    if (!tenant) {
+      res.status(404).json({ error: "Tenant not found" });
+      return;
+    }
+
+    const { clientId } = req.body || {};
+    let validClientId: string | undefined;
+    if (clientId && Types.ObjectId.isValid(clientId)) {
+      const client = await Client.findOne({ _id: clientId, tenantId: tenant._id }).select("_id");
+      if (client) validClientId = String(client._id);
+    }
+
+    const payload: RegistroTokenPayload = {
+      purpose: REGISTRO_TOKEN_PURPOSE,
+      tenantId: String(tenant._id),
+      tenantSlug: tenant.slug,
+      ...(validClientId ? { clientId: validClientId } : {}),
+    };
+
+    const token = jwt.sign(payload, env.JWT_SECRET, { expiresIn: "30d" });
+    res.json({ token });
+  } catch (error) {
+    console.error("registro-link error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /auth/registro-info?token=... - Catálogos públicos para el formulario de registro
+router.get("/registro-info", async (req, res) => {
+  try {
+    const token = String(req.query.token || "");
+    const payload = verifyRegistroToken(token);
+    if (!payload) {
+      res.status(401).json({ error: "Link inválido o expirado" });
+      return;
+    }
+
+    const types = ["genero", "tipo-documento", "nivel-estudio"];
+    const items = await Info.find({ type: { $in: types } }).sort({ name: 1 }).lean();
+    const pick = (t: string) => items.filter((i) => i.type === t).map((i) => ({ id: i.data?.id, name: i.name }));
+
+    res.json({
+      tenantSlug: payload.tenantSlug,
+      generos: pick("genero"),
+      tiposDocumento: pick("tipo-documento"),
+      nivelesEstudio: pick("nivel-estudio"),
+    });
+  } catch (error) {
+    console.error("registro-info error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /auth/registro - Registro público de usuario validando token de invitación
+router.post("/registro", async (req, res) => {
+  try {
+    const { token, ...body } = req.body || {};
+    const payload = verifyRegistroToken(token);
+    if (!payload) {
+      res.status(401).json({ error: "Link inválido o expirado" });
+      return;
+    }
+
+    const tenant = await Tenant.findById(payload.tenantId).select("_id slug");
+    if (!tenant) {
+      res.status(404).json({ error: "Organización no encontrada" });
+      return;
+    }
+    const tenantId = tenant._id as Types.ObjectId;
+
+    const firstName = String(body.firstName || "").trim();
+    const lastName = String(body.lastName || "").trim();
+    const email = String(body.email || "").trim().toLowerCase();
+    const password = String(body.password || "");
+
+    if (!firstName || !lastName || !email || !password) {
+      res.status(400).json({ error: "Faltan campos obligatorios" });
+      return;
+    }
+    if (password.length < 6) {
+      res.status(400).json({ error: "La contraseña debe tener al menos 6 caracteres" });
+      return;
+    }
+
+    const existingUser = await User.findOne({ email, tenantId });
+    if (existingUser) {
+      res.status(409).json({ error: "El email ya se encuentra registrado" });
+      return;
+    }
+
+    // Roles por defecto: rol default del tenant + mobile-colaborador (igual que el alta del panel)
+    const defaultRole = await Role.findOne({ tenantId, isDefault: true }).select("_id");
+    const mobileRole = await Role.findOne({ tenantId, name: { $regex: /^mobile-colaborador$/i } }).select("_id");
+    const roles = [defaultRole?._id, mobileRole?._id].filter(Boolean) as Types.ObjectId[];
+
+    const metadata: Record<string, any> = {
+      activo: true,
+      cuit: body.cuit || undefined,
+      tipoDocumentoId: body.tipoDocumentoId != null && body.tipoDocumentoId !== "" ? Number(body.tipoDocumentoId) : undefined,
+      documento: body.documento || undefined,
+      fechaNac: body.fechaNac || undefined,
+      generoId: body.generoId != null && body.generoId !== "" ? Number(body.generoId) : undefined,
+      nivelEstudioId: body.nivelEstudioId != null && body.nivelEstudioId !== "" ? Number(body.nivelEstudioId) : undefined,
+      nacionalidad: body.nacionalidad || undefined,
+      obraSocial: body.obraSocial || undefined,
+      estadoCivil: body.estadoCivil || undefined,
+      rolFrame: body.rolFrame || undefined,
+      // Domicilio
+      pais: body.pais || undefined,
+      localidad: body.localidad || undefined,
+      calle: body.calle || undefined,
+      altura: body.altura || undefined,
+      pisoDepto: body.pisoDepto || undefined,
+      codigoPostal: body.codigoPostal || undefined,
+      telefono: body.telefono || undefined,
+      telefono2: body.telefono2 || undefined,
+      visa: !!body.visa,
+      // Datos bancarios
+      banco: body.banco || undefined,
+      tipoDeCuentaBancaria: body.tipoDeCuentaBancaria || undefined,
+      cbu: body.cbu || undefined,
+      aliasBancario: body.aliasBancario || undefined,
+      nroDeCuentaBancaria: body.nroDeCuentaBancaria || undefined,
+    };
+
+    const clientIds = payload.clientId && Types.ObjectId.isValid(payload.clientId) ? [new Types.ObjectId(payload.clientId)] : [];
+
+    const user = new User({
+      tenantId,
+      email,
+      password,
+      firstName,
+      lastName,
+      roles,
+      clientIds,
+      hireDate: new Date(),
+      metadata,
+    });
+
+    await user.save();
+
+    await Tenant.findByIdAndUpdate(tenantId, {
+      $addToSet: { userIds: user._id },
+      $inc: { "usage.users.current": 1 },
+    });
+
+    if (clientIds.length > 0) {
+      try {
+        await addUserToClientUsuarios({ tenantId, clientId: clientIds[0], userId: user._id as Types.ObjectId });
+      } catch (e) {
+        console.warn("registro: no se pudo agregar el usuario al cliente:", e);
+      }
+    }
+
+    res.status(201).json({ success: true, message: "Registro completado correctamente" });
+  } catch (error: any) {
+    console.error("registro error:", error);
+    if (error?.code === 11000) {
+      res.status(409).json({ error: "El email ya se encuentra registrado" });
+      return;
+    }
     res.status(500).json({ error: "Internal server error" });
   }
 });
