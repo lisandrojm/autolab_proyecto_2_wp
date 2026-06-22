@@ -319,30 +319,35 @@ export const RegistroPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 pb-10">
-      <div className="max-w-5xl mx-auto px-6 pt-8">
-        <h1 className="text-3xl font-light text-gray-100">Registro</h1>
-        <p className="text-center text-sm text-red-400 -mt-6 mb-6">Los campos marcados con '*' son obligatorios</p>
-
-        {/* Tabs estilo modal */}
-        <div className="flex border-b border-gray-700 mb-6">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setActiveTab(t.key)}
-              className={`flex-1 py-3 text-sm font-bold border-b-2 transition-all ${
-                activeTab === t.key ? "border-blue-500 text-blue-400 bg-blue-500/5" : "border-transparent text-gray-400 hover:text-gray-200"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
+    <div className="h-screen flex flex-col bg-gray-900 text-gray-100">
+      {/* Header fijo con los tabs */}
+      <div className="shrink-0 border-b border-gray-800">
+        <div className="max-w-5xl mx-auto px-6 pt-6">
+          <h1 className="text-3xl font-light text-gray-100">Registro</h1>
+          <p className="text-center text-sm text-red-400 -mt-6 mb-4">Los campos marcados con '*' son obligatorios</p>
+          <div className="flex">
+            {tabs.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setActiveTab(t.key)}
+                className={`flex-1 py-3 text-sm font-bold border-b-2 transition-all ${
+                  activeTab === t.key ? "border-blue-500 text-blue-400 bg-blue-500/5" : "border-transparent text-gray-400 hover:text-gray-200"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
+      </div>
 
-        {error && <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>}
+      {/* Contenido scrolleable */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-5xl mx-auto px-6 py-6">
+          {error && <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>}
 
-        <form autoComplete="off" onSubmit={(e) => e.preventDefault()}>
+          <form autoComplete="off" onSubmit={(e) => e.preventDefault()}>
           {/* General */}
           {activeTab === "general" && (
             <div className="space-y-5">
@@ -539,16 +544,22 @@ export const RegistroPage: React.FC = () => {
               </div>
             </div>
           )}
-        </form>
+          </form>
+        </div>
+      </div>
 
-        <button
-          type="button"
-          onClick={handleNext}
-          disabled={submitting}
-          className="w-full mt-8 py-4 rounded-lg text-center text-white font-medium tracking-wide uppercase bg-blue-600 hover:bg-blue-700 disabled:opacity-60 transition-colors"
-        >
-          {submitting ? "Enviando…" : activeTab === "bancarios" ? "Registrarse" : "Siguiente"}
-        </button>
+      {/* Footer fijo con el botón */}
+      <div className="shrink-0 border-t border-gray-800">
+        <div className="max-w-5xl mx-auto px-6 py-4">
+          <button
+            type="button"
+            onClick={handleNext}
+            disabled={submitting}
+            className="w-full py-4 rounded-lg text-center text-white font-medium tracking-wide uppercase bg-blue-600 hover:bg-blue-700 disabled:opacity-60 transition-colors"
+          >
+            {submitting ? "Enviando…" : activeTab === "bancarios" ? "Registrarse" : "Siguiente"}
+          </button>
+        </div>
       </div>
     </div>
   );
