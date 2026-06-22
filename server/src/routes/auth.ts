@@ -600,7 +600,7 @@ router.get("/registro-info", async (req, res) => {
       return;
     }
 
-    const types = ["genero", "tipo-documento", "nivel-estudio", "nacionalidad", "pais", "obra-social"];
+    const types = ["genero", "tipo-documento", "nivel-estudio", "nacionalidad", "pais", "obra-social", "banco"];
     const items = await Info.find({ type: { $in: types } }).sort({ name: 1 }).lean();
     const pick = (t: string) => items.filter((i) => i.type === t).map((i) => ({ id: i.data?.id, name: i.name }));
     const nacionalidades = pick("nacionalidad").length > 0 ? pick("nacionalidad") : pick("pais");
@@ -613,6 +613,7 @@ router.get("/registro-info", async (req, res) => {
       nivelesEstudio: pick("nivel-estudio"),
       nacionalidades,
       obrasSociales: pick("obra-social"),
+      bancos: pick("banco"),
       rolesFrame,
     });
   } catch (error) {
@@ -690,7 +691,7 @@ router.post("/registro", async (req, res) => {
       telefono2: body.telefono2 || undefined,
       visa: !!body.visa,
       // Datos bancarios
-      banco: body.banco || undefined,
+      bancoId: num(body.bancoId),
       tipoDeCuentaBancaria: body.tipoDeCuentaBancaria || undefined,
       cbu: body.cbu || undefined,
       aliasBancario: body.aliasBancario || undefined,

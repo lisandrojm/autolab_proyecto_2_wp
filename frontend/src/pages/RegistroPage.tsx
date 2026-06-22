@@ -36,7 +36,7 @@ interface RegistroForm {
   telefono2: string;
   visa: boolean;
   // Bancarios
-  banco: string;
+  bancoId: string;
   tipoDeCuentaBancaria: string;
   cbu: string;
   aliasBancario: string;
@@ -68,7 +68,7 @@ const emptyForm: RegistroForm = {
   telefono: "",
   telefono2: "",
   visa: false,
-  banco: "",
+  bancoId: "",
   tipoDeCuentaBancaria: "",
   cbu: "",
   aliasBancario: "",
@@ -147,6 +147,7 @@ export const RegistroPage: React.FC = () => {
   const [nivelesEstudio, setNivelesEstudio] = useState<InfoOption[]>([]);
   const [nacionalidades, setNacionalidades] = useState<InfoOption[]>([]);
   const [obrasSociales, setObrasSociales] = useState<InfoOption[]>([]);
+  const [bancos, setBancos] = useState<InfoOption[]>([]);
   const [rolesFrame, setRolesFrame] = useState<InfoOption[]>([]);
 
   const [loading, setLoading] = useState(true);
@@ -179,6 +180,7 @@ export const RegistroPage: React.FC = () => {
         setNivelesEstudio(data.nivelesEstudio || []);
         setNacionalidades(data.nacionalidades || []);
         setObrasSociales(data.obrasSociales || []);
+        setBancos(data.bancos || []);
         setRolesFrame(data.rolesFrame || []);
       } catch {
         if (!cancelled) setInvalidToken(true);
@@ -263,7 +265,7 @@ export const RegistroPage: React.FC = () => {
         telefono: form.telefono,
         telefono2: form.telefono2,
         visa: form.visa,
-        banco: form.banco,
+        bancoId: form.bancoId,
         tipoDeCuentaBancaria: form.tipoDeCuentaBancaria,
         cbu: form.cbu,
         aliasBancario: form.aliasBancario,
@@ -514,7 +516,7 @@ export const RegistroPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className={labelClass}>Banco *</label>
-                  <input className={fieldClass} autoComplete="off" value={form.banco} onChange={(e) => set("banco", e.target.value)} />
+                  <SearchableSelect title="Banco" value={form.bancoId} options={bancos} onChange={(v) => set("bancoId", v)} />
                 </div>
                 <div>
                   <label className={labelClass}>Tipo de cuenta *</label>
