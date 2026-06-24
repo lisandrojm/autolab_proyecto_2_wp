@@ -1,0 +1,59 @@
+import mongoose, { Schema, Document, Types } from "mongoose";
+
+export interface IRelease extends Document {
+  tenantId: Types.ObjectId;
+  name: string;
+  version: string;
+  description?: string;
+  fileUrl?: string;
+  fileName?: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const releaseSchema = new Schema<IRelease>(
+  {
+    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: 1,
+      maxlength: 150,
+    },
+    version: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: 1,
+      maxlength: 50,
+    },
+    description: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: 2000,
+    },
+    fileUrl: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    fileName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
+  },
+  { timestamps: true, collection: "release" },
+);
+
+releaseSchema.index({ tenantId: 1, isActive: 1 });
+
+export const Release = mongoose.model<IRelease>("Release", releaseSchema);

@@ -5,7 +5,7 @@ import { ClientSelector } from "./ClientSelector";
 import { ClientContextMenu } from "./ClientContextMenu";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket } from "@fortawesome/free-solid-svg-icons";
 import { Logo } from "../components/ui/Logo";
 import axios from "../api/axiosConfig";
 import { SettingsModal } from "./SettingsModal";
@@ -157,6 +157,7 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("config_vacations:view")) base.push({ path: "/vacations-rules", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
       if (hasPermission("config_holidays:view")) base.push({ path: "/holidays", icon: faCalendar, label: "Feriados", scope: "global" });
       if (hasPermission("config_pdf_templates:view")) base.push({ path: "/pdfs", icon: faFilePdf, label: "Plantillas PDF", scope: "global" });
+      if (hasPermission("config_releases:view")) base.push({ path: "/releases", icon: faRocket, label: "Releases", scope: "global" });
       base.push({ path: "/categorias-sat", icon: faListCheck, label: "Categorías SAT", scope: "global" });
       base.push({ path: "/bancos", icon: faBuildingColumns, label: "Bancos", scope: "global" });
       base.push({ path: "/obras-sociales", icon: faBriefcaseMedical, label: "Obras Sociales", scope: "global" });
@@ -225,7 +226,7 @@ export const MobileNavbar: React.FC = () => {
 
     const generalAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ["/tenants"].includes(item.path)) : adminItems.filter((item) => ["/admin/projects", "/admin/sedes", "/admin/contracts", "/orders", "/vacations", "/requests", "/calendar-events", "/employee-profiles", "/documents"].includes(item.path))).sort(byLabel);
 
-    const configPaths = ["/requests/config", "/order-types", "/shifts", "/vacations-rules", "/holidays", "/pdfs", "/funciones-frame", "/categorias-sat", "/clients", "/contratos-frame", "/centros-costo", "/bancos", "/obras-sociales"];
+    const configPaths = ["/requests/config", "/order-types", "/shifts", "/vacations-rules", "/holidays", "/pdfs", "/releases", "/funciones-frame", "/categorias-sat", "/clients", "/contratos-frame", "/centros-costo", "/bancos", "/obras-sociales"];
     // "Mi Perfil" se incluye como un item más para que entre en el orden alfabético
     const profileItem = { path: "__profile__", icon: faIdCard, label: "Mi Perfil", scope: "global" as const };
     const configItems = [...adminItems.filter((item) => configPaths.includes(item.path)), profileItem].sort(byLabel);

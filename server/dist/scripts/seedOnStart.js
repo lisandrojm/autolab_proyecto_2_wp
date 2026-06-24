@@ -468,7 +468,7 @@ export async function seedOnStart() {
         // ---- ROLES ----
         console.log("👥 Seeding Roles...");
         // 1. Admin (Sistema)
-        const adminPerms = ["client:view", "admin_clients:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", "admin_areas:view", "admin_positions:view", "admin_levels:view", "admin_users:view", "admin_roles:view", "config_orders:view", "config_vacations:view", "config_activity_logs:view", "config_pdf_templates:view", "config_holidays:view", "mobile_collaborator:view"];
+        const adminPerms = ["client:view", "admin_clients:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", "admin_areas:view", "admin_positions:view", "admin_levels:view", "admin_users:view", "admin_roles:view", "config_orders:view", "config_vacations:view", "config_activity_logs:view", "config_pdf_templates:view", "config_releases:view", "config_holidays:view", "mobile_collaborator:view"];
         await ensureRole(tenantId, "Admin", adminPerms, "Rol de administrador del sistema", false, true);
         // 2. Responsable de Proyecto (Sistema)
         const responsablePerms = ["client:view", "admin_clients:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", "mobile_collaborator:view", "project_responsible:eligible"];

@@ -47,7 +47,7 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
     label: "Configuración",
     icon: faCog,
     description: "Configuración de módulos y plantillas",
-    permissions: ["config_orders:view", "config_vacations:view", "config_activity_logs:view", "config_pdf_templates:view", "config_holidays:view"],
+    permissions: ["config_orders:view", "config_vacations:view", "config_activity_logs:view", "config_pdf_templates:view", "config_releases:view", "config_holidays:view"],
   },
   mobile: {
     label: "Mobile",
@@ -82,6 +82,7 @@ const MODULE_LABELS: Record<string, string> = {
   "config_vacations:view": "Vacaciones (Config)",
   "config_activity_logs:view": "Novedades (Config)",
   "config_pdf_templates:view": "Plantillas PDF",
+  "config_releases:view": "Releases",
   "config_holidays:view": "Feriados (Config)",
 
   "mobile_collaborator:view": "Colaborador",
