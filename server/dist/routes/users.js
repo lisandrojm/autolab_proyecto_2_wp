@@ -178,39 +178,44 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
         const filter = andConditions.length > 0 ? { $and: andConditions } : {};
         const limitNum = Number(limit) || 50;
         const skip = (Number(page) - 1) * limitNum;
+        // Modo liviano: para lookups (id -> nombre) que no necesitan el detalle
+        // de proyectos/contratos. Evita el populate anidado pesado que de otro
+        // modo escala con (usuarios x proyectos x contratos) y produce timeouts.
+        const lightweight = req.query.lightweight === "true";
         // Debug model names if needed
         // console.log("Registered models:", mongoose.modelNames());
-        const query = User.find(filter)
-            .select("-password")
-            .populate({ path: "roles", select: "name", model: Role })
-            .populate({
-            path: "projectIds",
-            select: "name clientId",
-            model: Project,
-            populate: {
-                path: "clientId",
-                select: "name",
-                model: Client,
-            },
-        })
-            .populate({ path: "clientIds", select: "name", model: Client })
-            .populate({ path: "tenantId", select: "name", model: Tenant })
-            .populate({
-            path: "metadata.projects",
-            model: UserProject,
-            select: "projectId positionId levelId areaId nombre_rol_frame nombre_proyecto contracts",
-            populate: [
-                { path: "positionId", select: "name", model: Position },
-                { path: "levelId", select: "name", model: Level },
-                { path: "areaId", select: "name", model: Area },
-                { path: "projectId", select: "name status teamConfig coordinatorAssignments clientId", model: Project },
-            ],
-        })
-            .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame })
-            .sort({ _id: -1 })
-            .skip(skip)
-            .limit(limitNum)
-            .lean();
+        let query = lightweight
+            ? User.find(filter).select("firstName lastName email metadata.id metadata.activo metadata.isSolicitud roles").populate({ path: "roles", select: "name", model: Role })
+            : User.find(filter)
+                .select("-password")
+                .populate({ path: "roles", select: "name", model: Role })
+                .populate({
+                path: "projectIds",
+                select: "name clientId",
+                model: Project,
+                populate: {
+                    path: "clientId",
+                    select: "name",
+                    model: Client,
+                },
+            })
+                .populate({ path: "clientIds", select: "name", model: Client })
+                .populate({ path: "tenantId", select: "name", model: Tenant })
+                .populate({
+                path: "metadata.projects",
+                model: UserProject,
+                select: "projectId positionId levelId areaId nombre_rol_frame nombre_proyecto contracts",
+                populate: [
+                    { path: "positionId", select: "name", model: Position },
+                    { path: "levelId", select: "name", model: Level },
+                    { path: "areaId", select: "name", model: Area },
+                    // NOTA: no traer teamConfig/coordinatorAssignments aquí: son arrays
+                    // potencialmente enormes que no se usan en esta lista y disparan timeouts.
+                    { path: "projectId", select: "name status clientId", model: Project },
+                ],
+            })
+                .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame });
+        query = query.sort({ _id: -1 }).skip(skip).limit(limitNum).lean();
         const [users, total] = await Promise.all([query.exec(), User.countDocuments(filter).exec()]);
         // Filter out projects that no longer exist for each user
         const cleanedUsers = users.map((u) => {

@@ -1054,7 +1054,7 @@ export const ProjectTeamPage: React.FC = () => {
       setProject(updatedProject);
       setTeamConfig(updatedProject.teamConfig || []);
 
-      const usersData = await usersAPI.list({ limit: 10000 });
+      const usersData = await usersAPI.list({ projectId: project._id, limit: 500 });
       setAllUsers(usersData.users);
 
       setSelectedUserForWizard(null);

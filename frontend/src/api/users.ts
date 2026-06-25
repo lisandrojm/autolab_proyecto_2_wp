@@ -279,6 +279,7 @@ class UsersAPI {
       projectId?: string;
       metadataActivo?: string;
       isSolicitud?: string;
+      lightweight?: boolean;
     } = {},
   ): Promise<UsersListResponse> {
     const searchParams = new URLSearchParams();
@@ -291,6 +292,7 @@ class UsersAPI {
     if (params.projectId) searchParams.append("projectId", params.projectId);
     if (params.metadataActivo) searchParams.append("metadataActivo", params.metadataActivo);
     if (params.isSolicitud) searchParams.append("isSolicitud", params.isSolicitud);
+    if (params.lightweight) searchParams.append("lightweight", "true");
 
     const { data } = await axios.get(`/users?${searchParams.toString()}`, { headers: this.getHeaders() });
 

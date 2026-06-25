@@ -287,8 +287,9 @@ export const UsersPage: React.FC = () => {
 
   const fetchUserLookup = async () => {
     try {
-      // Fetch all users for lookup map (limit 10000 to get all)
-      const response = await usersAPI.list({ limit: 10000, page: 1 });
+      // Fetch all users for lookup map (limit 10000 to get all).
+      // lightweight: solo id/nombre, sin el populate pesado de proyectos/contratos.
+      const response = await usersAPI.list({ limit: 10000, page: 1, lightweight: true });
       const map = new Map<number | string, string>();
       response.users.forEach((u) => {
         const metaId = (u.metadata as any)?.id;
