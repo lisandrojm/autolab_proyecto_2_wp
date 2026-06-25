@@ -460,7 +460,8 @@ export const HolidaysPage: React.FC = () => {
                 return (
                   <Card
                     key={holiday._id}
-                    className="hover:scale-105 hover:shadow-lg transition-all duration-200 border-t-4 border-t-blue-500"
+                    onClick={canManage ? () => openEdit(holiday) : undefined}
+                    className="cursor-pointer hover:scale-[1.03] hover:shadow-lg transition-all duration-200"
                     header={{
                       title: holiday.name,
                       subtitle: dateStr,
@@ -468,10 +469,10 @@ export const HolidaysPage: React.FC = () => {
                       badges: [
                         {
                           text: holiday.type || "Nacional",
-                          variant: holiday.type === "Nacional" 
-                            ? "primary" 
-                            : holiday.type === "Feriado Puente" 
-                            ? "warning" 
+                          variant: holiday.type === "Nacional"
+                            ? "blue"
+                            : holiday.type === "Feriado Puente"
+                            ? "warning"
                             : "default",
                         },
                       ],

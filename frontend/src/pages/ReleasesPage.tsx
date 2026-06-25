@@ -6,12 +6,14 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faEdit, faTrash, faRocket, faCheckCircle, faTimesCircle, faDownload, faPaperclip, faUpload } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faEdit, faTrash, faRocket, faDownload, faPaperclip, faUpload, faEye } from "@fortawesome/free-solid-svg-icons";
 
 import { releasesAPI, Release } from "../api/release";
 
 import Swal from "sweetalert2";
 import { Modal } from "../components/ui/Modal";
+import { ReleaseViewerModal } from "../components/releases/ReleaseViewerModal";
+import { ViewToggle, ViewMode } from "../components/ui/ViewToggle";
 
 interface ReleaseFormData {
   name: string;
@@ -36,10 +38,34 @@ export function ReleasesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterActive, setFilterActive] = useState<"all" | "active" | "inactive">("all");
 
+  // Vista (Tabla vs Tarjetas)
+  const [viewMode, setViewMode] = useState<ViewMode>("cards");
+  const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
+  useEffect(() => {
+    const handleResize = () => {
+      const isNowLarge = window.innerWidth >= 1024;
+      setIsLarge(isNowLarge);
+      if (!isNowLarge) setViewMode("cards");
+    };
+    if (window.innerWidth >= 1024) {
+      const saved = localStorage.getItem("releasesViewMode");
+      if (saved === "table" || saved === "cards") setViewMode(saved as ViewMode);
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+  useEffect(() => {
+    if (isLarge) localStorage.setItem("releasesViewMode", viewMode);
+  }, [viewMode, isLarge]);
+  const effectiveViewMode: ViewMode = isLarge ? viewMode : "cards";
+
   // modal
   const [showModal, setShowModal] = useState(false);
   const [editingRelease, setEditingRelease] = useState<Release | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // viewer
+  const [viewingRelease, setViewingRelease] = useState<Release | null>(null);
 
   // form
   const [formData, setFormData] = useState<ReleaseFormData>(EMPTY_FORM);
@@ -170,9 +196,9 @@ export function ReleasesPage() {
 
   const getBadge = (release: Release) => {
     if (release.isActive) {
-      return { text: "Activo", color: "emerald", icon: faCheckCircle };
+      return { text: "Activo", variant: "green" as const };
     }
-    return { text: "Inactivo", color: "slate", icon: faTimesCircle };
+    return { text: "Inactivo", variant: "destructive" as const };
   };
 
   return (
@@ -188,22 +214,27 @@ export function ReleasesPage() {
         </button>
       }
       searchAndFilters={
-        <SearchAndFilters
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          searchPlaceholder="Buscar por nombre, versión o descripción..."
-          filters={[
-            {
-              value: filterActive,
-              onChange: (v) => setFilterActive(v as any),
-              options: [
-                { value: "all", label: "Todos" },
-                { value: "active", label: "Activos" },
-                { value: "inactive", label: "Inactivos" },
-              ],
-            },
-          ]}
-        />
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
+          <div className="flex-1 w-full">
+            <SearchAndFilters
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              searchPlaceholder="Buscar por nombre, versión o descripción..."
+              filters={[
+                {
+                  value: filterActive,
+                  onChange: (v) => setFilterActive(v as any),
+                  options: [
+                    { value: "all", label: "Todos" },
+                    { value: "active", label: "Activos" },
+                    { value: "inactive", label: "Inactivos" },
+                  ],
+                },
+              ]}
+            />
+          </div>
+          {isLarge && <ViewToggle value={viewMode} onChange={setViewMode} />}
+        </div>
       }
     >
       {loading ? (
@@ -212,6 +243,7 @@ export function ReleasesPage() {
         </div>
       ) : (
         <>
+          {effectiveViewMode === "cards" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
             {filteredReleases.map((release) => (
               <Card
@@ -234,6 +266,14 @@ export function ReleasesPage() {
                   actions: [
                     ...(release.fileUrl
                       ? [
+                          {
+                            icon: faEye,
+                            title: "Visualizar",
+                            onClick: (e: any) => {
+                              e.stopPropagation();
+                              setViewingRelease(release);
+                            },
+                          },
                           {
                             icon: faDownload,
                             title: "Descargar actual",
@@ -278,6 +318,62 @@ export function ReleasesPage() {
               }}
             />
           </div>
+          ) : (
+            <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg mx-0.5 lg:mx-0">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-900/50">
+                  <tr>
+                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Versión</th>
+                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
+                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Archivo</th>
+                    <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                  {filteredReleases.map((release) => (
+                    <tr key={release._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20 cursor-pointer" onClick={() => openEdit(release)}>
+                      <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">{release.name}</td>
+                      <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{release.version}</td>
+                      <td className="px-5 py-3 text-sm whitespace-nowrap">
+                        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${release.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"}`}>{release.isActive ? "Activo" : "Inactivo"}</span>
+                      </td>
+                      <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
+                        {release.fileName ? (
+                          <span className="flex items-center gap-1 truncate max-w-[220px]" title={release.fileName}>
+                            <FontAwesomeIcon icon={faPaperclip} className="h-3 w-3" />
+                            <span className="truncate">{release.fileName}</span>
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="px-5 py-3 text-sm text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-2">
+                          {release.fileUrl && (
+                            <>
+                              <button onClick={() => setViewingRelease(release)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Visualizar">
+                                <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
+                              </button>
+                              <button onClick={() => handleDownload(release)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Descargar actual">
+                                <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
+                          <button onClick={() => openEdit(release)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Editar">
+                            <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                          </button>
+                          <button onClick={() => handleDelete(release)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors" title="Eliminar">
+                            <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {filteredReleases.length === 0 && (
             <EmptyState
@@ -357,10 +453,16 @@ export function ReleasesPage() {
                 </button>
                 <span className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-[260px]">{selectedFile ? selectedFile.name : editingRelease?.fileName ? `Actual: ${editingRelease.fileName}` : "Ningún archivo seleccionado"}</span>
                 {editingRelease?.fileUrl && (
-                  <button type="button" onClick={() => handleDownload(editingRelease)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400">
-                    <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
-                    Descargar actual
-                  </button>
+                  <>
+                    <button type="button" onClick={() => setViewingRelease(editingRelease)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                      <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
+                      Visualizar
+                    </button>
+                    <button type="button" onClick={() => handleDownload(editingRelease)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                      <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
+                      Descargar actual
+                    </button>
+                  </>
                 )}
               </div>
               <input ref={fileInputRef} type="file" accept=".doc,.docx,.pdf" className="hidden" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} />
@@ -369,6 +471,9 @@ export function ReleasesPage() {
           </div>
         </form>
       </Modal>
+
+      {/* VISOR DE ARCHIVO */}
+      <ReleaseViewerModal release={viewingRelease} isOpen={!!viewingRelease} onClose={() => setViewingRelease(null)} />
     </PageLayout>
   );
 }

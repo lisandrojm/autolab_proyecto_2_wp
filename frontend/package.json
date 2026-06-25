@@ -26,6 +26,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
+    "docx-preview": "^0.3.7",
     "i18next": "^23.11.5",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.344.0",

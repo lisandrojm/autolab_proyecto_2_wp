@@ -3,6 +3,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileContract, faDownload, faUpload, faPlus, faEdit, faTrash, faTimes, faFileExcel } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
+import { Card } from "../components/ui/Card";
+import { ViewToggle, ViewMode } from "../components/ui/ViewToggle";
 import { sweetAlert } from "../utils/sweetAlert";
 import { fuzzyMatch } from "../utils/searchHelpers";
 import { contratoFrameAPI, ContratoFrameItem } from "../api/contratosFrame";
@@ -13,6 +15,27 @@ export const ContratosFramePage: React.FC = () => {
   const [items, setItems] = useState<ContratoFrameItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+
+  // Vista (Tabla vs Tarjetas)
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
+  useEffect(() => {
+    const handleResize = () => {
+      const isNowLarge = window.innerWidth >= 1024;
+      setIsLarge(isNowLarge);
+      if (!isNowLarge) setViewMode("cards");
+    };
+    if (window.innerWidth >= 1024) {
+      const saved = localStorage.getItem("contratosViewMode");
+      if (saved === "table" || saved === "cards") setViewMode(saved as ViewMode);
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+  useEffect(() => {
+    if (isLarge) localStorage.setItem("contratosViewMode", viewMode);
+  }, [viewMode, isLarge]);
+  const effectiveViewMode: ViewMode = isLarge ? viewMode : "cards";
 
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<ContratoFrameItem | null>(null);
@@ -160,8 +183,9 @@ export const ContratosFramePage: React.FC = () => {
 
   return (
     <PageLayout title="Contratos" subtitle="Catálogo de contratos de FRAME. Cargá registros manualmente o importá un Excel." faIcon={{ icon: faFileContract }} headerActions={headerActions}>
-      <div className="mb-4">
+      <div className="mb-4 flex flex-col md:flex-row gap-4 items-center justify-between">
         <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar contrato..." className="w-full max-w-md px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white" />
+        {isLarge && <ViewToggle value={viewMode} onChange={setViewMode} />}
       </div>
 
       {loading ? (
@@ -169,6 +193,39 @@ export const ContratosFramePage: React.FC = () => {
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-gray-500 dark:text-gray-400 text-sm">
           {items.length === 0 ? 'Todavía no hay contratos. Cargá uno con "Nuevo" o importá un Excel.' : "No hay resultados para la búsqueda."}
+        </div>
+      ) : effectiveViewMode === "cards" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
+          {filtered.map((item) => (
+            <Card
+              key={item._id}
+              onClick={() => openEdit(item)}
+              className="cursor-pointer hover:scale-[1.03] hover:shadow-lg transition-all duration-200"
+              header={{
+                title: item.name,
+                icon: faFileContract,
+                badges: item.externalId ? [{ text: `ID ${item.externalId}`, variant: "blue" }] : [],
+              }}
+              footer={{
+                actions: [
+                  { icon: faEdit, onClick: (e) => { e.stopPropagation(); openEdit(item); }, title: "Editar", variant: "default" },
+                  { icon: faTrash, onClick: (e) => { e.stopPropagation(); handleDelete(item); }, title: "Eliminar", variant: "default" },
+                ],
+              }}
+            >
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Jornadas</label>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">{item.data?.cantidadJornadas ?? "—"}</div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Mult. Diario</label>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">{item.data?.multiplicadorDiario ?? "—"}</div>
+                </div>
+              </div>
+            </Card>
+          ))}
+          <Card variant="create" onClick={openCreate} header={{ title: "Nuevo", subtitle: "Agregar contrato", icon: faFileContract }} />
         </div>
       ) : (
         <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">

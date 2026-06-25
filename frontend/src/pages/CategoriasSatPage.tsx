@@ -5,9 +5,11 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { EmptyState } from "../components/ui/EmptyState";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
+import { Card } from "../components/ui/Card";
+import { ViewToggle, ViewMode } from "../components/ui/ViewToggle";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faListCheck, faChevronUp, faChevronDown, faDownload, faUpload, faFileExcel, faTimes, faPlus, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faListCheck, faChevronUp, faChevronDown, faDownload, faUpload, faFileExcel, faTimes, faPlus, faEdit, faTrash, faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import { useAuthStore } from "../stores/authStore";
 
 type SortField = "numeroCategoria" | "nombre" | "sueldoBruto" | "neto" | "codigoAfip" | "presentismo" | "sueldoBasico" | "sueldoAdicional" | "fechaActualizacion";
@@ -33,6 +35,27 @@ export const CategoriasSatPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<SortField>("numeroCategoria");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  // Vista (Tabla vs Tarjetas)
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
+  useEffect(() => {
+    const handleResize = () => {
+      const isNowLarge = window.innerWidth >= 1024;
+      setIsLarge(isNowLarge);
+      if (!isNowLarge) setViewMode("cards");
+    };
+    if (window.innerWidth >= 1024) {
+      const saved = localStorage.getItem("categoriasSatViewMode");
+      if (saved === "table" || saved === "cards") setViewMode(saved as ViewMode);
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+  useEffect(() => {
+    if (isLarge) localStorage.setItem("categoriasSatViewMode", viewMode);
+  }, [viewMode, isLarge]);
+  const effectiveViewMode: ViewMode = isLarge ? viewMode : "cards";
 
   const { hasPermission } = useAuthStore();
   const canManage = hasPermission("config_holidays:view");
@@ -380,8 +403,11 @@ export const CategoriasSatPage: React.FC = () => {
         </div>
       }
       searchAndFilters={
-        <div className="flex-1 w-full">
-          <SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar por nombre, categoría, código AFIP..." />
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
+          <div className="flex-1 w-full">
+            <SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar por nombre, categoría, código AFIP..." />
+          </div>
+          {isLarge && <ViewToggle value={viewMode} onChange={setViewMode} />}
         </div>
       }
       modal={{
@@ -486,6 +512,63 @@ export const CategoriasSatPage: React.FC = () => {
               : undefined
           }
         />
+      ) : effectiveViewMode === "cards" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
+          {filtered.map((cat) => (
+            <Card
+              key={cat._id}
+              onClick={canManage ? () => openEdit(cat) : undefined}
+              className="cursor-pointer hover:scale-[1.03] hover:shadow-lg transition-all duration-200"
+              header={{
+                title: cat.data?.nombre || cat.name || "—",
+                subtitle: cat.data?.codigoAfip ? `Cód. AFIP ${cat.data.codigoAfip}` : undefined,
+                icon: faListCheck,
+                badges: [{ text: `Categoría ${cat.data?.numeroCategoria ?? "—"}`, variant: "blue" }],
+              }}
+              footer={
+                canManage
+                  ? {
+                      leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">Actualizado: {formatDate(cat.data?.fechaActualizacion)}</span>,
+                      actions: [
+                        { icon: faEdit, onClick: (e) => { e.stopPropagation(); openEdit(cat); }, title: "Editar", variant: "default" },
+                        { icon: faTrash, onClick: (e) => { e.stopPropagation(); handleDelete(cat); }, title: "Eliminar", variant: "default" },
+                      ],
+                    }
+                  : undefined
+              }
+            >
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Sueldo Básico</label>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">{formatCurrency(cat.data?.sueldoBasico)}</div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Adicional</label>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">{formatCurrency(cat.data?.sueldoAdicional)}</div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Sueldo Bruto</label>
+                  <div className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">{formatCurrency(cat.data?.sueldoBruto)}</div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Neto</label>
+                  <div className="text-sm font-bold text-blue-700 dark:text-blue-400">{formatCurrency(cat.data?.neto)}</div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Presentismo</label>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">{formatCurrency(cat.data?.presentismo)}</div>
+                </div>
+              </div>
+            </Card>
+          ))}
+          {canManage && (
+            <Card
+              variant="create"
+              onClick={openCreate}
+              header={{ title: "Nueva Categoría", subtitle: "Agregar categoría manualmente", icon: faListCheck }}
+            />
+          )}
+        </div>
       ) : (
         <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm mx-0.5 lg:mx-0">
           <div className="overflow-x-auto">

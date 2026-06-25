@@ -42,6 +42,14 @@ export const releasesAPI = {
     await axios.delete(`/releases/${id}`);
   },
 
+  // Trae el archivo como Blob (autenticado) para previsualizarlo en la app.
+  getFileBlob: async (release: Release): Promise<Blob> => {
+    const response = await axios.get(`/releases/${release._id}/download`, {
+      responseType: "blob",
+    });
+    return response.data as Blob;
+  },
+
   download: async (release: Release): Promise<void> => {
     const response = await axios.get(`/releases/${release._id}/download`, {
       responseType: "blob",
