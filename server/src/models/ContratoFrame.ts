@@ -9,6 +9,9 @@ export interface IContratoFrame extends Document {
     rutaArchivo: string;
     cantidadJornadas: number;
     multiplicadorDiario: number;
+    fileUrl: string;
+    fileName: string;
+    esTiempoIndeterminado: boolean;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -24,6 +27,9 @@ const contratoFrameSchema = new Schema<IContratoFrame>(
       rutaArchivo: { type: String },
       cantidadJornadas: { type: Number },
       multiplicadorDiario: { type: Number },
+      fileUrl: { type: String, default: "" },
+      fileName: { type: String, default: "" },
+      esTiempoIndeterminado: { type: Boolean, default: false },
     },
   },
   {

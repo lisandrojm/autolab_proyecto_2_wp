@@ -1,11 +1,31 @@
 import { Router, Response } from "express";
 import multer from "multer";
+import path from "path";
+import fs from "fs";
 import xlsx from "xlsx";
 import { ContratoFrame } from "../models/ContratoFrame.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
+
+// Multer config — almacenamiento en disco para el archivo del contrato
+const fileStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    const dest = path.join(process.cwd(), "storage", "contratos");
+    fs.mkdirSync(dest, { recursive: true });
+    cb(null, dest);
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, "contrato-" + uniqueSuffix + ext);
+  },
+});
+const fileUpload = multer({
+  storage: fileStorage,
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB
+});
 
 const parseNum = (val: any): number => {
   if (val === undefined || val === null || val === "") return 0;
@@ -43,6 +63,26 @@ router.get("/template", authenticateToken, async (_req: AuthenticatedRequest, re
   } catch (error) {
     console.error("Download contratos-frame template error:", error);
     res.status(500).json({ error: "No se pudo generar la plantilla" });
+  }
+});
+
+// GET /:id/download - descargar/previsualizar el archivo del contrato
+router.get("/:id/download", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const item = await ContratoFrame.findById(req.params.id);
+    if (!item || !item.data?.fileUrl) {
+      res.status(404).json({ error: "Archivo no encontrado" });
+      return;
+    }
+    const diskPath = path.join(process.cwd(), item.data.fileUrl.replace(/^\//, ""));
+    if (!fs.existsSync(diskPath)) {
+      res.status(404).json({ error: "Archivo no encontrado en el almacenamiento" });
+      return;
+    }
+    res.download(diskPath, item.data.fileName || path.basename(diskPath));
+  } catch (error) {
+    console.error("Download ContratoFrame file error:", error);
+    res.status(500).json({ error: "Error al descargar archivo" });
   }
 });
 
@@ -122,14 +162,15 @@ router.post("/import", authenticateToken, upload.single("file"), async (req: Aut
 });
 
 // POST / - crear
-router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.post("/", authenticateToken, fileUpload.single("file"), async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { nombre, externalId, cantidadJornadas, multiplicadorDiario, rutaArchivo } = req.body;
+    const { nombre, externalId, cantidadJornadas, multiplicadorDiario, rutaArchivo, esTiempoIndeterminado } = req.body;
     if (!nombre || !nombre.trim()) {
       res.status(400).json({ error: "El nombre es obligatorio" });
       return;
     }
     const idNum = externalId ? Number(externalId) : undefined;
+    const file = (req as any).file;
     const created = await ContratoFrame.create({
       name: nombre.trim(),
       externalId: externalId ? String(externalId).trim() : "",
@@ -139,6 +180,9 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
         rutaArchivo: String(rutaArchivo || "").trim(),
         cantidadJornadas: parseNum(cantidadJornadas),
         multiplicadorDiario: parseNum(multiplicadorDiario),
+        fileUrl: file ? `/storage/contratos/${file.filename}` : "",
+        fileName: file ? file.originalname : "",
+        esTiempoIndeterminado: esTiempoIndeterminado === "true" || esTiempoIndeterminado === true,
       },
     });
     res.status(201).json(created);
@@ -149,10 +193,10 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
 });
 
 // PUT /:id - actualizar
-router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.put("/:id", authenticateToken, fileUpload.single("file"), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { nombre, externalId, cantidadJornadas, multiplicadorDiario, rutaArchivo } = req.body;
+    const { nombre, externalId, cantidadJornadas, multiplicadorDiario, rutaArchivo, esTiempoIndeterminado } = req.body;
     const item = await ContratoFrame.findById(id);
     if (!item) {
       res.status(404).json({ error: "Contrato no encontrado" });
@@ -170,6 +214,20 @@ router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Res
     if (cantidadJornadas !== undefined) item.data.cantidadJornadas = parseNum(cantidadJornadas);
     if (multiplicadorDiario !== undefined) item.data.multiplicadorDiario = parseNum(multiplicadorDiario);
     if (rutaArchivo !== undefined) item.data.rutaArchivo = String(rutaArchivo).trim();
+    if (esTiempoIndeterminado !== undefined) item.data.esTiempoIndeterminado = esTiempoIndeterminado === "true" || esTiempoIndeterminado === true;
+
+    const file = (req as any).file;
+    if (file) {
+      // Eliminar archivo anterior si existía
+      if (item.data.fileUrl) {
+        const oldPath = path.join(process.cwd(), item.data.fileUrl.replace(/^\//, ""));
+        fs.promises.unlink(oldPath).catch(() => {});
+      }
+      item.data.fileUrl = `/storage/contratos/${file.filename}`;
+      item.data.fileName = file.originalname;
+    }
+
+    item.markModified("data");
     await item.save();
     res.json(item);
   } catch (error) {
@@ -181,11 +239,16 @@ router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Res
 // DELETE /:id - eliminar
 router.delete("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const result = await ContratoFrame.deleteOne({ _id: req.params.id });
-    if (result.deletedCount === 0) {
+    const item = await ContratoFrame.findById(req.params.id);
+    if (!item) {
       res.status(404).json({ error: "Contrato no encontrado" });
       return;
     }
+    if (item.data?.fileUrl) {
+      const diskPath = path.join(process.cwd(), item.data.fileUrl.replace(/^\//, ""));
+      fs.promises.unlink(diskPath).catch(() => {});
+    }
+    await item.deleteOne();
     res.json({ message: "Contrato eliminado correctamente" });
   } catch (error) {
     console.error("Delete ContratoFrame error:", error);
