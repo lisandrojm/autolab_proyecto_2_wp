@@ -334,8 +334,6 @@ export const ContratosFramePage: React.FC = () => {
               {field("Multiplicador Diario", "multiplicadorDiario", "number")}
             </div>
 
-            {field("ID Externo (opcional)", "externalId", "text", "ID de FRAME")}
-
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
