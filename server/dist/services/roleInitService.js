@@ -46,13 +46,22 @@ const ADMIN_PERMISSIONS = [
     "admin_positions:view", // Cargos
     "admin_levels:view", // Niveles
     "admin_users:view", // Usuarios
+    "admin_users_import:view", // Import Users WP
     // ──────────── Configuracion ────────────
     "config_orders:view", // Pedidos
+    "config_shifts:view", // Turnos
     "config_vacations:view", // Vacaciones
     "config_activity_logs:view", // Novedades
     "config_pdf_templates:view", // Plantillas PDF
     "config_releases:view", // Releases
     "config_holidays:view", // Feriados
+    "config_frame_functions:view", // Funciones FRAME
+    "config_categorias_sat:view", // Categorías SAT
+    "config_bancos:view", // Bancos
+    "config_obras_sociales:view", // Obras Sociales
+    "config_centros_costo:view", // Centros de Costos
+    "config_contratos_frame:view", // Contratos FRAME
+    "config_profile:view", // Mi Perfil
     // ──────────── Proyectos ────────────
 ];
 const MOBILE_COLLABORATOR_PERMISSIONS = [

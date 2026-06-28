@@ -8,6 +8,9 @@ const contratoFrameSchema = new Schema({
         rutaArchivo: { type: String },
         cantidadJornadas: { type: Number },
         multiplicadorDiario: { type: Number },
+        fileUrl: { type: String, default: "" },
+        fileName: { type: String, default: "" },
+        esTiempoIndeterminado: { type: Boolean, default: false },
     },
 }, {
     timestamps: true,

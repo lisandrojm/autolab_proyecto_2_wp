@@ -8,6 +8,9 @@ export interface IContratoFrame extends Document {
         rutaArchivo: string;
         cantidadJornadas: number;
         multiplicadorDiario: number;
+        fileUrl: string;
+        fileName: string;
+        esTiempoIndeterminado: boolean;
     };
     createdAt: Date;
     updatedAt: Date;
