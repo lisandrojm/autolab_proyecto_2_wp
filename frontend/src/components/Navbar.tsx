@@ -129,12 +129,12 @@ export const MobileNavbar: React.FC = () => {
       base.push({ path: "/tenants", icon: faBuilding, label: "Tenants", scope: "global", count: adminCounts.tenants }, { path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users }, { path: "/shifts", icon: faClock, label: "Turnos", scope: "global" }, { path: "/roles", icon: faUserShield, label: "Roles", scope: "global", count: adminCounts.roles }, { path: "/funciones-frame", icon: faUserShield, label: "Funciones FRAME", scope: "global" }, { path: "/areas", icon: faLayerGroup, label: "Áreas", scope: "global", count: adminCounts.areas }, { path: "/positions", icon: faUserTie, label: "Cargos", scope: "global", count: adminCounts.positions }, { path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels }, { path: "/clients", icon: faUsers, label: "Clientes", scope: "global", count: adminCounts.clients }, { path: "/categorias-sat", icon: faListCheck, label: "Categorías SAT", scope: "global" });
     } else {
       if (hasPermission("admin_roles:view")) base.push({ path: "/roles", icon: faUserShield, label: "Roles", scope: "global", count: adminCounts.roles });
-      if (hasPermission("admin_roles:view")) base.push({ path: "/funciones-frame", icon: faUserShield, label: "Funciones FRAME", scope: "global" });
+      if (hasPermission("config_frame_functions:view")) base.push({ path: "/funciones-frame", icon: faUserShield, label: "Funciones FRAME", scope: "global" });
       if (hasPermission("admin_areas:view")) base.push({ path: "/areas", icon: faLayerGroup, label: "Áreas", scope: "global", count: adminCounts.areas });
       if (hasPermission("admin_positions:view")) base.push({ path: "/positions", icon: faUserTie, label: "Cargos", scope: "global", count: adminCounts.positions });
       if (hasPermission("admin_levels:view")) base.push({ path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels });
       if (hasPermission("admin_users:view")) base.push({ path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users });
-      if (hasPermission("admin_users:view")) base.push({ path: "/users/import-wp", icon: faArrowUpRightFromSquare, label: "Import Users WP", scope: "global" });
+      if (hasPermission("admin_users_import:view")) base.push({ path: "/users/import-wp", icon: faArrowUpRightFromSquare, label: "Import Users WP", scope: "global" });
 
       // Admin GENERAL Items
       if (hasPermission("admin_clients:view")) base.push({ path: "/clients", icon: faUsers, label: "Clientes", scope: "global", count: adminCounts.clients });
@@ -152,16 +152,16 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("config_activity_logs:view")) base.push({ path: "/requests/config", icon: faFileText, label: "Novedades", scope: "global" });
 
       if (hasPermission("config_orders:view")) base.push({ path: "/order-types", icon: faShoppingCart, label: "Pedidos", scope: "global" });
-      if (hasPermission("admin_users:view")) base.push({ path: "/shifts", icon: faClock, label: "Turnos", scope: "global" });
+      if (hasPermission("config_shifts:view")) base.push({ path: "/shifts", icon: faClock, label: "Turnos", scope: "global" });
       if (hasPermission("config_vacations:view")) base.push({ path: "/vacations-rules", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
       if (hasPermission("config_holidays:view")) base.push({ path: "/holidays", icon: faCalendar, label: "Feriados", scope: "global" });
       if (hasPermission("config_pdf_templates:view")) base.push({ path: "/pdfs", icon: faFilePdf, label: "Plantillas PDF", scope: "global" });
       if (hasPermission("config_releases:view")) base.push({ path: "/releases", icon: faRocket, label: "Releases", scope: "global" });
-      base.push({ path: "/categorias-sat", icon: faListCheck, label: "Categorías SAT", scope: "global" });
-      base.push({ path: "/bancos", icon: faBuildingColumns, label: "Bancos", scope: "global" });
-      base.push({ path: "/obras-sociales", icon: faBriefcaseMedical, label: "Obras Sociales", scope: "global" });
-      base.push({ path: "/centros-costo", icon: faPiggyBank, label: "Centros de Costos", scope: "global" });
-      base.push({ path: "/contratos-frame", icon: faFileContract, label: "Contratos", scope: "global" });
+      if (hasPermission("config_categorias_sat:view")) base.push({ path: "/categorias-sat", icon: faListCheck, label: "Categorías SAT", scope: "global" });
+      if (hasPermission("config_bancos:view")) base.push({ path: "/bancos", icon: faBuildingColumns, label: "Bancos", scope: "global" });
+      if (hasPermission("config_obras_sociales:view")) base.push({ path: "/obras-sociales", icon: faBriefcaseMedical, label: "Obras Sociales", scope: "global" });
+      if (hasPermission("config_centros_costo:view")) base.push({ path: "/centros-costo", icon: faPiggyBank, label: "Centros de Costos", scope: "global" });
+      if (hasPermission("config_contratos_frame:view")) base.push({ path: "/contratos-frame", icon: faFileContract, label: "Contratos", scope: "global" });
     }
 
     return base;
