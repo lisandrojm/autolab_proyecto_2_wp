@@ -227,7 +227,7 @@ export const MobileNavbar: React.FC = () => {
     const configPaths = ["/requests/config", "/order-types", "/shifts", "/vacations-rules", "/holidays", "/pdfs", "/releases", "/funciones-frame", "/categorias-sat", "/clients", "/contratos-frame", "/centros-costo", "/bancos", "/obras-sociales"];
     // "Mi Perfil" se incluye como un item más para que entre en el orden alfabético
     const profileItem = { path: "/mi-perfil", icon: faIdCard, label: "Mi Perfil", scope: "global" as const };
-    const configItems = [...adminItems.filter((item) => configPaths.includes(item.path)), profileItem].sort(byLabel);
+    const configItems = [...adminItems.filter((item) => configPaths.includes(item.path)), ...(hasPermission("config_profile:view") ? [profileItem] : [])].sort(byLabel);
 
     const renderMenuItem = (item: any) => {
       if (item.external) {

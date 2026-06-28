@@ -67,6 +67,7 @@ const ADMIN_PERMISSIONS = [
   "config_obras_sociales:view", // Obras Sociales
   "config_centros_costo:view", // Centros de Costos
   "config_contratos_frame:view", // Contratos FRAME
+  "config_profile:view", // Mi Perfil
 
   // ──────────── Proyectos ────────────
 ];
