@@ -6,6 +6,8 @@ import { Client } from "../models/Client.js";
 import { Tenant } from "../models/Tenant.js";
 import { Info } from "../models/Info.js";
 import { RoleFrame } from "../models/RoleFrame.js";
+import { RegistroLink } from "../models/RegistroLink.js";
+import crypto from "crypto";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { validate } from "../middleware/validate.js";
 import { registerSchema, loginSchema } from "../validators/authSchemas.js";
@@ -547,9 +549,31 @@ interface RegistroTokenPayload {
   tenantId: string;
   tenantSlug?: string;
   clientId?: string;
+  /** Presente solo cuando el token proviene de un RegistroLink en BD */
+  linkId?: string;
 }
 
-function verifyRegistroToken(token: string): RegistroTokenPayload | null {
+/**
+ * Valida un token de registro. Primero busca un RegistroLink activo en BD
+ * (links persistentes y revocables). Si no existe, cae al JWT legacy (30d)
+ * por compatibilidad con links generados antes de la migración.
+ */
+async function verifyRegistroToken(token: string): Promise<RegistroTokenPayload | null> {
+  if (!token) return null;
+
+  // 1. Link persistente en BD
+  const link = await RegistroLink.findOne({ token, active: true });
+  if (link) {
+    return {
+      purpose: REGISTRO_TOKEN_PURPOSE,
+      tenantId: String(link.tenantId),
+      tenantSlug: link.tenantSlug,
+      ...(link.clientId ? { clientId: String(link.clientId) } : {}),
+      linkId: String(link._id),
+    };
+  }
+
+  // 2. Fallback: JWT legacy
   try {
     const payload = jwt.verify(token, env.JWT_SECRET) as RegistroTokenPayload;
     if (!payload || payload.purpose !== REGISTRO_TOKEN_PURPOSE || !payload.tenantId) return null;
@@ -575,14 +599,18 @@ router.post("/registro-link", requireTenant, authenticateToken, async (req: Auth
       if (client) validClientId = String(client._id);
     }
 
-    const payload: RegistroTokenPayload = {
-      purpose: REGISTRO_TOKEN_PURPOSE,
-      tenantId: String(tenant._id),
-      tenantSlug: tenant.slug,
-      ...(validClientId ? { clientId: validClientId } : {}),
-    };
+    // Token aleatorio URL-safe, persistente y revocable (no vence)
+    const token = crypto.randomBytes(32).toString("base64url");
 
-    const token = jwt.sign(payload, env.JWT_SECRET, { expiresIn: "30d" });
+    await RegistroLink.create({
+      tenantId: tenant._id,
+      tenantSlug: tenant.slug,
+      token,
+      ...(validClientId ? { clientId: validClientId } : {}),
+      createdBy: req.user?.userId,
+      active: true,
+    });
+
     res.json({ token });
   } catch (error) {
     console.error("registro-link error:", error);
@@ -594,7 +622,7 @@ router.post("/registro-link", requireTenant, authenticateToken, async (req: Auth
 router.get("/registro-info", async (req, res) => {
   try {
     const token = String(req.query.token || "");
-    const payload = verifyRegistroToken(token);
+    const payload = await verifyRegistroToken(token);
     if (!payload) {
       res.status(401).json({ error: "Link inválido o expirado" });
       return;
@@ -626,7 +654,7 @@ router.get("/registro-info", async (req, res) => {
 router.post("/registro", async (req, res) => {
   try {
     const { token, ...body } = req.body || {};
-    const payload = verifyRegistroToken(token);
+    const payload = await verifyRegistroToken(token);
     if (!payload) {
       res.status(401).json({ error: "Link inválido o expirado" });
       return;
@@ -723,6 +751,15 @@ router.post("/registro", async (req, res) => {
         await addUserToClientUsuarios({ tenantId, clientId: clientIds[0], userId: user._id as Types.ObjectId });
       } catch (e) {
         console.warn("registro: no se pudo agregar el usuario al cliente:", e);
+      }
+    }
+
+    // Registrar uso del link persistente (si el token provino de BD)
+    if (payload.linkId) {
+      try {
+        await RegistroLink.updateOne({ _id: payload.linkId }, { $inc: { usageCount: 1 }, $set: { lastUsedAt: new Date() } });
+      } catch (e) {
+        console.warn("registro: no se pudo actualizar el uso del link:", e);
       }
     }
 

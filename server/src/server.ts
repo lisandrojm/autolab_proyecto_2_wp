@@ -33,6 +33,7 @@ import { healthRoutes } from "./routes/health.js";
 import { clientRoutes } from "./routes/clients.js";
 import { roleRoutes } from "./routes/roles.js";
 import { userRoutes } from "./routes/users.js";
+import { registroLinkRoutes } from "./routes/registroLinks.js";
 import { projectRoutes } from "./routes/projects.js";
 import { cleanupRoutes } from "./routes/cleanup.js";
 import { tenantRoutes } from "./routes/tenants.js";
@@ -153,6 +154,7 @@ app.use("/api/v1/clients", clientRoutes);
 
 app.use("/api/v1/roles", roleRoutes);
 app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/registro-links", registroLinkRoutes);
 app.use("/api/v1/tenants", tenantRoutes);
 app.use("/api/v1/cleanup", cleanupRoutes);
 app.use("/api/v1", projectRoutes);

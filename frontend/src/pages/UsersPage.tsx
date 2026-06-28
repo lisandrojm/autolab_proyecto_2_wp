@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuthStore } from "../stores/authStore";
 import { usersAPI, User } from "../api/users";
+import { registroLinksAPI, RegistroLink, buildRegistroUrl } from "../api/registroLinks";
 import { rolesAPI, Role } from "../api/roles";
 import { positionsAPI, Position } from "../api/positions";
 import { levelsAPI, Level } from "../api/levels";
@@ -21,7 +22,7 @@ import { UserFormModal } from "../components/users/UserFormModal";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faLayerGroup, faHourglassHalf, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faUserPlus, faCopy, faCheck } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faLayerGroup, faHourglassHalf, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faUserPlus, faCopy, faCheck, faBan } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate, useParams } from "react-router-dom";
 import { getImageUrl } from "../utils/imageHelpers";
@@ -86,8 +87,10 @@ export const UsersPage: React.FC = () => {
   // modal create/edit/password
   const [showModal, setShowModal] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
-  const [registroLinkUrl, setRegistroLinkUrl] = useState<string | null>(null);
-  const [linkCopied, setLinkCopied] = useState(false);
+  const [registroLinks, setRegistroLinks] = useState<RegistroLink[]>([]);
+  const [linksLoading, setLinksLoading] = useState(false);
+  const [generatingLink, setGeneratingLink] = useState(false);
+  const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
   const [modalMode, setModalMode] = useState<ModalMode>("edit");
   const [editingUser, setEditingUser] = useState<User | null>(null);
 
@@ -472,25 +475,71 @@ export const UsersPage: React.FC = () => {
     setShowModal(true);
   };
 
-  // Generar el link público de registro y abrir el modal para compartirlo
-  const handleOpenLinkModal = async () => {
+  // Cargar la lista de links de registro del tenant
+  const loadRegistroLinks = async () => {
+    setLinksLoading(true);
     try {
-      const url = await usersAPI.generateRegistroLink(clientId);
-      setRegistroLinkUrl(url);
-      setLinkCopied(false);
-      setShowLinkModal(true);
+      const links = await registroLinksAPI.list();
+      setRegistroLinks(links);
     } catch (error) {
-      sweetAlert.error("Error", "No se pudo generar el link de registro");
+      sweetAlert.error("Error", "No se pudieron cargar los links de registro");
+    } finally {
+      setLinksLoading(false);
     }
   };
 
-  const copyRegistroLink = async () => {
-    if (!registroLinkUrl) return;
+  // Abrir el modal de links de registro (carga la lista, no genera automáticamente)
+  const handleOpenLinkModal = async () => {
+    setCopiedLinkId(null);
+    setShowLinkModal(true);
+    await loadRegistroLinks();
+  };
+
+  // Generar un nuevo link persistente
+  const handleGenerateLink = async () => {
+    setGeneratingLink(true);
     try {
-      await navigator.clipboard.writeText(registroLinkUrl);
-      setLinkCopied(true);
+      await registroLinksAPI.generate(clientId);
+      await loadRegistroLinks();
+    } catch (error) {
+      sweetAlert.error("Error", "No se pudo generar el link de registro");
+    } finally {
+      setGeneratingLink(false);
+    }
+  };
+
+  // Copiar un link al portapapeles
+  const copyRegistroLink = async (link: RegistroLink) => {
+    try {
+      await navigator.clipboard.writeText(buildRegistroUrl(link.token));
+      setCopiedLinkId(link._id);
+      setTimeout(() => setCopiedLinkId((prev) => (prev === link._id ? null : prev)), 2000);
     } catch {
-      /* el usuario puede copiarlo manualmente desde el campo */
+      /* el usuario puede copiarlo manualmente */
+    }
+  };
+
+  // Revocar un link (deja de funcionar al instante)
+  const handleRevokeLink = async (link: RegistroLink) => {
+    const result = await sweetAlert.confirm("¿Revocar link?", "El link dejará de funcionar de inmediato. Las personas que ya se registraron no se ven afectadas.", "Sí, revocar");
+    if (!result.isConfirmed) return;
+    try {
+      await registroLinksAPI.revoke(link._id);
+      await loadRegistroLinks();
+    } catch (error) {
+      sweetAlert.error("Error", "No se pudo revocar el link");
+    }
+  };
+
+  // Eliminar un link definitivamente
+  const handleDeleteLink = async (link: RegistroLink) => {
+    const result = await sweetAlert.confirm("¿Eliminar link?", "Se eliminará el link de forma permanente.", "Sí, eliminar");
+    if (!result.isConfirmed) return;
+    try {
+      await registroLinksAPI.remove(link._id);
+      await loadRegistroLinks();
+    } catch (error) {
+      sweetAlert.error("Error", "No se pudo eliminar el link");
     }
   };
 
@@ -1715,20 +1764,66 @@ export const UsersPage: React.FC = () => {
 
       <UserFormModal isOpen={showModal} onClose={closeModal} user={editingUser} mode={modalMode} onSaved={() => fetchUsers({ silent: true })} />
 
-      <InfoModal isOpen={showLinkModal} onClose={() => setShowLinkModal(false)} title="Registrar persona" size="md">
-        <div className="flex flex-col items-center text-center gap-4 py-2">
-          <div className="w-14 h-14 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-            <FontAwesomeIcon icon={faUserPlus} className="text-blue-600 dark:text-blue-400 text-xl" />
-          </div>
-          <p className="text-gray-700 dark:text-gray-300">Comparta este link a la persona que desee registrar</p>
-          <div className="w-full flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-3 py-2">
-            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Link</span>
-            <input readOnly value={registroLinkUrl ?? ""} onFocus={(e) => e.currentTarget.select()} className="flex-1 bg-transparent text-sm text-gray-700 dark:text-gray-200 outline-none truncate" />
-            <button type="button" onClick={copyRegistroLink} title="Copiar" className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors shrink-0">
-              <FontAwesomeIcon icon={linkCopied ? faCheck : faCopy} className="h-4 w-4" />
+      <InfoModal isOpen={showLinkModal} onClose={() => setShowLinkModal(false)} title="Registrar persona" size="lg">
+        <div className="flex flex-col gap-4 py-1">
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-sm text-gray-600 dark:text-gray-300">Comparta un link con la persona que desee registrar. Los links no vencen, pero puede revocarlos cuando quiera.</p>
+            <button type="button" onClick={handleGenerateLink} disabled={generatingLink} className="shrink-0 px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm disabled:opacity-60">
+              <FontAwesomeIcon icon={faPlus} className="h-3.5 w-3.5" />
+              {generatingLink ? "Generando..." : "Generar nuevo link"}
             </button>
           </div>
-          {linkCopied && <span className="text-xs font-medium text-emerald-500">¡Link copiado!</span>}
+
+          {linksLoading ? (
+            <p className="text-sm text-gray-500 text-center py-6">Cargando links...</p>
+          ) : registroLinks.length === 0 ? (
+            <div className="flex flex-col items-center text-center gap-3 py-6">
+              <div className="w-14 h-14 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                <FontAwesomeIcon icon={faUserPlus} className="text-blue-600 dark:text-blue-400 text-xl" />
+              </div>
+              <p className="text-sm text-gray-500">Todavía no hay links. Genere uno para empezar.</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2 max-h-[55vh] overflow-y-auto">
+              {registroLinks.map((link) => (
+                <div key={link._id} className={`rounded-lg border px-3 py-2.5 ${link.active ? "border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40" : "border-gray-200 dark:border-gray-800 bg-gray-100/60 dark:bg-gray-900/20 opacity-70"}`}>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${link.active ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"}`}>{link.active ? "Activo" : "Revocado"}</span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{link.clientName || "General"}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">{link.usageCount} {link.usageCount === 1 ? "registro" : "registros"}</span>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {link.active && (
+                        <button type="button" onClick={() => copyRegistroLink(link)} title="Copiar link" className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+                          <FontAwesomeIcon icon={copiedLinkId === link._id ? faCheck : faCopy} className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      {link.active && (
+                        <button type="button" onClick={() => handleRevokeLink(link)} title="Revocar link" className="p-2 rounded text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors">
+                          <FontAwesomeIcon icon={faBan} className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      <button type="button" onClick={() => handleDeleteLink(link)} title="Eliminar link" className="p-2 rounded text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
+                        <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  {link.active && (
+                    <div className="mt-2 flex items-center gap-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/60 px-2 py-1">
+                      <FontAwesomeIcon icon={faLink} className="h-3 w-3 text-gray-400 shrink-0" />
+                      <input readOnly value={buildRegistroUrl(link.token)} onFocus={(e) => e.currentTarget.select()} className="flex-1 bg-transparent text-xs text-gray-600 dark:text-gray-300 outline-none truncate" />
+                    </div>
+                  )}
+                  <div className="mt-1.5 flex items-center gap-3 text-[11px] text-gray-400">
+                    <span>Creado: {new Date(link.createdAt).toLocaleDateString()}</span>
+                    {link.lastUsedAt && <span>Último uso: {new Date(link.lastUsedAt).toLocaleDateString()}</span>}
+                    {link.createdByName && <span>Por: {link.createdByName}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </InfoModal>
     </PageLayout>
