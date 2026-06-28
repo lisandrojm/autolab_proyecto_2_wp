@@ -28,7 +28,7 @@ import { ProjectDetailPage } from "./pages/ProjectDetailPage";
 import { ProjectTeamPage } from "./pages/ProjectTeamPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { MobileNavbar } from "./components/Navbar";
-import { ProfileModalHost } from "./components/users/ProfileModalHost";
+import { MiPerfilPage } from "./pages/MiPerfilPage";
 import { ServerStatusCard } from "./components/ServerStatusCard";
 import { LoadingSpinner } from "./components/ui/LoadingSpinner";
 
@@ -81,7 +81,6 @@ const AppLayout: React.FC = () => {
   return (
     <>
       {isAuthenticated && <MobileNavbar />}
-      {isAuthenticated && <ProfileModalHost />}
       <Outlet />
     </>
   );
@@ -353,6 +352,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ImportUsersWpPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/mi-perfil"
+                element={
+                  <ProtectedRoute>
+                    <MiPerfilPage />
                   </ProtectedRoute>
                 }
               />
