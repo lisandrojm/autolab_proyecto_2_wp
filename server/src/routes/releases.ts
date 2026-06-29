@@ -4,8 +4,11 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { Release } from "../models/Release.js";
+import { User } from "../models/User.js";
+import UserProject from "../models/UserProject.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
+import { fillDocxTemplate, formatDateAr } from "../utils/releaseFiller.js";
 
 const router = Router();
 
@@ -93,6 +96,88 @@ router.get("/:id/download", authenticateToken, requireTenant, async (req: Authen
   } catch (error) {
     console.error("Download release error:", error);
     res.status(500).json({ error: "Error al descargar archivo" });
+  }
+});
+
+// GET /releases/:id/download-filled?userId=&projectId=&contractIndex=
+// Descarga el release (.docx) con las variables reemplazadas por los datos de la persona/contrato.
+router.get("/:id/download-filled", authenticateToken, requireTenant, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const release = await Release.findOne({ _id: req.params.id, tenantId: req.tenantObjectId });
+    if (!release || !release.fileUrl) {
+      res.status(404).json({ error: "Archivo no encontrado" });
+      return;
+    }
+
+    const diskPath = path.join(process.cwd(), release.fileUrl.replace(/^\//, ""));
+    if (!fs.existsSync(diskPath)) {
+      res.status(404).json({ error: "Archivo no encontrado en el almacenamiento" });
+      return;
+    }
+
+    // Solo se pueden reemplazar variables en .docx; otros formatos se descargan tal cual.
+    const ext = path.extname(release.fileName || diskPath).toLowerCase();
+    if (ext !== ".docx") {
+      res.download(diskPath, release.fileName || path.basename(diskPath));
+      return;
+    }
+
+    const { userId, projectId, contractIndex } = req.query as { userId?: string; projectId?: string; contractIndex?: string };
+
+    const user = await User.findOne({ _id: userId, tenantId: req.tenantObjectId }).populate({ path: "metadata.projects", model: UserProject }).lean();
+    if (!user) {
+      res.status(404).json({ error: "Empleado no encontrado" });
+      return;
+    }
+
+    // Buscar el UserProject del proyecto y el contrato correspondiente
+    const projects: any[] = (user as any).metadata?.projects || [];
+    const up = projects.find((p) => {
+      const pId = p?.projectId;
+      const idToCheck = typeof pId === "object" && pId ? pId._id : pId;
+      return String(idToCheck) === String(projectId);
+    });
+    const contracts: any[] = up?.contracts || [];
+    let idx = Number(contractIndex);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= contracts.length) idx = contracts.length - 1;
+    const contract: any = contracts[idx] || {};
+
+    const meta: any = (user as any).metadata || {};
+    const nombre = (user as any).firstName || "";
+    const apellido = (user as any).lastName || "";
+
+    const data: Record<string, any> = {
+      nombre,
+      apellido,
+      nombreCompleto: `${nombre} ${apellido}`.trim(),
+      fechaDeNacimiento: formatDateAr(meta.fechaNac),
+      email: (user as any).email || "",
+      documento: meta.documento || "",
+      cuit: meta.cuit || "",
+      nombreProyecto: contract.nombre_proyecto || up?.nombre_proyecto || "",
+      rolFrame: contract.nombre_rol_frame || up?.nombre_rol_frame || "",
+      fechaAltaContrato: formatDateAr(contract.fecha_alta_contrato),
+      fechaBajaContrato: formatDateAr(contract.fecha_baja_contrato),
+      nombreContrato: contract.nombre_contrato || "",
+      nombreSede: contract.nombre_sede || "",
+      nombreCargo: contract.nombre_cargo || "",
+      nombreNivel: contract.nombre_nivel || "",
+      nombreArea: contract.nombre_area || "",
+      nombreTurno: contract.nombre_turno || "",
+      sueldoMano: contract.sueldo_mano != null ? `$${Number(contract.sueldo_mano).toLocaleString("es-AR")}` : "",
+      fecha: formatDateAr(new Date()),
+    };
+
+    const buffer = fs.readFileSync(diskPath);
+    const filled = fillDocxTemplate(buffer, data);
+
+    const baseName = `${release.name}${nombre || apellido ? ` - ${nombre} ${apellido}`.trimEnd() : ""}`.replace(/[\\/:*?"<>|]/g, "_");
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    res.setHeader("Content-Disposition", `attachment; filename="${baseName}.docx"`);
+    res.send(filled);
+  } catch (error) {
+    console.error("Download filled release error:", error);
+    res.status(500).json({ error: "No se pudo generar el release con los datos." });
   }
 });
 

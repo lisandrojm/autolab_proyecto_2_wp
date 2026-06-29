@@ -63,4 +63,24 @@ export const releasesAPI = {
     link.remove();
     window.URL.revokeObjectURL(url);
   },
+
+  // Descarga el release (.docx) con las variables reemplazadas por los datos del empleado/contrato.
+  downloadFilled: async (release: Release, ctx: { userId: string; projectId: string; contractIndex: number }): Promise<void> => {
+    const response = await axios.get(`/releases/${release._id}/download-filled`, {
+      params: ctx,
+      responseType: "blob",
+    });
+    // Intenta usar el filename del header; si no, arma uno.
+    const disposition = response.headers?.["content-disposition"] || "";
+    const match = /filename="?([^"]+)"?/.exec(disposition);
+    const fileName = match?.[1] || release.fileName || `${release.name}.docx`;
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", fileName);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
 };

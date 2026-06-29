@@ -73,12 +73,14 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
     }
   };
 
-  const handleDownloadRelease = async (contractIndex: number) => {
-    const releaseId = selectedReleaseByContract[contractIndex];
+  const handleDownloadRelease = async (displayIndex: number) => {
+    const releaseId = selectedReleaseByContract[displayIndex];
     const release = activeReleases.find((r) => r._id === releaseId);
-    if (!release) return;
+    if (!release || !user) return;
+    // `contracts` está invertido para mostrar el más reciente primero → índice original en BD
+    const originalIndex = contracts.length - 1 - displayIndex;
     try {
-      await releasesAPI.download(release);
+      await releasesAPI.downloadFilled(release, { userId: user._id, projectId, contractIndex: originalIndex });
     } catch {
       sweetAlert.error("Error", "No se pudo descargar el release.");
     }
