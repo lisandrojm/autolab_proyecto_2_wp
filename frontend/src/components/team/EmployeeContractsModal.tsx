@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileContract, faDownload, faEdit, faTrash, faFileLines } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
@@ -42,9 +42,6 @@ const findTemplate = (contract: Contract, contratoFrames: ContratoFrameItem[]): 
 const templateHasFile = (cf: ContratoFrameItem | null): boolean => !!(cf && (cf.data?.fileUrl || cf.data?.fileName || cf.data?.rutaArchivo));
 
 export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ isOpen, onClose, user, projectId, contratoFrames, releases, onEdit, onDelete }) => {
-  // release seleccionado por contrato (clave = índice del contrato)
-  const [selectedReleaseByContract, setSelectedReleaseByContract] = useState<Record<number, string>>({});
-
   const fullName = user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email : "";
 
   const contracts = useMemo(() => {
@@ -73,10 +70,8 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
     }
   };
 
-  const handleDownloadRelease = async (displayIndex: number) => {
-    const releaseId = selectedReleaseByContract[displayIndex];
-    const release = activeReleases.find((r) => r._id === releaseId);
-    if (!release || !user) return;
+  const handleDownloadRelease = async (release: Release, displayIndex: number) => {
+    if (!user) return;
     // `contracts` está invertido para mostrar el más reciente primero → índice original en BD
     const originalIndex = contracts.length - 1 - displayIndex;
     try {
@@ -109,7 +104,6 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
               const template = findTemplate(contract, contratoFrames);
               const canDownloadContract = templateHasFile(template);
               const dateRange = `${formatDate(contract.fecha_alta_contrato)}${contract.fecha_baja_contrato ? ` - ${formatDate(contract.fecha_baja_contrato)}` : ""}`;
-              const selectedRelease = selectedReleaseByContract[idx] || "";
 
               return (
                 <div key={idx} className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
@@ -150,29 +144,28 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                     </div>
                   </div>
 
-                  {/* Release */}
-                  <div className="mt-3 pt-3 border-t border-blue-200/70 dark:border-blue-800/70 flex items-center gap-2">
-                    <select
-                      value={selectedRelease}
-                      onChange={(e) => setSelectedReleaseByContract((prev) => ({ ...prev, [idx]: e.target.value }))}
-                      className="flex-1 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 outline-none focus:border-blue-500"
-                    >
-                      <option value="">{activeReleases.length ? "Seleccionar release para descargar" : "No hay releases disponibles"}</option>
-                      {activeReleases.map((r) => (
-                        <option key={r._id} value={r._id}>
-                          {r.name}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => handleDownloadRelease(idx)}
-                      disabled={!selectedRelease}
-                      title="Descargar release"
-                      className="p-2 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                    >
-                      <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
-                    </button>
+                  {/* Releases: lista con descarga directa */}
+                  <div className="mt-3 pt-3 border-t border-blue-200/70 dark:border-blue-800/70">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Releases</p>
+                    {activeReleases.length === 0 ? (
+                      <p className="text-xs text-gray-500">No hay releases disponibles.</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {activeReleases.map((r) => (
+                          <div key={r._id} className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
+                            <span className="text-sm text-gray-700 dark:text-gray-200 truncate" title={r.name}>{r.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadRelease(r, idx)}
+                              title="Descargar release"
+                              className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shrink-0"
+                            >
+                              <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
