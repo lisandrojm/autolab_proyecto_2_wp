@@ -21,6 +21,9 @@ import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faT
 import { vacationsAPI, VacationRequest } from "../api/vacations";
 import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
 import { TeamCoordinadoresTab } from "../components/team/TeamCoordinadoresTab";
+import { EmployeeContractsModal } from "../components/team/EmployeeContractsModal";
+import { contratoFrameAPI, ContratoFrameItem } from "../api/contratosFrame";
+import { releasesAPI, Release } from "../api/release";
 import { Area, areasAPI } from "../api/areas";
 import { positionsAPI, Position } from "../api/positions";
 import { levelsAPI, Level } from "../api/levels";
@@ -223,6 +226,22 @@ export const ProjectTeamPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"equipo" | "solicitudes" | "coordinadores">("equipo");
   const [solicitudesCount, setSolicitudesCount] = useState(0);
   const [showCandidatesInfo, setShowCandidatesInfo] = useState(false);
+
+  // Modal de detalle del empleado (contratos del proyecto + descargas)
+  const [selectedMemberForDetail, setSelectedMemberForDetail] = useState<User | null>(null);
+  const [contratoFrames, setContratoFrames] = useState<ContratoFrameItem[]>([]);
+  const [releases, setReleases] = useState<Release[]>([]);
+  const [detailRefsLoaded, setDetailRefsLoaded] = useState(false);
+
+  const handleOpenMemberDetail = async (user: User) => {
+    setSelectedMemberForDetail(user);
+    if (detailRefsLoaded) return;
+    // Carga perezosa de plantillas de contrato y releases (puede fallar por permisos → listas vacías)
+    const [cf, rel] = await Promise.all([contratoFrameAPI.list().catch(() => [] as ContratoFrameItem[]), releasesAPI.getAll().catch(() => [] as Release[])]);
+    setContratoFrames(cf);
+    setReleases(rel);
+    setDetailRefsLoaded(true);
+  };
 
   // Persistence for view mode
   useEffect(() => {
@@ -1119,7 +1138,7 @@ export const ProjectTeamPage: React.FC = () => {
     const activeContract = projectMeta?.contracts?.length ? projectMeta.contracts[projectMeta.contracts.length - 1] : null;
 
     return (
-      <tr key={user._id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+      <tr key={user._id} onClick={() => handleOpenMemberDetail(user)} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer">
         <td className="px-4 py-3">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center shrink-0">
@@ -1246,7 +1265,7 @@ export const ProjectTeamPage: React.FC = () => {
                     <div key={i} className="flex flex-col gap-1">
                       <div className="group relative flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 pl-2 pr-1 py-1 rounded-lg border border-blue-100 dark:border-blue-800 hover:border-blue-300 dark:hover:border-blue-600 transition-all w-fit">
                         <span className="text-blue-700 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{ad.name}</span>
-                        <button type="button" onClick={() => setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: 'standard' })} className="flex items-center justify-center w-4 h-4 rounded-md text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors text-xs font-black" title="Ver turnos">
+                        <button type="button" onClick={(e) => { e.stopPropagation(); setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: 'standard' }); }} className="flex items-center justify-center w-4 h-4 rounded-md text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors text-xs font-black" title="Ver turnos">
                           +
                         </button>
                       </div>
@@ -1294,7 +1313,7 @@ export const ProjectTeamPage: React.FC = () => {
                     <div key={i} className="flex flex-col gap-1">
                       <div className="group relative flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 pl-2 pr-1 py-1 rounded-lg border border-amber-100 dark:border-amber-800 hover:border-amber-300 dark:hover:border-amber-600 transition-all w-fit">
                         <span className="text-amber-700 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{ad.name}</span>
-                        <button type="button" onClick={() => setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: 'coordinated' })} className="flex items-center justify-center w-4 h-4 rounded-md text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 transition-colors text-xs font-black" title="Ver turnos coordinados">
+                        <button type="button" onClick={(e) => { e.stopPropagation(); setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: 'coordinated' }); }} className="flex items-center justify-center w-4 h-4 rounded-md text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 transition-colors text-xs font-black" title="Ver turnos coordinados">
                           +
                         </button>
                       </div>
@@ -1334,10 +1353,10 @@ export const ProjectTeamPage: React.FC = () => {
         <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">{activeContract?.hora_inicio ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : "-"}</td>
         <td className="px-4 py-3 text-right">
           <div className="flex items-center justify-end gap-1">
-            <button onClick={() => handleOpenScheduleModal(user)} className="p-1 text-gray-400 hover:text-blue-500 transition-colors" title="Editar horario/área">
+            <button onClick={(e) => { e.stopPropagation(); handleOpenScheduleModal(user); }} className="p-1 text-gray-400 hover:text-blue-500 transition-colors" title="Editar horario/área">
               <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
             </button>
-            <button onClick={() => handleRemoveUser(user._id)} className="p-1 text-gray-400 hover:text-red-500 transition-colors ml-1" title="Retirar del proyecto">
+            <button onClick={(e) => { e.stopPropagation(); handleRemoveUser(user._id); }} className="p-1 text-gray-400 hover:text-red-500 transition-colors ml-1" title="Retirar del proyecto">
               <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
             </button>
           </div>
@@ -1358,6 +1377,7 @@ export const ProjectTeamPage: React.FC = () => {
         projectContext={project!}
         userConfig={userConfig}
         userLookup={userLookup}
+        onClick={() => handleOpenMemberDetail(user)}
         actions={[
           {
             icon: faEdit,
@@ -2520,6 +2540,24 @@ export const ProjectTeamPage: React.FC = () => {
           </Modal>
         </div>
       ) : null}
+
+      {/* Modal de detalle del empleado: contratos del proyecto + descargas */}
+      <EmployeeContractsModal
+        isOpen={!!selectedMemberForDetail}
+        onClose={() => setSelectedMemberForDetail(null)}
+        user={selectedMemberForDetail}
+        projectId={projectId || ""}
+        contratoFrames={contratoFrames}
+        releases={releases}
+        onEdit={(u) => {
+          setSelectedMemberForDetail(null);
+          handleOpenScheduleModal(u);
+        }}
+        onDelete={(id) => {
+          setSelectedMemberForDetail(null);
+          handleRemoveUser(id);
+        }}
+      />
     </PageLayout>
   );
 };

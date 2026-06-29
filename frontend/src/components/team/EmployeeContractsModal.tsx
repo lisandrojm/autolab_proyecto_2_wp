@@ -1,0 +1,183 @@
+import React, { useMemo, useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faFileContract, faDownload, faEdit, faTrash, faFileLines } from "@fortawesome/free-solid-svg-icons";
+import { Modal } from "../ui/Modal";
+import { User, Contract } from "../../api/users";
+import { contratoFrameAPI, ContratoFrameItem } from "../../api/contratosFrame";
+import { releasesAPI, Release } from "../../api/release";
+import { sweetAlert } from "../../utils/sweetAlert";
+
+interface EmployeeContractsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  user: User | null;
+  projectId: string;
+  contratoFrames: ContratoFrameItem[];
+  releases: Release[];
+  onEdit: (user: User) => void;
+  onDelete: (userId: string) => void;
+}
+
+const formatMoney = (n?: number): string => (n != null && !isNaN(n) ? `$${Number(n).toLocaleString("es-AR")}` : "-");
+
+const formatDate = (s?: string): string => {
+  if (!s) return "";
+  if (/^\d{2}\/\d{2}\/\d{4}/.test(s)) return s.slice(0, 10);
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s;
+  return d.toLocaleDateString("es-AR");
+};
+
+/** Busca la plantilla de contrato (ContratoFrame) que corresponde al contrato. */
+const findTemplate = (contract: Contract, contratoFrames: ContratoFrameItem[]): ContratoFrameItem | null => {
+  if (contract.tipo_contrato_id != null) {
+    const byId = contratoFrames.find((cf) => String(cf.data?.id) === String(contract.tipo_contrato_id));
+    if (byId) return byId;
+  }
+  const name = (contract.nombre_contrato || "").trim().toLowerCase();
+  if (!name) return null;
+  return contratoFrames.find((cf) => (cf.data?.nombre || cf.name || "").trim().toLowerCase() === name) || null;
+};
+
+const templateHasFile = (cf: ContratoFrameItem | null): boolean => !!(cf && (cf.data?.fileUrl || cf.data?.fileName || cf.data?.rutaArchivo));
+
+export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ isOpen, onClose, user, projectId, contratoFrames, releases, onEdit, onDelete }) => {
+  // release seleccionado por contrato (clave = índice del contrato)
+  const [selectedReleaseByContract, setSelectedReleaseByContract] = useState<Record<number, string>>({});
+
+  const fullName = user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email : "";
+
+  const contracts = useMemo(() => {
+    if (!user) return [];
+    const projectMeta = user.metadata?.projects?.find((p) => {
+      const pId = p.projectId;
+      const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
+      return String(idToCheck) === String(projectId);
+    });
+    // más reciente primero
+    return [...(projectMeta?.contracts || [])].reverse();
+  }, [user, projectId]);
+
+  const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
+
+  const handleDownloadContract = async (contract: Contract) => {
+    const template = findTemplate(contract, contratoFrames);
+    if (!templateHasFile(template)) {
+      sweetAlert.error("Sin plantilla", "No hay una plantilla de contrato disponible para este tipo de contrato.");
+      return;
+    }
+    try {
+      await contratoFrameAPI.download(template as ContratoFrameItem);
+    } catch {
+      sweetAlert.error("Error", "No se pudo descargar el contrato.");
+    }
+  };
+
+  const handleDownloadRelease = async (contractIndex: number) => {
+    const releaseId = selectedReleaseByContract[contractIndex];
+    const release = activeReleases.find((r) => r._id === releaseId);
+    if (!release) return;
+    try {
+      await releasesAPI.download(release);
+    } catch {
+      sweetAlert.error("Error", "No se pudo descargar el release.");
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={fullName || "Empleado"} subtitle="Contratos en el proyecto" size="lg" zIndex={60}>
+      <div className="space-y-4">
+        {/* Pestaña Contratos */}
+        <div className="border-b border-gray-200 dark:border-gray-700">
+          <span className="inline-flex items-center gap-2 px-1 pb-2 text-sm font-semibold text-blue-600 dark:text-blue-400 border-b-2 border-blue-500">
+            <FontAwesomeIcon icon={faFileContract} className="h-4 w-4" />
+            Contratos
+          </span>
+        </div>
+
+        {contracts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center text-center gap-3 py-10">
+            <FontAwesomeIcon icon={faFileLines} className="h-10 w-10 text-gray-300 dark:text-gray-600" />
+            <p className="text-sm text-gray-500">Este empleado no tiene contratos en el proyecto.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {contracts.map((contract, idx) => {
+              const cargo = contract.nombre_rol_frame || (contract as any).nombre_cargo || "Contrato";
+              const template = findTemplate(contract, contratoFrames);
+              const canDownloadContract = templateHasFile(template);
+              const dateRange = `${formatDate(contract.fecha_alta_contrato)}${contract.fecha_baja_contrato ? ` - ${formatDate(contract.fecha_baja_contrato)}` : ""}`;
+              const selectedRelease = selectedReleaseByContract[idx] || "";
+
+              return (
+                <div key={idx} className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h4 className="text-lg font-bold text-gray-900 dark:text-white truncate">{cargo}</h4>
+                      {contract.nombre_contrato && <p className="text-sm text-gray-600 dark:text-gray-300">{contract.nombre_contrato}</p>}
+                    </div>
+                    {dateRange.trim() && <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap shrink-0">{dateRange}</span>}
+                  </div>
+
+                  {contract.nombre_estado_empleado && (
+                    <span className="mt-2 inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border border-green-300 text-green-700 bg-green-50 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800">{contract.nombre_estado_empleado}</span>
+                  )}
+
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <span className="text-base font-semibold text-gray-900 dark:text-white">{formatMoney(contract.sueldo_mano)}</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadContract(contract)}
+                        disabled={!canDownloadContract}
+                        title={canDownloadContract ? "Descargar contrato" : "No hay plantilla para este tipo de contrato"}
+                        className="p-2 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <FontAwesomeIcon icon={faFileContract} className="h-4 w-4" />
+                      </button>
+                      {user && (
+                        <button type="button" onClick={() => onEdit(user)} title="Editar contrato" className="p-2 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+                          <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                        </button>
+                      )}
+                      {user && (
+                        <button type="button" onClick={() => onDelete(user._id)} title="Eliminar del proyecto" className="p-2 rounded text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
+                          <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Release */}
+                  <div className="mt-3 pt-3 border-t border-blue-200/70 dark:border-blue-800/70 flex items-center gap-2">
+                    <select
+                      value={selectedRelease}
+                      onChange={(e) => setSelectedReleaseByContract((prev) => ({ ...prev, [idx]: e.target.value }))}
+                      className="flex-1 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 outline-none focus:border-blue-500"
+                    >
+                      <option value="">{activeReleases.length ? "Seleccionar release para descargar" : "No hay releases disponibles"}</option>
+                      {activeReleases.map((r) => (
+                        <option key={r._id} value={r._id}>
+                          {r.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadRelease(idx)}
+                      disabled={!selectedRelease}
+                      title="Descargar release"
+                      className="p-2 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                    >
+                      <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+};
