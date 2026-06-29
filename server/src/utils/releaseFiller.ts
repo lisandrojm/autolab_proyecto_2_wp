@@ -12,7 +12,12 @@ export function fillDocxTemplate(content: Buffer, data: Record<string, any>): Bu
   const doc = new Docxtemplater(zip, {
     paragraphLoop: true,
     linebreaks: true,
-    nullGetter: () => "",
+    // Para placeholders no mapeados: dejarlos visibles como {variable} (así se detectan
+    // las que faltan mapear) en vez de borrarlos silenciosamente.
+    nullGetter: (part: any) => {
+      if (part && !part.module && part.value) return `{${part.value}}`;
+      return "";
+    },
   });
   doc.render(data);
   return doc.getZip().generate({ type: "nodebuffer", compression: "DEFLATE" }) as Buffer;

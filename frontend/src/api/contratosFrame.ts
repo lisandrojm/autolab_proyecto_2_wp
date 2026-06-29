@@ -74,6 +74,22 @@ class ContratoFrameAPI {
     link.remove();
     window.URL.revokeObjectURL(url);
   }
+
+  // Descarga la plantilla del contrato (.docx) con las variables reemplazadas por los datos del empleado/contrato.
+  async downloadFilled(item: ContratoFrameItem, ctx: { userId: string; projectId: string; contractIndex: number }): Promise<void> {
+    const response = await axios.get(`/contratos-frame/${item._id}/download-filled`, { params: ctx, responseType: "blob" });
+    const disposition = (response.headers?.["content-disposition"] as string) || "";
+    const match = /filename="?([^"]+)"?/.exec(disposition);
+    const fileName = match?.[1] || item.data?.fileName || `${item.name || "contrato"}.docx`;
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", fileName);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  }
 }
 
 export const contratoFrameAPI = new ContratoFrameAPI();

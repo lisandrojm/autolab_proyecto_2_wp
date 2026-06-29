@@ -8,7 +8,8 @@ import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
-import { fillDocxTemplate, formatDateAr } from "../utils/releaseFiller.js";
+import { fillDocxTemplate } from "../utils/releaseFiller.js";
+import { buildEmployeeDocData } from "../utils/employeeDocData.js";
 
 const router = Router();
 
@@ -142,31 +143,9 @@ router.get("/:id/download-filled", authenticateToken, requireTenant, async (req:
     if (!Number.isInteger(idx) || idx < 0 || idx >= contracts.length) idx = contracts.length - 1;
     const contract: any = contracts[idx] || {};
 
-    const meta: any = (user as any).metadata || {};
     const nombre = (user as any).firstName || "";
     const apellido = (user as any).lastName || "";
-
-    const data: Record<string, any> = {
-      nombre,
-      apellido,
-      nombreCompleto: `${nombre} ${apellido}`.trim(),
-      fechaDeNacimiento: formatDateAr(meta.fechaNac),
-      email: (user as any).email || "",
-      documento: meta.documento || "",
-      cuit: meta.cuit || "",
-      nombreProyecto: contract.nombre_proyecto || up?.nombre_proyecto || "",
-      rolFrame: contract.nombre_rol_frame || up?.nombre_rol_frame || "",
-      fechaAltaContrato: formatDateAr(contract.fecha_alta_contrato),
-      fechaBajaContrato: formatDateAr(contract.fecha_baja_contrato),
-      nombreContrato: contract.nombre_contrato || "",
-      nombreSede: contract.nombre_sede || "",
-      nombreCargo: contract.nombre_cargo || "",
-      nombreNivel: contract.nombre_nivel || "",
-      nombreArea: contract.nombre_area || "",
-      nombreTurno: contract.nombre_turno || "",
-      sueldoMano: contract.sueldo_mano != null ? `$${Number(contract.sueldo_mano).toLocaleString("es-AR")}` : "",
-      fecha: formatDateAr(new Date()),
-    };
+    const data = await buildEmployeeDocData(user, up, contract);
 
     const buffer = fs.readFileSync(diskPath);
     const filled = fillDocxTemplate(buffer, data);

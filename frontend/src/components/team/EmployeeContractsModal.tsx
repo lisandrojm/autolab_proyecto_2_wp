@@ -57,14 +57,17 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
 
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
 
-  const handleDownloadContract = async (contract: Contract) => {
+  const handleDownloadContract = async (contract: Contract, displayIndex: number) => {
     const template = findTemplate(contract, contratoFrames);
     if (!templateHasFile(template)) {
       sweetAlert.error("Sin plantilla", "No hay una plantilla de contrato disponible para este tipo de contrato.");
       return;
     }
+    if (!user) return;
+    // `contracts` está invertido para mostrar el más reciente primero → índice original en BD
+    const originalIndex = contracts.length - 1 - displayIndex;
     try {
-      await contratoFrameAPI.download(template as ContratoFrameItem);
+      await contratoFrameAPI.downloadFilled(template as ContratoFrameItem, { userId: user._id, projectId, contractIndex: originalIndex });
     } catch {
       sweetAlert.error("Error", "No se pudo descargar el contrato.");
     }
@@ -124,7 +127,7 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={() => handleDownloadContract(contract)}
+                        onClick={() => handleDownloadContract(contract, idx)}
                         disabled={!canDownloadContract}
                         title={canDownloadContract ? "Descargar contrato" : "No hay plantilla para este tipo de contrato"}
                         className="p-2 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"

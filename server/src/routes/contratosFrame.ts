@@ -4,7 +4,11 @@ import path from "path";
 import fs from "fs";
 import xlsx from "xlsx";
 import { ContratoFrame } from "../models/ContratoFrame.js";
+import { User } from "../models/User.js";
+import UserProject from "../models/UserProject.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
+import { fillDocxTemplate } from "../utils/releaseFiller.js";
+import { buildEmployeeDocData } from "../utils/employeeDocData.js";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -83,6 +87,63 @@ router.get("/:id/download", authenticateToken, async (req: AuthenticatedRequest,
   } catch (error) {
     console.error("Download ContratoFrame file error:", error);
     res.status(500).json({ error: "Error al descargar archivo" });
+  }
+});
+
+// GET /:id/download-filled?userId=&projectId=&contractIndex=
+// Descarga la plantilla del contrato (.docx) con las variables reemplazadas por los datos del empleado/contrato.
+router.get("/:id/download-filled", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const item = await ContratoFrame.findById(req.params.id);
+    if (!item || !item.data?.fileUrl) {
+      res.status(404).json({ error: "Archivo no encontrado" });
+      return;
+    }
+    const diskPath = path.join(process.cwd(), item.data.fileUrl.replace(/^\//, ""));
+    if (!fs.existsSync(diskPath)) {
+      res.status(404).json({ error: "Archivo no encontrado en el almacenamiento" });
+      return;
+    }
+
+    const ext = path.extname(item.data.fileName || diskPath).toLowerCase();
+    if (ext !== ".docx") {
+      res.download(diskPath, item.data.fileName || path.basename(diskPath));
+      return;
+    }
+
+    const { userId, projectId, contractIndex } = req.query as { userId?: string; projectId?: string; contractIndex?: string };
+
+    const user = await User.findOne({ _id: userId, tenantId: req.tenantObjectId }).populate({ path: "metadata.projects", model: UserProject }).lean();
+    if (!user) {
+      res.status(404).json({ error: "Empleado no encontrado" });
+      return;
+    }
+
+    const projects: any[] = (user as any).metadata?.projects || [];
+    const up = projects.find((p) => {
+      const pId = p?.projectId;
+      const idToCheck = typeof pId === "object" && pId ? pId._id : pId;
+      return String(idToCheck) === String(projectId);
+    });
+    const contracts: any[] = up?.contracts || [];
+    let idx = Number(contractIndex);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= contracts.length) idx = contracts.length - 1;
+    const contract: any = contracts[idx] || {};
+
+    const nombre = (user as any).firstName || "";
+    const apellido = (user as any).lastName || "";
+    const data = await buildEmployeeDocData(user, up, contract);
+
+    const buffer = fs.readFileSync(diskPath);
+    const filled = fillDocxTemplate(buffer, data);
+
+    const baseName = `${item.name || "Contrato"}${nombre || apellido ? ` - ${nombre} ${apellido}`.trimEnd() : ""}`.replace(/[\\/:*?"<>|]/g, "_");
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    res.setHeader("Content-Disposition", `attachment; filename="${baseName}.docx"`);
+    res.send(filled);
+  } catch (error) {
+    console.error("Download filled ContratoFrame error:", error);
+    res.status(500).json({ error: "No se pudo generar el contrato con los datos." });
   }
 });
 
