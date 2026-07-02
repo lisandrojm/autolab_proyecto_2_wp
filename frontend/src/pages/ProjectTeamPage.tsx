@@ -1047,11 +1047,16 @@ export const ProjectTeamPage: React.FC = () => {
       const primaryShiftId = firstAssignment?.shiftIds?.[0] || "";
       const primaryAreaId = firstAssignment?.areaId || "";
 
+      // Los contratos de tiempo indeterminado no llevan fecha de baja
+      const tipoContratoSel = allTiposContrato.find((t) => String(t.data.id) === String(wizardData.tipo_contrato_id));
+      const esTiempoIndeterminado = tipoContratoSel ? /indetermin/i.test(tipoContratoSel.name) : false;
+
       await projectsAPI.assignMember(project._id, {
         userId: selectedUserForWizard._id,
         isUpdate: isExistingMember,
         contract: {
           ...wizardData,
+          fecha_baja_contrato: esTiempoIndeterminado ? "" : wizardData.fecha_baja_contrato,
           areaId: primaryAreaId,
           shiftId: primaryShiftId,
           areaShiftAssignments: wizardData.areaShiftAssignments,
@@ -2187,7 +2192,17 @@ export const ProjectTeamPage: React.FC = () => {
 
                   <div className="space-y-1.5">
                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Tipo de contrato *</label>
-                    <select className="input-field w-full" value={wizardData.tipo_contrato_id} onChange={(e) => setWizardData((prev) => ({ ...prev, tipo_contrato_id: e.target.value }))} required>
+                    <select
+                      className="input-field w-full"
+                      value={wizardData.tipo_contrato_id}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const tipo = allTiposContrato.find((t) => String(t.data.id) === String(val));
+                        const esIndeterminado = tipo ? /indetermin/i.test(tipo.name) : false;
+                        setWizardData((prev) => ({ ...prev, tipo_contrato_id: val, fecha_baja_contrato: esIndeterminado ? "" : prev.fecha_baja_contrato }));
+                      }}
+                      required
+                    >
                       <option value="">Selecciona tipo...</option>
                       {allTiposContrato.map((t) => (
                         <option key={t._id} value={t.data.id}>
@@ -2250,10 +2265,12 @@ export const ProjectTeamPage: React.FC = () => {
                     <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_alta_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_alta_contrato: e.target.value }))} />
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha baja contrato</label>
-                    <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_baja_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_baja_contrato: e.target.value }))} />
-                  </div>
+                  {!allTiposContrato.some((t) => String(t.data.id) === String(wizardData.tipo_contrato_id) && /indetermin/i.test(t.name)) && (
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha baja contrato</label>
+                      <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_baja_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_baja_contrato: e.target.value }))} />
+                    </div>
+                  )}
 
                   {/* --- CONFIGURACIÓN POR ÁREA (visual toggle) --- */}
                   <div className="md:col-span-2 space-y-3 pt-6 border-t border-gray-100 dark:border-gray-700">
