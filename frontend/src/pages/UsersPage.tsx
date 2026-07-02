@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuthStore } from "../stores/authStore";
 import { usersAPI, User } from "../api/users";
-import { registroLinksAPI, RegistroLink, buildRegistroUrl } from "../api/registroLinks";
+import { registroLinksAPI, RegistroLink, buildRegistroUrl, registroLinkDaysLeft, isRegistroLinkExpired, registroLinkExpiry } from "../api/registroLinks";
 import { rolesAPI, Role } from "../api/roles";
 import { positionsAPI, Position } from "../api/positions";
 import { levelsAPI, Level } from "../api/levels";
@@ -91,6 +91,7 @@ export const UsersPage: React.FC = () => {
   const [linksLoading, setLinksLoading] = useState(false);
   const [generatingLink, setGeneratingLink] = useState(false);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
+  const [, forceLinkTick] = useState(0); // refresca el contador de días de los links
   const [modalMode, setModalMode] = useState<ModalMode>("edit");
   const [editingUser, setEditingUser] = useState<User | null>(null);
 
@@ -487,6 +488,13 @@ export const UsersPage: React.FC = () => {
       setLinksLoading(false);
     }
   };
+
+  // Mientras el modal de links está abierto, refrescar los días restantes cada minuto
+  useEffect(() => {
+    if (!showLinkModal) return;
+    const id = setInterval(() => forceLinkTick((n) => n + 1), 60_000);
+    return () => clearInterval(id);
+  }, [showLinkModal]);
 
   // Abrir el modal de links de registro (carga la lista, no genera automáticamente)
   const handleOpenLinkModal = async () => {
@@ -1764,10 +1772,10 @@ export const UsersPage: React.FC = () => {
 
       <UserFormModal isOpen={showModal} onClose={closeModal} user={editingUser} mode={modalMode} onSaved={() => fetchUsers({ silent: true })} />
 
-      <InfoModal isOpen={showLinkModal} onClose={() => setShowLinkModal(false)} title="Registrar persona" size="lg">
+      <InfoModal isOpen={showLinkModal} onClose={() => setShowLinkModal(false)} title="Registrar Usuario" size="lg">
         <div className="flex flex-col gap-4 py-1">
           <div className="flex items-start justify-between gap-3">
-            <p className="text-sm text-gray-600 dark:text-gray-300">Comparta un link con la persona que desee registrar. Los links no vencen, pero puede revocarlos cuando quiera.</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Comparta un link con la persona que desee registrar. Los links vencen a los 30 días de creados; luego deberá generar uno nuevo. También puede revocarlos cuando quiera.</p>
             <button type="button" onClick={handleGenerateLink} disabled={generatingLink} className="shrink-0 px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm disabled:opacity-60">
               <FontAwesomeIcon icon={faPlus} className="h-3.5 w-3.5" />
               {generatingLink ? "Generando..." : "Generar nuevo link"}
@@ -1785,21 +1793,37 @@ export const UsersPage: React.FC = () => {
             </div>
           ) : (
             <div className="flex flex-col gap-2 max-h-[55vh] overflow-y-auto">
-              {registroLinks.map((link) => (
-                <div key={link._id} className={`rounded-lg border px-3 py-2.5 ${link.active ? "border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40" : "border-gray-200 dark:border-gray-800 bg-gray-100/60 dark:bg-gray-900/20 opacity-70"}`}>
+              {registroLinks.map((link) => {
+                const expired = isRegistroLinkExpired(link);
+                const usable = link.active && !expired;
+                const daysLeft = registroLinkDaysLeft(link);
+                const expiryMs = registroLinkExpiry(link);
+                return (
+                <div key={link._id} className={`rounded-lg border px-3 py-2.5 ${usable ? "border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40" : "border-gray-200 dark:border-gray-800 bg-gray-100/60 dark:bg-gray-900/20 opacity-70"}`}>
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${link.active ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"}`}>{link.active ? "Activo" : "Revocado"}</span>
+                      {!link.active ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Revocado</span>
+                      ) : expired ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Vencido</span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Activo</span>
+                      )}
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{link.clientName || "General"}</span>
                       <span className="text-xs text-gray-500 dark:text-gray-400">{link.usageCount} {link.usageCount === 1 ? "registro" : "registros"}</span>
+                      {usable && daysLeft !== null && (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${daysLeft <= 5 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"}`}>
+                          {daysLeft === 0 ? "Vence hoy" : `Vence en ${daysLeft} ${daysLeft === 1 ? "día" : "días"}`}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      {link.active && (
+                      {usable && (
                         <button type="button" onClick={() => copyRegistroLink(link)} title="Copiar link" className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors">
                           <FontAwesomeIcon icon={copiedLinkId === link._id ? faCheck : faCopy} className="h-3.5 w-3.5" />
                         </button>
                       )}
-                      {link.active && (
+                      {usable && (
                         <button type="button" onClick={() => handleRevokeLink(link)} title="Revocar link" className="p-2 rounded text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors">
                           <FontAwesomeIcon icon={faBan} className="h-3.5 w-3.5" />
                         </button>
@@ -1809,7 +1833,7 @@ export const UsersPage: React.FC = () => {
                       </button>
                     </div>
                   </div>
-                  {link.active && (
+                  {usable && (
                     <div className="mt-2 flex items-center gap-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/60 px-2 py-1">
                       <FontAwesomeIcon icon={faLink} className="h-3 w-3 text-gray-400 shrink-0" />
                       <input readOnly value={buildRegistroUrl(link.token)} onFocus={(e) => e.currentTarget.select()} className="flex-1 bg-transparent text-xs text-gray-600 dark:text-gray-300 outline-none truncate" />
@@ -1817,11 +1841,13 @@ export const UsersPage: React.FC = () => {
                   )}
                   <div className="mt-1.5 flex items-center gap-3 text-[11px] text-gray-400">
                     <span>Creado: {new Date(link.createdAt).toLocaleDateString()}</span>
+                    {expiryMs !== null && <span>Vence: {new Date(expiryMs).toLocaleDateString()}</span>}
                     {link.lastUsedAt && <span>Último uso: {new Date(link.lastUsedAt).toLocaleDateString()}</span>}
                     {link.createdByName && <span>Por: {link.createdByName}</span>}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { RegistroLink } from "../models/RegistroLink.js";
+import { RegistroLink, getRegistroLinkExpiry } from "../models/RegistroLink.js";
 import { Client } from "../models/Client.js";
 import { User } from "../models/User.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
@@ -44,6 +44,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
       usageCount: l.usageCount,
       lastUsedAt: l.lastUsedAt || null,
       createdAt: l.createdAt,
+      expiresAt: new Date(getRegistroLinkExpiry(l)).toISOString(),
       createdByName: l.createdBy ? userMap.get(String(l.createdBy)) || null : null,
     }));
 

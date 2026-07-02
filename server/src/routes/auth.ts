@@ -6,7 +6,7 @@ import { Client } from "../models/Client.js";
 import { Tenant } from "../models/Tenant.js";
 import { Info } from "../models/Info.js";
 import { RoleFrame } from "../models/RoleFrame.js";
-import { RegistroLink } from "../models/RegistroLink.js";
+import { RegistroLink, REGISTRO_LINK_TTL_MS, getRegistroLinkExpiry } from "../models/RegistroLink.js";
 import crypto from "crypto";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { validate } from "../middleware/validate.js";
@@ -564,6 +564,8 @@ async function verifyRegistroToken(token: string): Promise<RegistroTokenPayload 
   // 1. Link persistente en BD
   const link = await RegistroLink.findOne({ token, active: true });
   if (link) {
+    // Vence a los 30 días de creado → tratar como inválido (misma landing que revocado)
+    if (Date.now() > getRegistroLinkExpiry(link)) return null;
     return {
       purpose: REGISTRO_TOKEN_PURPOSE,
       tenantId: String(link.tenantId),
@@ -599,7 +601,7 @@ router.post("/registro-link", requireTenant, authenticateToken, async (req: Auth
       if (client) validClientId = String(client._id);
     }
 
-    // Token aleatorio URL-safe, persistente y revocable (no vence)
+    // Token aleatorio URL-safe, persistente y revocable. Vence a los 30 días.
     const token = crypto.randomBytes(32).toString("base64url");
 
     await RegistroLink.create({
@@ -609,6 +611,7 @@ router.post("/registro-link", requireTenant, authenticateToken, async (req: Auth
       ...(validClientId ? { clientId: validClientId } : {}),
       createdBy: req.user?.userId,
       active: true,
+      expiresAt: new Date(Date.now() + REGISTRO_LINK_TTL_MS),
     });
 
     res.json({ token });
