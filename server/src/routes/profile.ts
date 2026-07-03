@@ -6,6 +6,7 @@ import { Vacation } from "../models/Vacation.js";
 import { User } from "../models/User.js";
 import { Area } from "../models/Area.js";
 import { Position } from "../models/Position.js";
+import { RoleFrame } from "../models/RoleFrame.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 
@@ -62,7 +63,8 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
             select: "name",
           },
         ],
-      });
+      })
+        .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame });
 
       // FILTER: Only show projects that exist and have active contracts
       if (user?.metadata?.projects && Array.isArray(user.metadata.projects)) {
@@ -177,6 +179,13 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
             }
           }
         }
+      }
+    }
+
+    // Roles frame propios del usuario (metadata.roles_frame, populado desde RoleFrame)
+    if (Array.isArray((user as any)?.metadata?.roles_frame)) {
+      for (const rf of (user as any).metadata.roles_frame) {
+        if (rf?.name) userRolFrameNames.add(rf.name);
       }
     }
 

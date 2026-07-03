@@ -20,6 +20,8 @@
     "fix:imported-users:all:dry": "dotenv -e .env.production -v DRY_RUN=true -v SCOPE=all -- tsx src/scripts/assignImportedUsersRoleAndDNI.ts",
     "fix:imported-users:all": "dotenv -e .env.production -v SCOPE=all -- tsx src/scripts/assignImportedUsersRoleAndDNI.ts",
     "diag:missing-members": "dotenv -e .env.production -- tsx src/scripts/diagnoseMissingProjectMembers.ts",
+    "backfill:roles-frame:dry": "dotenv -e .env.production -v DRY=true -- tsx src/scripts/backfillUserRolesFrame.ts",
+    "backfill:roles-frame": "dotenv -e .env.production -- tsx src/scripts/backfillUserRolesFrame.ts",
     "test:additive": "tsx --test src/utils/additiveSync.test.ts"
   },
   "dependencies": {

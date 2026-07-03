@@ -11,6 +11,7 @@ import {
     USER_FRAME_WHITELIST,
     USERPROJECT_FRAME_WHITELIST,
 } from "../utils/additiveSync.js";
+import { resolveRoleFrameRefs, FrameRolFrame } from "../utils/roleFrameSync.js";
 
 export class ExternalApiService {
     private api: AxiosInstance;
@@ -81,6 +82,26 @@ export class ExternalApiService {
         } catch (error) {
             console.error(`[EXTERNAL API] Failed to fetch employee projects for ${employeeId}:`, error);
             throw error;
+        }
+    }
+
+    /**
+     * roles_frame asignados directamente al empleado (relación empleado_rol_frame).
+     * Es el mismo dato que muestra la web de FRAME en la ficha de la persona,
+     * independiente de los contratos/proyectos.
+     */
+    async getEmployeeRolesFrame(employeeId: number): Promise<FrameRolFrame[]> {
+        if (!this.token) {
+            await this.login();
+        }
+        try {
+            const { data } = await this.api.get(`/rol-frame/empleado/${employeeId}`);
+            return Array.isArray(data)
+                ? data.map((r: any) => ({ id: Number(r.id), nombre: String(r.nombre ?? "").trim() }))
+                : [];
+        } catch (error) {
+            console.error(`[EXTERNAL API] Failed to fetch roles_frame for employee ${employeeId}:`, error);
+            return [];
         }
     }
 
@@ -442,6 +463,27 @@ export class ExternalApiService {
                         } catch (projErr) {
                             console.error(`[EXTERNAL API] Failed to sync projects for ${emp.email}:`, projErr);
                         }
+                    }
+
+                    // ── Sync roles_frame propios del empleado (relación empleado_rol_frame) ──
+                    // Independiente de los proyectos: son los roles asignados directamente al empleado
+                    // (GET /rol-frame/empleado/{id}). Merge aditivo (no borra refs existentes).
+                    try {
+                        const frameRoles = await this.getEmployeeRolesFrame(Number((emp as any).id));
+                        if (frameRoles.length > 0) {
+                            const { refs, created } = await resolveRoleFrameRefs(frameRoles);
+                            if (created.length > 0) {
+                                console.log(`[EXTERNAL API] Creados ${created.length} RoleFrame para emp ${emp.email}: ${created.map((c) => c.nombre).join(", ")}`);
+                            }
+                            if (refs.length > 0) {
+                                await User.updateOne(
+                                    { _id: userDoc._id },
+                                    { $addToSet: { "metadata.roles_frame": { $each: refs } } },
+                                );
+                            }
+                        }
+                    } catch (rfErr) {
+                        console.error(`[EXTERNAL API] Failed to sync roles_frame for ${emp.email}:`, rfErr);
                     }
 
                 } catch (error) {
