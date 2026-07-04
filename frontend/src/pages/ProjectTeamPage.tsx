@@ -513,11 +513,13 @@ export const ProjectTeamPage: React.FC = () => {
         if (!user.roles?.some((r) => r.name === filterRole)) return false;
       }
 
-      // 4. Filter by Role Frame
+      // 4. Filter by Role Frame (contratos/proyectos + propios del usuario en metadata.roles_frame)
       if (filterRoleFrame) {
-        const metadataProjects = user.metadata?.projects || [];
-        const userRF = metadataProjects[0]?.nombre_rol_frame || (user.externalInfo?.rolFrames?.length ? user.externalInfo.rolFrames[0] : "");
-        if (userRF !== filterRoleFrame) return false;
+        const ownRFNames = (((user.metadata as any)?.rolesFrameIds || (user.metadata as any)?.roles_frame || []) as any[])
+          .map((rf: any) => (typeof rf === "object" ? rf?.name : allRoleFrames.find((i) => i._id === rf)?.name))
+          .filter(Boolean) as string[];
+        const userRFs = Array.from(new Set([...(user.externalInfo?.rolFrames || []), ...ownRFNames]));
+        if (!userRFs.includes(filterRoleFrame)) return false;
       }
 
       // 5. Filter by Project
@@ -529,7 +531,7 @@ export const ProjectTeamPage: React.FC = () => {
 
       return true;
     });
-  }, [allUsers, candidateUsers, showAddModal, assignedUserIds, searchTerm, filterRole, filterRoleFrame, filterProject]);
+  }, [allUsers, candidateUsers, showAddModal, assignedUserIds, searchTerm, filterRole, filterRoleFrame, filterProject, allRoleFrames]);
 
   const teamMembers = useMemo(() => {
     return assignedUserIds.map((id) => allUsers.find((u) => u._id === id)).filter((u): u is User => !!u);
@@ -630,6 +632,17 @@ export const ProjectTeamPage: React.FC = () => {
     const allAssignedNames = Array.from(new Set([...assignedNames, ...projectsRFNames, ...contractRFNames]));
 
     let filtered = allRoleFrames.filter((rf) => allAssignedNames.includes(rf.name));
+
+    // Role frames propios del usuario (colección users.metadata.roles_frame / rolesFrameIds)
+    const ownRoleFrameIds = (((selectedUserForWizard.metadata as any)?.rolesFrameIds || (selectedUserForWizard.metadata as any)?.roles_frame || []) as any[])
+      .map((rf: any) => (typeof rf === "object" ? rf?._id : rf))
+      .filter(Boolean)
+      .map(String);
+    if (ownRoleFrameIds.length > 0) {
+      const ownFrames = allRoleFrames.filter((rf) => ownRoleFrameIds.includes(String(rf._id)));
+      // Merge sin duplicar: ambas listas provienen de allRoleFrames (mismas referencias)
+      filtered = Array.from(new Set([...filtered, ...ownFrames]));
+    }
 
     // If still empty, check the specific ID in metadata
     if (filtered.length === 0 && selectedUserForWizard.metadata?.roleFrameId) {
@@ -1727,7 +1740,11 @@ export const ProjectTeamPage: React.FC = () => {
                         filteredCandidates.map((user) => {
                         const isCoordinator = checkIsCoordinator(user);
                         const metadataProjects = user.metadata?.projects || [];
-                        const rolFrame = metadataProjects[0]?.nombre_rol_frame || (user.externalInfo?.rolFrames?.length ? user.externalInfo.rolFrames[0] : "-");
+                        // Role frames desde contratos/proyectos (unificados por el backend) + los propios del usuario (metadata.roles_frame)
+                        const ownRolFrameNames = (((user.metadata as any)?.rolesFrameIds || (user.metadata as any)?.roles_frame || []) as any[])
+                          .map((rf: any) => (typeof rf === "object" ? rf?.name : allRoleFrames.find((i) => i._id === rf)?.name))
+                          .filter(Boolean) as string[];
+                        const rolFrames = Array.from(new Set([...(user.externalInfo?.rolFrames || []), ...ownRolFrameNames])).filter(Boolean);
                         const activeProjects = Array.from(new Set(metadataProjects.map((p) => p.nombre_proyecto))).filter(Boolean);
 
                         return (
@@ -1761,8 +1778,12 @@ export const ProjectTeamPage: React.FC = () => {
                               </div>
                             </td>
                             <td className="px-4 py-3">
-                              {rolFrame && rolFrame !== "-" ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase whitespace-nowrap bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800">{rolFrame}</span>
+                              {rolFrames.length > 0 ? (
+                                <div className="flex flex-wrap gap-1 max-w-[180px]">
+                                  {rolFrames.map((rf, idx) => (
+                                    <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase whitespace-nowrap bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800">{rf}</span>
+                                  ))}
+                                </div>
                               ) : (
                                 <span className="text-xs text-gray-400">-</span>
                               )}
