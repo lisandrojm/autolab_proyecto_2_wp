@@ -8,7 +8,7 @@ import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { fillDocxTemplate } from "../utils/releaseFiller.js";
-import { buildEmployeeDocData } from "../utils/employeeDocData.js";
+import { buildEmployeeDocData, buildDocFileName } from "../utils/employeeDocData.js";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -130,14 +130,12 @@ router.get("/:id/download-filled", authenticateToken, async (req: AuthenticatedR
     if (!Number.isInteger(idx) || idx < 0 || idx >= contracts.length) idx = contracts.length - 1;
     const contract: any = contracts[idx] || {};
 
-    const nombre = (user as any).firstName || "";
-    const apellido = (user as any).lastName || "";
     const data = await buildEmployeeDocData(user, up, contract);
 
     const buffer = fs.readFileSync(diskPath);
     const filled = fillDocxTemplate(buffer, data);
 
-    const baseName = `${item.name || "Contrato"}${nombre || apellido ? ` - ${nombre} ${apellido}`.trimEnd() : ""}`.replace(/[\\/:*?"<>|]/g, "_");
+    const baseName = buildDocFileName({ tipo: "Contrato", user, up, contract });
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
     res.setHeader("Content-Disposition", `attachment; filename="${baseName}.docx"`);
     res.send(filled);

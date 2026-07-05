@@ -135,6 +135,9 @@ app.use(
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Authorization", "Content-Type", "X-Requested-With", "X-Tenant-Id"],
+    // Permite que el navegador lea el nombre de archivo generado por el backend
+    // (descargas de contratos/releases). Sin esto el header queda oculto por CORS.
+    exposedHeaders: ["Content-Disposition"],
   }),
 );
 
