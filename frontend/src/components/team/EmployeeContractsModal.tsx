@@ -41,6 +41,22 @@ const findTemplate = (contract: Contract, contratoFrames: ContratoFrameItem[]): 
 
 const templateHasFile = (cf: ContratoFrameItem | null): boolean => !!(cf && (cf.data?.fileUrl || cf.data?.fileName || cf.data?.rutaArchivo));
 
+/**
+ * Nomenclatura de descargas de contratos y releases:
+ *   [proyecto]_[Contrato|Release]_[nombreDoc]_[YYYY_MM_DD]_[apellido]_[nombres].docx
+ * `docName` es opcional (para releases es el nombre del release). La fecha es la de la descarga.
+ */
+const buildDownloadFileName = (tipo: "Contrato" | "Release", user: User | null, contract: Contract | undefined, docName?: string): string => {
+  const proyecto = (contract as any)?.proyecto_id ?? contract?.nombre_proyecto ?? "";
+  const nombres = (user?.firstName || "").trim();
+  const apellido = (user?.lastName || "").trim();
+  const persona = [apellido, nombres].filter(Boolean).join("_");
+  const d = new Date();
+  const fecha = `${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, "0")}_${String(d.getDate()).padStart(2, "0")}`;
+  const parts = [String(proyecto).trim(), tipo, (docName || "").trim(), fecha, persona].filter((p) => p && p.trim() !== "");
+  return `${parts.join("_").replace(/[\\/:*?"<>|]/g, "_")}.docx`;
+};
+
 export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ isOpen, onClose, user, projectId, contratoFrames, releases, onEdit, onDelete }) => {
   const fullName = user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email : "";
 
@@ -66,8 +82,9 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
     if (!user) return;
     // `contracts` está invertido para mostrar el más reciente primero → índice original en BD
     const originalIndex = contracts.length - 1 - displayIndex;
+    const fileName = buildDownloadFileName("Contrato", user, contracts[displayIndex]);
     try {
-      await contratoFrameAPI.downloadFilled(template as ContratoFrameItem, { userId: user._id, projectId, contractIndex: originalIndex });
+      await contratoFrameAPI.downloadFilled(template as ContratoFrameItem, { userId: user._id, projectId, contractIndex: originalIndex }, fileName);
     } catch {
       sweetAlert.error("Error", "No se pudo descargar el contrato.");
     }
@@ -77,8 +94,9 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
     if (!user) return;
     // `contracts` está invertido para mostrar el más reciente primero → índice original en BD
     const originalIndex = contracts.length - 1 - displayIndex;
+    const fileName = buildDownloadFileName("Release", user, contracts[displayIndex], release.name);
     try {
-      await releasesAPI.downloadFilled(release, { userId: user._id, projectId, contractIndex: originalIndex });
+      await releasesAPI.downloadFilled(release, { userId: user._id, projectId, contractIndex: originalIndex }, fileName);
     } catch {
       sweetAlert.error("Error", "No se pudo descargar el release.");
     }
