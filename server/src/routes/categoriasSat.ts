@@ -27,25 +27,22 @@ router.get("/", authenticateToken, async (req: AuthenticatedRequest, res) => {
 router.get("/template", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const wsData = [
-      ["Nº Categoría", "Nombre", "Sueldo Básico", "Sueldo Adicional", "Sueldo Bruto", "Sueldo Bruto Letras", "Presentismo", "Neto", "Sueldo Neto Letras", "Código AFIP", "Fecha Actualización"],
-      [1, "Director de Programas", 1034550.34, 646593.96, 1849258.73, "UN MILLÓN OCHOCIENTOS...", 168114.43, 1497899.57, "UN MILLÓN CUATROCIENTOS...", 35283, "2026-07-01"],
-      [2, "Camarógrafo Realizador", 979439.26, 479925.24, 1605300.95, "UN MILLÓN SEISCIENTOS...", 145936.45, 1300293.77, "UN MILLÓN TRESCIENTOS...", 35286, "2026-07-01"],
+      ["numeroCategoria", "sueldoBasico", "sueldoAdicional", "presentismo", "sueldoBruto", "sueldoBrutoLetras", "neto", "sueldoNetoLetras"],
+      [1, 1187208.59, 742005.37, 192921.40, 2122135.35, "DOS MILLONES CIENTO VEINTIDÓS MIL CIENTO TREINTA Y CINCO CON 35/100", 1718929.63, "UN MILLÓN SETECIENTOS DIECIOCHO MIL NOVECIENTOS VEINTINUEVE CON 63/100"],
+      [2, 1123965.32, 550743.01, 167470.83, 1842179.16, "UN MILLÓN OCHOCIENTOS CUARENTA Y DOS MIL CIENTO SETENTA Y NUEVE CON 16/100", 1492165.11, "UN MILLÓN CUATROCIENTOS NOVENTA Y DOS MIL CIENTO SESENTA Y CINCO CON 11/100"],
     ];
 
     const ws = xlsx.utils.aoa_to_sheet(wsData);
 
     ws["!cols"] = [
-      { wch: 14 },  // Nº Categoría
-      { wch: 40 },  // Nombre
-      { wch: 16 },  // Sueldo Básico
-      { wch: 16 },  // Sueldo Adicional
-      { wch: 16 },  // Sueldo Bruto
-      { wch: 35 },  // Sueldo Bruto Letras
-      { wch: 14 },  // Presentismo
-      { wch: 16 },  // Neto
-      { wch: 35 },  // Sueldo Neto Letras
-      { wch: 14 },  // Código AFIP
-      { wch: 20 },  // Fecha Actualización
+      { wch: 16 },  // numeroCategoria
+      { wch: 16 },  // sueldoBasico
+      { wch: 16 },  // sueldoAdicional
+      { wch: 14 },  // presentismo
+      { wch: 16 },  // sueldoBruto
+      { wch: 45 },  // sueldoBrutoLetras
+      { wch: 16 },  // neto
+      { wch: 45 },  // sueldoNetoLetras
     ];
 
     const wb = xlsx.utils.book_new();
@@ -85,7 +82,6 @@ router.post("/import", authenticateToken, upload.single("file"), async (req: Aut
 
     const parsedItems: Array<{
       numeroCategoria: number;
-      nombre: string;
       sueldoBasico: number;
       sueldoAdicional: number;
       sueldoBruto: number;
@@ -93,8 +89,6 @@ router.post("/import", authenticateToken, upload.single("file"), async (req: Aut
       presentismo: number;
       neto: number;
       sueldoNetoLetras: string;
-      codigoAfip: number;
-      fechaActualizacion: string;
     }> = [];
 
     const errors: string[] = [];
@@ -103,15 +97,10 @@ router.post("/import", authenticateToken, upload.single("file"), async (req: Aut
       const row = rawRows[i];
       const rowNum = i + 2;
 
-      const numCat = row["Nº Categoría"] ?? row["Nro Categoría"] ?? row["N° Categoría"] ?? row["numeroCategoria"] ?? row["Numero Categoria"];
-      const nombre = row["Nombre"] ?? row["nombre"] ?? row["NAME"] ?? row["Name"];
+      const numCat = row["numeroCategoria"] ?? row["Nº Categoría"] ?? row["Nro Categoría"] ?? row["N° Categoría"] ?? row["Numero Categoria"];
 
       if (numCat === undefined || numCat === null || numCat === "") {
-        errors.push(`Fila ${rowNum}: La columna 'Nº Categoría' es obligatoria.`);
-        continue;
-      }
-      if (!nombre) {
-        errors.push(`Fila ${rowNum}: La columna 'Nombre' es obligatoria.`);
+        errors.push(`Fila ${rowNum}: La columna 'numeroCategoria' es obligatoria.`);
         continue;
       }
 
@@ -123,16 +112,13 @@ router.post("/import", authenticateToken, upload.single("file"), async (req: Aut
 
       parsedItems.push({
         numeroCategoria: parseNum(numCat),
-        nombre: String(nombre).trim(),
-        sueldoBasico: parseNum(row["Sueldo Básico"] ?? row["sueldoBasico"] ?? row["Sueldo Basico"]),
-        sueldoAdicional: parseNum(row["Sueldo Adicional"] ?? row["sueldoAdicional"]),
-        sueldoBruto: parseNum(row["Sueldo Bruto"] ?? row["sueldoBruto"]),
-        sueldoBrutoLetras: String(row["Sueldo Bruto Letras"] ?? row["sueldoBrutoLetras"] ?? "").trim(),
-        presentismo: parseNum(row["Presentismo"] ?? row["presentismo"]),
-        neto: parseNum(row["Neto"] ?? row["neto"]),
-        sueldoNetoLetras: String(row["Sueldo Neto Letras"] ?? row["sueldoNetoLetras"] ?? "").trim(),
-        codigoAfip: parseNum(row["Código AFIP"] ?? row["codigoAfip"] ?? row["Codigo AFIP"]),
-        fechaActualizacion: String(row["Fecha Actualización"] ?? row["fechaActualizacion"] ?? row["Fecha Actualizacion"] ?? "").trim(),
+        sueldoBasico: parseNum(row["sueldoBasico"] ?? row["Sueldo Básico"] ?? row["Sueldo Basico"]),
+        sueldoAdicional: parseNum(row["sueldoAdicional"] ?? row["Sueldo Adicional"]),
+        presentismo: parseNum(row["presentismo"] ?? row["Presentismo"]),
+        sueldoBruto: parseNum(row["sueldoBruto"] ?? row["Sueldo Bruto"]),
+        sueldoBrutoLetras: String(row["sueldoBrutoLetras"] ?? row["Sueldo Bruto Letras"] ?? "").trim(),
+        neto: parseNum(row["neto"] ?? row["Neto"]),
+        sueldoNetoLetras: String(row["sueldoNetoLetras"] ?? row["Sueldo Neto Letras"] ?? "").trim(),
       });
     }
 
@@ -141,42 +127,44 @@ router.post("/import", authenticateToken, upload.single("file"), async (req: Aut
       return;
     }
 
-    const bulkOps = parsedItems.map((item) => ({
-      updateOne: {
-        filter: item.codigoAfip
-          ? { "data.codigoAfip": item.codigoAfip }
-          : { name: item.nombre },
-        update: {
-          $set: {
-            name: item.nombre,
-            externalId: String(item.codigoAfip || item.numeroCategoria),
-            data: {
-              id: item.numeroCategoria,
-              numeroCategoria: item.numeroCategoria,
-              nombre: item.nombre,
-              sueldoBasico: item.sueldoBasico,
-              sueldoAdicional: item.sueldoAdicional,
-              sueldoBruto: item.sueldoBruto,
-              sueldoBrutoLetras: item.sueldoBrutoLetras,
-              presentismo: item.presentismo,
-              neto: item.neto,
-              sueldoNetoLetras: item.sueldoNetoLetras,
-              codigoAfip: item.codigoAfip,
-              fechaActualizacion: item.fechaActualizacion,
-            },
-          },
-        },
-        upsert: true,
-      },
-    }));
+    // Solo actualiza los valores salariales de las categorías existentes (agrupadas por numeroCategoria).
+    // No crea, no elimina, ni modifica el ABM (nombre, código AFIP, etc.).
+    const fechaActualizacion = new Date().toISOString().split("T")[0];
 
-    let processed = 0;
-    if (bulkOps.length > 0) {
-      const result = await CategoriaSat.bulkWrite(bulkOps);
-      processed = (result.upsertedCount || 0) + (result.modifiedCount || 0) + (result.matchedCount || 0);
+    let categoriasActualizadas = 0;
+    let itemsActualizados = 0;
+    const noEncontradas: number[] = [];
+
+    for (const item of parsedItems) {
+      const result = await CategoriaSat.updateMany(
+        { "data.numeroCategoria": item.numeroCategoria },
+        {
+          $set: {
+            "data.sueldoBasico": item.sueldoBasico,
+            "data.sueldoAdicional": item.sueldoAdicional,
+            "data.presentismo": item.presentismo,
+            "data.sueldoBruto": item.sueldoBruto,
+            "data.sueldoBrutoLetras": item.sueldoBrutoLetras,
+            "data.neto": item.neto,
+            "data.sueldoNetoLetras": item.sueldoNetoLetras,
+            "data.fechaActualizacion": fechaActualizacion,
+          },
+        }
+      );
+
+      if (result.matchedCount > 0) {
+        categoriasActualizadas++;
+        itemsActualizados += result.matchedCount;
+      } else {
+        noEncontradas.push(item.numeroCategoria);
+      }
     }
 
-    res.json({ message: "Importación masiva completada con éxito", count: processed });
+    const message = noEncontradas.length > 0
+      ? `Se actualizaron ${categoriasActualizadas} categorías (${itemsActualizados} ítems). No se encontraron las categorías: ${noEncontradas.join(", ")}.`
+      : `Actualización masiva completada: ${categoriasActualizadas} categorías (${itemsActualizados} ítems).`;
+
+    res.json({ message, count: categoriasActualizadas });
   } catch (error) {
     console.error("Import categorias-sat error:", error);
     res.status(500).json({ error: "Error interno al procesar el archivo Excel" });

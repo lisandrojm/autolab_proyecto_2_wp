@@ -343,7 +343,7 @@ export const CategoriasSatPage: React.FC = () => {
       setImporting(true);
       setImportErrors([]);
       const res = await categoriaSatAPI.importExcel(importFile);
-      sweetAlert.success("Importación completada", `Se han procesado correctamente ${res.count} categorías.`);
+      sweetAlert.success("Actualización completada", res.message || `Se actualizaron ${res.count} categorías.`);
       setShowImportModal(false);
       setImportFile(null);
       fetchCategorias();
@@ -718,10 +718,10 @@ export const CategoriasSatPage: React.FC = () => {
                 <ol className="list-decimal list-inside space-y-1 text-xs">
                   <li>Descarga la plantilla de Excel provista.</li>
                   <li>
-                    Completa las columnas obligatorias: <strong>Nº Categoría</strong> y <strong>Nombre</strong>.
+                    Columna obligatoria: <strong>numeroCategoria</strong>. Completa los valores a actualizar (sueldos y letras).
                   </li>
                   <li>Sube tu archivo completado en esta ventana.</li>
-                  <li>Si un Nº Categoría ya existe, la carga masiva actualizará sus datos automáticamente (upsert).</li>
+                  <li>Solo se actualizarán los valores de las categorías existentes. No se crean, eliminan ni modifican nombres ni códigos AFIP.</li>
                 </ol>
               </div>
 
