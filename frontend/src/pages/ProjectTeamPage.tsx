@@ -2273,12 +2273,14 @@ export const ProjectTeamPage: React.FC = () => {
 
                   <div className="space-y-1.5">
                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Hora inicio - HH:MM</label>
-                    <input type="time" className="input-field w-full" value={wizardData.hora_inicio} onChange={(e) => setWizardData((prev) => ({ ...prev, hora_inicio: e.target.value }))} />
+                    <input type="time" className="input-field w-full opacity-60 cursor-not-allowed" value={wizardData.hora_inicio} readOnly disabled />
+                    <p className="text-[10px] text-gray-400 ml-1">Se toma del contrato del empleado (independiente de los turnos).</p>
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Hora fin - HH:MM</label>
-                    <input type="time" className="input-field w-full" value={wizardData.hora_fin} onChange={(e) => setWizardData((prev) => ({ ...prev, hora_fin: e.target.value }))} />
+                    <input type="time" className="input-field w-full opacity-60 cursor-not-allowed" value={wizardData.hora_fin} readOnly disabled />
+                    <p className="text-[10px] text-gray-400 ml-1">Se toma del contrato del empleado (independiente de los turnos).</p>
                   </div>
 
                   <div className="space-y-1.5">
@@ -2430,14 +2432,11 @@ export const ProjectTeamPage: React.FC = () => {
                                           }
                                         }
 
-                                        const allShiftIds = assignments.flatMap((a) => a.shiftIds);
-                                        const firstShift = allShifts.find((s) => allShiftIds.includes(String(s._id)));
-
+                                        // Los turnos NO tocan la hora del contrato: son entidades independientes.
+                                        // hora_inicio/hora_fin reflejan únicamente el contrato del empleado (DB).
                                         return {
                                           ...prev,
                                           areaShiftAssignments: assignments,
-                                          hora_inicio: firstShift ? firstShift.startTime : prev.hora_inicio,
-                                          hora_fin: firstShift ? firstShift.endTime : prev.hora_fin,
                                         };
                                       });
                                     }}
