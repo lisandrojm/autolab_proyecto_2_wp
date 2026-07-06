@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { UserProfile } from "../models/UserProfile.js";
 import { User } from "../models/User.js";
+import { RoleFrame } from "../models/RoleFrame.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 const router = Router();
@@ -52,7 +53,8 @@ router.get("/", async (req, res) => {
                         select: "name",
                     },
                 ],
-            });
+            })
+                .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame });
             // FILTER: Only show projects that exist and have active contracts
             if (user?.metadata?.projects && Array.isArray(user.metadata.projects)) {
                 const now = new Date();
@@ -159,6 +161,13 @@ router.get("/", async (req, res) => {
                         }
                     }
                 }
+            }
+        }
+        // Roles frame propios del usuario (metadata.roles_frame, populado desde RoleFrame)
+        if (Array.isArray(user?.metadata?.roles_frame)) {
+            for (const rf of user.metadata.roles_frame) {
+                if (rf?.name)
+                    userRolFrameNames.add(rf.name);
             }
         }
         const externalInfo = {

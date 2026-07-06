@@ -249,6 +249,13 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
                     }
                 }
             }
+            // Priority 3: Roles frame propios del usuario (metadata.roles_frame, populado desde RoleFrame)
+            if (Array.isArray(userObj.metadata?.roles_frame)) {
+                for (const rf of userObj.metadata.roles_frame) {
+                    if (rf?.name)
+                        userRolFrameNames.add(rf.name);
+                }
+            }
             return {
                 ...userObj,
                 externalInfo: {

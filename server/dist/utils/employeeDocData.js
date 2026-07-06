@@ -3,6 +3,27 @@ import { numeroALetras } from "./numeroALetras.js";
 import { formatDateAr } from "./releaseFiller.js";
 const num = (n) => (n != null && n !== "" && !isNaN(Number(n)) ? Number(n).toLocaleString("es-AR") : "");
 /**
+ * Nomenclatura de archivos descargados (contratos y releases):
+ *   [proyecto]_[Contrato|Release]_[nombreDoc]_[YYYY_MM_DD]_[apellido]_[nombres]
+ *
+ * - `proyecto`: número/ID externo del proyecto (ej. 426).
+ * - `nombreDoc`: opcional; para releases es el nombre del release.
+ * - fecha: día de la descarga (hoy) en formato YYYY_MM_DD.
+ * Devuelve el nombre SIN extensión (el caller agrega `.docx`).
+ */
+export function buildDocFileName(opts) {
+    const { tipo, user, up, contract, docName } = opts;
+    const proyecto = up?.externalProjectId ?? contract?.proyecto_id ?? up?.nombre_proyecto ?? contract?.nombre_proyecto ?? "";
+    const nombre = (user?.firstName || "").trim();
+    const apellido = (user?.lastName || "").trim();
+    const persona = [apellido, nombre].filter(Boolean).join("_");
+    const now = new Date();
+    const fecha = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, "0")}_${String(now.getDate()).padStart(2, "0")}`;
+    const parts = [String(proyecto).trim(), tipo, (docName || "").trim(), fecha, persona].filter((p) => p && String(p).trim() !== "");
+    // Eliminar caracteres inválidos para nombres de archivo (se conservan espacios y acentos).
+    return parts.join("_").replace(/[\\/:*?"<>|]/g, "_");
+}
+/**
  * Construye el mapa de variables para rellenar plantillas .docx (contratos y releases)
  * a partir del empleado, su UserProject en el proyecto y el contrato seleccionado.
  *

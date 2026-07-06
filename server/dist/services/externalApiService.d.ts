@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { FrameRolFrame } from "../utils/roleFrameSync.js";
 export declare class ExternalApiService {
     private api;
     private token;
@@ -6,6 +7,12 @@ export declare class ExternalApiService {
     login(): Promise<void>;
     getEmployees(): Promise<any[]>;
     getEmployeeProjects(employeeId: number): Promise<any[]>;
+    /**
+     * roles_frame asignados directamente al empleado (relación empleado_rol_frame).
+     * Es el mismo dato que muestra la web de FRAME en la ficha de la persona,
+     * independiente de los contratos/proyectos.
+     */
+    getEmployeeRolesFrame(employeeId: number): Promise<FrameRolFrame[]>;
     checkImportUsers(sinceDays: number): Promise<{
         count: number;
         employees: Array<{
