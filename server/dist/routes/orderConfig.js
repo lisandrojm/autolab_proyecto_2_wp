@@ -18,6 +18,8 @@ const subtypeSchema = z
 const configSchema = z
     .object({
     subtipos: z.array(subtypeSchema).optional(),
+    // Campos de datos personales habilitados para modificación (categoryType === "datos_personales").
+    camposEditables: z.array(z.string()).optional(),
 })
     .passthrough();
 const createCategorySchema = z
@@ -25,7 +27,7 @@ const createCategorySchema = z
     name: z.string().min(1).max(100),
     informacion: z.string().max(1000).optional(),
     isActive: z.boolean().default(true),
-    categoryType: z.enum(["fecha", "dinero", "objeto", "otros"]).default("otros"),
+    categoryType: z.enum(["fecha", "dinero", "objeto", "otros", "datos_personales"]).default("otros"),
     dateMode: z.enum(["single", "range"]).default("single").optional(),
     maxDays: z.number().min(1).nullable().optional(),
     config: configSchema.optional(),
@@ -97,7 +99,7 @@ const updateCategorySchema = z
     informacion: z.string().max(1000).optional(),
     isActive: z.boolean().optional(),
     sortOrder: z.number().int().min(0).optional(),
-    categoryType: z.enum(["fecha", "dinero", "objeto", "otros"]).optional(),
+    categoryType: z.enum(["fecha", "dinero", "objeto", "otros", "datos_personales"]).optional(),
     dateMode: z.enum(["single", "range"]).optional(),
     maxDays: z.number().min(1).nullable().optional(),
     config: configSchema.optional(),

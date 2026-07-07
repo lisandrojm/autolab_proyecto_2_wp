@@ -29,7 +29,7 @@ export interface IOrderConfig extends Document {
     icon?: string;
     isActive: boolean;
     sortOrder: number;
-    categoryType: "fecha" | "dinero" | "objeto" | "otros";
+    categoryType: "fecha" | "dinero" | "objeto" | "otros" | "datos_personales";
     dateMode?: DateMode;
     maxDays?: number;
     config: ITypeConfig;

@@ -14,6 +14,8 @@ import { Vacation } from "../models/Vacation.js";
 import { Notification } from "../models/Notification.js";
 import { Tenant } from "../models/Tenant.js";
 import { Pdf } from "../models/Pdf.js";
+import { User } from "../models/User.js";
+import { sanitizePersonalData, buildUserPersonalDataSet } from "../utils/personalDataFields.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { Types } from "mongoose";
@@ -739,6 +741,27 @@ router.put("/orders/:id/approve", async (req, res) => {
             order.signatureSentAt = new Date();
         }
         await order.save();
+        // Datos personales: al aprobar, aplicar la propuesta al User (allowlist de la config).
+        if (category?.categoryType === "datos_personales") {
+            try {
+                const enabled = category.config?.camposEditables || [];
+                const proposed = order.metadata?.proposedUserData || {};
+                const sanitized = sanitizePersonalData(proposed, enabled);
+                if (Object.keys(sanitized).length > 0) {
+                    const targetUser = await User.findById(order.userId).select("firstName lastName").lean();
+                    const set = buildUserPersonalDataSet(sanitized, {
+                        firstName: targetUser?.firstName,
+                        lastName: targetUser?.lastName,
+                    });
+                    if (Object.keys(set).length > 0) {
+                        await User.updateOne({ _id: order.userId, tenantId: req.tenantObjectId }, { $set: set });
+                    }
+                }
+            }
+            catch (personalDataError) {
+                console.error("Error aplicando datos personales del pedido aprobado:", personalDataError);
+            }
+        }
         const categoryName = category?.name || order.category;
         let subcategoryText = "";
         if (order.subcategories && order.subcategories.length > 0) {

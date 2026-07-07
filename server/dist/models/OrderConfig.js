@@ -8,7 +8,7 @@ const orderConfigSchema = new Schema({
     sortOrder: { type: Number, default: 0 },
     categoryType: {
         type: String,
-        enum: ["fecha", "dinero", "objeto", "otros"],
+        enum: ["fecha", "dinero", "objeto", "otros", "datos_personales"],
         default: "otros",
         index: true,
     },
