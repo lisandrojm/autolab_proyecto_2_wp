@@ -9,6 +9,7 @@ import { Pdf } from "../../api/pdf";
 import { CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode, RepaymentConfig } from "../../api/orderConfig";
 import { InfoModal } from "../ui/InfoModal";
 import { tipoAccionFuturaLabels, deadlineModeLabels } from "../../types/orderFutureAction";
+import { PERSONAL_DATA_FIELDS, PERSONAL_DATA_SECTION_LABELS, PersonalDataSection } from "../../config/personalDataFields";
 
 interface OrderCategoryFormProps {
   formData: {
@@ -37,6 +38,7 @@ interface OrderCategoryFormProps {
     pdfId?: string;
     pdfText?: string;
     repayment?: RepaymentConfig;
+    camposEditables?: string[];
   };
   setFormData: React.Dispatch<React.SetStateAction<any>>;
   onSubmit: (e: React.FormEvent) => void;
@@ -261,10 +263,64 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
             <option value="dinero">Dinero</option>
             <option value="objeto">Objeto</option>
             <option value="otros">Otros</option>
+            <option value="datos_personales">Datos personales</option>
           </select>
         </div>
 
+        {/* Datos personales: selección de campos editables */}
+        {formData.categoryType === "datos_personales" && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Campos que el colaborador podrá modificar</label>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Tildá los datos personales que este pedido permite editar. Al aprobarse, solo esos campos se actualizan en el usuario.</p>
+            <div className="space-y-4 border border-gray-200 dark:border-gray-600 rounded p-3">
+              {(Object.keys(PERSONAL_DATA_SECTION_LABELS) as PersonalDataSection[]).map((section) => {
+                const fields = PERSONAL_DATA_FIELDS.filter((f) => f.section === section);
+                const selected = formData.camposEditables || [];
+                const sectionKeys = fields.map((f) => f.key);
+                const allSelected = sectionKeys.every((k) => selected.includes(k));
+                const toggleSection = () => {
+                  const current = formData.camposEditables || [];
+                  const next = allSelected ? current.filter((k) => !sectionKeys.includes(k)) : Array.from(new Set([...current, ...sectionKeys]));
+                  setFormData({ ...formData, camposEditables: next });
+                };
+                return (
+                  <div key={section}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">{PERSONAL_DATA_SECTION_LABELS[section]}</span>
+                      <button type="button" onClick={toggleSection} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                        {allSelected ? "Quitar todos" : "Seleccionar todos"}
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
+                      {fields.map((field) => {
+                        const checked = selected.includes(field.key);
+                        return (
+                          <label key={field.key} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => {
+                                const current = formData.camposEditables || [];
+                                const next = e.target.checked ? [...current, field.key] : current.filter((k) => k !== field.key);
+                                setFormData({ ...formData, camposEditables: next });
+                              }}
+                              className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                            />
+                            {field.label}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {(formData.camposEditables || []).length === 0 && <p className="text-xs text-amber-500 dark:text-amber-400 mt-2">⚠ Seleccioná al menos un campo para que el pedido tenga efecto.</p>}
+          </div>
+        )}
+
         {/* Subtipos */}
+        {formData.categoryType !== "datos_personales" && (
         <div>
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -381,6 +437,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
             </div>
           )}
         </div>
+        )}
 
         {/* Modo Fecha */}
         {/* Modo Fecha */}

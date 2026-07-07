@@ -18,6 +18,7 @@ import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { getPlainOrderNumber, getOrderRemainingCost, recalculateUserOrderBalance } from "../utils/orderHelpers.js";
 import UserProject from "../models/UserProject.js";
+import { sanitizePersonalData } from "../utils/personalDataFields.js";
 import "../models/Position.js";
 
 const router = Router();
@@ -1084,6 +1085,13 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       const category = await OrderConfig.findById(data.categoryId);
       if (category?.requiresSignature) {
         orderData.signatureStatus = "pending";
+      }
+      // Datos personales: sanitizar la propuesta contra la allowlist configurada y
+      // guardarla en metadata.proposedUserData (se aplica al User al aprobar).
+      if (category?.categoryType === "datos_personales") {
+        const enabled = ((category.config as any)?.camposEditables as string[]) || [];
+        const sanitized = sanitizePersonalData(data.dynamicValue, enabled);
+        orderData.metadata = { ...(orderData.metadata || {}), proposedUserData: sanitized };
       }
     }
 

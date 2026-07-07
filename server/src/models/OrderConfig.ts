@@ -36,7 +36,7 @@ export interface IOrderConfig extends Document {
   icon?: string;
   isActive: boolean;
   sortOrder: number;
-  categoryType: "fecha" | "dinero" | "objeto" | "otros";
+  categoryType: "fecha" | "dinero" | "objeto" | "otros" | "datos_personales";
   dateMode?: DateMode;
   maxDays?: number; // Added
   config: ITypeConfig;
@@ -70,7 +70,7 @@ const orderConfigSchema = new Schema<IOrderConfig>(
     sortOrder: { type: Number, default: 0 },
     categoryType: {
       type: String,
-      enum: ["fecha", "dinero", "objeto", "otros"],
+      enum: ["fecha", "dinero", "objeto", "otros", "datos_personales"],
       default: "otros",
       index: true,
     },

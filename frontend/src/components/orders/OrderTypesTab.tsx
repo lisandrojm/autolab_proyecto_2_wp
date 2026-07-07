@@ -39,6 +39,7 @@ const SortableRow: React.FC<SortableRowProps> = ({ orderConfig, index, isReorder
     dinero: "Dinero",
     objeto: "Objeto",
     otros: "Otros",
+    datos_personales: "Datos personales",
   };
 
   const getExpectedTemplateCode = (): string | null => {
@@ -226,6 +227,7 @@ export const OrderTypesTab: React.FC = () => {
     requiresUserConfirmation?: boolean;
     pdfId?: string;
     pdfText?: string;
+    camposEditables?: string[];
   }>({
     name: "",
     informacion: "",
@@ -252,6 +254,7 @@ export const OrderTypesTab: React.FC = () => {
     pdfId: undefined,
     pdfText: "",
     repayment: undefined,
+    camposEditables: [],
   });
   const [submitting, setSubmitting] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
@@ -338,6 +341,7 @@ export const OrderTypesTab: React.FC = () => {
       requiresSignature: true,
       requiresUserConfirmation: false,
       pdfText: "",
+      camposEditables: [],
     });
     setShowModal(true);
   };
@@ -362,6 +366,7 @@ export const OrderTypesTab: React.FC = () => {
       deadlineMode: orderType.deadlineMode || "none",
       subtipos: orderType.config?.subtipos ?? [],
       repayment: orderType.config?.repayment ?? undefined,
+      camposEditables: orderType.config?.camposEditables ?? [],
       resetDate: (() => {
         const raw = orderType.config?.resetDate;
         if (!raw) return undefined;
@@ -494,6 +499,11 @@ export const OrderTypesTab: React.FC = () => {
           cfg.repayment = { ...(formData.repayment || {}), startOnApproval: formData.repayment.startOnApproval ?? true };
         }
         payload.config = Object.keys(cfg).length ? cfg : undefined;
+      }
+
+      // Datos personales: guardar la lista de campos editables habilitados en config.
+      if (formData.categoryType === "datos_personales") {
+        payload.config = { ...(payload.config || {}), camposEditables: formData.camposEditables || [] };
       }
 
       // If there are subtipos and category is dinero, copy any repayment fields from formData.subtipos into payload

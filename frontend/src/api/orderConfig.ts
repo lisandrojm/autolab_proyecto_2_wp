@@ -20,6 +20,8 @@ export interface TypeConfig {
   subtipos?: Subtype[];
   resetDate?: string;
   repayment?: RepaymentConfig;
+  // Campos de datos personales habilitados para modificación (categoryType === "datos_personales").
+  camposEditables?: string[];
   [key: string]: any;
 }
 
@@ -30,7 +32,7 @@ export interface RepaymentConfig {
   resetOnPaid?: boolean; // si al completarse se resetea el monto a cero
 }
 
-export type CategoryType = "fecha" | "dinero" | "objeto" | "otros";
+export type CategoryType = "fecha" | "dinero" | "objeto" | "otros" | "datos_personales";
 
 export interface OrderConfig {
   _id: string;
