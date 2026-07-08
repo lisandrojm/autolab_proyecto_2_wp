@@ -2,6 +2,7 @@ import { IOrder } from "../models/Order.js";
 import { IOrderConfig } from "../models/OrderConfig.js";
 import { IUser } from "../models/User.js";
 import { IVacation } from "../models/Vacation.js";
+import { buildDatosModificadosHtml } from "./personalDataFields.js";
 
 interface PdfVariables {
   categoria: string;
@@ -144,7 +145,7 @@ function calculateDays(fechaDesde: Date | string | undefined, fechaHasta: Date |
   }
 }
 
-export function prepareVariables(order: IOrder, category: IOrderConfig, user: IUser, tenantName: string): Record<string, string> {
+export async function prepareVariables(order: IOrder, category: IOrderConfig, user: IUser, tenantName: string): Promise<Record<string, string>> {
   const nombreCompleto = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Usuario";
 
   const categoryName = category.name || "-";
@@ -276,8 +277,17 @@ export function prepareVariables(order: IOrder, category: IOrderConfig, user: IU
   const descripcion = sanitizeHtml(order.description || "-");
   const textoAdicional = order.customTextBlock ? sanitizeHtml(order.customTextBlock) : "";
 
+  // Datos personales: lista de campos modificados (solo los que cambió el usuario).
+  let datosModificados = "-";
+  if (category.categoryType === "datos_personales") {
+    const proposed = (order.metadata as any)?.proposedUserData || (order.dynamicValue && typeof order.dynamicValue === "object" && !Array.isArray(order.dynamicValue) ? order.dynamicValue : null);
+    datosModificados = await buildDatosModificadosHtml(proposed, (order as any).tenantId);
+  }
+
   return {
     ...dynamicVars,
+    datosModificados,
+    numeroOrden: numeroPedido,
     categoria,
     subcategoria,
     monto,
@@ -458,6 +468,13 @@ export function getDummyVariables(code: string): Record<string, string> {
         subcategoria: "Varios",
         detalle: "Solicitud de prueba genérica",
         descripcion: "Solicitud de prueba genérica para validación de flujo",
+      };
+    case "datospersonales":
+      return {
+        ...defaults,
+        categoria: "Datos personales",
+        datosModificados: '<ul style="margin:0;padding-left:18px;"><li><strong>Teléfono:</strong> 11 2233-4455</li><li><strong>Calle:</strong> Av. Siempre Viva</li><li><strong>Banco:</strong> BANCO DE LA NACION ARGENTINA</li></ul>',
+        descripcion: "Solicitud de modificación de datos personales",
       };
     default:
       return defaults;

@@ -13,6 +13,7 @@ import { StatusBadge } from "../components/ui/StatusBadge";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { mapOrderStatusToStatusType, mapDocumentStateToStatusType, mapSignatureStateToStatusType, isOrderInFinalState } from "../utils/statusHelpers";
 import { getFormattedOrderNumber } from "../utils/orderHelpers";
+import { ProposedPersonalDataDetails } from "../components/orders/ProposedPersonalDataDetails";
 
 // 🔥 IMPORTAR HELP
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -1089,6 +1090,9 @@ export const OrdersPage: React.FC = () => {
                   ))}
                 </div>
               </div>
+              {(selectedOrder.categoryId as any)?.categoryType === "datos_personales" && (selectedOrder as any).metadata?.proposedUserData && (
+                <ProposedPersonalDataDetails proposedUserData={(selectedOrder as any).metadata.proposedUserData} />
+              )}
               {selectedOrder.pdfPreAprobacionUrl && (
                 <div className="border-slate-200 dark:border-slate-700">
                   <a href={`${import.meta.env.VITE_API_URL}${selectedOrder.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded hover:bg-violet-700 dark:bg-violet-800 dark:hover:bg-violet-600 transition-colors font-medium shadow-sm text-sm">

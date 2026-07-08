@@ -66,3 +66,17 @@ export const PERSONAL_DATA_FIELD_KEYS: string[] = PERSONAL_DATA_FIELDS.map((f) =
 export function getPersonalDataField(key: string): PersonalDataField | undefined {
   return PERSONAL_DATA_FIELDS.find((f) => f.key === key);
 }
+
+// Mapa catálogo (config) -> tipo de Info (backend infoAPI).
+export const CATALOG_TO_INFO_TYPE: Record<string, string> = {
+  generos: "genero",
+  tiposDocumento: "tipo-documento",
+  paises: "pais",
+  nacionalidades: "nacionalidad",
+  nivelesEstudio: "nivel-estudio",
+  bancos: "banco",
+  obrasSociales: "obra-social",
+};
+
+// Estado civil no tiene catálogo Info: opciones fijas (igual que el registro/admin).
+export const ESTADO_CIVIL_OPTIONS = ["Soltero", "Casado", "Divorciado", "Viudo", "Concubino"];

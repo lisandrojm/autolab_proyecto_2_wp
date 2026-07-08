@@ -4,6 +4,7 @@ import { faCalendar } from "@fortawesome/free-solid-svg-icons";
 import { OrderConfig as OrderType } from "../../../../api/orderConfig";
 import { CustomDatePicker } from "./CustomDatePicker";
 import { CustomMultiDatePicker } from "./CustomMultiDatePicker";
+import { PersonalDataForm } from "./PersonalDataForm";
 
 interface DynamicCategoryInputProps {
   category: OrderType | null;
@@ -73,6 +74,8 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
 
   const renderDynamicInput = () => {
     switch (category.categoryType) {
+      case "datos_personales":
+        return <PersonalDataForm enabledKeys={category.config?.camposEditables || []} value={dynamicValue || {}} onChange={onDynamicValueChange} />;
       case "fecha":
         if (category.dateMode === "range") {
           const fechaDesde = dynamicValue?.fechaDesde || "";

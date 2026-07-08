@@ -3,7 +3,7 @@ import axios from "./axiosConfig";
 export interface Pdf {
   _id: string;
   tenantId: string;
-  code: "dinero" | "fechaRango" | "fechaUnica" | "fechasMultiples" | "vacaciones" | "objeto" | "otros";
+  code: "dinero" | "fechaRango" | "fechaUnica" | "fechasMultiples" | "vacaciones" | "objeto" | "otros" | "datosPersonales";
   name: string;
   title?: string;
   content: string;
@@ -14,7 +14,7 @@ export interface Pdf {
 }
 
 export interface PdfInput {
-  code: "dinero" | "fechaRango" | "fechaUnica" | "fechasMultiples" | "vacaciones" | "objeto" | "otros";
+  code: "dinero" | "fechaRango" | "fechaUnica" | "fechasMultiples" | "vacaciones" | "objeto" | "otros" | "datosPersonales";
   name: string;
   title?: string;
   content: string;
@@ -52,9 +52,9 @@ export const codeOptions = [
   { value: "dinero", label: "Pedidos | Dinero" },
   { value: "fechaRango", label: "Pedidos | Fecha - Rango" },
   { value: "fechasMultiples", label: "Pedidos | Fecha - Múltiples" },
-  { value: "fechaUnica", label: "Pedidos | Fecha - Múltiples" },
   { value: "objeto", label: "Pedidos | Objeto" },
   { value: "otros", label: "Pedidos | Otros" },
+  { value: "datosPersonales", label: "Pedidos | Datos Personales" },
   { value: "vacaciones", label: "Vacaciones" },
 ] as const;
 
@@ -65,6 +65,7 @@ export const variablesByCode: Record<string, string[]> = {
   fechasMultiples: ["{{categoria}}", "{{subcategoria}}", "{{fechas}}", "{{fechasMultiples}}", "{{fechaUnica}}", "{{nombreUsuario}}", "{{numeroOrden}}", "{{textoAdicional}}"],
   objeto: ["{{categoria}}", "{{subcategoria}}", "{{objeto}}", "{{nombreUsuario}}", "{{numeroOrden}}", "{{textoAdicional}}"],
   otros: ["{{categoria}}", "{{subcategoria}}", "{{detalle}}", "{{nombreUsuario}}", "{{numeroOrden}}", "{{textoAdicional}}"],
+  datosPersonales: ["{{categoria}}", "{{datosModificados}}", "{{nombreUsuario}}", "{{numeroOrden}}", "{{textoAdicional}}"],
   vacaciones: ["{{dias}}", "{{anio}}", "{{fechaInicio}}", "{{fechaFin}}", "{{fechaReintegro}}", "{{nombreUsuario}}"],
 };
 

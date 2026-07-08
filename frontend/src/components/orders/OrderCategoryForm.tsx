@@ -62,6 +62,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
     if (categoryType === "dinero") return "dinero";
     if (categoryType === "objeto") return "objeto";
     if (categoryType === "otros") return "otros";
+    if (categoryType === "datos_personales") return "datosPersonales";
     return null;
   };
 

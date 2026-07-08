@@ -8,6 +8,7 @@ import { getUserName, getUserPosition, getUserAvatar, formatDateShort, getCatego
 import { sweetAlert } from "../utils/sweetAlert";
 import { StatusBadge } from "../../../../components/ui/StatusBadge";
 import { mapOrderStatusToStatusTypeForMobile, mapDocumentStateToStatusType, mapSignatureStateToStatusType, isOrderInFinalState } from "../../../../utils/statusHelpers";
+import { ProposedPersonalDataDetails } from "../../../../components/orders/ProposedPersonalDataDetails";
 
 interface OrderDetailModalProps {
   order: Order | null;
@@ -301,6 +302,9 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                 ))}
               </div>
             </div>
+            {(order.categoryId as any)?.categoryType === "datos_personales" && ((order as any).metadata?.proposedUserData || (order.dynamicValue && typeof order.dynamicValue === "object")) && (
+              <ProposedPersonalDataDetails proposedUserData={(order as any).metadata?.proposedUserData || order.dynamicValue} />
+            )}
             <div className="flex flex-wrap gap-10">
               {typeof order.dynamicValue === "string" && !/^\d{4}-\d{2}-\d{2}/.test(order.dynamicValue) && (
                 <div>

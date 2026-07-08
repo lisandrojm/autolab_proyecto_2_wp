@@ -13,6 +13,7 @@ export function PdfAssignmentStatus({ templates }: PdfAssignmentStatusProps) {
     { section: "Pedidos", code: "fechasMultiples", label: "Fecha - Múltiples", description: "Para una o más fechas puntuales" },
     { section: "Pedidos", code: "objeto", label: "Objeto", description: "Para solicitudes de equipamiento y materiales" },
     { section: "Pedidos", code: "otros", label: "Otros", description: "Para solicitudes genéricas y otros tipos" },
+    { section: "Pedidos", code: "datosPersonales", label: "Datos Personales", description: "Para solicitudes de modificación de datos personales" },
     { section: "Vacaciones", code: "vacaciones", label: "Vacaciones", description: "Para solicitudes de vacaciones" },
   ] as const;
 

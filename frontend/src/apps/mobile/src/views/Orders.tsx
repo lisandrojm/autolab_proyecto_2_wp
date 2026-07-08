@@ -488,6 +488,15 @@ export default function Orders({ onNavigate }: OrdersProps) {
         validDynamicValue = dynamicValue;
       }
 
+      if (selectedCategory?.categoryType === "datos_personales") {
+        const hasData = validDynamicValue && typeof validDynamicValue === "object" && Object.values(validDynamicValue).some((val) => val !== "" && val !== null && val !== undefined && !(Array.isArray(val) && val.length === 0));
+        if (!hasData) {
+          await sweetAlert.warning("Sin cambios", "Completá al menos un dato para enviar el pedido.");
+          setSubmitting(false);
+          return;
+        }
+      }
+
       const isDocumentType = selectedCategory?.futureActionType === "documento";
 
       const parseLocalDate = (dateVal: any): Date => {

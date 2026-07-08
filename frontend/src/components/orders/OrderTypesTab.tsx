@@ -50,6 +50,7 @@ const SortableRow: React.FC<SortableRowProps> = ({ orderConfig, index, isReorder
     if (categoryType === "dinero") return "dinero";
     if (categoryType === "objeto") return "objeto";
     if (categoryType === "otros") return "otros";
+    if (categoryType === "datos_personales") return "datosPersonales";
     return null;
   };
 

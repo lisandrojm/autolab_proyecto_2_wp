@@ -7,7 +7,7 @@ import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 const router = Router();
 
 const PdfSchema = z.object({
-  code: z.enum(["dinero", "fechaRango", "fechaUnica", "fechasMultiples", "vacaciones", "objeto", "otros"]),
+  code: z.enum(["dinero", "fechaRango", "fechaUnica", "fechasMultiples", "vacaciones", "objeto", "otros", "datosPersonales"]),
   name: z.string().min(1).max(100),
   title: z.string().optional(),
   content: z.string().min(10).max(50000),

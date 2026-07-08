@@ -4,6 +4,110 @@
 // Provee la allowlist de claves y arma el `$set` para mutar el User cuando se
 // aprueba un pedido con categoryType === "datos_personales".
 
+import { Types } from "mongoose";
+import { Info } from "../models/Info.js";
+import { RoleFrame } from "../models/RoleFrame.js";
+
+type PersonalDataSection = "General" | "Domicilio" | "Datos bancarios";
+
+interface PersonalDataFieldMeta {
+  key: string;
+  label: string;
+  section: PersonalDataSection;
+  type: "text" | "date" | "boolean" | "catalog";
+  // Tipo de catálogo Info (cuando type === "catalog").
+  catalogType?: string;
+}
+
+// Metadata de presentación (labels + tipo de catálogo Info).
+export const PERSONAL_DATA_FIELD_META: PersonalDataFieldMeta[] = [
+  { key: "nombre", label: "Nombre", section: "General", type: "text" },
+  { key: "apellido", label: "Apellido", section: "General", type: "text" },
+  { key: "cuit", label: "CUIL", section: "General", type: "text" },
+  { key: "tipoDocumentoId", label: "Tipo de documento", section: "General", type: "catalog", catalogType: "tipo-documento" },
+  { key: "documento", label: "Documento", section: "General", type: "text" },
+  { key: "fechaNac", label: "Fecha de nacimiento", section: "General", type: "date" },
+  { key: "generoId", label: "Género", section: "General", type: "catalog", catalogType: "genero" },
+  { key: "estadoCivil", label: "Estado civil", section: "General", type: "text" },
+  { key: "nivelEstudioId", label: "Nivel de estudio", section: "General", type: "catalog", catalogType: "nivel-estudio" },
+  { key: "nacionalidadId", label: "Nacionalidad", section: "General", type: "catalog", catalogType: "nacionalidad" },
+  { key: "osId", label: "Obra social", section: "General", type: "catalog", catalogType: "obra-social" },
+  { key: "osPrepaga", label: "Prepaga", section: "General", type: "text" },
+  { key: "rolesFrameIds", label: "Rol Frame", section: "General", type: "catalog", catalogType: "__roleFrame" },
+  { key: "paisId", label: "País", section: "Domicilio", type: "catalog", catalogType: "pais" },
+  { key: "localidad", label: "Localidad", section: "Domicilio", type: "text" },
+  { key: "calle", label: "Calle", section: "Domicilio", type: "text" },
+  { key: "altura", label: "Altura", section: "Domicilio", type: "text" },
+  { key: "pisoDepto", label: "Piso / Depto", section: "Domicilio", type: "text" },
+  { key: "codigoPostal", label: "Código postal", section: "Domicilio", type: "text" },
+  { key: "telefono", label: "Teléfono", section: "Domicilio", type: "text" },
+  { key: "telefono2", label: "Teléfono de emergencia", section: "Domicilio", type: "text" },
+  { key: "visa", label: "Visa", section: "Domicilio", type: "boolean" },
+  { key: "bancoId", label: "Banco", section: "Datos bancarios", type: "catalog", catalogType: "banco" },
+  { key: "tipoDeCuentaBancaria", label: "Tipo de cuenta", section: "Datos bancarios", type: "text" },
+  { key: "cbu", label: "CBU", section: "Datos bancarios", type: "text" },
+  { key: "aliasBancario", label: "Alias", section: "Datos bancarios", type: "text" },
+  { key: "nroDeCuentaBancaria", label: "Nro. de cuenta", section: "Datos bancarios", type: "text" },
+];
+
+function escapeHtml(str: string): string {
+  return String(str ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/**
+ * Arma el HTML de la lista de datos modificados (solo los campos presentes en
+ * `proposed`), resolviendo los valores de catálogo a su nombre legible.
+ * Devuelve una lista <ul> lista para inyectar en la plantilla PDF.
+ */
+export async function buildDatosModificadosHtml(proposed: Record<string, any> | undefined | null, tenantId: Types.ObjectId | string | undefined): Promise<string> {
+  if (!proposed || typeof proposed !== "object") return "-";
+  const keys = Object.keys(proposed).filter((k) => PERSONAL_DATA_FIELD_META.some((m) => m.key === k));
+  if (keys.length === 0) return "-";
+
+  const metas = PERSONAL_DATA_FIELD_META.filter((m) => keys.includes(m.key));
+
+  // Cargar catálogos Info necesarios (una consulta por tipo).
+  const catalogTypes = Array.from(new Set(metas.filter((m) => m.type === "catalog" && m.catalogType && m.catalogType !== "__roleFrame").map((m) => m.catalogType!)));
+  const infoMaps: Record<string, Map<string, string>> = {};
+  await Promise.all(
+    catalogTypes.map(async (type) => {
+      const filter: any = { type };
+      if (tenantId) filter.tenantId = tenantId;
+      const items = await Info.find(filter).lean();
+      const map = new Map<string, string>();
+      for (const it of items as any[]) map.set(String(it.data?.id), it.data?.nombre || it.name);
+      infoMaps[type] = map;
+    }),
+  );
+
+  // Roles frame (si aplica).
+  let roleFrameMap: Map<string, string> | null = null;
+  if (metas.some((m) => m.key === "rolesFrameIds")) {
+    const rfs = await RoleFrame.find({}).select("name").lean();
+    roleFrameMap = new Map<string, string>();
+    for (const rf of rfs as any[]) roleFrameMap.set(String(rf._id), rf.name);
+  }
+
+  const displayValue = (meta: PersonalDataFieldMeta): string => {
+    const raw = proposed[meta.key];
+    if (meta.type === "boolean") return raw ? "Sí" : "No";
+    if (meta.type === "date") return raw ? String(raw).split("T")[0] : "-";
+    if (meta.key === "rolesFrameIds") {
+      const ids: string[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
+      if (ids.length === 0) return "-";
+      return ids.map((id) => roleFrameMap?.get(String(id)) || id).join(", ");
+    }
+    if (meta.type === "catalog" && meta.catalogType && infoMaps[meta.catalogType]) {
+      return infoMaps[meta.catalogType].get(String(raw)) || String(raw);
+    }
+    if (raw === "" || raw === null || raw === undefined) return "-";
+    return String(raw);
+  };
+
+  const items = metas.map((m) => `<li><strong>${escapeHtml(m.label)}:</strong> ${escapeHtml(displayValue(m))}</li>`).join("");
+  return `<ul style="margin:0;padding-left:18px;">${items}</ul>`;
+}
+
 // Claves permitidas (deben coincidir con PERSONAL_DATA_FIELDS del frontend).
 export const PERSONAL_DATA_FIELD_KEYS: string[] = [
   // General
