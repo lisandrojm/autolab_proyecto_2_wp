@@ -187,7 +187,7 @@ export async function generateOrderPDF(order, category, template, user, tenantId
         if (order.customTextBlock && !bodyContent.includes("{{textoAdicional}}")) {
             bodyContent += `\n\n<div style="margin-top: 30px; padding-top: 15px; border-top: 1px dashed #ccc; font-style: italic; color: #555; font-size: 11pt; white-space: pre-wrap;">${order.customTextBlock}</div>`;
         }
-        const variables = prepareVariables(order, category, user, tenantName);
+        const variables = await prepareVariables(order, category, user, tenantName);
         console.log("[PDF GENERATOR] Variables prepared:", Object.keys(variables));
         // Use buildPdfHtml to generate HTML with global layout
         const htmlContent = await buildPdfHtml(tenantId, bodyContent, variables, template.title, user);

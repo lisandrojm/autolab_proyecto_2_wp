@@ -16,7 +16,7 @@ import { Pdf } from "../models/Pdf.js";
 const NAME = "Solicitud de Datos Personales";
 const TITLE = "SOLICITUD DE MODIFICACIÓN DE DATOS PERSONALES";
 
-const CONTENT = `<p>Por medio de la presente, <strong>{{nombreUsuario}}</strong> solicita la actualización de sus datos personales registrados en el sistema, conforme al detalle que se consigna a continuación.</p>
+const CONTENT = `<p>Por medio de la presente, <strong>{{nombreUsuario}}</strong> —en el marco de la solicitud de <strong>{{categoria}}</strong>— requiere la actualización de sus datos personales registrados en el sistema, conforme al detalle que se consigna a continuación.</p>
 
 <p><strong>Detalle de la información a modificar:</strong></p>
 {{datosModificados}}
@@ -25,9 +25,7 @@ const CONTENT = `<p>Por medio de la presente, <strong>{{nombreUsuario}}</strong>
 
 {{textoAdicional}}
 
-<p>En prueba de conformidad, se firma la presente solicitud.</p>
-
-<p style="margin-top:40px;">{{fechaCompleta}}</p>`;
+<p>En prueba de conformidad, se firma la presente solicitud.</p>`;
 
 async function main() {
   const tenantSlug = process.env.TENANT_SLUG?.trim();

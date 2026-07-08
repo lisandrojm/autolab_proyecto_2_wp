@@ -1,3 +1,19 @@
+import { Types } from "mongoose";
+type PersonalDataSection = "General" | "Domicilio" | "Datos bancarios";
+interface PersonalDataFieldMeta {
+    key: string;
+    label: string;
+    section: PersonalDataSection;
+    type: "text" | "date" | "boolean" | "catalog";
+    catalogType?: string;
+}
+export declare const PERSONAL_DATA_FIELD_META: PersonalDataFieldMeta[];
+/**
+ * Arma el HTML de la lista de datos modificados (solo los campos presentes en
+ * `proposed`), resolviendo los valores de catálogo a su nombre legible.
+ * Devuelve una lista <ul> lista para inyectar en la plantilla PDF.
+ */
+export declare function buildDatosModificadosHtml(proposed: Record<string, any> | undefined | null, tenantId: Types.ObjectId | string | undefined): Promise<string>;
 export declare const PERSONAL_DATA_FIELD_KEYS: string[];
 /**
  * Filtra un objeto de datos propuestos dejando sólo las claves permitidas y
@@ -14,3 +30,4 @@ export declare function buildUserPersonalDataSet(sanitized: Record<string, any>,
     firstName?: string;
     lastName?: string;
 }): Record<string, any>;
+export {};
