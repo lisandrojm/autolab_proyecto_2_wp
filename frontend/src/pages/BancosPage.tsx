@@ -24,6 +24,8 @@ export const BancosPage: React.FC = () => (
         options: [
           { value: "banco", label: "Banco" },
           { value: "billetera_virtual", label: "Billetera Virtual" },
+          { value: "compania_financiera", label: "Compañía Financiera" },
+          { value: "caja_credito", label: "Caja de Crédito" },
           { value: "otro", label: "Otro" },
         ],
       },
