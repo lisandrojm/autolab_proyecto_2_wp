@@ -645,6 +645,7 @@ router.post("/registro", async (req, res) => {
             visa: !!body.visa,
             // Datos bancarios
             tipoEntidadFinanciera: body.tipoEntidadFinanciera || undefined,
+            solicitaCreacionCuenta: !!body.solicitaCreacionCuenta,
             bancoId: num(body.bancoId),
             tipoDeCuentaBancaria: body.tipoDeCuentaBancaria || undefined,
             cbu: body.cbu || undefined,

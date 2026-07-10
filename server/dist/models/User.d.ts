@@ -55,8 +55,10 @@ export interface IUserMetadata {
     telefono2?: string | null;
     visa?: boolean | null;
     activo?: boolean;
-    /** Tipo de entidad financiera: "banco" | "billetera_virtual" | "compania_financiera" | "caja_credito" | "otro". */
+    /** Tipo de entidad financiera: "banco" | "billetera_virtual" | "compania_financiera" | "caja_credito" | "sin_banco". */
     tipoEntidadFinanciera?: string | null;
+    /** Si eligió "No tengo Banco" y pidió que le creen una cuenta. */
+    solicitaCreacionCuenta?: boolean | null;
     bancoId?: number | null;
     cbu?: string | null;
     tipoDeCuentaBancaria?: string | null;

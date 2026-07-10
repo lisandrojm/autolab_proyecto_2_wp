@@ -46,6 +46,7 @@ interface RegistroForm {
   cbu: string;
   aliasBancario: string;
   nroDeCuentaBancaria: string;
+  solicitaCreacionCuenta: boolean;
 }
 
 const emptyForm: RegistroForm = {
@@ -79,7 +80,11 @@ const emptyForm: RegistroForm = {
   cbu: "",
   aliasBancario: "",
   nroDeCuentaBancaria: "",
+  solicitaCreacionCuenta: false,
 };
+
+// Valor especial: el usuario no tiene banco y pide que le creen una cuenta.
+const SIN_BANCO = "sin_banco";
 
 const labelClass = "block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2";
 const fieldClass = "w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-colors";
@@ -90,7 +95,7 @@ const TIPO_ENTIDAD_OPTIONS = [
   { value: "billetera_virtual", label: "Billetera Virtual" },
   { value: "compania_financiera", label: "Compañía Financiera" },
   { value: "caja_credito", label: "Caja de Crédito" },
-  { value: "otro", label: "Otro" },
+  { value: SIN_BANCO, label: "No tengo Banco" },
 ];
 
 // Qué campos pide cada tipo (cascada). cbuLabel varía: CBU / CVU / CBU/CVU.
@@ -232,7 +237,7 @@ export const RegistroPage: React.FC = () => {
   // Al cambiar el tipo de entidad, reseteamos la entidad y los datos de cuenta
   // (evita arrastrar una entidad o valores de otro tipo).
   const onTipoEntidadChange = (value: string) => {
-    setForm((prev) => ({ ...prev, tipoEntidadFinanciera: value, bancoId: "", tipoDeCuentaBancaria: "", cbu: "", aliasBancario: "", nroDeCuentaBancaria: "" }));
+    setForm((prev) => ({ ...prev, tipoEntidadFinanciera: value, bancoId: "", tipoDeCuentaBancaria: "", cbu: "", aliasBancario: "", nroDeCuentaBancaria: "", solicitaCreacionCuenta: false }));
     setError(null);
   };
 
@@ -245,6 +250,10 @@ export const RegistroPage: React.FC = () => {
   // Devuelve un mensaje de error si los datos bancarios no están completos, o null si están OK.
   const validarBancarios = (): string | null => {
     if (!form.tipoEntidadFinanciera) return "Elegí el tipo de entidad financiera.";
+    if (form.tipoEntidadFinanciera === SIN_BANCO) {
+      if (!form.solicitaCreacionCuenta) return "Marcá 'Quiero que me creen una cuenta' para continuar.";
+      return null;
+    }
     if (!form.bancoId) return `Elegí ${labelTipo(form.tipoEntidadFinanciera).toLowerCase()}.`;
     const c = camposDe(form.tipoEntidadFinanciera);
     if (c.tipoCuenta && !form.tipoDeCuentaBancaria) return "Elegí el tipo de cuenta.";
@@ -328,6 +337,7 @@ export const RegistroPage: React.FC = () => {
         telefono2: form.telefono2,
         visa: form.visa,
         tipoEntidadFinanciera: form.tipoEntidadFinanciera,
+        solicitaCreacionCuenta: form.solicitaCreacionCuenta,
         bancoId: form.bancoId,
         tipoDeCuentaBancaria: form.tipoDeCuentaBancaria,
         cbu: form.cbu,
@@ -592,8 +602,26 @@ export const RegistroPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* "No tengo Banco": pedido de creación de cuenta + leyenda (sin entidad ni CBU) */}
+              {form.tipoEntidadFinanciera === SIN_BANCO && (
+                <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-5 space-y-3">
+                  <label className="flex items-center gap-3 cursor-pointer text-gray-100">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500"
+                      checked={form.solicitaCreacionCuenta}
+                      onChange={(e) => set("solicitaCreacionCuenta", e.target.checked)}
+                    />
+                    <span className="font-medium">Quiero que me creen una cuenta</span>
+                  </label>
+                  <p className="text-xs text-gray-400 leading-relaxed">
+                    Una vez que se cree la cuenta, recibirás una notificación en la aplicación.
+                  </p>
+                </div>
+              )}
+
               {/* Paso 2: entidad (aparece al elegir el tipo, filtrada por ese tipo) */}
-              {form.tipoEntidadFinanciera && (
+              {form.tipoEntidadFinanciera && form.tipoEntidadFinanciera !== SIN_BANCO && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
                     <label className={labelClass}>{labelTipo(form.tipoEntidadFinanciera)} *</label>
@@ -606,7 +634,7 @@ export const RegistroPage: React.FC = () => {
               )}
 
               {/* Paso 3: datos de la cuenta (aparece al elegir la entidad; los campos dependen del tipo) */}
-              {form.tipoEntidadFinanciera && form.bancoId && (
+              {form.tipoEntidadFinanciera !== SIN_BANCO && form.tipoEntidadFinanciera && form.bancoId && (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {camposDe(form.tipoEntidadFinanciera).tipoCuenta && (

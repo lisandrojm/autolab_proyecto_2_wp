@@ -50,6 +50,7 @@ const userSchema = new Schema({
         visa: Boolean,
         activo: { type: Boolean, default: true },
         tipoEntidadFinanciera: String,
+        solicitaCreacionCuenta: Boolean,
         bancoId: Number,
         cbu: String,
         tipoDeCuentaBancaria: String,
