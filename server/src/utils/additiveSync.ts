@@ -244,6 +244,7 @@ export const USER_FRAME_WHITELIST: readonly string[] = [
   "metadata.telefono2",
   "metadata.visa",
   "metadata.activo",
+  "metadata.tipoEntidadFinanciera",
   "metadata.bancoId",
   "metadata.cbu",
   "metadata.tipoDeCuentaBancaria",

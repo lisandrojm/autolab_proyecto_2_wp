@@ -60,6 +60,8 @@ export interface IUserMetadata {
   telefono2?: string | null;
   visa?: boolean | null;
   activo?: boolean;
+  /** Tipo de entidad financiera: "banco" | "billetera_virtual" | "compania_financiera" | "caja_credito" | "otro". */
+  tipoEntidadFinanciera?: string | null;
   bancoId?: number | null;
   cbu?: string | null;
   tipoDeCuentaBancaria?: string | null;
@@ -163,6 +165,7 @@ const userSchema = new Schema<IUser>(
       telefono2: String,
       visa: Boolean,
       activo: { type: Boolean, default: true },
+      tipoEntidadFinanciera: String,
       bancoId: Number,
       cbu: String,
       tipoDeCuentaBancaria: String,

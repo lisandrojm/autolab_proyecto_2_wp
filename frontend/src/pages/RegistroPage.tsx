@@ -9,6 +9,10 @@ interface InfoOption {
   name: string;
 }
 
+interface BancoOption extends InfoOption {
+  tipoEntidad?: string;
+}
+
 interface RegistroForm {
   firstName: string;
   lastName: string;
@@ -36,6 +40,7 @@ interface RegistroForm {
   telefono2: string;
   visa: boolean;
   // Bancarios
+  tipoEntidadFinanciera: string;
   bancoId: string;
   tipoDeCuentaBancaria: string;
   cbu: string;
@@ -68,6 +73,7 @@ const emptyForm: RegistroForm = {
   telefono: "",
   telefono2: "",
   visa: false,
+  tipoEntidadFinanciera: "",
   bancoId: "",
   tipoDeCuentaBancaria: "",
   cbu: "",
@@ -77,6 +83,31 @@ const emptyForm: RegistroForm = {
 
 const labelClass = "block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2";
 const fieldClass = "w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-colors";
+
+// Tipos de entidad financiera (espejo del ABM / enum del backend).
+const TIPO_ENTIDAD_OPTIONS = [
+  { value: "banco", label: "Banco" },
+  { value: "billetera_virtual", label: "Billetera Virtual" },
+  { value: "compania_financiera", label: "Compañía Financiera" },
+  { value: "caja_credito", label: "Caja de Crédito" },
+  { value: "otro", label: "Otro" },
+];
+
+// Qué campos pide cada tipo (cascada). cbuLabel varía: CBU / CVU / CBU/CVU.
+interface CamposTipo {
+  tipoCuenta: boolean;
+  nroCuenta: boolean;
+  cbuLabel: string;
+}
+const CAMPOS_POR_TIPO: Record<string, CamposTipo> = {
+  banco: { tipoCuenta: true, nroCuenta: true, cbuLabel: "CBU" },
+  caja_credito: { tipoCuenta: true, nroCuenta: true, cbuLabel: "CBU" },
+  compania_financiera: { tipoCuenta: false, nroCuenta: true, cbuLabel: "CBU" },
+  billetera_virtual: { tipoCuenta: false, nroCuenta: false, cbuLabel: "CVU" },
+  otro: { tipoCuenta: false, nroCuenta: false, cbuLabel: "CBU/CVU" },
+};
+const camposDe = (tipo: string): CamposTipo => CAMPOS_POR_TIPO[tipo] || CAMPOS_POR_TIPO.otro;
+const labelTipo = (tipo: string): string => TIPO_ENTIDAD_OPTIONS.find((o) => o.value === tipo)?.label || "Entidad";
 
 /** Selector con modal y buscador, para listas largas (Nacionalidad, Obra social, Rol frame). */
 const SearchableSelect: React.FC<{
@@ -147,7 +178,7 @@ export const RegistroPage: React.FC = () => {
   const [nivelesEstudio, setNivelesEstudio] = useState<InfoOption[]>([]);
   const [nacionalidades, setNacionalidades] = useState<InfoOption[]>([]);
   const [obrasSociales, setObrasSociales] = useState<InfoOption[]>([]);
-  const [bancos, setBancos] = useState<InfoOption[]>([]);
+  const [bancos, setBancos] = useState<BancoOption[]>([]);
   const [rolesFrame, setRolesFrame] = useState<InfoOption[]>([]);
 
   const [loading, setLoading] = useState(true);
@@ -198,6 +229,31 @@ export const RegistroPage: React.FC = () => {
     setError(null);
   };
 
+  // Al cambiar el tipo de entidad, reseteamos la entidad y los datos de cuenta
+  // (evita arrastrar una entidad o valores de otro tipo).
+  const onTipoEntidadChange = (value: string) => {
+    setForm((prev) => ({ ...prev, tipoEntidadFinanciera: value, bancoId: "", tipoDeCuentaBancaria: "", cbu: "", aliasBancario: "", nroDeCuentaBancaria: "" }));
+    setError(null);
+  };
+
+  // Entidades filtradas por el tipo elegido (las no clasificadas cuentan como "banco").
+  const bancosFiltrados = useMemo(
+    () => (form.tipoEntidadFinanciera ? bancos.filter((b) => (b.tipoEntidad || "banco") === form.tipoEntidadFinanciera) : []),
+    [bancos, form.tipoEntidadFinanciera],
+  );
+
+  // Devuelve un mensaje de error si los datos bancarios no están completos, o null si están OK.
+  const validarBancarios = (): string | null => {
+    if (!form.tipoEntidadFinanciera) return "Elegí el tipo de entidad financiera.";
+    if (!form.bancoId) return `Elegí ${labelTipo(form.tipoEntidadFinanciera).toLowerCase()}.`;
+    const c = camposDe(form.tipoEntidadFinanciera);
+    if (c.tipoCuenta && !form.tipoDeCuentaBancaria) return "Elegí el tipo de cuenta.";
+    if (!form.cbu.trim()) return `Completá el ${c.cbuLabel}.`;
+    if (!form.aliasBancario.trim()) return "Completá el alias.";
+    if (c.nroCuenta && !form.nroDeCuentaBancaria.trim()) return "Completá el número de cuenta.";
+    return null;
+  };
+
   const tabs: { key: Tab; label: string }[] = useMemo(
     () => [
       { key: "general", label: "General" },
@@ -237,6 +293,12 @@ export const RegistroPage: React.FC = () => {
       setError("Las contraseñas no coinciden.");
       return;
     }
+    const bancErr = validarBancarios();
+    if (bancErr) {
+      setActiveTab("bancarios");
+      setError(bancErr);
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -265,6 +327,7 @@ export const RegistroPage: React.FC = () => {
         telefono: form.telefono,
         telefono2: form.telefono2,
         visa: form.visa,
+        tipoEntidadFinanciera: form.tipoEntidadFinanciera,
         bancoId: form.bancoId,
         tipoDeCuentaBancaria: form.tipoDeCuentaBancaria,
         cbu: form.cbu,
@@ -513,40 +576,69 @@ export const RegistroPage: React.FC = () => {
             </div>
           )}
 
-          {/* Datos bancarios */}
+          {/* Datos bancarios — flujo en cascada según el tipo de entidad */}
           {activeTab === "bancarios" && (
             <div className="space-y-5">
+              {/* Paso 1: tipo de entidad financiera */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className={labelClass}>Banco *</label>
-                  <SearchableSelect title="Banco" value={form.bancoId} options={bancos} onChange={(v) => set("bancoId", v)} />
-                </div>
-                <div>
-                  <label className={labelClass}>Tipo de cuenta *</label>
-                  <select className={fieldClass} value={form.tipoDeCuentaBancaria} onChange={(e) => set("tipoDeCuentaBancaria", e.target.value)}>
+                  <label className={labelClass}>Tipo de Entidad Financiera *</label>
+                  <select className={fieldClass} value={form.tipoEntidadFinanciera} onChange={(e) => onTipoEntidadChange(e.target.value)}>
                     <option value="">Seleccionar...</option>
-                    <option value="Caja de ahorro $">Caja de ahorro $</option>
-                    <option value="Cuenta Corriente $">Cuenta Corriente $</option>
-                    <option value="Caja de ahorro u$s">Caja de ahorro u$s</option>
+                    {TIPO_ENTIDAD_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className={labelClass}>CBU *</label>
-                  <input className={fieldClass} autoComplete="off" placeholder="22 dígitos" minLength={22} maxLength={22} value={form.cbu} onChange={(e) => set("cbu", e.target.value)} />
+
+              {/* Paso 2: entidad (aparece al elegir el tipo, filtrada por ese tipo) */}
+              {form.tipoEntidadFinanciera && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className={labelClass}>{labelTipo(form.tipoEntidadFinanciera)} *</label>
+                    <SearchableSelect title={labelTipo(form.tipoEntidadFinanciera)} value={form.bancoId} options={bancosFiltrados} onChange={(v) => set("bancoId", v)} />
+                    {bancosFiltrados.length === 0 && (
+                      <p className="mt-2 text-xs text-amber-400">No hay entidades cargadas de este tipo. Cargalas en el ABM de Entidades Financieras.</p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <label className={labelClass}>Alias *</label>
-                  <input className={fieldClass} autoComplete="off" placeholder="Ej: LUNES.MALETA.CUNA" value={form.aliasBancario} onChange={(e) => set("aliasBancario", e.target.value)} />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className={labelClass}>Nro. de cuenta *</label>
-                  <input className={fieldClass} autoComplete="off" placeholder="Ej: 347-333020/7" value={form.nroDeCuentaBancaria} onChange={(e) => set("nroDeCuentaBancaria", e.target.value)} />
-                </div>
-              </div>
+              )}
+
+              {/* Paso 3: datos de la cuenta (aparece al elegir la entidad; los campos dependen del tipo) */}
+              {form.tipoEntidadFinanciera && form.bancoId && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {camposDe(form.tipoEntidadFinanciera).tipoCuenta && (
+                      <div>
+                        <label className={labelClass}>Tipo de cuenta *</label>
+                        <select className={fieldClass} value={form.tipoDeCuentaBancaria} onChange={(e) => set("tipoDeCuentaBancaria", e.target.value)}>
+                          <option value="">Seleccionar...</option>
+                          <option value="Caja de ahorro $">Caja de ahorro $</option>
+                          <option value="Cuenta Corriente $">Cuenta Corriente $</option>
+                          <option value="Caja de ahorro u$s">Caja de ahorro u$s</option>
+                        </select>
+                      </div>
+                    )}
+                    <div>
+                      <label className={labelClass}>{camposDe(form.tipoEntidadFinanciera).cbuLabel} *</label>
+                      <input className={fieldClass} autoComplete="off" placeholder="22 dígitos" minLength={22} maxLength={22} value={form.cbu} onChange={(e) => set("cbu", e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                      <label className={labelClass}>Alias *</label>
+                      <input className={fieldClass} autoComplete="off" placeholder="Ej: LUNES.MALETA.CUNA" value={form.aliasBancario} onChange={(e) => set("aliasBancario", e.target.value)} />
+                    </div>
+                    {camposDe(form.tipoEntidadFinanciera).nroCuenta && (
+                      <div>
+                        <label className={labelClass}>Nro. de cuenta *</label>
+                        <input className={fieldClass} autoComplete="off" placeholder="Ej: 347-333020/7" value={form.nroDeCuentaBancaria} onChange={(e) => set("nroDeCuentaBancaria", e.target.value)} />
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )}
           </form>
