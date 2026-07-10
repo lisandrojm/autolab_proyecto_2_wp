@@ -51,6 +51,8 @@ const userSchema = new Schema({
         activo: { type: Boolean, default: true },
         tipoEntidadFinanciera: String,
         solicitaCreacionCuenta: Boolean,
+        cuentaBancariaConfirmada: Boolean,
+        cuentaBancariaConfirmadaAt: Date,
         bancoId: Number,
         cbu: String,
         tipoDeCuentaBancaria: String,

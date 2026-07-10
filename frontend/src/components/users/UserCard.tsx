@@ -254,7 +254,7 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
                 </button>
               );
             })()}
-            {user.metadata?.solicitaCreacionCuenta && (
+            {user.metadata?.solicitaCreacionCuenta && !user.metadata?.cuentaBancariaConfirmada && (
               <span
                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-sm"
                 title="Solicitó que le creen una cuenta bancaria"

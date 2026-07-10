@@ -139,6 +139,8 @@ export interface User {
     // Bancarios
     tipoEntidadFinanciera?: string;
     solicitaCreacionCuenta?: boolean;
+    cuentaBancariaConfirmada?: boolean;
+    cuentaBancariaConfirmadaAt?: string;
     bancoId?: number;
     cbu?: string;
     tipoDeCuentaBancaria?: string;
@@ -351,6 +353,14 @@ class UsersAPI {
 
   async updatePassword(id: string, password: string): Promise<void> {
     await axios.patch(`/users/${id}/password`, { password }, { headers: this.getHeaders() });
+  }
+
+  /** Confirma que la cuenta bancaria fue creada y los datos cargados (plataforma + banco). */
+  async confirmarCuentaBancaria(id: string): Promise<User> {
+    const { data: updated } = await axios.patch(`/users/${id}/confirmar-cuenta-bancaria`, {}, { headers: this.getHeaders() });
+    const user = normalizeUser(updated);
+    emitUsersChanged("update", user._id);
+    return user;
   }
 
   async remove(id: string): Promise<void> {

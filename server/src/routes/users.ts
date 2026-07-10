@@ -690,6 +690,52 @@ router.patch("/:id/password", requireTenant, authenticateToken, requirePermissio
   }
 });
 
+// PATCH /users/:id/confirmar-cuenta-bancaria - Confirmar que la cuenta fue creada y los datos cargados
+router.patch("/:id/confirmar-cuenta-bancaria", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const userId = req.params.id;
+    const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
+
+    const query: any = { _id: userId };
+    if (!isSuperAdmin) {
+      if (!req.tenantObjectId) {
+        res.status(400).json({ error: "Invalid tenant ID" });
+        return;
+      }
+      query.tenantId = req.tenantObjectId;
+    }
+
+    const currentUser = await User.findOne(query);
+    if (!currentUser) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    // Guard: no se puede confirmar si todavía no se cargaron los datos bancarios.
+    const meta: any = currentUser.metadata || {};
+    if (!meta.bancoId && !meta.cbu) {
+      res.status(400).json({ error: "Cargá primero los datos bancarios antes de confirmar." });
+      return;
+    }
+
+    const user = await User.findOneAndUpdate(
+      { _id: userId, tenantId: currentUser.tenantId },
+      { $set: { "metadata.cuentaBancariaConfirmada": true, "metadata.cuentaBancariaConfirmadaAt": new Date() } },
+      { new: true },
+    )
+      .select("-password")
+      .populate("roles", "name description permissions")
+      .populate("clientIds", "name")
+      .populate("projectIds", "name")
+      .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame });
+
+    res.json(user);
+  } catch (error) {
+    console.error("Confirm bank account error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // PUT /users/:id/approve-solicitud - Aprobar solicitud de alta y convertir en miembro del equipo
 router.put("/:id/approve-solicitud", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {

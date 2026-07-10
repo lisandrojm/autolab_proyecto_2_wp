@@ -580,6 +580,24 @@ export const UsersPage: React.FC = () => {
     setViewUser(null);
   };
 
+  const handleConfirmarCuenta = async (user: User) => {
+    const result = await sweetAlert.confirm(
+      "¿Confirmar cuenta creada?",
+      "Confirmás que la cuenta bancaria fue creada y que los datos están cargados tanto en la plataforma como en el banco.",
+      "Sí, confirmar",
+    );
+    if (!result.isConfirmed) return;
+    try {
+      const updated = await usersAPI.confirmarCuentaBancaria(user._id);
+      setViewUser(updated);
+      sweetAlert.success("Cuenta confirmada", "La cuenta bancaria quedó confirmada y los datos cargados.");
+      fetchUsers({ silent: true });
+    } catch (error: any) {
+      const message = error.response?.data?.error || "No se pudo confirmar la cuenta.";
+      sweetAlert.error("Error", message);
+    }
+  };
+
   const handleDelete = async (user: User) => {
     const result = await sweetAlert.confirm("¿Eliminar usuario?", `¿Estás seguro de que quieres eliminar al usuario "${user.email}"?`);
     if (result.isConfirmed) {
@@ -836,7 +854,7 @@ export const UsersPage: React.FC = () => {
                 <button type="button" onClick={() => setViewActiveTab("bancarios")} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === "bancarios" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
                   <FontAwesomeIcon icon={faUniversity} className="text-xs" />
                   Datos Bancarios
-                  {viewUser.metadata?.solicitaCreacionCuenta && (
+                  {viewUser.metadata?.solicitaCreacionCuenta && !viewUser.metadata?.cuentaBancariaConfirmada && (
                     <FontAwesomeIcon icon={faBell} className="text-xs text-amber-500 animate-pulse" title="Solicitó creación de cuenta" />
                   )}
                 </button>
@@ -1141,13 +1159,43 @@ export const UsersPage: React.FC = () => {
 
             {viewActiveTab === "bancarios" && (
               <div className="space-y-6 animate-fadeIn transition-opacity duration-300">
-                {viewUser.metadata?.solicitaCreacionCuenta && (
-                  <div className="flex items-start gap-3 rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-900/20 p-4">
-                    <FontAwesomeIcon icon={faBell} className="text-amber-500 mt-0.5 animate-pulse" />
-                    <div>
+                {viewUser.metadata?.solicitaCreacionCuenta && !viewUser.metadata?.cuentaBancariaConfirmada && (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-900/20 p-4">
+                    <FontAwesomeIcon icon={faBell} className="text-amber-500 mt-0.5 animate-pulse shrink-0" />
+                    <div className="flex-1">
                       <p className="text-sm font-bold text-amber-800 dark:text-amber-300">Acción pendiente: crear cuenta bancaria</p>
                       <p className="text-xs text-amber-700 dark:text-amber-400/90 mt-0.5">
-                        El usuario indicó que <strong>no tiene banco</strong> y solicitó que le creen una cuenta. Una vez creada, cargá sus datos bancarios acá.
+                        El usuario indicó que <strong>no tiene banco</strong> y solicitó que le creen una cuenta. Cargá sus datos bancarios (Editar) y luego confirmá.
+                      </p>
+                    </div>
+                    {(() => {
+                      const tieneDatos = !!(viewUser.metadata?.bancoId || viewUser.metadata?.cbu);
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => handleConfirmarCuenta(viewUser)}
+                          disabled={!tieneDatos}
+                          title={tieneDatos ? "Confirmar que la cuenta fue creada y los datos cargados" : "Cargá primero los datos bancarios (Editar)"}
+                          className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <FontAwesomeIcon icon={faCheck} />
+                          Confirmar cuenta creada
+                        </button>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {viewUser.metadata?.cuentaBancariaConfirmada && (
+                  <div className="flex items-start gap-3 rounded-lg border border-emerald-300 dark:border-emerald-700/60 bg-emerald-50 dark:bg-emerald-900/20 p-4">
+                    <FontAwesomeIcon icon={faCheck} className="text-emerald-500 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">Cuenta bancaria creada y confirmada</p>
+                      <p className="text-xs text-emerald-700 dark:text-emerald-400/90 mt-0.5">
+                        Los datos están cargados en la plataforma y en el banco.
+                        {viewUser.metadata?.cuentaBancariaConfirmadaAt && (
+                          <> Confirmada el {new Date(viewUser.metadata.cuentaBancariaConfirmadaAt).toLocaleDateString("es-AR")}.</>
+                        )}
                       </p>
                     </div>
                   </div>
