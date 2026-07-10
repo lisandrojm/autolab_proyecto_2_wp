@@ -15,5 +15,14 @@ export interface SimpleCatalogConfig {
     templateFilename: string;
     /** Ejemplos para la plantilla (solo nombres). */
     sampleNames?: string[];
+    /**
+     * Campos string extra (además de name/externalId) a persistir en create/update/import.
+     * Solo lo usan los catálogos que lo requieren (ej. Bancos → tipoEntidad); el resto no se ve afectado.
+     */
+    extraStringFields?: Array<{
+        key: string;
+        excelHeader?: string;
+        aliases?: string[];
+    }>;
 }
 export declare function createSimpleCatalogRouter(model: Model<any>, config: SimpleCatalogConfig): Router;

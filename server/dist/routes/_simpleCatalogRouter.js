@@ -22,9 +22,13 @@ model, config) {
     router.get("/template", authenticateToken, async (_req, res) => {
         try {
             const samples = config.sampleNames && config.sampleNames.length > 0 ? config.sampleNames : ["Ejemplo 1", "Ejemplo 2"];
-            const wsData = [["ID Externo (opcional)", "Nombre"], ...samples.map((n) => ["", n])];
+            const extraHeaders = (config.extraStringFields || []).map((f) => f.excelHeader || f.key);
+            const wsData = [
+                ["ID Externo (opcional)", "Nombre", ...extraHeaders],
+                ...samples.map((n) => ["", n, ...extraHeaders.map(() => "")]),
+            ];
             const ws = xlsx.utils.aoa_to_sheet(wsData);
-            ws["!cols"] = [{ wch: 18 }, { wch: 45 }];
+            ws["!cols"] = [{ wch: 18 }, { wch: 45 }, ...extraHeaders.map(() => ({ wch: 22 }))];
             const wb = xlsx.utils.book_new();
             xlsx.utils.book_append_sheet(wb, ws, config.sheetName);
             const buffer = xlsx.write(wb, { type: "buffer", bookType: "xlsx" });
@@ -63,7 +67,20 @@ model, config) {
                     errors.push(`Fila ${rowNum}: La columna 'Nombre' es obligatoria.`);
                     continue;
                 }
-                parsed.push({ externalId: String(externalId ?? "").trim(), nombre: String(nombre).trim() });
+                const extras = {};
+                for (const f of config.extraStringFields || []) {
+                    const candidates = [f.excelHeader, f.key, ...(f.aliases || [])].filter(Boolean);
+                    let val;
+                    for (const h of candidates) {
+                        if (row[h] !== undefined) {
+                            val = row[h];
+                            break;
+                        }
+                    }
+                    if (val !== undefined && val !== null && String(val).trim() !== "")
+                        extras[f.key] = String(val).trim();
+                }
+                parsed.push({ externalId: String(externalId ?? "").trim(), nombre: String(nombre).trim(), extras });
             }
             if (errors.length > 0) {
                 res.status(400).json({ error: "Errores de validación en el archivo Excel", details: errors });
@@ -79,6 +96,7 @@ model, config) {
                                 name: item.nombre,
                                 externalId: item.externalId,
                                 data: { id: idNum !== undefined && !isNaN(idNum) ? idNum : undefined, nombre: item.nombre },
+                                ...item.extras,
                             },
                         },
                         upsert: true,
@@ -111,6 +129,11 @@ model, config) {
                 externalId: externalId ? String(externalId).trim() : "",
                 data: { id: idNum !== undefined && !isNaN(idNum) ? idNum : undefined, nombre: nombre.trim() },
             };
+            for (const f of config.extraStringFields || []) {
+                const v = req.body[f.key];
+                if (v !== undefined && v !== null)
+                    newItem[f.key] = String(v).trim();
+            }
             const created = await model.create(newItem);
             res.status(201).json(created);
         }
@@ -139,6 +162,11 @@ model, config) {
                 const idNum = Number(externalId);
                 item.data = item.data || {};
                 item.data.id = !isNaN(idNum) ? idNum : item.data.id;
+            }
+            for (const f of config.extraStringFields || []) {
+                const v = req.body[f.key];
+                if (v !== undefined)
+                    item[f.key] = v === null ? "" : String(v).trim();
             }
             await item.save();
             res.json(item);
