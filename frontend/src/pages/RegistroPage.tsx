@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 
 type Tab = "general" | "domicilio" | "bancarios";
 
@@ -387,7 +387,13 @@ export const RegistroPage: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-900 px-6">
         <div className="text-center">
           <h1 className="text-2xl font-semibold text-gray-100 mb-2">¡Registro completado!</h1>
-          <p className="text-gray-400">Tu cuenta fue creada correctamente. Ya podés iniciar sesión.</p>
+          <p className="text-gray-400 mb-6">Tu cuenta fue creada correctamente. Ya podés iniciar sesión.</p>
+          <Link
+            to="/login"
+            className="inline-block py-3 px-8 rounded-lg text-center text-white font-medium tracking-wide uppercase bg-blue-600 hover:bg-blue-700 transition-colors"
+          >
+            Iniciar sesión
+          </Link>
         </div>
       </div>
     );

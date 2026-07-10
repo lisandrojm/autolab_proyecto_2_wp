@@ -22,7 +22,7 @@ import { UserFormModal } from "../components/users/UserFormModal";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faLayerGroup, faHourglassHalf, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faUserPlus, faCopy, faCheck, faBan } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faLayerGroup, faHourglassHalf, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faUserPlus, faCopy, faCheck, faBan, faBell } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate, useParams } from "react-router-dom";
 import { getImageUrl } from "../utils/imageHelpers";
@@ -836,6 +836,9 @@ export const UsersPage: React.FC = () => {
                 <button type="button" onClick={() => setViewActiveTab("bancarios")} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === "bancarios" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
                   <FontAwesomeIcon icon={faUniversity} className="text-xs" />
                   Datos Bancarios
+                  {viewUser.metadata?.solicitaCreacionCuenta && (
+                    <FontAwesomeIcon icon={faBell} className="text-xs text-amber-500 animate-pulse" title="Solicitó creación de cuenta" />
+                  )}
                 </button>
                 <button type="button" onClick={() => setViewActiveTab("proyectos")} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === "proyectos" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
                   <FontAwesomeIcon icon={faBriefcase} className="text-xs" />
@@ -1138,6 +1141,17 @@ export const UsersPage: React.FC = () => {
 
             {viewActiveTab === "bancarios" && (
               <div className="space-y-6 animate-fadeIn transition-opacity duration-300">
+                {viewUser.metadata?.solicitaCreacionCuenta && (
+                  <div className="flex items-start gap-3 rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-900/20 p-4">
+                    <FontAwesomeIcon icon={faBell} className="text-amber-500 mt-0.5 animate-pulse" />
+                    <div>
+                      <p className="text-sm font-bold text-amber-800 dark:text-amber-300">Acción pendiente: crear cuenta bancaria</p>
+                      <p className="text-xs text-amber-700 dark:text-amber-400/90 mt-0.5">
+                        El usuario indicó que <strong>no tiene banco</strong> y solicitó que le creen una cuenta. Una vez creada, cargá sus datos bancarios acá.
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-4">
                   {viewUser.metadata?.bancoId && (
                     <div className="space-y-1">

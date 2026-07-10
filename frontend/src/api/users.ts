@@ -137,6 +137,8 @@ export interface User {
     telefono2?: string;
     visa?: boolean;
     // Bancarios
+    tipoEntidadFinanciera?: string;
+    solicitaCreacionCuenta?: boolean;
     bancoId?: number;
     cbu?: string;
     tipoDeCuentaBancaria?: string;
