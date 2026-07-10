@@ -205,6 +205,7 @@ export const USER_FRAME_WHITELIST = [
     "metadata.telefono2",
     "metadata.visa",
     "metadata.activo",
+    "metadata.tipoEntidadFinanciera",
     "metadata.bancoId",
     "metadata.cbu",
     "metadata.tipoDeCuentaBancaria",

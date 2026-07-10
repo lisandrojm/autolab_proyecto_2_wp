@@ -55,6 +55,8 @@ export interface IUserMetadata {
     telefono2?: string | null;
     visa?: boolean | null;
     activo?: boolean;
+    /** Tipo de entidad financiera: "banco" | "billetera_virtual" | "compania_financiera" | "caja_credito" | "otro". */
+    tipoEntidadFinanciera?: string | null;
     bancoId?: number | null;
     cbu?: string | null;
     tipoDeCuentaBancaria?: string | null;

@@ -49,6 +49,7 @@ const userSchema = new Schema({
         telefono2: String,
         visa: Boolean,
         activo: { type: Boolean, default: true },
+        tipoEntidadFinanciera: String,
         bancoId: Number,
         cbu: String,
         tipoDeCuentaBancaria: String,

@@ -5,6 +5,7 @@ import { Role } from "../models/Role.js";
 import { Client } from "../models/Client.js";
 import { Tenant } from "../models/Tenant.js";
 import { Info } from "../models/Info.js";
+import { Banco } from "../models/Banco.js";
 import { RoleFrame } from "../models/RoleFrame.js";
 import { RegistroLink, REGISTRO_LINK_TTL_MS, getRegistroLinkExpiry } from "../models/RegistroLink.js";
 import crypto from "crypto";
@@ -554,11 +555,18 @@ router.get("/registro-info", async (req, res) => {
             res.status(401).json({ error: "Link inválido o expirado" });
             return;
         }
-        const types = ["genero", "tipo-documento", "nivel-estudio", "nacionalidad", "pais", "obra-social", "banco"];
+        const types = ["genero", "tipo-documento", "nivel-estudio", "nacionalidad", "pais", "obra-social"];
         const items = await Info.find({ type: { $in: types } }).sort({ name: 1 }).lean();
         const pick = (t) => items.filter((i) => i.type === t).map((i) => ({ id: i.data?.id, name: i.name }));
         const nacionalidades = pick("nacionalidad").length > 0 ? pick("nacionalidad") : pick("pais");
         const rolesFrame = (await RoleFrame.find().select("name").sort({ name: 1 }).lean()).map((r) => ({ id: String(r._id), name: r.name }));
+        // Entidades financieras desde el catálogo del ABM (colección `bancos`), con su tipoEntidad
+        // para permitir el filtrado en cascada del formulario de registro.
+        const bancos = (await Banco.find().sort({ name: 1 }).lean()).map((b) => ({
+            id: b.data?.id,
+            name: b.name,
+            tipoEntidad: b.tipoEntidad || "banco",
+        }));
         res.json({
             tenantSlug: payload.tenantSlug,
             generos: pick("genero"),
@@ -566,7 +574,7 @@ router.get("/registro-info", async (req, res) => {
             nivelesEstudio: pick("nivel-estudio"),
             nacionalidades,
             obrasSociales: pick("obra-social"),
-            bancos: pick("banco"),
+            bancos,
             rolesFrame,
         });
     }
@@ -636,6 +644,7 @@ router.post("/registro", async (req, res) => {
             telefono2: body.telefono2 || undefined,
             visa: !!body.visa,
             // Datos bancarios
+            tipoEntidadFinanciera: body.tipoEntidadFinanciera || undefined,
             bancoId: num(body.bancoId),
             tipoDeCuentaBancaria: body.tipoDeCuentaBancaria || undefined,
             cbu: body.cbu || undefined,
