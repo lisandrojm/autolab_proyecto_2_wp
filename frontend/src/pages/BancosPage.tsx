@@ -7,11 +7,26 @@ const bancosApi = createSimpleCatalogApi("/bancos");
 
 export const BancosPage: React.FC = () => (
   <SimpleCatalogManager
-    title="Bancos"
-    subtitle="Catálogo de bancos. Cargá registros manualmente o importá un Excel."
+    title="Entidades Financieras"
+    subtitle="Catálogo de entidades financieras. Cargá registros manualmente o importá un Excel."
     icon={faBuildingColumns}
-    entityLabel="banco"
+    entityLabel="entidad financiera"
     api={bancosApi}
-    templateBaseName="bancos"
+    templateBaseName="entidades_financieras"
+    extraFields={[
+      {
+        key: "tipoEntidad",
+        label: "Tipo de Entidad",
+        type: "select",
+        required: true,
+        showColumn: true,
+        columnLabel: "Tipo",
+        options: [
+          { value: "banco", label: "Banco" },
+          { value: "billetera_virtual", label: "Billetera Virtual" },
+          { value: "otro", label: "Otro" },
+        ],
+      },
+    ]}
   />
 );

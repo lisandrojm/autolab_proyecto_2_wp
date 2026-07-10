@@ -158,7 +158,7 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("config_pdf_templates:view")) base.push({ path: "/pdfs", icon: faFilePdf, label: "Plantillas PDF", scope: "global" });
       if (hasPermission("config_releases:view")) base.push({ path: "/releases", icon: faRocket, label: "Releases", scope: "global" });
       if (hasPermission("config_categorias_sat:view")) base.push({ path: "/categorias-sat", icon: faListCheck, label: "Categorías SAT", scope: "global" });
-      if (hasPermission("config_bancos:view")) base.push({ path: "/bancos", icon: faBuildingColumns, label: "Bancos", scope: "global" });
+      if (hasPermission("config_bancos:view")) base.push({ path: "/bancos", icon: faBuildingColumns, label: "Entidades Financieras", scope: "global" });
       if (hasPermission("config_obras_sociales:view")) base.push({ path: "/obras-sociales", icon: faBriefcaseMedical, label: "Obras Sociales", scope: "global" });
       if (hasPermission("config_centros_costo:view")) base.push({ path: "/centros-costo", icon: faPiggyBank, label: "Centros de Costos", scope: "global" });
       if (hasPermission("config_contratos_frame:view")) base.push({ path: "/contratos-frame", icon: faFileContract, label: "Contratos", scope: "global" });

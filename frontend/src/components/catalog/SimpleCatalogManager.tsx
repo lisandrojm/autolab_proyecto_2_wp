@@ -10,6 +10,21 @@ import { sweetAlert } from "../../utils/sweetAlert";
 import { fuzzyMatch } from "../../utils/searchHelpers";
 import { SimpleCatalogApi, SimpleCatalogItem } from "../../api/simpleCatalog";
 
+/** Descriptor de un campo extra propio de un catálogo (además de nombre / ID externo). */
+export interface CatalogExtraField {
+  key: string;
+  label: string;
+  type?: "text" | "select";
+  /** Opciones para type "select". El value es lo que se persiste; el label lo que se muestra. */
+  options?: Array<{ value: string; label: string }>;
+  required?: boolean;
+  /** Si se muestra como columna en la vista de tabla. */
+  showColumn?: boolean;
+  /** Encabezado de la columna (por defecto usa `label`). */
+  columnLabel?: string;
+  placeholder?: string;
+}
+
 interface SimpleCatalogManagerProps {
   title: string;
   subtitle?: string;
@@ -19,9 +34,11 @@ interface SimpleCatalogManagerProps {
   api: SimpleCatalogApi;
   /** Nombre base para el archivo descargado, ej. "bancos". */
   templateBaseName: string;
+  /** Campos extra propios del catálogo (ej. Bancos → "Tipo de Entidad"). */
+  extraFields?: CatalogExtraField[];
 }
 
-export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName }) => {
+export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [] }) => {
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -54,7 +71,18 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
   const [editing, setEditing] = useState<SimpleCatalogItem | null>(null);
   const [nombre, setNombre] = useState("");
   const [externalId, setExternalId] = useState("");
+  const [extraValues, setExtraValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+
+  // Valor por defecto de un campo extra al crear (primer option del select, o "").
+  const defaultExtra = (f: CatalogExtraField): string => (f.type === "select" && f.options && f.options.length > 0 ? f.options[0].value : "");
+  // Etiqueta legible de un valor guardado (mapea value → label en selects).
+  const extraDisplay = (f: CatalogExtraField, value: unknown): string => {
+    const v = value == null ? "" : String(value);
+    if (!v) return "—";
+    if (f.type === "select") return f.options?.find((o) => o.value === v)?.label ?? v;
+    return v;
+  };
 
   // Import modal
   const [showImport, setShowImport] = useState(false);
@@ -84,6 +112,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
     setEditing(null);
     setNombre("");
     setExternalId("");
+    setExtraValues(Object.fromEntries(extraFields.map((f) => [f.key, defaultExtra(f)])));
     setShowModal(true);
   };
 
@@ -91,6 +120,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
     setEditing(item);
     setNombre(item.name || "");
     setExternalId(item.externalId || "");
+    setExtraValues(Object.fromEntries(extraFields.map((f) => [f.key, item[f.key] != null ? String(item[f.key]) : defaultExtra(f)])));
     setShowModal(true);
   };
 
@@ -99,13 +129,19 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
       sweetAlert.error("Falta el nombre", "El nombre es obligatorio.");
       return;
     }
+    const missing = extraFields.find((f) => f.required && !String(extraValues[f.key] ?? "").trim());
+    if (missing) {
+      sweetAlert.error(`Falta ${missing.label.toLowerCase()}`, `El campo "${missing.label}" es obligatorio.`);
+      return;
+    }
+    const extraPayload = Object.fromEntries(extraFields.map((f) => [f.key, String(extraValues[f.key] ?? "").trim()]));
     setSaving(true);
     try {
       if (editing) {
-        await api.update(editing._id, { nombre: nombre.trim(), externalId: externalId.trim() });
+        await api.update(editing._id, { nombre: nombre.trim(), externalId: externalId.trim(), ...extraPayload });
         sweetAlert.success("Actualizado", `${title} actualizado correctamente.`);
       } else {
-        await api.create({ nombre: nombre.trim(), externalId: externalId.trim() });
+        await api.create({ nombre: nombre.trim(), externalId: externalId.trim(), ...extraPayload });
         sweetAlert.success("Creado", `Registro de ${entityLabel} creado.`);
       }
       setShowModal(false);
@@ -203,7 +239,12 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
               header={{
                 title: item.name,
                 icon,
-                badges: item.externalId ? [{ text: `ID ${item.externalId}`, variant: "blue" }] : [],
+                badges: [
+                  ...extraFields
+                    .filter((f) => f.showColumn && item[f.key])
+                    .map((f) => ({ text: extraDisplay(f, item[f.key]), variant: "cyan" as const })),
+                  ...(item.externalId ? [{ text: `ID ${item.externalId}`, variant: "blue" as const }] : []),
+                ],
               }}
               footer={{
                 actions: [
@@ -221,6 +262,9 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
             <thead className="bg-gray-50 dark:bg-gray-900/50">
               <tr>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+                {extraFields.filter((f) => f.showColumn).map((f) => (
+                  <th key={f.key} className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{f.columnLabel || f.label}</th>
+                ))}
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID Externo</th>
                 <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
               </tr>
@@ -229,6 +273,9 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
               {filtered.map((item) => (
                 <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
                   <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">{item.name}</td>
+                  {extraFields.filter((f) => f.showColumn).map((f) => (
+                    <td key={f.key} className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{extraDisplay(f, item[f.key])}</td>
+                  ))}
                   <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono">{item.externalId || "—"}</td>
                   <td className="px-5 py-3 text-sm text-right">
                     <button onClick={() => openEdit(item)} className="text-blue-600 hover:text-blue-800 dark:text-blue-400 mr-3" title="Editar">
@@ -260,6 +307,33 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre *</label>
                 <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} autoFocus className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white" />
               </div>
+              {extraFields.map((f) => (
+                <div key={f.key}>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {f.label}{f.required ? " *" : ""}
+                  </label>
+                  {f.type === "select" ? (
+                    <select
+                      value={extraValues[f.key] ?? ""}
+                      onChange={(e) => setExtraValues((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white"
+                    >
+                      {!f.required && <option value="">—</option>}
+                      {(f.options || []).map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={extraValues[f.key] ?? ""}
+                      onChange={(e) => setExtraValues((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                      placeholder={f.placeholder}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white"
+                    />
+                  )}
+                </div>
+              ))}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ID Externo (opcional)</label>
                 <input type="text" value={externalId} onChange={(e) => setExternalId(e.target.value)} placeholder="ID de FRAME" className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white" />

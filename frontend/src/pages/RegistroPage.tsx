@@ -503,10 +503,13 @@ export const RegistroPage: React.FC = () => {
                   <input className={fieldClass} autoComplete="off" placeholder="Ej: 11 8765-4321" value={form.telefono2} onChange={(e) => set("telefono2", e.target.value)} />
                 </div>
               </div>
-              <label className="flex items-center gap-2 cursor-pointer text-gray-200">
-                <input type="checkbox" className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500" checked={form.visa} onChange={(e) => set("visa", e.target.checked)} />
-                <span>Visa</span>
-              </label>
+              {/* Checkbox "Visa" oculto a pedido: el valor (form.visa) se sigue enviando en el payload y sincronizando con FRAME sin cambios en lógica ni DB. */}
+              {false && (
+                <label className="flex items-center gap-2 cursor-pointer text-gray-200">
+                  <input type="checkbox" className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500" checked={form.visa} onChange={(e) => set("visa", e.target.checked)} />
+                  <span>Visa</span>
+                </label>
+              )}
             </div>
           )}
 

@@ -7,14 +7,16 @@ export interface SimpleCatalogItem {
   data?: { id?: number; nombre?: string };
   createdAt?: string;
   updatedAt?: string;
+  // Campos extra opcionales por catálogo (ej. Bancos → tipoEntidad).
+  [key: string]: unknown;
 }
 
 export interface SimpleCatalogApi {
   list(): Promise<SimpleCatalogItem[]>;
   downloadTemplate(): Promise<Blob>;
   importExcel(file: File): Promise<{ message: string; count: number }>;
-  create(data: { nombre: string; externalId?: string }): Promise<SimpleCatalogItem>;
-  update(id: string, data: { nombre?: string; externalId?: string }): Promise<SimpleCatalogItem>;
+  create(data: { nombre: string; externalId?: string } & Record<string, unknown>): Promise<SimpleCatalogItem>;
+  update(id: string, data: { nombre?: string; externalId?: string } & Record<string, unknown>): Promise<SimpleCatalogItem>;
   remove(id: string): Promise<{ message: string }>;
 }
 

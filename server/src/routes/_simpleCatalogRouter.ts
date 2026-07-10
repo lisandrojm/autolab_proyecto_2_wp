@@ -19,12 +19,18 @@ export interface SimpleCatalogConfig {
   templateFilename: string;
   /** Ejemplos para la plantilla (solo nombres). */
   sampleNames?: string[];
+  /**
+   * Campos string extra (además de name/externalId) a persistir en create/update/import.
+   * Solo lo usan los catálogos que lo requieren (ej. Bancos → tipoEntidad); el resto no se ve afectado.
+   */
+  extraStringFields?: Array<{ key: string; excelHeader?: string; aliases?: string[] }>;
 }
 
 interface SimpleCatalogDoc {
   externalId?: string;
   name: string;
   data?: { id?: number; nombre?: string };
+  [key: string]: unknown;
 }
 
 export function createSimpleCatalogRouter(
@@ -50,10 +56,14 @@ export function createSimpleCatalogRouter(
   router.get("/template", authenticateToken, async (_req: AuthenticatedRequest, res: Response) => {
     try {
       const samples = config.sampleNames && config.sampleNames.length > 0 ? config.sampleNames : ["Ejemplo 1", "Ejemplo 2"];
-      const wsData: (string | number)[][] = [["ID Externo (opcional)", "Nombre"], ...samples.map((n) => ["", n])];
+      const extraHeaders = (config.extraStringFields || []).map((f) => f.excelHeader || f.key);
+      const wsData: (string | number)[][] = [
+        ["ID Externo (opcional)", "Nombre", ...extraHeaders],
+        ...samples.map((n) => ["", n, ...extraHeaders.map(() => "")]),
+      ];
 
       const ws = xlsx.utils.aoa_to_sheet(wsData);
-      ws["!cols"] = [{ wch: 18 }, { wch: 45 }];
+      ws["!cols"] = [{ wch: 18 }, { wch: 45 }, ...extraHeaders.map(() => ({ wch: 22 }))];
 
       const wb = xlsx.utils.book_new();
       xlsx.utils.book_append_sheet(wb, ws, config.sheetName);
@@ -87,7 +97,7 @@ export function createSimpleCatalogRouter(
       }
 
       const errors: string[] = [];
-      const parsed: Array<{ externalId: string; nombre: string }> = [];
+      const parsed: Array<{ externalId: string; nombre: string; extras: Record<string, string> }> = [];
 
       for (let i = 0; i < rawRows.length; i++) {
         const row = rawRows[i];
@@ -99,7 +109,21 @@ export function createSimpleCatalogRouter(
           errors.push(`Fila ${rowNum}: La columna 'Nombre' es obligatoria.`);
           continue;
         }
-        parsed.push({ externalId: String(externalId ?? "").trim(), nombre: String(nombre).trim() });
+
+        const extras: Record<string, string> = {};
+        for (const f of config.extraStringFields || []) {
+          const candidates = [f.excelHeader, f.key, ...(f.aliases || [])].filter(Boolean) as string[];
+          let val: unknown;
+          for (const h of candidates) {
+            if (row[h] !== undefined) {
+              val = row[h];
+              break;
+            }
+          }
+          if (val !== undefined && val !== null && String(val).trim() !== "") extras[f.key] = String(val).trim();
+        }
+
+        parsed.push({ externalId: String(externalId ?? "").trim(), nombre: String(nombre).trim(), extras });
       }
 
       if (errors.length > 0) {
@@ -117,6 +141,7 @@ export function createSimpleCatalogRouter(
                 name: item.nombre,
                 externalId: item.externalId,
                 data: { id: idNum !== undefined && !isNaN(idNum) ? idNum : undefined, nombre: item.nombre },
+                ...item.extras,
               },
             },
             upsert: true,
@@ -151,6 +176,10 @@ export function createSimpleCatalogRouter(
         externalId: externalId ? String(externalId).trim() : "",
         data: { id: idNum !== undefined && !isNaN(idNum) ? idNum : undefined, nombre: nombre.trim() },
       };
+      for (const f of config.extraStringFields || []) {
+        const v = (req.body as Record<string, unknown>)[f.key];
+        if (v !== undefined && v !== null) newItem[f.key] = String(v).trim();
+      }
       const created = await model.create(newItem);
       res.status(201).json(created);
     } catch (error) {
@@ -181,6 +210,10 @@ export function createSimpleCatalogRouter(
         const idNum = Number(externalId);
         item.data = item.data || {};
         item.data.id = !isNaN(idNum) ? idNum : item.data.id;
+      }
+      for (const f of config.extraStringFields || []) {
+        const v = (req.body as Record<string, unknown>)[f.key];
+        if (v !== undefined) item[f.key] = v === null ? "" : String(v).trim();
       }
 
       await item.save();
