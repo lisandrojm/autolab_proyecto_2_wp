@@ -1,6 +1,6 @@
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUsers, faUserShield, faLayerGroup, faUserTie, faUserGraduate, faClock, faBuilding, faIdCard, faBriefcase, faFileContract, faUmbrellaBeach, faChevronDown, faChevronUp, faLock, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUsers, faUserShield, faLayerGroup, faUserTie, faUserGraduate, faClock, faBuilding, faIdCard, faBriefcase, faFileContract, faUmbrellaBeach, faChevronDown, faChevronUp, faLock, faInfoCircle, faBell } from "@fortawesome/free-solid-svg-icons";
 import { User } from "../../api/users";
 import { Project } from "../../api/projects";
 import { Client } from "../../api/clients";
@@ -254,6 +254,15 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
                 </button>
               );
             })()}
+            {user.metadata?.solicitaCreacionCuenta && (
+              <span
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-sm"
+                title="Solicitó que le creen una cuenta bancaria"
+              >
+                <FontAwesomeIcon icon={faBell} className="text-[9px] animate-pulse" />
+                <span>CUENTA BANCARIA</span>
+              </span>
+            )}
             {roleFrameBadges.map((badge, idx) => (
               <span key={idx} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight shadow-sm ${badge?.className}`}>
                 {badge?.text}
