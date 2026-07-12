@@ -16,6 +16,8 @@ import { useThemeStore } from "../../../stores/themeStore";
 
 function App() {
   const [currentView, setCurrentView] = useState<ViewType>("home");
+  // Intent para abrir Pedidos con un tipo preseleccionado y bloqueado (ej: desde el perfil).
+  const [ordersInitialType, setOrdersInitialType] = useState<string | null>(null);
   const { user, tenantId, setTenantId } = useAuthStore();
   const { theme } = useThemeStore();
 
@@ -53,11 +55,18 @@ function App() {
       case "documents":
         return <Documents />;
       case "profile":
-        return <Profile />;
+        return (
+          <Profile
+            onChangePersonalData={() => {
+              setOrdersInitialType("datos_personales");
+              setCurrentView("orders");
+            }}
+          />
+        );
       case "vacations":
         return <Vacations onNavigate={setCurrentView} />;
       case "orders":
-        return <Orders onNavigate={setCurrentView} />;
+        return <Orders onNavigate={setCurrentView} initialCategoryType={ordersInitialType} onIntentConsumed={() => setOrdersInitialType(null)} />;
       case "requests":
         return <Requests onNavigate={setCurrentView} />;
       case "activity_logs":

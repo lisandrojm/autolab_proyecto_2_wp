@@ -18,6 +18,10 @@ import { orderConfigAPI } from "../../../../api/orderConfig";
 
 interface OrdersProps {
   onNavigate: (view: ViewType) => void;
+  /** Si viene seteado, abre el formulario con ese tipo de pedido preseleccionado y bloqueado. */
+  initialCategoryType?: string | null;
+  /** Se llama una vez que se consumió el intent inicial (para limpiarlo en el padre). */
+  onIntentConsumed?: () => void;
 }
 
 interface ContractDayRule {
@@ -28,10 +32,12 @@ interface ContractDayRule {
   holiday: boolean;
 }
 
-export default function Orders({ onNavigate }: OrdersProps) {
+export default function Orders({ onNavigate, initialCategoryType, onIntentConsumed }: OrdersProps) {
   const { orders, loading, createOrder, updateOrderStatus, refetch } = useOrders();
   const { profile } = useProfile(); // Get user profile
   const [showForm, setShowForm] = useState(false);
+  // Cuando se abre el formulario desde "Cambiar datos personales", el tipo queda bloqueado.
+  const [lockCategory, setLockCategory] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [categories, setCategories] = useState<OrderConfig[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -64,15 +70,33 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
   const selectedCategory = categories.find((c) => c._id === selectedCategoryId) || null;
 
+  // Cierra el formulario y desbloquea el tipo de pedido.
+  const closeForm = () => {
+    setShowForm(false);
+    setLockCategory(false);
+  };
+
   useEffect(() => {
     const loadCategories = async () => {
       try {
         setLoadingCategories(true);
         const { data } = await axios.get<OrderConfig[]>("/order-config", { params: { isActive: true } });
-        setCategories(data.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)));
-        if (data.length > 0) {
-          setSelectedCategoryId(data[0]._id);
+        const sorted = data.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+        setCategories(sorted);
+        if (sorted.length > 0) {
+          // Si venimos con un intent (ej: desde "Cambiar datos personales"), preseleccionamos
+          // y bloqueamos ese tipo, y abrimos el formulario automáticamente.
+          const forced = initialCategoryType ? sorted.find((c) => c.categoryType === initialCategoryType) : null;
+          if (forced) {
+            setSelectedCategoryId(forced._id);
+            setLockCategory(true);
+            setShowForm(true);
+          } else {
+            setSelectedCategoryId(sorted[0]._id);
+          }
         }
+        // Consumir el intent siempre que haya venido, para no dejarlo colgado.
+        if (initialCategoryType) onIntentConsumed?.();
       } catch (err) {
         console.error("Error loading categories:", err);
       } finally {
@@ -80,6 +104,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
       }
     };
     loadCategories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -625,7 +650,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
       await sweetAlert.success("¡Pedido creado!", "Tu pedido ha sido enviado correctamente");
 
-      setShowForm(false);
+      closeForm();
       setDescription("");
       setSubcategories("");
       setDynamicValue("");
@@ -711,7 +736,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
             <div className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
               <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 flex-shrink-0">
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white">Nuevo Pedido</h3>
-                <button onClick={() => setShowForm(false)} className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                <button onClick={closeForm} className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
                   <FontAwesomeIcon icon={faTimes} className="text-slate-500 dark:text-slate-400" />
                 </button>
               </div>
@@ -726,13 +751,16 @@ export default function Orders({ onNavigate }: OrdersProps) {
                     {loadingCategories ? (
                       <div className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-500 dark:text-slate-400">Cargando categorías...</div>
                     ) : categories.length > 0 ? (
-                      <select value={selectedCategoryId} onChange={(e) => setSelectedCategoryId(e.target.value)} required className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2">
-                        {categories.map((cat) => (
-                          <option key={cat._id} value={cat._id}>
-                            {cat.name}
-                          </option>
-                        ))}
-                      </select>
+                      <>
+                        <select value={selectedCategoryId} onChange={(e) => setSelectedCategoryId(e.target.value)} required disabled={lockCategory} className={`w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 ${lockCategory ? "opacity-70 cursor-not-allowed" : ""}`}>
+                          {categories.map((cat) => (
+                            <option key={cat._id} value={cat._id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                        {lockCategory && <p className="mt-1 text-xs text-slate-400">Tipo fijado: estás solicitando un cambio de datos personales.</p>}
+                      </>
                     ) : (
                       <div className="w-full rounded border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-4 py-2 text-red-600 dark:text-red-400 text-sm">No hay "Tipos de pedido" disponibles. Contacta al administrador.</div>
                     )}
@@ -865,7 +893,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
               </form>
               <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex-shrink-0">
                 <div className="flex gap-3">
-                  <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded h-10 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+                  <button type="button" onClick={closeForm} className="flex-1 rounded h-10 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
                     Cancelar
                   </button>
                   <button type="submit" form="order-form" disabled={submitting} className="flex-1 rounded h-10 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors disabled:opacity-50">

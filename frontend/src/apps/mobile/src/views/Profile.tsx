@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEnvelope, faPhone, faBriefcase, faCalendar, faSignOutAlt, faUserCheck, faBuilding, faIdCard, faClock, faLayerGroup, faFileContract, faMoneyBillWave, faChevronDown, faCheckCircle, faUserShield, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faEnvelope, faPhone, faBriefcase, faCalendar, faSignOutAlt, faUserCheck, faBuilding, faIdCard, faClock, faLayerGroup, faFileContract, faMoneyBillWave, faChevronDown, faCheckCircle, faUserShield, faUsers, faUser, faMapMarkerAlt, faUniversity, faInfoCircle, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
 import { useAuthStore } from "../../../../stores/authStore";
 import { sweetAlert } from "../utils/sweetAlert";
 import { useProfile } from "../hooks/useProfile";
@@ -9,8 +9,21 @@ import { es } from "date-fns/locale";
 import { projectsAPI, Project } from "../../../../api/projects";
 import { areasAPI, Area } from "../../../../api/areas";
 import { shiftsAPI, Shift } from "../../../../api/shifts";
+import { infoAPI, InfoItem } from "../../../../api/info";
 
-export default function Profile() {
+type RegistroInfoTab = "general" | "domicilio" | "bancarios";
+
+/** Fila compacta etiqueta/valor para el detalle de datos del registro. */
+const InfoRow = ({ label, value }: { label: string; value?: React.ReactNode }) => (
+  <div className="flex justify-between items-center gap-3 py-1.5 border-b border-slate-50 dark:border-slate-800/50 last:border-b-0">
+    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter shrink-0">{label}</p>
+    <p className="text-xs font-bold text-slate-700 dark:text-slate-300 text-right truncate">
+      {value !== undefined && value !== null && value !== "" ? value : <span className="text-slate-300 dark:text-slate-600">—</span>}
+    </p>
+  </div>
+);
+
+export default function Profile({ onChangePersonalData }: { onChangePersonalData?: () => void }) {
   const { profile, stats, loading } = useProfile();
   const { user, logout } = useAuthStore();
    const [selectedProjectIndex, setSelectedProjectIndex] = useState(0);
@@ -19,6 +32,81 @@ export default function Profile() {
   const [allShifts, setAllShifts] = useState<Shift[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [currentFullProject, setCurrentFullProject] = useState<Project | null>(null);
+
+  // Datos del registro (Historial y Contacto → tabs) + catálogos para resolver IDs → nombres.
+  const [activeInfoTab, setActiveInfoTab] = useState<RegistroInfoTab>("general");
+  const [documentTypes, setDocumentTypes] = useState<InfoItem[]>([]);
+  const [genders, setGenders] = useState<InfoItem[]>([]);
+  const [educationLevels, setEducationLevels] = useState<InfoItem[]>([]);
+  const [nationalities, setNationalities] = useState<InfoItem[]>([]);
+  const [countries, setCountries] = useState<InfoItem[]>([]);
+  const [banks, setBanks] = useState<InfoItem[]>([]);
+  const [insuranceCompanies, setInsuranceCompanies] = useState<InfoItem[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [dt, g, el, n, c, b, ic] = await Promise.all([
+          infoAPI.listByType("tipo-documento"),
+          infoAPI.listByType("genero"),
+          infoAPI.listByType("nivel-estudio"),
+          infoAPI.listByType("nacionalidad"),
+          infoAPI.listByType("pais"),
+          infoAPI.listByType("banco"),
+          infoAPI.listByType("obra-social"),
+        ]);
+        if (cancelled) return;
+        setDocumentTypes(dt);
+        setGenders(g);
+        setEducationLevels(el);
+        setNationalities(n);
+        setCountries(c);
+        setBanks(b);
+        setInsuranceCompanies(ic);
+      } catch {
+        /* catálogos opcionales: si fallan, se muestran los valores crudos o "—" */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Resuelve un id numérico contra un catálogo Info (data.id) → nombre.
+  const nameFromInfo = (list: InfoItem[], id?: number | string | null) => {
+    if (id === undefined || id === null || id === "") return "";
+    return list.find((it) => String(it.data?.id) === String(id))?.name || "";
+  };
+
+  // Fecha en formato dd/MM/yyyy (tolera "YYYY-MM-DD" e ISO).
+  const fmtDate = (v?: string) => {
+    if (!v) return "";
+    if (/^\d{4}-\d{2}-\d{2}/.test(v)) {
+      const [y, m, d] = v.slice(0, 10).split("-");
+      return `${d}/${m}/${y}`;
+    }
+    const dt = new Date(v);
+    return isNaN(dt.getTime()) ? v : format(dt, "dd/MM/yyyy");
+  };
+
+  const md: any = (profile as any)?.metadata || {};
+  const infoTabs: { key: RegistroInfoTab; label: string; icon: any }[] = [
+    { key: "general", label: "General", icon: faUser },
+    { key: "domicilio", label: "Domicilio", icon: faMapMarkerAlt },
+    { key: "bancarios", label: "Bancarios", icon: faUniversity },
+  ];
+
+  // Explica que los datos personales solo se cambian vía un pedido, y ofrece ir a Pedidos.
+  const handleInfoDatosPersonales = async () => {
+    const res = await sweetAlert.confirm(
+      "Cambiar datos personales",
+      "Para modificar tus datos personales tenés que generar un pedido de tipo 'Datos Personales'. Solo vas a poder cambiar los campos habilitados por el administrador.",
+      "Ir a Pedidos",
+      "Cerrar",
+    );
+    if (res.isConfirmed) onChangePersonalData?.();
+  };
 
   const getProjectDetails = (proj: any) => {
     if (!proj) return null;
@@ -428,6 +516,83 @@ export default function Profile() {
               <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{profile?.phone || "Sin teléfono"}</p>
             </div>
           </div>
+        </div>
+
+        {/* Datos del registro, organizados en tabs */}
+        <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-1.5">
+              <h4 className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Datos personales</h4>
+              <button
+                type="button"
+                onClick={handleInfoDatosPersonales}
+                title="¿Cómo cambio mis datos personales?"
+                className="w-4 h-4 flex items-center justify-center text-slate-400 hover:text-primary transition-colors"
+              >
+                <FontAwesomeIcon icon={faInfoCircle} className="text-[11px]" />
+              </button>
+            </div>
+            {onChangePersonalData && (
+              <button
+                type="button"
+                onClick={onChangePersonalData}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 text-primary text-[9px] font-black uppercase tracking-wider hover:bg-primary/20 transition-colors"
+              >
+                <FontAwesomeIcon icon={faPenToSquare} className="text-[9px]" />
+                Cambiar datos
+              </button>
+            )}
+          </div>
+          <div className="flex gap-1 bg-slate-100 dark:bg-slate-800/60 rounded-lg p-1 mb-3">
+            {infoTabs.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setActiveInfoTab(t.key)}
+                className={`flex-1 py-1.5 rounded-md text-[9px] font-black uppercase tracking-wider transition-colors flex items-center justify-center gap-1 ${activeInfoTab === t.key ? "bg-white dark:bg-slate-700 text-primary shadow-sm" : "text-slate-400"}`}
+              >
+                <FontAwesomeIcon icon={t.icon} className="text-[9px]" />
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {activeInfoTab === "general" && (
+            <div className="animate-in fade-in duration-300">
+              <InfoRow label="Tipo de documento" value={nameFromInfo(documentTypes, md.tipoDocumentoId)} />
+              <InfoRow label="Documento" value={md.documento} />
+              <InfoRow label="CUIT / CUIL" value={md.cuit} />
+              <InfoRow label="Fecha de nacimiento" value={fmtDate(md.fechaNac)} />
+              <InfoRow label="Género" value={nameFromInfo(genders, md.generoId)} />
+              <InfoRow label="Estado civil" value={md.estadoCivil} />
+              <InfoRow label="Nivel de estudio" value={nameFromInfo(educationLevels, md.nivelEstudioId)} />
+              <InfoRow label="Nacionalidad" value={nameFromInfo(nationalities.length ? nationalities : countries, md.nacionalidadId)} />
+              <InfoRow label="Obra social" value={nameFromInfo(insuranceCompanies, md.osId)} />
+            </div>
+          )}
+
+          {activeInfoTab === "domicilio" && (
+            <div className="animate-in fade-in duration-300">
+              <InfoRow label="País" value={md.pais || nameFromInfo(countries, md.paisId)} />
+              <InfoRow label="Localidad" value={md.localidad} />
+              <InfoRow label="Calle" value={md.calle} />
+              <InfoRow label="Altura" value={md.altura} />
+              <InfoRow label="Piso / Depto" value={md.pisoDepto} />
+              <InfoRow label="Código postal" value={md.codigoPostal} />
+              <InfoRow label="Teléfono" value={md.telefono} />
+              <InfoRow label="Tel. de emergencia" value={md.telefono2} />
+            </div>
+          )}
+
+          {activeInfoTab === "bancarios" && (
+            <div className="animate-in fade-in duration-300">
+              <InfoRow label="Banco" value={nameFromInfo(banks, md.bancoId) || (md.tipoEntidadFinanciera === "sin_banco" ? "No tiene banco" : "")} />
+              <InfoRow label="CBU / CVU" value={md.cbu} />
+              <InfoRow label="Tipo de cuenta" value={md.tipoDeCuentaBancaria} />
+              <InfoRow label="Nro. de cuenta" value={md.nroDeCuentaBancaria} />
+              <InfoRow label="Alias" value={md.aliasBancario} />
+            </div>
+          )}
         </div>
       </div>
 
