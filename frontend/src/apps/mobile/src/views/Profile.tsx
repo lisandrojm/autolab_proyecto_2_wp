@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEnvelope, faPhone, faBriefcase, faCalendar, faSignOutAlt, faUserCheck, faBuilding, faIdCard, faClock, faLayerGroup, faFileContract, faMoneyBillWave, faChevronDown, faCheckCircle, faUserShield, faUsers, faUser, faMapMarkerAlt, faUniversity, faInfoCircle, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
+import { faEnvelope, faPhone, faBriefcase, faCalendar, faSignOutAlt, faUserCheck, faBuilding, faIdCard, faClock, faLayerGroup, faFileContract, faMoneyBillWave, faChevronDown, faCheckCircle, faUserShield, faUsers, faUser, faMapMarkerAlt, faUniversity, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
 import { useAuthStore } from "../../../../stores/authStore";
 import { sweetAlert } from "../utils/sweetAlert";
 import { useProfile } from "../hooks/useProfile";
@@ -529,7 +529,7 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
                 title="¿Cómo cambio mis datos personales?"
                 className="w-4 h-4 flex items-center justify-center text-slate-400 hover:text-primary transition-colors"
               >
-                <FontAwesomeIcon icon={faInfoCircle} className="text-[11px]" />
+                <FontAwesomeIcon icon={faPenToSquare} className="text-[11px]" />
               </button>
             </div>
             {onChangePersonalData && (
