@@ -642,6 +642,43 @@ router.patch("/:id/confirmar-cuenta-bancaria", requireTenant, authenticateToken,
         res.status(500).json({ error: "Internal server error" });
     }
 });
+// PATCH /users/:id/confirmar-cambio-cuenta - Confirmar que el cambio de datos bancarios fue aplicado en el banco/FRAME
+router.patch("/:id/confirmar-cambio-cuenta", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
+        const query = { _id: userId };
+        if (!isSuperAdmin) {
+            if (!req.tenantObjectId) {
+                res.status(400).json({ error: "Invalid tenant ID" });
+                return;
+            }
+            query.tenantId = req.tenantObjectId;
+        }
+        const currentUser = await User.findOne(query);
+        if (!currentUser) {
+            res.status(404).json({ error: "User not found" });
+            return;
+        }
+        // Guard: sólo se confirma si hay un cambio de datos bancarios pendiente.
+        const meta = currentUser.metadata || {};
+        if (!meta.solicitaCambioCuenta) {
+            res.status(400).json({ error: "No hay un cambio de datos bancarios pendiente para confirmar." });
+            return;
+        }
+        const user = await User.findOneAndUpdate({ _id: userId, tenantId: currentUser.tenantId }, { $set: { "metadata.cambioCuentaConfirmada": true, "metadata.cambioCuentaConfirmadaAt": new Date() } }, { new: true })
+            .select("-password")
+            .populate("roles", "name description permissions")
+            .populate("clientIds", "name")
+            .populate("projectIds", "name")
+            .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame });
+        res.json(user);
+    }
+    catch (error) {
+        console.error("Confirm bank change error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 // PUT /users/:id/approve-solicitud - Aprobar solicitud de alta y convertir en miembro del equipo
 router.put("/:id/approve-solicitud", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
     try {

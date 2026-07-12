@@ -63,6 +63,15 @@ export const PERSONAL_DATA_FIELDS: PersonalDataField[] = [
 
 export const PERSONAL_DATA_FIELD_KEYS: string[] = PERSONAL_DATA_FIELDS.map((f) => f.key);
 
+// Claves de datos bancarios (section === "bancarios").
+export const BANKING_FIELD_KEYS: string[] = PERSONAL_DATA_FIELDS.filter((f) => f.section === "bancarios").map((f) => f.key);
+
+/** True si la propuesta de un pedido incluye alguna modificación de datos bancarios. */
+export function isBankingProposal(proposed: Record<string, any> | undefined | null): boolean {
+  if (!proposed || typeof proposed !== "object") return false;
+  return BANKING_FIELD_KEYS.some((k) => Object.prototype.hasOwnProperty.call(proposed, k));
+}
+
 export function getPersonalDataField(key: string): PersonalDataField | undefined {
   return PERSONAL_DATA_FIELDS.find((f) => f.key === key);
 }

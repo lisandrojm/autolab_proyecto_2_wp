@@ -682,14 +682,12 @@ router.post("/registro", async (req, res) => {
     const firstName = String(body.firstName || "").trim();
     const lastName = String(body.lastName || "").trim();
     const email = String(body.email || "").trim().toLowerCase();
-    const password = String(body.password || "");
+    const documento = String(body.documento || "").trim();
+    // La contraseña de la plataforma es, por defecto, el DNI/Documento del usuario.
+    const password = documento;
 
-    if (!firstName || !lastName || !email || !password) {
+    if (!firstName || !lastName || !email || !documento) {
       res.status(400).json({ error: "Faltan campos obligatorios" });
-      return;
-    }
-    if (password.length < 6) {
-      res.status(400).json({ error: "La contraseña debe tener al menos 6 caracteres" });
       return;
     }
 
@@ -710,7 +708,7 @@ router.post("/registro", async (req, res) => {
       activo: true,
       cuit: body.cuit || undefined,
       tipoDocumentoId: num(body.tipoDocumentoId),
-      documento: body.documento || undefined,
+      documento: documento || undefined,
       fechaNac: body.fechaNac || undefined,
       generoId: num(body.generoId),
       nivelEstudioId: num(body.nivelEstudioId),

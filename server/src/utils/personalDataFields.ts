@@ -142,6 +142,21 @@ export const PERSONAL_DATA_FIELD_KEYS: string[] = [
   "nroDeCuentaBancaria",
 ];
 
+// Claves de datos bancarios (subconjunto de PERSONAL_DATA_FIELD_KEYS).
+export const BANKING_FIELD_KEYS: string[] = [
+  "bancoId",
+  "tipoDeCuentaBancaria",
+  "cbu",
+  "aliasBancario",
+  "nroDeCuentaBancaria",
+];
+
+/** True si el objeto sanitizado incluye alguna modificación de datos bancarios. */
+export function includesBankingChange(sanitized: Record<string, any> | undefined | null): boolean {
+  if (!sanitized || typeof sanitized !== "object") return false;
+  return BANKING_FIELD_KEYS.some((k) => Object.prototype.hasOwnProperty.call(sanitized, k));
+}
+
 /**
  * Filtra un objeto de datos propuestos dejando sólo las claves permitidas y
  * habilitadas (según la config del tipo de pedido).

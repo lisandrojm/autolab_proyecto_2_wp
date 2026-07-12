@@ -15,7 +15,7 @@ import { Notification } from "../models/Notification.js";
 import { Tenant } from "../models/Tenant.js";
 import { Pdf } from "../models/Pdf.js";
 import { User } from "../models/User.js";
-import { sanitizePersonalData, buildUserPersonalDataSet } from "../utils/personalDataFields.js";
+import { sanitizePersonalData, buildUserPersonalDataSet, includesBankingChange } from "../utils/personalDataFields.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { Types } from "mongoose";
@@ -753,6 +753,13 @@ router.put("/orders/:id/approve", async (req, res) => {
                         firstName: targetUser?.firstName,
                         lastName: targetUser?.lastName,
                     });
+                    // Si el pedido modificó datos bancarios, dejar una alerta pendiente: el cambio
+                    // debe aplicarse en la otra plataforma (FRAME) y luego confirmarse acá.
+                    if (includesBankingChange(sanitized)) {
+                        set["metadata.solicitaCambioCuenta"] = true;
+                        set["metadata.cambioCuentaConfirmada"] = false;
+                        set["metadata.cambioCuentaConfirmadaAt"] = null;
+                    }
                     if (Object.keys(set).length > 0) {
                         await User.updateOne({ _id: order.userId, tenantId: req.tenantObjectId }, { $set: set });
                     }
@@ -936,6 +943,55 @@ router.put("/orders/:id/deliver", async (req, res) => {
     }
     catch (error) {
         console.error("Deliver order error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// PUT /orders/:id/confirmar-cambio-bancario - Confirmar la notificación de cambio de datos bancarios del pedido
+router.put("/orders/:id/confirmar-cambio-bancario", async (req, res) => {
+    try {
+        const order = await Order.findOne({ _id: req.params.id, tenantId: req.tenantObjectId });
+        if (!order) {
+            res.status(404).json({ error: "Order not found" });
+            return;
+        }
+        // Sólo aplica a pedidos que modifican datos bancarios.
+        const proposed = order.metadata?.proposedUserData;
+        if (!includesBankingChange(proposed)) {
+            res.status(400).json({ error: "Este pedido no modifica datos bancarios." });
+            return;
+        }
+        order.metadata = { ...(order.metadata || {}), bankChangeConfirmed: true, bankChangeConfirmedAt: new Date() };
+        order.markModified("metadata");
+        await order.save();
+        // Sincronizar la alerta a nivel usuario (campanita del perfil/tarjeta).
+        if (order.userId) {
+            await User.updateOne({ _id: order.userId, tenantId: req.tenantObjectId }, { $set: { "metadata.cambioCuentaConfirmada": true, "metadata.cambioCuentaConfirmadaAt": new Date() } });
+        }
+        const finalOrder = await Order.findById(order._id)
+            .populate({
+            path: "userId",
+            select: "firstName lastName email metadata clientIds",
+            populate: [
+                { path: "clientIds", select: "name", model: "Client" },
+                {
+                    path: "metadata.projects",
+                    model: "UserProject",
+                    select: "nombre_rol_frame nombre_proyecto projectId",
+                    populate: {
+                        path: "projectId",
+                        model: "Project",
+                        select: "clientId",
+                        populate: { path: "clientId", select: "name", model: "Client" },
+                    },
+                },
+            ],
+        })
+            .populate("categoryId")
+            .populate("approvedBy", "firstName lastName email");
+        res.json(finalOrder);
+    }
+    catch (error) {
+        console.error("Confirm bank change (order) error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });

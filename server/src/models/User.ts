@@ -67,6 +67,11 @@ export interface IUserMetadata {
   /** Confirmación de que la cuenta fue creada y los datos cargados (plataforma + banco). */
   cuentaBancariaConfirmada?: boolean | null;
   cuentaBancariaConfirmadaAt?: Date | null;
+  /** El usuario solicitó (vía pedido aprobado) un cambio de datos bancarios, pendiente de aplicar en FRAME. */
+  solicitaCambioCuenta?: boolean | null;
+  /** Confirmación de que el cambio de datos bancarios fue aplicado en el banco/FRAME. */
+  cambioCuentaConfirmada?: boolean | null;
+  cambioCuentaConfirmadaAt?: Date | null;
   bancoId?: number | null;
   cbu?: string | null;
   tipoDeCuentaBancaria?: string | null;
@@ -174,6 +179,9 @@ const userSchema = new Schema<IUser>(
       solicitaCreacionCuenta: Boolean,
       cuentaBancariaConfirmada: Boolean,
       cuentaBancariaConfirmadaAt: Date,
+      solicitaCambioCuenta: Boolean,
+      cambioCuentaConfirmada: Boolean,
+      cambioCuentaConfirmadaAt: Date,
       bancoId: Number,
       cbu: String,
       tipoDeCuentaBancaria: String,

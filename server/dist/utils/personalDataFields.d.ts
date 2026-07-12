@@ -15,6 +15,9 @@ export declare const PERSONAL_DATA_FIELD_META: PersonalDataFieldMeta[];
  */
 export declare function buildDatosModificadosHtml(proposed: Record<string, any> | undefined | null, tenantId: Types.ObjectId | string | undefined): Promise<string>;
 export declare const PERSONAL_DATA_FIELD_KEYS: string[];
+export declare const BANKING_FIELD_KEYS: string[];
+/** True si el objeto sanitizado incluye alguna modificación de datos bancarios. */
+export declare function includesBankingChange(sanitized: Record<string, any> | undefined | null): boolean;
 /**
  * Filtra un objeto de datos propuestos dejando sólo las claves permitidas y
  * habilitadas (según la config del tipo de pedido).

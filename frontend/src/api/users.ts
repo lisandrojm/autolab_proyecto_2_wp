@@ -141,6 +141,9 @@ export interface User {
     solicitaCreacionCuenta?: boolean;
     cuentaBancariaConfirmada?: boolean;
     cuentaBancariaConfirmadaAt?: string;
+    solicitaCambioCuenta?: boolean;
+    cambioCuentaConfirmada?: boolean;
+    cambioCuentaConfirmadaAt?: string;
     bancoId?: number;
     cbu?: string;
     tipoDeCuentaBancaria?: string;
@@ -358,6 +361,14 @@ class UsersAPI {
   /** Confirma que la cuenta bancaria fue creada y los datos cargados (plataforma + banco). */
   async confirmarCuentaBancaria(id: string): Promise<User> {
     const { data: updated } = await axios.patch(`/users/${id}/confirmar-cuenta-bancaria`, {}, { headers: this.getHeaders() });
+    const user = normalizeUser(updated);
+    emitUsersChanged("update", user._id);
+    return user;
+  }
+
+  /** Confirma que el cambio de datos bancarios solicitado fue aplicado en el banco/FRAME. */
+  async confirmarCambioCuenta(id: string): Promise<User> {
+    const { data: updated } = await axios.patch(`/users/${id}/confirmar-cambio-cuenta`, {}, { headers: this.getHeaders() });
     const user = normalizeUser(updated);
     emitUsersChanged("update", user._id);
     return user;

@@ -263,6 +263,15 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
                 <span>CUENTA BANCARIA</span>
               </span>
             )}
+            {user.metadata?.solicitaCambioCuenta && !user.metadata?.cambioCuentaConfirmada && (
+              <span
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-sm"
+                title="Solicitó un cambio de datos bancarios (pendiente de aplicar en el banco/FRAME)"
+              >
+                <FontAwesomeIcon icon={faBell} className="text-[9px] animate-pulse" />
+                <span>CAMBIO BANCARIO</span>
+              </span>
+            )}
             {roleFrameBadges.map((badge, idx) => (
               <span key={idx} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight shadow-sm ${badge?.className}`}>
                 {badge?.text}

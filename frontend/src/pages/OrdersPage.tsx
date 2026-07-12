@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSearch, faFilter, faCalendar, faShoppingCart, faListCheck, faTable, faGrip, faFileArrowUp, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faFilePdf, faDownload, faTrash, faCheck, faFileSignature, faChartSimple } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSearch, faFilter, faCalendar, faShoppingCart, faListCheck, faTable, faGrip, faFileArrowUp, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faFilePdf, faDownload, faTrash, faCheck, faFileSignature, faChartSimple, faBell } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/management";
 import { OrderConfig } from "../api/orderConfig";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -14,6 +14,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { mapOrderStatusToStatusType, mapDocumentStateToStatusType, mapSignatureStateToStatusType, isOrderInFinalState } from "../utils/statusHelpers";
 import { getFormattedOrderNumber } from "../utils/orderHelpers";
 import { ProposedPersonalDataDetails } from "../components/orders/ProposedPersonalDataDetails";
+import { isBankingProposal } from "../config/personalDataFields";
 
 // 🔥 IMPORTAR HELP
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -256,6 +257,33 @@ export const OrdersPage: React.FC = () => {
     } catch (error: any) {
       setUpdatingStatus(false);
       await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo marcar como entregado");
+    }
+  };
+
+  const handleConfirmBankingChange = async () => {
+    if (!selectedOrder) return;
+
+    const result = await sweetAlert.confirm(
+      "¿Confirmar cambio de datos bancarios?",
+      "Confirmás que el cambio de datos bancarios de este pedido ya fue aplicado en el banco/FRAME.",
+      "Sí, confirmar",
+      "Cancelar",
+    );
+    if (!result.isConfirmed) return;
+
+    try {
+      setUpdatingStatus(true);
+      await hrManagementAPI.orders.confirmBankingChange(selectedOrder._id);
+      const updatedOrders = await loadOrders();
+      const refreshedOrder = updatedOrders.find((o) => o._id === selectedOrder._id);
+      if (refreshedOrder) {
+        setSelectedOrder(refreshedOrder);
+      }
+      setUpdatingStatus(false);
+      await sweetAlert.success("Cambio confirmado", "El cambio de datos bancarios quedó confirmado.");
+    } catch (error: any) {
+      setUpdatingStatus(false);
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo confirmar el cambio.");
     }
   };
 
@@ -1092,6 +1120,42 @@ export const OrdersPage: React.FC = () => {
               </div>
               {(selectedOrder.categoryId as any)?.categoryType === "datos_personales" && (selectedOrder as any).metadata?.proposedUserData && (
                 <ProposedPersonalDataDetails proposedUserData={(selectedOrder as any).metadata.proposedUserData} />
+              )}
+              {isBankingProposal((selectedOrder as any).metadata?.proposedUserData) && (
+                (selectedOrder as any).metadata?.bankChangeConfirmed ? (
+                  <div className="flex items-start gap-3 rounded-lg border border-emerald-300 dark:border-emerald-700/60 bg-emerald-50 dark:bg-emerald-900/20 p-4">
+                    <FontAwesomeIcon icon={faCheck} className="text-emerald-500 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">Cambio de datos bancarios confirmado</p>
+                      <p className="text-xs text-emerald-700 dark:text-emerald-400/90 mt-0.5">
+                        El cambio fue aplicado en el banco/FRAME.
+                        {(selectedOrder as any).metadata?.bankChangeConfirmedAt && (
+                          <> Confirmado el {new Date((selectedOrder as any).metadata.bankChangeConfirmedAt).toLocaleDateString("es-AR")}.</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-900/20 p-4">
+                    <FontAwesomeIcon icon={faBell} className="text-amber-500 mt-0.5 animate-pulse shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-amber-800 dark:text-amber-300">Notificación pendiente: cambio de datos bancarios</p>
+                      <p className="text-xs text-amber-700 dark:text-amber-400/90 mt-0.5">
+                        Este pedido modifica datos bancarios. Aplicá el cambio en el banco/FRAME y luego confirmá la notificación.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleConfirmBankingChange}
+                      disabled={updatingStatus}
+                      title="Confirmar que el cambio de datos bancarios fue aplicado"
+                      className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <FontAwesomeIcon icon={faCheck} />
+                      Confirmar notificación
+                    </button>
+                  </div>
+                )
               )}
               {selectedOrder.pdfPreAprobacionUrl && (
                 <div className="border-slate-200 dark:border-slate-700">

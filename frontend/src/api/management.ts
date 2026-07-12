@@ -260,6 +260,10 @@ export const hrManagementAPI = {
       const { data } = await axios.put<Order>(`/hr-management/orders/${orderId}/deliver`);
       return data;
     },
+    confirmBankingChange: async (orderId: string) => {
+      const { data } = await axios.put<Order>(`/hr-management/orders/${orderId}/confirmar-cambio-bancario`);
+      return data;
+    },
     sendSignature: async (orderId: string) => {
       const { data } = await axios.put<Order>(`/hr-management/orders/${orderId}/send-signature`);
       return data;

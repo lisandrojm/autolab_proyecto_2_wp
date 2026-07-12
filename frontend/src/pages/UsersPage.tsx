@@ -598,6 +598,24 @@ export const UsersPage: React.FC = () => {
     }
   };
 
+  const handleConfirmarCambio = async (user: User) => {
+    const result = await sweetAlert.confirm(
+      "¿Confirmar cambio de datos bancarios?",
+      "Confirmás que el cambio de datos bancarios solicitado ya fue aplicado en el banco/FRAME.",
+      "Sí, confirmar",
+    );
+    if (!result.isConfirmed) return;
+    try {
+      const updated = await usersAPI.confirmarCambioCuenta(user._id);
+      setViewUser(updated);
+      sweetAlert.success("Cambio confirmado", "El cambio de datos bancarios quedó confirmado.");
+      fetchUsers({ silent: true });
+    } catch (error: any) {
+      const message = error.response?.data?.error || "No se pudo confirmar el cambio.";
+      sweetAlert.error("Error", message);
+    }
+  };
+
   const handleDelete = async (user: User) => {
     const result = await sweetAlert.confirm("¿Eliminar usuario?", `¿Estás seguro de que quieres eliminar al usuario "${user.email}"?`);
     if (result.isConfirmed) {
@@ -854,8 +872,9 @@ export const UsersPage: React.FC = () => {
                 <button type="button" onClick={() => setViewActiveTab("bancarios")} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === "bancarios" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
                   <FontAwesomeIcon icon={faUniversity} className="text-xs" />
                   Datos Bancarios
-                  {viewUser.metadata?.solicitaCreacionCuenta && !viewUser.metadata?.cuentaBancariaConfirmada && (
-                    <FontAwesomeIcon icon={faBell} className="text-xs text-amber-500 animate-pulse" title="Solicitó creación de cuenta" />
+                  {((viewUser.metadata?.solicitaCreacionCuenta && !viewUser.metadata?.cuentaBancariaConfirmada) ||
+                    (viewUser.metadata?.solicitaCambioCuenta && !viewUser.metadata?.cambioCuentaConfirmada)) && (
+                    <FontAwesomeIcon icon={faBell} className="text-xs text-amber-500 animate-pulse" title="Acción bancaria pendiente" />
                   )}
                 </button>
                 <button type="button" onClick={() => setViewActiveTab("proyectos")} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === "proyectos" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
@@ -1195,6 +1214,42 @@ export const UsersPage: React.FC = () => {
                         Los datos están cargados en la plataforma y en el banco.
                         {viewUser.metadata?.cuentaBancariaConfirmadaAt && (
                           <> Confirmada el {new Date(viewUser.metadata.cuentaBancariaConfirmadaAt).toLocaleDateString("es-AR")}.</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {viewUser.metadata?.solicitaCambioCuenta && !viewUser.metadata?.cambioCuentaConfirmada && (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-900/20 p-4">
+                    <FontAwesomeIcon icon={faBell} className="text-amber-500 mt-0.5 animate-pulse shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-amber-800 dark:text-amber-300">Acción pendiente: cambio de datos bancarios</p>
+                      <p className="text-xs text-amber-700 dark:text-amber-400/90 mt-0.5">
+                        El usuario <strong>solicitó cambiar sus datos bancarios</strong>. Aplicá el cambio en el banco/FRAME y luego confirmá acá.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleConfirmarCambio(viewUser)}
+                      title="Confirmar que el cambio fue aplicado en el banco/FRAME"
+                      className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
+                    >
+                      <FontAwesomeIcon icon={faCheck} />
+                      Confirmar cambio realizado
+                    </button>
+                  </div>
+                )}
+
+                {viewUser.metadata?.cambioCuentaConfirmada && (
+                  <div className="flex items-start gap-3 rounded-lg border border-emerald-300 dark:border-emerald-700/60 bg-emerald-50 dark:bg-emerald-900/20 p-4">
+                    <FontAwesomeIcon icon={faCheck} className="text-emerald-500 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">Cambio de datos bancarios confirmado</p>
+                      <p className="text-xs text-emerald-700 dark:text-emerald-400/90 mt-0.5">
+                        El cambio fue aplicado en la plataforma y en el banco/FRAME.
+                        {viewUser.metadata?.cambioCuentaConfirmadaAt && (
+                          <> Confirmado el {new Date(viewUser.metadata.cambioCuentaConfirmadaAt).toLocaleDateString("es-AR")}.</>
                         )}
                       </p>
                     </div>
