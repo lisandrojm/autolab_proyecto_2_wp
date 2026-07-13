@@ -111,8 +111,35 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
   const getProjectDetails = (proj: any) => {
     if (!proj) return null;
 
-    const findArea = (id: string) => allAreas.find(a => String(a._id) === String(id));
-    const findShift = (id: string) => allShifts.find(s => String(s._id) === String(id));
+    // El mobile-coordinador/colaborador NO tiene permiso para /areas ni /shifts (403),
+    // así que allAreas/allShifts suelen venir vacíos. Como fallback resolvemos nombres
+    // desde la data que el server SÍ pobla en el proyecto (areasConfig, coordinatorAssignments,
+    // y teamConfig si vinieran poblados).
+    const areaMap = new Map<string, any>();
+    const shiftMap = new Map<string, any>();
+    const idOf = (x: any) => (x && typeof x === "object" ? String(x._id || x.id) : String(x));
+    const remember = (obj: any, map: Map<string, any>) => {
+      if (obj && typeof obj === "object" && (obj._id || obj.id)) map.set(idOf(obj), obj);
+    };
+    (proj.areasConfig || []).forEach((ac: any) => {
+      remember(ac.areaId, areaMap);
+      (ac.shiftIds || []).forEach((s: any) => remember(s, shiftMap));
+    });
+    (proj.coordinatorAssignments || []).forEach((ca: any) => {
+      remember(ca.areaId, areaMap);
+      remember(ca.shiftId, shiftMap);
+    });
+    (proj.teamConfig || []).forEach((tc: any) => {
+      remember(tc.areaId, areaMap);
+      remember(tc.shiftId, shiftMap);
+      (tc.areaShiftAssignments || []).forEach((asa: any) => {
+        remember(asa.areaId, areaMap);
+        (asa.shiftIds || []).forEach((s: any) => remember(s, shiftMap));
+      });
+    });
+
+    const findArea = (id: string) => allAreas.find(a => String(a._id) === String(id)) || areaMap.get(String(id));
+    const findShift = (id: string) => allShifts.find(s => String(s._id) === String(id)) || shiftMap.get(String(id));
 
     // Filter contracts to only those that match this project's ID or name
     const matchedContracts = proj.contracts?.filter((c: any) => {
@@ -263,7 +290,7 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
 
           detailedShifts.push({
             name,
-            time: fullShift?.hora_inicio && fullShift?.hora_fin ? `${fullShift.hora_inicio} - ${fullShift.hora_fin}` : (s.hora_inicio && s.hora_fin ? `${s.hora_inicio} - ${s.hora_fin}` : (s.startTime && s.endTime ? `${s.startTime} - ${s.endTime}` : "Sin horario")),
+            time: fullShift?.startTime && fullShift?.endTime ? `${fullShift.startTime} - ${fullShift.endTime}` : (fullShift?.hora_inicio && fullShift?.hora_fin ? `${fullShift.hora_inicio} - ${fullShift.hora_fin}` : (s.hora_inicio && s.hora_fin ? `${s.hora_inicio} - ${s.hora_fin}` : (s.startTime && s.endTime ? `${s.startTime} - ${s.endTime}` : "Sin horario"))),
             area: areaName,
             order: Number(fullShift?.order || s.order || 0)
           });
@@ -346,7 +373,10 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
   useEffect(() => {
     const fetchFullProject = async () => {
       const currentProj = profile?.metadata?.projects?.[selectedProjectIndex];
-      const pid = currentProj?._id || currentProj?.projectId;
+      // OJO: metadata.projects[] son docs UserProject → su `_id` es el id del UserProject,
+      // NO del proyecto. El id real del proyecto está en `projectId` (poblado como objeto).
+      const rawPid: any = currentProj?.projectId;
+      const pid = (rawPid && typeof rawPid === "object" ? (rawPid._id || rawPid.id) : rawPid) || currentProj?._id;
       if (!pid) return;
 
       try {
@@ -362,7 +392,9 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
   }, [selectedProjectIndex, profile]);
 
   const currentProjectSummary = profile?.metadata?.projects?.[selectedProjectIndex];
-  const targetProjectId = currentProjectSummary?._id || currentProjectSummary?.projectId;
+  // Id del proyecto REAL (projectId poblado), no el del UserProject (_id).
+  const rawSummaryPid: any = currentProjectSummary?.projectId;
+  const targetProjectId = (rawSummaryPid && typeof rawSummaryPid === "object" ? (rawSummaryPid._id || rawSummaryPid.id) : rawSummaryPid) || currentProjectSummary?._id;
   const targetProjectName = currentProjectSummary?.nombre_proyecto || currentProjectSummary?.name;
 
   const fullProjectDataFromCache = useMemo(() => {
