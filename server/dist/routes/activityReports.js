@@ -1,10 +1,20 @@
 import { Router } from "express";
 import { z } from "zod";
+import mongoose from "mongoose";
 import { Request } from "../models/Request.js";
+import { Notification } from "../models/Notification.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
+import { computeCompliance } from "../services/complianceService.js";
 const router = Router();
 router.use(requireTenant, authenticateToken);
+const isAdminReq = (req) => {
+    const roles = (req.user?.roles || []).map((r) => r.toString().toLowerCase());
+    const primary = req.user?.primaryRole?.toLowerCase();
+    return roles.includes("admin") || roles.includes("superadmin") || primary === "admin" || primary === "superadmin";
+};
+const MAX_RANGE_DAYS = 92;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const attendanceSchema = z.object({
     employeeId: z.string(),
     status: z.string().optional(),
@@ -95,6 +105,91 @@ router.post("/", async (req, res) => {
             return;
         }
         console.error("Create activity report error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// GET /compliance - Control de cumplimiento de novedades por coordinador (admin-only)
+router.get("/compliance", async (req, res) => {
+    try {
+        if (!isAdminReq(req)) {
+            res.status(403).json({ error: "No autorizado" });
+            return;
+        }
+        const from = String(req.query.from || "");
+        const to = String(req.query.to || "");
+        if (!DATE_RE.test(from) || !DATE_RE.test(to) || from > to) {
+            res.status(400).json({ error: "Parámetros 'from'/'to' inválidos (YYYY-MM-DD, from<=to)" });
+            return;
+        }
+        // Cap de rango para evitar cómputos gigantes.
+        const rangeDays = (new Date(to + "T00:00:00Z").getTime() - new Date(from + "T00:00:00Z").getTime()) / 86400000;
+        if (rangeDays > MAX_RANGE_DAYS) {
+            res.status(400).json({ error: `Rango demasiado grande (máx ${MAX_RANGE_DAYS} días)` });
+            return;
+        }
+        const data = await computeCompliance(req.tenantObjectId, {
+            from,
+            to,
+            projectId: req.query.projectId ? String(req.query.projectId) : undefined,
+            coordinatorId: req.query.coordinatorId ? String(req.query.coordinatorId) : undefined,
+            areaId: req.query.areaId ? String(req.query.areaId) : undefined,
+            shiftId: req.query.shiftId ? String(req.query.shiftId) : undefined,
+        });
+        res.json(data);
+    }
+    catch (error) {
+        console.error("Compliance error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// POST /compliance/remind - Notifica a los coordinadores con novedades faltantes (admin-only)
+router.post("/compliance/remind", async (req, res) => {
+    try {
+        if (!isAdminReq(req)) {
+            res.status(403).json({ error: "No autorizado" });
+            return;
+        }
+        const { from, to, projectId, coordinatorIds, message } = req.body || {};
+        if (!DATE_RE.test(String(from)) || !DATE_RE.test(String(to)) || String(from) > String(to)) {
+            res.status(400).json({ error: "Parámetros 'from'/'to' inválidos" });
+            return;
+        }
+        // Recalcular server-side (nunca confiar en una lista del cliente).
+        const data = await computeCompliance(req.tenantObjectId, { from, to, projectId });
+        const idSet = Array.isArray(coordinatorIds) && coordinatorIds.length ? new Set(coordinatorIds.map(String)) : null;
+        const behind = data.coordinators.filter((c) => c.missingCount > 0 && (!idSet || idSet.has(c.userId)));
+        // Dedupe: no crear un segundo recordatorio no-leído del mismo tipo el mismo día.
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const notified = [];
+        for (const c of behind) {
+            if (!mongoose.Types.ObjectId.isValid(c.userId))
+                continue;
+            const exists = await Notification.findOne({
+                tenantId: req.tenantObjectId,
+                userId: c.userId,
+                type: "novedad_compliance_reminder",
+                isRead: false,
+                createdAt: { $gte: startOfToday },
+            }).select("_id");
+            if (exists)
+                continue;
+            await Notification.create({
+                tenantId: req.tenantObjectId,
+                userId: c.userId,
+                type: "novedad_compliance_reminder",
+                title: "Novedades pendientes",
+                message: message
+                    ? String(message)
+                    : `Tenés ${c.missingCount} novedad(es) sin enviar. Por favor cargalas para completar los registros.`,
+                linkUrl: "/mobile",
+            });
+            notified.push({ userId: c.userId, name: c.name, missingCount: c.missingCount });
+        }
+        res.json({ notified, count: notified.length });
+    }
+    catch (error) {
+        console.error("Compliance remind error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });

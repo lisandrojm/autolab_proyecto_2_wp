@@ -978,6 +978,9 @@ export const RequestsPage: React.FC = () => {
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         <div className="flex items-center gap-2">
+          <button onClick={() => setShowCompliance((v) => !v)} className={`p-2 rounded transition-colors flex items-center gap-2 text-sm ${showCompliance ? "bg-blue-700 text-white ring-2 ring-blue-300 dark:ring-blue-500" : "bg-blue-600 text-white hover:bg-blue-700"}`} aria-label="Cumplimiento de coordinadores" title="Cumplimiento de coordinadores">
+            <FontAwesomeIcon icon={faCalendarCheck} className="h-4 w-4" />
+          </button>
           <button onClick={() => setShowStatsModal(true)} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen" title="Resumen de Novedades">
             <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
           </button>
@@ -1084,18 +1087,13 @@ export const RequestsPage: React.FC = () => {
             </select>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <button onClick={() => setShowCompliance(true)} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${showCompliance ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Cumplimiento de coordinadores" aria-label="Cumplimiento">
-              <FontAwesomeIcon icon={faCalendarCheck} className="h-4 w-4" />
+          <div className="hidden min-[1200px]:flex items-center gap-2 shrink-0">
+            <button onClick={() => { setShowCompliance(false); setListLayout("cards"); }} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${!showCompliance && listLayout === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
+              <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
             </button>
-            <div className="hidden min-[1200px]:flex items-center gap-2">
-              <button onClick={() => { setShowCompliance(false); setListLayout("cards"); }} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${!showCompliance && listLayout === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
-                <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
-              </button>
-              <button onClick={() => { setShowCompliance(false); setListLayout("table"); }} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${!showCompliance && listLayout === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
-                <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
-              </button>
-            </div>
+            <button onClick={() => { setShowCompliance(false); setListLayout("table"); }} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${!showCompliance && listLayout === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
+              <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
+            </button>
           </div>
         </div>
       }
