@@ -4,8 +4,9 @@ import { fuzzyMatch } from "../utils/searchHelpers";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileText, faFilter, faSearch, faUser, faCalendar, faTrash, faUserSlash, faGrip, faTable, faBriefcase, faChartSimple, faClock, faChevronDown, faChevronUp, faFileLines, faLayerGroup, faPen } from "@fortawesome/free-solid-svg-icons";
+import { faFileText, faFilter, faSearch, faUser, faCalendar, faTrash, faUserSlash, faGrip, faTable, faBriefcase, faChartSimple, faClock, faChevronDown, faChevronUp, faFileLines, faLayerGroup, faPen, faCalendarCheck } from "@fortawesome/free-solid-svg-icons";
 import { NewsReportsModal } from "../components/orders/news/NewsReportsModal";
+import { ComplianceView } from "../components/activity_logs/ComplianceView";
 import { PageLayout } from "../components/ui/PageLayout";
 import { CardItemGeneric } from "../components/ui/CardItemGeneric";
 import { Modal } from "../components/ui/Modal";
@@ -156,6 +157,7 @@ export const RequestsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
   const [listLayout, setListLayout] = useState<"table" | "cards">("table");
+  const [showCompliance, setShowCompliance] = useState(false);
 
   // Force cards view on screen resize < 1200px
   useEffect(() => {
@@ -1082,20 +1084,27 @@ export const RequestsPage: React.FC = () => {
             </select>
           </div>
 
-          <div className="hidden min-[1200px]:flex items-center gap-2 shrink-0">
-            <button onClick={() => setListLayout("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${listLayout === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
-              <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={() => setShowCompliance(true)} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${showCompliance ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Cumplimiento de coordinadores" aria-label="Cumplimiento">
+              <FontAwesomeIcon icon={faCalendarCheck} className="h-4 w-4" />
             </button>
-            <button onClick={() => setListLayout("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${listLayout === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
-              <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
-            </button>
+            <div className="hidden min-[1200px]:flex items-center gap-2">
+              <button onClick={() => { setShowCompliance(false); setListLayout("cards"); }} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${!showCompliance && listLayout === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
+                <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+              </button>
+              <button onClick={() => { setShowCompliance(false); setListLayout("table"); }} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${!showCompliance && listLayout === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
+                <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       }
     >
       <div className="space-y-6">
         {/* List Content */}
-        {loading ? (
+        {showCompliance ? (
+          <ComplianceView projectFilter={projectFilter} areaFilter={areaFilter} shiftFilter={shiftFilter} />
+        ) : loading ? (
           <div className="flex justify-center items-center py-12">
             <LoadingSpinner message="Cargando novedades..." />
           </div>

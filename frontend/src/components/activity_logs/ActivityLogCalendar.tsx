@@ -2,9 +2,14 @@ import React, { useState } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronLeft, faChevronRight, faChartPie, faChartSimple } from "@fortawesome/free-solid-svg-icons";
-import { ReportSchedule } from "./ReportingScheduleModal";
+import { faChevronLeft, faChevronRight, faChartSimple } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
+
+// Tipo local (el módulo ReportingScheduleModal fue removido; sólo se usa como tipo acá).
+interface ReportSchedule {
+  type: "daily" | "workdays" | "custom";
+  days: number[];
+}
 
 // Mock data generator for compliance - now schedule aware
 const generateMockCompliance = (date: Date, schedule?: ReportSchedule): "complete" | "missing" | "extra" | "none" => {
@@ -38,39 +43,54 @@ const generateMockCompliance = (date: Date, schedule?: ReportSchedule): "complet
   }
 };
 
+type DayStatus = "complete" | "partial" | "missing" | "extra" | "none";
+
 interface ActivityLogCalendarProps {
   project?: any;
   scheduleConfig?: ReportSchedule;
-  onDayClick?: (date: Date, status: "complete" | "missing" | "extra" | "none") => void;
+  onDayClick?: (date: Date, status: DayStatus) => void;
+  /** Data real de cumplimiento por fecha ("YYYY-MM-DD" → status). Si se provee, reemplaza al mock. */
+  complianceByDate?: Record<string, "complete" | "partial" | "missing" | "none">;
+  /** Mes visible controlado por el padre (para sincronizar con el rango de datos). */
+  controlledMonth?: Date;
+  onMonthChange?: (month: Date) => void;
 }
 
-export const ActivityLogCalendar: React.FC<ActivityLogCalendarProps> = ({ project, scheduleConfig, onDayClick }) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
+export const ActivityLogCalendar: React.FC<ActivityLogCalendarProps> = ({ project, scheduleConfig, onDayClick, complianceByDate, controlledMonth, onMonthChange }) => {
+  const [internalDate, setInternalDate] = useState(new Date());
+  const currentDate = controlledMonth || internalDate;
   const [showStatsModal, setShowStatsModal] = useState(false);
 
   const firstDay = startOfMonth(currentDate);
   const lastDay = endOfMonth(currentDate);
   const days = eachDayOfInterval({ start: firstDay, end: lastDay });
 
+  // Status real (complianceByDate) o mock si no viene data.
+  const statusOf = (day: Date): DayStatus => {
+    if (complianceByDate) return complianceByDate[format(day, "yyyy-MM-dd")] ?? "none";
+    return generateMockCompliance(day, scheduleConfig);
+  };
+
   // Calculate stats for the current month
   const stats = days.reduce(
     (acc, day) => {
-      const status = generateMockCompliance(day, scheduleConfig);
+      const status = statusOf(day);
       if (status === "complete") acc.reported++;
       if (status === "missing") acc.missing++;
+      if (status === "partial") acc.partial++;
       if (status === "extra") acc.extra++;
       return acc;
     },
-    { reported: 0, missing: 0, extra: 0 }
+    { reported: 0, missing: 0, partial: 0, extra: 0 }
   );
 
   // Calculate padding days for start of month
   const startPadding = Array(getDay(firstDay)).fill(null);
 
-  const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
-  const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
+  const prevMonth = () => (onMonthChange ? onMonthChange(subMonths(currentDate, 1)) : setInternalDate(subMonths(currentDate, 1)));
+  const nextMonth = () => (onMonthChange ? onMonthChange(addMonths(currentDate, 1)) : setInternalDate(addMonths(currentDate, 1)));
 
-  if (!project) {
+  if (!project && !complianceByDate) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-gray-400 py-12">
         <p>Selecciona un proyecto para ver sus reportes.</p>
@@ -123,7 +143,7 @@ export const ActivityLogCalendar: React.FC<ActivityLogCalendarProps> = ({ projec
           <div key={`padding-${i}`} className="h-14 sm:h-20 lg:h-24 bg-gray-50/50 dark:bg-gray-800/50 rounded-md sm:rounded"></div>
         ))}
         {days.map((day) => {
-          const status = generateMockCompliance(day, scheduleConfig);
+          const status = statusOf(day);
           const isToday = isSameDay(day, new Date());
 
           let statusColor = "bg-gray-50 dark:bg-gray-800"; // default / none
@@ -135,6 +155,9 @@ export const ActivityLogCalendar: React.FC<ActivityLogCalendarProps> = ({ projec
           } else if (status === "missing") {
             statusColor = "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800";
             statusIcon = <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-red-500 shrink-0 shadow-sm" title="No enviado"></div>;
+          } else if (status === "partial") {
+            statusColor = "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800";
+            statusIcon = <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-amber-500 shrink-0 shadow-sm" title="Parcial (faltan algunos)"></div>;
           } else if (status === "extra") {
             statusColor = "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 opacity-75";
             statusIcon = <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-blue-500 shrink-0 shadow-sm" title="Reporte Extra"></div>;
@@ -170,10 +193,17 @@ export const ActivityLogCalendar: React.FC<ActivityLogCalendarProps> = ({ projec
           <div className="w-4 h-4 rounded bg-red-500 shadow-sm ring-2 ring-red-100 dark:ring-red-900/30"></div>
           <span className="font-semibold text-gray-800 dark:text-gray-200">No enviado</span>
         </div>
-        <div className="flex items-center gap-2 opacity-75">
-          <div className="w-3 h-3 rounded bg-blue-500 shadow-sm"></div>
-          <span className="font-medium text-xs">Extra</span>
-        </div>
+        {complianceByDate ? (
+          <div className="flex items-center gap-2.5">
+            <div className="w-4 h-4 rounded bg-amber-500 shadow-sm ring-2 ring-amber-100 dark:ring-amber-900/30"></div>
+            <span className="font-semibold text-gray-800 dark:text-gray-200">Parcial</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 opacity-75">
+            <div className="w-3 h-3 rounded bg-blue-500 shadow-sm"></div>
+            <span className="font-medium text-xs">Extra</span>
+          </div>
+        )}
       </div>
 
       {/* Stats Modal */}
