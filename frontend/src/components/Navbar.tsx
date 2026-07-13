@@ -145,7 +145,6 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("admin_orders:view")) base.push({ path: "/orders", icon: faShoppingCart, label: "Pedidos", scope: "global" });
       if (hasPermission("admin_vacations:view")) base.push({ path: "/vacations", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
       if (hasPermission("admin_calendar:view")) base.push({ path: "/calendar-events", disabled: true, icon: faCalendar, label: "Calendario", scope: "global" });
-      if (hasPermission("admin_employee_profiles:view")) base.push({ path: "/employee-profiles", disabled: true, icon: faUsers, label: "Perfiles de Empleados", scope: "global" });
       if (hasPermission("admin_hr_documents:view")) base.push({ path: "/documents", disabled: true, icon: faFileText, label: "Documentos RRHH", scope: "global" });
 
       // CONFIGURACION Items
