@@ -1091,7 +1091,16 @@ export const RequestsPage: React.FC = () => {
       <div className="space-y-6">
         {/* List Content */}
         {showCompliance ? (
-          <ComplianceView projectFilter={projectFilter} areaFilter={areaFilter} shiftFilter={shiftFilter} />
+          <ComplianceView
+            projectFilter={projectFilter}
+            areaFilter={areaFilter}
+            shiftFilter={shiftFilter}
+            onOpenReport={(reportNumber) => {
+              const rep = reports.find((r) => r.reportNumber === reportNumber);
+              if (rep) handleViewDetail(rep);
+              else sweetAlert.error("Novedad no encontrada", `No se pudo abrir ${reportNumber}. Puede haber sido eliminada.`);
+            }}
+          />
         ) : loading ? (
           <div className="flex justify-center items-center py-12">
             <LoadingSpinner message="Cargando novedades..." />

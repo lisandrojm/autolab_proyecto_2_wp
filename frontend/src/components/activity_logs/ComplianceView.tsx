@@ -12,6 +12,8 @@ interface ComplianceViewProps {
   projectFilter: string; // "all" o id
   areaFilter: string;
   shiftFilter: string;
+  /** Abre el detalle de una novedad por su Nº (ej. "DEM-REG-000337"). */
+  onOpenReport?: (reportNumber: string) => void;
 }
 
 const todayStr = () => format(new Date(), "yyyy-MM-dd");
@@ -26,7 +28,7 @@ const weekdayOf = (d: string) => {
   return new Date(y, m - 1, day).getDay();
 };
 
-export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, areaFilter, shiftFilter }) => {
+export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, areaFilter, shiftFilter, onOpenReport }) => {
   const [viewMonth, setViewMonth] = useState(new Date());
   const [data, setData] = useState<ComplianceResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -253,7 +255,14 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
             controlledMonth={viewMonth}
             onMonthChange={setViewMonth}
             onDayClick={(day, status) => {
-              if (status === "missing" || status === "partial") setSelectedDay(format(day, "yyyy-MM-dd"));
+              const d = format(day, "yyyy-MM-dd");
+              // Día reportado con Nº de novedad → abrir su detalle.
+              const code = dayLabels?.[d];
+              if (code && onOpenReport) {
+                onOpenReport(code.split(",")[0].trim()); // si coordina varios proyectos, el primero
+                return;
+              }
+              if (status === "missing" || status === "partial") setSelectedDay(d);
             }}
           />
         </div>
