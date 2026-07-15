@@ -1912,9 +1912,16 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     });
   };
 
+  /** Día en el que TODAVÍA se puede cargar (esperado + dentro de la ventana allowedPastDays). */
   const isProjectWorkDay = (day: Date) => {
     if (!selectedProject) return false;
     return isDayAllowedForReporting(selectedProject, day);
+  };
+
+  /** Día ESPERADO por el schedule del proyecto (sin importar la ventana de carga). */
+  const isProjectExpectedDay = (day: Date) => {
+    if (!selectedProject) return false;
+    return isDayInFrequency(selectedProject, day);
   };
 
   const hasReport = (day: Date) => {
@@ -2689,7 +2696,9 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                   const isReported = hasReport(day);
                                   const isFutureDate = isFuture(day) && !isToday(day);
                                   const isSelected = reportDate === formattedDay;
-                                  const isProjectDay = isProjectWorkDay(day);
+                                  const isProjectDay = isProjectWorkDay(day); // todavía se puede cargar
+                                  // Esperado por el schedule pero ya fuera de la ventana de carga y sin reporte → vencido.
+                                  const isMissed = !isReported && !isFutureDate && isProjectExpectedDay(day) && !isProjectDay;
 
                                   // Style Classes
                                   let bgClass = "transparent";
@@ -2705,15 +2714,24 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                     textClass = "text-gray-300 dark:text-gray-600";
                                     cursorClass = "cursor-not-allowed opacity-60";
                                   } else {
-                                    // Valid Project Day
+                                    // Día disponible para cargar → azul
                                     textClass = "text-blue-600 dark:text-blue-400 font-semibold";
                                   }
 
-                                  if (isReported) {
+                                  // Vencido: se esperaba y ya no se puede cargar → rojo
+                                  if (isMissed) {
                                     bgClass = "bg-red-50 dark:bg-red-900/20";
-                                    textClass = "text-red-400 dark:text-red-400 line-through decoration-red-400/50";
-                                    cursorClass = "cursor-not-allowed opacity-70";
+                                    textClass = "text-red-500 dark:text-red-400 font-semibold";
+                                    cursorClass = "cursor-not-allowed";
                                     borderClass = "border border-red-100 dark:border-red-900/30";
+                                  }
+
+                                  // Ya reportado → verde
+                                  if (isReported) {
+                                    bgClass = "bg-green-50 dark:bg-green-900/20";
+                                    textClass = "text-green-600 dark:text-green-400 font-semibold";
+                                    cursorClass = "cursor-not-allowed";
+                                    borderClass = "border border-green-200 dark:border-green-900/40";
                                   }
 
                                   if (isFutureDate) {
@@ -2731,7 +2749,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                   }
 
                                   // Disable interaction for invalid days
-                                  const isDisabled = isFutureDate || isReported || !isProjectDay || (!isCurrentMonth && !isSelected);
+                                  const isDisabled = isFutureDate || isReported || isMissed || !isProjectDay || (!isCurrentMonth && !isSelected);
 
                                   return (
                                     <div key={idx} className="flex justify-center py-0.5">
@@ -2745,21 +2763,26 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                         className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all relative ${bgClass} ${textClass} ${cursorClass} ${borderClass}`}
                                       >
                                         {getDate(day)}
-                                        {isReported && <div className="absolute bottom-0.5 w-1 h-1 rounded-full bg-red-500"></div>}
+                                        {isReported && <div className="absolute bottom-0.5 w-1 h-1 rounded-full bg-green-500"></div>}
+                                        {isMissed && <div className="absolute bottom-0.5 w-1 h-1 rounded-full bg-red-500"></div>}
                                       </button>
                                     </div>
                                   );
                                 })}
                               </div>
                             </div>
-                            <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center text-[10px] text-slate-500 dark:text-slate-400">
+                            <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400">
                               <div className="flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-red-500/50"></span>
-                                <span>Reporte existente</span>
+                                <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                                <span>Reportado</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                                <span>No enviado</span>
                               </div>
                               <div className="flex items-center gap-1.5">
                                 <span className="w-2 h-2 rounded-full bg-blue-600"></span>
-                                <span>Días Proyecto</span>
+                                <span>Disponible</span>
                               </div>
                             </div>
                           </div>
