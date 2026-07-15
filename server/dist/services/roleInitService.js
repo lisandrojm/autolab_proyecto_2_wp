@@ -37,8 +37,6 @@ const ADMIN_PERMISSIONS = [
     "admin_orders:view", // Pedidos
     "admin_vacations:view", // Vacaciones
     "admin_activity_logs:view", // Novedades
-    "admin_calendar:view", // Calendario
-    "admin_employee_profiles:view", // Perfiles de empleados
     "admin_hr_documents:view", // Documentos RRHH
     // ──────────── Admin USUARIOS ────────────
     "admin_roles:view", // Roles

@@ -35,7 +35,7 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
     label: "Admin GENERAL",
     icon: faUsersGear,
     description: "Gestión general de RRHH y administración",
-    permissions: ["admin_clients:view", "admin_projects:view", "admin_sedes:view", "admin_contracts:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", "admin_calendar:view", "admin_employee_profiles:view", "admin_hr_documents:view"],
+    permissions: ["admin_clients:view", "admin_projects:view", "admin_sedes:view", "admin_contracts:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", "admin_hr_documents:view"],
   },
   admin_users: {
     label: "Admin USUARIOS",
@@ -72,8 +72,6 @@ const MODULE_LABELS: Record<string, string> = {
   "admin_orders:view": "Pedidos",
   "admin_vacations:view": "Vacaciones",
   "admin_activity_logs:view": "Novedades",
-  "admin_calendar:view": "Calendario",
-  "admin_employee_profiles:view": "Perfiles de Empleados",
   "admin_hr_documents:view": "Documentos RRHH",
   "project_responsible:eligible": "Responsable de Proyecto",
   "admin_areas:view": "Areas",

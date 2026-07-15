@@ -157,7 +157,21 @@ export const RequestsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
   const [listLayout, setListLayout] = useState<"table" | "cards">("table");
-  const [showCompliance, setShowCompliance] = useState(false);
+  // Persistida: así al volver del detalle de una novedad (o tras recargar) seguís en Cumplimiento.
+  const [showCompliance, setShowCompliance] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("novedades_showCompliance") === "true";
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("novedades_showCompliance", String(showCompliance));
+    } catch {
+      /* storage no disponible */
+    }
+  }, [showCompliance]);
 
   // Force cards view on screen resize < 1200px
   useEffect(() => {

@@ -28,14 +28,48 @@ const weekdayOf = (d: string) => {
   return new Date(y, m - 1, day).getDay();
 };
 
+// Persistencia: al abrir el detalle de una novedad este componente se desmonta,
+// así que guardamos mes y coordinador elegido para restaurarlos al volver.
+const LS_MONTH = "novedades_compliance_month";
+const LS_COORD = "novedades_compliance_coordinator";
+const readLS = (k: string): string | null => {
+  try {
+    return localStorage.getItem(k);
+  } catch {
+    return null;
+  }
+};
+const writeLS = (k: string, v: string | null) => {
+  try {
+    if (v) localStorage.setItem(k, v);
+    else localStorage.removeItem(k);
+  } catch {
+    /* storage no disponible */
+  }
+};
+
 export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, areaFilter, shiftFilter, onOpenReport }) => {
-  const [viewMonth, setViewMonth] = useState(new Date());
+  const [viewMonth, setViewMonth] = useState<Date>(() => {
+    const saved = readLS(LS_MONTH);
+    if (saved && /^\d{4}-\d{2}$/.test(saved)) {
+      const [y, m] = saved.split("-").map(Number);
+      return new Date(y, m - 1, 1);
+    }
+    return new Date();
+  });
   const [data, setData] = useState<ComplianceResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [selectedCoordinatorId, setSelectedCoordinatorId] = useState<string | null>(null);
+  const [selectedCoordinatorId, setSelectedCoordinatorId] = useState<string | null>(() => readLS(LS_COORD));
   const [showReport, setShowReport] = useState(false);
+
+  useEffect(() => {
+    writeLS(LS_MONTH, format(viewMonth, "yyyy-MM"));
+  }, [viewMonth]);
+  useEffect(() => {
+    writeLS(LS_COORD, selectedCoordinatorId);
+  }, [selectedCoordinatorId]);
   const [remindingIds, setRemindingIds] = useState<Set<string>>(new Set());
   const [remindingAll, setRemindingAll] = useState(false);
 
