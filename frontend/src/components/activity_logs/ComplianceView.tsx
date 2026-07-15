@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import * as XLSX from "xlsx";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBell, faFileExcel, faTriangleExclamation, faCircleCheck, faSpinner, faUser, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faFileExcel, faTriangleExclamation, faCircleCheck, faSpinner, faUser, faXmark, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { ActivityLogCalendar } from "./ActivityLogCalendar";
 import { Modal } from "../ui/Modal";
 import { sweetAlert } from "../../utils/sweetAlert";
@@ -246,9 +246,19 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
 
         {/* Panel de coordinadores */}
         <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
-          <div className="flex items-center justify-between mb-2 px-1">
+          <div className="flex items-center justify-between gap-2 mb-2 px-1">
             <h4 className="text-sm font-bold text-gray-700 dark:text-gray-200">Coordinadores</h4>
-            <span className="text-[10px] text-gray-400">Clickeá uno para ver su calendario</span>
+            {selectedCoordinatorId ? (
+              <button
+                onClick={() => setSelectedCoordinatorId(null)}
+                title="Volver al calendario de todos los coordinadores"
+                className="shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-bold text-blue-600 dark:text-blue-400 border border-blue-300 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+              >
+                <FontAwesomeIcon icon={faUsers} /> Ver todos
+              </button>
+            ) : (
+              <span className="text-[10px] text-gray-400">Clickeá uno para ver su calendario</span>
+            )}
           </div>
           <div className="space-y-1.5 max-h-[560px] overflow-y-auto pr-1">
             {(data?.coordinators || []).length === 0 && !loading && <p className="text-xs text-gray-400 px-1 py-4 text-center">Sin coordinadores con asignaciones en este período/filtro.</p>}
