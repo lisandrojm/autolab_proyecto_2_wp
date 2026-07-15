@@ -96,8 +96,10 @@ export async function computeCompliance(tenantId: Types.ObjectId, params: Compli
   // 1. Proyectos con asignaciones + schedule.
   const projectFilter: any = { tenantId };
   if (params.projectId) projectFilter._id = params.projectId;
+  // OJO: traer activityLogConfig COMPLETO (no sólo .schedule): necesitamos useGlobalConfig
+  // y allowedPastDays para resolver la ventana de "Días Permitidos" por proyecto.
   const projects = await Project.find(projectFilter)
-    .select("name coordinatorAssignments activityLogConfig.schedule")
+    .select("name coordinatorAssignments activityLogConfig")
     .lean();
 
   // 2. Catálogos de referencia + config global de "Días Permitidos".
