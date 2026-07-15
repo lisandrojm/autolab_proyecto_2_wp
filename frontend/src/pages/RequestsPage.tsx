@@ -186,7 +186,6 @@ export const RequestsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   // Filters
-  const [dateFilter, setDateFilter] = useState("daily"); // daily, weekly, monthly
   const [areaFilter, setAreaFilter] = useState("all");
   const [shiftFilter, setShiftFilter] = useState("all");
   const [projectFilter, setProjectFilter] = useState("all");
@@ -1075,15 +1074,6 @@ export const RequestsPage: React.FC = () => {
                   );
                 });
               })()}
-            </select>
-          </div>
-
-          <div className="relative">
-            <FontAwesomeIcon icon={faCalendar} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
-              <option value="daily">Diario</option>
-              <option value="weekly">Semanal</option>
-              <option value="monthly">Mensual</option>
             </select>
           </div>
 
