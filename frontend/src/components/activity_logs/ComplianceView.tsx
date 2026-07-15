@@ -165,7 +165,7 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
         submitted: c.submittedCount,
         missing: c.missingCount,
         compliancePct: c.expectedCount > 0 ? Math.round((c.submittedCount / c.expectedCount) * 1000) / 10 : 0,
-        coordinatorsBehind: c.missingCount > 0 ? 1 : 0,
+        coordinatorsBehind: (c.expiredCount ?? 0) > 0 ? 1 : 0,
       };
     }
     return data?.totals;
@@ -264,7 +264,7 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
           <button onClick={() => setShowReport(true)} disabled={!data} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 disabled:opacity-50">
             <FontAwesomeIcon icon={faFileExcel} /> Informe
           </button>
-          <button onClick={remindAll} disabled={!data || remindingAll || (data?.totals.coordinatorsBehind ?? 0) === 0} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50">
+          <button onClick={remindAll} disabled={!data || remindingAll || !data.coordinators.some((c) => c.missingCount > 0)} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50">
             <FontAwesomeIcon icon={remindingAll ? faSpinner : faBell} className={remindingAll ? "animate-spin" : ""} /> Recordar a los que faltan
           </button>
         </div>
@@ -419,10 +419,14 @@ const StatChip: React.FC<{ label: string; value: string | number; tone: "gray" |
 };
 
 const CoordinatorRow: React.FC<{ c: CoordinatorCompliance; selected: boolean; onSelect: () => void; reminding: boolean; onRemind: () => void }> = ({ c, selected, onSelect, reminding, onRemind }) => {
-  const behind = c.missingCount > 0;
+  // Rojo SÓLO si tiene novedades con el plazo vencido. Las que todavía puede cargar son "pendientes".
+  const pending = c.pendingCount ?? 0;
+  const expired = c.expiredCount ?? Math.max(0, c.missingCount - pending);
+  const isLate = expired > 0;
+  const hasMissing = c.missingCount > 0;
   const border = selected
     ? "border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-400/40"
-    : behind
+    : isLate
       ? "border-red-200 dark:border-red-800 bg-red-50/40 dark:bg-red-900/10"
       : "border-gray-100 dark:border-gray-700";
   return (
@@ -430,12 +434,15 @@ const CoordinatorRow: React.FC<{ c: CoordinatorCompliance; selected: boolean; on
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{c.name}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {c.submittedCount}/{c.expectedCount} enviadas
-            {behind && <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/15 text-red-600 dark:text-red-400">{c.missingCount} faltan</span>}
+          <p className="text-xs text-gray-500 dark:text-gray-400 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+            <span>
+              {c.submittedCount}/{c.expectedCount} enviadas
+            </span>
+            {expired > 0 && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/15 text-red-600 dark:text-red-400">{expired} vencida{expired > 1 ? "s" : ""}</span>}
+            {pending > 0 && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400">{pending} a tiempo</span>}
           </p>
         </div>
-        {behind && (
+        {hasMissing && (
           <button
             onClick={(e) => { e.stopPropagation(); onRemind(); }}
             disabled={reminding}

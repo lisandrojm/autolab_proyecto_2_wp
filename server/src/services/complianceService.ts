@@ -45,7 +45,12 @@ export interface CoordinatorCompliance {
   name: string;
   expectedCount: number;
   submittedCount: number;
+  /** Todas las faltantes (pendientes + vencidas). */
   missingCount: number;
+  /** Faltantes que todavía puede cargar (a tiempo). */
+  pendingCount: number;
+  /** Faltantes cuyo plazo ya venció → es lo que lo marca como atrasado (rojo). */
+  expiredCount: number;
   missingDates: string[];
   projects: ProjectCompliance[];
 }
@@ -241,12 +246,14 @@ export async function computeCompliance(tenantId: Types.ObjectId, params: Compli
     const pendingLookup = new Set(pendingDates);
 
     if (!coordMap.has(g.userId)) {
-      coordMap.set(g.userId, { userId: g.userId, name: nameOf(g.userId), expectedCount: 0, submittedCount: 0, missingCount: 0, missingDates: [], projects: [] });
+      coordMap.set(g.userId, { userId: g.userId, name: nameOf(g.userId), expectedCount: 0, submittedCount: 0, missingCount: 0, pendingCount: 0, expiredCount: 0, missingDates: [], projects: [] });
     }
     const c = coordMap.get(g.userId)!;
     c.expectedCount += g.expected.length;
     c.submittedCount += submittedDates.length;
     c.missingCount += missingDates.length;
+    c.pendingCount += pendingDates.length;
+    c.expiredCount += missingDates.length - pendingDates.length;
     c.missingDates.push(...missingDates);
     c.projects.push({
       projectId: g.projectId,
@@ -285,7 +292,8 @@ export async function computeCompliance(tenantId: Types.ObjectId, params: Compli
 
   const coordinators = [...coordMap.values()]
     .map((c) => ({ ...c, missingDates: [...new Set(c.missingDates)].sort() }))
-    .sort((a, b) => b.missingCount - a.missingCount || a.name.localeCompare(b.name));
+    // Primero los que tienen vencidas (atrasados reales), después por cantidad de faltantes.
+    .sort((a, b) => b.expiredCount - a.expiredCount || b.missingCount - a.missingCount || a.name.localeCompare(b.name));
 
   const calendar = [...dayMap.values()].map((day) => {
     let status: CalendarDayCompliance["status"] = "none";
@@ -301,7 +309,8 @@ export async function computeCompliance(tenantId: Types.ObjectId, params: Compli
   const expected = coordinators.reduce((s, c) => s + c.expectedCount, 0);
   const submittedTotal = coordinators.reduce((s, c) => s + c.submittedCount, 0);
   const missing = coordinators.reduce((s, c) => s + c.missingCount, 0);
-  const coordinatorsBehind = coordinators.filter((c) => c.missingCount > 0).length;
+  // "Atrasado" = tiene novedades cuyo plazo ya venció (no las que todavía puede cargar).
+  const coordinatorsBehind = coordinators.filter((c) => c.expiredCount > 0).length;
 
   return {
     from,

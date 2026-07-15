@@ -37,7 +37,12 @@ export interface CoordinatorCompliance {
     name: string;
     expectedCount: number;
     submittedCount: number;
+    /** Todas las faltantes (pendientes + vencidas). */
     missingCount: number;
+    /** Faltantes que todavía puede cargar (a tiempo). */
+    pendingCount: number;
+    /** Faltantes cuyo plazo ya venció → es lo que lo marca como atrasado (rojo). */
+    expiredCount: number;
     missingDates: string[];
     projects: ProjectCompliance[];
 }

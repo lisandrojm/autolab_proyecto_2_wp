@@ -21,7 +21,12 @@ export interface CoordinatorCompliance {
   name: string;
   expectedCount: number;
   submittedCount: number;
+  /** Todas las faltantes (pendientes + vencidas). */
   missingCount: number;
+  /** Faltantes que todavía puede cargar (a tiempo). Opcional: backend viejo no lo manda. */
+  pendingCount?: number;
+  /** Faltantes con plazo vencido → marca al coordinador como atrasado (rojo). */
+  expiredCount?: number;
   missingDates: string[];
   projects: ProjectCompliance[];
 }
