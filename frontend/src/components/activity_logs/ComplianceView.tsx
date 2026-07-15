@@ -109,6 +109,19 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
     return map;
   }, [data, selectedCoordinator]);
 
+  // Nº de novedad por fecha: sólo con un coordinador elegido (ahí hay 1 novedad por día/proyecto).
+  const dayLabels = useMemo(() => {
+    if (!selectedCoordinator) return undefined;
+    const map: Record<string, string[]> = {};
+    selectedCoordinator.projects.forEach((p) => {
+      Object.entries(p.reportsByDate || {}).forEach(([d, num]) => {
+        map[d] = map[d] || [];
+        map[d].push(num);
+      });
+    });
+    return Object.fromEntries(Object.entries(map).map(([d, nums]) => [d, nums.join(", ")]));
+  }, [selectedCoordinator]);
+
   // Totales: del coordinador elegido, o globales.
   const totals = useMemo(() => {
     if (selectedCoordinator) {
@@ -236,6 +249,7 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
           )}
           <ActivityLogCalendar
             complianceByDate={complianceByDate}
+            dayLabels={dayLabels}
             controlledMonth={viewMonth}
             onMonthChange={setViewMonth}
             onDayClick={(day, status) => {

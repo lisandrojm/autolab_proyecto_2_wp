@@ -51,12 +51,14 @@ interface ActivityLogCalendarProps {
   onDayClick?: (date: Date, status: DayStatus) => void;
   /** Data real de cumplimiento por fecha ("YYYY-MM-DD" → status). Si se provee, reemplaza al mock. */
   complianceByDate?: Record<string, "complete" | "partial" | "missing" | "none">;
+  /** Texto opcional a mostrar dentro del día (ej. Nº de novedad "DEM-REG-000353"). */
+  dayLabels?: Record<string, string>;
   /** Mes visible controlado por el padre (para sincronizar con el rango de datos). */
   controlledMonth?: Date;
   onMonthChange?: (month: Date) => void;
 }
 
-export const ActivityLogCalendar: React.FC<ActivityLogCalendarProps> = ({ project, scheduleConfig, onDayClick, complianceByDate, controlledMonth, onMonthChange }) => {
+export const ActivityLogCalendar: React.FC<ActivityLogCalendarProps> = ({ project, scheduleConfig, onDayClick, complianceByDate, dayLabels, controlledMonth, onMonthChange }) => {
   const [internalDate, setInternalDate] = useState(new Date());
   const currentDate = controlledMonth || internalDate;
   const [showStatsModal, setShowStatsModal] = useState(false);
@@ -178,6 +180,11 @@ export const ActivityLogCalendar: React.FC<ActivityLogCalendarProps> = ({ projec
                 <span className={`text-xs sm:text-sm font-semibold ${isSameMonth(day, currentDate) ? "text-gray-700 dark:text-gray-300" : "text-gray-400"}`}>{format(day, "d")}</span>
                 {statusIcon}
               </div>
+              {dayLabels?.[format(day, "yyyy-MM-dd")] && (
+                <span className="hidden sm:block text-[8px] lg:text-[9px] font-mono font-semibold text-green-700 dark:text-green-400 leading-tight break-all" title={dayLabels[format(day, "yyyy-MM-dd")]}>
+                  {dayLabels[format(day, "yyyy-MM-dd")]}
+                </span>
+              )}
             </div>
           );
         })}

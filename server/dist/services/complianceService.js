@@ -101,15 +101,19 @@ export async function computeCompliance(tenantId, params) {
     const projIdList = [...new Set([...groups.values()].map((g) => g.projectId))].filter((id) => Types.ObjectId.isValid(id)).map((id) => new Types.ObjectId(id));
     const submitted = userIdList.length && projIdList.length
         ? await Request.find({ tenantId, userId: { $in: userIdList }, projectId: { $in: projIdList }, date: { $gte: from, $lte: to } })
-            .select("userId projectId date")
+            .select("userId projectId date reportNumber")
             .lean()
         : [];
     const submittedByUserProj = new Map();
+    // Nº de novedad por (user|proj|fecha) para mostrarlo en el calendario.
+    const reportNumberByKey = new Map();
     for (const r of submitted) {
         const key = `${idStr(r.userId)}|${idStr(r.projectId)}`;
         if (!submittedByUserProj.has(key))
             submittedByUserProj.set(key, new Set());
         submittedByUserProj.get(key).add(String(r.date));
+        if (r.reportNumber)
+            reportNumberByKey.set(`${key}|${String(r.date)}`, String(r.reportNumber));
     }
     // 5. Left-join por grupo + agregación por coordinador y por día.
     const coordMap = new Map();
@@ -142,6 +146,9 @@ export async function computeCompliance(tenantId, params) {
             expectedDates: g.expected,
             submittedDates,
             missingDates,
+            reportsByDate: Object.fromEntries(submittedDates
+                .map((d) => [d, reportNumberByKey.get(`${g.userId}|${g.projectId}|${d}`)])
+                .filter(([, n]) => !!n)),
         });
         const label = labelOf(g);
         for (const d of g.expected) {

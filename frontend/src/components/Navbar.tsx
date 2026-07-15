@@ -144,7 +144,6 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("admin_activity_logs:view")) base.push({ path: "/requests", icon: faFileText, label: "Novedades", scope: "global", dividerTop: true });
       if (hasPermission("admin_orders:view")) base.push({ path: "/orders", icon: faShoppingCart, label: "Pedidos", scope: "global" });
       if (hasPermission("admin_vacations:view")) base.push({ path: "/vacations", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
-      if (hasPermission("admin_calendar:view")) base.push({ path: "/calendar-events", disabled: true, icon: faCalendar, label: "Calendario", scope: "global" });
       if (hasPermission("admin_hr_documents:view")) base.push({ path: "/documents", disabled: true, icon: faFileText, label: "Documentos RRHH", scope: "global" });
 
       // CONFIGURACION Items
@@ -221,7 +220,7 @@ export const MobileNavbar: React.FC = () => {
     // Partición de items: Admin Usuarios, Admin General, Configuración y GESTIÓN
     const userAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ["/users", "/roles", "/areas", "/positions", "/levels", "/users/import-wp"].includes(item.path)) : adminItems.filter((item) => ["/roles", "/areas", "/positions", "/levels", "/users", "/users/import-wp"].includes(item.path))).sort(byLabel);
 
-    const generalAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ["/tenants"].includes(item.path)) : adminItems.filter((item) => ["/admin/projects", "/admin/sedes", "/admin/contracts", "/orders", "/vacations", "/requests", "/calendar-events", "/employee-profiles", "/documents"].includes(item.path))).sort(byLabel);
+    const generalAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ["/tenants"].includes(item.path)) : adminItems.filter((item) => ["/admin/projects", "/admin/sedes", "/admin/contracts", "/orders", "/vacations", "/requests", "/documents"].includes(item.path))).sort(byLabel);
 
     const configPaths = ["/requests/config", "/order-types", "/shifts", "/vacations-rules", "/holidays", "/pdfs", "/releases", "/funciones-frame", "/categorias-sat", "/clients", "/contratos-frame", "/centros-costo", "/bancos", "/obras-sociales"];
     // "Mi Perfil" se incluye como un item más para que entre en el orden alfabético

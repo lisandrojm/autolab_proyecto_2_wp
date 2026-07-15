@@ -10,6 +10,8 @@ export interface ProjectCompliance {
   expectedDates: string[];
   submittedDates: string[];
   missingDates: string[];
+  /** Opcional: Nº de novedad por fecha enviada (ej. { "2026-07-01": "DEM-REG-000353" }). */
+  reportsByDate?: Record<string, string>;
 }
 
 export interface CoordinatorCompliance {

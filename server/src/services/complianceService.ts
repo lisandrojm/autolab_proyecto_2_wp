@@ -32,6 +32,8 @@ export interface ProjectCompliance {
   expectedDates: string[];
   submittedDates: string[];
   missingDates: string[];
+  /** Nº de novedad (reportNumber) por fecha enviada, ej. { "2026-07-01": "DEM-REG-000353" }. */
+  reportsByDate: Record<string, string>;
 }
 
 export interface CoordinatorCompliance {
@@ -188,14 +190,17 @@ export async function computeCompliance(tenantId: Types.ObjectId, params: Compli
   const projIdList = [...new Set([...groups.values()].map((g) => g.projectId))].filter((id) => Types.ObjectId.isValid(id)).map((id) => new Types.ObjectId(id));
   const submitted = userIdList.length && projIdList.length
     ? await Request.find({ tenantId, userId: { $in: userIdList }, projectId: { $in: projIdList }, date: { $gte: from, $lte: to } })
-        .select("userId projectId date")
+        .select("userId projectId date reportNumber")
         .lean()
     : [];
   const submittedByUserProj = new Map<string, Set<string>>();
+  // Nº de novedad por (user|proj|fecha) para mostrarlo en el calendario.
+  const reportNumberByKey = new Map<string, string>();
   for (const r of submitted as any[]) {
     const key = `${idStr(r.userId)}|${idStr(r.projectId)}`;
     if (!submittedByUserProj.has(key)) submittedByUserProj.set(key, new Set());
     submittedByUserProj.get(key)!.add(String(r.date));
+    if (r.reportNumber) reportNumberByKey.set(`${key}|${String(r.date)}`, String(r.reportNumber));
   }
 
   // 5. Left-join por grupo + agregación por coordinador y por día.
@@ -231,6 +236,11 @@ export async function computeCompliance(tenantId: Types.ObjectId, params: Compli
       expectedDates: g.expected,
       submittedDates,
       missingDates,
+      reportsByDate: Object.fromEntries(
+        submittedDates
+          .map((d) => [d, reportNumberByKey.get(`${g.userId}|${g.projectId}|${d}`)])
+          .filter(([, n]) => !!n) as [string, string][],
+      ),
     });
 
     const label = labelOf(g);
