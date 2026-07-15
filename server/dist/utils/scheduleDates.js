@@ -77,6 +77,28 @@ export function expandExpectedDates(opts) {
         return true;
     });
 }
+/**
+ * Ventana de carga: los últimos `allowedPastDays` días ESPERADOS (según el schedule del
+ * proyecto) contando hacia atrás desde hoy (hoy inclusive si es día esperado).
+ *
+ * Réplica exacta del criterio del mobile (`isDayAllowedForReporting`): la ventana NO son
+ * N días corridos, son los últimos N días de reporte activos.
+ */
+export function computeOpenWindow(opts) {
+    const { scheduleType, scheduleDays, allowedPastDays } = opts;
+    const out = new Set();
+    const days = resolveScheduleDays(scheduleType, scheduleDays);
+    if (days.length === 0 || !allowedPastDays || allowedPastDays <= 0)
+        return out;
+    let cur = opts.today || todayStr();
+    const maxSearch = Math.max(30, allowedPastDays * 10);
+    for (let i = 0; i < maxSearch && out.size < allowedPastDays; i++) {
+        if (days.includes(weekdayOf(cur)))
+            out.add(cur);
+        cur = addDaysStr(cur, -1);
+    }
+    return out;
+}
 /** "YYYY-MM-DD" de hoy en horario local del server. */
 export function todayStr() {
     const dt = new Date();

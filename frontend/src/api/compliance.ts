@@ -10,6 +10,8 @@ export interface ProjectCompliance {
   expectedDates: string[];
   submittedDates: string[];
   missingDates: string[];
+  /** Opcional: faltantes que todavía se pueden cargar (dentro de "Días Permitidos"). */
+  pendingDates?: string[];
   /** Opcional: Nº de novedad por fecha enviada (ej. { "2026-07-01": "DEM-REG-000353" }). */
   reportsByDate?: Record<string, string>;
 }
@@ -34,10 +36,12 @@ export interface MissingCell {
 
 export interface CalendarDayCompliance {
   date: string;
-  status: "complete" | "partial" | "missing" | "none";
+  /** "pending" = falta pero todavía se puede cargar (azul); "missing" = vencida (rojo). */
+  status: "complete" | "partial" | "pending" | "missing" | "none";
   expected: number;
   submitted: number;
   missing: number;
+  pending?: number;
   missingCells: MissingCell[];
 }
 

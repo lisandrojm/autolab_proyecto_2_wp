@@ -5,7 +5,8 @@ import { Area } from "../models/Area.js";
 import { User } from "../models/User.js";
 import { Holiday } from "../models/Holiday.js";
 import { Request } from "../models/Request.js";
-import { expandExpectedDates, eachDateStr, holidayToDateStr, todayStr } from "../utils/scheduleDates.js";
+import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
+import { expandExpectedDates, eachDateStr, holidayToDateStr, todayStr, computeOpenWindow } from "../utils/scheduleDates.js";
 const idStr = (v) => (v && typeof v === "object" ? String(v._id || v) : String(v));
 export async function computeCompliance(tenantId, params) {
     const today = todayStr();
@@ -18,18 +19,25 @@ export async function computeCompliance(tenantId, params) {
     const projects = await Project.find(projectFilter)
         .select("name coordinatorAssignments activityLogConfig.schedule")
         .lean();
-    // 2. Catálogos de referencia.
-    const [shifts, areas, holidayDocs] = await Promise.all([
+    // 2. Catálogos de referencia + config global de "Días Permitidos".
+    const [shifts, areas, holidayDocs, generalConfig] = await Promise.all([
         Shift.find({ tenantId }).select("name days").lean(),
         Area.find({ tenantId }).select("name").lean(),
         Holiday.find({ tenantId, date: { $gte: new Date(from + "T00:00:00Z"), $lte: new Date(to + "T23:59:59Z") } }).select("date").lean(),
+        ActivityLogGeneralConfig.getOrCreateDefault(tenantId),
     ]);
     const shiftById = new Map(shifts.map((s) => [String(s._id), s]));
     const areaById = new Map(areas.map((a) => [String(a._id), a]));
     const holidaySet = new Set(holidayDocs.map((h) => holidayToDateStr(h.date)));
     const groups = new Map();
+    // Ventana de carga abierta por proyecto (según "Días Permitidos": global u override del proyecto).
+    const openWindowByProject = new Map();
     for (const p of projects) {
         const schedule = p.activityLogConfig?.schedule || {};
+        // Mismo criterio que projects.ts/resolveProjectGlobalConfig: si no está en false, hereda el global.
+        const cfg = p.activityLogConfig || {};
+        const allowedPastDays = cfg.useGlobalConfig !== false ? generalConfig.allowedPastDays : (cfg.allowedPastDays ?? generalConfig.allowedPastDays);
+        openWindowByProject.set(String(p._id), computeOpenWindow({ scheduleType: schedule.type, scheduleDays: schedule.days, allowedPastDays, today }));
         for (const a of p.coordinatorAssignments || []) {
             const userId = idStr(a.userId);
             const areaId = idStr(a.areaId);
@@ -119,13 +127,17 @@ export async function computeCompliance(tenantId, params) {
     const coordMap = new Map();
     const dayMap = new Map();
     for (const d of eachDateStr(from, to)) {
-        dayMap.set(d, { date: d, status: "none", expected: 0, submitted: 0, missing: 0, missingCells: [] });
+        dayMap.set(d, { date: d, status: "none", expected: 0, submitted: 0, missing: 0, pending: 0, missingCells: [] });
     }
     for (const g of groups.values()) {
         const submittedSet = submittedByUserProj.get(`${g.userId}|${g.projectId}`) || new Set();
         const submittedDates = g.expected.filter((d) => submittedSet.has(d));
         const submittedLookup = new Set(submittedDates);
         const missingDates = g.expected.filter((d) => !submittedLookup.has(d));
+        // Faltantes que todavía se pueden cargar (dentro de la ventana del proyecto).
+        const openWindow = openWindowByProject.get(g.projectId) || new Set();
+        const pendingDates = missingDates.filter((d) => openWindow.has(d));
+        const pendingLookup = new Set(pendingDates);
         if (!coordMap.has(g.userId)) {
             coordMap.set(g.userId, { userId: g.userId, name: nameOf(g.userId), expectedCount: 0, submittedCount: 0, missingCount: 0, missingDates: [], projects: [] });
         }
@@ -146,6 +158,7 @@ export async function computeCompliance(tenantId, params) {
             expectedDates: g.expected,
             submittedDates,
             missingDates,
+            pendingDates,
             reportsByDate: Object.fromEntries(submittedDates
                 .map((d) => [d, reportNumberByKey.get(`${g.userId}|${g.projectId}|${d}`)])
                 .filter(([, n]) => !!n)),
@@ -161,6 +174,8 @@ export async function computeCompliance(tenantId, params) {
             }
             else {
                 day.missing += 1;
+                if (pendingLookup.has(d))
+                    day.pending += 1;
                 day.missingCells.push({ userId: g.userId, name: nameOf(g.userId), projectId: g.projectId, projectName: g.projectName, label });
             }
         }
@@ -174,6 +189,9 @@ export async function computeCompliance(tenantId, params) {
             status = "none";
         else if (day.missing === 0)
             status = "complete";
+        // Nada enviado pero TODAS las faltantes todavía se pueden cargar → pendiente (azul).
+        else if (day.submitted === 0 && day.pending === day.missing)
+            status = "pending";
         else if (day.submitted === 0)
             status = "missing";
         else

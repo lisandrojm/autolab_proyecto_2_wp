@@ -39,5 +39,18 @@ export interface ExpandOptions {
  * sin días futuros. Mirror server-side de `isDayInFrequency` del mobile.
  */
 export declare function expandExpectedDates(opts: ExpandOptions): string[];
+/**
+ * Ventana de carga: los últimos `allowedPastDays` días ESPERADOS (según el schedule del
+ * proyecto) contando hacia atrás desde hoy (hoy inclusive si es día esperado).
+ *
+ * Réplica exacta del criterio del mobile (`isDayAllowedForReporting`): la ventana NO son
+ * N días corridos, son los últimos N días de reporte activos.
+ */
+export declare function computeOpenWindow(opts: {
+    scheduleType?: ScheduleType;
+    scheduleDays?: number[];
+    allowedPastDays: number;
+    today?: string;
+}): Set<string>;
 /** "YYYY-MM-DD" de hoy en horario local del server. */
 export declare function todayStr(): string;

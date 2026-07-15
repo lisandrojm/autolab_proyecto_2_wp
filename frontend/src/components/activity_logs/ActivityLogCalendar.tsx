@@ -43,14 +43,14 @@ const generateMockCompliance = (date: Date, schedule?: ReportSchedule): "complet
   }
 };
 
-type DayStatus = "complete" | "partial" | "missing" | "extra" | "none";
+type DayStatus = "complete" | "partial" | "pending" | "missing" | "extra" | "none";
 
 interface ActivityLogCalendarProps {
   project?: any;
   scheduleConfig?: ReportSchedule;
   onDayClick?: (date: Date, status: DayStatus) => void;
   /** Data real de cumplimiento por fecha ("YYYY-MM-DD" → status). Si se provee, reemplaza al mock. */
-  complianceByDate?: Record<string, "complete" | "partial" | "missing" | "none">;
+  complianceByDate?: Record<string, "complete" | "partial" | "pending" | "missing" | "none">;
   /** Texto opcional a mostrar dentro del día (ej. Nº de novedad "DEM-REG-000353"). */
   dayLabels?: Record<string, string>;
   /** Mes visible controlado por el padre (para sincronizar con el rango de datos). */
@@ -156,7 +156,10 @@ export const ActivityLogCalendar: React.FC<ActivityLogCalendarProps> = ({ projec
             statusIcon = <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-green-500 shrink-0 shadow-sm" title="Reportado"></div>;
           } else if (status === "missing") {
             statusColor = "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800";
-            statusIcon = <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-red-500 shrink-0 shadow-sm" title="No enviado"></div>;
+            statusIcon = <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-red-500 shrink-0 shadow-sm" title="No enviado (vencido)"></div>;
+          } else if (status === "pending") {
+            statusColor = "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800";
+            statusIcon = <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-blue-500 shrink-0 shadow-sm" title="Pendiente (todavía se puede cargar)"></div>;
           } else if (status === "partial") {
             statusColor = "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800";
             statusIcon = <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-amber-500 shrink-0 shadow-sm" title="Parcial (faltan algunos)"></div>;
@@ -198,8 +201,14 @@ export const ActivityLogCalendar: React.FC<ActivityLogCalendarProps> = ({ projec
         </div>
         <div className="flex items-center gap-2.5">
           <div className="w-4 h-4 rounded bg-red-500 shadow-sm ring-2 ring-red-100 dark:ring-red-900/30"></div>
-          <span className="font-semibold text-gray-800 dark:text-gray-200">No enviado</span>
+          <span className="font-semibold text-gray-800 dark:text-gray-200">{complianceByDate ? "No enviado (vencido)" : "No enviado"}</span>
         </div>
+        {complianceByDate && (
+          <div className="flex items-center gap-2.5">
+            <div className="w-4 h-4 rounded bg-blue-500 shadow-sm ring-2 ring-blue-100 dark:ring-blue-900/30"></div>
+            <span className="font-semibold text-gray-800 dark:text-gray-200">Pendiente (a tiempo)</span>
+          </div>
+        )}
         {complianceByDate ? (
           <div className="flex items-center gap-2.5">
             <div className="w-4 h-4 rounded bg-amber-500 shadow-sm ring-2 ring-amber-100 dark:ring-amber-900/30"></div>

@@ -120,25 +120,23 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
 
   // Calendario: agregado de todos, o sólo del coordinador elegido (se deriva de la data ya cargada).
   const complianceByDate = useMemo(() => {
-    const map: Record<string, "complete" | "partial" | "missing" | "none"> = {};
+    const map: Record<string, "complete" | "partial" | "pending" | "missing" | "none"> = {};
     if (!selectedCoordinator) {
       (data?.calendar || []).forEach((d) => (map[d.date] = d.status));
       return map;
     }
-    const agg: Record<string, { exp: number; sub: number }> = {};
+    const agg: Record<string, { exp: number; sub: number; pend: number }> = {};
+    const touch = (d: string) => (agg[d] = agg[d] || { exp: 0, sub: 0, pend: 0 });
     selectedCoordinator.projects.forEach((p) => {
-      p.expectedDates.forEach((d) => {
-        agg[d] = agg[d] || { exp: 0, sub: 0 };
-        agg[d].exp++;
-      });
-      p.submittedDates.forEach((d) => {
-        agg[d] = agg[d] || { exp: 0, sub: 0 };
-        agg[d].sub++;
-      });
+      p.expectedDates.forEach((d) => touch(d).exp++);
+      p.submittedDates.forEach((d) => touch(d).sub++);
+      (p.pendingDates || []).forEach((d) => touch(d).pend++);
     });
     Object.entries(agg).forEach(([d, v]) => {
+      const missing = v.exp - v.sub;
       if (v.exp === 0) map[d] = "none";
-      else if (v.sub >= v.exp) map[d] = "complete";
+      else if (missing <= 0) map[d] = "complete";
+      else if (v.sub === 0 && v.pend >= missing) map[d] = "pending"; // todo lo que falta aún se puede cargar
       else if (v.sub === 0) map[d] = "missing";
       else map[d] = "partial";
     });
