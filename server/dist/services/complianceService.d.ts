@@ -18,6 +18,11 @@ export interface ProjectCompliance {
     projectName: string;
     areas: string[];
     turnos: string[];
+    /** Turnos con sus días (0=Dom..6=Sáb) para saber cuáles corren en cada fecha faltante. */
+    turnosInfo: {
+        name: string;
+        days: number[];
+    }[];
     expectedDates: string[];
     submittedDates: string[];
     missingDates: string[];

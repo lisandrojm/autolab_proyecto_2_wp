@@ -27,6 +27,8 @@ export interface ProjectCompliance {
   projectName: string;
   areas: string[];
   turnos: string[];
+  /** Turnos con sus días (0=Dom..6=Sáb) para saber cuáles corren en cada fecha faltante. */
+  turnosInfo: { name: string; days: number[] }[];
   expectedDates: string[];
   submittedDates: string[];
   missingDates: string[];
@@ -222,6 +224,10 @@ export async function computeCompliance(tenantId: Types.ObjectId, params: Compli
       projectName: g.projectName,
       areas: [...g.areaIds].map((id) => areaById.get(id)?.name || "(sin área)"),
       turnos: [...g.shiftIds].map((id) => shiftById.get(id)?.name || "(sin turno)"),
+      turnosInfo: [...g.shiftIds].map((id) => ({
+        name: shiftById.get(id)?.name || "(sin turno)",
+        days: Array.isArray(shiftById.get(id)?.days) ? shiftById.get(id).days : [],
+      })),
       expectedDates: g.expected,
       submittedDates,
       missingDates,

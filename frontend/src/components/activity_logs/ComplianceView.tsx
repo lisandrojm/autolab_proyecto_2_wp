@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import * as XLSX from "xlsx";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBell, faFileExcel, faTriangleExclamation, faCircleCheck, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faFileExcel, faTriangleExclamation, faCircleCheck, faSpinner, faUser, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { ActivityLogCalendar } from "./ActivityLogCalendar";
 import { Modal } from "../ui/Modal";
 import { sweetAlert } from "../../utils/sweetAlert";
@@ -19,6 +19,12 @@ const fmtDate = (d: string) => {
   const [y, m, day] = d.split("-");
   return `${day}/${m}/${y}`;
 };
+const DIAS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+/** Día de la semana de un "YYYY-MM-DD" sin drift de timezone. */
+const weekdayOf = (d: string) => {
+  const [y, m, day] = d.split("-").map(Number);
+  return new Date(y, m - 1, day).getDay();
+};
 
 export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, areaFilter, shiftFilter }) => {
   const [viewMonth, setViewMonth] = useState(new Date());
@@ -26,6 +32,7 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [selectedCoordinatorId, setSelectedCoordinatorId] = useState<string | null>(null);
   const [showReport, setShowReport] = useState(false);
   const [remindingIds, setRemindingIds] = useState<Set<string>>(new Set());
   const [remindingAll, setRemindingAll] = useState(false);
@@ -70,13 +77,60 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.from, params.to, params.projectId, params.areaId, params.shiftId]);
 
+  const selectedCoordinator = useMemo(
+    () => (selectedCoordinatorId ? data?.coordinators.find((c) => c.userId === selectedCoordinatorId) || null : null),
+    [data, selectedCoordinatorId],
+  );
+
+  // Calendario: agregado de todos, o sólo del coordinador elegido (se deriva de la data ya cargada).
   const complianceByDate = useMemo(() => {
     const map: Record<string, "complete" | "partial" | "missing" | "none"> = {};
-    (data?.calendar || []).forEach((d) => (map[d.date] = d.status));
+    if (!selectedCoordinator) {
+      (data?.calendar || []).forEach((d) => (map[d.date] = d.status));
+      return map;
+    }
+    const agg: Record<string, { exp: number; sub: number }> = {};
+    selectedCoordinator.projects.forEach((p) => {
+      p.expectedDates.forEach((d) => {
+        agg[d] = agg[d] || { exp: 0, sub: 0 };
+        agg[d].exp++;
+      });
+      p.submittedDates.forEach((d) => {
+        agg[d] = agg[d] || { exp: 0, sub: 0 };
+        agg[d].sub++;
+      });
+    });
+    Object.entries(agg).forEach(([d, v]) => {
+      if (v.exp === 0) map[d] = "none";
+      else if (v.sub >= v.exp) map[d] = "complete";
+      else if (v.sub === 0) map[d] = "missing";
+      else map[d] = "partial";
+    });
     return map;
-  }, [data]);
+  }, [data, selectedCoordinator]);
 
-  const selectedDayData = useMemo(() => (selectedDay ? data?.calendar.find((c) => c.date === selectedDay) : null), [selectedDay, data]);
+  // Totales: del coordinador elegido, o globales.
+  const totals = useMemo(() => {
+    if (selectedCoordinator) {
+      const c = selectedCoordinator;
+      return {
+        expected: c.expectedCount,
+        submitted: c.submittedCount,
+        missing: c.missingCount,
+        compliancePct: c.expectedCount > 0 ? Math.round((c.submittedCount / c.expectedCount) * 1000) / 10 : 0,
+        coordinatorsBehind: c.missingCount > 0 ? 1 : 0,
+      };
+    }
+    return data?.totals;
+  }, [data, selectedCoordinator]);
+
+  const selectedDayData = useMemo(() => {
+    if (!selectedDay) return null;
+    const day = data?.calendar.find((c) => c.date === selectedDay);
+    if (!day) return null;
+    if (!selectedCoordinator) return day;
+    return { ...day, missingCells: day.missingCells.filter((m) => m.userId === selectedCoordinator.userId) };
+  }, [selectedDay, data, selectedCoordinator]);
 
   const remind = async (coordinatorIds?: string[]) => {
     try {
@@ -120,12 +174,18 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
     wsS["!cols"] = [{ wch: 32 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, wsS, "Resumen");
     // Detalle de faltantes
-    const detail: (string | number)[][] = [["Coordinador", "Proyecto", "Área", "Turno", "Fecha faltante"]];
+    const detail: (string | number)[][] = [["Coordinador", "Proyecto", "Área", "Turnos del día", "Día", "Fecha faltante"]];
     data.coordinators.forEach((c) =>
-      c.projects.forEach((a) => a.missingDates.forEach((d) => detail.push([c.name, a.projectName, a.areas.join(", "), a.turnos.join(", "), fmtDate(d)]))),
+      c.projects.forEach((a) =>
+        a.missingDates.forEach((d) => {
+          const wd = weekdayOf(d);
+          const turnosDelDia = a.turnosInfo ? a.turnosInfo.filter((t) => !t.days?.length || t.days.includes(wd)).map((t) => t.name) : a.turnos;
+          detail.push([c.name, a.projectName, a.areas.join(", "), turnosDelDia.join(", "), DIAS[wd], fmtDate(d)]);
+        }),
+      ),
     );
     const wsD = XLSX.utils.aoa_to_sheet(detail);
-    wsD["!cols"] = [{ wch: 32 }, { wch: 22 }, { wch: 18 }, { wch: 22 }, { wch: 14 }];
+    wsD["!cols"] = [{ wch: 32 }, { wch: 22 }, { wch: 18 }, { wch: 40 }, { wch: 6 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, wsD, "Faltantes");
     XLSX.writeFile(wb, `cumplimiento_novedades_${from}_a_${to}.xlsx`);
     setShowReport(false);
@@ -135,12 +195,23 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
     <div className="space-y-4">
       {/* Totales + acciones */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
-          <StatChip label="Esperadas" value={data?.totals.expected ?? 0} tone="gray" />
-          <StatChip label="Enviadas" value={data?.totals.submitted ?? 0} tone="green" />
-          <StatChip label="Faltantes" value={data?.totals.missing ?? 0} tone="red" />
-          <StatChip label="Cumplimiento" value={`${data?.totals.compliancePct ?? 0}%`} tone="blue" />
-          <StatChip label="Coord. atrasados" value={data?.totals.coordinatorsBehind ?? 0} tone="amber" />
+        <div className="flex flex-wrap items-center gap-2">
+          <StatChip label="Esperadas" value={totals?.expected ?? 0} tone="gray" />
+          <StatChip label="Enviadas" value={totals?.submitted ?? 0} tone="green" />
+          <StatChip label="Faltantes" value={totals?.missing ?? 0} tone="red" />
+          <StatChip label="Cumplimiento" value={`${totals?.compliancePct ?? 0}%`} tone="blue" />
+          {!selectedCoordinator && <StatChip label="Coord. atrasados" value={totals?.coordinatorsBehind ?? 0} tone="amber" />}
+          {selectedCoordinator && (
+            <button
+              onClick={() => setSelectedCoordinatorId(null)}
+              title="Ver todos los coordinadores"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/40"
+            >
+              <FontAwesomeIcon icon={faUser} />
+              {selectedCoordinator.name}
+              <FontAwesomeIcon icon={faXmark} className="opacity-70" />
+            </button>
+          )}
         </div>
         <div className="flex gap-2">
           <button onClick={() => setShowReport(true)} disabled={!data} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 disabled:opacity-50">
@@ -175,15 +246,63 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
 
         {/* Panel de coordinadores */}
         <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
-          <h4 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-2 px-1">Coordinadores</h4>
+          <div className="flex items-center justify-between mb-2 px-1">
+            <h4 className="text-sm font-bold text-gray-700 dark:text-gray-200">Coordinadores</h4>
+            <span className="text-[10px] text-gray-400">Clickeá uno para ver su calendario</span>
+          </div>
           <div className="space-y-1.5 max-h-[560px] overflow-y-auto pr-1">
             {(data?.coordinators || []).length === 0 && !loading && <p className="text-xs text-gray-400 px-1 py-4 text-center">Sin coordinadores con asignaciones en este período/filtro.</p>}
             {(data?.coordinators || []).map((c) => (
-              <CoordinatorRow key={c.userId} c={c} reminding={remindingIds.has(c.userId)} onRemind={() => remindOne(c.userId)} />
+              <CoordinatorRow
+                key={c.userId}
+                c={c}
+                selected={selectedCoordinatorId === c.userId}
+                onSelect={() => setSelectedCoordinatorId((cur) => (cur === c.userId ? null : c.userId))}
+                reminding={remindingIds.has(c.userId)}
+                onRemind={() => remindOne(c.userId)}
+              />
             ))}
           </div>
         </div>
       </div>
+
+      {/* Detalle de faltantes del coordinador elegido */}
+      {selectedCoordinator && (
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+          <h4 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-1">
+            Novedades que le faltan a {selectedCoordinator.name}
+            <span className="ml-2 text-xs font-normal text-gray-400">({selectedCoordinator.missingCount} en {fmtDate(from)} – {fmtDate(to)})</span>
+          </h4>
+          <p className="text-[11px] text-gray-400 mb-3">Cada novedad cubre el día completo del coordinador en el proyecto (incluye los turnos que corren ese día).</p>
+          {selectedCoordinator.missingCount === 0 ? (
+            <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
+              <FontAwesomeIcon icon={faCircleCheck} /> Está al día: no le falta ninguna novedad en el período.
+            </p>
+          ) : (
+            <div className="space-y-1.5 max-h-72 overflow-y-auto">
+              {selectedCoordinator.projects.flatMap((p) =>
+                p.missingDates.map((d) => {
+                  const wd = weekdayOf(d);
+                  // Turnos que efectivamente corren ese día (si el backend mandó los días).
+                  const turnosDelDia = p.turnosInfo ? p.turnosInfo.filter((t) => !t.days?.length || t.days.includes(wd)).map((t) => t.name) : p.turnos;
+                  return (
+                    <div key={`${p.projectId}-${d}`} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-red-200 dark:border-red-800 bg-red-50/60 dark:bg-red-900/15 px-3 py-2">
+                      <span className="text-sm font-bold text-red-700 dark:text-red-300 w-28 shrink-0">
+                        {DIAS[wd]} {fmtDate(d)}
+                      </span>
+                      <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">{p.projectName}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold uppercase">{p.areas.join(", ")}</span>
+                      {turnosDelDia.map((t, i) => (
+                        <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-600 dark:text-purple-400 font-semibold">{t}</span>
+                      ))}
+                    </div>
+                  );
+                }),
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Drill-down de un día */}
       <Modal isOpen={!!selectedDay} onClose={() => setSelectedDay(null)} title={selectedDay ? `Faltantes del ${fmtDate(selectedDay)}` : ""} size="md">
@@ -234,21 +353,42 @@ const StatChip: React.FC<{ label: string; value: string | number; tone: "gray" |
   );
 };
 
-const CoordinatorRow: React.FC<{ c: CoordinatorCompliance; reminding: boolean; onRemind: () => void }> = ({ c, reminding, onRemind }) => {
+const CoordinatorRow: React.FC<{ c: CoordinatorCompliance; selected: boolean; onSelect: () => void; reminding: boolean; onRemind: () => void }> = ({ c, selected, onSelect, reminding, onRemind }) => {
   const behind = c.missingCount > 0;
+  const border = selected
+    ? "border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-400/40"
+    : behind
+      ? "border-red-200 dark:border-red-800 bg-red-50/40 dark:bg-red-900/10"
+      : "border-gray-100 dark:border-gray-700";
   return (
-    <div className={`flex items-center justify-between rounded-lg border px-3 py-2 ${behind ? "border-red-200 dark:border-red-800 bg-red-50/40 dark:bg-red-900/10" : "border-gray-100 dark:border-gray-700"}`}>
-      <div className="min-w-0">
-        <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{c.name}</p>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          {c.submittedCount}/{c.expectedCount} enviadas
-          {behind && <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/15 text-red-600 dark:text-red-400">{c.missingCount} faltan</span>}
-        </p>
+    <div onClick={onSelect} title="Ver el calendario de este coordinador" className={`cursor-pointer transition-all rounded-lg border px-3 py-2 hover:shadow-sm ${border}`}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{c.name}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {c.submittedCount}/{c.expectedCount} enviadas
+            {behind && <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/15 text-red-600 dark:text-red-400">{c.missingCount} faltan</span>}
+          </p>
+        </div>
+        {behind && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onRemind(); }}
+            disabled={reminding}
+            title="Enviar recordatorio"
+            className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/30 disabled:opacity-50"
+          >
+            <FontAwesomeIcon icon={reminding ? faSpinner : faBell} className={reminding ? "animate-spin" : ""} /> Recordar
+          </button>
+        )}
       </div>
-      {behind && (
-        <button onClick={onRemind} disabled={reminding} title="Enviar recordatorio" className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/30 disabled:opacity-50">
-          <FontAwesomeIcon icon={reminding ? faSpinner : faBell} className={reminding ? "animate-spin" : ""} /> Recordar
-        </button>
+      {selected && c.projects.length > 0 && (
+        <div className="mt-2 pt-2 border-t border-blue-200 dark:border-blue-800 space-y-1">
+          {c.projects.map((p) => (
+            <p key={p.projectId} className="text-[10px] text-gray-500 dark:text-gray-400">
+              <span className="font-semibold text-gray-700 dark:text-gray-300">{p.projectName}</span> · {p.areas.join(", ")} · {p.turnos.join(", ")}
+            </p>
+          ))}
+        </div>
       )}
     </div>
   );
