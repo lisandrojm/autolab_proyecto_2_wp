@@ -52,9 +52,9 @@ class RegistroLinksAPI {
     return data.links || [];
   }
 
-  /** Genera un nuevo link persistente. Devuelve el token. */
-  async generate(clientId?: string): Promise<string> {
-    const { data } = await axios.post(`/auth/registro-link`, { clientId });
+  /** Genera un nuevo link persistente con una duración (en días) inmutable. Devuelve el token. */
+  async generate(clientId?: string, durationDays?: number): Promise<string> {
+    const { data } = await axios.post(`/auth/registro-link`, { clientId, durationDays });
     return data.token;
   }
 

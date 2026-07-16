@@ -7,7 +7,7 @@ import { Tenant } from "../models/Tenant.js";
 import { Info } from "../models/Info.js";
 import { Banco } from "../models/Banco.js";
 import { RoleFrame } from "../models/RoleFrame.js";
-import { RegistroLink, REGISTRO_LINK_TTL_MS, getRegistroLinkExpiry } from "../models/RegistroLink.js";
+import { RegistroLink, getRegistroLinkExpiry } from "../models/RegistroLink.js";
 import crypto from "crypto";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { validate } from "../middleware/validate.js";
@@ -595,14 +595,27 @@ router.post("/registro-link", requireTenant, authenticateToken, async (req: Auth
       return;
     }
 
-    const { clientId } = req.body || {};
+    const { clientId, durationDays } = req.body || {};
     let validClientId: string | undefined;
     if (clientId && Types.ObjectId.isValid(clientId)) {
       const client = await Client.findOne({ _id: clientId, tenantId: tenant._id }).select("_id");
       if (client) validClientId = String(client._id);
     }
 
-    // Token aleatorio URL-safe, persistente y revocable. Vence a los 30 días.
+    // Duración elegida al crear (inmutable). Default 30 si no viene; 400 si viene inválida.
+    const MIN_LINK_DAYS = 1;
+    const MAX_LINK_DAYS = 365;
+    let days = 30;
+    if (durationDays !== undefined && durationDays !== null && durationDays !== "") {
+      const n = Number(durationDays);
+      if (!Number.isInteger(n) || n < MIN_LINK_DAYS || n > MAX_LINK_DAYS) {
+        res.status(400).json({ error: `La duración debe ser un número entero entre ${MIN_LINK_DAYS} y ${MAX_LINK_DAYS} días` });
+        return;
+      }
+      days = n;
+    }
+
+    // Token aleatorio URL-safe, persistente y revocable.
     const token = crypto.randomBytes(32).toString("base64url");
 
     await RegistroLink.create({
@@ -612,7 +625,7 @@ router.post("/registro-link", requireTenant, authenticateToken, async (req: Auth
       ...(validClientId ? { clientId: validClientId } : {}),
       createdBy: req.user?.userId,
       active: true,
-      expiresAt: new Date(Date.now() + REGISTRO_LINK_TTL_MS),
+      expiresAt: new Date(Date.now() + days * 24 * 60 * 60 * 1000),
     });
 
     res.json({ token });

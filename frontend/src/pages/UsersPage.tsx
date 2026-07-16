@@ -91,6 +91,9 @@ export const UsersPage: React.FC = () => {
   const [linksLoading, setLinksLoading] = useState(false);
   const [generatingLink, setGeneratingLink] = useState(false);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
+  // Duración (en días) del link a generar. "custom" habilita el input libre. Default 30.
+  const [linkDurationSel, setLinkDurationSel] = useState<string>("30");
+  const [linkDurationCustom, setLinkDurationCustom] = useState<string>("30");
   const [, forceLinkTick] = useState(0); // refresca el contador de días de los links
   const [modalMode, setModalMode] = useState<ModalMode>("edit");
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -505,12 +508,17 @@ export const UsersPage: React.FC = () => {
 
   // Generar un nuevo link persistente
   const handleGenerateLink = async () => {
+    const days = Number(linkDurationSel === "custom" ? linkDurationCustom : linkDurationSel);
+    if (!Number.isInteger(days) || days < 1 || days > 365) {
+      sweetAlert.error("Duración inválida", "La duración debe ser un número entero entre 1 y 365 días.");
+      return;
+    }
     setGeneratingLink(true);
     try {
-      await registroLinksAPI.generate(clientId);
+      await registroLinksAPI.generate(clientId, days);
       await loadRegistroLinks();
-    } catch (error) {
-      sweetAlert.error("Error", "No se pudo generar el link de registro");
+    } catch (error: any) {
+      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo generar el link de registro");
     } finally {
       setGeneratingLink(false);
     }
@@ -1891,12 +1899,44 @@ export const UsersPage: React.FC = () => {
 
       <InfoModal isOpen={showLinkModal} onClose={() => setShowLinkModal(false)} title="Registrar Usuario" size="lg">
         <div className="flex flex-col gap-4 py-1">
-          <div className="flex items-start justify-between gap-3">
-            <p className="text-sm text-gray-600 dark:text-gray-300">Comparta un link con la persona que desee registrar. Los links vencen a los 30 días de creados; luego deberá generar uno nuevo. También puede revocarlos cuando quiera.</p>
-            <button type="button" onClick={handleGenerateLink} disabled={generatingLink} className="shrink-0 px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm disabled:opacity-60">
-              <FontAwesomeIcon icon={faPlus} className="h-3.5 w-3.5" />
-              {generatingLink ? "Generando..." : "Generar nuevo link"}
-            </button>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <p className="text-sm text-gray-600 dark:text-gray-300 flex-1">
+              Comparta un link con la persona que desee registrar. Elegí cuántos días dura; <strong>la duración no se puede cambiar una vez creado</strong>. También puede revocarlos cuando quiera.
+            </p>
+            <div className="flex items-end gap-2 shrink-0">
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1">Duración</label>
+                <select
+                  value={linkDurationSel}
+                  onChange={(e) => setLinkDurationSel(e.target.value)}
+                  className="px-2 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white text-sm"
+                >
+                  <option value="7">7 días</option>
+                  <option value="15">15 días</option>
+                  <option value="30">30 días</option>
+                  <option value="60">60 días</option>
+                  <option value="90">90 días</option>
+                  <option value="custom">Personalizado…</option>
+                </select>
+              </div>
+              {linkDurationSel === "custom" && (
+                <div>
+                  <label className="block text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1">Días (1-365)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={linkDurationCustom}
+                    onChange={(e) => setLinkDurationCustom(e.target.value)}
+                    className="w-24 px-2 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white text-sm"
+                  />
+                </div>
+              )}
+              <button type="button" onClick={handleGenerateLink} disabled={generatingLink} className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm disabled:opacity-60">
+                <FontAwesomeIcon icon={faPlus} className="h-3.5 w-3.5" />
+                {generatingLink ? "Generando..." : "Generar nuevo link"}
+              </button>
+            </div>
           </div>
 
           {linksLoading ? (
