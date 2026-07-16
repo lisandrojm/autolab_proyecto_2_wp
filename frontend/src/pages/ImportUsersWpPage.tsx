@@ -2,20 +2,15 @@ import React, { useEffect, useState } from "react";
 import axios from "../api/axiosConfig";
 import { PageLayout } from "../components/ui/PageLayout";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { 
-  faArrowRotateRight, 
-  faCheckCircle, 
-  faExclamationTriangle, 
-  faUserPlus, 
-  faUserCheck, 
-  faExclamationCircle, 
-  faClock, 
-  faCalendarAlt, 
-  faToggleOn, 
-  faToggleOff, 
-  faListUl,
-  faDatabase,
-  faUsersCog
+import {
+  faArrowRotateRight,
+  faCheckCircle,
+  faExclamationTriangle,
+  faUserPlus,
+  faUserCheck,
+  faExclamationCircle,
+  faClock,
+  faDatabase
 } from "@fortawesome/free-solid-svg-icons";
 
 interface SyncStats {
@@ -69,35 +64,15 @@ interface HistoryItem {
   createdAt: string;
 }
 
-interface ImportConfigData {
-  isEnabled: boolean;
-  intervalHours: number;
-  syncProjects: boolean;
-  sinceDays?: number;
-  lastRun?: string;
-  nextRun?: string;
-}
-
 export const ImportUsersWpPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"users" | "projects" | "history">("users");
   const [loading, setLoading] = useState(false);
-  const [savingConfig, setSavingConfig] = useState(false);
   const [fetchingData, setFetchingData] = useState(true);
 
   // States for stats and sync
   const [latestSync, setLatestSync] = useState<HistoryItem | null>(null);
   const [addedUsersDetails, setAddedUsersDetails] = useState<AddedUserDetail[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [sinceDays, setSinceDays] = useState<number>(7);
-  const [isIncremental, setIsIncremental] = useState<boolean>(true);
-  const [syncProjectsOption, setSyncProjectsOption] = useState<boolean>(true);
-
-  // States for configuration
-  const [config, setConfig] = useState<ImportConfigData>({
-    isEnabled: false,
-    intervalHours: 24,
-    syncProjects: true,
-  });
 
   // Notification states
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | null }>({
@@ -126,26 +101,6 @@ export const ImportUsersWpPage: React.FC = () => {
       // 2. Fetch full history list
       const historyRes = await axios.get("/users/import/history");
       setHistory(historyRes.data);
-
-      // 3. Fetch auto-import config
-      const configRes = await axios.get("/users/import/config");
-      if (configRes.data) {
-        setConfig({
-          isEnabled: configRes.data.isEnabled,
-          intervalHours: configRes.data.intervalHours,
-          syncProjects: configRes.data.syncProjects,
-          sinceDays: configRes.data.sinceDays,
-          lastRun: configRes.data.lastRun,
-          nextRun: configRes.data.nextRun,
-        });
-        if (configRes.data.sinceDays !== undefined) {
-          setSinceDays(configRes.data.sinceDays);
-          setIsIncremental(true);
-        } else {
-          setIsIncremental(false);
-        }
-        setSyncProjectsOption(configRes.data.syncProjects);
-      }
     } catch (err: any) {
       console.error("Error fetching data:", err);
       showToast("Error al cargar la información del servidor", "error");
@@ -161,16 +116,9 @@ export const ImportUsersWpPage: React.FC = () => {
   const handleManualSync = async () => {
     setLoading(true);
     try {
-      const payload = {
-        syncProjects: syncProjectsOption,
-        sinceDays: isIncremental ? sinceDays : undefined,
-      };
-
-      const response = await axios.post("/users/import/trigger", payload);
-      
-      showToast("Sincronización manual completada con éxito", "success");
-      
-      // Refresh database records
+      // Sincronización SIEMPRE completa + con proyectos (sin opciones/automatización).
+      await axios.post("/users/import/trigger", { syncProjects: true });
+      showToast("Sincronización completada con éxito", "success");
       await fetchData();
     } catch (err: any) {
       console.error("Manual sync error:", err);
@@ -178,35 +126,6 @@ export const ImportUsersWpPage: React.FC = () => {
       showToast(errMsg, "error");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleSaveConfig = async () => {
-    setSavingConfig(true);
-    try {
-      const payload = {
-        isEnabled: config.isEnabled,
-        intervalHours: Number(config.intervalHours),
-        syncProjects: config.syncProjects,
-        sinceDays: isIncremental ? sinceDays : undefined,
-      };
-
-      const response = await axios.post("/users/import/config", payload);
-      setConfig({
-        isEnabled: response.data.isEnabled,
-        intervalHours: response.data.intervalHours,
-        syncProjects: response.data.syncProjects,
-        sinceDays: response.data.sinceDays,
-        lastRun: response.data.lastRun,
-        nextRun: response.data.nextRun,
-      });
-
-      showToast("Configuración de auto-sincronización guardada", "success");
-    } catch (err: any) {
-      console.error("Save config error:", err);
-      showToast("Error al guardar la configuración", "error");
-    } finally {
-      setSavingConfig(false);
     }
   };
 
@@ -255,10 +174,10 @@ export const ImportUsersWpPage: React.FC = () => {
           <span className="ml-3 text-gray-600 dark:text-gray-300">Cargando integración de FRAME...</span>
         </div>
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          
+        <div>
+
           {/* Main Sync Controls Card */}
-          <div className="xl:col-span-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col">
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col">
             <div className="p-5 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-semibold text-gray-950 dark:text-white flex items-center gap-2">
                 <FontAwesomeIcon icon={faDatabase} className="text-blue-500" />
@@ -319,61 +238,18 @@ export const ImportUsersWpPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Sync Scope Options */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Opciones de Sincronización Manual</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Option: Incremental / Full Sync */}
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-150 dark:border-gray-850">
-                    <label className="flex items-start gap-3 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={isIncremental}
-                        onChange={(e) => setIsIncremental(e.target.checked)}
-                        className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900"
-                      />
-                      <div>
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">Sincronización Incremental</span>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          Filtra y sincroniza solo empleados dados de alta en los últimos N días. Desmarca para sincronizar todo.
-                        </p>
-                      </div>
-                    </label>
-                    
-                    {isIncremental && (
-                      <div className="mt-3 flex items-center gap-3 pl-7">
-                        <span className="text-xs text-gray-600 dark:text-gray-400">Rango de días:</span>
-                        <input 
-                          type="number"
-                          min="1"
-                          max="365"
-                          value={sinceDays}
-                          onChange={(e) => setSinceDays(Math.max(1, Number(e.target.value)))}
-                          className="w-20 px-2.5 py-1 text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Option: Sync Projects */}
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-150 dark:border-gray-850">
-                    <label className="flex items-start gap-3 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={syncProjectsOption}
-                        onChange={(e) => setSyncProjectsOption(e.target.checked)}
-                        className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900"
-                      />
-                      <div>
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">Sincronizar Contratos y Proyectos</span>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          Consulta y actualiza la relación laboral e historial contractual de los empleados en FRAME.
-                        </p>
-                      </div>
-                    </label>
-                  </div>
-                </div>
+              {/* Qué hace la sincronización */}
+              <div className="p-4 bg-blue-50/50 dark:bg-blue-950/10 rounded-xl border border-blue-100 dark:border-blue-900/40">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                  <FontAwesomeIcon icon={faDatabase} className="text-blue-500" />
+                  ¿Qué hace "Sincronizar Ahora"?
+                </h3>
+                <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1.5 leading-relaxed list-disc list-inside">
+                  <li>Trae <strong>todos</strong> los empleados desde FRAME (sincronización completa, no incremental).</li>
+                  <li>Crea los <strong>usuarios nuevos</strong> (contraseña inicial = DNI) con rol <em>Mobile-Colaborador</em>; los que ya existen se <strong>omiten</strong>.</li>
+                  <li>Actualiza de forma <strong>aditiva</strong> sus <strong>contratos, roles frame y datos personales</strong> (nunca pisa datos ya cargados en WeProdu).</li>
+                  <li>Crea los <strong>proyectos de FRAME que falten</strong> (con su cliente y responsable) y <strong>vincula</strong> a cada empleado con su proyecto.</li>
+                </ul>
               </div>
             </div>
 
@@ -395,96 +271,6 @@ export const ImportUsersWpPage: React.FC = () => {
                     Sincronizar Ahora
                   </>
                 )}
-              </button>
-            </div>
-          </div>
-
-          {/* Configuration Settings Card */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col">
-            <div className="p-5 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-gray-950 dark:text-white flex items-center gap-2">
-                <FontAwesomeIcon icon={faClock} className="text-blue-500" />
-                Automatización (Programador)
-              </h2>
-            </div>
-            
-            <div className="p-5 flex-1 space-y-5">
-              {/* Toggle Enable */}
-              <div className="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-900/30 border border-gray-150 dark:border-gray-800">
-                <div>
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white">Auto-Sincronización</span>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Habilitar importaciones en segundo plano.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setConfig({ ...config, isEnabled: !config.isEnabled })}
-                  className="text-2xl text-blue-500 dark:text-blue-400 focus:outline-none"
-                >
-                  <FontAwesomeIcon icon={config.isEnabled ? faToggleOn : faToggleOff} className={config.isEnabled ? "text-blue-500" : "text-gray-400"} />
-                </button>
-              </div>
-
-              {/* Form Config Fields */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Intervalo de Ejecución</label>
-                  <select
-                    disabled={!config.isEnabled}
-                    value={config.intervalHours}
-                    onChange={(e) => setConfig({ ...config, intervalHours: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-sm"
-                  >
-                    <option value="12">Cada 12 Horas</option>
-                    <option value="24">Cada 24 Horas (Diario)</option>
-                    <option value="48">Cada 48 Horas (Cada 2 días)</option>
-                    <option value="168">Cada 168 Horas (Semanal)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Proyectos vinculados</label>
-                  <label className="flex items-center gap-2.5 cursor-pointer">
-                    <input 
-                      type="checkbox"
-                      disabled={!config.isEnabled}
-                      checked={config.syncProjects}
-                      onChange={(e) => setConfig({ ...config, syncProjects: e.target.checked })}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 disabled:opacity-40 disabled:cursor-not-allowed"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">Sincronizar proyectos de empleados</span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Cron Run Info */}
-              {config.isEnabled && (
-                <div className="p-3 bg-blue-50/50 dark:bg-blue-950/10 border border-blue-100 dark:border-blue-900/40 rounded-xl space-y-2">
-                  <h4 className="text-xs font-semibold text-blue-800 dark:text-blue-300 flex items-center gap-1.5">
-                    <FontAwesomeIcon icon={faCalendarAlt} />
-                    Próxima Ejecución Programada
-                  </h4>
-                  <p className="text-sm font-bold text-blue-950 dark:text-blue-200">
-                    {config.nextRun ? formatDate(config.nextRun) : "Programado al guardar"}
-                  </p>
-                  <p className="text-[10px] text-blue-600 dark:text-blue-400 leading-normal">
-                    La sincronización corre en segundo plano y se activará a la hora programada si el servidor está encendido.
-                  </p>
-                </div>
-              )}
-            </div>
-            
-            <div className="p-5 bg-gray-50/20 dark:bg-gray-900/40 border-t border-gray-200 dark:border-gray-700/80 flex justify-end">
-              <button
-                onClick={handleSaveConfig}
-                disabled={savingConfig}
-                className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm w-full sm:w-auto"
-              >
-                {savingConfig ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-3"></div>
-                    Guardando...
-                  </>
-                ) : "Guardar Configuración"}
               </button>
             </div>
           </div>

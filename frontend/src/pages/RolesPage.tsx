@@ -1,20 +1,20 @@
-import React, { useState, useEffect } from "react";
-import { fuzzyMatch } from "../utils/searchHelpers";
-import { useAuthStore } from "../stores/authStore";
-import { rolesAPI, Role } from "../api/roles";
-import { PageLayout } from "../components/ui/PageLayout";
-import { SearchAndFilters } from "../components/ui/SearchAndFilters";
-import { EmptyState } from "../components/ui/EmptyState";
-import { LoadingSpinner } from "../components/ui/LoadingSpinner";
-import { Card } from "../components/ui/Card";
-import { InfoModal } from "../components/ui/InfoModal";
-import { sweetAlert } from "../utils/sweetAlert";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faSquareCheck, faBuilding, faUserGear, faInfoCircle, faLock, faEye, faMobileAlt, faUsers, faUsersGear, faCog, faUserGraduate, faTable, faGrip, faUserTie, faLayerGroup, faClock, faBriefcase } from "@fortawesome/free-solid-svg-icons";
-import { getHelp, hasHelp } from "../data/help/helpContent";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { fuzzyMatch } from '../utils/searchHelpers';
+import { useAuthStore } from '../stores/authStore';
+import { rolesAPI, Role } from '../api/roles';
+import { PageLayout } from '../components/ui/PageLayout';
+import { SearchAndFilters } from '../components/ui/SearchAndFilters';
+import { EmptyState } from '../components/ui/EmptyState';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { Card } from '../components/ui/Card';
+import { InfoModal } from '../components/ui/InfoModal';
+import { sweetAlert } from '../utils/sweetAlert';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faSquareCheck, faBuilding, faUserGear, faInfoCircle, faLock, faEye, faMobileAlt, faUsers, faUsersGear, faCog, faUserGraduate, faTable, faGrip, faUserTie, faLayerGroup, faClock, faBriefcase } from '@fortawesome/free-solid-svg-icons';
+import { getHelp, hasHelp } from '../data/help/helpContent';
+import { useNavigate } from 'react-router-dom';
 
-const HELP_KEY = "roles" as const;
+const HELP_KEY = 'roles' as const;
 
 // Definición de módulos con metadatos
 interface PermissionModule {
@@ -26,91 +26,91 @@ interface PermissionModule {
 
 const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
   client: {
-    label: "Cliente",
+    label: 'Cliente',
     icon: faUsers,
-    description: "Ver o no Cliente y select de cliente",
-    permissions: ["client:view"],
+    description: 'Ver o no Cliente y select de cliente',
+    permissions: ['client:view'],
   },
   admin_general: {
-    label: "Admin GENERAL",
+    label: 'Admin GENERAL',
     icon: faUsersGear,
-    description: "Gestión general de RRHH y administración",
-    permissions: ["admin_clients:view", "admin_projects:view", "admin_sedes:view", "admin_contracts:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", "admin_hr_documents:view"],
+    description: 'Gestión general de RRHH y administración',
+    permissions: ['admin_clients:view', 'admin_projects:view', 'admin_sedes:view', 'admin_contracts:view', 'admin_orders:view', 'admin_vacations:view', 'admin_activity_logs:view', 'admin_hr_documents:view'],
   },
   admin_users: {
-    label: "Admin USUARIOS",
+    label: 'Admin USUARIOS',
     icon: faUserGear,
-    description: "Gestión de usuarios, roles y estructura organizacional",
-    permissions: ["admin_areas:view", "admin_positions:view", "admin_levels:view", "admin_users:view", "admin_users_import:view", "admin_roles:view"],
+    description: 'Gestión de usuarios, roles y estructura organizacional',
+    permissions: ['admin_areas:view', 'admin_positions:view', 'admin_levels:view', 'admin_users:view', 'admin_users_import:view', 'admin_roles:view'],
   },
   config: {
-    label: "Configuración",
+    label: 'Configuración',
     icon: faCog,
-    description: "Configuración de módulos y plantillas",
-    permissions: ["config_orders:view", "config_shifts:view", "config_vacations:view", "config_activity_logs:view", "config_holidays:view", "config_pdf_templates:view", "config_releases:view", "config_frame_functions:view", "config_categorias_sat:view", "config_bancos:view", "config_obras_sociales:view", "config_centros_costo:view", "config_contratos_frame:view", "config_profile:view"],
+    description: 'Configuración de módulos y plantillas',
+    permissions: ['config_orders:view', 'config_shifts:view', 'config_vacations:view', 'config_activity_logs:view', 'config_holidays:view', 'config_pdf_templates:view', 'config_releases:view', 'config_frame_functions:view', 'config_categorias_sat:view', 'config_bancos:view', 'config_obras_sociales:view', 'config_centros_costo:view', 'config_contratos_frame:view', 'config_profile:view'],
   },
   mobile: {
-    label: "Mobile",
+    label: 'Mobile',
     icon: faMobileAlt,
-    description: "Acceso a la aplicación móvil",
-    permissions: ["mobile_collaborator:view", "mobile_coordinator:view"],
+    description: 'Acceso a la aplicación móvil',
+    permissions: ['mobile_collaborator:view', 'mobile_coordinator:view'],
   },
   project_responsible: {
-    label: "Proyectos",
+    label: 'Proyectos',
     icon: faBriefcase,
-    description: "Capacidades relacionadas con la gestión de proyectos",
-    permissions: ["project_responsible:eligible"],
+    description: 'Capacidades relacionadas con la gestión de proyectos',
+    permissions: ['project_responsible:eligible'],
   },
 };
 
 const MODULE_LABELS: Record<string, string> = {
-  "client:view": "Cliente (Ver/Select)",
-  "admin_clients:view": "Clientes",
-  "admin_projects:view": "Proyectos",
-  "admin_sedes:view": "Sedes",
-  "admin_contracts:view": "Contratos",
-  "admin_orders:view": "Pedidos",
-  "admin_vacations:view": "Vacaciones",
-  "admin_activity_logs:view": "Novedades",
-  "admin_hr_documents:view": "Documentos RRHH",
-  "project_responsible:eligible": "Responsable de Proyecto",
-  "admin_areas:view": "Areas",
-  "admin_positions:view": "Cargos",
-  "admin_levels:view": "Niveles",
-  "admin_users:view": "Usuarios",
-  "admin_users_import:view": "Import Users WP",
-  "admin_roles:view": "Roles",
-  "config_orders:view": "Pedidos",
-  "config_shifts:view": "Turnos",
-  "config_vacations:view": "Vacaciones",
-  "config_activity_logs:view": "Novedades",
-  "config_pdf_templates:view": "Plantillas PDF",
-  "config_releases:view": "Releases",
-  "config_holidays:view": "Feriados",
-  "config_frame_functions:view": "Funciones FRAME",
-  "config_categorias_sat:view": "Categorías SAT",
-  "config_bancos:view": "Bancos",
-  "config_obras_sociales:view": "Obras Sociales",
-  "config_centros_costo:view": "Centros de Costos",
-  "config_contratos_frame:view": "Contratos FRAME",
-  "config_profile:view": "Mi Perfil",
+  'client:view': 'Cliente (Ver/Select)',
+  'admin_clients:view': 'Clientes',
+  'admin_projects:view': 'Proyectos',
+  'admin_sedes:view': 'Sedes',
+  'admin_contracts:view': 'Contratos',
+  'admin_orders:view': 'Pedidos',
+  'admin_vacations:view': 'Vacaciones',
+  'admin_activity_logs:view': 'Novedades',
+  'admin_hr_documents:view': 'Documentos RRHH',
+  'project_responsible:eligible': 'Responsable de Proyecto',
+  'admin_areas:view': 'Areas',
+  'admin_positions:view': 'Cargos',
+  'admin_levels:view': 'Niveles',
+  'admin_users:view': 'Usuarios',
+  'admin_users_import:view': 'Import WP',
+  'admin_roles:view': 'Roles',
+  'config_orders:view': 'Pedidos',
+  'config_shifts:view': 'Turnos',
+  'config_vacations:view': 'Vacaciones',
+  'config_activity_logs:view': 'Novedades',
+  'config_pdf_templates:view': 'Plantillas PDF',
+  'config_releases:view': 'Releases',
+  'config_holidays:view': 'Feriados',
+  'config_frame_functions:view': 'Funciones FRAME',
+  'config_categorias_sat:view': 'Categorías SAT',
+  'config_bancos:view': 'Bancos',
+  'config_obras_sociales:view': 'Obras Sociales',
+  'config_centros_costo:view': 'Centros de Costos',
+  'config_contratos_frame:view': 'Contratos FRAME',
+  'config_profile:view': 'Mi Perfil',
 
-  "mobile_collaborator:view": "Colaborador",
-  "mobile_coordinator:view": "Coordinador",
+  'mobile_collaborator:view': 'Colaborador',
+  'mobile_coordinator:view': 'Coordinador',
 };
 
 const SUPERADMIN_ONLY_PERMISSIONS: Record<string, PermissionModule> = {
   tenants: {
-    label: "Tenants",
+    label: 'Tenants',
     icon: faBuilding,
     description: "Ver y gestionar tenants (organizaciones) - Solo SuperAdmin. Con 'Ver' tienes acceso completo por defecto.",
-    permissions: ["tenants:view"],
+    permissions: ['tenants:view'],
   },
   system: {
-    label: "Sistema",
+    label: 'Sistema',
     icon: faShieldHalved,
-    description: "Acceso total al sistema - Solo SuperAdmin",
-    permissions: ["*"],
+    description: 'Acceso total al sistema - Solo SuperAdmin',
+    permissions: ['*'],
   },
 };
 
@@ -129,17 +129,17 @@ export const RolesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   // Búsqueda + filtro
-  const [searchTerm, setSearchTerm] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [filterStatus] = useState<"all" | "default" | "custom">("all");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [filterStatus] = useState<'all' | 'default' | 'custom'>('all');
 
   // Modal de acción (crear/editar)
   const [showModal, setShowModal] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [formData, setFormData] = useState<RoleFormData>({
-    name: "",
-    description: "",
+    name: '',
+    description: '',
     permissions: [],
     isDefault: false,
   });
@@ -155,7 +155,7 @@ export const RolesPage: React.FC = () => {
   const [viewRole, setViewRole] = useState<Role | null>(null);
 
   // View Mode Logic
-  const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
   const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
 
   useEffect(() => {
@@ -163,29 +163,29 @@ export const RolesPage: React.FC = () => {
       const isNowLarge = window.innerWidth >= 1024;
       setIsLarge(isNowLarge);
       if (!isNowLarge) {
-        setViewMode("cards");
+        setViewMode('cards');
       }
     };
 
     if (window.innerWidth >= 1024) {
-      const saved = localStorage.getItem("rolesViewMode");
-      if (saved === "table" || saved === "cards") {
-        setViewMode(saved as "table" | "cards");
+      const saved = localStorage.getItem('rolesViewMode');
+      if (saved === 'table' || saved === 'cards') {
+        setViewMode(saved as 'table' | 'cards');
       }
     }
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
     if (isLarge) {
-      localStorage.setItem("rolesViewMode", viewMode);
+      localStorage.setItem('rolesViewMode', viewMode);
     }
   }, [viewMode, isLarge]);
 
-  const canManage = hasPermission("admin_roles:view") || user?.primaryRole?.toLowerCase() === "admin" || user?.primaryRole?.toLowerCase() === "superadmin";
-  const isSuperAdmin = user?.primaryRole === "superadmin";
+  const canManage = hasPermission('admin_roles:view') || user?.primaryRole?.toLowerCase() === 'admin' || user?.primaryRole?.toLowerCase() === 'superadmin';
+  const isSuperAdmin = user?.primaryRole === 'superadmin';
 
   useEffect(() => {
     fetchRoles();
@@ -197,8 +197,8 @@ export const RolesPage: React.FC = () => {
       const response = await rolesAPI.list({});
       setRoles(response.roles);
     } catch (error) {
-      console.error("Error fetching roles:", error);
-      sweetAlert.error("Error", "No se pudieron cargar los roles");
+      console.error('Error fetching roles:', error);
+      sweetAlert.error('Error', 'No se pudieron cargar los roles');
     } finally {
       setLoading(false);
     }
@@ -215,23 +215,21 @@ export const RolesPage: React.FC = () => {
     permissions.forEach((perm) => {
       if (!perm) return;
 
-      if (perm === "*") {
+      if (perm === '*') {
         // Permiso superadmin - agregar todos los permisos disponibles
         Object.values(allModules).forEach((mod) => {
           expanded.push(...mod.permissions);
         });
-      } else if (perm.endsWith(":*")) {
+      } else if (perm.endsWith(':*')) {
         // Comodín de módulo específico (ej: "users:*")
-        const [modulePrefix] = perm.split(":");
-        
+        const [modulePrefix] = perm.split(':');
+
         // 1. Intentar encontrar por clave de módulo exacta
         let moduleData = allModules[modulePrefix];
-        
+
         // 2. Si no coincide, buscar cualquier módulo que tenga permisos con ese prefijo
         if (!moduleData) {
-          const foundModule = Object.values(allModules).find(mod => 
-            mod.permissions.some(p => p.startsWith(`${modulePrefix}:`))
-          );
+          const foundModule = Object.values(allModules).find((mod) => mod.permissions.some((p) => p.startsWith(`${modulePrefix}:`)));
           if (foundModule) {
             moduleData = foundModule;
           }
@@ -256,8 +254,8 @@ export const RolesPage: React.FC = () => {
   const openCreate = () => {
     setEditingRole(null);
     setFormData({
-      name: "",
-      description: "",
+      name: '',
+      description: '',
       permissions: [],
       isDefault: false,
     });
@@ -272,7 +270,7 @@ export const RolesPage: React.FC = () => {
 
     setFormData({
       name: role.name,
-      description: role.description || "",
+      description: role.description || '',
       permissions: expandedPermissions,
       isDefault: role.isDefault,
     });
@@ -301,7 +299,7 @@ export const RolesPage: React.FC = () => {
     if (formData.isDefault) {
       const currentDefaultRole = roles.find((r) => r.isDefault && r._id !== editingRole?._id);
       if (currentDefaultRole) {
-        const result = await sweetAlert.confirm("Cambiar rol predeterminado", `El rol "${currentDefaultRole.name}" es actualmente el predeterminado. Si continúas, "${formData.name}" será el nuevo rol predeterminado y "${currentDefaultRole.name}" dejará de serlo. ¿Deseas continuar?`);
+        const result = await sweetAlert.confirm('Cambiar rol predeterminado', `El rol "${currentDefaultRole.name}" es actualmente el predeterminado. Si continúas, "${formData.name}" será el nuevo rol predeterminado y "${currentDefaultRole.name}" dejará de serlo. ¿Deseas continuar?`);
         if (!result.isConfirmed) {
           return;
         }
@@ -311,45 +309,45 @@ export const RolesPage: React.FC = () => {
     try {
       if (editingRole) {
         await rolesAPI.update(editingRole._id, formData);
-        sweetAlert.success("Rol actualizado", "Los cambios se han guardado correctamente");
+        sweetAlert.success('Rol actualizado', 'Los cambios se han guardado correctamente');
       } else {
         await rolesAPI.create(formData);
-        sweetAlert.success("Rol creado", "El rol se ha creado correctamente");
+        sweetAlert.success('Rol creado', 'El rol se ha creado correctamente');
       }
       closeModal();
       fetchRoles();
     } catch (error: any) {
-      const message = error.response?.data?.error || "Error al guardar el rol";
-      sweetAlert.error("Error", message);
+      const message = error.response?.data?.error || 'Error al guardar el rol';
+      sweetAlert.error('Error', message);
     }
   };
 
   const handleDelete = async (role: Role) => {
-    const result = await sweetAlert.confirm("¿Eliminar rol?", `¿Estás seguro de que quieres eliminar el rol "${role.name}"?`);
+    const result = await sweetAlert.confirm('¿Eliminar rol?', `¿Estás seguro de que quieres eliminar el rol "${role.name}"?`);
     if (result.isConfirmed) {
       try {
         await rolesAPI.remove(role._id);
-        sweetAlert.success("Rol eliminado", "El rol ha sido eliminado correctamente");
+        sweetAlert.success('Rol eliminado', 'El rol ha sido eliminado correctamente');
         fetchRoles();
       } catch (error: any) {
         // Detectar si el error es por usuarios asignados
-        if (error.response?.status === 409 && error.response?.data?.code === "ROLE_ASSIGNED_TO_USERS") {
+        if (error.response?.status === 409 && error.response?.data?.code === 'ROLE_ASSIGNED_TO_USERS') {
           const usersCount = error.response.data.usersCount;
-          const confirmForce = await sweetAlert.confirm("Rol asignado a usuarios", `Este rol está asignado a ${usersCount} usuario(s). Si lo eliminas, estos usuarios perderán este rol. ¿Deseas forzar la eliminación?`, "warning", "Sí, eliminar y desasignar");
+          const confirmForce = await sweetAlert.confirm('Rol asignado a usuarios', `Este rol está asignado a ${usersCount} usuario(s). Si lo eliminas, estos usuarios perderán este rol. ¿Deseas forzar la eliminación?`, 'warning', 'Sí, eliminar y desasignar');
 
           if (confirmForce.isConfirmed) {
             try {
               await rolesAPI.remove(role._id, true);
-              sweetAlert.success("Rol eliminado", "El rol ha sido eliminado y desasignado de los usuarios.");
+              sweetAlert.success('Rol eliminado', 'El rol ha sido eliminado y desasignado de los usuarios.');
               fetchRoles();
             } catch (forceError: any) {
-              const message = forceError.response?.data?.error || "Error al eliminar el rol";
-              sweetAlert.error("Error", message);
+              const message = forceError.response?.data?.error || 'Error al eliminar el rol';
+              sweetAlert.error('Error', message);
             }
           }
         } else {
-          const message = error.response?.data?.error || "Error al eliminar el rol";
-          sweetAlert.error("Error", message);
+          const message = error.response?.data?.error || 'Error al eliminar el rol';
+          sweetAlert.error('Error', message);
         }
       }
     }
@@ -369,12 +367,12 @@ export const RolesPage: React.FC = () => {
         let newPermissions = [...currentPermissions, permission];
 
         // Lógica de exclusión mutua para roles Mobile
-        if (permission === "mobile_collaborator:view") {
+        if (permission === 'mobile_collaborator:view') {
           // Si selecciono colaborador, quito coordinador
-          newPermissions = newPermissions.filter((p) => p !== "mobile_coordinator:view");
-        } else if (permission === "mobile_coordinator:view") {
+          newPermissions = newPermissions.filter((p) => p !== 'mobile_coordinator:view');
+        } else if (permission === 'mobile_coordinator:view') {
           // Si selecciono coordinador, quito colaborador
-          newPermissions = newPermissions.filter((p) => p !== "mobile_collaborator:view");
+          newPermissions = newPermissions.filter((p) => p !== 'mobile_collaborator:view');
         }
 
         return {
@@ -387,8 +385,8 @@ export const RolesPage: React.FC = () => {
 
   const filteredRoles = roles.filter((r) => {
     const q = searchTerm.trim().toLowerCase();
-    const matchesSearch = q.length === 0 || fuzzyMatch(r.name, q) || fuzzyMatch(r.description || "", q);
-    const matchesStatus = filterStatus === "all" ? true : filterStatus === "default" ? r.isDefault : !r.isDefault;
+    const matchesSearch = q.length === 0 || fuzzyMatch(r.name, q) || fuzzyMatch(r.description || '', q);
+    const matchesStatus = filterStatus === 'all' ? true : filterStatus === 'default' ? r.isDefault : !r.isDefault;
 
     // Filtro de fechas (createdAt)
     let matchesDate = true;
@@ -429,23 +427,23 @@ export const RolesPage: React.FC = () => {
               <FontAwesomeIcon icon={faPlus} className="h-3 w-3 lg:h-4 lg:w-4" />
             </button>
           )}
-          <button onClick={() => navigate("/users")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate('/users')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserGear} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Usuarios</span>
           </button>
-          <button onClick={() => navigate("/positions")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate('/positions')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserTie} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Cargos</span>
           </button>
-          <button onClick={() => navigate("/levels")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate('/levels')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Niveles</span>
           </button>
-          <button onClick={() => navigate("/areas")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate('/areas')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Áreas</span>
           </button>
-          <button onClick={() => navigate("/shifts")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate('/shifts')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faClock} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Turnos</span>
           </button>
@@ -468,10 +466,10 @@ export const RolesPage: React.FC = () => {
           </div>
           {isLarge && (
             <div className="flex items-center gap-2 shrink-0">
-              <button onClick={() => setViewMode("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas">
+              <button onClick={() => setViewMode('cards')} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'cards' ? 'bg-blue-500 text-white shadow-sm border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`} title="Vista de tarjetas">
                 <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
               </button>
-              <button onClick={() => setViewMode("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla">
+              <button onClick={() => setViewMode('table')} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'table' ? 'bg-blue-500 text-white shadow-sm border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`} title="Vista de tabla">
                 <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
               </button>
             </div>
@@ -482,26 +480,26 @@ export const RolesPage: React.FC = () => {
       viewModal={{
         isOpen: viewOpen,
         onClose: closeView,
-        title: viewRole ? viewRole.name : "Rol",
+        title: viewRole ? viewRole.name : 'Rol',
         subtitle: viewRole?.description,
-        size: "md",
+        size: 'md',
         actions: [
-          ...(canManage && viewRole?.name.toLowerCase() !== "superadmin"
+          ...(canManage && viewRole?.name.toLowerCase() !== 'superadmin'
             ? [
                 {
-                  label: "Editar rol",
+                  label: 'Editar rol',
                   onClick: () => {
                     if (viewRole) openEdit(viewRole);
                     closeView();
                   },
-                  variant: "secondary",
+                  variant: 'secondary',
                 } as const,
               ]
             : []),
           {
-            label: "Cancelar",
+            label: 'Cancelar',
             onClick: closeView,
-            variant: "ghost",
+            variant: 'ghost',
           },
         ],
         content: viewRole ? (
@@ -510,17 +508,17 @@ export const RolesPage: React.FC = () => {
             <div className="flex items-center gap-2">
               {viewRole.tenant?.name && <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{viewRole.tenant.name}</span>}
               {viewRole.isSystem && <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-orange-500/10 text-orange-500 border border-orange-500/50">Sistema</span>}
-              <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${viewRole.isDefault ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300" : "bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300"}`}>{viewRole.isDefault ? "Por defecto" : "Personalizado"}</span>
-              {viewRole.permissions.some((p) => p.startsWith("tenants:")) && <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 border border-amber-200 dark:border-amber-800">SuperAdmin</span>}
+              <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${viewRole.isDefault ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' : 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'}`}>{viewRole.isDefault ? 'Por defecto' : 'Personalizado'}</span>
+              {viewRole.permissions.some((p) => p.startsWith('tenants:')) && <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 border border-amber-200 dark:border-amber-800">SuperAdmin</span>}
             </div>
 
             <div>
               <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Descripción</h4>
-              <p className="text-sm text-gray-700 dark:text-gray-300">{viewRole.description || "—"}</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300">{viewRole.description || '—'}</p>
             </div>
 
             <div>
-              {viewRole.name.toLowerCase() === "superadmin" ? (
+              {viewRole.name.toLowerCase() === 'superadmin' ? (
                 <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">Acceso total al sistema</p>
               ) : viewRole.permissions.length === 0 ? (
                 <p className="text-sm text-gray-500">Sin permisos</p>
@@ -534,10 +532,10 @@ export const RolesPage: React.FC = () => {
                     const isAdminModule = false;
 
                     return (
-                      <div key={moduleKey} className={`border rounded p-3 ${isSuperAdminModule ? "border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20" : isAdminModule ? "border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20" : "border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50"}`}>
+                      <div key={moduleKey} className={`border rounded p-3 ${isSuperAdminModule ? 'border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20' : isAdminModule ? 'border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20' : 'border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50'}`}>
                         <div className="flex items-start gap-3">
-                          <div className={`w-8 h-8 rounded flex items-center justify-center flex-shrink-0 ${isSuperAdminModule ? "bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/50 dark:to-blue-800/50" : isAdminModule ? "bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/50 dark:to-green-800/50" : "bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900/50 dark:to-primary-800/50"}`}>
-                            <FontAwesomeIcon icon={moduleData.icon} className={`h-4 w-4 ${isSuperAdminModule ? "text-blue-600 dark:text-blue-400" : isAdminModule ? "text-green-600 dark:text-green-400" : "text-primary-600 dark:text-primary-400"}`} />
+                          <div className={`w-8 h-8 rounded flex items-center justify-center flex-shrink-0 ${isSuperAdminModule ? 'bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/50 dark:to-blue-800/50' : isAdminModule ? 'bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/50 dark:to-green-800/50' : 'bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900/50 dark:to-primary-800/50'}`}>
+                            <FontAwesomeIcon icon={moduleData.icon} className={`h-4 w-4 ${isSuperAdminModule ? 'text-blue-600 dark:text-blue-400' : isAdminModule ? 'text-green-600 dark:text-green-400' : 'text-primary-600 dark:text-primary-400'}`} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
@@ -561,22 +559,22 @@ export const RolesPage: React.FC = () => {
       modal={{
         isOpen: showModal,
         onClose: closeModal,
-        title: editingRole ? "Editar Rol" : "Nuevo Rol",
-        subtitle: "Define nombre, descripción y permisos",
-        size: "lg",
+        title: editingRole ? 'Editar Rol' : 'Nuevo Rol',
+        subtitle: 'Define nombre, descripción y permisos',
+        size: 'lg',
         actions: [
           {
-            label: editingRole ? "Actualizar" : "Crear",
+            label: editingRole ? 'Actualizar' : 'Crear',
             onClick: () => {
-              const form = document.querySelector<HTMLFormElement>("#role-form");
+              const form = document.querySelector<HTMLFormElement>('#role-form');
               form?.requestSubmit();
             },
-            variant: "primary",
+            variant: 'primary',
           },
           {
-            label: "Cancelar",
+            label: 'Cancelar',
             onClick: closeModal,
-            variant: "ghost",
+            variant: 'ghost',
           },
         ],
         content: (
@@ -628,7 +626,7 @@ export const RolesPage: React.FC = () => {
                     </label>
                     <div className="space-y-3">
                       {Object.entries(AVAILABLE_PERMISSIONS)
-                        .filter(([module]) => module !== "mobile")
+                        .filter(([module]) => module !== 'mobile')
                         .map(([module, moduleData]) => {
                           return (
                             <div key={module} className="border border-gray-200 dark:border-gray-700 rounded p-4 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
@@ -659,7 +657,7 @@ export const RolesPage: React.FC = () => {
 
                       {/* Permisos de SuperAdmin */}
                       {isSuperAdmin &&
-                        editingRole?.name.toLowerCase() !== "superadmin" &&
+                        editingRole?.name.toLowerCase() !== 'superadmin' &&
                         Object.entries(SUPERADMIN_ONLY_PERMISSIONS).map(([module, moduleData]) => {
                           return (
                             <div key={module} className="border-2 border-blue-400 dark:border-blue-600 rounded p-4 bg-blue-50 dark:bg-blue-950/30">
@@ -677,7 +675,7 @@ export const RolesPage: React.FC = () => {
                               </div>
                               <div className="flex flex-wrap gap-3 pl-[52px] mt-3">
                                 {moduleData.permissions.map((permission) => {
-                                  const permissionLabel = MODULE_LABELS[permission] || (permission === "*" ? "Acceso Total" : permission);
+                                  const permissionLabel = MODULE_LABELS[permission] || (permission === '*' ? 'Acceso Total' : permission);
 
                                   return (
                                     <label key={permission} className="flex items-center gap-2 group cursor-pointer">
@@ -701,7 +699,7 @@ export const RolesPage: React.FC = () => {
                     </label>
                     <div className="space-y-3">
                       {Object.entries(AVAILABLE_PERMISSIONS)
-                        .filter(([module]) => module === "mobile")
+                        .filter(([module]) => module === 'mobile')
                         .map(([module, moduleData]) => {
                           return (
                             <div key={module} className="border border-gray-200 dark:border-gray-700 rounded p-4 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
@@ -746,10 +744,10 @@ export const RolesPage: React.FC = () => {
       ) : (
         <>
           {/* Grid */}
-          {viewMode === "cards" ? (
+          {viewMode === 'cards' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
               {filteredRoles.map((role) => {
-                const isSuperAdminRole = role.name.toLowerCase() === "superadmin";
+                const isSuperAdminRole = role.name.toLowerCase() === 'superadmin';
 
                 return (
                   <Card
@@ -766,33 +764,33 @@ export const RolesPage: React.FC = () => {
                           ? [
                               {
                                 text: role.tenant.name,
-                                variant: "default" as const,
-                                className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800",
+                                variant: 'default' as const,
+                                className: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800',
                               },
                             ]
                           : []),
                         ...(role.isSystem
                           ? [
                               {
-                                text: "Sistema",
-                                variant: "default" as const,
-                                className: "bg-orange-500/10 text-orange-500 border border-orange-500/50",
+                                text: 'Sistema',
+                                variant: 'default' as const,
+                                className: 'bg-orange-500/10 text-orange-500 border border-orange-500/50',
                               },
                             ]
                           : []),
                         ...(role.isDefault
                           ? [
                               {
-                                text: "Por defecto",
-                                variant: "success" as const,
+                                text: 'Por defecto',
+                                variant: 'success' as const,
                               },
                             ]
                           : []),
-                        ...(role.permissions.some((p) => p.startsWith("tenants:"))
+                        ...(role.permissions.some((p) => p.startsWith('tenants:'))
                           ? [
                               {
-                                text: "SuperAdmin",
-                                variant: "warning" as const,
+                                text: 'SuperAdmin',
+                                variant: 'warning' as const,
                               },
                             ]
                           : []),
@@ -807,8 +805,8 @@ export const RolesPage: React.FC = () => {
                               onClick: (e) => {
                                 e.stopPropagation();
                               },
-                              title: "Rol protegido",
-                              variant: "default",
+                              title: 'Rol protegido',
+                              variant: 'default',
                               disabled: true,
                             },
                           ]
@@ -819,10 +817,10 @@ export const RolesPage: React.FC = () => {
                                 e.stopPropagation();
                                 openEdit(role);
                               },
-                              title: "Editar",
-                              variant: "default",
+                              title: 'Editar',
+                              variant: 'default',
                             },
-                            ...(hasPermission("admin_roles:view") && !role.isSystem
+                            ...(hasPermission('admin_roles:view') && !role.isSystem
                               ? [
                                   {
                                     icon: faTrash,
@@ -830,8 +828,8 @@ export const RolesPage: React.FC = () => {
                                       e.stopPropagation();
                                       handleDelete(role);
                                     },
-                                    title: "Eliminar",
-                                    variant: "default" as const,
+                                    title: 'Eliminar',
+                                    variant: 'default' as const,
                                   },
                                 ]
                               : []),
@@ -842,8 +840,8 @@ export const RolesPage: React.FC = () => {
                                     onClick: (e: React.MouseEvent) => {
                                       e.stopPropagation();
                                     },
-                                    title: "Rol de sistema protegido",
-                                    variant: "default" as const,
+                                    title: 'Rol de sistema protegido',
+                                    variant: 'default' as const,
                                     disabled: true,
                                   },
                                 ]
@@ -858,8 +856,8 @@ export const RolesPage: React.FC = () => {
                   variant="create"
                   onClick={openCreate}
                   header={{
-                    title: "Nuevo Rol",
-                    subtitle: "Crear un nuevo rol con permisos personalizados",
+                    title: 'Nuevo Rol',
+                    subtitle: 'Crear un nuevo rol con permisos personalizados',
                     icon: faUserShield,
                   }}
                 />
@@ -879,7 +877,7 @@ export const RolesPage: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
                     {filteredRoles.map((role) => {
-                      const isSuperAdminRole = role.name.toLowerCase() === "superadmin";
+                      const isSuperAdminRole = role.name.toLowerCase() === 'superadmin';
                       // const isActionDisabled = isSuperAdminRole && !isSuperAdmin; // Removed unsed var
                       return (
                         <tr key={role._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer" onClick={() => openView(role)}>
@@ -887,7 +885,7 @@ export const RolesPage: React.FC = () => {
                             <div className="flex flex-col gap-1">
                               <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                                 {role.name}
-                                {role.permissions.some((p) => p.startsWith("tenants:")) && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800">SA</span>}
+                                {role.permissions.some((p) => p.startsWith('tenants:')) && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800">SA</span>}
                                 {role.isSystem && <span className="text-[9px] font-bold bg-orange-500/10 text-orange-500 border border-orange-500/50 px-1.5 py-0.5 rounded uppercase tracking-wider">Sistema</span>}
                                 {role.isDefault && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">Default</span>}
                               </span>
@@ -919,7 +917,7 @@ export const RolesPage: React.FC = () => {
                                   >
                                     <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
                                   </button>
-                                  {hasPermission("admin_roles:view") && !role.isSystem && (
+                                  {hasPermission('admin_roles:view') && !role.isSystem && (
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
@@ -953,12 +951,12 @@ export const RolesPage: React.FC = () => {
           {!loading && filteredRoles.length === 0 && (
             <EmptyState
               icon={faShieldHalved}
-              title={startDate || endDate ? "No hay roles en este rango de fechas" : "No hay roles"}
-              description={startDate || endDate ? `No se encontraron roles ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Crea tu primer rol para comenzar a gestionar permisos."}
+              title={startDate || endDate ? 'No hay roles en este rango de fechas' : 'No hay roles'}
+              description={startDate || endDate ? `No se encontraron roles ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : 'Crea tu primer rol para comenzar a gestionar permisos.'}
               action={
-                hasPermission("admin_roles:view")
+                hasPermission('admin_roles:view')
                   ? {
-                      label: "Nuevo Rol",
+                      label: 'Nuevo Rol',
                       onClick: openCreate,
                       icon: faPlus,
                     }
@@ -978,9 +976,9 @@ export const RolesPage: React.FC = () => {
         zIndex={60}
         actions={[
           {
-            label: "Entendido",
+            label: 'Entendido',
             onClick: () => setShowPermissionsInfo(false),
-            variant: "primary",
+            variant: 'primary',
           },
         ]}
       >

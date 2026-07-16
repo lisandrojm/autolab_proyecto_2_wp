@@ -1,6 +1,6 @@
-import { Types } from "mongoose";
-import { Role } from "../models/Role.js";
-import { cleanupDuplicateMobileRoles } from "./roleCleanupService.js";
+import { Types } from 'mongoose';
+import { Role } from '../models/Role.js';
+import { cleanupDuplicateMobileRoles } from './roleCleanupService.js';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
@@ -28,60 +28,60 @@ const USER_PERMISSIONS: string[] = [];
  */
 const ADMIN_PERMISSIONS = [
   // ──────────── Core Modules ────────────
-  "dashboard:view", // Dashboard
+  'dashboard:view', // Dashboard
 
   // ──────────── Cliente Context ────────────
-  "client:view", // Ver o no Cliente y select de cliente
+  'client:view', // Ver o no Cliente y select de cliente
 
   // ──────────── Admin GENERAL ────────────
-  "admin_clients:view", // Clientes
-  "admin_projects:view", // Proyectos
-  "admin_sedes:view", // Sedes
-  "admin_contracts:view", // Contratos
-  "admin_orders:view", // Pedidos
-  "admin_vacations:view", // Vacaciones
-  "admin_activity_logs:view", // Novedades
-  "admin_hr_documents:view", // Documentos RRHH
+  'admin_clients:view', // Clientes
+  'admin_projects:view', // Proyectos
+  'admin_sedes:view', // Sedes
+  'admin_contracts:view', // Contratos
+  'admin_orders:view', // Pedidos
+  'admin_vacations:view', // Vacaciones
+  'admin_activity_logs:view', // Novedades
+  'admin_hr_documents:view', // Documentos RRHH
 
   // ──────────── Admin USUARIOS ────────────
-  "admin_roles:view", // Roles
-  "admin_areas:view", // Areas
-  "admin_positions:view", // Cargos
-  "admin_levels:view", // Niveles
-  "admin_users:view", // Usuarios
-  "admin_users_import:view", // Import Users WP
+  'admin_roles:view', // Roles
+  'admin_areas:view', // Areas
+  'admin_positions:view', // Cargos
+  'admin_levels:view', // Niveles
+  'admin_users:view', // Usuarios
+  'admin_users_import:view', // Import WP
 
   // ──────────── Configuracion ────────────
-  "config_orders:view", // Pedidos
-  "config_shifts:view", // Turnos
-  "config_vacations:view", // Vacaciones
-  "config_activity_logs:view", // Novedades
-  "config_pdf_templates:view", // Plantillas PDF
-  "config_releases:view", // Releases
-  "config_holidays:view", // Feriados
-  "config_frame_functions:view", // Funciones FRAME
-  "config_categorias_sat:view", // Categorías SAT
-  "config_bancos:view", // Bancos
-  "config_obras_sociales:view", // Obras Sociales
-  "config_centros_costo:view", // Centros de Costos
-  "config_contratos_frame:view", // Contratos FRAME
-  "config_profile:view", // Mi Perfil
+  'config_orders:view', // Pedidos
+  'config_shifts:view', // Turnos
+  'config_vacations:view', // Vacaciones
+  'config_activity_logs:view', // Novedades
+  'config_pdf_templates:view', // Plantillas PDF
+  'config_releases:view', // Releases
+  'config_holidays:view', // Feriados
+  'config_frame_functions:view', // Funciones FRAME
+  'config_categorias_sat:view', // Categorías SAT
+  'config_bancos:view', // Bancos
+  'config_obras_sociales:view', // Obras Sociales
+  'config_centros_costo:view', // Centros de Costos
+  'config_contratos_frame:view', // Contratos FRAME
+  'config_profile:view', // Mi Perfil
 
   // ──────────── Proyectos ────────────
 ];
 const MOBILE_COLLABORATOR_PERMISSIONS = [
-  "mobile_collaborator:view", // Permisos de colaborador mobile
+  'mobile_collaborator:view', // Permisos de colaborador mobile
 ];
 
 const MOBILE_COORDINATOR_PERMISSIONS = [
-  "mobile_coordinator:view", // Permisos de coordinador mobile
+  'mobile_coordinator:view', // Permisos de coordinador mobile
 ];
 
 /**
  * Helper para asegurar la existencia y sincronización de un rol
  */
-async function ensureRole(tenantId: Types.ObjectId, name: string, permissions: string[] = [], description = "", isDefault = false, isSystem = false) {
-  let role = await Role.findOne({ tenantId, name: { $regex: new RegExp(`^${name}$`, "i") } });
+async function ensureRole(tenantId: Types.ObjectId, name: string, permissions: string[] = [], description = '', isDefault = false, isSystem = false) {
+  let role = await Role.findOne({ tenantId, name: { $regex: new RegExp(`^${name}$`, 'i') } });
 
   if (!role) {
     console.log(`[RoleInit] Creating ${name} role for tenant: ${tenantId}`);
@@ -115,7 +115,7 @@ async function ensureRole(tenantId: Types.ObjectId, name: string, permissions: s
     if (missingPerms.length > 0) {
       role.permissions = [...role.permissions, ...missingPerms];
       hasChanges = true;
-      console.log(`[RoleInit] ♻️ Adding missing permissions to ${name} role: ${missingPerms.join(", ")}`);
+      console.log(`[RoleInit] ♻️ Adding missing permissions to ${name} role: ${missingPerms.join(', ')}`);
     }
 
     if (hasChanges) {
@@ -133,10 +133,10 @@ export async function ensureDefaultRoles(tenantId: Types.ObjectId | string): Pro
   const tid = new Types.ObjectId(tenantId);
 
   // ════════ SKIP FOR SUPERADMIN TENANT ════════
-  const { Tenant } = await import("../models/Tenant.js");
+  const { Tenant } = await import('../models/Tenant.js');
   const tenant = await Tenant.findById(tid);
 
-  if (tenant?.isSystem || tenant?.slug === "superadmin") {
+  if (tenant?.isSystem || tenant?.slug === 'superadmin') {
     console.log(`[RoleInit] Skipping default roles creation for system tenant: ${tenant?.slug}`);
     // Aún así necesitamos devolver los roles si existen para evitar errores en los callers
     const adminRole = await Role.findOne({ tenantId: tid, name: { $regex: /^Admin$/i } });
@@ -145,20 +145,20 @@ export async function ensureDefaultRoles(tenantId: Types.ObjectId | string): Pro
   }
 
   // 1. Admin (Sistema)
-  const adminRole = await ensureRole(tid, "Admin", ADMIN_PERMISSIONS, "Administrador - Acceso completo a todos los módulos del sistema", false, true);
+  const adminRole = await ensureRole(tid, 'Admin', ADMIN_PERMISSIONS, 'Administrador - Acceso completo a todos los módulos del sistema', false, true);
 
   // 2. Responsable de Proyecto (Sistema)
-  const responsablePerms = ["client:view", "admin_clients:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", "mobile_collaborator:view", "project_responsible:eligible"];
-  await ensureRole(tid, "Responsable de Proyecto", responsablePerms, "Rol de responsable de proyectos", false, true);
+  const responsablePerms = ['client:view', 'admin_clients:view', 'admin_orders:view', 'admin_vacations:view', 'admin_activity_logs:view', 'mobile_collaborator:view', 'project_responsible:eligible'];
+  await ensureRole(tid, 'Responsable de Proyecto', responsablePerms, 'Rol de responsable de proyectos', false, true);
 
   // 3. Mobile-Coordinador (Sistema)
-  await ensureRole(tid, "Mobile-Coordinador", MOBILE_COORDINATOR_PERMISSIONS, "Rol de coordinador para app mobile", false, true);
+  await ensureRole(tid, 'Mobile-Coordinador', MOBILE_COORDINATOR_PERMISSIONS, 'Rol de coordinador para app mobile', false, true);
 
   // 4. Mobile-Colaborador (Sistema)
-  await ensureRole(tid, "Mobile-Colaborador", MOBILE_COLLABORATOR_PERMISSIONS, "Rol de colaborador para app mobile", false, true);
+  await ensureRole(tid, 'Mobile-Colaborador', MOBILE_COLLABORATOR_PERMISSIONS, 'Rol de colaborador para app mobile', false, true);
 
   // 5. User (Por defecto)
-  const userRole = await ensureRole(tid, "User", USER_PERMISSIONS, "Usuario estándar - Sin permisos por defecto", true, false);
+  const userRole = await ensureRole(tid, 'User', USER_PERMISSIONS, 'Usuario estándar - Sin permisos por defecto', true, false);
 
   return { adminRole, userRole };
 }
@@ -170,17 +170,17 @@ export async function migrateRolePermissions(tenantId: Types.ObjectId | string):
   const tid = new Types.ObjectId(tenantId);
 
   const PERMISSION_MAPPING: Record<string, string> = {
-    "campaigns:read": "campaigns:view",
-    "posts:read": "posts:view",
-    "projects:read": "projects:view",
-    "assets:read": "assets:view",
-    "clients:read": "clients:view",
-    "roles:view": "admin_roles:view",
-    "areas:view": "admin_areas:view",
-    "positions:view": "admin_positions:view",
-    "levels:view": "admin_levels:view",
-    "users:view": "admin_users:view",
-    "mobile:access": "mobile_collaborator:view",
+    'campaigns:read': 'campaigns:view',
+    'posts:read': 'posts:view',
+    'projects:read': 'projects:view',
+    'assets:read': 'assets:view',
+    'clients:read': 'clients:view',
+    'roles:view': 'admin_roles:view',
+    'areas:view': 'admin_areas:view',
+    'positions:view': 'admin_positions:view',
+    'levels:view': 'admin_levels:view',
+    'users:view': 'admin_users:view',
+    'mobile:access': 'mobile_collaborator:view',
   };
 
   const roles = await Role.find({ tenantId: tid });
@@ -200,7 +200,7 @@ export async function migrateRolePermissions(tenantId: Types.ObjectId | string):
     // 2) Filtrar: Solo permitir permisos que terminen en :view, :eligible o sean el comodín *
     // Esto elimina permisos granulares (:edit, :delete, :create) que ya no son necesarios
     const filteredPermissions = updatedPermissions.filter(
-      (perm) => perm === "*" || perm.endsWith(":view") || perm.endsWith(":eligible") || perm.startsWith("mobile_"), // Mantener roles móviles y elegibilidad
+      (perm) => perm === '*' || perm.endsWith(':view') || perm.endsWith(':eligible') || perm.startsWith('mobile_'), // Mantener roles móviles y elegibilidad
     );
 
     if (filteredPermissions.length !== updatedPermissions.length) {
@@ -234,7 +234,7 @@ export async function ensureMobileRoles(tenantId: Types.ObjectId | string): Prom
  */
 export async function ensureAllTenantsHaveDefaultRoles(): Promise<void> {
   try {
-    const { Tenant } = await import("../models/Tenant.js");
+    const { Tenant } = await import('../models/Tenant.js');
     const tenants = await Tenant.find({});
 
     console.log(`[RoleInit] Verifying ${tenants.length} tenants have default roles...`);
@@ -268,7 +268,7 @@ export async function ensureAllTenantsHaveDefaultRoles(): Promise<void> {
     console.log(`  - New roles created: ${rolesCreated}`);
     console.log(`  - Roles updated: ${rolesUpdated}`);
   } catch (error) {
-    console.error("[RoleInit] Error ensuring roles for all tenants:", error);
+    console.error('[RoleInit] Error ensuring roles for all tenants:', error);
     throw error;
   }
 }

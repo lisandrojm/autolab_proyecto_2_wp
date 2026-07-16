@@ -1,15 +1,15 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { useAuthStore } from "../stores/authStore";
-import { useThemeStore } from "../stores/themeStore";
-import { ClientSelector } from "./ClientSelector";
-import { ClientContextMenu } from "./ClientContextMenu";
-import { Link, useLocation } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket } from "@fortawesome/free-solid-svg-icons";
-import { Logo } from "../components/ui/Logo";
-import axios from "../api/axiosConfig";
-import { SettingsModal } from "./SettingsModal";
-import { useClientContextStore } from "../stores/clientContextStore";
+import React, { useEffect, useMemo, useState } from 'react';
+import { useAuthStore } from '../stores/authStore';
+import { useThemeStore } from '../stores/themeStore';
+import { ClientSelector } from './ClientSelector';
+import { ClientContextMenu } from './ClientContextMenu';
+import { Link, useLocation } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket } from '@fortawesome/free-solid-svg-icons';
+import { Logo } from '../components/ui/Logo';
+import axios from '../api/axiosConfig';
+import { SettingsModal } from './SettingsModal';
+import { useClientContextStore } from '../stores/clientContextStore';
 
 interface AdminCounts {
   clients: number;
@@ -31,21 +31,21 @@ export const MobileNavbar: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // No renderizar el Navbar en rutas públicas
-  const publicRoutes = ["/login", "/register", "/register-client"];
+  const publicRoutes = ['/login', '/register', '/register-client'];
   if (publicRoutes.includes(location.pathname)) {
     return null;
   }
 
   // Estado del acordeón persistente: "users" | "general" | null
   const [openAdminSection, setOpenAdminSection] = useState<string | null>(() => {
-    return localStorage.getItem("adminOpenSection") || "general";
+    return localStorage.getItem('adminOpenSection') || 'general';
   });
 
-  const toggleAdminSection = (section: "users" | "general" | "config" | "management") => {
+  const toggleAdminSection = (section: 'users' | 'general' | 'config' | 'management') => {
     const newVal = openAdminSection === section ? null : section;
     setOpenAdminSection(newVal);
-    if (newVal) localStorage.setItem("adminOpenSection", newVal);
-    else localStorage.removeItem("adminOpenSection");
+    if (newVal) localStorage.setItem('adminOpenSection', newVal);
+    else localStorage.removeItem('adminOpenSection');
   };
   const [adminCounts, setAdminCounts] = useState<AdminCounts>({ clients: 0, tenants: 0, roles: 0, users: 0, areas: 0, positions: 0, levels: 0, projects: 0 });
   const SHOW_MENU_COUNTS = false;
@@ -55,28 +55,28 @@ export const MobileNavbar: React.FC = () => {
       try {
         const promises: Array<Promise<any>> = [];
 
-        if (hasPermission("admin_clients:view")) promises.push(axios.get("/clients/count").catch(() => ({ data: { count: 0 } })));
+        if (hasPermission('admin_clients:view')) promises.push(axios.get('/clients/count').catch(() => ({ data: { count: 0 } })));
         else promises.push(Promise.resolve({ data: { count: 0 } }));
 
-        if (hasPermission("tenants:view")) promises.push(axios.get("/tenants/count").catch(() => ({ data: { count: 0 } })));
+        if (hasPermission('tenants:view')) promises.push(axios.get('/tenants/count').catch(() => ({ data: { count: 0 } })));
         else promises.push(Promise.resolve({ data: { count: 0 } }));
 
-        if (hasPermission("admin_roles:view")) promises.push(axios.get("/roles/count").catch(() => ({ data: { count: 0 } })));
+        if (hasPermission('admin_roles:view')) promises.push(axios.get('/roles/count').catch(() => ({ data: { count: 0 } })));
         else promises.push(Promise.resolve({ data: { count: 0 } }));
 
-        if (hasPermission("admin_areas:view")) promises.push(axios.get("/areas/count").catch(() => ({ data: { count: 0 } })));
+        if (hasPermission('admin_areas:view')) promises.push(axios.get('/areas/count').catch(() => ({ data: { count: 0 } })));
         else promises.push(Promise.resolve({ data: { count: 0 } }));
 
-        if (hasPermission("admin_positions:view")) promises.push(axios.get("/positions/count").catch(() => ({ data: { count: 0 } })));
+        if (hasPermission('admin_positions:view')) promises.push(axios.get('/positions/count').catch(() => ({ data: { count: 0 } })));
         else promises.push(Promise.resolve({ data: { count: 0 } }));
 
-        if (hasPermission("admin_levels:view")) promises.push(axios.get("/levels/count").catch(() => ({ data: { count: 0 } })));
+        if (hasPermission('admin_levels:view')) promises.push(axios.get('/levels/count').catch(() => ({ data: { count: 0 } })));
         else promises.push(Promise.resolve({ data: { count: 0 } }));
 
-        if (hasPermission("admin_users:view")) promises.push(axios.get("/users/count").catch(() => ({ data: { count: 0 } })));
+        if (hasPermission('admin_users:view')) promises.push(axios.get('/users/count').catch(() => ({ data: { count: 0 } })));
         else promises.push(Promise.resolve({ data: { count: 0 } }));
 
-        if (hasPermission("admin_projects:view")) promises.push(axios.get("/projects/count").catch(() => ({ data: { count: 0 } })));
+        if (hasPermission('admin_projects:view')) promises.push(axios.get('/projects/count').catch(() => ({ data: { count: 0 } })));
         else promises.push(Promise.resolve({ data: { count: 0 } }));
 
         const [clientsRes, tenantsRes, rolesRes, areasRes, positionsRes, levelsRes, usersRes, projectsRes] = await Promise.all(promises);
@@ -92,7 +92,7 @@ export const MobileNavbar: React.FC = () => {
           users: usersRes?.data?.count || 0,
         });
       } catch (error) {
-        console.error("Error fetching admin counts:", error);
+        console.error('Error fetching admin counts:', error);
       }
     };
     fetchAdminCounts();
@@ -100,9 +100,9 @@ export const MobileNavbar: React.FC = () => {
 
   const userRoleNames = useMemo(() => {
     if (Array.isArray(user?.roles) && user.roles.length > 0) {
-      if (typeof user.roles[0] === "string") return [...new Set(user.roles)];
-      if (typeof user.roles[0] === "object" && user.roles[0] !== null) {
-        const names = user.roles.map((r: any) => r.name || r).filter((n): n is string => typeof n === "string");
+      if (typeof user.roles[0] === 'string') return [...new Set(user.roles)];
+      if (typeof user.roles[0] === 'object' && user.roles[0] !== null) {
+        const names = user.roles.map((r: any) => r.name || r).filter((n): n is string => typeof n === 'string');
         return [...new Set(names)];
       }
     }
@@ -110,14 +110,14 @@ export const MobileNavbar: React.FC = () => {
   }, [user?.roles, user?.primaryRole]);
 
   const menuItems = useMemo(() => {
-    const isSuperAdminTenant = user?.tenantSlug === "superadmin";
+    const isSuperAdminTenant = user?.tenantSlug === 'superadmin';
 
     const base: Array<{
       path: string;
       icon: any;
       label: string;
       external?: boolean;
-      scope?: "global" | "client";
+      scope?: 'global' | 'client';
       count?: number;
       dividerTop?: boolean;
       badge?: string;
@@ -126,40 +126,40 @@ export const MobileNavbar: React.FC = () => {
     }> = [];
 
     if (isSuperAdminTenant) {
-      base.push({ path: "/tenants", icon: faBuilding, label: "Tenants", scope: "global", count: adminCounts.tenants }, { path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users }, { path: "/shifts", icon: faClock, label: "Turnos", scope: "global" }, { path: "/roles", icon: faUserShield, label: "Roles", scope: "global", count: adminCounts.roles }, { path: "/funciones-frame", icon: faUserShield, label: "Funciones FRAME", scope: "global" }, { path: "/areas", icon: faLayerGroup, label: "Áreas", scope: "global", count: adminCounts.areas }, { path: "/positions", icon: faUserTie, label: "Cargos", scope: "global", count: adminCounts.positions }, { path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels }, { path: "/clients", icon: faUsers, label: "Clientes", scope: "global", count: adminCounts.clients }, { path: "/categorias-sat", icon: faListCheck, label: "Categorías SAT", scope: "global" });
+      base.push({ path: '/tenants', icon: faBuilding, label: 'Tenants', scope: 'global', count: adminCounts.tenants }, { path: '/users', icon: faUserGear, label: 'Usuarios', scope: 'global', count: adminCounts.users }, { path: '/shifts', icon: faClock, label: 'Turnos', scope: 'global' }, { path: '/roles', icon: faUserShield, label: 'Roles', scope: 'global', count: adminCounts.roles }, { path: '/funciones-frame', icon: faUserShield, label: 'Funciones FRAME', scope: 'global' }, { path: '/areas', icon: faLayerGroup, label: 'Áreas', scope: 'global', count: adminCounts.areas }, { path: '/positions', icon: faUserTie, label: 'Cargos', scope: 'global', count: adminCounts.positions }, { path: '/levels', icon: faUserGraduate, label: 'Niveles', scope: 'global', count: adminCounts.levels }, { path: '/clients', icon: faUsers, label: 'Clientes', scope: 'global', count: adminCounts.clients }, { path: '/categorias-sat', icon: faListCheck, label: 'Categorías SAT', scope: 'global' });
     } else {
-      if (hasPermission("admin_roles:view")) base.push({ path: "/roles", icon: faUserShield, label: "Roles", scope: "global", count: adminCounts.roles });
-      if (hasPermission("config_frame_functions:view")) base.push({ path: "/funciones-frame", icon: faUserShield, label: "Funciones FRAME", scope: "global" });
-      if (hasPermission("admin_areas:view")) base.push({ path: "/areas", icon: faLayerGroup, label: "Áreas", scope: "global", count: adminCounts.areas });
-      if (hasPermission("admin_positions:view")) base.push({ path: "/positions", icon: faUserTie, label: "Cargos", scope: "global", count: adminCounts.positions });
-      if (hasPermission("admin_levels:view")) base.push({ path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels });
-      if (hasPermission("admin_users:view")) base.push({ path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users });
-      if (hasPermission("admin_users_import:view")) base.push({ path: "/users/import-wp", icon: faArrowUpRightFromSquare, label: "Import Users WP", scope: "global" });
+      if (hasPermission('admin_roles:view')) base.push({ path: '/roles', icon: faUserShield, label: 'Roles', scope: 'global', count: adminCounts.roles });
+      if (hasPermission('config_frame_functions:view')) base.push({ path: '/funciones-frame', icon: faUserShield, label: 'Funciones FRAME', scope: 'global' });
+      if (hasPermission('admin_areas:view')) base.push({ path: '/areas', icon: faLayerGroup, label: 'Áreas', scope: 'global', count: adminCounts.areas });
+      if (hasPermission('admin_positions:view')) base.push({ path: '/positions', icon: faUserTie, label: 'Cargos', scope: 'global', count: adminCounts.positions });
+      if (hasPermission('admin_levels:view')) base.push({ path: '/levels', icon: faUserGraduate, label: 'Niveles', scope: 'global', count: adminCounts.levels });
+      if (hasPermission('admin_users:view')) base.push({ path: '/users', icon: faUserGear, label: 'Usuarios', scope: 'global', count: adminCounts.users });
+      if (hasPermission('admin_users_import:view')) base.push({ path: '/users/import-wp', icon: faArrowUpRightFromSquare, label: 'Import WP', scope: 'global' });
 
       // Admin GENERAL Items
-      if (hasPermission("admin_clients:view")) base.push({ path: "/clients", icon: faUsers, label: "Clientes", scope: "global", count: adminCounts.clients });
-      if (hasPermission("admin_projects:view")) base.push({ path: "/admin/projects", icon: faBriefcase, label: "Proyectos", scope: "global", count: adminCounts.projects });
-      if (hasPermission("admin_sedes:view")) base.push({ path: "/admin/sedes", icon: faBuilding, label: "Sedes", scope: "global" });
-      if (hasPermission("admin_contracts:view")) base.push({ path: "/admin/contracts", icon: faFileContract, label: "Contratos", scope: "global" });
-      if (hasPermission("admin_activity_logs:view")) base.push({ path: "/requests", icon: faFileText, label: "Novedades", scope: "global", dividerTop: true });
-      if (hasPermission("admin_orders:view")) base.push({ path: "/orders", icon: faShoppingCart, label: "Pedidos", scope: "global" });
-      if (hasPermission("admin_vacations:view")) base.push({ path: "/vacations", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
-      if (hasPermission("admin_hr_documents:view")) base.push({ path: "/documents", disabled: true, icon: faFileText, label: "Documentos RRHH", scope: "global" });
+      if (hasPermission('admin_clients:view')) base.push({ path: '/clients', icon: faUsers, label: 'Clientes', scope: 'global', count: adminCounts.clients });
+      if (hasPermission('admin_projects:view')) base.push({ path: '/admin/projects', icon: faBriefcase, label: 'Proyectos', scope: 'global', count: adminCounts.projects });
+      if (hasPermission('admin_sedes:view')) base.push({ path: '/admin/sedes', icon: faBuilding, label: 'Sedes', scope: 'global' });
+      if (hasPermission('admin_contracts:view')) base.push({ path: '/admin/contracts', icon: faFileContract, label: 'Contratos', scope: 'global' });
+      if (hasPermission('admin_activity_logs:view')) base.push({ path: '/requests', icon: faFileText, label: 'Novedades', scope: 'global', dividerTop: true });
+      if (hasPermission('admin_orders:view')) base.push({ path: '/orders', icon: faShoppingCart, label: 'Pedidos', scope: 'global' });
+      if (hasPermission('admin_vacations:view')) base.push({ path: '/vacations', icon: faUmbrellaBeach, label: 'Vacaciones', scope: 'global' });
+      if (hasPermission('admin_hr_documents:view')) base.push({ path: '/documents', disabled: true, icon: faFileText, label: 'Documentos RRHH', scope: 'global' });
 
       // CONFIGURACION Items
-      if (hasPermission("config_activity_logs:view")) base.push({ path: "/requests/config", icon: faFileText, label: "Novedades", scope: "global" });
+      if (hasPermission('config_activity_logs:view')) base.push({ path: '/requests/config', icon: faFileText, label: 'Novedades', scope: 'global' });
 
-      if (hasPermission("config_orders:view")) base.push({ path: "/order-types", icon: faShoppingCart, label: "Pedidos", scope: "global" });
-      if (hasPermission("config_shifts:view")) base.push({ path: "/shifts", icon: faClock, label: "Turnos", scope: "global" });
-      if (hasPermission("config_vacations:view")) base.push({ path: "/vacations-rules", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
-      if (hasPermission("config_holidays:view")) base.push({ path: "/holidays", icon: faCalendar, label: "Feriados", scope: "global" });
-      if (hasPermission("config_pdf_templates:view")) base.push({ path: "/pdfs", icon: faFilePdf, label: "Plantillas PDF", scope: "global" });
-      if (hasPermission("config_releases:view")) base.push({ path: "/releases", icon: faRocket, label: "Releases", scope: "global" });
-      if (hasPermission("config_categorias_sat:view")) base.push({ path: "/categorias-sat", icon: faListCheck, label: "Categorías SAT", scope: "global" });
-      if (hasPermission("config_bancos:view")) base.push({ path: "/bancos", icon: faBuildingColumns, label: "Entidades Financieras", scope: "global" });
-      if (hasPermission("config_obras_sociales:view")) base.push({ path: "/obras-sociales", icon: faBriefcaseMedical, label: "Obras Sociales", scope: "global" });
-      if (hasPermission("config_centros_costo:view")) base.push({ path: "/centros-costo", icon: faPiggyBank, label: "Centros de Costos", scope: "global" });
-      if (hasPermission("config_contratos_frame:view")) base.push({ path: "/contratos-frame", icon: faFileContract, label: "Contratos", scope: "global" });
+      if (hasPermission('config_orders:view')) base.push({ path: '/order-types', icon: faShoppingCart, label: 'Pedidos', scope: 'global' });
+      if (hasPermission('config_shifts:view')) base.push({ path: '/shifts', icon: faClock, label: 'Turnos', scope: 'global' });
+      if (hasPermission('config_vacations:view')) base.push({ path: '/vacations-rules', icon: faUmbrellaBeach, label: 'Vacaciones', scope: 'global' });
+      if (hasPermission('config_holidays:view')) base.push({ path: '/holidays', icon: faCalendar, label: 'Feriados', scope: 'global' });
+      if (hasPermission('config_pdf_templates:view')) base.push({ path: '/pdfs', icon: faFilePdf, label: 'Plantillas PDF', scope: 'global' });
+      if (hasPermission('config_releases:view')) base.push({ path: '/releases', icon: faRocket, label: 'Releases', scope: 'global' });
+      if (hasPermission('config_categorias_sat:view')) base.push({ path: '/categorias-sat', icon: faListCheck, label: 'Categorías SAT', scope: 'global' });
+      if (hasPermission('config_bancos:view')) base.push({ path: '/bancos', icon: faBuildingColumns, label: 'Entidades Financieras', scope: 'global' });
+      if (hasPermission('config_obras_sociales:view')) base.push({ path: '/obras-sociales', icon: faBriefcaseMedical, label: 'Obras Sociales', scope: 'global' });
+      if (hasPermission('config_centros_costo:view')) base.push({ path: '/centros-costo', icon: faPiggyBank, label: 'Centros de Costos', scope: 'global' });
+      if (hasPermission('config_contratos_frame:view')) base.push({ path: '/contratos-frame', icon: faFileContract, label: 'Contratos', scope: 'global' });
     }
 
     return base;
@@ -169,13 +169,13 @@ export const MobileNavbar: React.FC = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  const RoleChips: React.FC<{ className?: string }> = ({ className = "text-[9px]" }) =>
+  const RoleChips: React.FC<{ className?: string }> = ({ className = 'text-[9px]' }) =>
     userRoleNames.length ? (
       <div className="flex flex-wrap gap-1">
         {userRoleNames.map((label) => {
-          const isCoord = label.toLowerCase().includes("coordinador");
+          const isCoord = label.toLowerCase().includes('coordinador');
           return (
-            <div key={label} className={`flex text-transform: capitalize font-semibold items-center justify-center px-3 py-1 rounded ${className} text-xs ${isCoord ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" : "bg-primary-100 text-primary-800 dark:bg-blue-900/30 dark:text-primary-300"}`}>
+            <div key={label} className={`flex text-transform: capitalize font-semibold items-center justify-center px-3 py-1 rounded ${className} text-xs ${isCoord ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-primary-100 text-primary-800 dark:bg-blue-900/30 dark:text-primary-300'}`}>
               <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 mr-1.5" />
               {label}
             </div>
@@ -184,12 +184,12 @@ export const MobileNavbar: React.FC = () => {
       </div>
     ) : (
       <div className="mt-2">
-        <span className={`inline-flex items-center px-2 py-0.5 rounded ${className} font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-300 uppercase`}>{user?.primaryRole ?? "user"}</span>
+        <span className={`inline-flex items-center px-2 py-0.5 rounded ${className} font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-300 uppercase`}>{user?.primaryRole ?? 'user'}</span>
       </div>
     );
 
   const UserCard: React.FC = () => {
-    const displayName = user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.firstName || user?.lastName || user?.email || "Usuario";
+    const displayName = user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.firstName || user?.lastName || user?.email || 'Usuario';
     return (
       <div>
         {user?.tenantSlug && (
@@ -212,20 +212,23 @@ export const MobileNavbar: React.FC = () => {
 
   const NavMenu: React.FC<{ onItemClick?: () => void }> = ({ onItemClick }) => {
     const adminItems = menuItems;
-    const isSuperAdminTenant = user?.tenantSlug === "superadmin";
+    const isSuperAdminTenant = user?.tenantSlug === 'superadmin';
 
     // Orden alfabético (respeta español: ignora acentos y mayúsculas)
-    const byLabel = (a: { label: string }, b: { label: string }) => a.label.localeCompare(b.label, "es", { sensitivity: "base" });
+    const byLabel = (a: { label: string }, b: { label: string }) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' });
 
     // Partición de items: Admin Usuarios, Admin General, Configuración y GESTIÓN
-    const userAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ["/users", "/roles", "/areas", "/positions", "/levels", "/users/import-wp"].includes(item.path)) : adminItems.filter((item) => ["/roles", "/areas", "/positions", "/levels", "/users", "/users/import-wp"].includes(item.path))).sort(byLabel);
+    const userAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ['/users', '/roles', '/areas', '/positions', '/levels'].includes(item.path)) : adminItems.filter((item) => ['/roles', '/areas', '/positions', '/levels', '/users'].includes(item.path))).sort(byLabel);
 
-    const generalAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ["/tenants"].includes(item.path)) : adminItems.filter((item) => ["/admin/projects", "/admin/sedes", "/admin/contracts", "/orders", "/vacations", "/requests", "/documents"].includes(item.path))).sort(byLabel);
+    const generalAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ['/tenants'].includes(item.path)) : adminItems.filter((item) => ['/admin/projects', '/admin/sedes', '/admin/contracts', '/orders', '/vacations', '/requests', '/documents'].includes(item.path))).sort(byLabel);
 
-    const configPaths = ["/requests/config", "/order-types", "/shifts", "/vacations-rules", "/holidays", "/pdfs", "/releases", "/funciones-frame", "/categorias-sat", "/clients", "/contratos-frame", "/centros-costo", "/bancos", "/obras-sociales"];
+    const configPaths = ['/requests/config', '/order-types', '/shifts', '/vacations-rules', '/holidays', '/pdfs', '/releases', '/funciones-frame', '/categorias-sat', '/clients', '/contratos-frame', '/centros-costo', '/bancos', '/obras-sociales'];
     // "Mi Perfil" se incluye como un item más para que entre en el orden alfabético
-    const profileItem = { path: "/mi-perfil", icon: faIdCard, label: "Mi Perfil", scope: "global" as const };
-    const configItems = [...adminItems.filter((item) => configPaths.includes(item.path)), ...(hasPermission("config_profile:view") ? [profileItem] : [])].sort(byLabel);
+    const profileItem = { path: '/mi-perfil', icon: faIdCard, label: 'Mi Perfil', scope: 'global' as const };
+    const configItems = [...adminItems.filter((item) => configPaths.includes(item.path)), ...(hasPermission('config_profile:view') ? [profileItem] : [])].sort(byLabel);
+    // "Import WP" es un módulo temporal → va al FINAL de Configuración (después del orden alfabético).
+    const importItem = adminItems.find((item) => item.path === '/users/import-wp');
+    if (importItem) configItems.push(importItem);
 
     const renderMenuItem = (item: any) => {
       if (item.external) {
@@ -250,7 +253,7 @@ export const MobileNavbar: React.FC = () => {
         );
       }
 
-      if (item.path === "#") {
+      if (item.path === '#') {
         return (
           <button
             key={item.label}
@@ -264,7 +267,7 @@ export const MobileNavbar: React.FC = () => {
               <FontAwesomeIcon icon={item.icon} className="h-5 w-5 flex-shrink-0" />
               <span className="font-medium truncate">{item.label}</span>
             </div>
-            {SHOW_MENU_COUNTS && item.count !== undefined && <span className={`ml-2 flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${item.count > 0 ? "bg-slate-500/20 text-slate-500 dark:bg-white/20 dark:text-white" : "bg-red-500/20 text-red-700 dark:bg-red-500/20 dark:text-red-400"}`}>{item.count}</span>}
+            {SHOW_MENU_COUNTS && item.count !== undefined && <span className={`ml-2 flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${item.count > 0 ? 'bg-slate-500/20 text-slate-500 dark:bg-white/20 dark:text-white' : 'bg-red-500/20 text-red-700 dark:bg-red-500/20 dark:text-red-400'}`}>{item.count}</span>}
           </button>
         );
       }
@@ -283,16 +286,16 @@ export const MobileNavbar: React.FC = () => {
         );
       }
       return (
-        <Link key={item.path} to={item.path} onClick={onItemClick} aria-current={isActive(item.path) ? "page" : undefined} className={`group relative flex items-center justify-between px-2 py-2 rounded transition-all ${isActive(item.path) ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-blue-300 dark:border-blue-800" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/50"}`}>
+        <Link key={item.path} to={item.path} onClick={onItemClick} aria-current={isActive(item.path) ? 'page' : undefined} className={`group relative flex items-center justify-between px-2 py-2 rounded transition-all ${isActive(item.path) ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-blue-300 dark:border-blue-800' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/50'}`}>
           <div className="flex items-center space-x-3 flex-1 min-w-0">
-            <div className={`h-8 w-8 flex items-center justify-center rounded-md transition-colors ${isActive(item.path) ? "bg-primary-600 text-white dark:bg-primary-700/30" : "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 group-hover:bg-gray-300 dark:group-hover:bg-blue-800"}`}>
+            <div className={`h-8 w-8 flex items-center justify-center rounded-md transition-colors ${isActive(item.path) ? 'bg-primary-600 text-white dark:bg-primary-700/30' : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 group-hover:bg-gray-300 dark:group-hover:bg-blue-800'}`}>
               <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
             </div>
             <span className="font-medium truncate">{item.label}</span>
-            {item.badge && <span className={`ml-1 px-2 py-0.5 rounded text-[8px] font-bold ${item.badgeColor || "bg-green-500"} text-white uppercase`}>{item.badge}</span>}
+            {item.badge && <span className={`ml-1 px-2 py-0.5 rounded text-[8px] font-bold ${item.badgeColor || 'bg-green-500'} text-white uppercase`}>{item.badge}</span>}
           </div>
 
-          {SHOW_MENU_COUNTS && item.count !== undefined && <span className={`ml-2 flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${item.count > 0 ? "bg-slate-500/20 text-slate-500 dark:bg-white/20 dark:text-white" : "bg-red-500/20 text-red-700 dark:bg-red-500/20 dark:text-red-400"}`}>{item.count}</span>}
+          {SHOW_MENU_COUNTS && item.count !== undefined && <span className={`ml-2 flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${item.count > 0 ? 'bg-slate-500/20 text-slate-500 dark:bg-white/20 dark:text-white' : 'bg-red-500/20 text-red-700 dark:bg-red-500/20 dark:text-red-400'}`}>{item.count}</span>}
         </Link>
       );
     };
@@ -302,45 +305,45 @@ export const MobileNavbar: React.FC = () => {
         {/* ADMIN GENERAL (RRHH) */}
         {generalAdminItems.length > 0 && (
           <div className="px-2 mb-2">
-            <button onClick={() => toggleAdminSection("general")} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors pb-2 pt-2">
+            <button onClick={() => toggleAdminSection('general')} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors pb-2 pt-2">
               <span>
                 <FontAwesomeIcon icon={faUsersGear} className="mr-2 h-4 w-4" />
                 Admin <span className="uppercase">General</span>
               </span>
-              <FontAwesomeIcon icon={openAdminSection === "general" ? faChevronDown : faChevronRight} className="h-3 w-3" />
+              <FontAwesomeIcon icon={openAdminSection === 'general' ? faChevronDown : faChevronRight} className="h-3 w-3" />
             </button>
 
-            {openAdminSection === "general" && <nav className="space-y-1 pb-2">{generalAdminItems.map((item) => renderMenuItem(item))}</nav>}
+            {openAdminSection === 'general' && <nav className="space-y-1 pb-2">{generalAdminItems.map((item) => renderMenuItem(item))}</nav>}
           </div>
         )}
 
         {/* ADMIN USUARIOS */}
         {userAdminItems.length > 0 && (
           <div className="px-2 mb-2">
-            <button onClick={() => toggleAdminSection("users")} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors pb-2 pt-2">
+            <button onClick={() => toggleAdminSection('users')} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors pb-2 pt-2">
               <span>
                 <FontAwesomeIcon icon={faUsersGear} className="mr-2 h-4 w-4" />
                 Admin <span className="uppercase">Usuarios</span>
               </span>
-              <FontAwesomeIcon icon={openAdminSection === "users" ? faChevronDown : faChevronRight} className="h-3 w-3" />
+              <FontAwesomeIcon icon={openAdminSection === 'users' ? faChevronDown : faChevronRight} className="h-3 w-3" />
             </button>
 
-            {openAdminSection === "users" && <nav className="space-y-1 pb-2">{userAdminItems.map((item) => renderMenuItem(item))}</nav>}
+            {openAdminSection === 'users' && <nav className="space-y-1 pb-2">{userAdminItems.map((item) => renderMenuItem(item))}</nav>}
           </div>
         )}
 
         {/* CONFIGURACIÓN */}
         {configItems.length > 0 && (
           <div className="px-2 mb-2">
-            <button onClick={() => toggleAdminSection("config")} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors pb-2 pt-2">
+            <button onClick={() => toggleAdminSection('config')} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors pb-2 pt-2">
               <span>
                 <FontAwesomeIcon icon={faCog} className="mr-2 h-4 w-4" />
                 Configuración
               </span>
-              <FontAwesomeIcon icon={openAdminSection === "config" ? faChevronDown : faChevronRight} className="h-3 w-3" />
+              <FontAwesomeIcon icon={openAdminSection === 'config' ? faChevronDown : faChevronRight} className="h-3 w-3" />
             </button>
 
-            {openAdminSection === "config" && <nav className="space-y-1 pb-2">{configItems.map((item) => renderMenuItem(item))}</nav>}
+            {openAdminSection === 'config' && <nav className="space-y-1 pb-2">{configItems.map((item) => renderMenuItem(item))}</nav>}
           </div>
         )}
       </div>
@@ -348,12 +351,12 @@ export const MobileNavbar: React.FC = () => {
   };
 
   const showClientContext = useMemo(() => {
-    const isSuperAdminTenant = user?.tenantSlug === "superadmin";
-    const hasClientsPermission = hasPermission("client:view");
+    const isSuperAdminTenant = user?.tenantSlug === 'superadmin';
+    const hasClientsPermission = hasPermission('client:view');
     return !isSuperAdminTenant && hasClientsPermission;
   }, [user?.tenantSlug, hasPermission]);
 
-  const LogoutButton: React.FC<{ onClick?: () => void; className?: string }> = ({ onClick, className = "" }) => (
+  const LogoutButton: React.FC<{ onClick?: () => void; className?: string }> = ({ onClick, className = '' }) => (
     <button
       onClick={() => {
         logout();
@@ -423,7 +426,7 @@ export const MobileNavbar: React.FC = () => {
               )} */}
 
               <button onClick={toggleTheme} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                {theme === "light" ? <FontAwesomeIcon icon={faMoon} className="h-5 w-5 text-gray-600" /> : <FontAwesomeIcon icon={faSun} className="h-5 w-5 text-gray-300" />}
+                {theme === 'light' ? <FontAwesomeIcon icon={faMoon} className="h-5 w-5 text-gray-600" /> : <FontAwesomeIcon icon={faSun} className="h-5 w-5 text-gray-300" />}
               </button>
               <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-gray-800 py-2 border-t border-gray-200 lg:border-hidden dark:border-gray-700 px-4 hidden lg:block">
                 <LogoutButton onClick={() => setOpen(false)} />
@@ -433,7 +436,7 @@ export const MobileNavbar: React.FC = () => {
         </div>
 
         {open && <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]" onClick={() => setOpen(false)} />}
-        <div className={`fixed top-0 left-0 z-50 h-svh w-80 bg-white dark:bg-gray-800 transform transition-transform duration-300 ease-in-out ${open ? "translate-x-0" : "-translate-x-full"}`} aria-hidden={!open}>
+        <div className={`fixed top-0 left-0 z-50 h-svh w-80 bg-white dark:bg-gray-800 transform transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'}`} aria-hidden={!open}>
           <div className="p-4 pb-0">
             <div className="flex items-start justify-between border-b border-gray-700 mb-2">
               <div>
