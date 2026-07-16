@@ -4,6 +4,7 @@ import UserProject from "../models/UserProject.js";
 import mongoose, { Types } from "mongoose";
 import { ImportHistory } from "../models/ImportHistory.js";
 import { Project } from "../models/Project.js";
+import { Client } from "../models/Client.js";
 import { Role } from "../models/Role.js";
 import {
     buildAdditiveSet,
@@ -83,6 +84,103 @@ export class ExternalApiService {
             console.error(`[EXTERNAL API] Failed to fetch employee projects for ${employeeId}:`, error);
             throw error;
         }
+    }
+
+    /** Lista global de proyectos de FRAME (GET /proyecto). Trae cliente/responsable/fechas. */
+    async getAllProjects(): Promise<any[]> {
+        if (!this.token) {
+            await this.login();
+        }
+        try {
+            const { data } = await this.api.get("/proyecto");
+            return Array.isArray(data) ? data : [];
+        } catch (error) {
+            console.error("[EXTERNAL API] Failed to fetch projects:", error);
+            return [];
+        }
+    }
+
+    /**
+     * Crea en WeProdu los Project de FRAME que todavía no existen (match por externalId).
+     * ADITIVO y seguro: no toca proyectos existentes. Solo crea si el cliente de FRAME mapea a
+     * un Client de WeProdu (por Client.externalId) y hay responsable. Colisiones de nombre+cliente
+     * (índice único) se saltean vía error 11000. Mismo shape que la creación manual (routes/projects.ts).
+     * Devuelve cuántos creó y registra los nombres en `addedProjectsMap` para el reporte.
+     */
+    private async createMissingProjects(
+        tenantObjectId: Types.ObjectId,
+        executedBy: mongoose.Types.ObjectId | "system",
+        addedProjectsMap: Map<number, string>
+    ): Promise<number> {
+        const frameProjects = await this.getAllProjects();
+        if (!frameProjects.length) return 0;
+
+        const clients = await Client.find({ tenantId: tenantObjectId }).select("_id externalId").lean();
+        const clientByExt = new Map<string, Types.ObjectId>(
+            clients.filter((c: any) => c.externalId != null && c.externalId !== "").map((c: any) => [String(c.externalId), c._id as Types.ObjectId])
+        );
+
+        const existing = await Project.find({ tenantId: tenantObjectId, externalId: { $ne: null } }).select("externalId").lean();
+        const existingExt = new Set<number>(existing.map((p: any) => Number(p.externalId)));
+
+        // createdBy es un String requerido; el sync automático puede correr como "system".
+        const createdBy = executedBy === "system" ? "system" : String(executedBy);
+
+        let created = 0;
+        for (const fp of frameProjects) {
+            const extId = Number(fp.id);
+            if (!extId || existingExt.has(extId)) continue;
+            if (fp.responsableId == null) {
+                console.warn(`[EXTERNAL API] Skip create project ${extId} "${fp.nombre}": FRAME sin responsableId.`);
+                continue;
+            }
+            const clientId = fp.clienteId != null ? clientByExt.get(String(fp.clienteId)) : undefined;
+            if (!clientId) {
+                console.warn(`[EXTERNAL API] Skip create project ${extId} "${fp.nombre}": cliente FRAME ${fp.clienteId} no existe en WeProdu.`);
+                continue;
+            }
+            try {
+                const proj = new Project({
+                    tenantId: tenantObjectId,
+                    clientId,
+                    name: fp.nombre,
+                    description: fp.descripcion || "",
+                    status: fp.activo === false ? "archived" : "active",
+                    startDate: fp.fechaInicio ? new Date(fp.fechaInicio) : undefined,
+                    endDate: fp.fechaFin ? new Date(fp.fechaFin) : undefined,
+                    objectives: [],
+                    createdBy,
+                    externalId: extId,
+                    assignedUsers: [],
+                    metadata: {
+                        id: extId,
+                        nombre: fp.nombre,
+                        descripcion: fp.descripcion || "",
+                        responsableId: Number(fp.responsableId),
+                        clienteId: fp.clienteId != null ? Number(fp.clienteId) : undefined,
+                        fechaInicio: fp.fechaInicio || "",
+                        fechaFin: fp.fechaFin || "",
+                        fechaAlta: fp.fechaAlta || new Date().toISOString(),
+                        activo: fp.activo !== false,
+                        sedeId: fp.sedeId != null ? Number(fp.sedeId) : undefined,
+                        centroCostoId: fp.centroCostoId != null ? Number(fp.centroCostoId) : undefined,
+                    },
+                });
+                await proj.save();
+                await Client.findByIdAndUpdate(clientId, { $addToSet: { proyectos: proj._id } });
+                addedProjectsMap.set(extId, fp.nombre);
+                existingExt.add(extId);
+                created++;
+                console.log(`[EXTERNAL API] Proyecto creado desde FRAME: ${extId} "${fp.nombre}"`);
+            } catch (e: any) {
+                if (e?.code === 11000) {
+                    console.warn(`[EXTERNAL API] Proyecto "${fp.nombre}" ya existe (nombre+cliente duplicado); no se crea.`);
+                } else {
+                    console.error(`[EXTERNAL API] Error creando proyecto ${extId} "${fp.nombre}":`, e?.message || e);
+                }
+            }
+        }
+        return created;
     }
 
     /**
@@ -200,6 +298,13 @@ export class ExternalApiService {
                 thresholdDate = new Date();
                 thresholdDate.setDate(thresholdDate.getDate() - sinceDays);
                 thresholdDate.setHours(0, 0, 0, 0);
+            }
+
+            // Crear los proyectos nuevos de FRAME ANTES de vincular empleados, así el linking
+            // por empleado (más abajo) los encuentra. Aditivo: no toca proyectos existentes.
+            if (syncProjects) {
+                const createdProjects = await this.createMissingProjects(tenantObjectId, executedBy, addedProjectsMap);
+                console.log(`[EXTERNAL API] Proyectos nuevos creados desde FRAME: ${createdProjects}`);
             }
 
             for (const emp of employees) {
