@@ -205,13 +205,6 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
   const isSolicitud = user.metadata?.isSolicitud;
   const fullName = isSolicitud && user.metadata?.fullName ? user.metadata.fullName : user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : user.email.split("@")[0];
 
-  // Helper for Role Frame badges
-  const roleFrameBadges = (user.metadata?.rolesFrameIds || user.metadata?.roles_frame || []).map((rfId: any) => {
-    const id = typeof rfId === "object" ? rfId?._id : rfId;
-    const rf = allRoleFrames.find((item) => item._id === id);
-    return rf ? { text: rf.name, variant: "default" as const, className: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border-purple-200 dark:border-purple-800" } : null;
-  }).filter(Boolean);
-
   // Helper for Project/Client badges in Solicitud
   const solicitudProjectBadges: any[] = [];
   if (isSolicitud && user.metadata?.projectIds) {
@@ -272,11 +265,6 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
                 <span>CAMBIO BANCARIO</span>
               </span>
             )}
-            {roleFrameBadges.map((badge, idx) => (
-              <span key={idx} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight shadow-sm ${badge?.className}`}>
-                {badge?.text}
-              </span>
-            ))}
           </div>
         ),
         subtitle: user.email,
