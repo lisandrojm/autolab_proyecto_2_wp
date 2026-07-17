@@ -101,8 +101,9 @@ export const UserRegistrationDetailModal: React.FC<UserRegistrationDetailModalPr
     if (!res.isConfirmed) return;
     setCancelling(true);
     try {
-      await usersAPI.rejectSolicitud(user._id);
-      sweetAlert.success("Solicitud cancelada", "La solicitud de alta fue cancelada correctamente.");
+      // NO se borra: queda registrada con estado "cancelada".
+      await usersAPI.setSolicitudStatus(user._id, "cancelada");
+      sweetAlert.success("Solicitud cancelada", "La solicitud de alta quedó cancelada.");
       onCancelled?.();
       onClose();
     } catch (err: any) {

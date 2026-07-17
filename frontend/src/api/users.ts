@@ -106,6 +106,8 @@ export interface User {
     documento?: string;
     fullName?: string;
     isSolicitud?: boolean;
+    /** Estado de la solicitud de alta (ciclo tipo Pedido). */
+    solicitudStatus?: "pendiente" | "aprobada" | "rechazada" | "cancelada";
     activo?: boolean;
     roleFrameId?: string;
     categoriaSatId?: string;
@@ -387,10 +389,19 @@ class UsersAPI {
 
 
 
+  /** Trae las solicitudes de alta en CUALQUIER estado (pendiente/aprobada/rechazada/cancelada). */
   async listSolicitudes(): Promise<User[]> {
-    const { data } = await axios.get(`/users?isSolicitud=true&limit=500`, { headers: this.getHeaders() });
+    const { data } = await axios.get(`/users?solicitudAny=true&limit=500`, { headers: this.getHeaders() });
     const rows: any[] = Array.isArray(data?.users) ? data.users : Array.isArray(data) ? data : [];
     return rows.map(normalizeUser);
+  }
+
+  /** Rechaza o cancela una solicitud SIN borrarla (queda con su estado). */
+  async setSolicitudStatus(id: string, status: "rechazada" | "cancelada"): Promise<User> {
+    const { data } = await axios.patch(`/users/${id}/solicitud-status`, { status }, { headers: this.getHeaders() });
+    const user = normalizeUser(data);
+    emitUsersChanged("update", id);
+    return user;
   }
 
   async approveSolicitud(id: string, approvalData: {
