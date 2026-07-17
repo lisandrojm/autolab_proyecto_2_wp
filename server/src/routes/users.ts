@@ -166,6 +166,11 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
       andConditions.push({ "metadata.isSolicitud": req.query.isSolicitud === "true" });
     }
 
+    // Trae TODA solicitud de alta sin importar su estado (pendiente/aprobada/rechazada/cancelada).
+    if (req.query.solicitudAny === "true") {
+      andConditions.push({ "metadata.solicitudStatus": { $exists: true, $ne: null } });
+    }
+
     if (req.query.metadataActivo !== undefined) {
       andConditions.push({ "metadata.activo": req.query.metadataActivo === "true" });
     }
@@ -316,6 +321,11 @@ router.post("/", requireTenant, authenticateToken, requirePermission("admin_user
 
     if ((data as any).levelId === null) {
       (data as any).levelId = undefined;
+    }
+
+    // Toda solicitud de alta nace "pendiente" (ciclo de vida tipo Pedido).
+    if ((data as any).metadata?.isSolicitud === true && !(data as any).metadata.solicitudStatus) {
+      (data as any).metadata.solicitudStatus = "pendiente";
     }
 
     // Verificar que no existe usuario con el mismo email en el tenant
@@ -782,6 +792,39 @@ router.patch("/:id/confirmar-cambio-cuenta", requireTenant, authenticateToken, r
   }
 });
 
+// PATCH /users/:id/solicitud-status - Cambiar el estado de una solicitud (rechazada/cancelada) SIN borrarla
+router.patch("/:id/solicitud-status", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { status } = req.body || {};
+    if (!["rechazada", "cancelada"].includes(String(status))) {
+      res.status(400).json({ error: "Estado inválido. Sólo se acepta 'rechazada' o 'cancelada'." });
+      return;
+    }
+
+    const user = await User.findOne({ _id: req.params.id, tenantId: req.tenantObjectId });
+    if (!user) {
+      res.status(404).json({ error: "Solicitud no encontrada" });
+      return;
+    }
+    // Sólo se puede rechazar/cancelar una solicitud que sigue pendiente.
+    if (!user.metadata?.isSolicitud || user.metadata?.solicitudStatus === "aprobada") {
+      res.status(400).json({ error: "Esta solicitud ya fue aprobada o no está pendiente." });
+      return;
+    }
+
+    const updated = await User.findOneAndUpdate(
+      { _id: req.params.id, tenantId: req.tenantObjectId },
+      { $set: { "metadata.solicitudStatus": status } },
+      { new: true },
+    ).select("-password");
+
+    res.json(updated);
+  } catch (error) {
+    console.error("Update solicitud status error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // PUT /users/:id/approve-solicitud - Aprobar solicitud de alta y convertir en miembro del equipo
 router.put("/:id/approve-solicitud", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
@@ -917,6 +960,7 @@ router.put("/:id/approve-solicitud", requireTenant, authenticateToken, requirePe
       "metadata.activo": true,
       projectIds: projectIds.map((id: any) => new Types.ObjectId(id.toString())),
       "metadata.isSolicitud": false,
+      "metadata.solicitudStatus": "aprobada",
       "metadata.projects": userProjectRefs,
     };
 
