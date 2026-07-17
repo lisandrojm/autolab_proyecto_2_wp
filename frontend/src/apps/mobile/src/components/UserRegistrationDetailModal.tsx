@@ -1,24 +1,28 @@
 import React, { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBriefcase, faBuilding, faCalendarAlt, faClock, faDollarSign, faIdCard, faCheckCircle, faInfoCircle, faEdit } from "@fortawesome/free-solid-svg-icons";
-import { User } from "../../../../api/users";
+import { faBriefcase, faBuilding, faCalendarAlt, faClock, faDollarSign, faIdCard, faCheckCircle, faInfoCircle, faEdit, faSpinner, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { User, usersAPI } from "../../../../api/users";
 import { Modal } from "../../../../components/ui/Modal";
 import { projectsAPI, Project } from "../../../../api/projects";
 import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat";
+import { sweetAlert } from "../utils/sweetAlert";
 
 interface UserRegistrationDetailModalProps {
   user: User | null;
   isOpen: boolean;
   onClose: () => void;
   onEdit?: (user: User) => void;
+  /** Se llama tras cancelar la solicitud, para refrescar el listado. */
+  onCancelled?: () => void;
 }
 
-export const UserRegistrationDetailModal: React.FC<UserRegistrationDetailModalProps> = ({ user, isOpen, onClose, onEdit }) => {
+export const UserRegistrationDetailModal: React.FC<UserRegistrationDetailModalProps> = ({ user, isOpen, onClose, onEdit, onCancelled }) => {
   const [requestedProjects, setRequestedProjects] = useState<Project[]>([]);
   const [roleFrame, setRoleFrame] = useState<RoleFrameItem | null>(null);
   const [categoriaSat, setCategoriaSat] = useState<CategoriaSatItem | null>(null);
   const [loading, setLoading] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     if (isOpen && user && user.metadata?.isSolicitud) {
@@ -81,6 +85,31 @@ export const UserRegistrationDetailModal: React.FC<UserRegistrationDetailModalPr
 
   const getInitials = (name: string) => {
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+  };
+
+  /**
+   * Cancela (elimina) la solicitud de alta. Solo se ofrece mientras está PENDIENTE:
+   * una vez aprobada ya es un usuario real y no debe borrarse desde acá.
+   */
+  const handleCancelSolicitud = async () => {
+    if (!user) return;
+    const res = await sweetAlert.confirm(
+      "¿Cancelar solicitud?",
+      `Se eliminará la solicitud de alta de ${displayName}. Esta acción no se puede deshacer.`,
+      "Sí, cancelar",
+    );
+    if (!res.isConfirmed) return;
+    setCancelling(true);
+    try {
+      await usersAPI.rejectSolicitud(user._id);
+      sweetAlert.success("Solicitud cancelada", "La solicitud de alta fue cancelada correctamente.");
+      onCancelled?.();
+      onClose();
+    } catch (err: any) {
+      sweetAlert.error("Error", err?.response?.data?.error || "No se pudo cancelar la solicitud.");
+    } finally {
+      setCancelling(false);
+    }
   };
 
   return (
@@ -276,6 +305,20 @@ export const UserRegistrationDetailModal: React.FC<UserRegistrationDetailModalPr
             </div>
           )}
         </div>
+
+        {/* ACCIONES: cancelar solo mientras la solicitud está pendiente de aprobación */}
+        {isSolicitud && (
+          <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
+            <button
+              onClick={handleCancelSolicitud}
+              disabled={cancelling}
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50"
+            >
+              <FontAwesomeIcon icon={cancelling ? faSpinner : faXmark} className={`w-4 h-4 ${cancelling ? "animate-spin" : ""}`} />
+              {cancelling ? "Cancelando..." : "Cancelar Solicitud"}
+            </button>
+          </div>
+        )}
       </div>
     </Modal>
   );

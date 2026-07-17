@@ -171,6 +171,11 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
         }}
         user={selectedUser}
         onEdit={handleEdit}
+        onCancelled={() => {
+          setShowDetailModal(false);
+          setSelectedUser(null);
+          refetch();
+        }}
       />
     </div>
   );
