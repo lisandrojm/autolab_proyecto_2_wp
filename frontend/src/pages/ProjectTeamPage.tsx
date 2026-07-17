@@ -263,13 +263,20 @@ export const ProjectTeamPage: React.FC = () => {
 
   const effectiveViewMode = isLg ? viewMode : "cards";
   
-  /* -------------------------- Auto-Calculations --------------------------- */
+  /* -------------------------- Auto-Calculations ---------------------------
+   * El Sueldo NETO y BRUTO salen de la Categoría SAT seleccionada (ya vienen
+   * calculados en el catálogo: bruto = básico + adicional + presentismo; neto = bruto × 0.81).
+   * De ahí se derivan el diario neto (neto / 30) y la diferencia diaria contra
+   * lo que efectivamente se paga por jornada. Sin categoría → todo en 0.
+   */
   useEffect(() => {
     const sueldo_mano = wizardData.sueldo_jornada * wizardData.cantidad_jornadas_laborales;
-    const sueldo_neto = Number((sueldo_mano * 1.69894164).toFixed(2));
-    const sueldo_bruto = Number((sueldo_neto / 0.81).toFixed(2));
-    const sueldo_diario_neto = Number((sueldo_neto / 30).toFixed(2));
-    const diferencia_diaria_neto = Number((wizardData.sueldo_jornada - sueldo_diario_neto).toFixed(2));
+
+    const cat = allCategoriasSat.find((c) => String(c.data?.id) === String(wizardData.categoria_sat_id));
+    const sueldo_neto = cat ? Number(Number(cat.data?.neto ?? 0).toFixed(2)) : 0;
+    const sueldo_bruto = cat ? Number(Number(cat.data?.sueldoBruto ?? 0).toFixed(2)) : 0;
+    const sueldo_diario_neto = cat ? Number((sueldo_neto / 30).toFixed(2)) : 0;
+    const diferencia_diaria_neto = cat ? Number((wizardData.sueldo_jornada - sueldo_diario_neto).toFixed(2)) : 0;
     const sueldo_mano_texto = numeroALetras(sueldo_mano);
 
     if (
@@ -290,7 +297,7 @@ export const ProjectTeamPage: React.FC = () => {
         sueldo_mano_texto,
       }));
     }
-  }, [wizardData.sueldo_jornada, wizardData.cantidad_jornadas_laborales]);
+  }, [wizardData.sueldo_jornada, wizardData.cantidad_jornadas_laborales, wizardData.categoria_sat_id, allCategoriasSat]);
 
   /* ------------------------------ Fetchers ------------------------------- */
 
