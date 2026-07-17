@@ -31,6 +31,7 @@ import { userProjectsAPI } from "../api/userProjects";
 import { shiftsAPI, Shift } from "../api/shifts";
 import { clientsAPI } from "../api/clients";
 import { infoAPI, InfoItem } from "../api/info";
+import { categoriaSatAPI, CategoriaSatItem } from "../api/categoriasSat";
 import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
 
 const HELP_KEY = "projectTeam" as const;
@@ -172,7 +173,9 @@ export const ProjectTeamPage: React.FC = () => {
   const [allClients, setAllClients] = useState<any[]>([]);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allSedes, setAllSedes] = useState<InfoItem[]>([]);
-  const [allCategoriasSat, setAllCategoriasSat] = useState<InfoItem[]>([]);
+  // Catálogo REAL de Categorías SAT (colección `categorias-sat`, el mismo que muestra la ABM).
+  // OJO: NO usar infoAPI.listByType("categoria-sat") → esa colección está vacía.
+  const [allCategoriasSat, setAllCategoriasSat] = useState<CategoriaSatItem[]>([]);
   const [allEstados, setAllEstados] = useState<InfoItem[]>([]);
   const [allTiposContrato, setAllTiposContrato] = useState<InfoItem[]>([]);
   const [allRoleFrames, setAllRoleFrames] = useState<RoleFrameItem[]>([]);
@@ -376,7 +379,7 @@ export const ProjectTeamPage: React.FC = () => {
         setAllProjects(allProjectsResponse);
 
         // Fetch Metadata Info
-        const [sedes, cats, estados, tipos, rf] = await Promise.all([infoAPI.listByType("sede"), infoAPI.listByType("categoria-sat"), infoAPI.listByType("estado-empleado"), infoAPI.listByType("contrato"), roleFrameAPI.list()]);
+        const [sedes, cats, estados, tipos, rf] = await Promise.all([infoAPI.listByType("sede"), categoriaSatAPI.list(), infoAPI.listByType("estado-empleado"), infoAPI.listByType("contrato"), roleFrameAPI.list()]);
         setAllSedes(sedes);
         setAllCategoriasSat(cats);
         setAllEstados(estados);
