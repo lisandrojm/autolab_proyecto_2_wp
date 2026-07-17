@@ -149,7 +149,7 @@ export const UserRegistrationDetailModal: React.FC<UserRegistrationDetailModalPr
               <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Fecha de Solicitud</span>
               <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{formatDate(user.createdAt)}</span>
             </div>
-            {isSolicitud && onEdit && (
+            {isPendiente && onEdit && (
               <button
                 onClick={() => user && onEdit(user)}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white dark:bg-blue-500 text-[10px] font-bold shadow-md shadow-blue-500/20 transition-all hover:bg-blue-700 active:scale-95"
@@ -308,7 +308,7 @@ export const UserRegistrationDetailModal: React.FC<UserRegistrationDetailModalPr
         </div>
 
         {/* ACCIONES: cancelar solo mientras la solicitud está pendiente de aprobación */}
-        {isSolicitud && (
+        {isPendiente && (
           <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
             <button
               onClick={handleCancelSolicitud}
