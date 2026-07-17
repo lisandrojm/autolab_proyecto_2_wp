@@ -70,9 +70,18 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
     });
   }, [solicitudes, projectId, searchTerm]);
 
-  const getRolFrameName = (id?: string) => {
-    if (!id) return "Sin rol";
-    return roleFrames.find((rf) => rf._id === id)?.name || "Sin rol";
+  /**
+   * El rol frame de una solicitud puede venir en 3 formas según quién la creó:
+   * `metadata.roleFrameId` (singular), `metadata.rolesFrameIds[]` o `metadata.roles_frame[]`
+   * (este último es el que usa el alta desde mobile). Resolvemos las tres.
+   */
+  const getRolFrameFromMeta = (meta?: any): string => {
+    if (!meta) return "Sin rol";
+    const raw = meta.roleFrameId || meta.rolesFrameIds?.[0] || meta.roles_frame?.[0];
+    if (!raw) return "Sin rol";
+    // Puede venir como id (string) o ya populado ({_id, name}).
+    if (typeof raw === "object") return raw.name || roleFrames.find((rf) => rf._id === String(raw._id))?.name || "Sin rol";
+    return roleFrames.find((rf) => rf._id === String(raw))?.name || "Sin rol";
   };
 
   const getCategoriaName = (id?: string) => {
@@ -216,7 +225,7 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{getRolFrameName(meta?.roleFrameId)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{getRolFrameFromMeta(meta)}</td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{getCategoriaName(meta?.categoriaSatId)}</td>
                       <td className="px-4 py-3">
                         <div className="text-xs text-gray-600 dark:text-gray-400">
@@ -268,7 +277,7 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
                 </div>
                 <div>
                   <span className="text-[10px] text-blue-500 dark:text-blue-400 uppercase font-semibold">Rol/es Frame</span>
-                  <p className="font-medium text-gray-900 dark:text-white">{getRolFrameName(approvalModal.user.metadata?.roleFrameId)}</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{getRolFrameFromMeta(approvalModal.user.metadata)}</p>
                 </div>
                 <div>
                   <span className="text-[10px] text-blue-500 dark:text-blue-400 uppercase font-semibold">Categoría SAT</span>
