@@ -69,6 +69,18 @@ export const UserRegistrationDetailModal: React.FC<UserRegistrationDetailModalPr
 
   const isSolicitud = user.metadata?.isSolicitud;
   const displayName = isSolicitud ? user.metadata?.fullName || `${user.firstName} ${user.lastName}` : `${user.firstName} ${user.lastName}`;
+
+  // Estado real de la solicitud. Fallback para registros previos al campo `solicitudStatus`:
+  // si sigue marcada como solicitud es "pendiente"; si no, ya fue aprobada.
+  const status = user.metadata?.solicitudStatus || (isSolicitud ? "pendiente" : "aprobada");
+  const isPendiente = status === "pendiente";
+  const ESTADOS: Record<string, { label: string; cls: string; icon: any }> = {
+    pendiente: { label: "PENDIENTE DE APROBACIÓN", cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400", icon: faClock },
+    aprobada: { label: "APROBADA", cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400", icon: faCheckCircle },
+    rechazada: { label: "RECHAZADA", cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400", icon: faXmark },
+    cancelada: { label: "CANCELADA", cls: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400", icon: faInfoCircle },
+  };
+  const estado = ESTADOS[status] || ESTADOS.pendiente;
   
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "N/A";
@@ -126,22 +138,10 @@ export const UserRegistrationDetailModal: React.FC<UserRegistrationDetailModalPr
           <div className="flex flex-col">
             <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Estado de la solicitud</span>
             <div className="mt-1">
-              {isSolicitud ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                  <FontAwesomeIcon icon={faClock} className="text-[10px]" />
-                  PENDIENTE DE APROBACIÓN
-                </span>
-              ) : user.isActive ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                  <FontAwesomeIcon icon={faCheckCircle} className="text-[10px]" />
-                  ACTIVO
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                  <FontAwesomeIcon icon={faInfoCircle} className="text-[10px]" />
-                  INACTIVO
-                </span>
-              )}
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${estado.cls}`}>
+                <FontAwesomeIcon icon={estado.icon} className="text-[10px]" />
+                {estado.label}
+              </span>
             </div>
           </div>
           <div className="text-right flex flex-col items-end gap-3">
