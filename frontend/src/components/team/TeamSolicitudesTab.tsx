@@ -146,15 +146,29 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
   };
 
   const handleReject = async (user: User) => {
-    const result = await sweetAlert.confirm("¿Rechazar solicitud?", `Se eliminará la solicitud de ${user.metadata?.fullName || "este usuario"}. Esta acción no se puede deshacer.`, "Sí, rechazar");
+    const result = await sweetAlert.confirm("¿Rechazar solicitud?", `La solicitud de ${user.metadata?.fullName || "este usuario"} quedará registrada como rechazada.`, "Sí, rechazar");
+    if (!result.isConfirmed) return;
+
+    try {
+      await usersAPI.setSolicitudStatus(user._id, "rechazada");
+      sweetAlert.success("Solicitud Rechazada", "La solicitud quedó marcada como rechazada.");
+      fetchSolicitudes();
+    } catch (error: any) {
+      sweetAlert.error("Error", error.response?.data?.error || "Error al rechazar la solicitud");
+    }
+  };
+
+  /** Borrado definitivo: solo desde el admin, para depurar el listado. */
+  const handleDelete = async (user: User) => {
+    const result = await sweetAlert.confirm("¿Eliminar solicitud?", `Se eliminará definitivamente la solicitud de ${user.metadata?.fullName || "este usuario"}. Esta acción no se puede deshacer.`, "Sí, eliminar");
     if (!result.isConfirmed) return;
 
     try {
       await usersAPI.rejectSolicitud(user._id);
-      sweetAlert.success("Solicitud Rechazada", "La solicitud ha sido eliminada.");
+      sweetAlert.success("Solicitud Eliminada", "La solicitud fue eliminada.");
       fetchSolicitudes();
     } catch (error: any) {
-      sweetAlert.error("Error", error.response?.data?.error || "Error al rechazar la solicitud");
+      sweetAlert.error("Error", error.response?.data?.error || "Error al eliminar la solicitud");
     }
   };
 
