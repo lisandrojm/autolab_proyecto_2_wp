@@ -88,16 +88,23 @@ async function rpc(tenantId: string, cfg: TenantDropboxConfig, endpoint: string,
   return data;
 }
 
-/** Valida las credenciales y devuelve el email de la cuenta conectada. */
+/**
+ * Valida las credenciales. La conexión es válida si el refresh token funciona (obtener
+ * el access token ya valida appKey/appSecret/refreshToken). El email de la cuenta es
+ * best-effort: requiere el scope account_info.read; si no está, NO rompe la conexión.
+ */
 export async function verifyAccount(tenantId: string, cfg: TenantDropboxConfig): Promise<{ email?: string; name?: string }> {
-  const token = await getAccessToken(tenantId, cfg);
-  // get_current_account no lleva argumentos: Dropbox exige un Content-Type de su lista
-  // (usamos el "cors-hack" que soporta body nulo). Sin esto, axios manda
-  // application/x-www-form-urlencoded por defecto y Dropbox lo rechaza.
-  const { data } = await axios.post(`${RPC}/users/get_current_account`, null, {
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "text/plain; charset=dropbox-cors-hack" },
-  });
-  return { email: data?.email, name: data?.name?.display_name };
+  const token = await getAccessToken(tenantId, cfg); // lanza si las credenciales son inválidas
+  try {
+    // get_current_account no lleva argumentos: body JSON `null` (string "null") + application/json.
+    const { data } = await axios.post(`${RPC}/users/get_current_account`, "null", {
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    });
+    return { email: data?.email, name: data?.name?.display_name };
+  } catch (e: any) {
+    console.warn("[Dropbox] get_current_account falló (se conecta igual):", e?.response?.data?.error_summary || e?.message);
+    return {};
+  }
 }
 
 const mapEntry = (e: any): DropboxEntry => ({

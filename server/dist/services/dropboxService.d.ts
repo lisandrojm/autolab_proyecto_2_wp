@@ -18,7 +18,11 @@ export declare function getTenantDropboxConfig(tenant: any): TenantDropboxConfig
 export declare function isTenantDropboxConnected(tenant: any): boolean;
 /** Invalida el token cacheado del tenant (al desconectar o cambiar credenciales). */
 export declare function clearTenantToken(tenantId: string): void;
-/** Valida las credenciales y devuelve el email de la cuenta conectada. */
+/**
+ * Valida las credenciales. La conexión es válida si el refresh token funciona (obtener
+ * el access token ya valida appKey/appSecret/refreshToken). El email de la cuenta es
+ * best-effort: requiere el scope account_info.read; si no está, NO rompe la conexión.
+ */
 export declare function verifyAccount(tenantId: string, cfg: TenantDropboxConfig): Promise<{
     email?: string;
     name?: string;
