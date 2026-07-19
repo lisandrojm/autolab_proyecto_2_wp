@@ -65,8 +65,11 @@ async function rpc(tenantId, cfg, endpoint, body) {
 /** Valida las credenciales y devuelve el email de la cuenta conectada. */
 export async function verifyAccount(tenantId, cfg) {
     const token = await getAccessToken(tenantId, cfg);
+    // get_current_account no lleva argumentos: Dropbox exige un Content-Type de su lista
+    // (usamos el "cors-hack" que soporta body nulo). Sin esto, axios manda
+    // application/x-www-form-urlencoded por defecto y Dropbox lo rechaza.
     const { data } = await axios.post(`${RPC}/users/get_current_account`, null, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "text/plain; charset=dropbox-cors-hack" },
     });
     return { email: data?.email, name: data?.name?.display_name };
 }
