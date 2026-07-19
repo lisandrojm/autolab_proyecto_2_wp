@@ -9,12 +9,15 @@ const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 router.use(requireTenant, authenticateToken);
 const isAdmin = (req) => (req.user?.roles || []).some((r) => ["admin", "superadmin"].includes(r.toLowerCase()));
-// Traduce errores de Dropbox a algo legible.
+// Traduce errores de Dropbox a algo legible (cubre errores RPC y de OAuth).
 function dropboxError(res, error) {
     const dbx = error?.response?.data;
-    const summary = dbx?.error_summary || (typeof dbx === "string" ? dbx : "") || error?.message || "Error de Dropbox";
-    console.error("[Dropbox]", summary, dbx || "");
-    res.status(400).json({ error: `Dropbox: ${summary}` });
+    const oauth = dbx?.error_description || (typeof dbx?.error === "string" ? dbx.error : "");
+    const summary = dbx?.error_summary || oauth || (typeof dbx === "string" ? dbx : "") || error?.message || "Error de Dropbox";
+    // Pista para el error más común: pegar un access token en vez de un refresh token.
+    const hint = oauth === "invalid_grant" ? " (¿el refresh token es válido y de tipo offline? no un access token)" : oauth === "invalid_client" ? " (revisá App key / App secret)" : "";
+    console.error("[Dropbox]", summary, JSON.stringify(dbx || {}));
+    res.status(400).json({ error: `Dropbox: ${summary}${hint}` });
 }
 // GET /dropbox/status - ¿está conectado este tenant?
 router.get("/status", async (req, res) => {
