@@ -34,6 +34,9 @@ const envSchema = z.object({
   MONGO_DB_NAME: z.string().min(1),
   JWT_SECRET: z.string().min(1),
   JWT_EXPIRES_IN: z.string().default("7d"),
+  // Llave del server para cifrar secretos de integraciones por tenant (Dropbox, etc.).
+  // Opcional: si no está, se deriva del JWT_SECRET.
+  ENCRYPTION_KEY: z.string().optional(),
   CORS_ORIGIN: z.string().default("*"),
   TENANCY_HEADER: z.string().default("X-Tenant-Id"),
   SEED_TENANT_SLUG: z.string().default("demo-tenant"),

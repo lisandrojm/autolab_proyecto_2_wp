@@ -9,6 +9,7 @@ export declare const env: {
     MONGO_DB_NAME?: string;
     JWT_SECRET?: string;
     JWT_EXPIRES_IN?: string;
+    ENCRYPTION_KEY?: string;
     CORS_ORIGIN?: string;
     TENANCY_HEADER?: string;
     SEED_TENANT_SLUG?: string;

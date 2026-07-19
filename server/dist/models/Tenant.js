@@ -35,6 +35,16 @@ const tenantSchema = new Schema({
         language: { type: String, default: "en" },
         features: [{ type: String }],
     },
+    integrations: {
+        dropbox: {
+            appKey: { type: String },
+            appSecretEnc: { type: String },
+            refreshTokenEnc: { type: String },
+            rootPath: { type: String, default: "/HelloSign" },
+            accountEmail: { type: String },
+            connectedAt: { type: Date },
+        },
+    },
     subscription: {
         plan: { type: String, enum: ["free", "basic", "pro", "enterprise"], default: "free" },
         status: { type: String, enum: ["active", "suspended", "cancelled"], default: "active" },

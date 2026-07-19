@@ -31,6 +31,16 @@ export interface ITenant extends Document {
     department?: string;
   };
   settings: { timezone: string; currency: string; language: string; features: string[] };
+  integrations?: {
+    dropbox?: {
+      appKey?: string;
+      appSecretEnc?: string; // cifrado en reposo
+      refreshTokenEnc?: string; // cifrado en reposo
+      rootPath?: string; // ej: "/HelloSign"
+      accountEmail?: string; // solo para mostrar quién está conectado
+      connectedAt?: Date;
+    };
+  };
   subscription: { plan: "free" | "basic" | "pro" | "enterprise"; status: "active" | "suspended" | "cancelled"; expiresAt?: Date };
   usage: {
     users: { current: number; limit: number };
@@ -105,6 +115,17 @@ const tenantSchema = new Schema<ITenant>(
       currency: { type: String, default: "USD" },
       language: { type: String, default: "en" },
       features: [{ type: String }],
+    },
+
+    integrations: {
+      dropbox: {
+        appKey: { type: String },
+        appSecretEnc: { type: String },
+        refreshTokenEnc: { type: String },
+        rootPath: { type: String, default: "/HelloSign" },
+        accountEmail: { type: String },
+        connectedAt: { type: Date },
+      },
     },
 
     subscription: {

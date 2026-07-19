@@ -81,6 +81,7 @@ const userSchema = new Schema({
         dailyRate: Number,
         isReplacement: Boolean,
         isSolicitud: { type: Boolean, default: false },
+        solicitudStatus: { type: String, enum: ["pendiente", "aprobada", "rechazada", "cancelada"] },
         projectIds: [{ type: Schema.Types.ObjectId, ref: "Project" }],
         roles_frame: {
             type: [{ type: Schema.Types.ObjectId, ref: "RoleFrame" }],

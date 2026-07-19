@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import { Types } from 'mongoose';
 /**
  * Asegura que un tenant tenga los roles de sistema configurados correctamente
  */

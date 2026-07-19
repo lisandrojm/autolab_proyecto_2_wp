@@ -35,6 +35,16 @@ export interface ITenant extends Document {
         language: string;
         features: string[];
     };
+    integrations?: {
+        dropbox?: {
+            appKey?: string;
+            appSecretEnc?: string;
+            refreshTokenEnc?: string;
+            rootPath?: string;
+            accountEmail?: string;
+            connectedAt?: Date;
+        };
+    };
     subscription: {
         plan: "free" | "basic" | "pro" | "enterprise";
         status: "active" | "suspended" | "cancelled";

@@ -211,9 +211,30 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
     // de proyectos/contratos. Evita el populate anidado pesado que de otro
     // modo escala con (usuarios x proyectos x contratos) y produce timeouts.
     const lightweight = req.query.lightweight === "true";
+    // slimProjects: no trae los contratos ni el populate anidado de metadata.projects.
+    // Lo usa la búsqueda de candidatos (que no muestra contratos): baja mucho la memoria.
+    // El contrato se trae on-demand al abrir el wizard vía GET /users/:id.
+    const slimProjects = req.query.slimProjects === "true";
 
-    // Debug model names if needed
-    // console.log("Registered models:", mongoose.modelNames());
+    const projectsPopulate: any = slimProjects
+      ? {
+          path: "metadata.projects",
+          model: UserProject,
+          select: "projectId nombre_rol_frame nombre_proyecto nombre_sede",
+        }
+      : {
+          path: "metadata.projects",
+          model: UserProject,
+          select: "projectId positionId levelId areaId nombre_rol_frame nombre_proyecto contracts",
+          populate: [
+            { path: "positionId", select: "name", model: Position },
+            { path: "levelId", select: "name", model: Level },
+            { path: "areaId", select: "name", model: Area },
+            // NOTA: no traer teamConfig/coordinatorAssignments aquí: son arrays
+            // potencialmente enormes que no se usan en esta lista y disparan timeouts.
+            { path: "projectId", select: "name status clientId", model: Project },
+          ],
+        };
 
     let query: any = lightweight
       ? User.find(filter).select("firstName lastName email metadata.id metadata.activo metadata.isSolicitud roles").populate({ path: "roles", select: "name", model: Role })
@@ -232,19 +253,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
           })
           .populate({ path: "clientIds", select: "name", model: Client })
           .populate({ path: "tenantId", select: "name", model: Tenant })
-          .populate({
-            path: "metadata.projects",
-            model: UserProject,
-            select: "projectId positionId levelId areaId nombre_rol_frame nombre_proyecto contracts",
-            populate: [
-              { path: "positionId", select: "name", model: Position },
-              { path: "levelId", select: "name", model: Level },
-              { path: "areaId", select: "name", model: Area },
-              // NOTA: no traer teamConfig/coordinatorAssignments aquí: son arrays
-              // potencialmente enormes que no se usan en esta lista y disparan timeouts.
-              { path: "projectId", select: "name status clientId", model: Project },
-            ],
-          })
+          .populate(projectsPopulate)
           .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame });
 
     query = query.sort({ _id: -1 }).skip(skip).limit(limitNum).lean();

@@ -22,6 +22,8 @@ import { vacationsAPI, VacationRequest } from "../api/vacations";
 import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
 import { TeamCoordinadoresTab } from "../components/team/TeamCoordinadoresTab";
 import { EmployeeContractsModal } from "../components/team/EmployeeContractsModal";
+import { TeamDropboxTab } from "../components/team/TeamDropboxTab";
+import { faDropbox } from "@fortawesome/free-brands-svg-icons";
 import { contratoFrameAPI, ContratoFrameItem } from "../api/contratosFrame";
 import { releasesAPI, Release } from "../api/release";
 import { Area, areasAPI } from "../api/areas";
@@ -226,7 +228,7 @@ export const ProjectTeamPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const [showAddModal, setShowAddModal] = useState(false);
   const [isLg, setIsLg] = useState(window.innerWidth >= 1024);
-  const [activeTab, setActiveTab] = useState<"equipo" | "solicitudes" | "coordinadores">("equipo");
+  const [activeTab, setActiveTab] = useState<"equipo" | "solicitudes" | "coordinadores" | "dropbox">("equipo");
   const [solicitudesCount, setSolicitudesCount] = useState(0);
   const [showCandidatesInfo, setShowCandidatesInfo] = useState(false);
 
@@ -437,27 +439,25 @@ export const ProjectTeamPage: React.FC = () => {
     }
 
     const delayDebounceFn = setTimeout(async () => {
-      // If we have 1 character, don't search yet to avoid noise
-      if (searchTerm.length === 1) {
+      // Requiere al menos 2 caracteres. Antes, con búsqueda vacía se traían 500 usuarios
+      // con populate pesado (riesgo de OOM). La UI ya pide "Escribe al menos 2 caracteres".
+      if (searchTerm.length < 2) {
         setCandidateUsers([]);
         return;
       }
 
       try {
         setSearchingCandidates(true);
-        // Fetch active users. If searchTerm is empty, it returns first page of active users.
-        const params: any = { limit: 500, metadataActivo: "true" };
-        if (searchTerm.length >= 2) {
-          params.email = searchTerm;
-        }
-        const response = await usersAPI.list(params);
+        // Búsqueda acotada por nombre/email + slimProjects (sin contratos) → carga liviana.
+        // El contrato para el pre-fill del wizard se trae on-demand en handleOpenWizard.
+        const response = await usersAPI.list({ limit: 100, metadataActivo: "true", email: searchTerm, slimProjects: true });
         setCandidateUsers(response.users);
       } catch (error) {
         console.error("Error fetching candidates:", error);
       } finally {
         setSearchingCandidates(false);
       }
-    }, searchTerm.length >= 2 ? 500 : 0); // No debounce for initial load or empty search
+    }, 400);
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm, showAddModal]);
@@ -841,8 +841,17 @@ export const ProjectTeamPage: React.FC = () => {
 
   /* ------------------------------- Actions -------------------------------- */
 
-  const handleOpenWizard = (userId: string) => {
-    const user = allUsers.find((u) => u._id === userId) || candidateUsers.find((u) => u._id === userId);
+  const handleOpenWizard = async (userId: string) => {
+    // La lista de candidatos viene "slim" (sin contratos) para no cargar 100 historiales
+    // de una. Traemos el usuario completo (con contratos) on-demand para el pre-fill.
+    const cached = allUsers.find((u) => u._id === userId) || candidateUsers.find((u) => u._id === userId);
+    let user = cached;
+    try {
+      const full = await usersAPI.get(userId);
+      if (full) user = full;
+    } catch (e) {
+      console.error("No se pudo traer el usuario completo, uso el de la lista:", e);
+    }
     if (!user) return;
 
     // Attempt to find existing data to pre-fill from user history
@@ -1132,8 +1141,8 @@ export const ProjectTeamPage: React.FC = () => {
       // Use the new thorough removal endpoint
       await projectsAPI.removeMember(project._id, userId);
 
-      // Refresh local state
-      const [updatedProject, usersData] = await Promise.all([projectsAPI.getProject(project._id), usersAPI.list({ limit: 10000 })]);
+      // Refresh local state (solo los miembros del proyecto, no todo el tenant → evita OOM)
+      const [updatedProject, usersData] = await Promise.all([projectsAPI.getProject(project._id), usersAPI.list({ projectId: project._id, limit: 500 })]);
 
       setProject(updatedProject);
       setTeamConfig(updatedProject.teamConfig || []);
@@ -1499,6 +1508,10 @@ export const ProjectTeamPage: React.FC = () => {
                 Solicitudes
                 {solicitudesCount > 0 && <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] text-[10px] font-bold rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1">{solicitudesCount}</span>}
               </button>
+              <button onClick={() => setActiveTab("dropbox")} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "dropbox" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+                <FontAwesomeIcon icon={faDropbox} className="text-xs" />
+                Dropbox
+              </button>
             </div>
             {/* The right side portal target */}
             <div id="tab-actions-portal" className="shrink-0 mb-1 lg:mb-0"></div>
@@ -1621,7 +1634,7 @@ export const ProjectTeamPage: React.FC = () => {
                 projectId={projectId!}
                 project={project}
                 onApproved={async () => {
-                  const [projectData, usersData] = await Promise.all([projectsAPI.getProject(projectId!), usersAPI.list({ limit: 10000 })]);
+                  const [projectData, usersData] = await Promise.all([projectsAPI.getProject(projectId!), usersAPI.list({ projectId: projectId!, limit: 500 })]);
                   setProject(projectData);
                   setTeamConfig(projectData.teamConfig || []);
                   setAllUsers(usersData.users);
@@ -1630,6 +1643,8 @@ export const ProjectTeamPage: React.FC = () => {
                 }}
               />
             )}
+
+            {activeTab === "dropbox" && project && <TeamDropboxTab projectId={projectId!} project={project} />}
           </div>
 
           {/* Modals */}

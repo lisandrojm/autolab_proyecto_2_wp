@@ -90,7 +90,10 @@ export interface IUserMetadata {
     schedule?: string;
     dailyRate?: number;
     isReplacement?: boolean;
+    /** true mientras el registro NO es un usuario real (pendiente/rechazada/cancelada). */
     isSolicitud?: boolean;
+    /** Ciclo de vida de la solicitud de alta (espeja los estados de un Pedido). */
+    solicitudStatus?: "pendiente" | "aprobada" | "rechazada" | "cancelada";
     projectIds?: Types.ObjectId[];
     rolesFrameIds?: string[] | Types.ObjectId[];
 }

@@ -149,6 +149,10 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
         if (req.query.isSolicitud !== undefined) {
             andConditions.push({ "metadata.isSolicitud": req.query.isSolicitud === "true" });
         }
+        // Trae TODA solicitud de alta sin importar su estado (pendiente/aprobada/rechazada/cancelada).
+        if (req.query.solicitudAny === "true") {
+            andConditions.push({ "metadata.solicitudStatus": { $exists: true, $ne: null } });
+        }
         if (req.query.metadataActivo !== undefined) {
             andConditions.push({ "metadata.activo": req.query.metadataActivo === "true" });
         }
@@ -182,8 +186,29 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
         // de proyectos/contratos. Evita el populate anidado pesado que de otro
         // modo escala con (usuarios x proyectos x contratos) y produce timeouts.
         const lightweight = req.query.lightweight === "true";
-        // Debug model names if needed
-        // console.log("Registered models:", mongoose.modelNames());
+        // slimProjects: no trae los contratos ni el populate anidado de metadata.projects.
+        // Lo usa la búsqueda de candidatos (que no muestra contratos): baja mucho la memoria.
+        // El contrato se trae on-demand al abrir el wizard vía GET /users/:id.
+        const slimProjects = req.query.slimProjects === "true";
+        const projectsPopulate = slimProjects
+            ? {
+                path: "metadata.projects",
+                model: UserProject,
+                select: "projectId nombre_rol_frame nombre_proyecto nombre_sede",
+            }
+            : {
+                path: "metadata.projects",
+                model: UserProject,
+                select: "projectId positionId levelId areaId nombre_rol_frame nombre_proyecto contracts",
+                populate: [
+                    { path: "positionId", select: "name", model: Position },
+                    { path: "levelId", select: "name", model: Level },
+                    { path: "areaId", select: "name", model: Area },
+                    // NOTA: no traer teamConfig/coordinatorAssignments aquí: son arrays
+                    // potencialmente enormes que no se usan en esta lista y disparan timeouts.
+                    { path: "projectId", select: "name status clientId", model: Project },
+                ],
+            };
         let query = lightweight
             ? User.find(filter).select("firstName lastName email metadata.id metadata.activo metadata.isSolicitud roles").populate({ path: "roles", select: "name", model: Role })
             : User.find(filter)
@@ -201,19 +226,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
             })
                 .populate({ path: "clientIds", select: "name", model: Client })
                 .populate({ path: "tenantId", select: "name", model: Tenant })
-                .populate({
-                path: "metadata.projects",
-                model: UserProject,
-                select: "projectId positionId levelId areaId nombre_rol_frame nombre_proyecto contracts",
-                populate: [
-                    { path: "positionId", select: "name", model: Position },
-                    { path: "levelId", select: "name", model: Level },
-                    { path: "areaId", select: "name", model: Area },
-                    // NOTA: no traer teamConfig/coordinatorAssignments aquí: son arrays
-                    // potencialmente enormes que no se usan en esta lista y disparan timeouts.
-                    { path: "projectId", select: "name status clientId", model: Project },
-                ],
-            })
+                .populate(projectsPopulate)
                 .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame });
         query = query.sort({ _id: -1 }).skip(skip).limit(limitNum).lean();
         const [users, total] = await Promise.all([query.exec(), User.countDocuments(filter).exec()]);
@@ -285,6 +298,10 @@ router.post("/", requireTenant, authenticateToken, requirePermission("admin_user
         const data = createUserSchema.parse(req.body);
         if (data.levelId === null) {
             data.levelId = undefined;
+        }
+        // Toda solicitud de alta nace "pendiente" (ciclo de vida tipo Pedido).
+        if (data.metadata?.isSolicitud === true && !data.metadata.solicitudStatus) {
+            data.metadata.solicitudStatus = "pendiente";
         }
         // Verificar que no existe usuario con el mismo email en el tenant
         const existingUser = await User.findOne({
@@ -679,6 +696,32 @@ router.patch("/:id/confirmar-cambio-cuenta", requireTenant, authenticateToken, r
         res.status(500).json({ error: "Internal server error" });
     }
 });
+// PATCH /users/:id/solicitud-status - Cambiar el estado de una solicitud (rechazada/cancelada) SIN borrarla
+router.patch("/:id/solicitud-status", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
+    try {
+        const { status } = req.body || {};
+        if (!["rechazada", "cancelada"].includes(String(status))) {
+            res.status(400).json({ error: "Estado inválido. Sólo se acepta 'rechazada' o 'cancelada'." });
+            return;
+        }
+        const user = await User.findOne({ _id: req.params.id, tenantId: req.tenantObjectId });
+        if (!user) {
+            res.status(404).json({ error: "Solicitud no encontrada" });
+            return;
+        }
+        // Sólo se puede rechazar/cancelar una solicitud que sigue pendiente.
+        if (!user.metadata?.isSolicitud || user.metadata?.solicitudStatus === "aprobada") {
+            res.status(400).json({ error: "Esta solicitud ya fue aprobada o no está pendiente." });
+            return;
+        }
+        const updated = await User.findOneAndUpdate({ _id: req.params.id, tenantId: req.tenantObjectId }, { $set: { "metadata.solicitudStatus": status } }, { new: true }).select("-password");
+        res.json(updated);
+    }
+    catch (error) {
+        console.error("Update solicitud status error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 // PUT /users/:id/approve-solicitud - Aprobar solicitud de alta y convertir en miembro del equipo
 router.put("/:id/approve-solicitud", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
     try {
@@ -793,6 +836,7 @@ router.put("/:id/approve-solicitud", requireTenant, authenticateToken, requirePe
             "metadata.activo": true,
             projectIds: projectIds.map((id) => new Types.ObjectId(id.toString())),
             "metadata.isSolicitud": false,
+            "metadata.solicitudStatus": "aprobada",
             "metadata.projects": userProjectRefs,
         };
         // Set firstName/lastName from fullName

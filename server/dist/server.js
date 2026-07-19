@@ -65,8 +65,20 @@ import { ProjectPdfConfigRoutes } from "./routes/projectPdfConfig.js";
 import { shiftRoutes } from "./routes/shifts.js";
 import { holidayRoutes } from "./routes/holidays.js";
 import { userProjectRoutes } from "./routes/userProjects.js";
+import { dropboxRoutes } from "./routes/dropbox.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+// ───────────────── Red de seguridad a nivel proceso ─────────────────
+// Sin estos handlers, una promesa rechazada sin catch (p.ej. un endpoint async
+// que lanza sin try/catch) tira abajo TODO el server (Node cierra el proceso),
+// y a partir de ahí cualquier request falla con CORS/ERR_FAILED. Logueamos el
+// error real y mantenemos el server vivo para no cortar el servicio a todos.
+process.on("unhandledRejection", (reason) => {
+    console.error("🛑 [unhandledRejection] El server sigue vivo. Motivo:", reason);
+});
+process.on("uncaughtException", (err) => {
+    console.error("🛑 [uncaughtException] El server sigue vivo. Error:", err);
+});
 const app = express();
 const PORT = Number(env.PORT) || 8080;
 const USE_HTTPS = String(env.USE_HTTPS) === "true";
@@ -170,6 +182,7 @@ app.use("/api/v1/activity-reports", RequestRoutes);
 app.use("/api/v1/shifts", shiftRoutes);
 app.use("/api/v1/holidays", holidayRoutes);
 app.use("/api/v1/user-projects", userProjectRoutes);
+app.use("/api/v1/dropbox", dropboxRoutes);
 // ───────────────── 404 + errores (al final) ─────────────────
 app.use(notFoundHandler);
 app.use(errorHandler);
