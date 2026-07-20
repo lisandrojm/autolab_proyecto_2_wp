@@ -36,6 +36,8 @@ interface NewsReportsModalProps {
   reports: FormattedReport[];
   allUsers: User[];
   allProjects: { id: string; name: string }[];
+  /** Si se provee, al abrir el modal se preselecciona este proyecto (por _id) en el filtro de Proyecto. */
+  initialProjectFilter?: string;
 }
 
 interface EmployeeStats {
@@ -536,11 +538,18 @@ const DailyDetailModal: React.FC<DailyDetailModalProps> = ({ isOpen, onClose, st
   );
 };
 
-export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onClose, reports, allUsers, allProjects }) => {
+export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onClose, reports, allUsers, allProjects, initialProjectFilter }) => {
   const navigate = useNavigate();
   const [dateFrom, setDateFrom] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
   const [projectFilter, setProjectFilter] = useState("all");
+
+  // Preselecciona el proyecto en el filtro cuando el modal se abre con un proyecto indicado (shortcut desde Proyectos).
+  useEffect(() => {
+    if (isOpen && initialProjectFilter && initialProjectFilter.trim()) {
+      setProjectFilter(initialProjectFilter);
+    }
+  }, [isOpen, initialProjectFilter]);
   const [searchTerm, setSearchTerm] = useState("");
   const [contractModal, setContractModal] = useState<{ open: boolean; employeeName: string; data: UserProjectMetadata[] }>({ open: false, employeeName: "", data: [] });
   const [totalDetail, setTotalDetail] = useState<{ open: boolean; stats: EmployeeStats | null }>({ open: false, stats: null });

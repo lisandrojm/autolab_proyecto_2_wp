@@ -10,6 +10,8 @@ interface CardAction {
   title: string;
   variant?: "default" | "blue" | "success" | "warning" | "danger";
   disabled?: boolean;
+  /** Muestra un tooltip visible al pasar el mouse (desktop). Si no se define, sólo se usa el title nativo. */
+  tooltip?: string;
 }
 
 interface CardBadge {
@@ -264,18 +266,24 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
           {footer.actions?.length ? (
             <div className="flex items-center space-x-2">
               {footer.actions.map((action, index) => (
-                <button
-                  key={index}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    action.onClick(e);
-                  }}
-                  disabled={action.disabled}
-                  className={`p-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${getActionClasses(action.variant)}`}
-                  title={action.title}
-                >
-                  <FontAwesomeIcon icon={action.icon} className="h-4 w-4" />
-                </button>
+                <div key={index} className="relative group/action flex items-center">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      action.onClick(e);
+                    }}
+                    disabled={action.disabled}
+                    className={`p-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${getActionClasses(action.variant)}`}
+                    title={action.tooltip ? undefined : action.title}
+                  >
+                    <FontAwesomeIcon icon={action.icon} className="h-4 w-4" />
+                  </button>
+                  {action.tooltip && (
+                    <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover/action:opacity-100 dark:bg-gray-700">
+                      {action.tooltip}
+                    </span>
+                  )}
+                </div>
               ))}
             </div>
           ) : null}

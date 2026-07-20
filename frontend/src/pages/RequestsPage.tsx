@@ -206,6 +206,7 @@ export const RequestsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showReportsModal, setShowReportsModal] = useState(false);
+  const [reportsInitialProject, setReportsInitialProject] = useState("");
 
   const filteredReports = useMemo(() => {
     let result = reports;
@@ -232,6 +233,7 @@ export const RequestsPage: React.FC = () => {
   // Check for URL params to auto-open report detail
   useEffect(() => {
     const reportId = searchParams.get("report");
+    const reportsProject = searchParams.get("reportsProject");
     if (reportId) {
       const report = reports.find((r) => r.id === reportId);
       if (report) {
@@ -240,6 +242,11 @@ export const RequestsPage: React.FC = () => {
         setDetailTab("attendance");
       }
       // Clean up URL after handling
+      setSearchParams({}, { replace: true });
+    } else if (reportsProject) {
+      // Shortcut desde Proyectos: abrir el modal de Reportes de Novedades con el proyecto filtrado
+      setReportsInitialProject(reportsProject);
+      setShowReportsModal(true);
       setSearchParams({}, { replace: true });
     }
   }, [searchParams, setSearchParams, reports]);
@@ -1263,7 +1270,7 @@ export const RequestsPage: React.FC = () => {
         </div>
       </Modal>
 
-      <NewsReportsModal isOpen={showReportsModal} onClose={() => setShowReportsModal(false)} reports={reports as any} allUsers={allUsers} allProjects={allProjects} />
+      <NewsReportsModal isOpen={showReportsModal} onClose={() => { setShowReportsModal(false); setReportsInitialProject(""); }} reports={reports as any} allUsers={allUsers} allProjects={allProjects} initialProjectFilter={reportsInitialProject} />
     </PageLayout>
   );
 };

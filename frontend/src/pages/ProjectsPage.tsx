@@ -15,7 +15,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { sweetAlert } from "../utils/sweetAlert";
 import { emitProjectsChanged } from "../utils/navbarEvents";
-import { faBriefcase, faBuilding, faTable, faGrip, faPlus, faLayerGroup, faEdit, faTrash, faInfoCircle, faUserTie, faCalendarDay, faCalendarCheck, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faBriefcase, faBuilding, faTable, faGrip, faPlus, faLayerGroup, faEdit, faTrash, faInfoCircle, faUserTie, faCalendarDay, faCalendarCheck, faUsers, faFileLines, faBell } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -375,6 +375,36 @@ export const ProjectsPage: React.FC = () => {
                   leftContent: <div className="text-xs text-gray-500 dark:text-gray-500">Creado: {new Date(project.createdAt).toLocaleDateString()}</div>,
                   actions: [
                     {
+                      icon: faFileLines,
+                      onClick: (e: any) => {
+                        e.stopPropagation();
+                        // TODO: destino de Reportes (a definir)
+                      },
+                      title: "Reportes",
+                      tooltip: "Reportes",
+                      variant: "default",
+                    },
+                    {
+                      icon: faBell,
+                      onClick: (e: any) => {
+                        e.stopPropagation();
+                        navigate(`/requests?reportsProject=${project._id}`);
+                      },
+                      title: "Novedades",
+                      tooltip: "Novedades",
+                      variant: "default",
+                    },
+                    {
+                      icon: faUsers,
+                      onClick: (e: any) => {
+                        e.stopPropagation();
+                        navigate(`/projects/${project._id}/team`);
+                      },
+                      title: "Equipo",
+                      tooltip: "Equipo",
+                      variant: "default",
+                    },
+                    {
                       icon: faEdit,
                       onClick: (e: any) => {
                         e.stopPropagation();
@@ -395,6 +425,16 @@ export const ProjectsPage: React.FC = () => {
                   ],
                 }}
               >
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4 pb-4 border-b border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400" title="Fecha desde">
+                    <FontAwesomeIcon icon={faCalendarDay} className="h-3.5 w-3.5 text-gray-400" />
+                    <span>{project.startDate ? new Date(project.startDate).toLocaleDateString() : "—"}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400" title="Fecha hasta">
+                    <FontAwesomeIcon icon={faCalendarCheck} className="h-3.5 w-3.5 text-gray-400" />
+                    <span>{project.endDate ? new Date(project.endDate).toLocaleDateString() : "—"}</span>
+                  </div>
+                </div>
                 {project.metadataResolutions?.sede && (
                   <div className="flex flex-col">
                     <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex gap-1 items-center">
@@ -404,6 +444,13 @@ export const ProjectsPage: React.FC = () => {
                     <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">{project.metadataResolutions.sede.name || project.metadataResolutions.sede.data?.nombre || "Sede"}</span>
                   </div>
                 )}
+                <div className="flex flex-col mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex gap-1 items-center">
+                    <FontAwesomeIcon icon={faUsers} className="h-3 w-3 text-gray-400" />
+                    Miembros
+                  </label>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">{project.metadataUserCount ?? 0}</span>
+                </div>
                 {project.metadataResolutions?.responsable && (
                   <div className="flex flex-col mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
                     <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex gap-1 items-center">
@@ -415,20 +462,6 @@ export const ProjectsPage: React.FC = () => {
                     </span>
                   </div>
                 )}
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-                  <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400" title="Fecha desde">
-                    <FontAwesomeIcon icon={faCalendarDay} className="h-3 w-3 text-gray-400" />
-                    <span>{project.startDate ? new Date(project.startDate).toLocaleDateString() : "—"}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400" title="Fecha hasta">
-                    <FontAwesomeIcon icon={faCalendarCheck} className="h-3 w-3 text-gray-400" />
-                    <span>{project.endDate ? new Date(project.endDate).toLocaleDateString() : "—"}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400" title="Personas asignadas">
-                    <FontAwesomeIcon icon={faUsers} className="h-3 w-3 text-gray-400" />
-                    <span>{project.metadataUserCount ?? 0}</span>
-                  </div>
-                </div>
               </Card>
             );
           })}
