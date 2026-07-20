@@ -140,6 +140,21 @@ export async function getTemporaryLink(tenantId: string, cfg: TenantDropboxConfi
   return data.link as string;
 }
 
+/** Descarga el contenido de un archivo como Buffer (para armar ZIPs, etc.). */
+export async function downloadFileContent(tenantId: string, cfg: TenantDropboxConfig, path: string): Promise<Buffer> {
+  const token = await getAccessToken(tenantId, cfg);
+  const { data } = await axios.post(`${CONTENT}/files/download`, null, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Dropbox-API-Arg": JSON.stringify({ path }),
+    },
+    responseType: "arraybuffer",
+    maxBodyLength: Infinity,
+    maxContentLength: Infinity,
+  });
+  return Buffer.from(data);
+}
+
 export async function uploadFile(tenantId: string, cfg: TenantDropboxConfig, path: string, buffer: Buffer): Promise<DropboxEntry> {
   const token = await getAccessToken(tenantId, cfg);
   const arg = { path, mode: "add", autorename: true, mute: false, strict_conflict: false };

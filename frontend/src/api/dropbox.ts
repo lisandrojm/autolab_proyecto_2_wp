@@ -43,6 +43,11 @@ export const dropboxAPI = {
     return data.link;
   },
 
+  async downloadZip(paths: string[]): Promise<Blob> {
+    const { data } = await axios.post("/dropbox/download-zip", { paths }, { responseType: "blob" });
+    return data;
+  },
+
   async upload(path: string, file: File): Promise<DropboxEntry> {
     const form = new FormData();
     form.append("path", path);

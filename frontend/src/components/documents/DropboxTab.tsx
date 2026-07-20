@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFolder, faFileLines, faDownload, faTrash, faPen, faUpload, faFolderPlus, faRotate, faChevronRight, faSpinner, faTriangleExclamation, faPlug } from "@fortawesome/free-solid-svg-icons";
+import { faFolder, faFileLines, faDownload, faTrash, faPen, faUpload, faFolderPlus, faRotate, faChevronRight, faSpinner, faTriangleExclamation, faPlug, faFileZipper } from "@fortawesome/free-solid-svg-icons";
 import { faDropbox } from "@fortawesome/free-brands-svg-icons";
 import { dropboxAPI, DropboxEntry, DropboxStatus } from "../../api/dropbox";
 import { sweetAlert } from "../../utils/sweetAlert";
@@ -26,7 +26,10 @@ export const DropboxTab: React.FC = () => {
   const [rootPath, setRootPath] = useState("/HelloSign");
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const MAX_ZIP_FILES = 50; // debe coincidir con ZIP_MAX_FILES del backend
 
   // Form de conexión (solo admin, cuando no está conectado)
   const [form, setForm] = useState({ appKey: "", appSecret: "", refreshToken: "", rootPath: "/HelloSign" });
@@ -53,6 +56,7 @@ export const DropboxTab: React.FC = () => {
 
   const loadFolder = async (path: string) => {
     setBusy(true);
+    setSelected(new Set()); // la selección es por carpeta; al navegar/recargar se limpia
     try {
       const r = await dropboxAPI.list(path);
       setEntries(r.entries);
@@ -99,6 +103,49 @@ export const DropboxTab: React.FC = () => {
       window.open(link, "_blank");
     } catch (e: any) {
       sweetAlert.error("Error", e?.response?.data?.error || "No se pudo generar el enlace de descarga.");
+    }
+  };
+
+  const toggleSelected = (path: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  };
+
+  const handleBulkDownload = async () => {
+    const paths = Array.from(selected);
+    if (paths.length === 0) return;
+    if (paths.length > MAX_ZIP_FILES) {
+      sweetAlert.error("Demasiados archivos", `Máximo ${MAX_ZIP_FILES} archivos por descarga. Deseleccioná algunos.`);
+      return;
+    }
+    setBusy(true);
+    try {
+      const blob = await dropboxAPI.downloadZip(paths);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `documentos_${new Date().toISOString().slice(0, 10)}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setSelected(new Set());
+    } catch (e: any) {
+      // Con responseType "blob" el error del server también llega como Blob: lo leemos para mostrar el mensaje.
+      let msg = "No se pudo generar el ZIP.";
+      try {
+        const txt = await e?.response?.data?.text?.();
+        if (txt) msg = JSON.parse(txt).error || msg;
+      } catch {
+        /* dejamos el mensaje genérico */
+      }
+      sweetAlert.error("Error", msg);
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -175,6 +222,19 @@ export const DropboxTab: React.FC = () => {
       return a.name.localeCompare(b.name);
     });
   }, [entries, search]);
+
+  // Archivos seleccionables en la vista actual (las carpetas no se tildan).
+  const fileEntries = useMemo(() => filtered.filter((e) => e.tag === "file"), [filtered]);
+  const allFilesSelected = fileEntries.length > 0 && fileEntries.every((e) => selected.has(e.path));
+
+  const toggleSelectAll = () => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allFilesSelected) fileEntries.forEach((e) => next.delete(e.path));
+      else fileEntries.forEach((e) => next.add(e.path));
+      return next;
+    });
+  };
 
   if (loading) {
     return (
@@ -272,12 +332,42 @@ export const DropboxTab: React.FC = () => {
         )}
       </div>
 
+      {/* Barra de selección masiva */}
+      {selected.size > 0 && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5">
+          <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+            {selected.size} archivo{selected.size === 1 ? "" : "s"} seleccionado{selected.size === 1 ? "" : "s"}
+          </span>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setSelected(new Set())} className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 whitespace-nowrap">
+              Deseleccionar
+            </button>
+            <button onClick={handleBulkDownload} disabled={busy} className="btn-primary text-xs py-1.5 px-3 flex items-center gap-2 disabled:opacity-60">
+              <FontAwesomeIcon icon={busy ? faSpinner : faFileZipper} spin={busy} /> Descargar {selected.size} (ZIP)
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Lista */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    className="cursor-pointer accent-blue-600"
+                    checked={allFilesSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = !allFilesSelected && fileEntries.some((e) => selected.has(e.path));
+                    }}
+                    disabled={fileEntries.length === 0}
+                    onChange={toggleSelectAll}
+                    title="Seleccionar todos los archivos"
+                  />
+                </th>
                 <th className="px-4 py-3 font-semibold">Nombre</th>
                 <th className="px-4 py-3 font-semibold">Tamaño</th>
                 <th className="px-4 py-3 font-semibold">Modificado</th>
@@ -286,12 +376,22 @@ export const DropboxTab: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {busy && filtered.length === 0 ? (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400"><FontAwesomeIcon icon={faSpinner} spin /> Cargando...</td></tr>
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400"><FontAwesomeIcon icon={faSpinner} spin /> Cargando...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">{search ? "No hay resultados para el filtro." : "Carpeta vacía."}</td></tr>
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">{search ? "No hay resultados para el filtro." : "Carpeta vacía."}</td></tr>
               ) : (
                 filtered.map((e) => (
-                  <tr key={e.path} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                  <tr key={e.path} className={`hover:bg-gray-50 dark:hover:bg-gray-800/40 ${e.tag === "file" && selected.has(e.path) ? "bg-blue-50/60 dark:bg-blue-900/10" : ""}`}>
+                    <td className="px-4 py-2.5">
+                      {e.tag === "file" && (
+                        <input
+                          type="checkbox"
+                          className="cursor-pointer accent-blue-600"
+                          checked={selected.has(e.path)}
+                          onChange={() => toggleSelected(e.path)}
+                        />
+                      )}
+                    </td>
                     <td className="px-4 py-2.5">
                       {e.tag === "folder" ? (
                         <button onClick={() => loadFolder(e.path)} className="flex items-center gap-2 font-medium text-gray-800 dark:text-gray-100 hover:text-blue-600">
