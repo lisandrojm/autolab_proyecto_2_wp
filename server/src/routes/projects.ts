@@ -277,6 +277,21 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
       });
     }
 
+    // 5. BULK PEOPLE COUNT (cantidad de personas asignadas al proyecto)
+    // Se cuenta desde la colección users_&_projects (UserProject), fuente autoritativa.
+    const projectIdsForCount = projects.map((p) => p._id);
+    if (projectIdsForCount.length > 0) {
+      const counts = await UserProject.aggregate([
+        { $match: { projectId: { $in: projectIdsForCount } } },
+        { $group: { _id: "$projectId", count: { $sum: 1 } } },
+      ]);
+      const countMap = new Map<string, number>();
+      counts.forEach((c) => countMap.set(String(c._id), c.count));
+      projects.forEach((p) => {
+        (p as any).metadataUserCount = countMap.get(String(p._id)) || 0;
+      });
+    }
+
     console.log(`[PROJECTS] Found ${projects.length} projects for filter`);
 
     await resolveProjectsGlobalConfig(projects, req.tenantObjectId);
@@ -505,6 +520,20 @@ router.get(
               (p as any).metadataResolutions.sede = sede;
             }
           }
+        });
+      }
+
+      // Bulk People Count (cantidad de personas asignadas al proyecto)
+      const projectIdsForCount = projects.map((p) => p._id);
+      if (projectIdsForCount.length > 0) {
+        const counts = await UserProject.aggregate([
+          { $match: { projectId: { $in: projectIdsForCount } } },
+          { $group: { _id: "$projectId", count: { $sum: 1 } } },
+        ]);
+        const countMap = new Map<string, number>();
+        counts.forEach((c) => countMap.set(String(c._id), c.count));
+        projects.forEach((p) => {
+          (p as any).metadataUserCount = countMap.get(String(p._id)) || 0;
         });
       }
 

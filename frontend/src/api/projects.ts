@@ -133,6 +133,7 @@ function normalizeProject(raw: any): Project {
     coordinatorAssignments: Array.isArray(raw?.coordinatorAssignments) ? raw.coordinatorAssignments : [],
     metadata: raw?.metadata,
     metadataResolutions: raw?.metadataResolutions,
+    metadataUserCount: typeof raw?.metadataUserCount === "number" ? raw.metadataUserCount : Array.isArray(raw?.assignedUsers) ? raw.assignedUsers.length : 0,
   };
 }
 

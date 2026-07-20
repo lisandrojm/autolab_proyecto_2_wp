@@ -15,7 +15,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { sweetAlert } from "../utils/sweetAlert";
 import { emitProjectsChanged } from "../utils/navbarEvents";
-import { faBriefcase, faBuilding, faTable, faGrip, faPlus, faLayerGroup, faEdit, faTrash, faInfoCircle, faUserTie } from "@fortawesome/free-solid-svg-icons";
+import { faBriefcase, faBuilding, faTable, faGrip, faPlus, faLayerGroup, faEdit, faTrash, faInfoCircle, faUserTie, faCalendarDay, faCalendarCheck, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -415,6 +415,20 @@ export const ProjectsPage: React.FC = () => {
                     </span>
                   </div>
                 )}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400" title="Fecha desde">
+                    <FontAwesomeIcon icon={faCalendarDay} className="h-3 w-3 text-gray-400" />
+                    <span>{project.startDate ? new Date(project.startDate).toLocaleDateString() : "—"}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400" title="Fecha hasta">
+                    <FontAwesomeIcon icon={faCalendarCheck} className="h-3 w-3 text-gray-400" />
+                    <span>{project.endDate ? new Date(project.endDate).toLocaleDateString() : "—"}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400" title="Personas asignadas">
+                    <FontAwesomeIcon icon={faUsers} className="h-3 w-3 text-gray-400" />
+                    <span>{project.metadataUserCount ?? 0}</span>
+                  </div>
+                </div>
               </Card>
             );
           })}
