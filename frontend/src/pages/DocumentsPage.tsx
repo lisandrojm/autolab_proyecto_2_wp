@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileText } from "@fortawesome/free-solid-svg-icons";
 import { faDropbox } from "@fortawesome/free-brands-svg-icons";
@@ -7,11 +7,15 @@ import { DropboxTab } from "../components/documents/DropboxTab";
 
 export function DocumentsPage() {
   const [activeTab, setActiveTab] = useState<"dropbox">("dropbox");
+  const [itemCount, setItemCount] = useState<number | undefined>(undefined);
+
+  const handleCountChange = useCallback((count: number | undefined) => setItemCount(count), []);
 
   return (
     <PageLayout
       title="Documentos RRHH"
       faIcon={{ icon: faFileText }}
+      itemCount={itemCount}
       shouldShowInfo={false}
       searchAndFilters={
         <div className="mx-auto">
@@ -25,7 +29,7 @@ export function DocumentsPage() {
 
           {/* Tab Content */}
           <div className="animate-in fade-in duration-300">
-            {activeTab === "dropbox" && <DropboxTab />}
+            {activeTab === "dropbox" && <DropboxTab onCountChange={handleCountChange} />}
           </div>
         </div>
       }

@@ -18,7 +18,12 @@ const formatDate = (s?: string): string => {
   return isNaN(d.getTime()) ? "" : d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
 };
 
-export const DropboxTab: React.FC = () => {
+interface DropboxTabProps {
+  /** Reporta hacia el contenedor la cantidad de items visibles (según filtro) para mostrarla junto al título. */
+  onCountChange?: (count: number | undefined) => void;
+}
+
+export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange }) => {
   const [status, setStatus] = useState<DropboxStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [entries, setEntries] = useState<DropboxEntry[]>([]);
@@ -236,6 +241,14 @@ export const DropboxTab: React.FC = () => {
     });
   };
 
+  // Informa el conteo (según filtro) al contenedor para mostrarlo junto al título; sólo cuando hay conexión.
+  useEffect(() => {
+    onCountChange?.(status?.connected ? filtered.length : undefined);
+  }, [filtered, status?.connected, onCountChange]);
+
+  // Al desmontar, limpia el conteo del título.
+  useEffect(() => () => onCountChange?.(undefined), [onCountChange]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64 text-gray-500">
@@ -297,6 +310,16 @@ export const DropboxTab: React.FC = () => {
   // ── Conectado: explorador ──
   return (
     <div className="space-y-4">
+      {/* Cuenta conectada / Desconectar — arriba a la derecha */}
+      {(status.accountEmail || status.canManageConnection) && (
+        <div className="flex items-center justify-end gap-2">
+          {status.accountEmail && <span className="text-[11px] text-gray-400">Cuenta: {status.accountEmail}</span>}
+          {status.canManageConnection && (
+            <button onClick={handleDisconnect} className="text-[11px] text-red-500 hover:text-red-600 whitespace-nowrap">Desconectar</button>
+          )}
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="flex flex-col lg:flex-row lg:items-center gap-3 justify-between">
         <div className="flex items-center gap-2 flex-wrap text-sm">
@@ -326,10 +349,6 @@ export const DropboxTab: React.FC = () => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        {status.accountEmail && <span className="text-[11px] text-gray-400 hidden sm:inline">Cuenta: {status.accountEmail}</span>}
-        {status.canManageConnection && (
-          <button onClick={handleDisconnect} className="text-[11px] text-red-500 hover:text-red-600 whitespace-nowrap">Desconectar</button>
-        )}
       </div>
 
       {/* Barra de selección masiva */}
