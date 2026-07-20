@@ -22,8 +22,6 @@ import { vacationsAPI, VacationRequest } from "../api/vacations";
 import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
 import { TeamCoordinadoresTab } from "../components/team/TeamCoordinadoresTab";
 import { EmployeeContractsModal } from "../components/team/EmployeeContractsModal";
-import { TeamDropboxTab } from "../components/team/TeamDropboxTab";
-import { faDropbox } from "@fortawesome/free-brands-svg-icons";
 import { contratoFrameAPI, ContratoFrameItem } from "../api/contratosFrame";
 import { releasesAPI, Release } from "../api/release";
 import { Area, areasAPI } from "../api/areas";
@@ -228,7 +226,7 @@ export const ProjectTeamPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const [showAddModal, setShowAddModal] = useState(false);
   const [isLg, setIsLg] = useState(window.innerWidth >= 1024);
-  const [activeTab, setActiveTab] = useState<"equipo" | "solicitudes" | "coordinadores" | "dropbox">("equipo");
+  const [activeTab, setActiveTab] = useState<"equipo" | "solicitudes" | "coordinadores">("equipo");
   const [solicitudesCount, setSolicitudesCount] = useState(0);
   const [showCandidatesInfo, setShowCandidatesInfo] = useState(false);
 
@@ -1508,10 +1506,6 @@ export const ProjectTeamPage: React.FC = () => {
                 Solicitudes
                 {solicitudesCount > 0 && <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] text-[10px] font-bold rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1">{solicitudesCount}</span>}
               </button>
-              <button onClick={() => setActiveTab("dropbox")} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "dropbox" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
-                <FontAwesomeIcon icon={faDropbox} className="text-xs" />
-                Dropbox
-              </button>
             </div>
             {/* The right side portal target */}
             <div id="tab-actions-portal" className="shrink-0 mb-1 lg:mb-0"></div>
@@ -1643,8 +1637,6 @@ export const ProjectTeamPage: React.FC = () => {
                 }}
               />
             )}
-
-            {activeTab === "dropbox" && project && <TeamDropboxTab projectId={projectId!} project={project} />}
           </div>
 
           {/* Modals */}

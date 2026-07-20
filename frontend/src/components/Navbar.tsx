@@ -144,7 +144,7 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission('admin_activity_logs:view')) base.push({ path: '/requests', icon: faFileText, label: 'Novedades', scope: 'global', dividerTop: true });
       if (hasPermission('admin_orders:view')) base.push({ path: '/orders', icon: faShoppingCart, label: 'Pedidos', scope: 'global' });
       if (hasPermission('admin_vacations:view')) base.push({ path: '/vacations', icon: faUmbrellaBeach, label: 'Vacaciones', scope: 'global' });
-      if (hasPermission('admin_hr_documents:view')) base.push({ path: '/documents', disabled: true, icon: faFileText, label: 'Documentos RRHH', scope: 'global' });
+      if (hasPermission('admin_hr_documents:view')) base.push({ path: '/documents', icon: faFileText, label: 'Documentos RRHH', scope: 'global' });
 
       // CONFIGURACION Items
       if (hasPermission('config_activity_logs:view')) base.push({ path: '/requests/config', icon: faFileText, label: 'Novedades', scope: 'global' });

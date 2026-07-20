@@ -39,6 +39,7 @@ import { OrdersPage } from "./pages/OrdersPage";
 import { OrderTypesPage } from "./pages/OrderTypesPage";
 import { VacationsPage } from "./pages/VacationsPage";
 import { VacationsRulesPage } from "./pages/VacationsRulesPage";
+import { DocumentsPage } from "./pages/DocumentsPage";
 import { VacationsCalendarPage } from "./pages/VacationsCalendarPage";
 import { PdfTemplatesPage } from "./pages/PdfTemplatesPage";
 import { ReleasesPage } from "./pages/ReleasesPage";
@@ -418,6 +419,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <VacationsRulesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/documents"
+                element={
+                  <ProtectedRoute>
+                    <DocumentsPage />
                   </ProtectedRoute>
                 }
               />
