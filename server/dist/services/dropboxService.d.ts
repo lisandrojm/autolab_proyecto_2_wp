@@ -34,6 +34,8 @@ export declare function listFolder(tenantId: string, cfg: TenantDropboxConfig, p
 }>;
 /** Link temporal (4h) para descargar/previsualizar un archivo directamente desde Dropbox. */
 export declare function getTemporaryLink(tenantId: string, cfg: TenantDropboxConfig, path: string): Promise<string>;
+/** Descarga el contenido de un archivo como Buffer (para armar ZIPs, etc.). */
+export declare function downloadFileContent(tenantId: string, cfg: TenantDropboxConfig, path: string): Promise<Buffer>;
 export declare function uploadFile(tenantId: string, cfg: TenantDropboxConfig, path: string, buffer: Buffer): Promise<DropboxEntry>;
 export declare function deleteEntry(tenantId: string, cfg: TenantDropboxConfig, path: string): Promise<void>;
 export declare function moveEntry(tenantId: string, cfg: TenantDropboxConfig, fromPath: string, toPath: string): Promise<DropboxEntry>;

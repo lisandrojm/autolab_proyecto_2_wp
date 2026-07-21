@@ -111,6 +111,20 @@ export async function getTemporaryLink(tenantId, cfg, path) {
     const data = await rpc(tenantId, cfg, "/files/get_temporary_link", { path });
     return data.link;
 }
+/** Descarga el contenido de un archivo como Buffer (para armar ZIPs, etc.). */
+export async function downloadFileContent(tenantId, cfg, path) {
+    const token = await getAccessToken(tenantId, cfg);
+    const { data } = await axios.post(`${CONTENT}/files/download`, null, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Dropbox-API-Arg": JSON.stringify({ path }),
+        },
+        responseType: "arraybuffer",
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+    });
+    return Buffer.from(data);
+}
 export async function uploadFile(tenantId, cfg, path, buffer) {
     const token = await getAccessToken(tenantId, cfg);
     const arg = { path, mode: "add", autorename: true, mute: false, strict_conflict: false };

@@ -1,12 +1,16 @@
 import { Router } from "express";
 import multer from "multer";
+import PizZip from "pizzip";
 import { Tenant } from "../models/Tenant.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { encryptSecret } from "../utils/secretCrypto.js";
-import { getTenantDropboxConfig, verifyAccount, listFolder, getTemporaryLink, uploadFile, deleteEntry, moveEntry, createFolder, clearTenantToken, isWithinRoot, } from "../services/dropboxService.js";
+import { getTenantDropboxConfig, verifyAccount, listFolder, getTemporaryLink, downloadFileContent, uploadFile, deleteEntry, moveEntry, createFolder, clearTenantToken, isWithinRoot, } from "../services/dropboxService.js";
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+// Límites de la descarga masiva (ZIP): evitan saturar la memoria del server.
+const ZIP_MAX_FILES = 50;
+const ZIP_MAX_TOTAL_BYTES = 200 * 1024 * 1024; // 200 MB descomprimidos
 router.use(requireTenant, authenticateToken);
 const isAdmin = (req) => (req.user?.roles || []).some((r) => ["admin", "superadmin"].includes(r.toLowerCase()));
 // Traduce errores de Dropbox a algo legible (cubre errores RPC y de OAuth).
@@ -140,6 +144,57 @@ router.get("/temp-link", async (req, res) => {
         }
         const link = await getTemporaryLink(String(req.tenantObjectId), cfg, path);
         res.json({ link });
+    }
+    catch (error) {
+        dropboxError(res, error);
+    }
+});
+// POST /dropbox/download-zip { paths: string[] } - baja varios archivos y los devuelve como un único ZIP
+router.post("/download-zip", async (req, res) => {
+    try {
+        const cfg = await requireConfig(req, res);
+        if (!cfg)
+            return;
+        const raw = Array.isArray(req.body?.paths) ? req.body.paths : [];
+        // Normaliza, deduplica y valida que todo esté dentro del rootPath permitido.
+        const paths = Array.from(new Set(raw.map((p) => String(p || "")).filter(Boolean)));
+        if (paths.length === 0) {
+            res.status(400).json({ error: "No se seleccionó ningún archivo." });
+            return;
+        }
+        if (paths.length > ZIP_MAX_FILES) {
+            res.status(400).json({ error: `Demasiados archivos: máximo ${ZIP_MAX_FILES} por descarga.` });
+            return;
+        }
+        if (paths.some((p) => !isWithinRoot(cfg, p))) {
+            res.status(403).json({ error: "Alguna ruta está fuera de la carpeta permitida." });
+            return;
+        }
+        const zip = new PizZip();
+        const used = new Map(); // evita colisiones de nombre en el ZIP
+        let total = 0;
+        for (const p of paths) {
+            const buf = await downloadFileContent(String(req.tenantObjectId), cfg, p);
+            total += buf.length;
+            if (total > ZIP_MAX_TOTAL_BYTES) {
+                res.status(400).json({ error: `La selección supera el máximo de ${Math.round(ZIP_MAX_TOTAL_BYTES / 1024 / 1024)} MB. Elegí menos archivos.` });
+                return;
+            }
+            let name = p.split("/").pop() || "archivo";
+            const seen = used.get(name) || 0;
+            used.set(name, seen + 1);
+            if (seen > 0) {
+                const dot = name.lastIndexOf(".");
+                name = dot > 0 ? `${name.slice(0, dot)} (${seen})${name.slice(dot)}` : `${name} (${seen})`;
+            }
+            zip.file(name, buf);
+        }
+        const out = zip.generate({ type: "nodebuffer", compression: "DEFLATE" });
+        const stamp = new Date().toISOString().slice(0, 10);
+        res.setHeader("Content-Type", "application/zip");
+        res.setHeader("Content-Disposition", `attachment; filename="documentos_${stamp}.zip"`);
+        res.setHeader("Content-Length", out.length);
+        res.end(out);
     }
     catch (error) {
         dropboxError(res, error);
