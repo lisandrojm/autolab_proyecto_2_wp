@@ -17,7 +17,7 @@ import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { getHelp } from "../data/help/helpContent";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faChevronDown, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faChevronDown, faXmark, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI, VacationRequest } from "../api/vacations";
 import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
 import { TeamCoordinadoresTab } from "../components/team/TeamCoordinadoresTab";
@@ -162,6 +162,17 @@ export const ProjectTeamPage: React.FC = () => {
   // Data
   const [project, setProject] = useState<Project | null>(null);
    const [allUsers, setAllUsers] = useState<User[]>([]);
+
+  // --- Paginación server-side del Equipo (misma lógica que Usuarios) ---
+  // allUsers = equipo completo pero liviano (para Coordinadores/contadores/lookups).
+  // teamRows = página actual con datos completos que se muestra en la tabla.
+  const TEAM_PAGE_SIZE = 25;
+  const [teamRows, setTeamRows] = useState<User[]>([]);
+  const [teamPage, setTeamPage] = useState(1);
+  const [teamTotal, setTeamTotal] = useState(0);
+  const [teamTotalPages, setTeamTotalPages] = useState(1);
+  const [teamFetching, setTeamFetching] = useState(false);
+  const teamReqIdRef = React.useRef(0);
    const [candidateUsers, setCandidateUsers] = useState<User[]>([]);
    const [searchingCandidates, setSearchingCandidates] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -304,15 +315,51 @@ export const ProjectTeamPage: React.FC = () => {
 
   /* ------------------------------ Fetchers ------------------------------- */
 
+  // Página actual del equipo (datos completos), paginada en el server por proyecto + búsqueda + estado.
+  const fetchTeamPage = async (page: number, opts?: { search?: string; status?: string }) => {
+    if (!projectId) return;
+    const search = opts?.search ?? searchTermTeam;
+    const status = opts?.status ?? filterUserStatus;
+    const reqId = ++teamReqIdRef.current;
+    try {
+      setTeamFetching(true);
+      const params: any = { projectId, page, limit: TEAM_PAGE_SIZE };
+      if (search) params.email = search; // el backend busca fuzzy en nombre/email
+      if (status === "active") params.metadataActivo = "true";
+      if (status === "inactive") params.metadataActivo = "false";
+      const resp = await usersAPI.list(params);
+      if (reqId !== teamReqIdRef.current) return; // descartar respuestas viejas
+      setTeamRows(resp.users);
+      setTeamTotal(resp.pagination.total);
+      setTeamTotalPages(resp.pagination.pages);
+    } catch (e) {
+      if (reqId === teamReqIdRef.current) console.error("Error fetching team page:", e);
+    } finally {
+      if (reqId === teamReqIdRef.current) setTeamFetching(false);
+    }
+  };
+
+  // Equipo completo pero liviano (sin populates pesados ni N+1) para Coordinadores, contadores y lookups.
+  const fetchFullTeamLite = async (): Promise<User[]> => {
+    if (!projectId) return [];
+    try {
+      const resp = await usersAPI.list({ projectId, limit: 10000, lightweight: true });
+      setAllUsers(resp.users);
+      return resp.users;
+    } catch (e) {
+      console.error("Error fetching full team (lite):", e);
+      return [];
+    }
+  };
+
   useEffect(() => {
     if (!projectId || !token) return;
 
     const init = async () => {
       try {
         setLoading(true);
-        const [projectData, usersData, vacationsData, areasData, positionsData, levelsData, shiftsData] = await Promise.all([
+        const [projectData, vacationsData, areasData, positionsData, levelsData, shiftsData] = await Promise.all([
           projectsAPI.getProject(projectId),
-          usersAPI.list({ projectId, limit: 500 }), // Only fetch team members initially
           vacationsAPI.getAll(),
           areasAPI.listAll(),
           positionsAPI.listAll(),
@@ -343,32 +390,10 @@ export const ProjectTeamPage: React.FC = () => {
           setTeamConfig(projectData.teamConfig || []);
         }
 
-        // Set initial users from the project query
-        let teamUsers = usersData.users;
-        
-        // Check for users in project.assignedUsers that weren't returned by the query
-        // This handles cases where the user's projectIds field is out of sync
-        const currentProject = projectData; // may have been updated by cleanup
-        const assignedIds = ((currentProject.assignedUsers as any[]) || []).map((u: any) => typeof u === "string" ? u : u._id);
-        const loadedIds = new Set(teamUsers.map((u: User) => u._id));
-        const missingIds = assignedIds.filter((id: string) => !loadedIds.has(id));
-        
-        if (missingIds.length > 0) {
-          console.log(`📋 Fetching ${missingIds.length} missing team members by ID...`);
-          const missingUsers = await Promise.all(
-            missingIds.map(async (id: string) => {
-              try {
-                return await usersAPI.get(id);
-              } catch {
-                return null;
-              }
-            })
-          );
-          const validMissing = missingUsers.filter((u): u is User => u !== null);
-          teamUsers = [...teamUsers, ...validMissing];
-        }
-        
-        setAllUsers(teamUsers);
+        // Equipo: lista liviana completa (Coordinadores/contadores) + primera página con datos completos.
+        const teamUsers = await fetchFullTeamLite();
+        fetchTeamPage(1);
+
         setVacations(vacationsData);
         setAllAreas(areasData);
 
@@ -412,6 +437,34 @@ export const ProjectTeamPage: React.FC = () => {
 
     init();
   }, [projectId, token]);
+
+  // Búsqueda / filtro de estado en el Equipo → server-side, resetea a página 1 (debounced, como Usuarios).
+  const teamFiltersInitedRef = React.useRef(false);
+  useEffect(() => {
+    if (!projectId) return;
+    if (!teamFiltersInitedRef.current) {
+      teamFiltersInitedRef.current = true; // evita doble fetch en el montaje (init ya carga la página 1)
+      return;
+    }
+    const h = setTimeout(() => {
+      setTeamPage(1);
+      fetchTeamPage(1, { search: searchTermTeam, status: filterUserStatus });
+    }, 300);
+    return () => clearTimeout(h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTermTeam, filterUserStatus]);
+
+  // Cambio de página → traer esa página del server.
+  const teamPageInitedRef = React.useRef(false);
+  useEffect(() => {
+    if (!projectId) return;
+    if (!teamPageInitedRef.current) {
+      teamPageInitedRef.current = true; // la página 1 ya la cargó init
+      return;
+    }
+    fetchTeamPage(teamPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teamPage]);
 
   // Fetch solicitudes count for this project
   useEffect(() => {
@@ -541,28 +594,13 @@ export const ProjectTeamPage: React.FC = () => {
     });
   }, [allUsers, candidateUsers, showAddModal, assignedUserIds, searchTerm, filterRole, filterRoleFrame, filterProject, allRoleFrames]);
 
-  const teamMembers = useMemo(() => {
-    return assignedUserIds.map((id) => allUsers.find((u) => u._id === id)).filter((u): u is User => !!u);
-  }, [assignedUserIds, allUsers]);
-
-  const filteredTeamMembers = useMemo(() => {
-    return teamMembers.filter((user) => {
-      // User Status Filter
-      if (filterUserStatus === "active" && !user.metadata?.activo) return false;
-      if (filterUserStatus === "inactive" && user.metadata?.activo) return false;
-
-      // Search Filter
-      if (searchTermTeam) {
-        if (!fuzzyMatch(`${user.firstName || ""} ${user.lastName || ""}`, searchTermTeam) && !fuzzyMatch(user.email, searchTermTeam)) return false;
-      }
-
-      return true;
-    });
-  }, [teamMembers, searchTermTeam, filterUserStatus]);
+  // El equipo real es lo que devuelve la consulta por projectId (allUsers, versión liviana);
+  // no depende de project.assignedUsers (que puede quedar desincronizado).
+  const teamMembers = useMemo(() => allUsers, [allUsers]);
 
   const displayedCount = useMemo(() => {
     if (activeTab === "equipo") {
-      return filteredTeamMembers.length;
+      return teamTotal;
     }
     if (activeTab === "coordinadores") {
       const coordIds = new Set(
@@ -576,7 +614,7 @@ export const ProjectTeamPage: React.FC = () => {
       return solicitudesCount;
     }
     return teamMembers.length;
-  }, [activeTab, filteredTeamMembers.length, project?.coordinatorAssignments, solicitudesCount, teamMembers.length]);
+  }, [activeTab, teamTotal, project?.coordinatorAssignments, solicitudesCount, teamMembers.length]);
 
   const hasMobileCoordinator = useMemo(() => {
     return teamMembers.some((u) => u.roles?.some((r) => {
@@ -1108,8 +1146,8 @@ export const ProjectTeamPage: React.FC = () => {
       setProject(updatedProject);
       setTeamConfig(updatedProject.teamConfig || []);
 
-      const usersData = await usersAPI.list({ projectId: project._id, limit: 500 });
-      setAllUsers(usersData.users);
+      await fetchFullTeamLite();
+      fetchTeamPage(teamPage);
 
       setSelectedUserForWizard(null);
       setShowAddModal(false);
@@ -1139,12 +1177,12 @@ export const ProjectTeamPage: React.FC = () => {
       // Use the new thorough removal endpoint
       await projectsAPI.removeMember(project._id, userId);
 
-      // Refresh local state (solo los miembros del proyecto, no todo el tenant → evita OOM)
-      const [updatedProject, usersData] = await Promise.all([projectsAPI.getProject(project._id), usersAPI.list({ projectId: project._id, limit: 500 })]);
-
+      // Refresh local state (equipo liviano + página actual, no todo el tenant → evita OOM)
+      const updatedProject = await projectsAPI.getProject(project._id);
       setProject(updatedProject);
       setTeamConfig(updatedProject.teamConfig || []);
-      setAllUsers(usersData.users);
+      await fetchFullTeamLite();
+      fetchTeamPage(teamPage);
 
       sweetAlert.success("Usuario Retirado", "El usuario ha sido retirado del equipo y sus asignaciones han sido limpiadas.");
     } catch (error: any) {
@@ -1560,21 +1598,22 @@ export const ProjectTeamPage: React.FC = () => {
 
 
                 {(() => {
-                  const coordinators = filteredTeamMembers.filter(checkIsCoordinator);
-                  const members = filteredTeamMembers.filter((u) => !checkIsCoordinator(u));
+                  // Coordinadores primero dentro de la página actual.
+                  const coordinators = teamRows.filter(checkIsCoordinator);
+                  const members = teamRows.filter((u) => !checkIsCoordinator(u));
 
-                  if (filteredTeamMembers.length === 0) {
+                  if (teamTotal === 0 && !teamFetching) {
                     return (
                       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center h-64 text-gray-500">
                         <FontAwesomeIcon icon={faUsers} className="h-12 w-12 mb-4 opacity-10" />
-                        <p className="text-base font-medium">Aún no hay miembros en el equipo</p>
-                        <p className="text-sm mt-1">Usa el botón "Agregar Miembro" para comenzar.</p>
+                        <p className="text-base font-medium">{searchTermTeam || filterUserStatus ? "No se encontraron miembros" : "Aún no hay miembros en el equipo"}</p>
+                        <p className="text-sm mt-1">{searchTermTeam || filterUserStatus ? "Probá ajustar la búsqueda o el filtro." : 'Usa el botón "Agregar Miembro" para comenzar.'}</p>
                       </div>
                     );
                   }
 
                   return effectiveViewMode === "table" ? (
-                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-opacity ${teamFetching ? "opacity-60" : ""}`}>
                       <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                           <thead>
@@ -1598,12 +1637,52 @@ export const ProjectTeamPage: React.FC = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 transition-opacity ${teamFetching ? "opacity-60" : ""}`}>
                       {coordinators.map((u) => renderUserCard(u))}
                       {members.map((u) => renderUserCard(u))}
                     </div>
                   );
                 })()}
+
+                {/* Paginación server-side (misma lógica que Usuarios) */}
+                {teamTotalPages > 1 && (
+                  <div className="mt-6 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4 gap-4">
+                    {/* Mobile */}
+                    <div className="flex-1 flex justify-between sm:hidden w-full">
+                      <button onClick={() => setTeamPage((p) => Math.max(p - 1, 1))} disabled={teamPage === 1} className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed">Anterior</button>
+                      <button onClick={() => setTeamPage((p) => Math.min(p + 1, teamTotalPages))} disabled={teamPage === teamTotalPages} className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed">Siguiente</button>
+                    </div>
+
+                    {/* Desktop */}
+                    <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between w-full">
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                        Mostrando <span className="font-semibold text-primary-600">{teamRows.length}</span> de <span className="font-semibold text-primary-600">{teamTotal}</span>
+                      </p>
+                      <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                        <button onClick={() => setTeamPage((p) => Math.max(p - 1, 1))} disabled={teamPage === 1} className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                          <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4" />
+                        </button>
+                        {Array.from({ length: teamTotalPages }).map((_, i) => {
+                          const p = i + 1;
+                          if (p === 1 || p === teamTotalPages || (p >= teamPage - 2 && p <= teamPage + 2)) {
+                            return (
+                              <button key={p} onClick={() => setTeamPage(p)} className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${teamPage === p ? "bg-primary-600 border-primary-600 text-white z-10" : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}>
+                                {p}
+                              </button>
+                            );
+                          }
+                          if ((p === 2 && teamPage > 4) || (p === teamTotalPages - 1 && teamPage < teamTotalPages - 3)) {
+                            return <span key={`dots-${p}`} className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-sm">...</span>;
+                          }
+                          return null;
+                        })}
+                        <button onClick={() => setTeamPage((p) => Math.min(p + 1, teamTotalPages))} disabled={teamPage === teamTotalPages} className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                          <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4" />
+                        </button>
+                      </nav>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1628,10 +1707,11 @@ export const ProjectTeamPage: React.FC = () => {
                 projectId={projectId!}
                 project={project}
                 onApproved={async () => {
-                  const [projectData, usersData] = await Promise.all([projectsAPI.getProject(projectId!), usersAPI.list({ projectId: projectId!, limit: 500 })]);
+                  const projectData = await projectsAPI.getProject(projectId!);
                   setProject(projectData);
                   setTeamConfig(projectData.teamConfig || []);
-                  setAllUsers(usersData.users);
+                  await fetchFullTeamLite();
+                  fetchTeamPage(teamPage);
                   const solis = await usersAPI.listSolicitudes();
                   setSolicitudesCount(solis.filter((u) => u.metadata?.projectIds?.includes(projectId!)).length);
                 }}
