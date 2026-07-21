@@ -45,8 +45,9 @@ export const EmpresasPage: React.FC = () => {
       setLoading(true);
       setCompanies(await companiesAPI.list());
     } catch (error) {
+      // Sin empresas o endpoint aún no disponible: mostramos el estado vacío en vez de un error.
       console.error("Error fetching companies:", error);
-      sweetAlert.error("Error", "No se pudieron cargar las empresas");
+      setCompanies([]);
     } finally {
       setLoading(false);
     }
