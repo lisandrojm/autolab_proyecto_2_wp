@@ -49,6 +49,7 @@ import { CategoriasSatPage } from "./pages/CategoriasSatPage";
 import { BancosPage } from "./pages/BancosPage";
 import { ObrasSocialesPage } from "./pages/ObrasSocialesPage";
 import { CentrosCostoPage } from "./pages/CentrosCostoPage";
+import { EmpresasPage } from "./pages/EmpresasPage";
 import { ContratosFramePage } from "./pages/ContratosFramePage";
 
 const AppMobile = lazy(() => import("./apps/mobile/src/App"));
@@ -496,6 +497,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <CentrosCostoPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/empresas"
+                element={
+                  <ProtectedRoute>
+                    <EmpresasPage />
                   </ProtectedRoute>
                 }
               />

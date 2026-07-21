@@ -160,6 +160,7 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission('config_obras_sociales:view')) base.push({ path: '/obras-sociales', icon: faBriefcaseMedical, label: 'Obras Sociales', scope: 'global' });
       if (hasPermission('config_centros_costo:view')) base.push({ path: '/centros-costo', icon: faPiggyBank, label: 'Centros de Costos', scope: 'global' });
       if (hasPermission('config_contratos_frame:view')) base.push({ path: '/contratos-frame', icon: faFileContract, label: 'Contratos', scope: 'global' });
+      if (hasPermission('config_contratos_frame:view')) base.push({ path: '/empresas', icon: faBuilding, label: 'Empresas', scope: 'global' });
     }
 
     return base;
@@ -222,7 +223,7 @@ export const MobileNavbar: React.FC = () => {
 
     const generalAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ['/tenants'].includes(item.path)) : adminItems.filter((item) => ['/admin/projects', '/admin/sedes', '/admin/contracts', '/orders', '/vacations', '/requests', '/documents'].includes(item.path))).sort(byLabel);
 
-    const configPaths = ['/requests/config', '/order-types', '/shifts', '/vacations-rules', '/holidays', '/pdfs', '/releases', '/funciones-frame', '/categorias-sat', '/clients', '/contratos-frame', '/centros-costo', '/bancos', '/obras-sociales'];
+    const configPaths = ['/requests/config', '/order-types', '/shifts', '/vacations-rules', '/holidays', '/pdfs', '/releases', '/funciones-frame', '/categorias-sat', '/clients', '/contratos-frame', '/centros-costo', '/bancos', '/obras-sociales', '/empresas'];
     // "Mi Perfil" se incluye como un item más para que entre en el orden alfabético
     const profileItem = { path: '/mi-perfil', icon: faIdCard, label: 'Mi Perfil', scope: 'global' as const };
     const configItems = [...adminItems.filter((item) => configPaths.includes(item.path)), ...(hasPermission('config_profile:view') ? [profileItem] : [])].sort(byLabel);
