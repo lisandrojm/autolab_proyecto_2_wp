@@ -3,6 +3,7 @@ import { fuzzyMatch } from "../utils/searchHelpers";
 import { useNavigate } from "react-router-dom";
 import { projectsAPI, Project } from "../api/projects";
 import { clientsAPI, Client } from "../api/clients";
+import { companiesAPI, Company } from "../api/companies";
 import { shiftsAPI, Shift } from "../api/shifts";
 import { areasAPI, Area } from "../api/areas";
 import { useAuthStore } from "../stores/authStore";
@@ -26,6 +27,7 @@ export const ProjectsPage: React.FC = () => {
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [openInfo, setOpenInfo] = useState(false);
   const [showResponsableInfo, setShowResponsableInfo] = useState(false);
@@ -58,6 +60,8 @@ export const ProjectsPage: React.FC = () => {
     status: "active" as "active" | "completed" | "on_hold" | "archived",
     startDate: "",
     endDate: "",
+    contratoEmpresa: "",
+    releaseEmpresa: "",
     areasConfig: [] as { areaId: string; shiftIds: string[] }[],
     metadata: {
       centroCostoId: undefined as number | undefined,
@@ -95,8 +99,9 @@ export const ProjectsPage: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [projectsData, clientsData] = await Promise.all([projectsAPI.listAll({ limit: 500 }), clientsAPI.listAll()]);
+      const [projectsData, clientsData, companiesData] = await Promise.all([projectsAPI.listAll({ limit: 500 }), clientsAPI.listAll(), companiesAPI.list()]);
       setProjects(projectsData);
+      setCompanies(companiesData);
       setClients(clientsData);
     } catch (error) {
       console.error("Error fetching projects data:", error);
@@ -182,6 +187,8 @@ export const ProjectsPage: React.FC = () => {
       status: "active",
       startDate: "",
       endDate: "",
+      contratoEmpresa: "",
+      releaseEmpresa: "",
       areasConfig: [],
       metadata: {
         centroCostoId: undefined,
@@ -205,6 +212,8 @@ export const ProjectsPage: React.FC = () => {
       status: project.status || "active",
       startDate: project.startDate ? project.startDate.split("T")[0] : "",
       endDate: project.endDate ? project.endDate.split("T")[0] : "",
+      contratoEmpresa: project.contratoEmpresa || "",
+      releaseEmpresa: project.releaseEmpresa || "",
       areasConfig: (project.areasConfig || []).map((ac: any) => ({
         areaId: typeof ac.areaId === "string" ? ac.areaId : ac.areaId._id,
         shiftIds: ac.shiftIds.map((s: any) => (typeof s === "string" ? s : s._id)),
@@ -663,6 +672,36 @@ export const ProjectsPage: React.FC = () => {
                   <option key={c._id} value={c.metadata?.id}>{c.firstName} {c.lastName}</option>
                 ))}
               </select>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
+              <div>
+                <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Empresa del Contrato</label>
+                <select
+                  className="input-field py-2.5"
+                  value={formData.contratoEmpresa}
+                  onChange={(e) => setFormData((p) => ({ ...p, contratoEmpresa: e.target.value }))}
+                >
+                  <option value="">Seleccionar empresa...</option>
+                  {companies.map((c) => (
+                    <option key={c._id} value={c._id}>{c.razonSocial}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Empresa del Release</label>
+                <select
+                  className="input-field py-2.5"
+                  value={formData.releaseEmpresa}
+                  onChange={(e) => setFormData((p) => ({ ...p, releaseEmpresa: e.target.value }))}
+                >
+                  <option value="">Seleccionar empresa...</option>
+                  {companies.map((c) => (
+                    <option key={c._id} value={c._id}>{c.razonSocial}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
