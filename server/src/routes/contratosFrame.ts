@@ -40,7 +40,7 @@ const parseNum = (val: any): number => {
 // GET / - listar
 router.get("/", authenticateToken, async (_req: AuthenticatedRequest, res: Response) => {
   try {
-    const items = await ContratoFrame.find().sort({ name: 1 }).lean();
+    const items = await ContratoFrame.find().populate("empresaId", "razonSocial cuit").sort({ name: 1 }).lean();
     res.json(items);
   } catch (error) {
     console.error("Get contratos-frame error:", error);
@@ -223,9 +223,13 @@ router.post("/import", authenticateToken, upload.single("file"), async (req: Aut
 // POST / - crear
 router.post("/", authenticateToken, fileUpload.single("file"), async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { nombre, externalId, cantidadJornadas, multiplicadorDiario, rutaArchivo, esTiempoIndeterminado } = req.body;
+    const { nombre, externalId, empresaId, cantidadJornadas, multiplicadorDiario, rutaArchivo, esTiempoIndeterminado } = req.body;
     if (!nombre || !nombre.trim()) {
       res.status(400).json({ error: "El nombre es obligatorio" });
+      return;
+    }
+    if (!empresaId || !String(empresaId).trim()) {
+      res.status(400).json({ error: "La empresa es obligatoria" });
       return;
     }
     const idNum = externalId ? Number(externalId) : undefined;
@@ -233,6 +237,7 @@ router.post("/", authenticateToken, fileUpload.single("file"), async (req: Authe
     const created = await ContratoFrame.create({
       name: nombre.trim(),
       externalId: externalId ? String(externalId).trim() : "",
+      empresaId: String(empresaId).trim(),
       data: {
         id: idNum !== undefined && !isNaN(idNum) ? idNum : undefined,
         nombre: nombre.trim(),
@@ -255,7 +260,7 @@ router.post("/", authenticateToken, fileUpload.single("file"), async (req: Authe
 router.put("/:id", authenticateToken, fileUpload.single("file"), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { nombre, externalId, cantidadJornadas, multiplicadorDiario, rutaArchivo, esTiempoIndeterminado } = req.body;
+    const { nombre, externalId, empresaId, cantidadJornadas, multiplicadorDiario, rutaArchivo, esTiempoIndeterminado } = req.body;
     const item = await ContratoFrame.findById(id);
     if (!item) {
       res.status(404).json({ error: "Contrato no encontrado" });
@@ -264,6 +269,13 @@ router.put("/:id", authenticateToken, fileUpload.single("file"), async (req: Aut
     if (nombre !== undefined) {
       item.name = String(nombre).trim();
       item.data.nombre = String(nombre).trim();
+    }
+    if (empresaId !== undefined) {
+      if (!String(empresaId).trim()) {
+        res.status(400).json({ error: "La empresa es obligatoria" });
+        return;
+      }
+      item.empresaId = String(empresaId).trim() as any;
     }
     if (externalId !== undefined) {
       item.externalId = String(externalId).trim();

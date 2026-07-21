@@ -2,6 +2,7 @@ import mongoose, { Schema } from "mongoose";
 const contratoFrameSchema = new Schema({
     externalId: { type: String },
     name: { type: String, required: true },
+    empresaId: { type: Schema.Types.ObjectId, ref: "Company" },
     data: {
         id: { type: Number },
         nombre: { type: String },

@@ -4,6 +4,7 @@ export interface ContratoFrameItem {
   _id: string;
   externalId: string;
   name: string;
+  empresaId?: string | { _id: string; razonSocial: string; cuit?: string };
   data: {
     id?: number;
     nombre: string;
