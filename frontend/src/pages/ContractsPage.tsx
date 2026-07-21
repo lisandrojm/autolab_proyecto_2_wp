@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useAuthStore } from "../stores/authStore";
 import { contractsAPI } from "../api/contracts";
 import { projectsAPI } from "../api/projects";
 import { cachedFetch } from "../utils/refCache";
@@ -33,8 +32,6 @@ interface ContractRecord {
 }
 
 export const ContractsPage: React.FC = () => {
-  const { hasPermission } = useAuthStore();
-
   // Data (paginado server-side)
   const [contracts, setContracts] = useState<ContractRecord[]>([]);
   const [total, setTotal] = useState(0);
