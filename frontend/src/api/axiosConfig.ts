@@ -8,6 +8,23 @@ const axiosInstance = axios.create({
   timeout: 60000,
 });
 
+// --- Cancelación de GET en vuelo al cambiar de ruta ---
+// Evita que, al navegar rápido entre páginas (Proyectos / Usuarios / Equipo),
+// se apilen consultas pesadas contra el server. Solo se cancelan GET
+// (nunca mutaciones POST/PUT/DELETE en curso).
+const pendingGetControllers = new Set<AbortController>();
+
+export function cancelPendingGetRequests() {
+  pendingGetControllers.forEach((c) => {
+    try {
+      c.abort();
+    } catch {
+      /* noop */
+    }
+  });
+  pendingGetControllers.clear();
+}
+
 // Interceptor para añadir headers necesarios
 axiosInstance.interceptors.request.use(
   (config) => {
@@ -36,6 +53,14 @@ axiosInstance.interceptors.request.use(
       config.headers["Content-Type"] = "application/json";
     }
 
+    // Registrar los GET para poder cancelarlos al cambiar de ruta (si no traen signal propio).
+    if ((config.method || "get").toLowerCase() === "get" && !config.signal) {
+      const controller = new AbortController();
+      config.signal = controller.signal;
+      (config as any).__getAbortController = controller;
+      pendingGetControllers.add(controller);
+    }
+
     return config;
   },
   (error) => {
@@ -45,8 +70,20 @@ axiosInstance.interceptors.request.use(
 
 // Interceptor para manejar respuestas de error
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const c = (response.config as any)?.__getAbortController;
+    if (c) pendingGetControllers.delete(c);
+    return response;
+  },
   (error) => {
+    const c = (error.config as any)?.__getAbortController;
+    if (c) pendingGetControllers.delete(c);
+
+    // Cancelado por navegación (cambio de ruta): silenciar. No mostrar error ni desloguear.
+    if (axios.isCancel(error) || error.code === "ERR_CANCELED" || error.name === "CanceledError") {
+      return new Promise(() => {}); // la promesa no se resuelve; el componente se está desmontando
+    }
+
     if (error.code === "ECONNABORTED") {
       console.error("Request timeout:", error.config?.url);
       return Promise.reject(new Error("La solicitud tardó demasiado tiempo. Por favor, inténtalo de nuevo."));

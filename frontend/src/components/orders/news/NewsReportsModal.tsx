@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, eachDayOfInterval } from "date-fns";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileExport, faCalendar, faBriefcase, faUser, faClock, faUserSlash, faMoneyBillWave, faSearch, faFileContract, faTimes, faIdBadge, faCalendarDays, faHourglassHalf, faDollarSign, faClipboardList, faLocationDot, faStar, faFileExcel, faCircleInfo, faChartSimple, faFileLines } from "@fortawesome/free-solid-svg-icons";
+import { faFileExport, faCalendar, faBriefcase, faUser, faClock, faUserSlash, faMoneyBillWave, faSearch, faFileContract, faTimes, faIdBadge, faCalendarDays, faHourglassHalf, faDollarSign, faClipboardList, faLocationDot, faStar, faFileExcel, faCircleInfo, faChartSimple, faFileLines, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../../ui/Modal";
 import { User, UserProjectMetadata } from "../../../api/users";
 import { overtimeUtils, OvertimeSettings, splitOvertime } from "../../../utils/overtimeUtils";
@@ -559,6 +559,10 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   const [showStats, setShowStats] = useState(false);
   const [showActiveTableOnly, setShowActiveTableOnly] = useState(true);
   const [contractTypeFilter, setContractTypeFilter] = useState("all");
+
+  // Paginación client-side de la tabla de empleados (alivia el render de tablas grandes).
+  const REPORT_PAGE_SIZE = 25;
+  const [reportPage, setReportPage] = useState(1);
   const [glossary, setGlossary] = useState<OvertimeSettings>(overtimeUtils.getGlossary());
 
   useEffect(() => {
@@ -995,6 +999,21 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
 
     return results.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
   }, [reports, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects, contractTypeFilter]);
+
+  // Paginación de la tabla (los totales del pie siguen calculándose sobre TODO statsByEmployee).
+  const reportTotalPages = Math.max(1, Math.ceil(statsByEmployee.length / REPORT_PAGE_SIZE));
+  const pagedStats = useMemo(
+    () => statsByEmployee.slice((reportPage - 1) * REPORT_PAGE_SIZE, reportPage * REPORT_PAGE_SIZE),
+    [statsByEmployee, reportPage],
+  );
+
+  // Volver a la página 1 cuando cambian filtros/apertura, y no quedar fuera de rango.
+  useEffect(() => {
+    setReportPage(1);
+  }, [dateFrom, dateTo, projectFilter, searchTerm, showActiveTableOnly, contractTypeFilter, isOpen]);
+  useEffect(() => {
+    if (reportPage > reportTotalPages) setReportPage(reportTotalPages);
+  }, [reportPage, reportTotalPages]);
 
   const formattedMonthLabel = useMemo(() => {
     try {
@@ -1549,7 +1568,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {statsByEmployee.map((s) => {
+                {pagedStats.map((s) => {
                   return (
                     <React.Fragment key={s.rowKey}>
                       <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
@@ -1785,6 +1804,37 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
               )}
             </table>
           </div>
+
+          {/* Paginación client-side de la tabla de empleados */}
+          {reportTotalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-3 mt-1 gap-3 shrink-0">
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Mostrando <span className="font-semibold text-primary-600">{pagedStats.length}</span> de <span className="font-semibold text-primary-600">{statsByEmployee.length}</span> empleados
+              </p>
+              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                <button onClick={() => setReportPage((p) => Math.max(p - 1, 1))} disabled={reportPage === 1} className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                  <FontAwesomeIcon icon={faChevronLeft} className="h-3.5 w-3.5" />
+                </button>
+                {Array.from({ length: reportTotalPages }).map((_, i) => {
+                  const p = i + 1;
+                  if (p === 1 || p === reportTotalPages || (p >= reportPage - 2 && p <= reportPage + 2)) {
+                    return (
+                      <button key={p} onClick={() => setReportPage(p)} className={`relative inline-flex items-center px-3.5 py-2 border text-sm font-medium ${reportPage === p ? "bg-primary-600 border-primary-600 text-white z-10" : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}>
+                        {p}
+                      </button>
+                    );
+                  }
+                  if ((p === 2 && reportPage > 4) || (p === reportTotalPages - 1 && reportPage < reportTotalPages - 3)) {
+                    return <span key={`dots-${p}`} className="relative inline-flex items-center px-3.5 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-sm">...</span>;
+                  }
+                  return null;
+                })}
+                <button onClick={() => setReportPage((p) => Math.min(p + 1, reportTotalPages))} disabled={reportPage === reportTotalPages} className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                  <FontAwesomeIcon icon={faChevronRight} className="h-3.5 w-3.5" />
+                </button>
+              </nav>
+            </div>
+          )}
         </div>
       </Modal>
 

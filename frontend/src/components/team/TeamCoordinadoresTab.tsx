@@ -5,6 +5,7 @@ import { Project, projectsAPI } from "../../api/projects";
 import { User } from "../../api/users";
 import { Area, areasAPI } from "../../api/areas";
 import { Shift, shiftsAPI } from "../../api/shifts";
+import { cachedFetch } from "../../utils/refCache";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSave, faUserTie, faInfoCircle, faTable } from "@fortawesome/free-solid-svg-icons";
@@ -37,8 +38,8 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
     const fetchAuxData = async () => {
       try {
         const [areasList, shiftsList] = await Promise.all([
-          areasAPI.listAll(),
-          shiftsAPI.getAll(),
+          cachedFetch("areas:all", () => areasAPI.listAll()),
+          cachedFetch("shifts:all", () => shiftsAPI.getAll()),
         ]);
         setAreas(areasList);
         setShifts(shiftsList);

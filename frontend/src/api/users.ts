@@ -290,10 +290,12 @@ class UsersAPI {
       isSolicitud?: string;
       lightweight?: boolean;
       slimProjects?: boolean;
+      sort?: string;
     } = {},
   ): Promise<UsersListResponse> {
     const searchParams = new URLSearchParams();
 
+    if (params.sort) searchParams.append("sort", params.sort);
     if (params.page) searchParams.append("page", params.page.toString());
     if (params.limit) searchParams.append("limit", params.limit.toString());
     if (params.email) searchParams.append("email", params.email);

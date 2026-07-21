@@ -26,12 +26,19 @@ import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate, useParams } from "react-router-dom";
 import { getImageUrl } from "../utils/imageHelpers";
+import { cachedFetch, invalidateRefCache } from "../utils/refCache";
 
 const HELP_KEY = "users" as const;
 
 type ModalTab = "general" | "domicilio" | "bancarios" | "proyectos";
 
 type ModalMode = "edit" | "password";
+
+// Invalida el caché compartido (mapa de nombres + proyectos) tras mutar usuarios.
+const invalidateUsersPageCache = () => {
+  invalidateRefCache("userLookup:all");
+  invalidateRefCache("projects:all");
+};
 
 export const UsersPage: React.FC = () => {
   const navigate = useNavigate();
@@ -294,19 +301,21 @@ export const UsersPage: React.FC = () => {
 
   const fetchUserLookup = async () => {
     try {
-      // Fetch all users for lookup map (limit 10000 to get all).
+      // Cacheado (compartido): evita traer 1502 usuarios al reentrar a Usuarios.
       // lightweight: solo id/nombre, sin el populate pesado de proyectos/contratos.
-      const response = await usersAPI.list({ limit: 10000, page: 1, lightweight: true });
-      const map = new Map<number | string, string>();
-      response.users.forEach((u) => {
-        const metaId = (u.metadata as any)?.id;
-        if (metaId) {
-          const name = u.firstName || u.lastName ? `${u.firstName || ""} ${u.lastName || ""}`.trim() : u.email;
-          map.set(metaId, name);
-        }
+      const map = await cachedFetch("userLookup:all", async () => {
+        const response = await usersAPI.list({ limit: 10000, page: 1, lightweight: true });
+        const m = new Map<number | string, string>();
+        response.users.forEach((u) => {
+          const metaId = (u.metadata as any)?.id;
+          if (metaId) {
+            const name = u.firstName || u.lastName ? `${u.firstName || ""} ${u.lastName || ""}`.trim() : u.email;
+            m.set(metaId, name);
+          }
+        });
+        return m;
       });
       setUserLookup(map);
-      console.log(`📋 User lookup map built with ${map.size} entries`);
     } catch (error) {
       console.error("Error fetching user lookup:", error);
     }
@@ -433,15 +442,9 @@ export const UsersPage: React.FC = () => {
 
   const fetchAllProjects = async () => {
     try {
-      const projects = await projectsAPI.listAll({ limit: 500 }); // Increase limit for safety
+      // Cacheado (compartido con Equipo): evita traer hasta 500 proyectos al reentrar.
+      const projects = await cachedFetch("projects:all", () => projectsAPI.listAll({ limit: 500 }));
       setAllProjects(projects);
-      console.log("📂 Proyectos cargados para asignación:", {
-        count: projects.length,
-        projects: projects.map((p) => ({
-          name: p.name,
-          cid: typeof p.clientId === "string" ? p.clientId : p.clientId?._id,
-        })),
-      });
     } catch (error: any) {
       console.error("Error fetching all projects:", error);
       // Solo loguear, pero podríamos poner un estado de error si quisiéramos
@@ -630,6 +633,7 @@ export const UsersPage: React.FC = () => {
       try {
         await usersAPI.remove(user._id);
         sweetAlert.success("Usuario eliminado", "El usuario ha sido eliminado correctamente");
+        invalidateUsersPageCache(); // el mapa de nombres puede haber cambiado
         fetchUsers({ silent: true });
       } catch (error: any) {
         const message = error.response?.data?.error || "Error al eliminar el usuario";
@@ -1895,7 +1899,7 @@ export const UsersPage: React.FC = () => {
         </InfoModal>
       )}
 
-      <UserFormModal isOpen={showModal} onClose={closeModal} user={editingUser} mode={modalMode} onSaved={() => fetchUsers({ silent: true })} />
+      <UserFormModal isOpen={showModal} onClose={closeModal} user={editingUser} mode={modalMode} onSaved={() => { invalidateUsersPageCache(); fetchUsers({ silent: true }); }} />
 
       <InfoModal isOpen={showLinkModal} onClose={() => setShowLinkModal(false)} title="Registrar Usuario" size="lg">
         <div className="flex flex-col gap-4 py-1">

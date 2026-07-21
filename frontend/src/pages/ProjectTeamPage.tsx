@@ -33,6 +33,7 @@ import { clientsAPI } from "../api/clients";
 import { infoAPI, InfoItem } from "../api/info";
 import { categoriaSatAPI, CategoriaSatItem } from "../api/categoriasSat";
 import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
+import { cachedFetch } from "../utils/refCache";
 
 const HELP_KEY = "projectTeam" as const;
 
@@ -323,7 +324,7 @@ export const ProjectTeamPage: React.FC = () => {
     const reqId = ++teamReqIdRef.current;
     try {
       setTeamFetching(true);
-      const params: any = { projectId, page, limit: TEAM_PAGE_SIZE };
+      const params: any = { projectId, page, limit: TEAM_PAGE_SIZE, sort: "name" };
       if (search) params.email = search; // el backend busca fuzzy en nombre/email
       if (status === "active") params.metadataActivo = "true";
       if (status === "inactive") params.metadataActivo = "false";
@@ -359,12 +360,12 @@ export const ProjectTeamPage: React.FC = () => {
       try {
         setLoading(true);
         const [projectData, vacationsData, areasData, positionsData, levelsData, shiftsData] = await Promise.all([
-          projectsAPI.getProject(projectId),
-          vacationsAPI.getAll(),
-          areasAPI.listAll(),
-          positionsAPI.listAll(),
-          levelsAPI.listAll(),
-          shiftsAPI.getAll(),
+          projectsAPI.getProject(projectId), // específico del proyecto: no se cachea
+          cachedFetch("vacations:all", () => vacationsAPI.getAll()),
+          cachedFetch("areas:all", () => areasAPI.listAll()),
+          cachedFetch("positions:all", () => positionsAPI.listAll()),
+          cachedFetch("levels:all", () => levelsAPI.listAll()),
+          cachedFetch("shifts:all", () => shiftsAPI.getAll()),
         ]);
 
         setAllPositions(positionsData);
@@ -398,13 +399,22 @@ export const ProjectTeamPage: React.FC = () => {
         setAllAreas(areasData);
 
         // Fetch additional data for user cards
-        const [allClientsData, allProjectsResponse] = await Promise.all([clientsAPI.listAll(), projectsAPI.listAll({ limit: 500 })]);
+        const [allClientsData, allProjectsResponse] = await Promise.all([
+          cachedFetch("clients:all", () => clientsAPI.listAll()),
+          cachedFetch("projects:all", () => projectsAPI.listAll({ limit: 500 })),
+        ]);
 
         setAllClients(allClientsData);
         setAllProjects(allProjectsResponse);
 
-        // Fetch Metadata Info
-        const [sedes, cats, estados, tipos, rf] = await Promise.all([infoAPI.listByType("sede"), categoriaSatAPI.list(), infoAPI.listByType("estado-empleado"), infoAPI.listByType("contrato"), roleFrameAPI.list()]);
+        // Fetch Metadata Info (datos de referencia estables → cacheados)
+        const [sedes, cats, estados, tipos, rf] = await Promise.all([
+          cachedFetch("info:sede", () => infoAPI.listByType("sede")),
+          cachedFetch("categoriaSat:all", () => categoriaSatAPI.list()),
+          cachedFetch("info:estado-empleado", () => infoAPI.listByType("estado-empleado")),
+          cachedFetch("info:contrato", () => infoAPI.listByType("contrato")),
+          cachedFetch("roleFrames:all", () => roleFrameAPI.list()),
+        ]);
         setAllSedes(sedes);
         setAllCategoriasSat(cats);
         setAllEstados(estados);
@@ -1598,10 +1608,7 @@ export const ProjectTeamPage: React.FC = () => {
 
 
                 {(() => {
-                  // Coordinadores primero dentro de la página actual.
-                  const coordinators = teamRows.filter(checkIsCoordinator);
-                  const members = teamRows.filter((u) => !checkIsCoordinator(u));
-
+                  // Orden alfabético tal como lo devuelve el server (sort=name).
                   if (teamTotal === 0 && !teamFetching) {
                     return (
                       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center h-64 text-gray-500">
@@ -1630,16 +1637,14 @@ export const ProjectTeamPage: React.FC = () => {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                            {coordinators.map((u) => renderUserRow(u))}
-                            {members.map((u) => renderUserRow(u))}
+                            {teamRows.map((u) => renderUserRow(u))}
                           </tbody>
                         </table>
                       </div>
                     </div>
                   ) : (
                     <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 transition-opacity ${teamFetching ? "opacity-60" : ""}`}>
-                      {coordinators.map((u) => renderUserCard(u))}
-                      {members.map((u) => renderUserCard(u))}
+                      {teamRows.map((u) => renderUserCard(u))}
                     </div>
                   );
                 })()}

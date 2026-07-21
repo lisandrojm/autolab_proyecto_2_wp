@@ -1,6 +1,7 @@
 // apps/web/src/App.tsx
 import { useEffect, lazy, Suspense } from "react";
-import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Outlet, useLocation } from "react-router-dom";
+import { cancelPendingGetRequests } from "./api/axiosConfig";
 import { useAuthStore } from "./stores/authStore";
 import { useThemeStore } from "./stores/themeStore";
 import { LoginPage } from "./pages/LoginPage";
@@ -85,6 +86,17 @@ const AppLayout: React.FC = () => {
       <Outlet />
     </>
   );
+};
+
+// Al cambiar de ruta, cancela los GET en vuelo de la página anterior para que no se
+// apilen consultas pesadas contra el server al navegar rápido. La limpieza corre antes
+// de que la nueva página dispare sus propios fetch.
+const RouteChangeCanceller: React.FC = () => {
+  const location = useLocation();
+  useEffect(() => {
+    return () => cancelPendingGetRequests();
+  }, [location.pathname]);
+  return null;
 };
 
 function App() {
@@ -172,6 +184,7 @@ function App() {
     <div className={theme}>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
         <Router>
+          <RouteChangeCanceller />
           <Routes>
             {/* Rutas públicas (SIN Navbar) */}
             <Route element={<PublicLayout />}>

@@ -256,7 +256,14 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
           .populate(projectsPopulate)
           .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame });
 
-    query = query.sort({ _id: -1 }).skip(skip).limit(limitNum).lean();
+    // Orden: por defecto _id desc (más nuevos primero). Con ?sort=name se ordena
+    // alfabéticamente por nombre/apellido, case- y acento-insensible (collation es).
+    if (req.query.sort === "name") {
+      query = query.collation({ locale: "es", strength: 1 }).sort({ firstName: 1, lastName: 1 });
+    } else {
+      query = query.sort({ _id: -1 });
+    }
+    query = query.skip(skip).limit(limitNum).lean();
 
     const [users, total] = await Promise.all([query.exec(), User.countDocuments(filter).exec()]);
 

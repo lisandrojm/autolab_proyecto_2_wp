@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
-import { fuzzyMatch } from "../utils/searchHelpers";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuthStore } from "../stores/authStore";
-import { usersAPI, User } from "../api/users";
+import { contractsAPI } from "../api/contracts";
+import { projectsAPI } from "../api/projects";
+import { cachedFetch } from "../utils/refCache";
 import { infoAPI } from "../api/info";
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
@@ -34,8 +35,11 @@ interface ContractRecord {
 export const ContractsPage: React.FC = () => {
   const { hasPermission } = useAuthStore();
 
-  // Data
-  const [allContracts, setAllContracts] = useState<ContractRecord[]>([]);
+  // Data (paginado server-side)
+  const [contracts, setContracts] = useState<ContractRecord[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [projectOptions, setProjectOptions] = useState<{ id: string; name: string }[]>([]);
   const [isFetching, setIsFetching] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
@@ -44,7 +48,7 @@ export const ContractsPage: React.FC = () => {
 
   // Filtering & Pagination
   const [searchTerm, setSearchTerm] = useState("");
-  const [projectFilter, setProjectFilter] = useState("all");
+  const [projectFilter, setProjectFilter] = useState("all"); // projectId o "all"
   const [currentPage, setCurrentPage] = useState(1);
   const [limit] = useState(20);
   const [viewMode, setViewMode] = useState<"table" | "cards">(() => {
@@ -72,20 +76,40 @@ export const ContractsPage: React.FC = () => {
     const fetchAllData = async () => {
       try {
         setInitialLoading(true);
-        await Promise.all([fetchContractTypes(), fetchContracts()]);
+        await Promise.all([fetchContractTypes(), fetchProjectOptions(), fetchContracts(1)]);
       } finally {
         setInitialLoading(false);
       }
     };
     fetchAllData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Buscar / filtrar por proyecto → server-side, resetea a página 1 (debounced, como Usuarios).
+  const filtersInitedRef = useRef(false);
   useEffect(() => {
+    if (!filtersInitedRef.current) {
+      filtersInitedRef.current = true;
+      return;
+    }
     const h = setTimeout(() => {
-      fetchContracts();
+      setCurrentPage(1);
+      fetchContracts(1);
     }, 300);
     return () => clearTimeout(h);
-  }, [searchTerm, contractTypes]); // Refetch if types load late? No, types loaded once. Filter changes refetch not needed for types.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm, projectFilter]);
+
+  // Cambio de página → traer esa página del server.
+  const pageInitedRef = useRef(false);
+  useEffect(() => {
+    if (!pageInitedRef.current) {
+      pageInitedRef.current = true;
+      return;
+    }
+    fetchContracts(currentPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
 
   const fetchContractTypes = async () => {
     try {
@@ -102,87 +126,63 @@ export const ContractsPage: React.FC = () => {
     }
   };
 
-  const fetchContracts = async () => {
+  const fetchProjectOptions = async () => {
+    try {
+      const projects = await cachedFetch("projects:all", () => projectsAPI.listAll({ limit: 500 }));
+      setProjectOptions(
+        projects
+          .map((p: any) => ({ id: p._id as string, name: (p.name as string) || "" }))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      );
+    } catch (e) {
+      console.error("Error fetching projects for filter:", e);
+    }
+  };
+
+  const fetchContracts = async (page = currentPage) => {
     try {
       setIsFetching(true);
       const currentId = ++requestIdRef.current;
 
-      // We fetch all users to extract contracts
-      // In a real scenario, we might have a specific contracts endpoint
-      const response = await usersAPI.list({ limit: 1000 }); // Get a good amount of users
+      const resp = await contractsAPI.list({ page, limit, q: searchTerm || undefined, projectId: projectFilter });
+      if (currentId !== requestIdRef.current) return;
 
-      if (currentId === requestIdRef.current) {
-        const extracted: ContractRecord[] = [];
+      const rows: ContractRecord[] = resp.contracts.map((c, idx) => {
+        const userName = c.userFirstName || c.userLastName ? `${c.userFirstName || ""} ${c.userLastName || ""}`.trim() : (c.userEmail || "").split("@")[0];
+        const start = c.fecha_alta_contrato ? new Date(c.fecha_alta_contrato) : null;
+        const end = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : new Date();
+        const days = start ? Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1) : 0;
+        return {
+          id: `${c.userId}-${c.projectName || ""}-${c.fecha_alta_contrato || ""}-${idx}`,
+          userId: c.userId,
+          userEmail: c.userEmail,
+          userName,
+          projectName: c.projectName || "",
+          nombre_contrato: c.nombre_contrato || "",
+          nombre_sede: c.nombre_sede || "",
+          nombre_rol_frame: c.nombre_rol_frame || "",
+          fecha_alta_contrato: c.fecha_alta_contrato || "",
+          fecha_baja_contrato: c.fecha_baja_contrato,
+          days,
+          sueldo_mano: c.sueldo_mano,
+          nombre_estado_empleado: c.nombre_estado_empleado || "",
+          cantidad_jornadas_laborales: c.cantidad_jornadas_laborales,
+          tipo_contrato_id: c.tipo_contrato_id,
+        };
+      });
 
-        response.users.forEach((user: User) => {
-          const userName = user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName || user.lastName || user.email.split("@")[0];
-
-          (user.metadata?.projects || []).forEach((p: any) => {
-            (p.contracts || []).forEach((c: any, cIdx: number) => {
-              const start = new Date(c.fecha_alta_contrato);
-              const end = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : new Date();
-              const days = Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-
-              extracted.push({
-                id: `${user._id}-${p._id}-${cIdx}`,
-                userId: user._id || "",
-                userEmail: user.email,
-                userName,
-                projectName: p.nombre_proyecto || c.nombre_proyecto,
-                nombre_contrato: c.nombre_contrato,
-                nombre_sede: c.nombre_sede,
-                nombre_rol_frame: c.nombre_rol_frame,
-                fecha_alta_contrato: c.fecha_alta_contrato,
-                fecha_baja_contrato: c.fecha_baja_contrato,
-                days,
-                sueldo_mano: c.sueldo_mano,
-                nombre_estado_empleado: c.nombre_estado_empleado,
-                cantidad_jornadas_laborales: c.cantidad_jornadas_laborales,
-                tipo_contrato_id: c.tipo_contrato_id,
-              });
-            });
-          });
-        });
-
-        // Sort by start date desc
-        extracted.sort((a, b) => new Date(b.fecha_alta_contrato).getTime() - new Date(a.fecha_alta_contrato).getTime());
-
-        setAllContracts(extracted);
-        setHasLoaded(true);
-      }
+      setContracts(rows);
+      setTotal(resp.pagination.total);
+      setTotalPages(resp.pagination.pages);
+      setHasLoaded(true);
     } catch (error) {
       console.error("Error fetching contracts:", error);
       sweetAlert.error("Error", "No se pudieron cargar los contratos");
-      setHasLoaded(true); // También marcamos como cargado en caso de error
+      setHasLoaded(true);
     } finally {
       setIsFetching(false);
     }
   };
-
-  const uniqueProjects = useMemo(() => {
-    const projects = new Set<string>();
-    allContracts.forEach((c) => {
-      if (c.projectName) {
-        projects.add(c.projectName);
-      }
-    });
-    return Array.from(projects).sort();
-  }, [allContracts]);
-
-  const filteredContracts = useMemo(() => {
-    return allContracts.filter((c) => {
-      const matchesSearch = !searchTerm || fuzzyMatch(c.userName, searchTerm) || fuzzyMatch(c.userEmail, searchTerm) || fuzzyMatch(c.projectName, searchTerm) || fuzzyMatch(c.nombre_contrato, searchTerm);
-      const matchesProject = projectFilter === "all" || c.projectName === projectFilter;
-      return matchesSearch && matchesProject;
-    });
-  }, [allContracts, searchTerm, projectFilter]);
-
-  const paginatedContracts = useMemo(() => {
-    const start = (currentPage - 1) * limit;
-    return filteredContracts.slice(start, start + limit);
-  }, [filteredContracts, currentPage, limit]);
-
-  const totalPages = Math.ceil(filteredContracts.length / limit);
 
   const toggleViewMode = (mode: "table" | "cards") => {
     setViewMode(mode);
@@ -194,7 +194,7 @@ export const ContractsPage: React.FC = () => {
       title="Contratos"
       subtitle="Visualiza y gestiona todos los registros de contratación de los usuarios."
       faIcon={{ icon: faFileContract }}
-      itemCount={filteredContracts.length}
+      itemCount={total}
       infoModal={{
         isOpen: openInfo,
         onOpen: () => setOpenInfo(true),
@@ -219,9 +219,9 @@ export const ContractsPage: React.FC = () => {
             </span>
             <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} className="input-field pl-10 pr-8 h-10 border border-gray-300 dark:border-gray-600 rounded bg-transparent appearance-none focus:ring-2 focus:ring-blue-500">
               <option value="all">Todos los Proyectos</option>
-              {uniqueProjects.map((p) => (
-                <option key={p} value={p}>
-                  {p}
+              {projectOptions.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
                 </option>
               ))}
             </select>
@@ -242,7 +242,7 @@ export const ContractsPage: React.FC = () => {
         <div className="flex items-center justify-center py-20">
           <LoadingSpinner message={initialLoading ? "Cargando historial de contratos..." : "Cargando contratos..."} />
         </div>
-      ) : filteredContracts.length === 0 ? (
+      ) : total === 0 ? (
         <EmptyState title="No se encontraron contratos" description={searchTerm ? "Intenta con otros términos de búsqueda." : "No hay registros de contratos en el sistema."} icon={faFileContract} />
       ) : effectiveViewMode === "table" ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
@@ -261,7 +261,7 @@ export const ContractsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {paginatedContracts.map((record) => (
+                {contracts.map((record) => (
                   <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors group">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -308,7 +308,7 @@ export const ContractsPage: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {paginatedContracts.map((record) => (
+          {contracts.map((record) => (
             <Card key={record.id} className="p-0 overflow-hidden group hover:border-primary-500 transition-all border-gray-200 dark:border-gray-700">
               <div className="p-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700/50">
                 <div className="flex justify-between items-start mb-3">
@@ -385,7 +385,7 @@ export const ContractsPage: React.FC = () => {
       {totalPages > 1 && (
         <div className="mt-8 flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
           <div className="text-sm text-gray-500 dark:text-gray-400">
-            Mostrando <span className="font-semibold text-gray-900 dark:text-gray-100">{paginatedContracts.length}</span> de <span className="font-semibold text-gray-900 dark:text-gray-100">{filteredContracts.length}</span> resultados
+            Mostrando <span className="font-semibold text-gray-900 dark:text-gray-100">{contracts.length}</span> de <span className="font-semibold text-gray-900 dark:text-gray-100">{total}</span> resultados
           </div>
           <div className="flex gap-2">
             <button onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))} disabled={currentPage === 1} className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
