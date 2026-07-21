@@ -32,6 +32,7 @@ const upload = multer({
 const ReleaseSchema = z.object({
     name: z.string().min(1).max(150),
     version: z.string().min(1).max(50),
+    empresaId: z.string().min(1, "La empresa es obligatoria"),
     description: z.string().max(2000).optional(),
     isActive: z
         .union([z.boolean(), z.string()])
@@ -42,7 +43,9 @@ router.get("/", authenticateToken, requireTenant, async (req, res) => {
     try {
         const releases = await Release.find({
             tenantId: req.tenantObjectId,
-        }).sort({ createdAt: -1 });
+        })
+            .populate("empresaId", "razonSocial cuit")
+            .sort({ createdAt: -1 });
         res.json(releases);
     }
     catch (error) {
@@ -178,6 +181,7 @@ router.put("/:id", authenticateToken, requireTenant, upload.single("file"), asyn
         }
         release.name = validatedData.name;
         release.version = validatedData.version;
+        release.empresaId = validatedData.empresaId;
         if (validatedData.description !== undefined)
             release.description = validatedData.description;
         if (validatedData.isActive !== undefined)

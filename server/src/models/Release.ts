@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, Types } from "mongoose";
 
 export interface IRelease extends Document {
   tenantId: Types.ObjectId;
+  empresaId?: Types.ObjectId;
   name: string;
   version: string;
   description?: string;
@@ -15,6 +16,7 @@ export interface IRelease extends Document {
 const releaseSchema = new Schema<IRelease>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
+    empresaId: { type: Schema.Types.ObjectId, ref: "Company" },
     name: {
       type: String,
       required: true,
