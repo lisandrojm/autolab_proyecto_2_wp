@@ -1,6 +1,6 @@
 import React from "react";
 
-export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels" | "pdfTemplates" | "vacations" | "vacationsRules" | "activityLogs" | "projectTeam" | "projects" | "sedes" | "contracts";
+export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels" | "pdfTemplates" | "vacations" | "vacationsRules" | "activityLogs" | "projectTeam" | "projects" | "sedes" | "contracts" | "categoriasSat" | "centrosCosto" | "contratosFrame" | "empresas" | "bancos" | "holidays" | "funcionesFrame" | "miPerfil" | "requestsConfig" | "obrasSociales" | "orderTypes" | "releases" | "shifts" | "importUsersWp";
 
 export type HelpEntry = {
   title: string;
@@ -184,6 +184,76 @@ const helpResources = {
       "contracts.title": "Gestión de Contratos",
       "contracts.description": "Historial completo de contrataciones y vinculaciones laborales.",
       "contracts.items": ["**Registros**: Detalle de cada contrato asociado a un usuario y proyecto.", "**Datos clave**: Incluye fechas de alta/baja, duración en días, sueldo y rol desempeñado.", "**Estado**: Visualiza si el contrato está vigente o finalizado.", "**Sede y Rol**: Ubicación y función específica que desempeña el usuario.", "**Filtros**: Busca por nombre de usuario, proyecto o contrato.", "**Vistas**: Alterna entre vista de tabla (detalle) y tarjetas (resumen)."],
+
+      // Categorías SAT
+      "categoriasSat.title": "Información de Categorías SAT",
+      "categoriasSat.description": "Catálogo de categorías del sistema (SAT) para clasificar al personal.",
+      "categoriasSat.items": ["**Categoría SAT**: Clasificación del personal según convenio (CCT SATSAID), usada en contratos y liquidaciones.", "**Origen**: Se sincroniza desde FRAME o se carga manualmente; cada categoría tiene nombre e ID externo.", "**Gestión**: Crear, editar y eliminar categorías, o importarlas masivamente desde un Excel."],
+
+      // Centros de Costos
+      "centrosCosto.title": "Información de Centros de Costos",
+      "centrosCosto.description": "Catálogo de centros de costo para imputar proyectos y gastos.",
+      "centrosCosto.items": ["**Centro de costo**: Unidad contable a la que se imputan proyectos, contratos y gastos.", "**Uso**: Se asigna a cada proyecto para agrupar y reportar costos por área o unidad de negocio.", "**Gestión**: Crear, editar y eliminar centros de costo, o importarlos desde un Excel."],
+
+      // Contratos (config / contratos-frame)
+      "contratosFrame.title": "Información de Contratos",
+      "contratosFrame.description": "Catálogo de tipos de contrato con sus parámetros para armar los contratos del personal.",
+      "contratosFrame.items": ["**Tipo de contrato**: Modalidad de contratación (ej. Jornada, Plazo fijo, Tiempo Indeterminado, Eventual).", "**Parámetros**: Cantidad de jornadas y multiplicador diario que definen el cálculo de la liquidación.", "**ID externo**: Vincula el tipo con FRAME para la sincronización.", "**Gestión**: Crear, editar, eliminar e importar tipos de contrato desde un Excel."],
+
+      // Empresas
+      "empresas.title": "Información de Empresas",
+      "empresas.description": "Empresas / productoras con sus datos legales para armar los contratos.",
+      "empresas.items": ["**Empresa**: Razón social y CUIT de la productora que figura como 'La Empleadora' en los contratos.", "**Domicilio legal**: Calle, número, localidad, provincia y código postal de la empresa.", "**Firmante**: Persona que representa a la empresa al firmar (nombre, DNI y cargo, ej. Socio Gerente).", "**Representante legal**: Apoderado legal con su nombre y email de contacto.", "**Gestión**: Crear, editar y eliminar empresas para usarlas al generar los contratos."],
+
+      // Entidades Financieras (Bancos)
+      "bancos.title": "Información de Entidades Financieras",
+      "bancos.description": "Catálogo de bancos y entidades financieras para los datos bancarios del personal.",
+      "bancos.items": ["**Entidad financiera**: Banco o entidad donde el personal cobra sus haberes.", "**Uso**: Se selecciona al cargar los datos bancarios (CBU/alias) de cada usuario.", "**Gestión**: Crear, editar y eliminar entidades, o importarlas desde un Excel."],
+
+      // Feriados
+      "holidays.title": "Información de Feriados",
+      "holidays.description": "Calendario de feriados que afecta la liquidación de jornadas y horas.",
+      "holidays.items": ["**Feriado**: Día no laborable con su fecha y descripción.", "**Impacto**: Los feriados se consideran en el cálculo de asistencias, horas extra y liquidaciones.", "**Gestión**: Crear, editar y eliminar feriados del calendario."],
+
+      // Funciones FRAME
+      "funcionesFrame.title": "Información de Funciones FRAME",
+      "funcionesFrame.description": "Catálogo de funciones / roles FRAME asignables al personal en los proyectos.",
+      "funcionesFrame.items": ["**Función FRAME**: Rol técnico del personal en el proyecto (ej. Camarógrafo, Sonidista, Maquillador).", "**Uso**: Se asigna a cada miembro del equipo y aparece en contratos y novedades.", "**Gestión**: Crear, editar y eliminar funciones FRAME."],
+
+      // Mi Perfil
+      "miPerfil.title": "Información de Mi Perfil",
+      "miPerfil.description": "Tus datos personales, de contacto y de cuenta.",
+      "miPerfil.items": ["**Datos personales**: Nombre, documento y datos de contacto.", "**Cuenta**: Email de acceso y cambio de contraseña.", "**Roles**: Roles de sistema asignados que determinan tus permisos."],
+
+      // Novedades (Configuración)
+      "requestsConfig.title": "Información de Configuración de Novedades",
+      "requestsConfig.description": "Parámetros que controlan cómo se cargan y validan las novedades de los proyectos.",
+      "requestsConfig.items": ["**Tipos de novedad**: Motivos de ausencia/presencia disponibles al cargar una novedad.", "**Reglas**: Días permitidos para cargar hacia atrás, personal adicional y carga rápida.", "**Alcance**: La configuración aplica globalmente o puede ajustarse por proyecto."],
+
+      // Obras Sociales
+      "obrasSociales.title": "Información de Obras Sociales",
+      "obrasSociales.description": "Catálogo de obras sociales para los datos del personal.",
+      "obrasSociales.items": ["**Obra social**: Cobertura de salud asociada al personal.", "**Uso**: Se selecciona al cargar los datos del empleado.", "**Gestión**: Crear, editar y eliminar obras sociales, o importarlas desde un Excel."],
+
+      // Pedidos (Configuración / tipos de pedido)
+      "orderTypes.title": "Información de Pedidos",
+      "orderTypes.description": "Configuración de los tipos de pedido disponibles en el sistema.",
+      "orderTypes.items": ["**Tipo de pedido**: Categoría de solicitud que el personal puede generar.", "**Configuración**: Definí los tipos habilitados y sus parámetros.", "**Gestión**: Crear, editar y eliminar tipos de pedido."],
+
+      // Releases
+      "releases.title": "Información de Releases",
+      "releases.description": "Documentos de release / cesión de derechos usados en los proyectos.",
+      "releases.items": ["**Release**: Documento de cesión de derechos o autorización asociado a un contrato o proyecto.", "**Uso**: Respalda la cesión de titularidad de la obra por parte del personal.", "**Gestión**: Crear, editar y eliminar releases."],
+
+      // Turnos
+      "shifts.title": "Información de Turnos",
+      "shifts.description": "Catálogo de turnos horarios asignables a las áreas de los proyectos.",
+      "shifts.items": ["**Turno**: Franja horaria con hora de inicio, fin y días de la semana (ej. Mañana 6 a 12).", "**Uso**: Se habilita por área en cada proyecto y se asigna a los miembros del equipo.", "**Gestión**: Crear, editar y eliminar turnos."],
+
+      // Importación de Usuarios WP
+      "importUsersWp.title": "Información de Importación de Usuarios WP",
+      "importUsersWp.description": "Herramienta para importar usuarios desde WeProdu (WP).",
+      "importUsersWp.items": ["**Importación**: Trae usuarios desde el sistema WP y los da de alta en el tenant.", "**Mapeo**: Asocia los datos de origen con los campos de usuario (email, documento, roles).", "**Proceso**: Revisá el resultado de la importación y corregí los registros con error."],
     },
     // Agregar dentro de helpResources.es.help
 
@@ -373,6 +443,21 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
     size: "sm",
     content: buildHelpContent("projectTeam"),
   },
+
+  categoriasSat: { title: "Información de Categorías SAT", size: "sm", content: buildHelpContent("categoriasSat") },
+  centrosCosto: { title: "Información de Centros de Costos", size: "sm", content: buildHelpContent("centrosCosto") },
+  contratosFrame: { title: "Información de Contratos", size: "sm", content: buildHelpContent("contratosFrame") },
+  empresas: { title: "Información de Empresas", size: "sm", content: buildHelpContent("empresas") },
+  bancos: { title: "Información de Entidades Financieras", size: "sm", content: buildHelpContent("bancos") },
+  holidays: { title: "Información de Feriados", size: "sm", content: buildHelpContent("holidays") },
+  funcionesFrame: { title: "Información de Funciones FRAME", size: "sm", content: buildHelpContent("funcionesFrame") },
+  miPerfil: { title: "Información de Mi Perfil", size: "sm", content: buildHelpContent("miPerfil") },
+  requestsConfig: { title: "Configuración de Novedades", size: "sm", content: buildHelpContent("requestsConfig") },
+  obrasSociales: { title: "Información de Obras Sociales", size: "sm", content: buildHelpContent("obrasSociales") },
+  orderTypes: { title: "Información de Pedidos", size: "sm", content: buildHelpContent("orderTypes") },
+  releases: { title: "Información de Releases", size: "sm", content: buildHelpContent("releases") },
+  shifts: { title: "Información de Turnos", size: "sm", content: buildHelpContent("shifts") },
+  importUsersWp: { title: "Importación de Usuarios WP", size: "sm", content: buildHelpContent("importUsersWp") },
 };
 
 export function getHelp(key: HelpKey): HelpEntry {

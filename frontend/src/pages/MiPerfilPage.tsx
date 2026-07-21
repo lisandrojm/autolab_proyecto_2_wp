@@ -4,6 +4,7 @@ import { usersAPI, User } from "../api/users";
 import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
 import { infoAPI, InfoItem } from "../api/info";
 import { PageLayout } from "../components/ui/PageLayout";
+import { getHelp, hasHelp } from "../data/help/helpContent";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -40,6 +41,9 @@ const formatDate = (value?: string) => {
 export const MiPerfilPage: React.FC = () => {
   const authUser = useAuthStore((s) => s.user);
 
+  const HELP_KEY = "miPerfil" as const;
+  const helpEntry = getHelp(HELP_KEY);
+  const [showInfo, setShowInfo] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<ProfileTab>("general");
@@ -152,7 +156,7 @@ export const MiPerfilPage: React.FC = () => {
   ];
 
   return (
-    <PageLayout title="Mi Perfil" subtitle="Visualización de tus datos personales (solo lectura)" faIcon={{ icon: faIdCard }}>
+    <PageLayout title="Mi Perfil" subtitle="Visualización de tus datos personales (solo lectura)" faIcon={{ icon: faIdCard }} shouldShowInfo={hasHelp(HELP_KEY)} infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: helpEntry.title, size: helpEntry.size, content: helpEntry.content }}>
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         {/* Encabezado con nombre y roles */}
         <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">

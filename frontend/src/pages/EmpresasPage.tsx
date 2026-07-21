@@ -8,6 +8,9 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { sweetAlert } from "../utils/sweetAlert";
 import { fuzzyMatch } from "../utils/searchHelpers";
 import { companiesAPI, Company, CompanyInput } from "../api/companies";
+import { getHelp, hasHelp } from "../data/help/helpContent";
+
+const HELP_KEY = "empresas" as const;
 
 const EMPTY_FORM: CompanyInput = {
   razonSocial: "",
@@ -34,6 +37,8 @@ export const EmpresasPage: React.FC = () => {
   const [editing, setEditing] = useState<Company | null>(null);
   const [form, setForm] = useState<CompanyInput>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
+  const helpEntry = getHelp(HELP_KEY);
 
   const fetchCompanies = async () => {
     try {
@@ -144,6 +149,15 @@ export const EmpresasPage: React.FC = () => {
       subtitle="Empresas / productoras con sus datos para armar los contratos."
       faIcon={{ icon: faBuilding }}
       itemCount={filtered.length}
+      shouldShowInfo={hasHelp(HELP_KEY)}
+      infoModal={{
+        isOpen: showInfo,
+        onOpen: () => setShowInfo(true),
+        onClose: () => setShowInfo(false),
+        title: helpEntry.title,
+        size: helpEntry.size,
+        content: helpEntry.content,
+      }}
       headerActions={
         <button onClick={openCreate} className="btn-primary flex items-center gap-2 text-sm">
           <FontAwesomeIcon icon={faPlus} className="h-4 w-4" />

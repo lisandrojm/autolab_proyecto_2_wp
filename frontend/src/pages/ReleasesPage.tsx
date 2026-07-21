@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { PageLayout } from "../components/ui/PageLayout";
+import { getHelp, hasHelp } from "../data/help/helpContent";
 import { Card } from "../components/ui/Card";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -31,6 +32,9 @@ const EMPTY_FORM: ReleaseFormData = {
 
 export function ReleasesPage() {
   // data
+  const HELP_KEY = "releases" as const;
+  const helpEntry = getHelp(HELP_KEY);
+  const [showInfo, setShowInfo] = useState(false);
   const [releases, setReleases] = useState<Release[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -207,6 +211,8 @@ export function ReleasesPage() {
       itemCount={filteredReleases.length}
       subtitle="Crea y gestiona los releases con sus archivos adjuntos"
       faIcon={{ icon: faRocket }}
+      shouldShowInfo={hasHelp(HELP_KEY)}
+      infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: helpEntry.title, size: helpEntry.size, content: helpEntry.content }}
       headerActions={
         <button onClick={openCreate} className="flex items-center justify-center text-sm px-4 py-2 gap-2 rounded-md transition-colors bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700" title="Crear nuevo release">
           <FontAwesomeIcon icon={faPlus} className="h-4 w-4" />

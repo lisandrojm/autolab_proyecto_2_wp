@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../api/categoriasSat";
 import { PageLayout } from "../components/ui/PageLayout";
+import { getHelp, hasHelp } from "../data/help/helpContent";
 import { Card } from "../components/ui/Card";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
@@ -11,6 +12,9 @@ import { Modal } from "../components/ui/Modal";
 import { sweetAlert } from "../utils/sweetAlert";
 
 export const RolesFramePage: React.FC = () => {
+  const HELP_KEY = "funcionesFrame" as const;
+  const helpEntry = getHelp(HELP_KEY);
+  const [showInfo, setShowInfo] = useState(false);
   const [roles, setRoles] = useState<RoleFrameItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -181,6 +185,8 @@ export const RolesFramePage: React.FC = () => {
     <PageLayout
       title="Funciones FRAME"
       subtitle="Todos los roles externos del sistema y su asociación con categorías SAT"
+      shouldShowInfo={hasHelp(HELP_KEY)}
+      infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: helpEntry.title, size: helpEntry.size, content: helpEntry.content }}
       itemCount={filteredRoles.length}
       faIcon={{ icon: faUserShield }}
       headerActions={

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { fuzzyMatch } from "../utils/searchHelpers";
 import { categoriaSatAPI, CategoriaSatItem } from "../api/categoriasSat";
 import { PageLayout } from "../components/ui/PageLayout";
+import { getHelp, hasHelp } from "../data/help/helpContent";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { EmptyState } from "../components/ui/EmptyState";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
@@ -30,6 +31,9 @@ const formatDate = (value: string | Date | undefined | null): string => {
 };
 
 export const CategoriasSatPage: React.FC = () => {
+  const HELP_KEY = "categoriasSat" as const;
+  const helpEntry = getHelp(HELP_KEY);
+  const [showInfo, setShowInfo] = useState(false);
   const [categorias, setCategorias] = useState<CategoriaSatItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -370,7 +374,8 @@ export const CategoriasSatPage: React.FC = () => {
       itemCount={filtered.length}
       subtitle="Listado de categorías SAT sincronizadas desde la base de datos"
       faIcon={{ icon: faListCheck }}
-      shouldShowInfo={false}
+      shouldShowInfo={hasHelp(HELP_KEY)}
+      infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: helpEntry.title, size: helpEntry.size, content: helpEntry.content }}
       headerActions={
         <div className="flex items-center gap-3">
           {canManage && (

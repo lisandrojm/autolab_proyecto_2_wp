@@ -3,6 +3,7 @@ import { fuzzyMatch } from "../utils/searchHelpers";
 import { useAuthStore } from "../stores/authStore";
 import { holidaysAPI, Holiday } from "../api/holidays";
 import { PageLayout } from "../components/ui/PageLayout";
+import { getHelp, hasHelp } from "../data/help/helpContent";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { EmptyState } from "../components/ui/EmptyState";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
@@ -23,6 +24,9 @@ export const HolidaysPage: React.FC = () => {
   const navigate = useNavigate();
   const { hasPermission } = useAuthStore();
 
+  const HELP_KEY = "holidays" as const;
+  const helpEntry = getHelp(HELP_KEY);
+  const [showInfo, setShowInfo] = useState(false);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -261,6 +265,8 @@ export const HolidaysPage: React.FC = () => {
       itemCount={filteredHolidays.length}
       subtitle={`Gestiona el calendario de días feriados para la organización`}
       faIcon={{ icon: faCalendar }}
+      shouldShowInfo={hasHelp(HELP_KEY)}
+      infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: helpEntry.title, size: helpEntry.size, content: helpEntry.content }}
       headerActions={
         <div className="flex items-center gap-3">
           {canManage && (

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "../api/axiosConfig";
 import { PageLayout } from "../components/ui/PageLayout";
+import { getHelp, hasHelp } from "../data/help/helpContent";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowRotateRight,
@@ -65,6 +66,9 @@ interface HistoryItem {
 }
 
 export const ImportUsersWpPage: React.FC = () => {
+  const HELP_KEY = "importUsersWp" as const;
+  const helpEntry = getHelp(HELP_KEY);
+  const [showInfo, setShowInfo] = useState(false);
   const [activeTab, setActiveTab] = useState<"users" | "projects" | "history">("users");
   const [loading, setLoading] = useState(false);
   const [fetchingData, setFetchingData] = useState(true);
@@ -154,6 +158,8 @@ export const ImportUsersWpPage: React.FC = () => {
     <PageLayout
       title="Importación de Usuarios WP (FRAME)"
       subtitle="Módulo de integración y sincronización de empleados, contratos y proyectos desde el sistema externo FRAME."
+      shouldShowInfo={hasHelp(HELP_KEY)}
+      infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: helpEntry.title, size: helpEntry.size, content: helpEntry.content }}
     >
       
       {/* Toast Notification */}

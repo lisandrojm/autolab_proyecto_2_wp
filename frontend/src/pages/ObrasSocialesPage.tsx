@@ -13,5 +13,6 @@ export const ObrasSocialesPage: React.FC = () => (
     entityLabel="obra social"
     api={obrasSocialesApi}
     templateBaseName="obras_sociales"
+    helpKey="obrasSociales"
   />
 );

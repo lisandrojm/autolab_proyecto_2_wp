@@ -1,34 +1,35 @@
-import React, { useState, useEffect } from "react";
-import { PageLayout } from "../components/ui/PageLayout";
-import { ProjectHeaderSelector } from "../components/activity_logs_config/ProjectHeaderSelector";
-import { SortableActivityTypeRow, RequestConfig as RequestConfigType } from "../components/activity_logs_config/SortableActivityTypeRow";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faCog, faPlus, faGripVertical, faInfoCircle, faGlobe, faUsers, faToggleOn, faToggleOff, faCircleInfo, faSpinner, faBriefcase, faMobileAlt, faUserPlus, faFileInvoiceDollar, faSave } from "@fortawesome/free-solid-svg-icons";
-import { overtimeUtils, OvertimeSettings } from "../utils/overtimeUtils";
-import { useNavigate, useLocation } from "react-router-dom";
-import { ReportSchedule } from "../types/activityTypes";
-import { sweetAlert } from "../utils/sweetAlert";
-import { activityLogTypesAPI } from "../api/requestConfig";
+import React, { useState, useEffect } from 'react';
+import { PageLayout } from '../components/ui/PageLayout';
+import { getHelp, hasHelp } from '../data/help/helpContent';
+import { ProjectHeaderSelector } from '../components/activity_logs_config/ProjectHeaderSelector';
+import { SortableActivityTypeRow, RequestConfig as RequestConfigType } from '../components/activity_logs_config/SortableActivityTypeRow';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCheck, faCog, faPlus, faGripVertical, faInfoCircle, faGlobe, faUsers, faToggleOn, faToggleOff, faCircleInfo, faSpinner, faBriefcase, faMobileAlt, faUserPlus, faFileInvoiceDollar, faSave } from '@fortawesome/free-solid-svg-icons';
+import { overtimeUtils, OvertimeSettings } from '../utils/overtimeUtils';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { ReportSchedule } from '../types/activityTypes';
+import { sweetAlert } from '../utils/sweetAlert';
+import { activityLogTypesAPI } from '../api/requestConfig';
 
-import { projectsAPI, Project } from "../api/projects";
-import { Modal } from "../components/ui/Modal";
-import { InfoModal } from "../components/ui/InfoModal";
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { projectsAPI, Project } from '../api/projects';
+import { Modal } from '../components/ui/Modal';
+import { InfoModal } from '../components/ui/InfoModal';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 
 const DAYS_OF_WEEK = [
-  { id: 0, label: "Domingo", short: "D" },
-  { id: 1, label: "Lunes", short: "L" },
-  { id: 2, label: "Martes", short: "M" },
-  { id: 3, label: "Miércoles", short: "X" },
-  { id: 4, label: "Jueves", short: "J" },
-  { id: 5, label: "Viernes", short: "V" },
-  { id: 6, label: "Sábado", short: "S" },
+  { id: 0, label: 'Domingo', short: 'D' },
+  { id: 1, label: 'Lunes', short: 'L' },
+  { id: 2, label: 'Martes', short: 'M' },
+  { id: 3, label: 'Miércoles', short: 'X' },
+  { id: 4, label: 'Jueves', short: 'J' },
+  { id: 5, label: 'Viernes', short: 'V' },
+  { id: 6, label: 'Sábado', short: 'S' },
 ];
 
 const sanitizeActivityLogConfig = (config: any) => {
   if (!config) return undefined;
-  
+
   const sanitized: any = {
     useGlobalConfig: config.useGlobalConfig ?? true,
   };
@@ -36,11 +37,11 @@ const sanitizeActivityLogConfig = (config: any) => {
   if (config.enableFastEntry !== undefined) {
     sanitized.enableFastEntry = !!config.enableFastEntry;
   }
-  
+
   if (config.allowsAdditionalStaff !== undefined) {
     sanitized.allowsAdditionalStaff = !!config.allowsAdditionalStaff;
   }
-  
+
   if (config.allowedPastDays !== undefined) {
     sanitized.allowedPastDays = Number(config.allowedPastDays);
   }
@@ -58,7 +59,10 @@ const sanitizeActivityLogConfig = (config: any) => {
 export const RequestsConfigPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<"general" | "types" | "project" | "allowedDays" | "glossary">("general");
+  const HELP_KEY = 'requestsConfig' as const;
+  const helpEntry = getHelp(HELP_KEY);
+  const [showInfo, setShowInfo] = useState(false);
+  const [activeTab, setActiveTab] = useState<'general' | 'types' | 'project' | 'allowedDays' | 'glossary'>('general');
 
   useEffect(() => {
     if (location.state && (location.state as any).activeTab) {
@@ -75,7 +79,7 @@ export const RequestsConfigPage: React.FC = () => {
   // const [loadingConfig, setLoadingConfig] = useState(false);
 
   // Schedule Config State
-  const [type, setType] = useState<ReportSchedule["type"]>("daily");
+  const [type, setType] = useState<ReportSchedule['type']>('daily');
   const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [savingFrequency, setSavingFrequency] = useState(false);
 
@@ -110,7 +114,7 @@ export const RequestsConfigPage: React.FC = () => {
       const data = await activityLogTypesAPI.getGeneralSettings();
       setGlobalAllowedPastDays(data.allowedPastDays ?? 3);
     } catch (e) {
-      console.error("Error fetching general allowed past days settings", e);
+      console.error('Error fetching general allowed past days settings', e);
     }
   };
 
@@ -122,14 +126,14 @@ export const RequestsConfigPage: React.FC = () => {
         order: d.order,
         type: d.name,
         requiresReplacement: d.requiresReplacement,
-        status: d.isActive ? "Activa" : "Inactiva",
-        visibility: d.visibility || "all",
+        status: d.isActive ? 'Activa' : 'Inactiva',
+        visibility: d.visibility || 'all',
         allowedProjectIds: d.allowedProjectIds || [],
       }));
       setActivityTypes(mapped);
     } catch (error) {
-      console.error("Error fetching types:", error);
-      sweetAlert.error("Error", "No se pudieron cargar los tipos de novedades");
+      console.error('Error fetching types:', error);
+      sweetAlert.error('Error', 'No se pudieron cargar los tipos de novedades');
     }
   };
 
@@ -138,7 +142,7 @@ export const RequestsConfigPage: React.FC = () => {
       const projs = await projectsAPI.listAll();
       setAllProjects(projs);
     } catch (e) {
-      console.error("Error loading projects", e);
+      console.error('Error loading projects', e);
     }
   };
 
@@ -149,20 +153,20 @@ export const RequestsConfigPage: React.FC = () => {
         setType(currentConfig.type);
         setSelectedDays(currentConfig.days);
       } else {
-        setType("daily");
+        setType('daily');
         setSelectedDays([0, 1, 2, 3, 4, 5, 6]);
       }
     }
   }, [selectedProject?._id, selectedProject?.activityLogConfig]);
 
-  const handleTypeChange = (newType: ReportSchedule["type"]) => {
+  const handleTypeChange = (newType: ReportSchedule['type']) => {
     setType(newType);
-    if (newType === "daily") setSelectedDays([0, 1, 2, 3, 4, 5, 6]);
-    else if (newType === "workdays") setSelectedDays([1, 2, 3, 4, 5]);
+    if (newType === 'daily') setSelectedDays([0, 1, 2, 3, 4, 5, 6]);
+    else if (newType === 'workdays') setSelectedDays([1, 2, 3, 4, 5]);
   };
 
   const toggleDay = (dayId: number) => {
-    if (type !== "custom") return;
+    if (type !== 'custom') return;
     setSelectedDays((prev) => (prev.includes(dayId) ? prev.filter((d) => d !== dayId) : [...prev, dayId]));
   };
 
@@ -184,10 +188,10 @@ export const RequestsConfigPage: React.FC = () => {
       setSelectedProject((prev: any) => (prev ? { ...prev, activityLogConfig: newConfig } : prev));
       setAllProjects((prev) => prev.map((p) => (p._id === selectedProject._id ? { ...p, activityLogConfig: newConfig } : p)));
 
-      sweetAlert.success("Configuración Guardada", `Se ha actualizado la frecuencia para ${selectedProject.name}`);
+      sweetAlert.success('Configuración Guardada', `Se ha actualizado la frecuencia para ${selectedProject.name}`);
     } catch (error) {
-      console.error("Error saving frequency:", error);
-      sweetAlert.error("Error", "No se pudo guardar la configuración");
+      console.error('Error saving frequency:', error);
+      sweetAlert.error('Error', 'No se pudo guardar la configuración');
     } finally {
       setSavingFrequency(false);
     }
@@ -207,14 +211,12 @@ export const RequestsConfigPage: React.FC = () => {
       });
 
       // Optimistic UI
-      setAllProjects((prev) =>
-        prev.map((p) => (p._id === project._id ? { ...p, activityLogConfig: newConfig } : p))
-      );
+      setAllProjects((prev) => prev.map((p) => (p._id === project._id ? { ...p, activityLogConfig: newConfig } : p)));
 
       await projectsAPI.updateProject(project._id, { activityLogConfig: newConfig });
     } catch (error) {
-      console.error("Error toggling global config:", error);
-      sweetAlert.error("Error", "No se pudo actualizar el proyecto.");
+      console.error('Error toggling global config:', error);
+      sweetAlert.error('Error', 'No se pudo actualizar el proyecto.');
       loadProjects(); // Revert
     }
   };
@@ -229,14 +231,12 @@ export const RequestsConfigPage: React.FC = () => {
       });
 
       // Optimistic UI
-      setAllProjects((prev) =>
-        prev.map((p) => (p._id === project._id ? { ...p, activityLogConfig: newConfig } : p))
-      );
+      setAllProjects((prev) => prev.map((p) => (p._id === project._id ? { ...p, activityLogConfig: newConfig } : p)));
 
       await projectsAPI.updateProject(project._id, { activityLogConfig: newConfig });
     } catch (error) {
-      console.error("Error saving custom allowed days:", error);
-      sweetAlert.error("Error", "No se pudo guardar la configuración");
+      console.error('Error saving custom allowed days:', error);
+      sweetAlert.error('Error', 'No se pudo guardar la configuración');
       loadProjects(); // Revert
     }
   };
@@ -245,7 +245,7 @@ export const RequestsConfigPage: React.FC = () => {
     setSavingGlobalAllowedDays(true);
     try {
       await activityLogTypesAPI.updateGeneralSettings({ allowedPastDays: globalAllowedPastDays });
-      
+
       // Update all projects optimistically if they use global config
       setAllProjects((prev) =>
         prev.map((p) => {
@@ -260,9 +260,9 @@ export const RequestsConfigPage: React.FC = () => {
             };
           }
           return p;
-        })
+        }),
       );
-      
+
       if (selectedProject && selectedProject.activityLogConfig?.useGlobalConfig !== false) {
         setSelectedProject((prev: any) => ({
           ...prev,
@@ -274,10 +274,10 @@ export const RequestsConfigPage: React.FC = () => {
         }));
       }
 
-      sweetAlert.success("Configuración Guardada", "Se ha actualizado la cantidad de días permitidos global");
+      sweetAlert.success('Configuración Guardada', 'Se ha actualizado la cantidad de días permitidos global');
     } catch (error) {
-      console.error("Error saving global allowed past days:", error);
-      sweetAlert.error("Error", "No se pudo guardar la configuración general");
+      console.error('Error saving global allowed past days:', error);
+      sweetAlert.error('Error', 'No se pudo guardar la configuración general');
     } finally {
       setSavingGlobalAllowedDays(false);
     }
@@ -294,12 +294,12 @@ export const RequestsConfigPage: React.FC = () => {
     setSelectedProject(upToDateProject);
   };
 
-  const handleBack = () => navigate("/requests");
+  const handleBack = () => navigate('/requests');
 
   // ABM Handlers
   const openCreateModal = () => {
     const maxOrder = activityTypes.reduce((max, item) => Math.max(max, item.order), 0);
-    setCurrentType({ order: maxOrder + 1, status: "Activa", requiresReplacement: false, type: "", visibility: "all", allowedProjectIds: [] });
+    setCurrentType({ order: maxOrder + 1, status: 'Activa', requiresReplacement: false, type: '', visibility: 'all', allowedProjectIds: [] });
     setIsAbmModalOpen(true);
   };
 
@@ -310,14 +310,14 @@ export const RequestsConfigPage: React.FC = () => {
 
   const handleSaveType = async () => {
     if (!currentType.type?.trim()) {
-      sweetAlert.error("Error", "El nombre del tipo es requerido");
+      sweetAlert.error('Error', 'El nombre del tipo es requerido');
       return;
     }
     try {
       const payload = {
         name: currentType.type,
         requiresReplacement: currentType.requiresReplacement,
-        isActive: currentType.status === "Activa",
+        isActive: currentType.status === 'Activa',
         status: currentType.status,
         order: currentType.order,
         visibility: currentType.visibility,
@@ -326,37 +326,37 @@ export const RequestsConfigPage: React.FC = () => {
 
       if (currentType.id) {
         await activityLogTypesAPI.update(currentType.id, payload);
-        sweetAlert.success("Actualizado", "El tipo de novedad ha sido actualizado.");
+        sweetAlert.success('Actualizado', 'El tipo de novedad ha sido actualizado.');
       } else {
         await activityLogTypesAPI.create(payload);
-        sweetAlert.success("Creado", "El tipo de novedad ha sido creado.");
+        sweetAlert.success('Creado', 'El tipo de novedad ha sido creado.');
       }
       fetchTypes();
       setIsAbmModalOpen(false);
     } catch (error) {
-      console.error("Error saving type:", error);
-      sweetAlert.error("Error", "No se pudo guardar el tipo");
+      console.error('Error saving type:', error);
+      sweetAlert.error('Error', 'No se pudo guardar el tipo');
     }
   };
 
   const handleDeleteType = async (id: string) => {
-    const result = await sweetAlert.confirm("¿Estás seguro?", "Esta acción eliminará el tipo de novedad permanentemente.");
+    const result = await sweetAlert.confirm('¿Estás seguro?', 'Esta acción eliminará el tipo de novedad permanentemente.');
     if (result.isConfirmed) {
       try {
         await activityLogTypesAPI.delete(id);
         fetchTypes();
-        sweetAlert.success("Eliminado", "El tipo de novedad ha sido eliminado.");
+        sweetAlert.success('Eliminado', 'El tipo de novedad ha sido eliminado.');
       } catch (error) {
-        sweetAlert.error("Error", "No se pudo eliminar el tipo");
+        sweetAlert.error('Error', 'No se pudo eliminar el tipo');
       }
     }
   };
 
   const handleToggleActive = async (item: RequestConfigType) => {
     try {
-      const newStatus = item.status === "Activa" ? "Inactiva" : "Activa";
+      const newStatus = item.status === 'Activa' ? 'Inactiva' : 'Activa';
       setActivityTypes((prev) => prev.map((p) => (p.id === item.id ? { ...p, status: newStatus } : p)));
-      await activityLogTypesAPI.update(item.id, { isActive: newStatus === "Activa" });
+      await activityLogTypesAPI.update(item.id, { isActive: newStatus === 'Activa' });
     } catch (error) {
       fetchTypes();
     }
@@ -374,8 +374,8 @@ export const RequestsConfigPage: React.FC = () => {
 
   const handleToggleProjectForType = async (item: RequestConfigType) => {
     if (!modalSelectedProject) return;
-    if (item.visibility === "all") {
-      sweetAlert.info("Tipo Global", "Los tipos globales están habilitados en todos los proyectos automáticamente.");
+    if (item.visibility === 'all') {
+      sweetAlert.info('Tipo Global', 'Los tipos globales están habilitados en todos los proyectos automáticamente.');
       return;
     }
     try {
@@ -387,7 +387,7 @@ export const RequestsConfigPage: React.FC = () => {
       await activityLogTypesAPI.update(item.id, { allowedProjectIds: newIds });
     } catch (error) {
       fetchTypes();
-      sweetAlert.error("Error", "No se pudo actualizar la disponibilidad");
+      sweetAlert.error('Error', 'No se pudo actualizar la disponibilidad');
     }
   };
 
@@ -400,10 +400,10 @@ export const RequestsConfigPage: React.FC = () => {
     try {
       await activityLogTypesAPI.reorder(reorderedDetails.map((d) => ({ id: d.id, order: d.order })));
       setIsReorderMode(false);
-      sweetAlert.success("Orden Guardado", "El nuevo orden ha sido guardado.");
+      sweetAlert.success('Orden Guardado', 'El nuevo orden ha sido guardado.');
       fetchTypes();
     } catch (error) {
-      sweetAlert.error("Error", "No se pudo guardar el orden");
+      sweetAlert.error('Error', 'No se pudo guardar el orden');
       fetchTypes();
     }
   };
@@ -424,35 +424,36 @@ export const RequestsConfigPage: React.FC = () => {
     setTimeout(() => {
       overtimeUtils.saveGlossary(glossary);
       setSavingGlossary(false);
-      sweetAlert.success("Glosario Guardado", "La configuración de horas extras se ha actualizado correctamente.");
+      sweetAlert.success('Glosario Guardado', 'La configuración de horas extras se ha actualizado correctamente.');
     }, 500);
   };
 
-  const tabClass = (isActive: boolean) => `px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${isActive ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`;
+  const tabClass = (isActive: boolean) => `px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${isActive ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`;
 
   return (
     <PageLayout
-      title="Novedades | Configuración"
+      title="Novedades"
       faIcon={{ icon: faCog }}
       onBack={handleBack}
-      shouldShowInfo={false}
+      shouldShowInfo={hasHelp(HELP_KEY)}
+      infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: helpEntry.title, size: helpEntry.size, content: helpEntry.content }}
       searchAndFilters={
         <div className="mx-auto">
           {/* Tabs Header */}
           <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6 sticky top-[140px] z-20 bg-white dark:bg-gray-900">
-            <button className={tabClass(activeTab === "general")} onClick={() => setActiveTab("general")}>
+            <button className={tabClass(activeTab === 'general')} onClick={() => setActiveTab('general')}>
               General
             </button>
-            <button className={tabClass(activeTab === "types")} onClick={() => setActiveTab("types")}>
+            <button className={tabClass(activeTab === 'types')} onClick={() => setActiveTab('types')}>
               Tipos de ausencias
             </button>
-            <button className={tabClass(activeTab === "project")} onClick={() => setActiveTab("project")}>
+            <button className={tabClass(activeTab === 'project')} onClick={() => setActiveTab('project')}>
               Frecuencia
             </button>
-            <button className={tabClass(activeTab === "allowedDays")} onClick={() => setActiveTab("allowedDays")}>
+            <button className={tabClass(activeTab === 'allowedDays')} onClick={() => setActiveTab('allowedDays')}>
               Días Permitidos
             </button>
-            <button className={tabClass(activeTab === "glossary")} onClick={() => setActiveTab("glossary")}>
+            <button className={tabClass(activeTab === 'glossary')} onClick={() => setActiveTab('glossary')}>
               Glosario de Extras
             </button>
           </div>
@@ -460,7 +461,7 @@ export const RequestsConfigPage: React.FC = () => {
           {/* Tab Content */}
           <div className="animate-in fade-in duration-300">
             {/* ===================== GENERAL SETTINGS TAB ===================== */}
-            {activeTab === "general" && (
+            {activeTab === 'general' && (
               <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                 <div className="space-y-8">
                   {/* Intro Section (Explanation) */}
@@ -554,7 +555,7 @@ export const RequestsConfigPage: React.FC = () => {
                             await projectsAPI.updateProject(project._id, { activityLogConfig: newConfig });
                             // sweetAlert.toast? No, too intrusive.
                           } catch (e) {
-                            sweetAlert.error("Error", "No se pudo actualizar el proyecto.");
+                            sweetAlert.error('Error', 'No se pudo actualizar el proyecto.');
                             loadProjects(); // Revert
                           }
                         };
@@ -574,7 +575,7 @@ export const RequestsConfigPage: React.FC = () => {
 
                             await projectsAPI.updateProject(project._id, { activityLogConfig: newConfig });
                           } catch (e) {
-                            sweetAlert.error("Error", "No se pudo actualizar el proyecto.");
+                            sweetAlert.error('Error', 'No se pudo actualizar el proyecto.');
                             loadProjects(); // Revert
                           }
                         };
@@ -583,7 +584,7 @@ export const RequestsConfigPage: React.FC = () => {
                           <div key={project._id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded flex items-center justify-center font-bold text-sm ${isActive ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"}`}>{project.name.charAt(0)}</div>
+                                <div className={`w-10 h-10 rounded flex items-center justify-center font-bold text-sm ${isActive ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>{project.name.charAt(0)}</div>
                                 <span className="font-semibold text-gray-900 dark:text-white">{project.name}</span>
                               </div>
                             </div>
@@ -594,10 +595,10 @@ export const RequestsConfigPage: React.FC = () => {
                               <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3">
                                 <div className="flex flex-col">
                                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Reporte Rápido</span>
-                                  <span className="text-[10px] text-gray-400">{isActive ? "Pregunta si hubo novedades" : "Uno por uno"}</span>
+                                  <span className="text-[10px] text-gray-400">{isActive ? 'Pregunta si hubo novedades' : 'Uno por uno'}</span>
                                 </div>
-                                <button onClick={handleToggle} className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isActive ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`} title={isActive ? "Desactivar Reporte Rápido" : "Activar Reporte Rápido"}>
-                                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isActive ? "translate-x-5" : "translate-x-0"}`} />
+                                <button onClick={handleToggle} className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isActive ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`} title={isActive ? 'Desactivar Reporte Rápido' : 'Activar Reporte Rápido'}>
+                                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isActive ? 'translate-x-5' : 'translate-x-0'}`} />
                                 </button>
                               </div>
 
@@ -605,10 +606,10 @@ export const RequestsConfigPage: React.FC = () => {
                               <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3">
                                 <div className="flex flex-col">
                                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Otros Presentes</span>
-                                  <span className="text-[10px] text-gray-400">{allowsAdditionalStaff ? "Permite agregar personal externo" : "Solo personal asignado"}</span>
+                                  <span className="text-[10px] text-gray-400">{allowsAdditionalStaff ? 'Permite agregar personal externo' : 'Solo personal asignado'}</span>
                                 </div>
-                                <button onClick={handleToggleAdditionalStaff} className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${allowsAdditionalStaff ? "bg-green-600" : "bg-gray-300 dark:bg-gray-600"}`} title={allowsAdditionalStaff ? "Desactivar Personal Adicional" : "Activar Personal Adicional"}>
-                                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${allowsAdditionalStaff ? "translate-x-5" : "translate-x-0"}`} />
+                                <button onClick={handleToggleAdditionalStaff} className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${allowsAdditionalStaff ? 'bg-green-600' : 'bg-gray-300 dark:bg-gray-600'}`} title={allowsAdditionalStaff ? 'Desactivar Personal Adicional' : 'Activar Personal Adicional'}>
+                                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${allowsAdditionalStaff ? 'translate-x-5' : 'translate-x-0'}`} />
                                 </button>
                               </div>
                             </div>
@@ -622,7 +623,7 @@ export const RequestsConfigPage: React.FC = () => {
             )}
 
             {/* ===================== TIPOS DE NOVEDADES TAB ===================== */}
-            {activeTab === "types" && (
+            {activeTab === 'types' && (
               <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center bg-gray-50/50 dark:bg-gray-800/50">
                   <div className="flex items-center gap-4 me-4">
@@ -702,7 +703,7 @@ export const RequestsConfigPage: React.FC = () => {
             )}
 
             {/* ===================== FRECUENCIA POR PROYECTO TAB ===================== */}
-            {activeTab === "project" && (
+            {activeTab === 'project' && (
               <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                 <div className="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Seleccionar Proyecto</h3>
@@ -733,46 +734,46 @@ export const RequestsConfigPage: React.FC = () => {
                     <div>
                       <h4 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4">Tipo de Frecuencia</h4>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <button onClick={() => handleTypeChange("daily")} className={`p-4 rounded border text-left transition-all ${type === "daily" ? "border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-600 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-500" : "border-gray-200 hover:border-blue-300 dark:border-gray-700 dark:hover:border-gray-600"}`}>
+                        <button onClick={() => handleTypeChange('daily')} className={`p-4 rounded border text-left transition-all ${type === 'daily' ? 'border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-600 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-500' : 'border-gray-200 hover:border-blue-300 dark:border-gray-700 dark:hover:border-gray-600'}`}>
                           <div className="font-medium mb-1">Todos los días</div>
                           <div className="text-sm opacity-70">Lunes a Domingo</div>
                         </button>
-                        <button onClick={() => handleTypeChange("workdays")} className={`p-4 rounded border text-left transition-all ${type === "workdays" ? "border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-600 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-500" : "border-gray-200 hover:border-blue-300 dark:border-gray-700 dark:hover:border-gray-600"}`}>
+                        <button onClick={() => handleTypeChange('workdays')} className={`p-4 rounded border text-left transition-all ${type === 'workdays' ? 'border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-600 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-500' : 'border-gray-200 hover:border-blue-300 dark:border-gray-700 dark:hover:border-gray-600'}`}>
                           <div className="font-medium mb-1">Días Hábiles</div>
                           <div className="text-sm opacity-70">Lunes a Viernes</div>
                         </button>
-                        <button onClick={() => handleTypeChange("custom")} className={`p-4 rounded border text-left transition-all ${type === "custom" ? "border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-600 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-500" : "border-gray-200 hover:border-blue-300 dark:border-gray-700 dark:hover:border-gray-600"}`}>
+                        <button onClick={() => handleTypeChange('custom')} className={`p-4 rounded border text-left transition-all ${type === 'custom' ? 'border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-600 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-500' : 'border-gray-200 hover:border-blue-300 dark:border-gray-700 dark:hover:border-gray-600'}`}>
                           <div className="font-medium mb-1">Personalizado</div>
                           <div className="text-sm opacity-70">Elegir días específicos</div>
                         </button>
                       </div>
                     </div>
 
-                    {type === "custom" && (
+                    {type === 'custom' && (
                       <div className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded">
                         <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Seleccionar días:</h4>
                         <div className="flex flex-wrap gap-3">
                           {DAYS_OF_WEEK.map((day) => (
-                            <button key={day.id} onClick={() => toggleDay(day.id)} className={`w-10 h-10 rounded flex items-center justify-center font-semibold transition-all ${selectedDays.includes(day.id) ? "bg-blue-600 text-white shadow-md" : "bg-white text-gray-500 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600"}`} title={day.label}>
+                            <button key={day.id} onClick={() => toggleDay(day.id)} className={`w-10 h-10 rounded flex items-center justify-center font-semibold transition-all ${selectedDays.includes(day.id) ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-500 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600'}`} title={day.label}>
                               {day.short}
                             </button>
                           ))}
                         </div>
-                        <p className="text-xs text-gray-500 mt-3">Días seleccionados: {selectedDays.length > 0 ? selectedDays.map((d) => DAYS_OF_WEEK.find((day) => day.id === d)?.label).join(", ") : "Ninguno"}</p>
+                        <p className="text-xs text-gray-500 mt-3">Días seleccionados: {selectedDays.length > 0 ? selectedDays.map((d) => DAYS_OF_WEEK.find((day) => day.id === d)?.label).join(', ') : 'Ninguno'}</p>
                       </div>
                     )}
 
-                    {type !== "custom" && (
+                    {type !== 'custom' && (
                       <div className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded">
                         <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Días incluidos:</h4>
                         <div className="flex flex-wrap gap-3">
                           {DAYS_OF_WEEK.map((day) => (
-                            <div key={day.id} className={`w-10 h-10 rounded flex items-center justify-center font-semibold ${selectedDays.includes(day.id) ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-400 dark:bg-gray-600 dark:text-gray-500"}`} title={day.label}>
+                            <div key={day.id} className={`w-10 h-10 rounded flex items-center justify-center font-semibold ${selectedDays.includes(day.id) ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-400 dark:bg-gray-600 dark:text-gray-500'}`} title={day.label}>
                               {day.short}
                             </div>
                           ))}
                         </div>
-                        <p className="text-xs text-gray-500 mt-3">Días seleccionados: {selectedDays.map((d) => DAYS_OF_WEEK.find((day) => day.id === d)?.label).join(", ")}</p>
+                        <p className="text-xs text-gray-500 mt-3">Días seleccionados: {selectedDays.map((d) => DAYS_OF_WEEK.find((day) => day.id === d)?.label).join(', ')}</p>
                       </div>
                     )}
 
@@ -797,7 +798,7 @@ export const RequestsConfigPage: React.FC = () => {
             )}
 
             {/* ===================== DÍAS PERMITIDOS TAB ===================== */}
-            {activeTab === "allowedDays" && (
+            {activeTab === 'allowedDays' && (
               <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                 <div className="space-y-8">
                   {/* Global Config Header/Intro */}
@@ -808,29 +809,16 @@ export const RequestsConfigPage: React.FC = () => {
                       </div>
                       <div className="flex-1">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Días Permitidos (Configuración Global)</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-3">
-                          Define cuántos días hacia atrás se permite registrar o modificar novedades de forma predeterminada para todos los proyectos de la plataforma.
-                        </p>
-                        
+                        <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-3">Define cuántos días hacia atrás se permite registrar o modificar novedades de forma predeterminada para todos los proyectos de la plataforma.</p>
+
                         <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4 max-w-xl">
                           <div className="flex flex-col">
                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Días permitidos por defecto (hacia atrás)</span>
                             <span className="text-[10px] text-gray-400">Se aplica si el proyecto no tiene días personalizados configurados.</span>
                           </div>
                           <div className="flex items-center gap-3 ml-auto">
-                            <input
-                              type="number"
-                              min="1"
-                              max="30"
-                              value={globalAllowedPastDays}
-                              onChange={(e) => setGlobalAllowedPastDays(Math.max(1, parseInt(e.target.value) || 1))}
-                              className="w-20 p-2 rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-center font-semibold text-gray-900 dark:text-white text-sm"
-                            />
-                            <button
-                              onClick={handleSaveGlobalAllowedDays}
-                              disabled={savingGlobalAllowedDays}
-                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium flex items-center gap-2 disabled:opacity-50 transition-colors text-sm"
-                            >
+                            <input type="number" min="1" max="30" value={globalAllowedPastDays} onChange={(e) => setGlobalAllowedPastDays(Math.max(1, parseInt(e.target.value) || 1))} className="w-20 p-2 rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-center font-semibold text-gray-900 dark:text-white text-sm" />
+                            <button onClick={handleSaveGlobalAllowedDays} disabled={savingGlobalAllowedDays} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium flex items-center gap-2 disabled:opacity-50 transition-colors text-sm">
                               {savingGlobalAllowedDays ? <FontAwesomeIcon icon={faSpinner} spin /> : <FontAwesomeIcon icon={faCheck} />}
                               <span>Guardar</span>
                             </button>
@@ -860,9 +848,7 @@ export const RequestsConfigPage: React.FC = () => {
                           <div key={project._id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded flex items-center justify-center font-bold text-sm bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300`}>
-                                  {project.name.charAt(0)}
-                                </div>
+                                <div className={`w-10 h-10 rounded flex items-center justify-center font-bold text-sm bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300`}>{project.name.charAt(0)}</div>
                                 <span className="font-semibold text-gray-900 dark:text-white">{project.name}</span>
                               </div>
                             </div>
@@ -873,16 +859,10 @@ export const RequestsConfigPage: React.FC = () => {
                               <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3">
                                 <div className="flex flex-col">
                                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Usar Configuración Global</span>
-                                  <span className="text-[10px] text-gray-400">
-                                    {usesGlobal ? `Hereda los ${globalAllowedPastDays} días configurados de forma global` : "Configuración de días personalizada"}
-                                  </span>
+                                  <span className="text-[10px] text-gray-400">{usesGlobal ? `Hereda los ${globalAllowedPastDays} días configurados de forma global` : 'Configuración de días personalizada'}</span>
                                 </div>
-                                <button
-                                  onClick={() => handleToggleUseGlobal(project)}
-                                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${usesGlobal ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}
-                                  title={usesGlobal ? "Desactivar Configuración Global" : "Activar Configuración Global"}
-                                >
-                                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${usesGlobal ? "translate-x-5" : "translate-x-0"}`} />
+                                <button onClick={() => handleToggleUseGlobal(project)} className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${usesGlobal ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`} title={usesGlobal ? 'Desactivar Configuración Global' : 'Activar Configuración Global'}>
+                                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${usesGlobal ? 'translate-x-5' : 'translate-x-0'}`} />
                                 </button>
                               </div>
 
@@ -890,16 +870,10 @@ export const RequestsConfigPage: React.FC = () => {
                               <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3">
                                 <div className="flex flex-col">
                                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Días Permitidos</span>
-                                  <span className="text-[10px] text-gray-400">
-                                    {usesGlobal 
-                                      ? `Heredado de la configuración global` 
-                                      : `Permite reportar hoy y hasta los ${effectiveDays - 1} días anteriores`}
-                                  </span>
+                                  <span className="text-[10px] text-gray-400">{usesGlobal ? `Heredado de la configuración global` : `Permite reportar hoy y hasta los ${effectiveDays - 1} días anteriores`}</span>
                                 </div>
                                 {usesGlobal ? (
-                                  <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 font-semibold text-sm rounded px-3 py-1 border border-gray-200 dark:border-gray-600">
-                                    {globalAllowedPastDays} días
-                                  </div>
+                                  <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 font-semibold text-sm rounded px-3 py-1 border border-gray-200 dark:border-gray-600">{globalAllowedPastDays} días</div>
                                 ) : (
                                   <div className="flex items-center gap-2">
                                     <input
@@ -913,7 +887,7 @@ export const RequestsConfigPage: React.FC = () => {
                                       }}
                                       onBlur={() => handleSaveProjectDays(project, projectSpecificDays[project._id] ?? effectiveDays)}
                                       onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
+                                        if (e.key === 'Enter') {
                                           handleSaveProjectDays(project, projectSpecificDays[project._id] ?? effectiveDays);
                                           (e.target as HTMLInputElement).blur();
                                         }
@@ -935,7 +909,7 @@ export const RequestsConfigPage: React.FC = () => {
             )}
 
             {/* ===================== GLOSARIO DE EXTRAS TAB ===================== */}
-            {activeTab === "glossary" && (
+            {activeTab === 'glossary' && (
               <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-8">
                 <div className="flex items-center justify-between mb-8 border-b border-gray-100 dark:border-gray-700 pb-4">
                   <div className="flex items-center gap-4">
@@ -946,7 +920,7 @@ export const RequestsConfigPage: React.FC = () => {
                   </div>
                   <button onClick={handleSaveGlossary} disabled={savingGlossary} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold flex items-center gap-2 transition-all shadow-md hover:shadow-lg disabled:opacity-50">
                     <FontAwesomeIcon icon={savingGlossary ? faSpinner : faSave} spin={savingGlossary} />
-                    {savingGlossary ? "Guardando..." : "Guardar Cambios"}
+                    {savingGlossary ? 'Guardando...' : 'Guardar Cambios'}
                   </button>
                 </div>
 
@@ -1056,7 +1030,7 @@ export const RequestsConfigPage: React.FC = () => {
       <Modal
         isOpen={isAbmModalOpen}
         onClose={() => setIsAbmModalOpen(false)}
-        title={currentType.id ? "Editar Tipo" : "Nuevo Tipo"}
+        title={currentType.id ? 'Editar Tipo' : 'Nuevo Tipo'}
         size="md"
         footer={
           <div className="flex gap-3 w-full">
@@ -1073,7 +1047,7 @@ export const RequestsConfigPage: React.FC = () => {
           {/* Nombre */}
           <div>
             <label className="block text-sm font-medium mb-1">Nombre del Tipo</label>
-            <input type="text" value={currentType.type || ""} onChange={(e) => setCurrentType({ ...currentType, type: e.target.value })} className="w-full border rounded p-2.5 dark:bg-gray-700 dark:border-gray-600" placeholder="Ej. Llegada Tarde" />
+            <input type="text" value={currentType.type || ''} onChange={(e) => setCurrentType({ ...currentType, type: e.target.value })} className="w-full border rounded p-2.5 dark:bg-gray-700 dark:border-gray-600" placeholder="Ej. Llegada Tarde" />
           </div>
 
           {/* Disponibilidad en Proyectos - Unified Section */}
@@ -1082,25 +1056,25 @@ export const RequestsConfigPage: React.FC = () => {
 
             {/* Cards for Global / Specific */}
             <div className="grid grid-cols-2 gap-3 mb-4">
-              <button type="button" onClick={() => setCurrentType({ ...currentType, visibility: "all" })} className={`p-3 rounded border text-left transition-all ${currentType.visibility === "all" ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500" : "border-gray-200 dark:border-gray-600 hover:border-gray-300"}`}>
+              <button type="button" onClick={() => setCurrentType({ ...currentType, visibility: 'all' })} className={`p-3 rounded border text-left transition-all ${currentType.visibility === 'all' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'}`}>
                 <div className="flex items-center gap-2 mb-1">
-                  <FontAwesomeIcon icon={faGlobe} className={`${currentType.visibility === "all" ? "text-blue-600" : "text-gray-400"}`} />
-                  <span className={`font-medium ${currentType.visibility === "all" ? "text-blue-700 dark:text-blue-400" : "text-gray-700 dark:text-gray-300"}`}>Global</span>
+                  <FontAwesomeIcon icon={faGlobe} className={`${currentType.visibility === 'all' ? 'text-blue-600' : 'text-gray-400'}`} />
+                  <span className={`font-medium ${currentType.visibility === 'all' ? 'text-blue-700 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'}`}>Global</span>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Disponible en todos los proyectos</p>
               </button>
 
-              <button type="button" onClick={() => setCurrentType({ ...currentType, visibility: "specific" })} className={`p-3 rounded border text-left transition-all ${currentType.visibility === "specific" ? "border-green-500 bg-green-50 dark:bg-green-900/20 ring-2 ring-green-500" : "border-gray-200 dark:border-gray-600 hover:border-gray-300"}`}>
+              <button type="button" onClick={() => setCurrentType({ ...currentType, visibility: 'specific' })} className={`p-3 rounded border text-left transition-all ${currentType.visibility === 'specific' ? 'border-green-500 bg-green-50 dark:bg-green-900/20 ring-2 ring-green-500' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'}`}>
                 <div className="flex items-center gap-2 mb-1">
-                  <FontAwesomeIcon icon={faUsers} className={`${currentType.visibility === "specific" ? "text-green-600" : "text-gray-400"}`} />
-                  <span className={`font-medium ${currentType.visibility === "specific" ? "text-green-700 dark:text-green-400" : "text-gray-700 dark:text-gray-300"}`}>Específico</span>
+                  <FontAwesomeIcon icon={faUsers} className={`${currentType.visibility === 'specific' ? 'text-green-600' : 'text-gray-400'}`} />
+                  <span className={`font-medium ${currentType.visibility === 'specific' ? 'text-green-700 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'}`}>Específico</span>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Solo proyectos seleccionados</p>
               </button>
             </div>
 
             {/* Project List - Only shown when Specific is selected */}
-            {currentType.visibility === "specific" && (
+            {currentType.visibility === 'specific' && (
               <div className="border-t border-gray-200 dark:border-gray-600 pt-3">
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Selecciona los proyectos donde estará disponible:</p>
                 <div className="space-y-2 max-h-40 overflow-y-auto">
@@ -1116,10 +1090,10 @@ export const RequestsConfigPage: React.FC = () => {
                             const newIds = isEnabled ? ids.filter((id) => id !== p._id) : [...ids, p._id];
                             setCurrentType({ ...currentType, allowedProjectIds: newIds });
                           }}
-                          className={`px-2.5 py-1 rounded text-xs font-medium flex items-center gap-1.5 transition-colors ${isEnabled ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300"}`}
+                          className={`px-2.5 py-1 rounded text-xs font-medium flex items-center gap-1.5 transition-colors ${isEnabled ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300'}`}
                         >
                           <FontAwesomeIcon icon={isEnabled ? faToggleOn : faToggleOff} />
-                          {isEnabled ? "Sí" : "No"}
+                          {isEnabled ? 'Sí' : 'No'}
                         </button>
                       </div>
                     );
@@ -1139,9 +1113,9 @@ export const RequestsConfigPage: React.FC = () => {
                 <span className="text-sm font-medium">Reemplazo Opcional</span>
                 <p className="text-xs text-gray-500">Permite asignar un reemplazo al reportar</p>
               </div>
-              <button type="button" onClick={() => setCurrentType({ ...currentType, requiresReplacement: !currentType.requiresReplacement })} className={`px-3 py-1 rounded text-xs font-semibold flex items-center gap-2 ${currentType.requiresReplacement ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-300"}`}>
+              <button type="button" onClick={() => setCurrentType({ ...currentType, requiresReplacement: !currentType.requiresReplacement })} className={`px-3 py-1 rounded text-xs font-semibold flex items-center gap-2 ${currentType.requiresReplacement ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-300'}`}>
                 <FontAwesomeIcon icon={currentType.requiresReplacement ? faToggleOn : faToggleOff} />
-                {currentType.requiresReplacement ? "Sí" : "No"}
+                {currentType.requiresReplacement ? 'Sí' : 'No'}
               </button>
             </div>
 
@@ -1150,9 +1124,9 @@ export const RequestsConfigPage: React.FC = () => {
                 <span className="text-sm font-medium">Estado</span>
                 <p className="text-xs text-gray-500">Si está inactivo, no aparecerá al reportar</p>
               </div>
-              <button type="button" onClick={() => setCurrentType({ ...currentType, status: currentType.status === "Activa" ? "Inactiva" : "Activa" })} className={`px-3 py-1 rounded text-xs font-semibold flex items-center gap-2 ${currentType.status === "Activa" ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-300"}`}>
-                <FontAwesomeIcon icon={currentType.status === "Activa" ? faToggleOn : faToggleOff} />
-                {currentType.status === "Activa" ? "Activo" : "Inactivo"}
+              <button type="button" onClick={() => setCurrentType({ ...currentType, status: currentType.status === 'Activa' ? 'Inactiva' : 'Activa' })} className={`px-3 py-1 rounded text-xs font-semibold flex items-center gap-2 ${currentType.status === 'Activa' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-300'}`}>
+                <FontAwesomeIcon icon={currentType.status === 'Activa' ? faToggleOn : faToggleOff} />
+                {currentType.status === 'Activa' ? 'Activo' : 'Inactivo'}
               </button>
             </div>
           </div>
@@ -1183,10 +1157,10 @@ export const RequestsConfigPage: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-2">
                 {activityTypes.map((item) => {
-                  const isGlobal = item.visibility === "all";
+                  const isGlobal = item.visibility === 'all';
                   const isIncluded = isGlobal || (item.allowedProjectIds || []).includes(modalSelectedProject._id);
                   return (
-                    <div key={item.id} className={`flex items-center justify-between p-3 border rounded transition-colors ${isIncluded ? "bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800" : "bg-gray-50 dark:bg-gray-700/30 border-gray-200 dark:border-gray-700"}`}>
+                    <div key={item.id} className={`flex items-center justify-between p-3 border rounded transition-colors ${isIncluded ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800' : 'bg-gray-50 dark:bg-gray-700/30 border-gray-200 dark:border-gray-700'}`}>
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-900 dark:text-white">{item.type}</span>
                         {isGlobal ? (
@@ -1201,9 +1175,9 @@ export const RequestsConfigPage: React.FC = () => {
                           </span>
                         )}
                       </div>
-                      <button onClick={() => handleToggleProjectForType(item)} disabled={isGlobal} className={`px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-2 transition-all ${isIncluded ? "bg-green-600 text-white hover:bg-green-700" : "bg-gray-300 text-gray-700 hover:bg-gray-400 dark:bg-gray-600 dark:text-gray-300"} ${isGlobal ? "opacity-60 cursor-not-allowed" : ""}`}>
+                      <button onClick={() => handleToggleProjectForType(item)} disabled={isGlobal} className={`px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-2 transition-all ${isIncluded ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-700 hover:bg-gray-400 dark:bg-gray-600 dark:text-gray-300'} ${isGlobal ? 'opacity-60 cursor-not-allowed' : ''}`}>
                         <FontAwesomeIcon icon={isIncluded ? faToggleOn : faToggleOff} />
-                        {isIncluded ? "Habilitado" : "Deshabilitado"}
+                        {isIncluded ? 'Habilitado' : 'Deshabilitado'}
                       </button>
                     </div>
                   );

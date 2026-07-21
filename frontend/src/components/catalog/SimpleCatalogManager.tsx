@@ -9,6 +9,7 @@ import { ViewToggle, ViewMode } from "../ui/ViewToggle";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { fuzzyMatch } from "../../utils/searchHelpers";
 import { SimpleCatalogApi, SimpleCatalogItem } from "../../api/simpleCatalog";
+import { getHelp, hasHelp, HelpKey } from "../../data/help/helpContent";
 
 /** Descriptor de un campo extra propio de un catálogo (además de nombre / ID externo). */
 export interface CatalogExtraField {
@@ -36,12 +37,16 @@ interface SimpleCatalogManagerProps {
   templateBaseName: string;
   /** Campos extra propios del catálogo (ej. Bancos → "Tipo de Entidad"). */
   extraFields?: CatalogExtraField[];
+  /** Clave de ayuda para el modal de info (i). */
+  helpKey?: HelpKey;
 }
 
-export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [] }) => {
+export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], helpKey }) => {
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [showInfo, setShowInfo] = useState(false);
+  const helpEntry = helpKey ? getHelp(helpKey) : null;
 
   // Vista (Tabla vs Tarjetas)
   const storageKey = `catalog_${templateBaseName}_viewMode`;
@@ -211,7 +216,25 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
   );
 
   return (
-    <PageLayout title={title} subtitle={subtitle} faIcon={{ icon }} headerActions={headerActions}>
+    <PageLayout
+      title={title}
+      subtitle={subtitle}
+      faIcon={{ icon }}
+      headerActions={headerActions}
+      shouldShowInfo={!!helpKey && hasHelp(helpKey)}
+      infoModal={
+        helpKey && helpEntry
+          ? {
+              isOpen: showInfo,
+              onOpen: () => setShowInfo(true),
+              onClose: () => setShowInfo(false),
+              title: helpEntry.title,
+              size: helpEntry.size,
+              content: helpEntry.content,
+            }
+          : undefined
+      }
+    >
       <div className="mb-4 flex flex-col md:flex-row gap-4 items-center justify-between">
         <input
           type="text"

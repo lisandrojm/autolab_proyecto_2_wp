@@ -13,6 +13,7 @@ export const BancosPage: React.FC = () => (
     entityLabel="entidad financiera"
     api={bancosApi}
     templateBaseName="entidades_financieras"
+    helpKey="bancos"
     extraFields={[
       {
         key: "tipoEntidad",

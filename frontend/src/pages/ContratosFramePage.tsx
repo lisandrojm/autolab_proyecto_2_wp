@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileContract, faDownload, faUpload, faPlus, faEdit, faTrash, faFileExcel, faPaperclip, faEye } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
+import { getHelp, hasHelp } from "../data/help/helpContent";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Modal } from "../components/ui/Modal";
 import { Card } from "../components/ui/Card";
@@ -14,6 +15,9 @@ import { ContratoViewerModal } from "../components/contratos/ContratoViewerModal
 const emptyForm = { nombre: "", externalId: "", cantidadJornadas: "", multiplicadorDiario: "" };
 
 export const ContratosFramePage: React.FC = () => {
+  const HELP_KEY = "contratosFrame" as const;
+  const helpEntry = getHelp(HELP_KEY);
+  const [showInfo, setShowInfo] = useState(false);
   const [items, setItems] = useState<ContratoFrameItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -206,7 +210,7 @@ export const ContratosFramePage: React.FC = () => {
   );
 
   return (
-    <PageLayout title="Contratos" subtitle="Catálogo de contratos de FRAME. Cargá registros manualmente o importá un Excel." faIcon={{ icon: faFileContract }} headerActions={headerActions}>
+    <PageLayout title="Contratos" subtitle="Catálogo de contratos de FRAME. Cargá registros manualmente o importá un Excel." faIcon={{ icon: faFileContract }} headerActions={headerActions} shouldShowInfo={hasHelp(HELP_KEY)} infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: helpEntry.title, size: helpEntry.size, content: helpEntry.content }}>
       <div className="mb-4 flex flex-col md:flex-row gap-4 items-center justify-between">
         <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar contrato..." className="w-full max-w-md px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white" />
         {isLarge && <ViewToggle value={viewMode} onChange={setViewMode} />}
