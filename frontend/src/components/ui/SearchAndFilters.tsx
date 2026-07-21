@@ -237,7 +237,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
                         : "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-700"
                   }`}
                 >
-                  {rf.label}: {isDefault ? "Todos los usuarios Activos e Inactivos" : (rf.options.find((o) => o.value === rf.value)?.label || rf.value)}
+                  {rf.label}: {rf.options.find((o) => o.value === rf.value)?.label || rf.value || "Todos"}
                   {!isDefault && (
                     <button
                       onClick={() => rf.onChange("")}
@@ -282,10 +282,10 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
           <div className="space-y-4">
             {/* Radio Filters Section (Top) */}
             {radioFilters.length > 0 && (
-              <div className="space-y-3 pb-4 border-b border-gray-200 dark:border-gray-700">
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Filtrar por usuarios</h4>
+              <div className="space-y-4 pb-4 border-b border-gray-200 dark:border-gray-700">
                 {radioFilters.map((rf, idx) => (
                   <div key={`modal-radio-${idx}`} className="space-y-2">
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{rf.label}</h4>
                     {rf.options.map((opt, optIdx) => (
                       <label key={optIdx} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors">
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{opt.label}</span>

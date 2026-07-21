@@ -13,7 +13,7 @@ import { InfoModal } from "../components/ui/InfoModal";
 import { EmptyState } from "../components/ui/EmptyState";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faUsers, faBriefcase, faFileLines, faUmbrellaBeach, faPlus, faLayerGroup, faTrash, faTable, faUserTie, faCalendarAlt, faBuilding, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+import { faEdit, faUsers, faBriefcase, faFileLines, faUmbrellaBeach, faPlus, faLayerGroup, faTrash, faTable, faUserTie, faCalendarAlt, faBuilding, faInfoCircle, faBell } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { areasAPI, Area } from "../api/areas";
 
@@ -985,6 +985,26 @@ export const ProjectDetailPage: React.FC = () => {
                 title: "Gestionar Equipo",
               },
             ],
+          }}
+        />
+
+        {/* Card 3: Novedades del Proyecto (mismo atajo que el botón Novedades de la card principal) */}
+        <Card
+          onClick={() => navigate(`/requests?reportsProject=${project._id}`)}
+          className="cursor-pointer hover:scale-[1.02] hover:shadow-lg transition-all duration-300"
+          header={{
+            title: "Novedades del Proyecto",
+            subtitle: "Ver el reporte de novedades del proyecto",
+            icon: faBell,
+          }}
+        />
+
+        {/* Card 4: Reportes del Proyecto (sin destino por ahora, igual que el botón Reportes de la card principal) */}
+        <Card
+          header={{
+            title: "Reportes del Proyecto",
+            subtitle: "Próximamente",
+            icon: faFileLines,
           }}
         />
       </div>

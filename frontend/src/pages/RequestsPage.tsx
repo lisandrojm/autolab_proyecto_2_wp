@@ -4,7 +4,7 @@ import { fuzzyMatch } from "../utils/searchHelpers";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileText, faFilter, faSearch, faUser, faCalendar, faTrash, faUserSlash, faGrip, faTable, faBriefcase, faChartSimple, faClock, faChevronDown, faChevronUp, faFileLines, faLayerGroup, faPen, faCalendarCheck } from "@fortawesome/free-solid-svg-icons";
+import { faFileText, faFilter, faSearch, faUser, faCalendar, faTrash, faUserSlash, faGrip, faTable, faBriefcase, faChartSimple, faClock, faChevronDown, faChevronUp, faFileLines, faLayerGroup, faPen, faCalendarCheck, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { NewsReportsModal } from "../components/orders/news/NewsReportsModal";
 import { ComplianceView } from "../components/activity_logs/ComplianceView";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -229,6 +229,21 @@ export const RequestsPage: React.FC = () => {
 
     return result;
   }, [reports, searchTerm, areaFilter, projectFilter, shiftFilter]);
+
+  // Paginación client-side de la tabla de novedades (misma UX que Contratos).
+  const REQUESTS_PAGE_SIZE = 25;
+  const [reqPage, setReqPage] = useState(1);
+  const reqTotalPages = Math.max(1, Math.ceil(filteredReports.length / REQUESTS_PAGE_SIZE));
+  const pagedReports = useMemo(
+    () => filteredReports.slice((reqPage - 1) * REQUESTS_PAGE_SIZE, reqPage * REQUESTS_PAGE_SIZE),
+    [filteredReports, reqPage],
+  );
+  useEffect(() => {
+    setReqPage(1);
+  }, [searchTerm, areaFilter, projectFilter, shiftFilter]);
+  useEffect(() => {
+    if (reqPage > reqTotalPages) setReqPage(reqTotalPages);
+  }, [reqPage, reqTotalPages]);
 
   // Check for URL params to auto-open report detail
   useEffect(() => {
@@ -700,7 +715,7 @@ export const RequestsPage: React.FC = () => {
   const renderCardsView = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredReports.map((report) => {
+        {pagedReports.map((report) => {
           const isEdited = report.createdAt && report.updatedAt && (new Date(report.updatedAt).getTime() - new Date(report.createdAt).getTime() > 1000);
           const badgesTop = [
             <span key="id" className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
@@ -1149,7 +1164,7 @@ export const RequestsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredReports.map((report) => (
+                {pagedReports.map((report) => (
                   <tr key={report.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onClick={() => handleViewDetail(report)}>
                     <td className="py-3 px-4">
                       <div className="flex flex-col gap-1 items-start">
@@ -1246,6 +1261,26 @@ export const RequestsPage: React.FC = () => {
           <div className="text-center py-12">
             <FontAwesomeIcon icon={faFileText} className="h-16 w-16 text-gray-400 mb-4" />
             <p className="text-gray-600 dark:text-gray-400">No hay novedades registradas</p>
+          </div>
+        )}
+
+        {/* Paginación (misma UX que Contratos) */}
+        {reqTotalPages > 1 && (
+          <div className="mt-8 flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              <span className="font-semibold text-gray-900 dark:text-gray-100">{pagedReports.length}</span> de <span className="font-semibold text-gray-900 dark:text-gray-100">{filteredReports.length}</span> novedades · pág. {reqPage}/{reqTotalPages}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setReqPage((p) => Math.max(1, p - 1))} disabled={reqPage === 1} className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                <FontAwesomeIcon icon={faChevronLeft} />
+              </button>
+              <div className="flex items-center px-4 text-sm font-medium dark:text-gray-100">
+                Página {reqPage} de {reqTotalPages}
+              </div>
+              <button onClick={() => setReqPage((p) => Math.min(reqTotalPages, p + 1))} disabled={reqPage === reqTotalPages} className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                <FontAwesomeIcon icon={faChevronRight} />
+              </button>
+            </div>
           </div>
         )}
       </div>

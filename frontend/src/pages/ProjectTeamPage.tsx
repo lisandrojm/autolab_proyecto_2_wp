@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { fuzzyMatch } from "../utils/searchHelpers";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "../api/axiosConfig";
 import { projectsAPI, Project } from "../api/projects";
@@ -36,6 +35,38 @@ import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
 import { cachedFetch } from "../utils/refCache";
 
 const HELP_KEY = "projectTeam" as const;
+
+// Formatea una fecha de contrato (ISO "YYYY-MM-DD...") a d/m/yyyy sin corrimiento de zona horaria.
+function formatContractDate(d?: string): string {
+  if (!d) return "—";
+  const iso = String(d).substring(0, 10);
+  const parts = iso.split("-");
+  if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
+    return `${Number(parts[2])}/${Number(parts[1])}/${parts[0]}`;
+  }
+  const dt = new Date(d);
+  return isNaN(dt.getTime()) ? "—" : dt.toLocaleDateString();
+}
+
+// Un contrato está VIGENTE si no tiene baja (tiempo indeterminado) o si la baja es hoy o futura.
+// NO VIGENTE si la fecha de baja es anterior a hoy.
+function isContractVigente(baja?: string): boolean {
+  if (!baja) return true; // sin baja → tiempo indeterminado → vigente
+  const iso = String(baja).substring(0, 10);
+  const parts = iso.split("-");
+  let bajaDate: Date | null = null;
+  if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
+    bajaDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  } else {
+    const d = new Date(baja);
+    if (!isNaN(d.getTime())) bajaDate = d;
+  }
+  if (!bajaDate) return true;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  bajaDate.setHours(0, 0, 0, 0);
+  return bajaDate.getTime() >= today.getTime();
+}
 
 function numeroALetras(num: number): string {
   const Unidades = (num: number): string => {
@@ -176,6 +207,12 @@ export const ProjectTeamPage: React.FC = () => {
   const teamReqIdRef = React.useRef(0);
    const [candidateUsers, setCandidateUsers] = useState<User[]>([]);
    const [searchingCandidates, setSearchingCandidates] = useState(false);
+   // Paginación server-side del listado de candidatos (Agregar Miembros).
+   const CAND_PAGE_SIZE = 25;
+   const [candPage, setCandPage] = useState(1);
+   const [candTotal, setCandTotal] = useState(0);
+   const [candTotalPages, setCandTotalPages] = useState(1);
+   const candReqIdRef = React.useRef(0);
   const [loading, setLoading] = useState(true);
   const [teamConfig, setTeamConfig] = useState<any[]>([]);
   const [vacations, setVacations] = useState<VacationRequest[]>([]);
@@ -202,6 +239,9 @@ export const ProjectTeamPage: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false); // Toggle filters UI
   const [searchTermTeam, setSearchTermTeam] = useState(""); // For Equipo Actual
   const [filterUserStatus, setFilterUserStatus] = useState<string>("");
+  const [filterVigencia, setFilterVigencia] = useState<string>(""); // "" | "vigente" | "novigente" (client-side sobre la página)
+  const [filterTipoContrato, setFilterTipoContrato] = useState<string>(""); // tipo_contrato_id (client-side sobre la página)
+  const [filterAreaTurno, setFilterAreaTurno] = useState<string>(""); // "" | "__none__" | "areaId::shiftId" (client-side sobre la página)
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [selectedUserForWizard, setSelectedUserForWizard] = useState<User | null>(null);
   const [viewingShiftsData, setViewingShiftsData] = useState<{ user: User; areaId: string; areaName: string } | null>(null);
@@ -491,37 +531,43 @@ export const ProjectTeamPage: React.FC = () => {
     fetchCount();
   }, [projectId]);
 
-  // Candidate Search
+  // Al cambiar la búsqueda, volver a la página 1 (mientras el modal está abierto).
+  useEffect(() => {
+    if (showAddModal) setCandPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]);
+
+  // Candidatos: por defecto TODOS los usuarios activos (paginados); filtra en vivo al tipear.
   useEffect(() => {
     if (!showAddModal) {
       setCandidateUsers([]);
       setSearchTerm("");
+      setCandTotal(0);
+      setCandTotalPages(1);
+      setCandPage(1);
       return;
     }
 
+    const reqId = ++candReqIdRef.current;
     const delayDebounceFn = setTimeout(async () => {
-      // Requiere al menos 2 caracteres. Antes, con búsqueda vacía se traían 500 usuarios
-      // con populate pesado (riesgo de OOM). La UI ya pide "Escribe al menos 2 caracteres".
-      if (searchTerm.length < 2) {
-        setCandidateUsers([]);
-        return;
-      }
-
       try {
         setSearchingCandidates(true);
-        // Búsqueda acotada por nombre/email + slimProjects (sin contratos) → carga liviana.
-        // El contrato para el pre-fill del wizard se trae on-demand en handleOpenWizard.
-        const response = await usersAPI.list({ limit: 100, metadataActivo: "true", email: searchTerm, slimProjects: true });
+        // slimProjects (sin contratos) → carga liviana; el contrato se trae on-demand en handleOpenWizard.
+        const response = await usersAPI.list({ page: candPage, limit: CAND_PAGE_SIZE, metadataActivo: "true", email: searchTerm || undefined, slimProjects: true });
+        if (reqId !== candReqIdRef.current) return;
         setCandidateUsers(response.users);
+        setCandTotal(response.pagination.total);
+        setCandTotalPages(response.pagination.pages);
       } catch (error) {
-        console.error("Error fetching candidates:", error);
+        if (reqId === candReqIdRef.current) console.error("Error fetching candidates:", error);
       } finally {
-        setSearchingCandidates(false);
+        if (reqId === candReqIdRef.current) setSearchingCandidates(false);
       }
-    }, 400);
+    }, 250);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm, showAddModal]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAddModal, searchTerm, candPage]);
 
   /* ------------------------------- Logic --------------------------------- */
 
@@ -536,6 +582,27 @@ export const ProjectTeamPage: React.FC = () => {
 
   const projectMap = useMemo(() => new Map(allProjects.map((p) => [p._id, p])), [allProjects]);
   const clientMap = useMemo(() => new Map(allClients.map((c) => [c._id, c])), [allClients]);
+
+  // Combinaciones Área · Turno configuradas en el proyecto (para el filtro).
+  const areaTurnoOptions = useMemo(() => {
+    const opts: { value: string; label: string }[] = [];
+    const seen = new Set<string>();
+    (project?.areasConfig || []).forEach((ac: any) => {
+      const aId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
+      const aName = typeof ac.areaId === "object" ? ac.areaId?.name : allAreas.find((a) => String(a._id) === String(aId))?.name;
+      if (!aId || !aName) return;
+      (ac.shiftIds || []).forEach((sid: any) => {
+        const sId = typeof sid === "object" ? sid?._id : sid;
+        const sName = typeof sid === "object" ? sid?.name : allShifts.find((s) => String(s._id) === String(sId))?.name;
+        if (!sId || !sName) return;
+        const key = `${aId}::${sId}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        opts.push({ value: key, label: `${aName} · ${sName}` });
+      });
+    });
+    return opts;
+  }, [project, allAreas, allShifts]);
 
   const sedeName = useMemo(() => {
     if (!project) return null;
@@ -574,10 +641,7 @@ export const ProjectTeamPage: React.FC = () => {
       // 1. Exclude already assigned
       if (assignedUserIds.includes(user._id)) return false;
 
-      // 2. Search Term (name or email only)
-      if (searchTerm && searchTerm.length >= 2) {
-        if (!fuzzyMatch(`${user.firstName || ""} ${user.lastName || ""}`, searchTerm) && !fuzzyMatch(user.email, searchTerm)) return false;
-      }
+      // 2. Búsqueda: la resuelve el server (param email). Acá sólo filtros secundarios.
 
       // 3. Filter by Role
       if (filterRole) {
@@ -602,7 +666,7 @@ export const ProjectTeamPage: React.FC = () => {
 
       return true;
     });
-  }, [allUsers, candidateUsers, showAddModal, assignedUserIds, searchTerm, filterRole, filterRoleFrame, filterProject, allRoleFrames]);
+  }, [allUsers, candidateUsers, showAddModal, assignedUserIds, filterRole, filterRoleFrame, filterProject, allRoleFrames]);
 
   // El equipo real es lo que devuelve la consulta por projectId (allUsers, versión liviana);
   // no depende de project.assignedUsers (que puede quedar desincronizado).
@@ -1209,6 +1273,40 @@ export const ProjectTeamPage: React.FC = () => {
     return <EmptyState icon={faBriefcase} title="Proyecto no encontrado" description="El proyecto no existe o no tienes acceso." action={{ label: "volver", onClick: () => navigate(-1) }} />;
   }
 
+  // Combinaciones "areaId::shiftId" asignadas al miembro (config del equipo + coordinaciones).
+  const getUserAreaShiftKeys = (user: User): Set<string> => {
+    const keys = new Set<string>();
+    const config = teamConfig.find((c) => String(c.userId) === String(user._id));
+    (config?.areaShiftAssignments || []).forEach((asa: any) => {
+      const aId = typeof asa.areaId === "object" ? asa.areaId?._id : asa.areaId;
+      if (!aId) return;
+      (asa.shiftIds || []).forEach((sid: any) => {
+        const sId = typeof sid === "object" ? sid?._id : sid;
+        if (sId) keys.add(`${aId}::${sId}`);
+      });
+    });
+    if (checkIsCoordinator(user)) {
+      (project?.coordinatorAssignments || []).forEach((asm: any) => {
+        const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
+        if (String(uid) !== String(user._id)) return;
+        const aId = typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId;
+        const sId = typeof asm.shiftId === "object" ? asm.shiftId?._id : asm.shiftId;
+        if (aId && sId) keys.add(`${aId}::${sId}`);
+      });
+    }
+    return keys;
+  };
+
+  // Último contrato del empleado en ESTE proyecto (mismo criterio que la columna Contrato).
+  const getActiveContract = (user: User): any => {
+    const projectMeta = user.metadata?.projects?.find((p: any) => {
+      const pId = p.projectId;
+      const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
+      return String(idToCheck) === String(projectId);
+    });
+    return projectMeta?.contracts?.length ? projectMeta.contracts[projectMeta.contracts.length - 1] : null;
+  };
+
   // Render function for Table Row
   const renderUserRow = (user: User) => {
     const userConfig = teamConfig.find((c) => c.userId === user._id);
@@ -1433,6 +1531,26 @@ export const ProjectTeamPage: React.FC = () => {
             )}
           </div>
         </td>
+        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+          {activeContract ? (
+            <div className="flex flex-col gap-1">
+              {(() => {
+                const vigente = isContractVigente(activeContract.fecha_baja_contrato);
+                return (
+                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>
+                    {vigente ? "VIGENTE" : "NO VIGENTE"}
+                  </span>
+                );
+              })()}
+              <div className="flex flex-col gap-0.5">
+                <span><span className="text-gray-400">Alta:</span> {formatContractDate(activeContract.fecha_alta_contrato)}</span>
+                <span><span className="text-gray-400">Baja:</span> {activeContract.fecha_baja_contrato ? formatContractDate(activeContract.fecha_baja_contrato) : "—"}</span>
+              </div>
+            </div>
+          ) : (
+            "—"
+          )}
+        </td>
         <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">{activeContract?.hora_inicio ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : "-"}</td>
         <td className="px-4 py-3 text-right">
           <div className="flex items-center justify-end gap-1">
@@ -1580,6 +1698,32 @@ export const ProjectTeamPage: React.FC = () => {
                             { label: "Todos los usuarios", value: "" },
                           ],
                         },
+                        {
+                          label: "Contratos",
+                          value: filterVigencia,
+                          onChange: setFilterVigencia,
+                          options: [
+                            { label: "Vigentes", value: "vigente" },
+                            { label: "No Vigentes", value: "novigente" },
+                            { label: "Todos los contratos", value: "" },
+                          ],
+                        },
+                      ]}
+                      selectFilters={[
+                        {
+                          label: "Tipo de contrato",
+                          value: filterTipoContrato,
+                          onChange: setFilterTipoContrato,
+                          placeholder: "Todos los tipos",
+                          options: allTiposContrato.map((t) => ({ value: String(t.data?.id ?? t._id), label: t.name })),
+                        },
+                        {
+                          label: "Área / Turno",
+                          value: filterAreaTurno,
+                          onChange: setFilterAreaTurno,
+                          placeholder: "Todas las áreas/turnos",
+                          options: [{ value: "__none__", label: "Sin área/turno" }, ...areaTurnoOptions],
+                        },
                       ]}
                     />
                   </div>
@@ -1608,6 +1752,29 @@ export const ProjectTeamPage: React.FC = () => {
 
 
                 {(() => {
+                  // Filtros client-side sobre la página cargada (contrato + área/turno).
+                  const rows = filterVigencia || filterTipoContrato || filterAreaTurno
+                    ? teamRows.filter((u) => {
+                        const ac = getActiveContract(u);
+                        if (filterVigencia) {
+                          const vig = isContractVigente(ac?.fecha_baja_contrato);
+                          if (filterVigencia === "vigente" ? !vig : vig) return false;
+                        }
+                        if (filterTipoContrato) {
+                          if (String(ac?.tipo_contrato_id ?? "") !== String(filterTipoContrato)) return false;
+                        }
+                        if (filterAreaTurno) {
+                          const keys = getUserAreaShiftKeys(u);
+                          if (filterAreaTurno === "__none__") {
+                            if (keys.size > 0) return false;
+                          } else if (!keys.has(filterAreaTurno)) {
+                            return false;
+                          }
+                        }
+                        return true;
+                      })
+                    : teamRows;
+
                   // Orden alfabético tal como lo devuelve el server (sort=name).
                   if (teamTotal === 0 && !teamFetching) {
                     return (
@@ -1615,6 +1782,14 @@ export const ProjectTeamPage: React.FC = () => {
                         <FontAwesomeIcon icon={faUsers} className="h-12 w-12 mb-4 opacity-10" />
                         <p className="text-base font-medium">{searchTermTeam || filterUserStatus ? "No se encontraron miembros" : "Aún no hay miembros en el equipo"}</p>
                         <p className="text-sm mt-1">{searchTermTeam || filterUserStatus ? "Probá ajustar la búsqueda o el filtro." : 'Usa el botón "Agregar Miembro" para comenzar.'}</p>
+                      </div>
+                    );
+                  }
+
+                  if (rows.length === 0) {
+                    return (
+                      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center h-40 text-gray-500 text-sm">
+                        Ningún contrato coincide con los filtros en esta página.
                       </div>
                     );
                   }
@@ -1632,19 +1807,20 @@ export const ProjectTeamPage: React.FC = () => {
                               <th className="px-4 py-3 font-semibold">Área / Turno</th>
                               <th className="px-4 py-3 font-semibold text-amber-600 dark:text-amber-400">Área/Turno Coordinada</th>
                               <th className="px-4 py-3 font-semibold">Contrato</th>
+                              <th className="px-4 py-3 font-semibold whitespace-nowrap">Alta / Baja</th>
                               <th className="px-4 py-3 font-semibold">Horario</th>
                               <th className="px-4 py-3 font-semibold text-right">Acciones</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                            {teamRows.map((u) => renderUserRow(u))}
+                            {rows.map((u) => renderUserRow(u))}
                           </tbody>
                         </table>
                       </div>
                     </div>
                   ) : (
                     <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 transition-opacity ${teamFetching ? "opacity-60" : ""}`}>
-                      {teamRows.map((u) => renderUserCard(u))}
+                      {rows.map((u) => renderUserCard(u))}
                     </div>
                   );
                 })()}
@@ -1826,16 +2002,10 @@ export const ProjectTeamPage: React.FC = () => {
                             Buscando candidatos...
                           </td>
                         </tr>
-                      ) : searchTerm.length >= 2 && filteredCandidates.length === 0 ? (
+                      ) : filteredCandidates.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                            No se encontraron usuarios para "{searchTerm}"
-                          </td>
-                        </tr>
-                      ) : searchTerm.length < 2 && filteredCandidates.length === 0 ? (
-                        <tr>
-                          <td colSpan={6} className="px-4 py-8 text-center text-gray-500 italic">
-                            Escribe al menos 2 caracteres para buscar candidatos...
+                            {searchTerm ? `No se encontraron usuarios para "${searchTerm}"` : "No hay usuarios disponibles para asignar"}
                           </td>
                         </tr>
                       ) : (
@@ -1936,7 +2106,25 @@ export const ProjectTeamPage: React.FC = () => {
                 </div>
               </div>
 
-
+              {/* Paginación de candidatos (misma UX que Contratos/Novedades) */}
+              {candTotalPages > 1 && (
+                <div className="mt-1 flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 shrink-0">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">{filteredCandidates.length}</span> en esta página · <span className="font-semibold text-gray-900 dark:text-gray-100">{candTotal}</span> usuarios · pág. {candPage}/{candTotalPages}
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => setCandPage((p) => Math.max(1, p - 1))} disabled={candPage === 1 || searchingCandidates} className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                      <FontAwesomeIcon icon={faChevronLeft} />
+                    </button>
+                    <div className="flex items-center px-4 text-sm font-medium dark:text-gray-100">
+                      Página {candPage} de {candTotalPages}
+                    </div>
+                    <button onClick={() => setCandPage((p) => Math.min(candTotalPages, p + 1))} disabled={candPage === candTotalPages || searchingCandidates} className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                      <FontAwesomeIcon icon={faChevronRight} />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </Modal>
 

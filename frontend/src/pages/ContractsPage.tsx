@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { contractsAPI } from "../api/contracts";
+import { usersAPI } from "../api/users";
 import { projectsAPI } from "../api/projects";
 import { cachedFetch } from "../utils/refCache";
 import { infoAPI } from "../api/info";
@@ -32,9 +32,10 @@ interface ContractRecord {
 }
 
 export const ContractsPage: React.FC = () => {
-  // Data (paginado server-side)
+  // Data (paginado server-side POR EMPLEADO — usa endpoint existente en prod)
+  const USERS_PER_PAGE = 25;
   const [contracts, setContracts] = useState<ContractRecord[]>([]);
-  const [total, setTotal] = useState(0);
+  const [totalEmployees, setTotalEmployees] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [projectOptions, setProjectOptions] = useState<{ id: string; name: string }[]>([]);
   const [isFetching, setIsFetching] = useState(false);
@@ -47,7 +48,6 @@ export const ContractsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [projectFilter, setProjectFilter] = useState("all"); // projectId o "all"
   const [currentPage, setCurrentPage] = useState(1);
-  const [limit] = useState(20);
   const [viewMode, setViewMode] = useState<"table" | "cards">(() => {
     return (localStorage.getItem("contractsViewMode") as "table" | "cards") || "table";
   });
@@ -141,35 +141,53 @@ export const ContractsPage: React.FC = () => {
       setIsFetching(true);
       const currentId = ++requestIdRef.current;
 
-      const resp = await contractsAPI.list({ page, limit, q: searchTerm || undefined, projectId: projectFilter });
+      // Paginación server-side POR EMPLEADO (usa endpoint existente en prod).
+      // De cada empleado de la página se extraen sus contratos.
+      const resp = await usersAPI.list({
+        page,
+        limit: USERS_PER_PAGE,
+        projectId: projectFilter !== "all" ? projectFilter : undefined,
+        email: searchTerm || undefined,
+      });
       if (currentId !== requestIdRef.current) return;
 
-      const rows: ContractRecord[] = resp.contracts.map((c, idx) => {
-        const userName = c.userFirstName || c.userLastName ? `${c.userFirstName || ""} ${c.userLastName || ""}`.trim() : (c.userEmail || "").split("@")[0];
-        const start = c.fecha_alta_contrato ? new Date(c.fecha_alta_contrato) : null;
-        const end = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : new Date();
-        const days = start ? Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1) : 0;
-        return {
-          id: `${c.userId}-${c.projectName || ""}-${c.fecha_alta_contrato || ""}-${idx}`,
-          userId: c.userId,
-          userEmail: c.userEmail,
-          userName,
-          projectName: c.projectName || "",
-          nombre_contrato: c.nombre_contrato || "",
-          nombre_sede: c.nombre_sede || "",
-          nombre_rol_frame: c.nombre_rol_frame || "",
-          fecha_alta_contrato: c.fecha_alta_contrato || "",
-          fecha_baja_contrato: c.fecha_baja_contrato,
-          days,
-          sueldo_mano: c.sueldo_mano,
-          nombre_estado_empleado: c.nombre_estado_empleado || "",
-          cantidad_jornadas_laborales: c.cantidad_jornadas_laborales,
-          tipo_contrato_id: c.tipo_contrato_id,
-        };
+      const rows: ContractRecord[] = [];
+      resp.users.forEach((user: any) => {
+        const userName = user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : (user.email || "").split("@")[0];
+        (user.metadata?.projects || []).forEach((p: any) => {
+          const pProjId = typeof p.projectId === "object" ? p.projectId?._id : p.projectId;
+          // Si hay filtro de proyecto, solo los contratos de ese proyecto.
+          if (projectFilter !== "all" && String(pProjId || "") !== String(projectFilter)) return;
+          (p.contracts || []).forEach((c: any, cIdx: number) => {
+            const start = c.fecha_alta_contrato ? new Date(c.fecha_alta_contrato) : null;
+            const end = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : new Date();
+            const days = start ? Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1) : 0;
+            rows.push({
+              id: `${user._id}-${p._id || pProjId || ""}-${cIdx}`,
+              userId: user._id || "",
+              userEmail: user.email,
+              userName,
+              projectName: p.nombre_proyecto || c.nombre_proyecto || "",
+              nombre_contrato: c.nombre_contrato || "",
+              nombre_sede: c.nombre_sede || "",
+              nombre_rol_frame: c.nombre_rol_frame || "",
+              fecha_alta_contrato: c.fecha_alta_contrato || "",
+              fecha_baja_contrato: c.fecha_baja_contrato,
+              days,
+              sueldo_mano: c.sueldo_mano,
+              nombre_estado_empleado: c.nombre_estado_empleado || "",
+              cantidad_jornadas_laborales: c.cantidad_jornadas_laborales,
+              tipo_contrato_id: c.tipo_contrato_id,
+            });
+          });
+        });
       });
 
+      // Orden por fecha de alta desc dentro de la página.
+      rows.sort((a, b) => new Date(b.fecha_alta_contrato).getTime() - new Date(a.fecha_alta_contrato).getTime());
+
       setContracts(rows);
-      setTotal(resp.pagination.total);
+      setTotalEmployees(resp.pagination.total); // total de EMPLEADOS (la paginación es por empleado)
       setTotalPages(resp.pagination.pages);
       setHasLoaded(true);
     } catch (error) {
@@ -191,7 +209,7 @@ export const ContractsPage: React.FC = () => {
       title="Contratos"
       subtitle="Visualiza y gestiona todos los registros de contratación de los usuarios."
       faIcon={{ icon: faFileContract }}
-      itemCount={total}
+      itemCount={totalEmployees}
       infoModal={{
         isOpen: openInfo,
         onOpen: () => setOpenInfo(true),
@@ -239,7 +257,7 @@ export const ContractsPage: React.FC = () => {
         <div className="flex items-center justify-center py-20">
           <LoadingSpinner message={initialLoading ? "Cargando historial de contratos..." : "Cargando contratos..."} />
         </div>
-      ) : total === 0 ? (
+      ) : contracts.length === 0 ? (
         <EmptyState title="No se encontraron contratos" description={searchTerm ? "Intenta con otros términos de búsqueda." : "No hay registros de contratos en el sistema."} icon={faFileContract} />
       ) : effectiveViewMode === "table" ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
@@ -382,7 +400,7 @@ export const ContractsPage: React.FC = () => {
       {totalPages > 1 && (
         <div className="mt-8 flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
           <div className="text-sm text-gray-500 dark:text-gray-400">
-            Mostrando <span className="font-semibold text-gray-900 dark:text-gray-100">{contracts.length}</span> de <span className="font-semibold text-gray-900 dark:text-gray-100">{total}</span> resultados
+            <span className="font-semibold text-gray-900 dark:text-gray-100">{contracts.length}</span> contratos · <span className="font-semibold text-gray-900 dark:text-gray-100">{totalEmployees}</span> empleados · pág. {currentPage}/{totalPages}
           </div>
           <div className="flex gap-2">
             <button onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))} disabled={currentPage === 1} className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
