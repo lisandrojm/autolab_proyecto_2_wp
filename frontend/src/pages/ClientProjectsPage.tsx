@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 // Si necesitás i18n, usá: import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../stores/authStore";
 import { projectsAPI, Project } from "../api/projects";
+import { companiesAPI, Company } from "../api/companies";
 import { shiftsAPI, Shift } from "../api/shifts";
 import { areasAPI, Area } from "../api/areas";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -33,6 +34,7 @@ export const ClientProjectsPage: React.FC = () => {
   const [availableSedes, setAvailableSedes] = useState<any[]>([]);
   const [availableCostCenters, setAvailableCostCenters] = useState<any[]>([]);
   const [availableCoordinators, setAvailableCoordinators] = useState<any[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
 
   // búsqueda, fechas y paginación
   const [searchTerm, setSearchTerm] = useState("");
@@ -53,6 +55,7 @@ export const ClientProjectsPage: React.FC = () => {
     // Fetch shifts once on component mount
     shiftsAPI.getAll().then(setAvailableShifts).catch(console.error);
     areasAPI.listAll().then(setAvailableAreas).catch(console.error);
+    companiesAPI.list().then(setCompanies).catch(console.error);
     
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -71,6 +74,8 @@ export const ClientProjectsPage: React.FC = () => {
     status: "active" as "active" | "completed" | "on_hold" | "archived",
     startDate: "",
     endDate: "",
+    contratoEmpresa: "",
+    releaseEmpresa: "",
     objectives: [] as string[],
     targetAudience: "",
     turnos: [] as string[],
@@ -206,6 +211,8 @@ export const ClientProjectsPage: React.FC = () => {
       status: "active",
       startDate: "",
       endDate: "",
+      contratoEmpresa: "",
+      releaseEmpresa: "",
       objectives: [],
       targetAudience: "",
       turnos: [],
@@ -250,6 +257,8 @@ export const ClientProjectsPage: React.FC = () => {
       status: project.status || "active",
       startDate: project.startDate ? project.startDate.split("T")[0] : "",
       endDate: project.endDate ? project.endDate.split("T")[0] : "",
+      contratoEmpresa: project.contratoEmpresa || "",
+      releaseEmpresa: project.releaseEmpresa || "",
       objectives: project.objectives || [],
       targetAudience: project.targetAudience || "",
       turnos: (project.turnos || []).map((t: any) => (typeof t === "string" ? t : t._id)),
@@ -532,6 +541,36 @@ export const ClientProjectsPage: React.FC = () => {
                           <option key={c._id} value={c.metadata?.id}>{c.firstName} {c.lastName}</option>
                         ))}
                       </select>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Empresa del Contrato</label>
+                        <select
+                          className="input-field py-2.5"
+                          value={formData.contratoEmpresa}
+                          onChange={(e) => setFormData((p) => ({ ...p, contratoEmpresa: e.target.value }))}
+                        >
+                          <option value="">Seleccionar empresa...</option>
+                          {companies.map((c) => (
+                            <option key={c._id} value={c._id}>{c.razonSocial}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Empresa del Release</label>
+                        <select
+                          className="input-field py-2.5"
+                          value={formData.releaseEmpresa}
+                          onChange={(e) => setFormData((p) => ({ ...p, releaseEmpresa: e.target.value }))}
+                        >
+                          <option value="">Seleccionar empresa...</option>
+                          {companies.map((c) => (
+                            <option key={c._id} value={c._id}>{c.razonSocial}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">

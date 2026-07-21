@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { projectsAPI, Project, Client } from "../api/projects";
+import { companiesAPI, Company } from "../api/companies";
 import { shiftsAPI, Shift } from "../api/shifts";
 
 import { useAuthStore } from "../stores/authStore";
@@ -49,6 +50,7 @@ export const ProjectDetailPage: React.FC = () => {
   const [availableSedes, setAvailableSedes] = useState<any[]>([]);
   const [availableCostCenters, setAvailableCostCenters] = useState<any[]>([]);
   const [availableCoordinators, setAvailableCoordinators] = useState<any[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   
   // modales de áreas
   const [isAddingArea, setIsAddingArea] = useState(false);
@@ -68,6 +70,8 @@ export const ProjectDetailPage: React.FC = () => {
     status: "active" as Project["status"],
     startDate: "",
     endDate: "",
+    contratoEmpresa: "",
+    releaseEmpresa: "",
     objectives: [""],
     targetAudience: "",
     turnos: [] as string[],
@@ -108,6 +112,8 @@ export const ProjectDetailPage: React.FC = () => {
         status: data.status || "active",
         startDate: data.startDate ? data.startDate.split("T")[0] : "",
         endDate: data.endDate ? data.endDate.split("T")[0] : "",
+        contratoEmpresa: data.contratoEmpresa || "",
+        releaseEmpresa: data.releaseEmpresa || "",
         objectives: data.objectives?.length ? data.objectives : [""],
         targetAudience: data.targetAudience || "",
         turnos: (data.turnos || []).map((t: any) => (typeof t === "string" ? t : (t as any)._id)),
@@ -173,7 +179,7 @@ export const ProjectDetailPage: React.FC = () => {
       setAvailableShifts(shifts);
       setAvailableAreas(areas);
 
-
+      companiesAPI.list().then(setCompanies).catch(console.error);
     } catch (err) {
       console.error("Error fetching aux data:", err);
     }
@@ -459,6 +465,36 @@ export const ProjectDetailPage: React.FC = () => {
                       <option key={c._id} value={c.metadata?.id}>{c.firstName} {c.lastName}</option>
                     ))}
                   </select>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Empresa del Contrato</label>
+                    <select
+                      className="input-field py-2.5"
+                      value={projectForm.contratoEmpresa}
+                      onChange={(e) => setProjectForm((p) => ({ ...p, contratoEmpresa: e.target.value }))}
+                    >
+                      <option value="">Seleccionar empresa...</option>
+                      {companies.map((c) => (
+                        <option key={c._id} value={c._id}>{c.razonSocial}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Empresa del Release</label>
+                    <select
+                      className="input-field py-2.5"
+                      value={projectForm.releaseEmpresa}
+                      onChange={(e) => setProjectForm((p) => ({ ...p, releaseEmpresa: e.target.value }))}
+                    >
+                      <option value="">Seleccionar empresa...</option>
+                      {companies.map((c) => (
+                        <option key={c._id} value={c._id}>{c.razonSocial}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
