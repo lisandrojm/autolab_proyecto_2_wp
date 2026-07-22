@@ -293,8 +293,13 @@ export const ProjectTeamPage: React.FC = () => {
     if (detailRefsLoaded) return;
     // Carga perezosa de plantillas de contrato y releases (puede fallar por permisos → listas vacías)
     const [cf, rel] = await Promise.all([contratoFrameAPI.list().catch(() => [] as ContratoFrameItem[]), releasesAPI.getAll().catch(() => [] as Release[])]);
-    setContratoFrames(cf);
-    setReleases(rel);
+    // Si el proyecto tiene empresa seteada para contrato/release, solo se muestran los que coinciden
+    // exactamente con esa empresa (filtro estricto: los que no tienen empresa quedan fuera).
+    const empresaOf = (empresaId?: string | { _id: string }) => (empresaId && typeof empresaId === "object" ? empresaId._id : empresaId) || "";
+    const cfFiltered = project?.contratoEmpresa ? cf.filter((c) => empresaOf(c.empresaId) === project.contratoEmpresa) : cf;
+    const relFiltered = project?.releaseEmpresa ? rel.filter((r) => empresaOf(r.empresaId) === project.releaseEmpresa) : rel;
+    setContratoFrames(cfFiltered);
+    setReleases(relFiltered);
     setDetailRefsLoaded(true);
   };
 

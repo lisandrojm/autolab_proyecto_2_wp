@@ -4,6 +4,7 @@ import path from "path";
 import fs from "fs";
 import xlsx from "xlsx";
 import { ContratoFrame } from "../models/ContratoFrame.js";
+import { Company } from "../models/Company.js";
 import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
@@ -130,7 +131,9 @@ router.get("/:id/download-filled", authenticateToken, async (req: AuthenticatedR
     if (!Number.isInteger(idx) || idx < 0 || idx >= contracts.length) idx = contracts.length - 1;
     const contract: any = contracts[idx] || {};
 
-    const data = await buildEmployeeDocData(user, up, contract);
+    // Empresa/Productora tagueada en el contrato (ABM de Empresas) → variables empresa* en la plantilla
+    const empresa = item.empresaId ? await Company.findById(item.empresaId).lean() : null;
+    const data = await buildEmployeeDocData(user, up, contract, empresa);
 
     const buffer = fs.readFileSync(diskPath);
     const filled = fillDocxTemplate(buffer, data);

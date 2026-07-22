@@ -41,6 +41,10 @@ const findTemplate = (contract: Contract, contratoFrames: ContratoFrameItem[]): 
 
 const templateHasFile = (cf: ContratoFrameItem | null): boolean => !!(cf && (cf.data?.fileUrl || cf.data?.fileName || cf.data?.rutaArchivo));
 
+/** Razón social de la empresa a la que pertenece un contrato/release (empresaId viene poblado desde el backend). */
+const empresaLabel = (empresaId?: string | { _id: string; razonSocial?: string }): string =>
+  empresaId && typeof empresaId === "object" ? empresaId.razonSocial || "" : "";
+
 /**
  * Nomenclatura de descargas de contratos y releases:
  *   [proyecto]_[Contrato|Release]_[nombreDoc]_[YYYY_MM_DD]_[apellido]_[nombres].docx
@@ -124,6 +128,8 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
               const cargo = contract.nombre_rol_frame || (contract as any).nombre_cargo || "Contrato";
               const template = findTemplate(contract, contratoFrames);
               const canDownloadContract = templateHasFile(template);
+              const tipoContrato = contract.nombre_contrato || template?.data?.nombre || template?.name || "Contrato";
+              const contratoEmpresa = empresaLabel(template?.empresaId);
               const dateRange = `${formatDate(contract.fecha_alta_contrato)}${contract.fecha_baja_contrato ? ` - ${formatDate(contract.fecha_baja_contrato)}` : ""}`;
 
               return (
@@ -143,15 +149,6 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                   <div className="mt-3 flex items-center justify-between gap-2">
                     <span className="text-base font-semibold text-gray-900 dark:text-white">{formatMoney(contract.sueldo_mano)}</span>
                     <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleDownloadContract(contract, idx)}
-                        disabled={!canDownloadContract}
-                        title={canDownloadContract ? "Descargar contrato" : "No hay plantilla para este tipo de contrato"}
-                        className="p-2 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        <FontAwesomeIcon icon={faFileContract} className="h-4 w-4" />
-                      </button>
                       {user && (
                         <button type="button" onClick={() => onEdit(user)} title="Editar contrato" className="p-2 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
                           <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
@@ -165,16 +162,41 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                     </div>
                   </div>
 
+                  {/* Contrato: descarga con el nombre del tipo de contrato */}
+                  <div className="mt-3 pt-3 border-t border-blue-200/70 dark:border-blue-800/70">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Contrato | Empresa</p>
+                    <div className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
+                      <span className="text-sm text-gray-700 dark:text-gray-200 truncate" title={contratoEmpresa ? `${tipoContrato} | ${contratoEmpresa}` : tipoContrato}>
+                        {tipoContrato}
+                        {contratoEmpresa && <span className="text-gray-500 dark:text-gray-400"> | {contratoEmpresa}</span>}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadContract(contract, idx)}
+                        disabled={!canDownloadContract}
+                        title={canDownloadContract ? "Descargar contrato" : "No hay plantilla para este tipo de contrato"}
+                        className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Releases: lista con descarga directa */}
                   <div className="mt-3 pt-3 border-t border-blue-200/70 dark:border-blue-800/70">
-                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Releases</p>
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Release | Empresa</p>
                     {activeReleases.length === 0 ? (
                       <p className="text-xs text-gray-500">No hay releases disponibles.</p>
                     ) : (
                       <div className="space-y-1.5">
-                        {activeReleases.map((r) => (
+                        {activeReleases.map((r) => {
+                          const releaseEmpresa = empresaLabel(r.empresaId);
+                          return (
                           <div key={r._id} className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
-                            <span className="text-sm text-gray-700 dark:text-gray-200 truncate" title={r.name}>{r.name}</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-200 truncate" title={releaseEmpresa ? `${r.name} | ${releaseEmpresa}` : r.name}>
+                              {r.name}
+                              {releaseEmpresa && <span className="text-gray-500 dark:text-gray-400"> | {releaseEmpresa}</span>}
+                            </span>
                             <button
                               type="button"
                               onClick={() => handleDownloadRelease(r, idx)}
@@ -184,7 +206,8 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                               <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
                             </button>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>

@@ -4,6 +4,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { Release } from "../models/Release.js";
+import { Company } from "../models/Company.js";
 import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
@@ -146,7 +147,9 @@ router.get("/:id/download-filled", authenticateToken, requireTenant, async (req:
     if (!Number.isInteger(idx) || idx < 0 || idx >= contracts.length) idx = contracts.length - 1;
     const contract: any = contracts[idx] || {};
 
-    const data = await buildEmployeeDocData(user, up, contract);
+    // Empresa/Productora tagueada en el release (ABM de Empresas) → variables empresa* en la plantilla
+    const empresa = release.empresaId ? await Company.findById(release.empresaId).lean() : null;
+    const data = await buildEmployeeDocData(user, up, contract, empresa);
 
     const buffer = fs.readFileSync(diskPath);
     const filled = fillDocxTemplate(buffer, data);

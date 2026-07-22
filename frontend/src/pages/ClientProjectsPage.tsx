@@ -95,6 +95,7 @@ export const ClientProjectsPage: React.FC = () => {
   // ⓘ estado del modal de información
   const [openInfo, setOpenInfo] = useState(false);
   const [showResponsableInfo, setShowResponsableInfo] = useState(false);
+  const [showEmpresaInfo, setShowEmpresaInfo] = useState(false);
   const helpEntry = getHelp(HELP_KEY);
 
   useEffect(() => {
@@ -545,7 +546,12 @@ export const ClientProjectsPage: React.FC = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
                       <div>
-                        <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Empresa del Contrato</label>
+                        <label className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                          Empresa del Contrato
+                          <button type="button" onClick={() => setShowEmpresaInfo(true)} className="text-blue-500 hover:text-blue-600 transition-colors">
+                            <FontAwesomeIcon icon={faInfoCircle} />
+                          </button>
+                        </label>
                         <select
                           className="input-field py-2.5"
                           value={formData.contratoEmpresa}
@@ -559,7 +565,12 @@ export const ClientProjectsPage: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Empresa del Release</label>
+                        <label className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                          Empresa del Release
+                          <button type="button" onClick={() => setShowEmpresaInfo(true)} className="text-blue-500 hover:text-blue-600 transition-colors">
+                            <FontAwesomeIcon icon={faInfoCircle} />
+                          </button>
+                        </label>
                         <select
                           className="input-field py-2.5"
                           value={formData.releaseEmpresa}
@@ -1119,6 +1130,36 @@ export const ClientProjectsPage: React.FC = () => {
               <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
               <span className="text-sm text-gray-700 dark:text-gray-300">
                 <strong>Rol de Sistema:</strong> Debe tener asignado el rol "Responsable de Proyecto" o un rol con permisos de elegibilidad.
+              </span>
+            </li>
+          </ul>
+        </div>
+      </InfoModal>
+
+      <InfoModal
+        isOpen={showEmpresaInfo}
+        onClose={() => setShowEmpresaInfo(false)}
+        title="Empresa del Contrato y del Release"
+        subtitle="Cómo se vinculan con los contratos y releases"
+        size="sm"
+        zIndex={100}
+        actions={[{ label: "Entendido", onClick: () => setShowEmpresaInfo(false), variant: "primary" }]}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            Cada Contrato (Configuración → Contratos) y cada Release (Configuración → Releases) está <strong>tagueado con una empresa</strong>.
+          </p>
+          <ul className="space-y-3">
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                Al elegir acá la <strong>Empresa del Contrato</strong> y la <strong>Empresa del Release</strong>, el proyecto queda vinculado a esas empresas.
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                En el equipo del proyecto, al cargar los contratos y releases de una persona <strong>solo se mostrarán los que pertenezcan a la empresa seteada</strong>. Los que no tienen empresa no aparecen.
               </span>
             </li>
           </ul>
