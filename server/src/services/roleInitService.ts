@@ -56,7 +56,7 @@ const ADMIN_PERMISSIONS = [
   'config_shifts:view', // Turnos
   'config_vacations:view', // Vacaciones
   'config_activity_logs:view', // Novedades
-  'config_pdf_templates:view', // Plantillas PDF
+  'config_pdf_templates:view', // Plantillas | Pedidos | Vacaciones
   'config_releases:view', // Releases
   'config_holidays:view', // Feriados
   'config_frame_functions:view', // Funciones FRAME

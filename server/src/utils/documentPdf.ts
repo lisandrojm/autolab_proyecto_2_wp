@@ -1,14 +1,13 @@
-import HTMLtoDOCX from "html-to-docx";
+import htmlPdf from "html-pdf-node";
 
 /**
- * Generación del .docx de un Release a partir del contenido redactado en la plataforma.
+ * Generación del PDF de un documento (Release / Contrato) a partir del contenido redactado en la plataforma.
  *
  * El contenido se guarda como HTML (editor con formato) y usa variables de llave doble
  * `{{variable}}`, igual que las plantillas PDF.
  * Por compatibilidad también se acepta la llave simple `{variable}`, que es la sintaxis de los
  * .docx de Word que se venían subiendo (así se puede pegar ese texto sin reescribir las variables).
- * Las variables sin valor quedan visibles para detectar las que faltan mapear
- * (mismo criterio que el nullGetter de `releaseFiller.ts`).
+ * Las variables sin valor quedan visibles para detectar las que faltan mapear.
  */
 
 /** Escapa texto plano para insertarlo dentro del HTML sin romperlo. */
@@ -20,7 +19,7 @@ function escapeHtml(value: string): string {
  * Reemplaza `{{variable}}` (y también `{variable}`) por su valor dentro del HTML.
  * Solo reemplaza las claves presentes en `data` con valor no vacío; el resto queda intacto.
  */
-export function replaceReleaseVariables(html: string, data: Record<string, any>): string {
+export function replaceDocVariables(html: string, data: Record<string, any>): string {
   let result = html || "";
   for (const [key, rawValue] of Object.entries(data || {})) {
     const value = rawValue == null ? "" : String(rawValue);
@@ -35,36 +34,49 @@ export function replaceReleaseVariables(html: string, data: Record<string, any>)
   return result;
 }
 
-/** Envuelve el HTML del editor en un documento completo con estilos base para el .docx. */
+/**
+ * `html-pdf-node` compila el HTML con Handlebars, así que cualquier `{{...}}` que haya quedado
+ * sin reemplazar rompe la generación del PDF. Se convierten a entidades para que Handlebars no las
+ * interprete y sigan viéndose literales en el documento (útil para detectar variables mal escritas).
+ */
+function neutralizeHandlebars(html: string): string {
+  return html.replace(/\{\{/g, "&#123;&#123;").replace(/\}\}/g, "&#125;&#125;");
+}
+
+/** Envuelve el HTML del editor en un documento completo con estilos base para el PDF. */
 function wrapHtml(bodyHtml: string): string {
   return `<!DOCTYPE html><html><head><meta charset="utf-8" /><style>
-    body { font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.4; }
-    p { margin: 0 0 8pt 0; }
-    table { border-collapse: collapse; width: 100%; }
-    td, th { border: 1px solid #000; padding: 4pt; vertical-align: top; }
+    body { font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.45; color: #222; margin: 0; }
+    p { margin: 0 0 10pt 0; }
+    h1 { font-size: 14pt; margin: 0 0 10pt 0; }
+    h2 { font-size: 13pt; margin: 0 0 10pt 0; }
+    ul, ol { margin: 0 0 10pt 0; padding-left: 24pt; }
+    table { border-collapse: collapse; width: 100%; margin: 0 0 10pt 0; page-break-inside: avoid; }
+    td, th { border: 1px solid #999; padding: 5pt; vertical-align: top; }
+    hr { border: none; border-top: 1px solid #ccc; margin: 10pt 0; }
   </style></head><body>${bodyHtml || ""}</body></html>`;
 }
 
 /**
- * Construye el .docx final: reemplaza las variables en el contenido y lo convierte a Word.
+ * Construye el PDF final: reemplaza las variables en el contenido y lo renderiza.
  * Devuelve el Buffer listo para enviar en la respuesta.
  */
-export async function buildReleaseDocx(content: string, data: Record<string, any>): Promise<Buffer> {
-  const html = wrapHtml(replaceReleaseVariables(content, data));
-  const result = await HTMLtoDOCX(html, null, {
-    table: { row: { cantSplit: true } },
-    footer: false,
-    pageNumber: false,
-    margins: { top: 1134, right: 1134, bottom: 1134, left: 1134 }, // ~2cm en twips
-  });
-  return Buffer.isBuffer(result) ? result : Buffer.from(result as any);
+export async function buildDocPdf(content: string, data: Record<string, any>): Promise<Buffer> {
+  const html = wrapHtml(neutralizeHandlebars(replaceDocVariables(content, data)));
+  const options = {
+    format: "A4",
+    margin: { top: "20mm", right: "20mm", bottom: "20mm", left: "20mm" },
+    printBackground: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  };
+  return (await htmlPdf.generatePdf({ content: html }, options as any)) as Buffer;
 }
 
 /**
- * Valores de ejemplo para la previsualización del release desde el editor
+ * Valores de ejemplo para la previsualización del documento desde el editor
  * (equivalente a getDummyVariables de las plantillas PDF).
  */
-export function getReleaseDummyVariables(): Record<string, string> {
+export function getDummyDocVariables(): Record<string, string> {
   return {
     // Persona
     nombre: "Juan",

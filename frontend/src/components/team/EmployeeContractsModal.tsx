@@ -42,12 +42,14 @@ const findTemplate = (contract: Contract, contratoFrames: ContratoFrameItem[]): 
   return contratoFrames.find((cf) => (cf.data?.nombre || cf.name || "").trim().toLowerCase() === name) || null;
 };
 
-const templateHasFile = (cf: ContratoFrameItem | null): boolean => !!(cf && (cf.data?.fileUrl || cf.data?.fileName || cf.data?.rutaArchivo));
+/** El contrato se puede generar si la plantilla tiene contenido redactado en la plataforma. */
+const templateHasContent = (cf: ContratoFrameItem | null): boolean => !!cf?.content;
 
 /**
  * Nomenclatura de descargas de contratos y releases:
- *   [proyecto]_[Contrato|Release]_[nombreDoc]_[YYYY_MM_DD]_[apellido]_[nombres].docx
+ *   [proyecto]_[Contrato|Release]_[nombreDoc]_[YYYY_MM_DD]_[apellido]_[nombres].pdf
  * `docName` es opcional (para releases es el nombre del release). La fecha es la de la descarga.
+ * Ambos (contratos y releases) se redactan en la plataforma y se generan en PDF.
  */
 const buildDownloadFileName = (tipo: "Contrato" | "Release", user: User | null, contract: Contract | undefined, docName?: string): string => {
   const proyecto = (contract as any)?.proyecto_id ?? contract?.nombre_proyecto ?? "";
@@ -57,7 +59,8 @@ const buildDownloadFileName = (tipo: "Contrato" | "Release", user: User | null, 
   const d = new Date();
   const fecha = `${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, "0")}_${String(d.getDate()).padStart(2, "0")}`;
   const parts = [String(proyecto).trim(), tipo, (docName || "").trim(), fecha, persona].filter((p) => p && p.trim() !== "");
-  return `${parts.join("_").replace(/[\\/:*?"<>|]/g, "_")}.docx`;
+  const ext = "pdf";
+  return `${parts.join("_").replace(/[\\/:*?"<>|]/g, "_")}.${ext}`;
 };
 
 export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ isOpen, onClose, user, projectId, contratoFrames, releases, contratoEmpresaLabel, releaseEmpresaLabel, onEdit, onDelete }) => {
@@ -78,8 +81,8 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
 
   const handleDownloadContract = async (contract: Contract, displayIndex: number) => {
     const template = findTemplate(contract, contratoFrames);
-    if (!templateHasFile(template)) {
-      sweetAlert.error("Sin plantilla", "No hay una plantilla de contrato disponible para este tipo de contrato.");
+    if (!templateHasContent(template)) {
+      sweetAlert.error("Sin contenido", "La plantilla de este tipo de contrato todavía no tiene contenido redactado.");
       return;
     }
     if (!user) return;
@@ -126,7 +129,7 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
             {contracts.map((contract, idx) => {
               const cargo = contract.nombre_rol_frame || (contract as any).nombre_cargo || "Contrato";
               const template = findTemplate(contract, contratoFrames);
-              const canDownloadContract = templateHasFile(template);
+              const canDownloadContract = templateHasContent(template);
               const tipoContrato = contract.nombre_contrato || template?.data?.nombre || template?.name || "Contrato";
               const contratoEmpresa = contratoEmpresaLabel || "";
               const dateRange = `${formatDate(contract.fecha_alta_contrato)}${contract.fecha_baja_contrato ? ` - ${formatDate(contract.fecha_baja_contrato)}` : ""}`;
@@ -173,7 +176,7 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                         type="button"
                         onClick={() => handleDownloadContract(contract, idx)}
                         disabled={!canDownloadContract}
-                        title={canDownloadContract ? "Descargar contrato" : "No hay plantilla para este tipo de contrato"}
+                        title={canDownloadContract ? "Descargar contrato" : "La plantilla de este tipo de contrato no tiene contenido"}
                         className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />

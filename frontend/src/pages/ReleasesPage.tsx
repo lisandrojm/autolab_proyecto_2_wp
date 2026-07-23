@@ -158,7 +158,7 @@ export function ReleasesPage() {
     }
   };
 
-  /** Genera y descarga un .docx de ejemplo con el contenido actual del editor (sin guardar). */
+  /** Genera y descarga un PDF de ejemplo con el contenido actual del editor (sin guardar). */
   const handlePreview = async () => {
     if (!hasContent(formData.content)) {
       Swal.fire("Sin contenido", "Escribí el contenido del release para previsualizarlo", "warning");
@@ -170,7 +170,7 @@ export function ReleasesPage() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `Preview_${formData.name || "Release"}.docx`);
+      link.setAttribute("download", `Preview_${formData.name || "Release"}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -293,7 +293,7 @@ export function ReleasesPage() {
                       ? [
                           {
                             icon: faDownload,
-                            title: "Descargar .docx de ejemplo",
+                            title: "Descargar PDF de ejemplo",
                             onClick: (e: any) => {
                               e.stopPropagation();
                               handleDownload(release);
@@ -367,7 +367,7 @@ export function ReleasesPage() {
                       <td className="px-5 py-3 text-sm text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
                           {release.content && (
-                            <button onClick={() => handleDownload(release)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Descargar .docx de ejemplo">
+                            <button onClick={() => handleDownload(release)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Descargar PDF de ejemplo">
                               <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
                             </button>
                           )}

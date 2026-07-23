@@ -1,11 +1,56 @@
 import React, { useEffect } from "react";
 import { useEditor, EditorContent, Editor } from "@tiptap/react";
+import { Extension } from "@tiptap/core";
+import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
 import { TableKit } from "@tiptap/extension-table";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { faBold, faItalic, faUnderline, faListUl, faListOl, faAlignLeft, faAlignCenter, faAlignRight, faAlignJustify, faTable, faHeading, faRotateLeft, faRotateRight, faMinus } from "@fortawesome/free-solid-svg-icons";
+
+/**
+ * Resalta las variables `{{variable}}` (y `{variable}`) dentro del editor.
+ * Usa decoraciones de ProseMirror: es solo visual, no toca el HTML que se guarda,
+ * así que no afecta al .docx / PDF generados.
+ */
+const VARIABLE_PATTERN = /\{\{[^{}\n]+\}\}|\{[^{}\n]+\}/g;
+
+const buildVariableDecorations = (doc: ProseMirrorNode): DecorationSet => {
+  const decorations: Decoration[] = [];
+  doc.descendants((node, pos) => {
+    if (!node.isText || !node.text) return;
+    const regex = new RegExp(VARIABLE_PATTERN.source, "g");
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(node.text)) !== null) {
+      decorations.push(Decoration.inline(pos + match.index, pos + match.index + match[0].length, { class: "tiptap-variable" }));
+    }
+  });
+  return DecorationSet.create(doc, decorations);
+};
+
+const VariableHighlight = Extension.create({
+  name: "variableHighlight",
+  addProseMirrorPlugins() {
+    const key = new PluginKey("variableHighlight");
+    return [
+      new Plugin({
+        key,
+        state: {
+          init: (_config, { doc }) => buildVariableDecorations(doc),
+          apply: (tr, old) => (tr.docChanged ? buildVariableDecorations(tr.doc) : old),
+        },
+        props: {
+          decorations(state) {
+            return key.getState(state);
+          },
+        },
+      }),
+    ];
+  },
+});
 
 /** Grupo de variables para mostrarlas separadas por título. */
 export interface VariableGroup {
@@ -44,9 +89,14 @@ const ToolbarButton: React.FC<{ onClick: () => void; active?: boolean; title: st
 
 export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, variables = [], variablesTitle = "Variables disponibles", minHeight = "320px" }) => {
   const editor = useEditor({
-    extensions: [StarterKit, TextAlign.configure({ types: ["heading", "paragraph"] }), TableKit.configure({ table: { resizable: true } })],
+    extensions: [StarterKit, TextAlign.configure({ types: ["heading", "paragraph"] }), TableKit.configure({ table: { resizable: true } }), VariableHighlight],
     content: value || "",
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
+    editorProps: {
+      // El alto mínimo va en el elemento editable (no en el contenedor): si no, el área en blanco
+      // de abajo no es clickeable y el primer click no enfoca el editor.
+      attributes: { class: "outline-none", style: `min-height: ${minHeight}` },
+    },
   });
 
   // Sincroniza cuando el contenido viene de afuera (ej: abrir el modal en modo edición)
@@ -117,9 +167,15 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
           <ToolbarButton onClick={() => e.chain().focus().redo().run()} title="Rehacer" icon={faRotateRight} />
         </div>
 
-        {/* Área de edición */}
+        {/* Área de edición. El click en el padding también enfoca (el editable no cubre ese margen). */}
         <div
-          className="bg-white dark:bg-gray-900 px-4 py-3 overflow-y-auto text-sm text-gray-900 dark:text-gray-100
+          onMouseDown={(ev) => {
+            if (ev.target === ev.currentTarget && !e.isFocused) {
+              ev.preventDefault();
+              e.chain().focus("end").run();
+            }
+          }}
+          className="bg-white dark:bg-gray-900 px-4 py-3 overflow-y-auto cursor-text text-sm text-gray-900 dark:text-gray-100
             [&_.ProseMirror]:outline-none
             [&_.ProseMirror_p]:mb-2
             [&_.ProseMirror_h1]:text-xl [&_.ProseMirror_h1]:font-bold [&_.ProseMirror_h1]:mb-2
@@ -129,8 +185,10 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
             [&_.ProseMirror_table]:border-collapse [&_.ProseMirror_table]:w-full [&_.ProseMirror_table]:my-2
             [&_.ProseMirror_td]:border [&_.ProseMirror_td]:border-gray-400 [&_.ProseMirror_td]:p-1.5
             [&_.ProseMirror_th]:border [&_.ProseMirror_th]:border-gray-400 [&_.ProseMirror_th]:p-1.5 [&_.ProseMirror_th]:bg-gray-100 dark:[&_.ProseMirror_th]:bg-gray-800
-            [&_.ProseMirror_hr]:my-3 [&_.ProseMirror_hr]:border-gray-300"
-          style={{ minHeight }}
+            [&_.ProseMirror_hr]:my-3 [&_.ProseMirror_hr]:border-gray-300
+            [&_.tiptap-variable]:text-amber-600 [&_.tiptap-variable]:font-semibold
+            [&_.tiptap-variable]:bg-amber-100 [&_.tiptap-variable]:rounded [&_.tiptap-variable]:px-0.5
+            dark:[&_.tiptap-variable]:text-amber-300 dark:[&_.tiptap-variable]:bg-amber-400/15"
         >
           <EditorContent editor={editor} />
         </div>

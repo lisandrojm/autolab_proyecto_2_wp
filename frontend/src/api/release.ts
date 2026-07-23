@@ -94,22 +94,22 @@ export const releasesAPI = {
     await axios.delete(`/releases/${id}`);
   },
 
-  /** Genera un .docx de ejemplo con el contenido del editor (sin guardar). */
+  /** Genera un PDF de ejemplo con el contenido del editor (sin guardar). */
   preview: async (content: string): Promise<Blob> => {
     const response = await axios.post("/releases/preview", { content }, { responseType: "blob" });
     return response.data as Blob;
   },
 
-  /** Descarga el .docx del release con valores de ejemplo. */
+  /** Descarga el PDF del release con valores de ejemplo. */
   download: async (release: Release): Promise<void> => {
     const response = await axios.get(`/releases/${release._id}/download`, { responseType: "blob" });
-    downloadBlob(response.data, fileNameFromDisposition(response.headers?.["content-disposition"], `${release.name}.docx`));
+    downloadBlob(response.data, fileNameFromDisposition(response.headers?.["content-disposition"], `${release.name}.pdf`));
   },
 
-  /** Descarga el .docx con las variables reemplazadas por los datos del empleado/contrato. */
+  /** Descarga el PDF con las variables reemplazadas por los datos del empleado/contrato. */
   downloadFilled: async (release: Release, ctx: { userId: string; projectId: string; contractIndex: number }, fileNameOverride?: string): Promise<void> => {
     const response = await axios.get(`/releases/${release._id}/download-filled`, { params: ctx, responseType: "blob" });
-    const fileName = fileNameOverride || fileNameFromDisposition(response.headers?.["content-disposition"], `${release.name}.docx`);
+    const fileName = fileNameOverride || fileNameFromDisposition(response.headers?.["content-disposition"], `${release.name}.pdf`);
     downloadBlob(response.data, fileName);
   },
 };

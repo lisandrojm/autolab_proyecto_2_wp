@@ -6,7 +6,7 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faEdit, faTrash, faFileContract, faCheckCircle, faTimesCircle, faEye, faList } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faEdit, faTrash, faFileContract, faCheckCircle, faTimesCircle, faEye, faList, faInfoCircle, faDownload } from "@fortawesome/free-solid-svg-icons";
 
 import { pdfsAPI, Pdf, PdfInput, codeOptions, variablesByCode, systemVariables } from "../api/pdf";
 import { pdfPreviewAPI } from "../api/pdfPreview";
@@ -15,6 +15,7 @@ import Swal from "sweetalert2";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { Modal } from "../components/ui/Modal";
 import { RichTextEditor } from "../components/ui/RichTextEditor";
+import { ViewToggle, ViewMode } from "../components/ui/ViewToggle";
 import { PdfGlobalConfigTab } from "./PdfGlobalConfigTab";
 import { PdfProjectConfigTab } from "./PdfProjectConfigTab";
 import { PdfAssignmentStatus } from "./PdfAssignmentStatus";
@@ -49,6 +50,27 @@ export function PdfTemplatesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterActive, setFilterActive] = useState<"all" | "active" | "inactive">("all");
   const [isFetching, setIsFetching] = useState(false);
+
+  // Vista (Tabla vs Tarjetas)
+  const [viewMode, setViewMode] = useState<ViewMode>("cards");
+  const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
+  useEffect(() => {
+    const handleResize = () => {
+      const isNowLarge = window.innerWidth >= 1024;
+      setIsLarge(isNowLarge);
+      if (!isNowLarge) setViewMode("cards");
+    };
+    if (window.innerWidth >= 1024) {
+      const saved = localStorage.getItem("pdfTemplatesViewMode");
+      if (saved === "table" || saved === "cards") setViewMode(saved as ViewMode);
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+  useEffect(() => {
+    if (isLarge) localStorage.setItem("pdfTemplatesViewMode", viewMode);
+  }, [viewMode, isLarge]);
+  const effectiveViewMode: ViewMode = isLarge ? viewMode : "cards";
 
   // modal
   const [showModal, setShowModal] = useState(false);
@@ -92,6 +114,24 @@ export function PdfTemplatesPage() {
     } catch (error) {
       console.error(error);
       Swal.fire("Error", "No se pudo generar la previsualización", "error");
+    }
+  };
+
+  /** Descarga el PDF de la plantilla ya guardada, con valores de ejemplo (igual que en Releases). */
+  const handleDownload = async (template: Pdf) => {
+    try {
+      const blob = await pdfPreviewAPI.preview(template.content, template.code, template.title);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `${template.name || "Plantilla"}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      Swal.fire("Error", "No se pudo generar el PDF de la plantilla", "error");
     }
   };
 
@@ -231,16 +271,13 @@ export function PdfTemplatesPage() {
   const availableCodes = codeOptions.filter((c) => !usedCodes.includes(c.value));
   const isAddDisabled = availableCodes.length === 0;
 
-  // Códigos ofrecidos en el modal: los libres, más el de la plantilla que se está editando.
-  // Evita elegir uno ya usado (el backend lo rechaza por el índice único tenant+code).
-  // Siempre se incluye `formData.code` para que el valor del <select> exista como opción: si no,
-  // el navegador muestra la primera opción mientras el estado dice otra cosa y las variables
-  // del pedido aparecen vacías.
-  const modalCodeOptions = codeOptions.filter((c) => !usedCodes.includes(c.value) || c.value === formData.code || c.value === editingTemplate?.code);
+  // Un código ya usado por OTRA plantilla no se puede elegir (índice único tenant+code):
+  // se muestra igual en el select pero deshabilitado, para que se entienda por qué no está disponible.
+  const isCodeTaken = (code: (typeof codeOptions)[number]["value"]) => usedCodes.includes(code) && code !== editingTemplate?.code;
 
   return (
     <PageLayout
-      title="Plantillas PDF"
+      title="Plantillas | Pedidos | Vacaciones"
       itemCount={activeTab === "templates" ? filteredTemplates.length : undefined}
       subtitle="Crea y gestiona plantillas PDF para pedidos y vacaciones"
       faIcon={{ icon: faFileContract }}
@@ -285,22 +322,27 @@ export function PdfTemplatesPage() {
           </div>
 
           {activeTab === "templates" && (
-            <SearchAndFilters
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-              searchPlaceholder="Buscar por nombre o contenido..."
-              filters={[
-                {
-                  value: filterActive,
-                  onChange: (v) => setFilterActive(v as any),
-                  options: [
-                    { value: "all", label: "Todas" },
-                    { value: "active", label: "Activas" },
-                    { value: "inactive", label: "Inactivas" },
-                  ],
-                },
-              ]}
-            />
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
+              <div className="flex-1 w-full">
+                <SearchAndFilters
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  searchPlaceholder="Buscar por nombre o contenido..."
+                  filters={[
+                    {
+                      value: filterActive,
+                      onChange: (v) => setFilterActive(v as any),
+                      options: [
+                        { value: "all", label: "Todas" },
+                        { value: "active", label: "Activas" },
+                        { value: "inactive", label: "Inactivas" },
+                      ],
+                    },
+                  ]}
+                />
+              </div>
+              {isLarge && <ViewToggle value={viewMode} onChange={setViewMode} />}
+            </div>
           )}
         </div>
       }
@@ -316,9 +358,67 @@ export function PdfTemplatesPage() {
         <PdfProjectConfigTab />
       ) : (
         <>
+          {/* Todos los códigos ya tienen su plantilla: no hace falta (ni se puede) crear más. */}
+          {isAddDisabled && (
+            <div className="mb-6 mx-0.5 lg:mx-0 flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-800 dark:bg-blue-900/20">
+              <FontAwesomeIcon icon={faInfoCircle} className="h-5 w-5 mt-0.5 shrink-0 text-blue-600 dark:text-blue-400" />
+              <div className="text-sm">
+                <p className="font-semibold text-blue-800 dark:text-blue-300">Ya están creadas las {codeOptions.length} plantillas disponibles</p>
+                <p className="text-blue-700 dark:text-blue-300/80 mt-0.5">
+                  Cada código admite una sola plantilla, así que no es necesario crear más. Para cambiar un documento, editá la plantilla del código correspondiente.
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="relative">
             {isFetching && <div className="absolute -top-6 right-0 text-xs text-gray-500 dark:text-gray-400">Filtrando…</div>}
 
+            {effectiveViewMode === "table" ? (
+              <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg mx-0.5 lg:mx-0">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-900/50">
+                    <tr>
+                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Código</th>
+                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
+                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Contenido</th>
+                      <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                    {filteredTemplates.map((template) => (
+                      <tr key={template._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20 cursor-pointer" onClick={() => openEdit(template)}>
+                        <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">{template.name}</td>
+                        <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{codeOptions.find((c) => c.value === template.code)?.label || template.code}</td>
+                        <td className="px-5 py-3 text-sm whitespace-nowrap">
+                          <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${template.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"}`}>{template.isActive ? "Activa" : "Inactiva"}</span>
+                        </td>
+                        <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
+                          <span className="truncate max-w-[320px] block" title="Contenido de la plantilla">
+                            {(template.content || "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").trim().slice(0, 70)}
+                            {(template.content || "").length > 70 ? "…" : ""}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-sm text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-2">
+                            <button onClick={() => handleDownload(template)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Descargar PDF de ejemplo">
+                              <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => openEdit(template)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Editar">
+                              <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => handleDelete(template)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors" title="Eliminar">
+                              <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
               {filteredTemplates.map((template) => (
                 <Card
@@ -334,6 +434,14 @@ export function PdfTemplatesPage() {
                   footer={{
                     leftContent: null,
                     actions: [
+                      {
+                        icon: faDownload,
+                        title: "Descargar PDF de ejemplo",
+                        onClick: (e) => {
+                          e.stopPropagation();
+                          handleDownload(template);
+                        },
+                      },
                       {
                         icon: faEdit,
                         title: "Editar",
@@ -357,28 +465,35 @@ export function PdfTemplatesPage() {
                 </Card>
               ))}
 
-              {/* CREATE CARD */}
-              <Card
-                variant="create"
-                onClick={openCreate}
-                header={{
-                  icon: faFileContract,
-                  title: "Nueva Plantilla",
-                  subtitle: "Crear nueva plantilla",
-                }}
-              />
+              {/* CREATE CARD — oculta si ya no quedan códigos libres (igual que el botón del header) */}
+              {!isAddDisabled && (
+                <Card
+                  variant="create"
+                  onClick={openCreate}
+                  header={{
+                    icon: faFileContract,
+                    title: "Nueva Plantilla",
+                    subtitle: "Crear nueva plantilla",
+                  }}
+                />
+              )}
             </div>
+            )}
           </div>
           {filteredTemplates.length === 0 && !isFetching && (
             <EmptyState
               icon={faFileContract}
               title="No hay plantillas"
               description="No hay plantillas definidas."
-              action={{
-                label: "Nueva Plantilla",
-                onClick: openCreate,
-                icon: faPlus,
-              }}
+              action={
+                isAddDisabled
+                  ? undefined
+                  : {
+                      label: "Nueva Plantilla",
+                      onClick: openCreate,
+                      icon: faPlus,
+                    }
+              }
             />
           )}
         </>
@@ -439,9 +554,10 @@ export function PdfTemplatesPage() {
                   }
                   className="input-field w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
                 >
-                  {modalCodeOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
+                  {codeOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value} disabled={isCodeTaken(opt.value)}>
                       {opt.label}
+                      {isCodeTaken(opt.value) ? " — ya en uso" : ""}
                     </option>
                   ))}
                 </select>

@@ -5,7 +5,7 @@ import { ClientSelector } from './ClientSelector';
 import { ClientContextMenu } from './ClientContextMenu';
 import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard } from '@fortawesome/free-solid-svg-icons';
 import { Logo } from '../components/ui/Logo';
 import axios from '../api/axiosConfig';
 import { SettingsModal } from './SettingsModal';
@@ -21,6 +21,12 @@ interface AdminCounts {
   levels: number;
   projects: number;
 }
+
+/**
+ * Subgrupo "Plantillas" (dentro de Configuración): agrupa las tres plantillas de documentos.
+ * El orden del array es el que se muestra en el menú.
+ */
+const PLANTILLAS_PATHS = ['/pdfs', '/contratos-frame', '/releases'];
 
 export const MobileNavbar: React.FC = () => {
   const { user, logout, hasPermission } = useAuthStore();
@@ -47,6 +53,26 @@ export const MobileNavbar: React.FC = () => {
     if (newVal) localStorage.setItem('adminOpenSection', newVal);
     else localStorage.removeItem('adminOpenSection');
   };
+
+  // Subgrupo "Plantillas" dentro de Configuración. Su estado vive acá (y no en NavMenu) porque
+  // NavMenu se redefine en cada render del padre y perdería el estado interno.
+  // Arranca abierto si lo dejaste abierto, o si entrás directo a una de sus páginas.
+  const [openPlantillas, setOpenPlantillas] = useState<boolean>(() => localStorage.getItem('configPlantillasOpen') === 'true' || PLANTILLAS_PATHS.includes(location.pathname));
+  const togglePlantillas = () => {
+    const newVal = !openPlantillas;
+    setOpenPlantillas(newVal);
+    localStorage.setItem('configPlantillasOpen', String(newVal));
+  };
+  // Al NAVEGAR hacia una de sus páginas se abre solo. Se ignora el primer render para no pisar
+  // el estado inicial: si no, estando parado en una de esas rutas nunca se podría colapsar.
+  const plantillasMounted = React.useRef(false);
+  useEffect(() => {
+    if (!plantillasMounted.current) {
+      plantillasMounted.current = true;
+      return;
+    }
+    if (PLANTILLAS_PATHS.includes(location.pathname)) setOpenPlantillas(true);
+  }, [location.pathname]);
   const [adminCounts, setAdminCounts] = useState<AdminCounts>({ clients: 0, tenants: 0, roles: 0, users: 0, areas: 0, positions: 0, levels: 0, projects: 0 });
   const SHOW_MENU_COUNTS = false;
 
@@ -153,13 +179,13 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission('config_shifts:view')) base.push({ path: '/shifts', icon: faClock, label: 'Turnos', scope: 'global' });
       if (hasPermission('config_vacations:view')) base.push({ path: '/vacations-rules', icon: faUmbrellaBeach, label: 'Vacaciones', scope: 'global' });
       if (hasPermission('config_holidays:view')) base.push({ path: '/holidays', icon: faCalendar, label: 'Feriados', scope: 'global' });
-      if (hasPermission('config_pdf_templates:view')) base.push({ path: '/pdfs', icon: faFilePdf, label: 'Plantillas PDF', scope: 'global' });
-      if (hasPermission('config_releases:view')) base.push({ path: '/releases', icon: faRocket, label: 'Releases', scope: 'global' });
+      if (hasPermission('config_pdf_templates:view')) base.push({ path: '/pdfs', icon: faFilePdf, label: 'Pedidos | Vacaciones', scope: 'global' });
+      if (hasPermission('config_releases:view')) base.push({ path: '/releases', icon: faFilePdf, label: 'Releases', scope: 'global' });
       if (hasPermission('config_categorias_sat:view')) base.push({ path: '/categorias-sat', icon: faListCheck, label: 'Categorías SAT', scope: 'global' });
       if (hasPermission('config_bancos:view')) base.push({ path: '/bancos', icon: faBuildingColumns, label: 'Entidades Financieras', scope: 'global' });
       if (hasPermission('config_obras_sociales:view')) base.push({ path: '/obras-sociales', icon: faBriefcaseMedical, label: 'Obras Sociales', scope: 'global' });
       if (hasPermission('config_centros_costo:view')) base.push({ path: '/centros-costo', icon: faPiggyBank, label: 'Centros de Costos', scope: 'global' });
-      if (hasPermission('config_contratos_frame:view')) base.push({ path: '/contratos-frame', icon: faFileContract, label: 'Contratos', scope: 'global' });
+      if (hasPermission('config_contratos_frame:view')) base.push({ path: '/contratos-frame', icon: faFilePdf, label: 'Contratos', scope: 'global' });
       if (hasPermission('config_contratos_frame:view')) base.push({ path: '/empresas', icon: faBuilding, label: 'Empresas', scope: 'global' });
     }
 
@@ -223,15 +249,49 @@ export const MobileNavbar: React.FC = () => {
 
     const generalAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ['/tenants'].includes(item.path)) : adminItems.filter((item) => ['/admin/projects', '/admin/sedes', '/admin/contracts', '/orders', '/vacations', '/requests', '/documents'].includes(item.path))).sort(byLabel);
 
-    const configPaths = ['/requests/config', '/order-types', '/shifts', '/vacations-rules', '/holidays', '/pdfs', '/releases', '/funciones-frame', '/categorias-sat', '/clients', '/contratos-frame', '/centros-costo', '/bancos', '/obras-sociales', '/empresas'];
+    // Ojo: los paths de PLANTILLAS_PATHS NO van acá, se agrupan aparte en el subgrupo "Plantillas".
+    const configPaths = ['/requests/config', '/order-types', '/shifts', '/vacations-rules', '/holidays', '/funciones-frame', '/categorias-sat', '/clients', '/centros-costo', '/bancos', '/obras-sociales', '/empresas'];
     // "Mi Perfil" se incluye como un item más para que entre en el orden alfabético
     const profileItem = { path: '/mi-perfil', icon: faIdCard, label: 'Mi Perfil', scope: 'global' as const };
-    const configItems = [...adminItems.filter((item) => configPaths.includes(item.path)), ...(hasPermission('config_profile:view') ? [profileItem] : [])].sort(byLabel);
+
+    // Subgrupo "Plantillas": respeta el orden de PLANTILLAS_PATHS (no alfabético) y solo incluye
+    // los items a los que el usuario tenga permiso.
+    const plantillasChildren = PLANTILLAS_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems;
+    const plantillasGroup = { path: '#plantillas', icon: faFilePdf, label: 'Plantillas', scope: 'global' as const, children: plantillasChildren };
+
+    const configItems = [
+      ...adminItems.filter((item) => configPaths.includes(item.path)),
+      ...(hasPermission('config_profile:view') ? [profileItem] : []),
+      ...(plantillasChildren.length > 0 ? [plantillasGroup] : []),
+    ].sort(byLabel) as any[];
     // "Import WP" es un módulo temporal → va al FINAL de Configuración (después del orden alfabético).
     const importItem = adminItems.find((item) => item.path === '/users/import-wp');
     if (importItem) configItems.push(importItem);
 
     const renderMenuItem = (item: any) => {
+      // Subgrupo colapsable (ej: "Plantillas"). Debe ir primero: no es un link navegable.
+      if (item.children) {
+        return (
+          <div key={item.path}>
+            <button
+              type="button"
+              onClick={togglePlantillas}
+              className="w-full group flex items-center justify-between px-2 py-2 rounded transition-all text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/50"
+            >
+              <div className="flex items-center space-x-3 flex-1 min-w-0">
+                <div className="h-8 w-8 flex items-center justify-center rounded-md transition-colors bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 group-hover:bg-gray-300 dark:group-hover:bg-blue-800">
+                  <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
+                </div>
+                <span className="font-medium truncate">{item.label}</span>
+              </div>
+              <FontAwesomeIcon icon={openPlantillas ? faChevronDown : faChevronRight} className="h-3 w-3 shrink-0" />
+            </button>
+
+            {openPlantillas && <nav className="space-y-1 mt-1 ml-5 pl-2 border-l-2 border-gray-200 dark:border-gray-700">{item.children.map((child: any) => renderMenuItem(child))}</nav>}
+          </div>
+        );
+      }
+
       if (item.external) {
         return (
           <a

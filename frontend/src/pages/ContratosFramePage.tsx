@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileContract, faDownload, faUpload, faPlus, faEdit, faTrash, faFileExcel, faPaperclip, faEye } from "@fortawesome/free-solid-svg-icons";
+import { faFileContract, faDownload, faUpload, faPlus, faEdit, faTrash, faFileExcel, faEye } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
@@ -9,10 +9,13 @@ import { Card } from "../components/ui/Card";
 import { ViewToggle, ViewMode } from "../components/ui/ViewToggle";
 import { sweetAlert } from "../utils/sweetAlert";
 import { fuzzyMatch } from "../utils/searchHelpers";
-import { contratoFrameAPI, ContratoFrameItem } from "../api/contratosFrame";
-import { ContratoViewerModal } from "../components/contratos/ContratoViewerModal";
+import { contratoFrameAPI, ContratoFrameItem, contratoVariables } from "../api/contratosFrame";
+import { RichTextEditor } from "../components/ui/RichTextEditor";
 
-const emptyForm = { nombre: "", externalId: "", cantidadJornadas: "", multiplicadorDiario: "" };
+const emptyForm = { nombre: "", externalId: "", content: "", cantidadJornadas: "", multiplicadorDiario: "" };
+
+/** El editor devuelve "<p></p>" cuando está vacío: chequeamos que haya texto real. */
+const hasContent = (html: string): boolean => !!html && html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim().length > 0;
 
 export const ContratosFramePage: React.FC = () => {
   const HELP_KEY = "contratosFrame" as const;
@@ -47,11 +50,8 @@ export const ContratosFramePage: React.FC = () => {
   const [editing, setEditing] = useState<ContratoFrameItem | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [esTiempoIndeterminado, setEsTiempoIndeterminado] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
-
-  const [viewing, setViewing] = useState<ContratoFrameItem | null>(null);
+  const [previewing, setPreviewing] = useState(false);
 
   const [showImport, setShowImport] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -78,7 +78,6 @@ export const ContratosFramePage: React.FC = () => {
     setEditing(null);
     setForm({ ...emptyForm });
     setEsTiempoIndeterminado(false);
-    setSelectedFile(null);
     setShowModal(true);
   };
 
@@ -87,11 +86,11 @@ export const ContratosFramePage: React.FC = () => {
     setForm({
       nombre: item.name || "",
       externalId: item.externalId || "",
+      content: item.content || "",
       cantidadJornadas: String(item.data?.cantidadJornadas ?? ""),
       multiplicadorDiario: String(item.data?.multiplicadorDiario ?? ""),
     });
     setEsTiempoIndeterminado(!!item.data?.esTiempoIndeterminado);
-    setSelectedFile(null);
     setShowModal(true);
   };
 
@@ -100,15 +99,20 @@ export const ContratosFramePage: React.FC = () => {
       sweetAlert.error("Falta el nombre", "El nombre del contrato es obligatorio.");
       return;
     }
+    if (!hasContent(form.content)) {
+      sweetAlert.error("Falta el contenido", "Escribí el contenido del contrato.");
+      return;
+    }
     setSaving(true);
     try {
-      const payload = new FormData();
-      payload.append("nombre", form.nombre.trim());
-      payload.append("externalId", form.externalId.trim());
-      payload.append("cantidadJornadas", form.cantidadJornadas);
-      payload.append("multiplicadorDiario", form.multiplicadorDiario);
-      payload.append("esTiempoIndeterminado", String(esTiempoIndeterminado));
-      if (selectedFile) payload.append("file", selectedFile);
+      const payload = {
+        nombre: form.nombre.trim(),
+        externalId: form.externalId.trim(),
+        content: form.content,
+        cantidadJornadas: form.cantidadJornadas,
+        multiplicadorDiario: form.multiplicadorDiario,
+        esTiempoIndeterminado,
+      };
 
       if (editing) {
         await contratoFrameAPI.update(editing._id, payload);
@@ -148,6 +152,28 @@ export const ContratosFramePage: React.FC = () => {
       await contratoFrameAPI.download(item);
     } catch {
       sweetAlert.error("Error", "No se pudo descargar el archivo.");
+    }
+  };
+
+  /** Genera y descarga un PDF de ejemplo con el contenido actual del editor (sin guardar). */
+  const handlePreview = async () => {
+    if (!hasContent(form.content)) {
+      sweetAlert.error("Sin contenido", "Escribí el contenido del contrato para previsualizarlo.");
+      return;
+    }
+    try {
+      setPreviewing(true);
+      const blob = await contratoFrameAPI.preview(form.content);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Preview_${form.nombre || "Contrato"}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      sweetAlert.error("Error", "No se pudo generar la previsualización.");
+    } finally {
+      setPreviewing(false);
     }
   };
 
@@ -210,7 +236,7 @@ export const ContratosFramePage: React.FC = () => {
   );
 
   return (
-    <PageLayout title="Contratos" subtitle="Catálogo de contratos de FRAME. Cargá registros manualmente o importá un Excel." faIcon={{ icon: faFileContract }} headerActions={headerActions} shouldShowInfo={hasHelp(HELP_KEY)} infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: helpEntry.title, size: helpEntry.size, content: helpEntry.content }}>
+    <PageLayout title="Plantillas | Contratos" subtitle="Catálogo de contratos de FRAME. Cargá registros manualmente o importá un Excel." faIcon={{ icon: faFileContract }} headerActions={headerActions} shouldShowInfo={hasHelp(HELP_KEY)} infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: helpEntry.title, size: helpEntry.size, content: helpEntry.content }}>
       <div className="mb-4 flex flex-col md:flex-row gap-4 items-center justify-between">
         <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar contrato..." className="w-full max-w-md px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white" />
         {isLarge && <ViewToggle value={viewMode} onChange={setViewMode} />}
@@ -235,17 +261,11 @@ export const ContratosFramePage: React.FC = () => {
                 badges: item.externalId ? [{ text: `ID ${item.externalId}`, variant: "blue" }] : [],
               }}
               footer={{
-                leftContent: item.data?.fileName ? (
-                  <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                    <FontAwesomeIcon icon={faPaperclip} className="h-3 w-3" />
-                    <span className="truncate max-w-[140px]">{item.data.fileName}</span>
-                  </span>
-                ) : undefined,
+                leftContent: undefined,
                 actions: [
-                  ...(item.data?.fileUrl
+                  ...(item.content
                     ? [
-                        { icon: faEye, onClick: (e: React.MouseEvent) => { e.stopPropagation(); setViewing(item); }, title: "Visualizar", variant: "default" as const },
-                        { icon: faDownload, onClick: (e: React.MouseEvent) => { e.stopPropagation(); handleDownloadFile(item); }, title: "Descargar", variant: "default" as const },
+                        { icon: faDownload, onClick: (e: React.MouseEvent) => { e.stopPropagation(); handleDownloadFile(item); }, title: "Descargar PDF de ejemplo", variant: "default" as const },
                       ]
                     : []),
                   { icon: faEdit, onClick: (e) => { e.stopPropagation(); openEdit(item); }, title: "Editar", variant: "default" },
@@ -287,11 +307,8 @@ export const ContratosFramePage: React.FC = () => {
                   <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{item.data?.multiplicadorDiario ?? "—"}</td>
                   <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono">{item.externalId || "—"}</td>
                   <td className="px-5 py-3 text-sm text-right">
-                    {item.data?.fileUrl && (
-                      <>
-                        <button onClick={() => setViewing(item)} className="text-gray-600 hover:text-gray-800 dark:text-gray-300 mr-3" title="Visualizar"><FontAwesomeIcon icon={faEye} /></button>
-                        <button onClick={() => handleDownloadFile(item)} className="text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 mr-3" title="Descargar"><FontAwesomeIcon icon={faDownload} /></button>
-                      </>
+                    {item.content && (
+                      <button onClick={() => handleDownloadFile(item)} className="text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 mr-3" title="Descargar PDF de ejemplo"><FontAwesomeIcon icon={faDownload} /></button>
                     )}
                     <button onClick={() => openEdit(item)} className="text-blue-600 hover:text-blue-800 dark:text-blue-400 mr-3" title="Editar"><FontAwesomeIcon icon={faEdit} /></button>
                     <button onClick={() => handleDelete(item)} className="text-rose-600 hover:text-rose-800 dark:text-rose-400" title="Eliminar"><FontAwesomeIcon icon={faTrash} /></button>
@@ -312,7 +329,17 @@ export const ContratosFramePage: React.FC = () => {
         title={editing ? "Editar Contrato" : "Nuevo Contrato"}
         size="lg"
         footer={
-          <div className="flex justify-end gap-2 w-full">
+          <div className="flex justify-between gap-2 w-full">
+            <button
+              type="button"
+              onClick={handlePreview}
+              disabled={previewing}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
+            >
+              <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
+              {previewing ? "Generando..." : "Previsualizar"}
+            </button>
+            <div className="flex gap-2">
             <button
               type="button"
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
@@ -326,6 +353,7 @@ export const ContratosFramePage: React.FC = () => {
             <button type="submit" form="contrato-form" disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
               {saving ? "Guardando..." : editing ? "Actualizar" : "Crear"}
             </button>
+            </div>
           </div>
         }
       >
@@ -348,30 +376,18 @@ export const ContratosFramePage: React.FC = () => {
               Es tiempo indeterminado
             </label>
 
-            {/* Archivo */}
+            {/* Contenido del contrato */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Archivo</label>
-              <div className="flex items-center gap-3">
-                <button type="button" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
-                  <FontAwesomeIcon icon={faUpload} className="h-4 w-4" />
-                  Subir archivo
-                </button>
-                <span className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-[260px]">{selectedFile ? selectedFile.name : editing?.data?.fileName ? `Actual: ${editing.data.fileName}` : "Ningún archivo seleccionado"}</span>
-                {editing?.data?.fileUrl && (
-                  <>
-                    <button type="button" onClick={() => setViewing(editing)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400">
-                      <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
-                      Visualizar
-                    </button>
-                    <button type="button" onClick={() => handleDownloadFile(editing)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400">
-                      <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
-                      Descargar actual
-                    </button>
-                  </>
-                )}
-              </div>
-              <input ref={fileInputRef} type="file" accept=".doc,.docx,.pdf" className="hidden" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} />
-              <p className="text-xs text-gray-500 mt-1">Tamaño máximo: 25MB.{editing ? " Si no seleccionás un archivo, se mantiene el actual." : ""}</p>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contenido *</label>
+              <RichTextEditor
+                value={form.content}
+                onChange={(html) => setForm((f) => ({ ...f, content: html }))}
+                variables={contratoVariables}
+                variablesTitle="Variables del contrato (click para insertar)"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Las variables se reemplazan al descargar con los datos de la persona y de la empresa seteada en el proyecto (Empresa del Contrato).
+              </p>
             </div>
           </div>
         </form>
@@ -407,7 +423,6 @@ export const ContratosFramePage: React.FC = () => {
         </div>
       </Modal>
 
-      <ContratoViewerModal contrato={viewing} isOpen={!!viewing} onClose={() => setViewing(null)} />
     </PageLayout>
   );
 };

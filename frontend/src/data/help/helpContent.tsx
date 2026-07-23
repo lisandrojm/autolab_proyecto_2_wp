@@ -148,7 +148,7 @@ const helpResources = {
       // NUEVO: PDF Templates
       // ---------------------------------------------------------
       //
-      "pdfTemplates.title": "Plantillas PDF",
+      "pdfTemplates.title": "Plantillas | Pedidos | Vacaciones",
       "pdfTemplates.description": "Configura los documentos PDF generados automáticamente cuando un pedido o solicitud de vacaciones es aprobado.",
       "pdfTemplates.items": ["**Plantillas**: Cada plantilla define el texto base que se usa para generar el PDF del documento.", "**Códigos y Tipos**: Existen plantillas para diferentes tipos de pedidos (Dinero, Fecha Rango, etc.) y para Vacaciones.", "**Variables dinámicas**: El sistema reemplaza automáticamente valores como {{categoria}}, {{monto}}, {{fechaInicio}}, {{dias}} según el contexto.", "**Plantilla activa**: Si está activa y coincide el código de la solicitud, se usa esa plantilla para generar el PDF.", "**Objetivo**: Personalizar los documentos que reciben los colaboradores."],
 
@@ -419,7 +419,7 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
     content: buildHelpContent("levels"),
   },
   pdfTemplates: {
-    title: "Plantillas PDF",
+    title: "Plantillas | Pedidos | Vacaciones",
     size: "sm",
     content: buildHelpContent("pdfTemplates"),
   },
