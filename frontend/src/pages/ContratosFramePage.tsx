@@ -99,10 +99,7 @@ export const ContratosFramePage: React.FC = () => {
       sweetAlert.error("Falta el nombre", "El nombre del contrato es obligatorio.");
       return;
     }
-    if (!hasContent(form.content)) {
-      sweetAlert.error("Falta el contenido", "Escribí el contenido del contrato.");
-      return;
-    }
+    // El contenido es opcional: se puede crear el tipo de contrato y redactarlo más adelante.
     setSaving(true);
     try {
       const payload = {
@@ -378,7 +375,7 @@ export const ContratosFramePage: React.FC = () => {
 
             {/* Contenido del contrato */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contenido *</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contenido</label>
               <RichTextEditor
                 value={form.content}
                 onChange={(html) => setForm((f) => ({ ...f, content: html }))}
@@ -386,7 +383,8 @@ export const ContratosFramePage: React.FC = () => {
                 variablesTitle="Variables del contrato (click para insertar)"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Las variables se reemplazan al descargar con los datos de la persona y de la empresa seteada en el proyecto (Empresa del Contrato).
+                Opcional: podés crear el contrato y redactarlo más adelante, pero sin contenido no se puede generar el PDF. Las variables se reemplazan al
+                descargar con los datos de la persona y de la empresa seteada en el proyecto (Empresa del Contrato).
               </p>
             </div>
           </div>
