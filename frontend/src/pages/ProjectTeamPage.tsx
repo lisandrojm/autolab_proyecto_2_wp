@@ -241,7 +241,7 @@ export const ProjectTeamPage: React.FC = () => {
   const [searchTermTeam, setSearchTermTeam] = useState(""); // For Equipo Actual
   const [filterUserStatus, setFilterUserStatus] = useState<string>("");
   const [filterVigencia, setFilterVigencia] = useState<string>(""); // "" | "vigente" | "novigente" (client-side sobre la página)
-  const [filterTipoContrato, setFilterTipoContrato] = useState<string>(""); // tipo_contrato_id (client-side sobre la página)
+  const [filterTipoContrato, setFilterTipoContrato] = useState<string>(""); // nombre_contrato (client-side sobre la página)
   const [filterAreaTurno, setFilterAreaTurno] = useState<string>(""); // "" | "__none__" | "areaId::shiftId" (client-side sobre la página)
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [selectedUserForWizard, setSelectedUserForWizard] = useState<User | null>(null);
@@ -250,7 +250,9 @@ export const ProjectTeamPage: React.FC = () => {
     // Step 1: Contrato
     rol_frame_id: "",
     categoria_sat_id: "",
-    tipo_contrato_id: "",
+    contrato_frame_id: "", // _id de la contratos-frame elegida (valor del select)
+    nombre_contrato: "", // nombre de la contratos-frame elegida (identificador estable / match PDF)
+    tipo_contrato_id: "", // ID Externo numérico, solo si la contratos-frame lo tiene
     estado_id: "",
     hora_inicio: "09:00",
     hora_fin: "18:00",
@@ -459,18 +461,20 @@ export const ProjectTeamPage: React.FC = () => {
         setAllProjects(allProjectsResponse);
 
         // Fetch Metadata Info (datos de referencia estables → cacheados)
-        const [sedes, cats, estados, tipos, rf] = await Promise.all([
+        const [sedes, cats, estados, tipos, rf, cfs] = await Promise.all([
           cachedFetch("info:sede", () => infoAPI.listByType("sede")),
           cachedFetch("categoriaSat:all", () => categoriaSatAPI.list()),
           cachedFetch("info:estado-empleado", () => infoAPI.listByType("estado-empleado")),
           cachedFetch("info:contrato", () => infoAPI.listByType("contrato")),
           cachedFetch("roleFrames:all", () => roleFrameAPI.list()),
+          cachedFetch("contratoFrames:all", () => contratoFrameAPI.list()),
         ]);
         setAllSedes(sedes);
         setAllCategoriasSat(cats);
         setAllEstados(estados);
         setAllTiposContrato(tipos);
         setAllRoleFrames(rf);
+        setContratoFrames(cfs);
 
         // Default sede from project if available
         if (projectData.metadata?.sedeId) {
@@ -1062,6 +1066,15 @@ export const ProjectTeamPage: React.FC = () => {
       initialTipoContratoId = String((user.metadata as any).tipo_contrato_id);
     }
 
+    // Preseleccionar la contratos-frame del último contrato: primero por nombre (identificador estable),
+    // fallback por ID Externo numérico.
+    const initialCf =
+      contratoFrames.find((cf) => cf.name === lastContract?.nombre_contrato) ||
+      (initialTipoContratoId ? contratoFrames.find((cf) => cf.data?.id != null && String(cf.data.id) === initialTipoContratoId) : undefined);
+    const initialContratoFrameId = initialCf?._id || "";
+    const initialNombreContrato = initialCf?.name || lastContract?.nombre_contrato || "";
+    if (initialCf?.data?.id != null) initialTipoContratoId = String(initialCf.data.id);
+
     let initialEstadoId = "";
     if (lastContract) {
       const estadoIdFromDb = (lastContract as any).estado_id;
@@ -1154,6 +1167,8 @@ export const ProjectTeamPage: React.FC = () => {
     setWizardData({
       rol_frame_id: initialRolFrameId,
       categoria_sat_id: initialCatId,
+      contrato_frame_id: initialContratoFrameId,
+      nombre_contrato: initialNombreContrato,
       tipo_contrato_id: initialTipoContratoId,
       estado_id: initialEstadoId,
       hora_inicio: lastContract?.hora_inicio || "09:00",
@@ -1201,8 +1216,8 @@ export const ProjectTeamPage: React.FC = () => {
       const primaryAreaId = firstAssignment?.areaId || "";
 
       // Los contratos de tiempo indeterminado no llevan fecha de baja
-      const tipoContratoSel = allTiposContrato.find((t) => String(t.data.id) === String(wizardData.tipo_contrato_id));
-      const esTiempoIndeterminado = tipoContratoSel ? /indetermin/i.test(tipoContratoSel.name) : false;
+      const cfSel = contratoFrames.find((c) => c._id === wizardData.contrato_frame_id);
+      const esTiempoIndeterminado = cfSel ? (cfSel.data?.esTiempoIndeterminado ?? /indetermin/i.test(cfSel.name)) : false;
 
       await projectsAPI.assignMember(project._id, {
         userId: selectedUserForWizard._id,
@@ -1218,7 +1233,8 @@ export const ProjectTeamPage: React.FC = () => {
           sede_id: Number(wizardData.sede_id),
           estado_id: Number(wizardData.estado_id),
           categoria_sat_id: Number(wizardData.categoria_sat_id),
-          tipo_contrato_id: Number(wizardData.tipo_contrato_id),
+          nombre_contrato: wizardData.nombre_contrato,
+          tipo_contrato_id: wizardData.tipo_contrato_id ? Number(wizardData.tipo_contrato_id) : null,
           rol_frame_id: Number(wizardData.rol_frame_id),
           empleado_id_reemplezado: wizardData.empleado_id_reemplezado ? Number(wizardData.empleado_id_reemplezado) : null,
         },
@@ -1726,7 +1742,7 @@ export const ProjectTeamPage: React.FC = () => {
                           value: filterTipoContrato,
                           onChange: setFilterTipoContrato,
                           placeholder: "Todos los tipos",
-                          options: allTiposContrato.map((t) => ({ value: String(t.data?.id ?? t._id), label: t.name })),
+                          options: contratoFrames.map((cf) => ({ value: cf.name, label: cf.name })),
                         },
                         {
                           label: "Área / Turno",
@@ -1772,7 +1788,7 @@ export const ProjectTeamPage: React.FC = () => {
                           if (filterVigencia === "vigente" ? !vig : vig) return false;
                         }
                         if (filterTipoContrato) {
-                          if (String(ac?.tipo_contrato_id ?? "") !== String(filterTipoContrato)) return false;
+                          if (String(ac?.nombre_contrato ?? "") !== String(filterTipoContrato)) return false;
                         }
                         if (filterAreaTurno) {
                           const keys = getUserAreaShiftKeys(u);
@@ -2516,19 +2532,24 @@ export const ProjectTeamPage: React.FC = () => {
                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Tipo de contrato *</label>
                     <select
                       className="input-field w-full"
-                      value={wizardData.tipo_contrato_id}
+                      value={wizardData.contrato_frame_id}
                       onChange={(e) => {
-                        const val = e.target.value;
-                        const tipo = allTiposContrato.find((t) => String(t.data.id) === String(val));
-                        const esIndeterminado = tipo ? /indetermin/i.test(tipo.name) : false;
-                        setWizardData((prev) => ({ ...prev, tipo_contrato_id: val, fecha_baja_contrato: esIndeterminado ? "" : prev.fecha_baja_contrato }));
+                        const cf = contratoFrames.find((c) => c._id === e.target.value);
+                        const esIndeterminado = cf ? (cf.data?.esTiempoIndeterminado ?? /indetermin/i.test(cf.name)) : false;
+                        setWizardData((prev) => ({
+                          ...prev,
+                          contrato_frame_id: cf?._id || "",
+                          nombre_contrato: cf?.name || "",
+                          tipo_contrato_id: cf?.data?.id != null ? String(cf.data.id) : "",
+                          fecha_baja_contrato: esIndeterminado ? "" : prev.fecha_baja_contrato,
+                        }));
                       }}
                       required
                     >
                       <option value="">Selecciona tipo...</option>
-                      {allTiposContrato.map((t) => (
-                        <option key={t._id} value={t.data.id}>
-                          {t.name}
+                      {contratoFrames.map((cf) => (
+                        <option key={cf._id} value={cf._id}>
+                          {cf.name}
                         </option>
                       ))}
                     </select>
@@ -2589,7 +2610,7 @@ export const ProjectTeamPage: React.FC = () => {
                     <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_alta_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_alta_contrato: e.target.value }))} />
                   </div>
 
-                  {!allTiposContrato.some((t) => String(t.data.id) === String(wizardData.tipo_contrato_id) && /indetermin/i.test(t.name)) && (
+                  {!(() => { const cf = contratoFrames.find((c) => c._id === wizardData.contrato_frame_id); return cf ? (cf.data?.esTiempoIndeterminado ?? /indetermin/i.test(cf.name)) : false; })() && (
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha baja contrato</label>
                       <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_baja_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_baja_contrato: e.target.value }))} />

@@ -1080,7 +1080,7 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
       nombre_sede: sede?.name || "Sin sede",
       nombre_categoria_sat: cat?.name || "Sin categoria",
       nombre_estado_empleado: estado?.name || "Activo",
-      nombre_contrato: tipo?.name || "Sin tipo",
+      nombre_contrato: contract.nombre_contrato || tipo?.name || "Sin tipo",
       nombre_area: (area as any)?.name || "Sin área",
       nombre_cargo: (pos as any)?.name || "Sin cargo",
       nombre_nivel: (level as any)?.name || "Sin nivel",
