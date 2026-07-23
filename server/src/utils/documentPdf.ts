@@ -53,7 +53,10 @@ function wrapHtml(bodyHtml: string): string {
     h1 { font-size: 14pt; margin: 0 0 10pt 0; }
     h2 { font-size: 13pt; margin: 0 0 10pt 0; }
     ul, ol { margin: 0 0 10pt 0; padding-left: 24pt; }
-    table { border-collapse: collapse; width: 100%; margin: 0 0 10pt 0; page-break-inside: avoid; }
+    /* Sin page-break-inside: avoid — en tablas largas (contratos de varias páginas) el motor no
+       puede cumplirlo, empuja la tabla entera a la página siguiente y deja páginas casi en blanco.
+       Se deja que la tabla fluya y corte de forma natural entre páginas. */
+    table { border-collapse: collapse; width: 100%; margin: 0 0 10pt 0; }
     td, th { border: 1px solid #999; padding: 5pt; vertical-align: top; }
     hr { border: none; border-top: 1px solid #ccc; margin: 10pt 0; }
   </style></head><body>${bodyHtml || ""}</body></html>`;
