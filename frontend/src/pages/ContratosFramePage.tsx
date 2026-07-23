@@ -10,17 +10,15 @@ import { ViewToggle, ViewMode } from "../components/ui/ViewToggle";
 import { sweetAlert } from "../utils/sweetAlert";
 import { fuzzyMatch } from "../utils/searchHelpers";
 import { contratoFrameAPI, ContratoFrameItem } from "../api/contratosFrame";
-import { companiesAPI, Company } from "../api/companies";
 import { ContratoViewerModal } from "../components/contratos/ContratoViewerModal";
 
-const emptyForm = { nombre: "", externalId: "", empresaId: "", cantidadJornadas: "", multiplicadorDiario: "" };
+const emptyForm = { nombre: "", externalId: "", cantidadJornadas: "", multiplicadorDiario: "" };
 
 export const ContratosFramePage: React.FC = () => {
   const HELP_KEY = "contratosFrame" as const;
   const helpEntry = getHelp(HELP_KEY);
   const [showInfo, setShowInfo] = useState(false);
   const [items, setItems] = useState<ContratoFrameItem[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
@@ -62,19 +60,12 @@ export const ContratosFramePage: React.FC = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const [contratos, empresas] = await Promise.all([contratoFrameAPI.list(), companiesAPI.list()]);
-      setItems(contratos);
-      setCompanies(empresas);
+      setItems(await contratoFrameAPI.list());
     } catch {
       sweetAlert.error("Error", "No se pudieron cargar los contratos.");
     } finally {
       setLoading(false);
     }
-  };
-
-  const empresaNombre = (it: ContratoFrameItem): string => {
-    if (it.empresaId && typeof it.empresaId === "object") return it.empresaId.razonSocial || "—";
-    return companies.find((c) => c._id === it.empresaId)?.razonSocial ?? "—";
   };
 
   useEffect(() => {
@@ -96,7 +87,6 @@ export const ContratosFramePage: React.FC = () => {
     setForm({
       nombre: item.name || "",
       externalId: item.externalId || "",
-      empresaId: item.empresaId && typeof item.empresaId === "object" ? item.empresaId._id : (item.empresaId || ""),
       cantidadJornadas: String(item.data?.cantidadJornadas ?? ""),
       multiplicadorDiario: String(item.data?.multiplicadorDiario ?? ""),
     });
@@ -110,16 +100,11 @@ export const ContratosFramePage: React.FC = () => {
       sweetAlert.error("Falta el nombre", "El nombre del contrato es obligatorio.");
       return;
     }
-    if (!form.empresaId) {
-      sweetAlert.error("Falta la empresa", "Debés seleccionar una empresa.");
-      return;
-    }
     setSaving(true);
     try {
       const payload = new FormData();
       payload.append("nombre", form.nombre.trim());
       payload.append("externalId", form.externalId.trim());
-      payload.append("empresaId", form.empresaId);
       payload.append("cantidadJornadas", form.cantidadJornadas);
       payload.append("multiplicadorDiario", form.multiplicadorDiario);
       payload.append("esTiempoIndeterminado", String(esTiempoIndeterminado));
@@ -269,10 +254,6 @@ export const ContratosFramePage: React.FC = () => {
               }}
             >
               <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Empresa</label>
-                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">{empresaNombre(item)}</div>
-                </div>
                 <div>
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Jornadas</label>
                   <div className="text-sm font-medium text-gray-700 dark:text-gray-300">{item.data?.cantidadJornadas ?? "—"}</div>
@@ -292,7 +273,6 @@ export const ContratosFramePage: React.FC = () => {
             <thead className="bg-gray-50 dark:bg-gray-900/50">
               <tr>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
-                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Empresa</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Jornadas</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Mult. Diario</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID Externo</th>
@@ -303,7 +283,6 @@ export const ContratosFramePage: React.FC = () => {
               {filtered.map((item) => (
                 <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
                   <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">{item.name}</td>
-                  <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{empresaNombre(item)}</td>
                   <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{item.data?.cantidadJornadas ?? "—"}</td>
                   <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{item.data?.multiplicadorDiario ?? "—"}</td>
                   <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono">{item.externalId || "—"}</td>
@@ -353,23 +332,6 @@ export const ContratosFramePage: React.FC = () => {
         <form id="contrato-form" onSubmit={handleSubmitForm}>
           <div className="space-y-6">
             {field("Nombre *", "nombre")}
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Empresa *</label>
-              <select
-                required
-                value={form.empresaId}
-                onChange={(e) => setForm((f) => ({ ...f, empresaId: e.target.value }))}
-                className="input-field w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-              >
-                <option value="">Seleccionar empresa...</option>
-                {companies.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.razonSocial}
-                  </option>
-                ))}
-              </select>
-            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {field("Cantidad de Jornadas", "cantidadJornadas", "number")}

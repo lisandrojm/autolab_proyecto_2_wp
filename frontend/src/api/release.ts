@@ -3,7 +3,6 @@ import axios from "./axiosConfig";
 export interface Release {
   _id: string;
   tenantId: string;
-  empresaId?: string | { _id: string; razonSocial: string; cuit?: string };
   name: string;
   version: string;
   description?: string;

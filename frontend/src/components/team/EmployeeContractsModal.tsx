@@ -14,6 +14,9 @@ interface EmployeeContractsModalProps {
   projectId: string;
   contratoFrames: ContratoFrameItem[];
   releases: Release[];
+  /** Razón social de la empresa seteada en el proyecto (contratoEmpresa / releaseEmpresa). */
+  contratoEmpresaLabel?: string;
+  releaseEmpresaLabel?: string;
   onEdit: (user: User) => void;
   onDelete: (userId: string) => void;
 }
@@ -41,10 +44,6 @@ const findTemplate = (contract: Contract, contratoFrames: ContratoFrameItem[]): 
 
 const templateHasFile = (cf: ContratoFrameItem | null): boolean => !!(cf && (cf.data?.fileUrl || cf.data?.fileName || cf.data?.rutaArchivo));
 
-/** Razón social de la empresa a la que pertenece un contrato/release (empresaId viene poblado desde el backend). */
-const empresaLabel = (empresaId?: string | { _id: string; razonSocial?: string }): string =>
-  empresaId && typeof empresaId === "object" ? empresaId.razonSocial || "" : "";
-
 /**
  * Nomenclatura de descargas de contratos y releases:
  *   [proyecto]_[Contrato|Release]_[nombreDoc]_[YYYY_MM_DD]_[apellido]_[nombres].docx
@@ -61,7 +60,7 @@ const buildDownloadFileName = (tipo: "Contrato" | "Release", user: User | null, 
   return `${parts.join("_").replace(/[\\/:*?"<>|]/g, "_")}.docx`;
 };
 
-export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ isOpen, onClose, user, projectId, contratoFrames, releases, onEdit, onDelete }) => {
+export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ isOpen, onClose, user, projectId, contratoFrames, releases, contratoEmpresaLabel, releaseEmpresaLabel, onEdit, onDelete }) => {
   const fullName = user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email : "";
 
   const contracts = useMemo(() => {
@@ -129,7 +128,7 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
               const template = findTemplate(contract, contratoFrames);
               const canDownloadContract = templateHasFile(template);
               const tipoContrato = contract.nombre_contrato || template?.data?.nombre || template?.name || "Contrato";
-              const contratoEmpresa = empresaLabel(template?.empresaId);
+              const contratoEmpresa = contratoEmpresaLabel || "";
               const dateRange = `${formatDate(contract.fecha_alta_contrato)}${contract.fecha_baja_contrato ? ` - ${formatDate(contract.fecha_baja_contrato)}` : ""}`;
 
               return (
@@ -190,7 +189,7 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                     ) : (
                       <div className="space-y-1.5">
                         {activeReleases.map((r) => {
-                          const releaseEmpresa = empresaLabel(r.empresaId);
+                          const releaseEmpresa = releaseEmpresaLabel || "";
                           return (
                           <div key={r._id} className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
                             <span className="text-sm text-gray-700 dark:text-gray-200 truncate" title={releaseEmpresa ? `${r.name} | ${releaseEmpresa}` : r.name}>

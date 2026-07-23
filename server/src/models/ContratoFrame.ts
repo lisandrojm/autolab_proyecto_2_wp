@@ -3,7 +3,6 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface IContratoFrame extends Document {
   externalId: string;
   name: string;
-  empresaId?: mongoose.Types.ObjectId;
   data: {
     id: number;
     nombre: string;
@@ -22,7 +21,6 @@ const contratoFrameSchema = new Schema<IContratoFrame>(
   {
     externalId: { type: String },
     name: { type: String, required: true },
-    empresaId: { type: Schema.Types.ObjectId, ref: "Company" },
     data: {
       id: { type: Number },
       nombre: { type: String },

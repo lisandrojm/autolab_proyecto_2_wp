@@ -23,6 +23,7 @@ import { TeamCoordinadoresTab } from "../components/team/TeamCoordinadoresTab";
 import { EmployeeContractsModal } from "../components/team/EmployeeContractsModal";
 import { contratoFrameAPI, ContratoFrameItem } from "../api/contratosFrame";
 import { releasesAPI, Release } from "../api/release";
+import { companiesAPI, Company } from "../api/companies";
 import { Area, areasAPI } from "../api/areas";
 import { positionsAPI, Position } from "../api/positions";
 import { levelsAPI, Level } from "../api/levels";
@@ -286,22 +287,27 @@ export const ProjectTeamPage: React.FC = () => {
   const [selectedMemberForDetail, setSelectedMemberForDetail] = useState<User | null>(null);
   const [contratoFrames, setContratoFrames] = useState<ContratoFrameItem[]>([]);
   const [releases, setReleases] = useState<Release[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [detailRefsLoaded, setDetailRefsLoaded] = useState(false);
 
   const handleOpenMemberDetail = async (user: User) => {
     setSelectedMemberForDetail(user);
     if (detailRefsLoaded) return;
-    // Carga perezosa de plantillas de contrato y releases (puede fallar por permisos → listas vacías)
-    const [cf, rel] = await Promise.all([contratoFrameAPI.list().catch(() => [] as ContratoFrameItem[]), releasesAPI.getAll().catch(() => [] as Release[])]);
-    // Si el proyecto tiene empresa seteada para contrato/release, solo se muestran los que coinciden
-    // exactamente con esa empresa (filtro estricto: los que no tienen empresa quedan fuera).
-    const empresaOf = (empresaId?: string | { _id: string }) => (empresaId && typeof empresaId === "object" ? empresaId._id : empresaId) || "";
-    const cfFiltered = project?.contratoEmpresa ? cf.filter((c) => empresaOf(c.empresaId) === project.contratoEmpresa) : cf;
-    const relFiltered = project?.releaseEmpresa ? rel.filter((r) => empresaOf(r.empresaId) === project.releaseEmpresa) : rel;
-    setContratoFrames(cfFiltered);
-    setReleases(relFiltered);
+    // Carga perezosa de plantillas de contrato, releases y empresas (puede fallar por permisos → listas vacías)
+    const [cf, rel, emp] = await Promise.all([
+      contratoFrameAPI.list().catch(() => [] as ContratoFrameItem[]),
+      releasesAPI.getAll().catch(() => [] as Release[]),
+      companiesAPI.list().catch(() => [] as Company[]),
+    ]);
+    setContratoFrames(cf);
+    setReleases(rel);
+    setCompanies(emp);
     setDetailRefsLoaded(true);
   };
+
+  // Empresa (razón social) seteada en el proyecto para contratos/releases → se muestra en el modal
+  const contratoEmpresaLabel = companies.find((c) => c._id === project?.contratoEmpresa)?.razonSocial || "";
+  const releaseEmpresaLabel = companies.find((c) => c._id === project?.releaseEmpresa)?.razonSocial || "";
 
   // Persistence for view mode
   useEffect(() => {
@@ -2881,6 +2887,8 @@ export const ProjectTeamPage: React.FC = () => {
         projectId={projectId || ""}
         contratoFrames={contratoFrames}
         releases={releases}
+        contratoEmpresaLabel={contratoEmpresaLabel}
+        releaseEmpresaLabel={releaseEmpresaLabel}
         onEdit={(u) => {
           setSelectedMemberForDetail(null);
           handleOpenScheduleModal(u);

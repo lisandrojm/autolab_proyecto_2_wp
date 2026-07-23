@@ -10,7 +10,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faEdit, faTrash, faRocket, faDownload, faPaperclip, faUpload, faEye } from "@fortawesome/free-solid-svg-icons";
 
 import { releasesAPI, Release } from "../api/release";
-import { companiesAPI, Company } from "../api/companies";
 
 import Swal from "sweetalert2";
 import { Modal } from "../components/ui/Modal";
@@ -20,7 +19,6 @@ import { ViewToggle, ViewMode } from "../components/ui/ViewToggle";
 interface ReleaseFormData {
   name: string;
   version: string;
-  empresaId: string;
   description: string;
   isActive: boolean;
 }
@@ -28,7 +26,6 @@ interface ReleaseFormData {
 const EMPTY_FORM: ReleaseFormData = {
   name: "",
   version: "",
-  empresaId: "",
   description: "",
   isActive: true,
 };
@@ -39,7 +36,6 @@ export function ReleasesPage() {
   const helpEntry = getHelp(HELP_KEY);
   const [showInfo, setShowInfo] = useState(false);
   const [releases, setReleases] = useState<Release[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
 
   // filters
@@ -88,19 +84,13 @@ export function ReleasesPage() {
   const loadReleases = async () => {
     try {
       setLoading(true);
-      const [data, empresas] = await Promise.all([releasesAPI.getAll(), companiesAPI.list()]);
+      const data = await releasesAPI.getAll();
       setReleases(data);
-      setCompanies(empresas);
     } catch {
       Swal.fire("Error", "No se pudieron cargar los releases", "error");
     } finally {
       setLoading(false);
     }
-  };
-
-  const empresaNombre = (r: Release): string => {
-    if (r.empresaId && typeof r.empresaId === "object") return r.empresaId.razonSocial || "—";
-    return companies.find((c) => c._id === r.empresaId)?.razonSocial ?? "—";
   };
 
   // filtering
@@ -131,7 +121,6 @@ export function ReleasesPage() {
     setFormData({
       name: release.name,
       version: release.version,
-      empresaId: release.empresaId && typeof release.empresaId === "object" ? release.empresaId._id : (release.empresaId || ""),
       description: release.description || "",
       isActive: release.isActive,
     });
@@ -175,7 +164,6 @@ export function ReleasesPage() {
     const newErrors: Record<string, string> = {};
     if (!formData.name.trim()) newErrors.name = "El nombre es requerido";
     if (!formData.version.trim()) newErrors.version = "La versión es requerida";
-    if (!formData.empresaId) newErrors.empresaId = "La empresa es requerida";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -189,7 +177,6 @@ export function ReleasesPage() {
       const payload = new FormData();
       payload.append("name", formData.name);
       payload.append("version", formData.version);
-      payload.append("empresaId", formData.empresaId);
       payload.append("description", formData.description);
       payload.append("isActive", String(formData.isActive));
       if (selectedFile) payload.append("file", selectedFile);
@@ -322,11 +309,7 @@ export function ReleasesPage() {
                   ],
                 }}
               >
-                <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Empresa</label>
-                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">{empresaNombre(release)}</div>
-                </div>
-                {release.description && <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 mt-2">{release.description}</p>}
+                {release.description && <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3">{release.description}</p>}
               </Card>
             ))}
 
@@ -348,7 +331,6 @@ export function ReleasesPage() {
                   <tr>
                     <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
                     <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Versión</th>
-                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Empresa</th>
                     <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
                     <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Archivo</th>
                     <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
@@ -359,7 +341,6 @@ export function ReleasesPage() {
                     <tr key={release._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20 cursor-pointer" onClick={() => openEdit(release)}>
                       <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">{release.name}</td>
                       <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{release.version}</td>
-                      <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{empresaNombre(release)}</td>
                       <td className="px-5 py-3 text-sm whitespace-nowrap">
                         <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${release.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"}`}>{release.isActive ? "Activo" : "Inactivo"}</span>
                       </td>
@@ -456,19 +437,6 @@ export function ReleasesPage() {
                 <input type="text" value={formData.version} onChange={(e) => setFormData({ ...formData, version: e.target.value })} placeholder="Ej: 1" className="input-field w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" />
                 {errors.version && <p className="text-sm text-red-500 mt-1">{errors.version}</p>}
               </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Empresa *</label>
-              <select value={formData.empresaId} onChange={(e) => setFormData({ ...formData, empresaId: e.target.value })} className="input-field w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100">
-                <option value="">Seleccionar empresa...</option>
-                {companies.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.razonSocial}
-                  </option>
-                ))}
-              </select>
-              {errors.empresaId && <p className="text-sm text-red-500 mt-1">{errors.empresaId}</p>}
             </div>
 
             <div>
