@@ -4,6 +4,8 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { Release } from "../models/Release.js";
+import { Company } from "../models/Company.js";
+import { Project } from "../models/Project.js";
 import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
 import { authenticateToken } from "../middleware/auth.js";
@@ -32,7 +34,6 @@ const upload = multer({
 const ReleaseSchema = z.object({
     name: z.string().min(1).max(150),
     version: z.string().min(1).max(50),
-    empresaId: z.string().min(1, "La empresa es obligatoria"),
     description: z.string().max(2000).optional(),
     isActive: z
         .union([z.boolean(), z.string()])
@@ -43,9 +44,7 @@ router.get("/", authenticateToken, requireTenant, async (req, res) => {
     try {
         const releases = await Release.find({
             tenantId: req.tenantObjectId,
-        })
-            .populate("empresaId", "razonSocial cuit")
-            .sort({ createdAt: -1 });
+        }).sort({ createdAt: -1 });
         res.json(releases);
     }
     catch (error) {
@@ -130,7 +129,11 @@ router.get("/:id/download-filled", authenticateToken, requireTenant, async (req,
         if (!Number.isInteger(idx) || idx < 0 || idx >= contracts.length)
             idx = contracts.length - 1;
         const contract = contracts[idx] || {};
-        const data = await buildEmployeeDocData(user, up, contract);
+        // Empresa/Productora seteada en el PROYECTO (releaseEmpresa) → variables empresa* en la plantilla
+        const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).lean();
+        const empresaId = project?.releaseEmpresa;
+        const empresa = empresaId ? await Company.findById(empresaId).lean() : null;
+        const data = await buildEmployeeDocData(user, up, contract, empresa);
         const buffer = fs.readFileSync(diskPath);
         const filled = fillDocxTemplate(buffer, data);
         const baseName = buildDocFileName({ tipo: "Release", user, up, contract, docName: release.name });
@@ -181,7 +184,6 @@ router.put("/:id", authenticateToken, requireTenant, upload.single("file"), asyn
         }
         release.name = validatedData.name;
         release.version = validatedData.version;
-        release.empresaId = validatedData.empresaId;
         if (validatedData.description !== undefined)
             release.description = validatedData.description;
         if (validatedData.isActive !== undefined)

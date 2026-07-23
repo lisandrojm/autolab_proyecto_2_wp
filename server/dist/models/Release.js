@@ -1,7 +1,6 @@
 import mongoose, { Schema } from "mongoose";
 const releaseSchema = new Schema({
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
-    empresaId: { type: Schema.Types.ObjectId, ref: "Company" },
     name: {
         type: String,
         required: true,

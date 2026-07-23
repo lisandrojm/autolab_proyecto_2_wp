@@ -30,7 +30,43 @@ export function buildDocFileName(opts) {
  * Provee múltiples alias (camelCase y nombres usados en las plantillas) para máxima cobertura.
  * Las variables que no estén acá quedan visibles como {variable} (ver nullGetter en releaseFiller).
  */
-export async function buildEmployeeDocData(user, up, contract) {
+/**
+ * Variables de la Empresa/Productora ("La Empleadora") para las plantillas.
+ * Se toman del ABM de Empresas (colección companies), seteada por empresa en el proyecto
+ * (contratoEmpresa / releaseEmpresa) y tagueada en cada contrato/release.
+ * Van con prefijo `empresa*` para no chocar con los datos personales del empleado
+ * (que ya usan cuit, localidad, codigoPostal).
+ */
+export function buildEmpresaDocData(empresa) {
+    const e = empresa || {};
+    const calle = e.domicilioCalle || "";
+    const numero = e.domicilioNumero || "";
+    const pisoDepto = e.domicilioPisoDepto || "";
+    const domicilio = [[calle, numero].filter(Boolean).join(" "), pisoDepto].filter(Boolean).join(", ");
+    return {
+        // Razón social (varios alias porque las plantillas la nombran de distintas formas)
+        empresa: e.razonSocial || "",
+        razonSocial: e.razonSocial || "",
+        empresaRazonSocial: e.razonSocial || "",
+        empresaCuit: e.cuit || "",
+        // Domicilio legal
+        empresaDomicilio: domicilio,
+        empresaDomicilioCalle: calle,
+        empresaDomicilioNumero: numero,
+        empresaDomicilioPisoDepto: pisoDepto,
+        empresaLocalidad: e.localidad || "",
+        empresaProvincia: e.provincia || "",
+        empresaCodigoPostal: e.codigoPostal || "",
+        // Firmante
+        empresaFirmanteNombre: e.firmanteNombre || "",
+        empresaFirmanteDni: e.firmanteDni || "",
+        empresaFirmanteCargo: e.firmanteCargo || "",
+        // Representante legal / apoderado
+        empresaRepresentanteLegalNombre: e.representanteLegalNombre || "",
+        empresaRepresentanteLegalEmail: e.representanteLegalEmail || "",
+    };
+}
+export async function buildEmployeeDocData(user, up, contract, empresa) {
     const meta = user?.metadata || {};
     const c = contract || {};
     const nombre = user?.firstName || "";
@@ -118,5 +154,7 @@ export async function buildEmployeeDocData(user, up, contract) {
         sueldoDiarioNeto: num(c.sueldo_diario_neto),
         // ── Otros ──
         fecha: formatDateAr(new Date()),
+        // ── Empresa / Productora (La Empleadora) ──
+        ...buildEmpresaDocData(empresa),
     };
 }

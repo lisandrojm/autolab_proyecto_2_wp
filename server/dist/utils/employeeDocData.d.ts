@@ -21,4 +21,12 @@ export declare function buildDocFileName(opts: {
  * Provee múltiples alias (camelCase y nombres usados en las plantillas) para máxima cobertura.
  * Las variables que no estén acá quedan visibles como {variable} (ver nullGetter en releaseFiller).
  */
-export declare function buildEmployeeDocData(user: any, up: any, contract: any): Promise<Record<string, any>>;
+/**
+ * Variables de la Empresa/Productora ("La Empleadora") para las plantillas.
+ * Se toman del ABM de Empresas (colección companies), seteada por empresa en el proyecto
+ * (contratoEmpresa / releaseEmpresa) y tagueada en cada contrato/release.
+ * Van con prefijo `empresa*` para no chocar con los datos personales del empleado
+ * (que ya usan cuit, localidad, codigoPostal).
+ */
+export declare function buildEmpresaDocData(empresa: any): Record<string, any>;
+export declare function buildEmployeeDocData(user: any, up: any, contract: any, empresa?: any): Promise<Record<string, any>>;

@@ -1,7 +1,6 @@
 import mongoose, { Document, Types } from "mongoose";
 export interface IRelease extends Document {
     tenantId: Types.ObjectId;
-    empresaId?: Types.ObjectId;
     name: string;
     version: string;
     description?: string;
