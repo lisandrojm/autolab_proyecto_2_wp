@@ -298,12 +298,12 @@ export const ContratosFramePage: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
               {filtered.map((item) => (
-                <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
+                <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20 cursor-pointer" onClick={() => openEdit(item)}>
                   <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">{item.name}</td>
                   <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{item.data?.cantidadJornadas ?? "—"}</td>
                   <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{item.data?.multiplicadorDiario ?? "—"}</td>
                   <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono">{item.externalId || "—"}</td>
-                  <td className="px-5 py-3 text-sm text-right">
+                  <td className="px-5 py-3 text-sm text-right" onClick={(e) => e.stopPropagation()}>
                     {item.content && (
                       <button onClick={() => handleDownloadFile(item)} className="text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 mr-3" title="Descargar PDF de ejemplo"><FontAwesomeIcon icon={faDownload} /></button>
                     )}
