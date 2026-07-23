@@ -303,12 +303,20 @@ export const ContratosFramePage: React.FC = () => {
                   <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{item.data?.cantidadJornadas ?? "—"}</td>
                   <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{item.data?.multiplicadorDiario ?? "—"}</td>
                   <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono">{item.externalId || "—"}</td>
-                  <td className="px-5 py-3 text-sm text-right" onClick={(e) => e.stopPropagation()}>
-                    {item.content && (
-                      <button onClick={() => handleDownloadFile(item)} className="text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 mr-3" title="Descargar PDF de ejemplo"><FontAwesomeIcon icon={faDownload} /></button>
-                    )}
-                    <button onClick={() => openEdit(item)} className="text-blue-600 hover:text-blue-800 dark:text-blue-400 mr-3" title="Editar"><FontAwesomeIcon icon={faEdit} /></button>
-                    <button onClick={() => handleDelete(item)} className="text-rose-600 hover:text-rose-800 dark:text-rose-400" title="Eliminar"><FontAwesomeIcon icon={faTrash} /></button>
+                  <td className="px-5 py-3 text-sm text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-2">
+                      {item.content && (
+                        <button onClick={() => handleDownloadFile(item)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Descargar PDF de ejemplo">
+                          <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
+                        </button>
+                      )}
+                      <button onClick={() => openEdit(item)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Editar">
+                        <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => handleDelete(item)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors" title="Eliminar">
+                        <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
