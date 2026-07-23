@@ -1,8 +1,5 @@
 import { Router } from "express";
 import { z } from "zod";
-import multer from "multer";
-import path from "path";
-import fs from "fs";
 import { Release } from "../models/Release.js";
 import { Company } from "../models/Company.js";
 import { Project } from "../models/Project.js";
@@ -10,36 +7,26 @@ import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
-import { fillDocxTemplate } from "../utils/releaseFiller.js";
 import { buildEmployeeDocData, buildDocFileName } from "../utils/employeeDocData.js";
+import { buildReleaseDocx, getReleaseDummyVariables } from "../utils/releaseDocx.js";
 const router = Router();
-// Multer config — almacenamiento en disco por tenant
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const tenantId = req.tenantObjectId.toString();
-        const dest = path.join(process.cwd(), "storage", tenantId, "releases");
-        fs.mkdirSync(dest, { recursive: true });
-        cb(null, dest);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-        const ext = path.extname(file.originalname);
-        cb(null, "release-" + uniqueSuffix + ext);
-    },
-});
-const upload = multer({
-    storage: storage,
-    limits: { fileSize: 25 * 1024 * 1024 }, // 25MB
-});
+// El release se redacta en la plataforma (editor con formato) y se guarda como HTML en `content`.
+// El .docx se genera al descargar, reemplazando las variables `{variable}`.
 const ReleaseSchema = z.object({
     name: z.string().min(1).max(150),
     version: z.string().min(1).max(50),
     description: z.string().max(2000).optional(),
+    content: z.string().max(200000).optional(),
     isActive: z
         .union([z.boolean(), z.string()])
         .optional()
         .transform((v) => (typeof v === "string" ? v === "true" : v)),
 });
+const sendDocx = (res, buffer, baseName) => {
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    res.setHeader("Content-Disposition", `attachment; filename="${baseName}.docx"`);
+    res.send(buffer);
+};
 router.get("/", authenticateToken, requireTenant, async (req, res) => {
     try {
         const releases = await Release.find({
@@ -50,6 +37,22 @@ router.get("/", authenticateToken, requireTenant, async (req, res) => {
     catch (error) {
         console.error("Get releases error:", error);
         res.status(500).json({ error: "Error al obtener releases" });
+    }
+});
+// POST /releases/preview — genera un .docx de ejemplo con el contenido del editor (sin guardar).
+router.post("/preview", authenticateToken, requireTenant, async (req, res) => {
+    try {
+        const { content } = z.object({ content: z.string().max(200000) }).parse(req.body);
+        const buffer = await buildReleaseDocx(content, getReleaseDummyVariables());
+        sendDocx(res, buffer, "Preview_Release");
+    }
+    catch (error) {
+        if (error instanceof z.ZodError) {
+            res.status(400).json({ error: "Datos inválidos", details: error.errors });
+            return;
+        }
+        console.error("Preview release error:", error);
+        res.status(500).json({ error: "No se pudo generar la previsualización" });
     }
 });
 router.get("/:id", authenticateToken, requireTenant, async (req, res) => {
@@ -69,46 +72,38 @@ router.get("/:id", authenticateToken, requireTenant, async (req, res) => {
         res.status(500).json({ error: "Error al obtener release" });
     }
 });
+// GET /releases/:id/download — .docx del release con valores de ejemplo (sin persona asociada).
 router.get("/:id/download", authenticateToken, requireTenant, async (req, res) => {
     try {
-        const release = await Release.findOne({
-            _id: req.params.id,
-            tenantId: req.tenantObjectId,
-        });
-        if (!release || !release.fileUrl) {
-            res.status(404).json({ error: "Archivo no encontrado" });
+        const release = await Release.findOne({ _id: req.params.id, tenantId: req.tenantObjectId });
+        if (!release) {
+            res.status(404).json({ error: "Release no encontrado" });
             return;
         }
-        const diskPath = path.join(process.cwd(), release.fileUrl.replace(/^\//, ""));
-        if (!fs.existsSync(diskPath)) {
-            res.status(404).json({ error: "Archivo no encontrado en el almacenamiento" });
+        if (!release.content) {
+            res.status(400).json({ error: "El release no tiene contenido redactado" });
             return;
         }
-        res.download(diskPath, release.fileName || path.basename(diskPath));
+        const buffer = await buildReleaseDocx(release.content, getReleaseDummyVariables());
+        sendDocx(res, buffer, `${release.name || "Release"}`);
     }
     catch (error) {
         console.error("Download release error:", error);
-        res.status(500).json({ error: "Error al descargar archivo" });
+        res.status(500).json({ error: "Error al generar el archivo" });
     }
 });
 // GET /releases/:id/download-filled?userId=&projectId=&contractIndex=
-// Descarga el release (.docx) con las variables reemplazadas por los datos de la persona/contrato.
+// Genera el .docx del release con las variables reemplazadas por los datos de la persona/contrato
+// y de la empresa seteada en el proyecto (releaseEmpresa).
 router.get("/:id/download-filled", authenticateToken, requireTenant, async (req, res) => {
     try {
         const release = await Release.findOne({ _id: req.params.id, tenantId: req.tenantObjectId });
-        if (!release || !release.fileUrl) {
-            res.status(404).json({ error: "Archivo no encontrado" });
+        if (!release) {
+            res.status(404).json({ error: "Release no encontrado" });
             return;
         }
-        const diskPath = path.join(process.cwd(), release.fileUrl.replace(/^\//, ""));
-        if (!fs.existsSync(diskPath)) {
-            res.status(404).json({ error: "Archivo no encontrado en el almacenamiento" });
-            return;
-        }
-        // Solo se pueden reemplazar variables en .docx; otros formatos se descargan tal cual.
-        const ext = path.extname(release.fileName || diskPath).toLowerCase();
-        if (ext !== ".docx") {
-            res.download(diskPath, release.fileName || path.basename(diskPath));
+        if (!release.content) {
+            res.status(400).json({ error: "El release no tiene contenido redactado" });
             return;
         }
         const { userId, projectId, contractIndex } = req.query;
@@ -134,30 +129,22 @@ router.get("/:id/download-filled", authenticateToken, requireTenant, async (req,
         const empresaId = project?.releaseEmpresa;
         const empresa = empresaId ? await Company.findById(empresaId).lean() : null;
         const data = await buildEmployeeDocData(user, up, contract, empresa);
-        const buffer = fs.readFileSync(diskPath);
-        const filled = fillDocxTemplate(buffer, data);
+        const buffer = await buildReleaseDocx(release.content, data);
         const baseName = buildDocFileName({ tipo: "Release", user, up, contract, docName: release.name });
-        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-        res.setHeader("Content-Disposition", `attachment; filename="${baseName}.docx"`);
-        res.send(filled);
+        sendDocx(res, buffer, baseName);
     }
     catch (error) {
         console.error("Download filled release error:", error);
         res.status(500).json({ error: "No se pudo generar el release con los datos." });
     }
 });
-router.post("/", authenticateToken, requireTenant, upload.single("file"), async (req, res) => {
+router.post("/", authenticateToken, requireTenant, async (req, res) => {
     try {
         const validatedData = ReleaseSchema.parse(req.body);
-        const tenantIdStr = req.tenantObjectId.toString();
         const release = new Release({
             ...validatedData,
             tenantId: req.tenantObjectId,
         });
-        if (req.file) {
-            release.fileUrl = `/storage/${tenantIdStr}/releases/${req.file.filename}`;
-            release.fileName = req.file.originalname;
-        }
         await release.save();
         res.status(201).json(release);
     }
@@ -170,10 +157,9 @@ router.post("/", authenticateToken, requireTenant, upload.single("file"), async 
         res.status(500).json({ error: "Error al crear release" });
     }
 });
-router.put("/:id", authenticateToken, requireTenant, upload.single("file"), async (req, res) => {
+router.put("/:id", authenticateToken, requireTenant, async (req, res) => {
     try {
         const validatedData = ReleaseSchema.parse(req.body);
-        const tenantIdStr = req.tenantObjectId.toString();
         const release = await Release.findOne({
             _id: req.params.id,
             tenantId: req.tenantObjectId,
@@ -186,17 +172,10 @@ router.put("/:id", authenticateToken, requireTenant, upload.single("file"), asyn
         release.version = validatedData.version;
         if (validatedData.description !== undefined)
             release.description = validatedData.description;
+        if (validatedData.content !== undefined)
+            release.content = validatedData.content;
         if (validatedData.isActive !== undefined)
             release.isActive = validatedData.isActive;
-        if (req.file) {
-            // Eliminar archivo anterior si existía
-            if (release.fileUrl) {
-                const oldPath = path.join(process.cwd(), release.fileUrl.replace(/^\//, ""));
-                fs.promises.unlink(oldPath).catch(() => { });
-            }
-            release.fileUrl = `/storage/${tenantIdStr}/releases/${req.file.filename}`;
-            release.fileName = req.file.originalname;
-        }
         await release.save();
         res.json(release);
     }
@@ -218,10 +197,6 @@ router.delete("/:id", authenticateToken, requireTenant, async (req, res) => {
         if (!release) {
             res.status(404).json({ error: "Release no encontrado" });
             return;
-        }
-        if (release.fileUrl) {
-            const diskPath = path.join(process.cwd(), release.fileUrl.replace(/^\//, ""));
-            fs.promises.unlink(diskPath).catch(() => { });
         }
         await release.deleteOne();
         res.json({ message: "Release eliminado correctamente" });

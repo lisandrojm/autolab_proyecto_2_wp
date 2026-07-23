@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { PageLayout } from "../components/ui/PageLayout";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { Card } from "../components/ui/Card";
@@ -7,19 +7,20 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faEdit, faTrash, faRocket, faDownload, faPaperclip, faUpload, faEye } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faEdit, faTrash, faRocket, faDownload, faEye } from "@fortawesome/free-solid-svg-icons";
 
-import { releasesAPI, Release } from "../api/release";
+import { releasesAPI, Release, releaseVariables } from "../api/release";
 
 import Swal from "sweetalert2";
 import { Modal } from "../components/ui/Modal";
-import { ReleaseViewerModal } from "../components/releases/ReleaseViewerModal";
+import { RichTextEditor } from "../components/ui/RichTextEditor";
 import { ViewToggle, ViewMode } from "../components/ui/ViewToggle";
 
 interface ReleaseFormData {
   name: string;
   version: string;
   description: string;
+  content: string;
   isActive: boolean;
 }
 
@@ -27,8 +28,12 @@ const EMPTY_FORM: ReleaseFormData = {
   name: "",
   version: "",
   description: "",
+  content: "",
   isActive: true,
 };
+
+/** El editor devuelve "<p></p>" cuando está vacío: chequeamos que haya texto real. */
+const hasContent = (html: string): boolean => !!html && html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim().length > 0;
 
 export function ReleasesPage() {
   // data
@@ -68,14 +73,10 @@ export function ReleasesPage() {
   const [editingRelease, setEditingRelease] = useState<Release | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // viewer
-  const [viewingRelease, setViewingRelease] = useState<Release | null>(null);
-
   // form
   const [formData, setFormData] = useState<ReleaseFormData>(EMPTY_FORM);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [previewing, setPreviewing] = useState(false);
 
   useEffect(() => {
     loadReleases();
@@ -110,8 +111,6 @@ export function ReleasesPage() {
   const openCreate = () => {
     setEditingRelease(null);
     setFormData(EMPTY_FORM);
-    setSelectedFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
     setErrors({});
     setShowModal(true);
   };
@@ -122,10 +121,9 @@ export function ReleasesPage() {
       name: release.name,
       version: release.version,
       description: release.description || "",
+      content: release.content || "",
       isActive: release.isActive,
     });
-    setSelectedFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
     setErrors({});
     setShowModal(true);
   };
@@ -160,10 +158,35 @@ export function ReleasesPage() {
     }
   };
 
+  /** Genera y descarga un .docx de ejemplo con el contenido actual del editor (sin guardar). */
+  const handlePreview = async () => {
+    if (!hasContent(formData.content)) {
+      Swal.fire("Sin contenido", "Escribí el contenido del release para previsualizarlo", "warning");
+      return;
+    }
+    try {
+      setPreviewing(true);
+      const blob = await releasesAPI.preview(formData.content);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `Preview_${formData.name || "Release"}.docx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      Swal.fire("Error", "No se pudo generar la previsualización", "error");
+    } finally {
+      setPreviewing(false);
+    }
+  };
+
   const validate = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.name.trim()) newErrors.name = "El nombre es requerido";
     if (!formData.version.trim()) newErrors.version = "La versión es requerida";
+    if (!hasContent(formData.content)) newErrors.content = "El contenido es requerido";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -174,12 +197,13 @@ export function ReleasesPage() {
 
     try {
       setSaving(true);
-      const payload = new FormData();
-      payload.append("name", formData.name);
-      payload.append("version", formData.version);
-      payload.append("description", formData.description);
-      payload.append("isActive", String(formData.isActive));
-      if (selectedFile) payload.append("file", selectedFile);
+      const payload = {
+        name: formData.name,
+        version: formData.version,
+        description: formData.description,
+        content: formData.content,
+        isActive: formData.isActive,
+      };
 
       if (editingRelease) {
         await releasesAPI.update(editingRelease._id, payload);
@@ -263,26 +287,13 @@ export function ReleasesPage() {
                   badges: [getBadge(release)],
                 }}
                 footer={{
-                  leftContent: release.fileName ? (
-                    <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 truncate max-w-[140px]" title={release.fileName}>
-                      <FontAwesomeIcon icon={faPaperclip} className="h-3 w-3" />
-                      <span className="truncate">{release.fileName}</span>
-                    </span>
-                  ) : null,
+                  leftContent: null,
                   actions: [
-                    ...(release.fileUrl
+                    ...(release.content
                       ? [
                           {
-                            icon: faEye,
-                            title: "Visualizar",
-                            onClick: (e: any) => {
-                              e.stopPropagation();
-                              setViewingRelease(release);
-                            },
-                          },
-                          {
                             icon: faDownload,
-                            title: "Descargar actual",
+                            title: "Descargar .docx de ejemplo",
                             onClick: (e: any) => {
                               e.stopPropagation();
                               handleDownload(release);
@@ -332,7 +343,7 @@ export function ReleasesPage() {
                     <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
                     <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Versión</th>
                     <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
-                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Archivo</th>
+                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Contenido</th>
                     <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
                   </tr>
                 </thead>
@@ -345,26 +356,20 @@ export function ReleasesPage() {
                         <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${release.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"}`}>{release.isActive ? "Activo" : "Inactivo"}</span>
                       </td>
                       <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
-                        {release.fileName ? (
-                          <span className="flex items-center gap-1 truncate max-w-[220px]" title={release.fileName}>
-                            <FontAwesomeIcon icon={faPaperclip} className="h-3 w-3" />
-                            <span className="truncate">{release.fileName}</span>
+                        {hasContent(release.content || "") ? (
+                          <span className="truncate max-w-[260px] block" title="Contenido redactado">
+                            {(release.content || "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").trim().slice(0, 60)}…
                           </span>
                         ) : (
-                          "—"
+                          <span className="text-amber-600 dark:text-amber-400">Sin contenido</span>
                         )}
                       </td>
                       <td className="px-5 py-3 text-sm text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
-                          {release.fileUrl && (
-                            <>
-                              <button onClick={() => setViewingRelease(release)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Visualizar">
-                                <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
-                              </button>
-                              <button onClick={() => handleDownload(release)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Descargar actual">
-                                <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
-                              </button>
-                            </>
+                          {release.content && (
+                            <button onClick={() => handleDownload(release)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Descargar .docx de ejemplo">
+                              <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
+                            </button>
                           )}
                           <button onClick={() => openEdit(release)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Editar">
                             <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
@@ -406,7 +411,17 @@ export function ReleasesPage() {
         title={editingRelease ? "Editar Release" : "Nuevo Release"}
         size="lg"
         footer={
-          <div className="flex justify-end gap-2 w-full">
+          <div className="flex justify-between gap-2 w-full">
+            <button
+              type="button"
+              onClick={handlePreview}
+              disabled={previewing}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
+            >
+              <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
+              {previewing ? "Generando..." : "Previsualizar"}
+            </button>
+            <div className="flex gap-2">
             <button
               type="button"
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
@@ -420,6 +435,7 @@ export function ReleasesPage() {
             <button type="submit" form="release-form" disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
               {saving ? "Guardando..." : editingRelease ? "Actualizar" : "Crear"}
             </button>
+            </div>
           </div>
         }
       >
@@ -449,37 +465,23 @@ export function ReleasesPage() {
               Release activo
             </label>
 
-            {/* Archivo */}
+            {/* Contenido del release */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Archivo</label>
-              <div className="flex items-center gap-3">
-                <button type="button" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
-                  <FontAwesomeIcon icon={faUpload} className="h-4 w-4" />
-                  Subir archivo
-                </button>
-                <span className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-[260px]">{selectedFile ? selectedFile.name : editingRelease?.fileName ? `Actual: ${editingRelease.fileName}` : "Ningún archivo seleccionado"}</span>
-                {editingRelease?.fileUrl && (
-                  <>
-                    <button type="button" onClick={() => setViewingRelease(editingRelease)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400">
-                      <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
-                      Visualizar
-                    </button>
-                    <button type="button" onClick={() => handleDownload(editingRelease)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400">
-                      <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
-                      Descargar actual
-                    </button>
-                  </>
-                )}
-              </div>
-              <input ref={fileInputRef} type="file" accept=".doc,.docx,.pdf" className="hidden" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} />
-              <p className="text-xs text-gray-500 mt-1">Tamaño máximo: 25MB.{editingRelease ? " Si no seleccionás un archivo, se mantiene el actual." : ""}</p>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contenido *</label>
+              <RichTextEditor
+                value={formData.content}
+                onChange={(html) => setFormData((f) => ({ ...f, content: html }))}
+                variables={releaseVariables}
+                variablesTitle="Variables del release (click para insertar)"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Las variables se reemplazan al descargar con los datos de la persona y de la empresa seteada en el proyecto (Empresa del Release).
+              </p>
+              {errors.content && <p className="text-sm text-red-500 mt-1">{errors.content}</p>}
             </div>
           </div>
         </form>
       </Modal>
-
-      {/* VISOR DE ARCHIVO */}
-      <ReleaseViewerModal release={viewingRelease} isOpen={!!viewingRelease} onClose={() => setViewingRelease(null)} />
     </PageLayout>
   );
 }

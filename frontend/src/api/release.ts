@@ -6,12 +6,68 @@ export interface Release {
   name: string;
   version: string;
   description?: string;
-  fileUrl?: string;
-  fileName?: string;
+  /** Contenido redactado en la plataforma (HTML) con variables `{{variable}}` */
+  content?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
+
+export interface ReleaseInput {
+  name: string;
+  version: string;
+  description?: string;
+  content?: string;
+  isActive?: boolean;
+}
+
+/**
+ * Variables disponibles para redactar el contenido del release.
+ * Se reemplazan al descargar con los datos de la persona/contrato y de la empresa
+ * seteada en el proyecto (Empresa del Release).
+ */
+export const releaseVariables: { grupo: string; vars: string[] }[] = [
+  {
+    grupo: "Datos de la persona",
+    vars: ["{{nombre}}", "{{apellido}}", "{{nombreCompleto}}", "{{dni}}", "{{cuit}}", "{{email}}", "{{fechaDeNacimiento}}", "{{estadoCivil}}", "{{telefono}}"],
+  },
+  {
+    grupo: "Domicilio de la persona",
+    vars: ["{{direccion}}", "{{calle}}", "{{altura}}", "{{localidad}}", "{{codigoPostal}}"],
+  },
+  {
+    grupo: "Contrato y proyecto",
+    vars: ["{{nombreProyecto}}", "{{rolFrame}}", "{{nombreContrato}}", "{{nombreSede}}", "{{nombreCargo}}", "{{nombreArea}}", "{{nombreTurno}}", "{{fechaAltaContrato}}", "{{fechaBajaContrato}}", "{{cantidadJornadas}}"],
+  },
+  {
+    grupo: "Empresa (se toma del proyecto)",
+    vars: ["{{razonSocial}}", "{{empresaCuit}}", "{{empresaDomicilio}}", "{{empresaLocalidad}}", "{{empresaProvincia}}", "{{empresaCodigoPostal}}"],
+  },
+  {
+    grupo: "Firmante de la empresa",
+    vars: ["{{empresaFirmanteNombre}}", "{{empresaFirmanteDni}}", "{{empresaFirmanteCargo}}"],
+  },
+  { grupo: "Otros", vars: ["{{fecha}}"] },
+];
+
+/** Lista plana de todas las variables (para los chips del editor). */
+export const releaseVariablesFlat: string[] = releaseVariables.flatMap((g) => g.vars);
+
+const downloadBlob = (data: BlobPart, fileName: string) => {
+  const url = window.URL.createObjectURL(new Blob([data]));
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", fileName);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+
+const fileNameFromDisposition = (disposition: string, fallback: string): string => {
+  const match = /filename="?([^"]+)"?/.exec(disposition || "");
+  return match?.[1] || fallback;
+};
 
 export const releasesAPI = {
   getAll: async (): Promise<Release[]> => {
@@ -24,17 +80,13 @@ export const releasesAPI = {
     return response.data;
   },
 
-  create: async (data: FormData): Promise<Release> => {
-    const response = await axios.post("/releases", data, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+  create: async (data: ReleaseInput): Promise<Release> => {
+    const response = await axios.post("/releases", data);
     return response.data;
   },
 
-  update: async (id: string, data: FormData): Promise<Release> => {
-    const response = await axios.put(`/releases/${id}`, data, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+  update: async (id: string, data: ReleaseInput): Promise<Release> => {
+    const response = await axios.put(`/releases/${id}`, data);
     return response.data;
   },
 
@@ -42,45 +94,22 @@ export const releasesAPI = {
     await axios.delete(`/releases/${id}`);
   },
 
-  // Trae el archivo como Blob (autenticado) para previsualizarlo en la app.
-  getFileBlob: async (release: Release): Promise<Blob> => {
-    const response = await axios.get(`/releases/${release._id}/download`, {
-      responseType: "blob",
-    });
+  /** Genera un .docx de ejemplo con el contenido del editor (sin guardar). */
+  preview: async (content: string): Promise<Blob> => {
+    const response = await axios.post("/releases/preview", { content }, { responseType: "blob" });
     return response.data as Blob;
   },
 
+  /** Descarga el .docx del release con valores de ejemplo. */
   download: async (release: Release): Promise<void> => {
-    const response = await axios.get(`/releases/${release._id}/download`, {
-      responseType: "blob",
-    });
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", release.fileName || `${release.name}-${release.version}`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
+    const response = await axios.get(`/releases/${release._id}/download`, { responseType: "blob" });
+    downloadBlob(response.data, fileNameFromDisposition(response.headers?.["content-disposition"], `${release.name}.docx`));
   },
 
-  // Descarga el release (.docx) con las variables reemplazadas por los datos del empleado/contrato.
+  /** Descarga el .docx con las variables reemplazadas por los datos del empleado/contrato. */
   downloadFilled: async (release: Release, ctx: { userId: string; projectId: string; contractIndex: number }, fileNameOverride?: string): Promise<void> => {
-    const response = await axios.get(`/releases/${release._id}/download-filled`, {
-      params: ctx,
-      responseType: "blob",
-    });
-    // Prioridad: nombre pasado por el caller > filename del header > fallback.
-    const disposition = response.headers?.["content-disposition"] || "";
-    const match = /filename="?([^"]+)"?/.exec(disposition);
-    const fileName = fileNameOverride || match?.[1] || release.fileName || `${release.name}.docx`;
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", fileName);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
+    const response = await axios.get(`/releases/${release._id}/download-filled`, { params: ctx, responseType: "blob" });
+    const fileName = fileNameOverride || fileNameFromDisposition(response.headers?.["content-disposition"], `${release.name}.docx`);
+    downloadBlob(response.data, fileName);
   },
 };

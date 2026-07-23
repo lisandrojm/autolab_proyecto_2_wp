@@ -18,6 +18,12 @@ async function buildPdfHtml(tenantId, bodyContent, additionalVars = {}, title = 
     const allVars = { ...additionalVars, ...systemVars };
     // Replace variables in the content (body)
     const processedBodyContent = replacePdfVariables(bodyContent, allVars);
+    // El contenido puede venir del editor con formato (HTML) o ser texto plano de plantillas viejas.
+    // El texto plano necesita `white-space: pre-wrap` para conservar los saltos de línea; el HTML no
+    // (si no, los bloques quedan con doble espaciado).
+    // Se evalúa sobre la plantilla ORIGINAL: algunos valores de variables inyectan HTML y no deben
+    // cambiar el modo de renderizado de una plantilla de texto plano.
+    const isHtmlContent = /<\/?(p|div|h[1-6]|ul|ol|li|table|tr|td|strong|em|u|br)\b/i.test(bodyContent || "");
     const logoUrl = config.logoUrl;
     let logoImgTag = "";
     if (logoUrl) {
@@ -84,7 +90,15 @@ async function buildPdfHtml(tenantId, bodyContent, additionalVars = {}, title = 
           .company-info { text-align: right; font-size: 10pt; color: #555; }
           .date-line { text-align: right; margin-bottom: 20px; font-size: 11pt; }
           .title { text-align: center; font-size: 12pt; font-weight: bold; margin-bottom: 20px; text-transform: uppercase; width: 100%; }
-          .content { min-height: 400px; padding: 0; white-space: pre-wrap; width: 100%; } 
+          .content { min-height: 400px; padding: 0; white-space: pre-wrap; width: 100%; }
+          .content.html { white-space: normal; }
+          .content.html p { margin: 0 0 10pt 0; }
+          .content.html h1 { font-size: 14pt; margin: 0 0 10pt 0; }
+          .content.html h2 { font-size: 13pt; margin: 0 0 10pt 0; }
+          .content.html ul, .content.html ol { margin: 0 0 10pt 0; padding-left: 24pt; }
+          .content.html table { border-collapse: collapse; width: 100%; margin: 0 0 10pt 0; }
+          .content.html td, .content.html th { border: 1px solid #999; padding: 4pt; vertical-align: top; }
+          .content.html hr { border: none; border-top: 1px solid #ccc; margin: 10pt 0; }
           .footer { margin-top: 50px; page-break-inside: avoid; display: flex; justify-content: space-between; align-items: flex-end; }
           .user-signature { text-align: left; }
           .company-signature { text-align: center; }
@@ -109,7 +123,7 @@ async function buildPdfHtml(tenantId, bodyContent, additionalVars = {}, title = 
           ${systemVars.fechaCompleta}
         </div>
 
-        <div class="content">${processedBodyContent}</div>
+        <div class="content${isHtmlContent ? " html" : ""}">${processedBodyContent}</div>
 
         <div class="footer">
           <div class="user-signature">

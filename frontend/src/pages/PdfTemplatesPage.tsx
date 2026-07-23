@@ -8,17 +8,37 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faEdit, faTrash, faFileContract, faCheckCircle, faTimesCircle, faEye, faList } from "@fortawesome/free-solid-svg-icons";
 
-import { pdfsAPI, Pdf, PdfInput, codeOptions, variablesByCode } from "../api/pdf";
+import { pdfsAPI, Pdf, PdfInput, codeOptions, variablesByCode, systemVariables } from "../api/pdf";
 import { pdfPreviewAPI } from "../api/pdfPreview";
 
 import Swal from "sweetalert2";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { Modal } from "../components/ui/Modal";
+import { RichTextEditor } from "../components/ui/RichTextEditor";
 import { PdfGlobalConfigTab } from "./PdfGlobalConfigTab";
 import { PdfProjectConfigTab } from "./PdfProjectConfigTab";
 import { PdfAssignmentStatus } from "./PdfAssignmentStatus";
 
 const HELP_KEY = "pdfTemplates" as const;
+
+/** El editor devuelve "<p></p>" cuando está vacío: chequeamos que haya texto real. */
+const hasContent = (html: string): boolean => !!html && html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim().length > 0;
+
+const looksLikeHtml = (s: string): boolean => /<\/?(p|div|h[1-6]|ul|ol|li|table|tr|td|strong|em|u|br)\b/i.test(s || "");
+
+/**
+ * Las plantillas creadas antes del editor con formato son texto plano con saltos de línea.
+ * Al abrirlas hay que convertirlas a HTML para no perder esos saltos dentro del editor.
+ */
+const toEditorHtml = (content: string): string => {
+  const text = content || "";
+  if (!text.trim() || looksLikeHtml(text)) return text;
+  const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return text
+    .split(/\n{2,}/)
+    .map((block) => `<p>${escape(block).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+};
 
 export function PdfTemplatesPage() {
   // data
@@ -108,9 +128,10 @@ export function PdfTemplatesPage() {
   const openCreate = () => {
     setEditingTemplate(null);
 
-    // Find first available code
-    const usedCodes = new Set(templates.map((t) => t.code));
-    const firstAvailable = codeOptions.find((opt) => !usedCodes.has(opt.value))?.value || "";
+    // Primer código libre. Nunca dejar "" : el <select> mostraría la primera opción sin que el
+    // estado coincida, y las variables del pedido quedarían vacías hasta cambiar el select.
+    const used = new Set(templates.map((t) => t.code));
+    const firstAvailable = codeOptions.find((opt) => !used.has(opt.value))?.value ?? codeOptions[0].value;
 
     setFormData({
       code: firstAvailable as any,
@@ -130,7 +151,7 @@ export function PdfTemplatesPage() {
       code: template.code,
       name: template.name,
       title: template.title || "",
-      content: template.content,
+      content: toEditorHtml(template.content),
       variablesHint: template.variablesHint || "",
       isActive: template.isActive,
     });
@@ -163,7 +184,7 @@ export function PdfTemplatesPage() {
   const validate = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.name.trim()) newErrors.name = "El nombre es requerido";
-    if (!formData.content.trim()) newErrors.content = "El contenido es requerido";
+    if (!hasContent(formData.content)) newErrors.content = "El contenido es requerido";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -209,6 +230,13 @@ export function PdfTemplatesPage() {
   const usedCodes = templates.map((t) => t.code);
   const availableCodes = codeOptions.filter((c) => !usedCodes.includes(c.value));
   const isAddDisabled = availableCodes.length === 0;
+
+  // Códigos ofrecidos en el modal: los libres, más el de la plantilla que se está editando.
+  // Evita elegir uno ya usado (el backend lo rechaza por el índice único tenant+code).
+  // Siempre se incluye `formData.code` para que el valor del <select> exista como opción: si no,
+  // el navegador muestra la primera opción mientras el estado dice otra cosa y las variables
+  // del pedido aparecen vacías.
+  const modalCodeOptions = codeOptions.filter((c) => !usedCodes.includes(c.value) || c.value === formData.code || c.value === editingTemplate?.code);
 
   return (
     <PageLayout
@@ -411,7 +439,7 @@ export function PdfTemplatesPage() {
                   }
                   className="input-field w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
                 >
-                  {codeOptions.map((opt) => (
+                  {modalCodeOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
                     </option>
@@ -441,23 +469,18 @@ export function PdfTemplatesPage() {
               Plantilla activa
             </label>
 
-            {/* variables del pedido */}
-            <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-4">
-              <h4 className="font-semibold text-slate-700 dark:text-slate-200 mb-2">{formData.code === "vacaciones" ? "Variables de vacaciones" : "Variables del pedido"}</h4>
-
-              <div className="flex flex-wrap gap-1">
-                {(variablesByCode[formData.code] || []).map((v) => (
-                  <code key={v} className="bg-white dark:bg-slate-800 px-2 py-1 rounded text-xs">
-                    {v}
-                  </code>
-                ))}
-              </div>
-            </div>
-
             {/* contenido */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Contenido *</label>
-              <textarea value={formData.content} onChange={(e) => setFormData({ ...formData, content: e.target.value })} rows={12} className="w-full px-4 py-3 border rounded font-mono text-sm dark:bg-slate-900" />
+              <RichTextEditor
+                value={formData.content}
+                onChange={(html) => setFormData({ ...formData, content: html })}
+                variables={[
+                  { grupo: formData.code === "vacaciones" ? "Variables de vacaciones" : "Variables del pedido", vars: variablesByCode[formData.code] || [] },
+                  { grupo: "Variables de la empresa", vars: systemVariables.map((s) => s.variable) },
+                ]}
+                variablesTitle="Variables disponibles (click para insertar)"
+              />
               {errors.content && <p className="text-sm text-red-500 mt-1">{errors.content}</p>}
             </div>
           </div>

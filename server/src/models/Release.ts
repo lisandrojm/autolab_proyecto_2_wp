@@ -5,8 +5,8 @@ export interface IRelease extends Document {
   name: string;
   version: string;
   description?: string;
-  fileUrl?: string;
-  fileName?: string;
+  /** Contenido del release redactado en la plataforma (HTML del editor, con variables `{{variable}}`). */
+  content: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -35,15 +35,10 @@ const releaseSchema = new Schema<IRelease>(
       default: "",
       maxlength: 2000,
     },
-    fileUrl: {
+    content: {
       type: String,
-      trim: true,
       default: "",
-    },
-    fileName: {
-      type: String,
-      trim: true,
-      default: "",
+      maxlength: 200000,
     },
     isActive: {
       type: Boolean,

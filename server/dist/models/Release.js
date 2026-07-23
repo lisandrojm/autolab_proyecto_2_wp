@@ -21,15 +21,10 @@ const releaseSchema = new Schema({
         default: "",
         maxlength: 2000,
     },
-    fileUrl: {
+    content: {
         type: String,
-        trim: true,
         default: "",
-    },
-    fileName: {
-        type: String,
-        trim: true,
-        default: "",
+        maxlength: 200000,
     },
     isActive: {
         type: Boolean,

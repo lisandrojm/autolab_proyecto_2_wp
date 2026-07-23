@@ -4,8 +4,8 @@ export interface IRelease extends Document {
     name: string;
     version: string;
     description?: string;
-    fileUrl?: string;
-    fileName?: string;
+    /** Contenido del release redactado en la plataforma (HTML del editor, con variables `{{variable}}`). */
+    content: string;
     isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
