@@ -33,7 +33,7 @@ export const releaseVariables: { grupo: string; vars: string[] }[] = [
   },
   {
     grupo: "Domicilio de la persona",
-    vars: ["{{direccion}}", "{{calle}}", "{{altura}}", "{{localidad}}", "{{codigoPostal}}"],
+    vars: ["{{direccion}}", "{{calle}}", "{{altura}}", "{{pisoDepto}}", "{{localidad}}", "{{codigoPostal}}"],
   },
   {
     grupo: "Contrato y proyecto",

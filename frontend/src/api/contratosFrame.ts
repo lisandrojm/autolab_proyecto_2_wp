@@ -38,7 +38,7 @@ export const contratoVariables: { grupo: string; vars: string[] }[] = [
   },
   {
     grupo: "Domicilio de la persona",
-    vars: ["{{direccion}}", "{{calle}}", "{{altura}}", "{{localidad}}", "{{codigoPostal}}"],
+    vars: ["{{direccion}}", "{{calle}}", "{{altura}}", "{{pisoDepto}}", "{{localidad}}", "{{codigoPostal}}"],
   },
   {
     grupo: "Datos bancarios",
@@ -86,20 +86,6 @@ const fileNameFromDisposition = (disposition: string, fallback: string): string 
 class ContratoFrameAPI {
   async list(): Promise<ContratoFrameItem[]> {
     const { data } = await axios.get("/contratos-frame");
-    return data;
-  }
-
-  async downloadTemplate(): Promise<Blob> {
-    const { data } = await axios.get("/contratos-frame/template", { responseType: "blob" });
-    return data;
-  }
-
-  async importExcel(file: File): Promise<{ message: string; count: number }> {
-    const formData = new FormData();
-    formData.append("file", file);
-    const { data } = await axios.post("/contratos-frame/import", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
     return data;
   }
 

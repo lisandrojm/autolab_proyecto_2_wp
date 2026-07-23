@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileContract, faDownload, faUpload, faPlus, faEdit, faTrash, faFileExcel, faEye } from "@fortawesome/free-solid-svg-icons";
+import { faFileContract, faDownload, faPlus, faEdit, faTrash, faEye } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
@@ -16,6 +16,12 @@ const emptyForm = { nombre: "", externalId: "", content: "", cantidadJornadas: "
 
 /** El editor devuelve "<p></p>" cuando está vacío: chequeamos que haya texto real. */
 const hasContent = (html: string): boolean => !!html && html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim().length > 0;
+
+/** Primeros caracteres del contenido en texto plano (sin las etiquetas HTML del editor). */
+const contentPreview = (html: string, max = 60): string => {
+  const text = html.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+  return text.length > max ? `${text.slice(0, max)}…` : text;
+};
 
 export const ContratosFramePage: React.FC = () => {
   const HELP_KEY = "contratosFrame" as const;
@@ -53,9 +59,6 @@ export const ContratosFramePage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState(false);
 
-  const [showImport, setShowImport] = useState(false);
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [importing, setImporting] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -174,47 +177,10 @@ export const ContratosFramePage: React.FC = () => {
     }
   };
 
-  const handleDownloadTemplate = async () => {
-    try {
-      const blob = await contratoFrameAPI.downloadTemplate();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "plantilla_contratos.xlsx";
-      a.click();
-      window.URL.revokeObjectURL(url);
-    } catch {
-      sweetAlert.error("Error", "No se pudo descargar la plantilla.");
-    }
-  };
-
-  const handleImport = async () => {
-    if (!importFile) return;
-    setImporting(true);
-    try {
-      const res = await contratoFrameAPI.importExcel(importFile);
-      sweetAlert.success("Importación completada", `${res.count} contratos procesados.`);
-      setShowImport(false);
-      setImportFile(null);
-      await load();
-    } catch (err: any) {
-      const details = err?.response?.data?.details;
-      sweetAlert.error("Error al importar", Array.isArray(details) ? details.slice(0, 5).join("\n") : err?.response?.data?.error || "No se pudo importar el archivo.");
-    } finally {
-      setImporting(false);
-    }
-  };
-
   const headerActions = (
     <div className="flex flex-wrap gap-2">
-      <button onClick={handleDownloadTemplate} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800">
-        <FontAwesomeIcon icon={faDownload} /> Plantilla
-      </button>
-      <button onClick={() => setShowImport(true)} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30">
-        <FontAwesomeIcon icon={faUpload} /> Importar Excel
-      </button>
-      <button onClick={openCreate} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
-        <FontAwesomeIcon icon={faPlus} /> Nuevo
+      <button onClick={openCreate} title="Nuevo contrato" aria-label="Nuevo contrato" className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+        <FontAwesomeIcon icon={faPlus} />
       </button>
     </div>
   );
@@ -293,6 +259,7 @@ export const ContratosFramePage: React.FC = () => {
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Jornadas</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Mult. Diario</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID Externo</th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Contenido</th>
                 <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
@@ -303,6 +270,15 @@ export const ContratosFramePage: React.FC = () => {
                   <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{item.data?.cantidadJornadas ?? "—"}</td>
                   <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{item.data?.multiplicadorDiario ?? "—"}</td>
                   <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono">{item.externalId || "—"}</td>
+                  <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
+                    {hasContent(item.content || "") ? (
+                      <span className="truncate max-w-[280px] block" title="Contenido redactado">
+                        {contentPreview(item.content || "")}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td className="px-5 py-3 text-sm text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-2">
                       {item.content && (
@@ -397,36 +373,6 @@ export const ContratosFramePage: React.FC = () => {
             </div>
           </div>
         </form>
-      </Modal>
-
-      <Modal
-        isOpen={showImport}
-        onClose={() => { setShowImport(false); setImportFile(null); }}
-        title="Importar Contratos desde Excel"
-        size="lg"
-        footer={
-          <div className="flex justify-end gap-2 w-full">
-            <button
-              type="button"
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
-              onClick={() => { setShowImport(false); setImportFile(null); }}
-            >
-              Cancelar
-            </button>
-            <button onClick={handleImport} disabled={!importFile || importing} className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 border border-transparent rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed">
-              {importing ? "Importando..." : "Importar"}
-            </button>
-          </div>
-        }
-      >
-        <div className="space-y-3">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Descargá la plantilla, completala y subila acá. Los contratos se actualizan/crean por nombre o ID externo.</p>
-          <label className="flex items-center gap-3 px-4 py-6 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900/30">
-            <FontAwesomeIcon icon={faFileExcel} className="text-emerald-600 text-xl" />
-            <span className="text-sm text-gray-600 dark:text-gray-300">{importFile ? importFile.name : "Seleccionar archivo .xlsx"}</span>
-            <input type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => setImportFile(e.target.files?.[0] || null)} />
-          </label>
-        </div>
       </Modal>
 
     </PageLayout>

@@ -7,7 +7,8 @@ import htmlPdf from "html-pdf-node";
  * `{{variable}}`, igual que las plantillas PDF.
  * Por compatibilidad también se acepta la llave simple `{variable}`, que es la sintaxis de los
  * .docx de Word que se venían subiendo (así se puede pegar ese texto sin reescribir las variables).
- * Las variables sin valor quedan visibles para detectar las que faltan mapear.
+ * Las variables desconocidas quedan visibles para detectar las que faltan mapear; las conocidas
+ * pero vacías (campos opcionales) se reemplazan por vacío.
  */
 
 /** Escapa texto plano para insertarlo dentro del HTML sin romperlo. */
@@ -17,13 +18,14 @@ function escapeHtml(value: string): string {
 
 /**
  * Reemplaza `{{variable}}` (y también `{variable}`) por su valor dentro del HTML.
- * Solo reemplaza las claves presentes en `data` con valor no vacío; el resto queda intacto.
+ * Reemplaza todas las claves presentes en `data` (aunque estén vacías); el resto queda intacto.
  */
 export function replaceDocVariables(html: string, data: Record<string, any>): string {
   let result = html || "";
   for (const [key, rawValue] of Object.entries(data || {})) {
+    // Una variable conocida pero SIN valor (ej. una persona sin piso/depto) se reemplaza por vacío.
+    // Solo quedan visibles las que no existen en `data`, que son las que hay que corregir.
     const value = rawValue == null ? "" : String(rawValue);
-    if (value === "") continue; // sin valor → se deja la variable visible
     // Escapamos la clave por si tuviera caracteres especiales de regex.
     const safeKey = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const escaped = escapeHtml(value);
@@ -93,6 +95,7 @@ export function getDummyDocVariables(): Record<string, string> {
     direccion: "Av. Siempre Viva",
     calle: "Av. Siempre Viva",
     altura: "742",
+    pisoDepto: "4B",
     localidad: "CABA",
     codigoPostal: "1425",
     // Contrato / proyecto
