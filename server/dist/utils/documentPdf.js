@@ -45,10 +45,16 @@ function wrapHtml(bodyHtml) {
     return `<!DOCTYPE html><html><head><meta charset="utf-8" /><style>
     body { font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.45; color: #222; margin: 0; }
     p { margin: 0 0 10pt 0; }
-    h1 { font-size: 14pt; margin: 0 0 10pt 0; }
-    h2 { font-size: 13pt; margin: 0 0 10pt 0; }
+    /* break-after: avoid mantiene el título pegado al contenido que sigue (evita que quede solo
+       al final de una página, ej. el título del contrato solo en la página 1). */
+    h1 { font-size: 14pt; margin: 0 0 10pt 0; break-inside: avoid; break-after: avoid; }
+    h2 { font-size: 13pt; margin: 0 0 10pt 0; break-inside: avoid; break-after: avoid; }
     ul, ol { margin: 0 0 10pt 0; padding-left: 24pt; }
-    table { border-collapse: collapse; width: 100%; margin: 0 0 10pt 0; page-break-inside: avoid; }
+    /* En tablas largas (contratos de varias páginas) NO se puede evitar el corte: forzar
+       break-inside: auto en tabla/filas/celdas para que fluyan y corten de forma natural entre
+       páginas. Con "avoid" el motor empuja la tabla entera a la página siguiente y deja huecos. */
+    table { border-collapse: collapse; width: 100%; margin: 0 0 10pt 0; break-inside: auto; }
+    tr, td, th { break-inside: auto; }
     td, th { border: 1px solid #999; padding: 5pt; vertical-align: top; }
     hr { border: none; border-top: 1px solid #ccc; margin: 10pt 0; }
   </style></head><body>${bodyHtml || ""}</body></html>`;
