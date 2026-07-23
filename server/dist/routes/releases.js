@@ -8,10 +8,10 @@ import UserProject from "../models/UserProject.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { buildEmployeeDocData, buildDocFileName } from "../utils/employeeDocData.js";
-import { buildReleaseDocx, getReleaseDummyVariables } from "../utils/releaseDocx.js";
+import { buildDocPdf, getDummyDocVariables } from "../utils/documentPdf.js";
 const router = Router();
 // El release se redacta en la plataforma (editor con formato) y se guarda como HTML en `content`.
-// El .docx se genera al descargar, reemplazando las variables `{variable}`.
+// El PDF se genera al descargar, reemplazando las variables `{{variable}}`.
 const ReleaseSchema = z.object({
     name: z.string().min(1).max(150),
     version: z.string().min(1).max(50),
@@ -22,9 +22,9 @@ const ReleaseSchema = z.object({
         .optional()
         .transform((v) => (typeof v === "string" ? v === "true" : v)),
 });
-const sendDocx = (res, buffer, baseName) => {
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-    res.setHeader("Content-Disposition", `attachment; filename="${baseName}.docx"`);
+const sendPdf = (res, buffer, baseName) => {
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${baseName}.pdf"`);
     res.send(buffer);
 };
 router.get("/", authenticateToken, requireTenant, async (req, res) => {
@@ -39,12 +39,12 @@ router.get("/", authenticateToken, requireTenant, async (req, res) => {
         res.status(500).json({ error: "Error al obtener releases" });
     }
 });
-// POST /releases/preview — genera un .docx de ejemplo con el contenido del editor (sin guardar).
+// POST /releases/preview — genera un PDF de ejemplo con el contenido del editor (sin guardar).
 router.post("/preview", authenticateToken, requireTenant, async (req, res) => {
     try {
         const { content } = z.object({ content: z.string().max(200000) }).parse(req.body);
-        const buffer = await buildReleaseDocx(content, getReleaseDummyVariables());
-        sendDocx(res, buffer, "Preview_Release");
+        const buffer = await buildDocPdf(content, getDummyDocVariables());
+        sendPdf(res, buffer, "Preview_Release");
     }
     catch (error) {
         if (error instanceof z.ZodError) {
@@ -72,7 +72,7 @@ router.get("/:id", authenticateToken, requireTenant, async (req, res) => {
         res.status(500).json({ error: "Error al obtener release" });
     }
 });
-// GET /releases/:id/download — .docx del release con valores de ejemplo (sin persona asociada).
+// GET /releases/:id/download — PDF del release con valores de ejemplo (sin persona asociada).
 router.get("/:id/download", authenticateToken, requireTenant, async (req, res) => {
     try {
         const release = await Release.findOne({ _id: req.params.id, tenantId: req.tenantObjectId });
@@ -84,8 +84,8 @@ router.get("/:id/download", authenticateToken, requireTenant, async (req, res) =
             res.status(400).json({ error: "El release no tiene contenido redactado" });
             return;
         }
-        const buffer = await buildReleaseDocx(release.content, getReleaseDummyVariables());
-        sendDocx(res, buffer, `${release.name || "Release"}`);
+        const buffer = await buildDocPdf(release.content, getDummyDocVariables());
+        sendPdf(res, buffer, `${release.name || "Release"}`);
     }
     catch (error) {
         console.error("Download release error:", error);
@@ -93,7 +93,7 @@ router.get("/:id/download", authenticateToken, requireTenant, async (req, res) =
     }
 });
 // GET /releases/:id/download-filled?userId=&projectId=&contractIndex=
-// Genera el .docx del release con las variables reemplazadas por los datos de la persona/contrato
+// Genera el PDF del release con las variables reemplazadas por los datos de la persona/contrato
 // y de la empresa seteada en el proyecto (releaseEmpresa).
 router.get("/:id/download-filled", authenticateToken, requireTenant, async (req, res) => {
     try {
@@ -129,9 +129,9 @@ router.get("/:id/download-filled", authenticateToken, requireTenant, async (req,
         const empresaId = project?.releaseEmpresa;
         const empresa = empresaId ? await Company.findById(empresaId).lean() : null;
         const data = await buildEmployeeDocData(user, up, contract, empresa);
-        const buffer = await buildReleaseDocx(release.content, data);
+        const buffer = await buildDocPdf(release.content, data);
         const baseName = buildDocFileName({ tipo: "Release", user, up, contract, docName: release.name });
-        sendDocx(res, buffer, baseName);
+        sendPdf(res, buffer, baseName);
     }
     catch (error) {
         console.error("Download filled release error:", error);

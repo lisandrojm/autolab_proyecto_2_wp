@@ -17,7 +17,12 @@ async function buildPdfHtml(tenantId, bodyContent, additionalVars = {}, title = 
     const systemVars = getSystemVariables(config);
     const allVars = { ...additionalVars, ...systemVars };
     // Replace variables in the content (body)
-    const processedBodyContent = replacePdfVariables(bodyContent, allVars);
+    // `html-pdf-node` compila el HTML con Handlebars: si queda algún `{{...}}` sin reemplazar
+    // (variable mal escrita o no soportada por el código), la generación del PDF falla.
+    // Se convierten a entidades para que Handlebars no las interprete y queden visibles como texto.
+    const processedBodyContent = replacePdfVariables(bodyContent, allVars)
+        .replace(/\{\{/g, "&#123;&#123;")
+        .replace(/\}\}/g, "&#125;&#125;");
     // El contenido puede venir del editor con formato (HTML) o ser texto plano de plantillas viejas.
     // El texto plano necesita `white-space: pre-wrap` para conservar los saltos de línea; el HTML no
     // (si no, los bloques quedan con doble espaciado).
