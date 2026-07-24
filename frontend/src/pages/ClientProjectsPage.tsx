@@ -16,6 +16,7 @@ import { getHelp, hasHelp } from "../data/help/helpContent";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { InfoModal } from "../components/ui/InfoModal";
+import { CompanyMultiSelect } from "../components/CompanyMultiSelect";
 import { getImageUrl } from "../utils/imageHelpers";
 
 const HELP_KEY = "clientProjects" as const;
@@ -74,8 +75,8 @@ export const ClientProjectsPage: React.FC = () => {
     status: "active" as "active" | "completed" | "on_hold" | "archived",
     startDate: "",
     endDate: "",
-    contratoEmpresa: "",
-    releaseEmpresa: "",
+    contratoEmpresas: [] as string[],
+    releaseEmpresas: [] as string[],
     objectives: [] as string[],
     targetAudience: "",
     turnos: [] as string[],
@@ -212,8 +213,8 @@ export const ClientProjectsPage: React.FC = () => {
       status: "active",
       startDate: "",
       endDate: "",
-      contratoEmpresa: "",
-      releaseEmpresa: "",
+      contratoEmpresas: [] as string[],
+      releaseEmpresas: [] as string[],
       objectives: [],
       targetAudience: "",
       turnos: [],
@@ -258,8 +259,8 @@ export const ClientProjectsPage: React.FC = () => {
       status: project.status || "active",
       startDate: project.startDate ? project.startDate.split("T")[0] : "",
       endDate: project.endDate ? project.endDate.split("T")[0] : "",
-      contratoEmpresa: project.contratoEmpresa || "",
-      releaseEmpresa: project.releaseEmpresa || "",
+      contratoEmpresas: project.contratoEmpresas || [],
+      releaseEmpresas: project.releaseEmpresas || [],
       objectives: project.objectives || [],
       targetAudience: project.targetAudience || "",
       turnos: (project.turnos || []).map((t: any) => (typeof t === "string" ? t : t._id)),
@@ -552,16 +553,11 @@ export const ClientProjectsPage: React.FC = () => {
                             <FontAwesomeIcon icon={faInfoCircle} />
                           </button>
                         </label>
-                        <select
-                          className="input-field py-2.5"
-                          value={formData.contratoEmpresa}
-                          onChange={(e) => setFormData((p) => ({ ...p, contratoEmpresa: e.target.value }))}
-                        >
-                          <option value="">Seleccionar empresa...</option>
-                          {companies.map((c) => (
-                            <option key={c._id} value={c._id}>{c.razonSocial}</option>
-                          ))}
-                        </select>
+                        <CompanyMultiSelect
+                          companies={companies}
+                          value={formData.contratoEmpresas}
+                          onChange={(ids) => setFormData((p) => ({ ...p, contratoEmpresas: ids }))}
+                        />
                       </div>
 
                       <div>
@@ -571,16 +567,11 @@ export const ClientProjectsPage: React.FC = () => {
                             <FontAwesomeIcon icon={faInfoCircle} />
                           </button>
                         </label>
-                        <select
-                          className="input-field py-2.5"
-                          value={formData.releaseEmpresa}
-                          onChange={(e) => setFormData((p) => ({ ...p, releaseEmpresa: e.target.value }))}
-                        >
-                          <option value="">Seleccionar empresa...</option>
-                          {companies.map((c) => (
-                            <option key={c._id} value={c._id}>{c.razonSocial}</option>
-                          ))}
-                        </select>
+                        <CompanyMultiSelect
+                          companies={companies}
+                          value={formData.releaseEmpresas}
+                          onChange={(ids) => setFormData((p) => ({ ...p, releaseEmpresas: ids }))}
+                        />
                       </div>
                     </div>
 

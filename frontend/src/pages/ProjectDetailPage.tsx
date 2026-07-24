@@ -11,6 +11,7 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { Card } from "../components/ui/Card";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { InfoModal } from "../components/ui/InfoModal";
+import { CompanyMultiSelect } from "../components/CompanyMultiSelect";
 import { EmptyState } from "../components/ui/EmptyState";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -71,8 +72,8 @@ export const ProjectDetailPage: React.FC = () => {
     status: "active" as Project["status"],
     startDate: "",
     endDate: "",
-    contratoEmpresa: "",
-    releaseEmpresa: "",
+    contratoEmpresas: [] as string[],
+    releaseEmpresas: [] as string[],
     objectives: [""],
     targetAudience: "",
     turnos: [] as string[],
@@ -113,8 +114,8 @@ export const ProjectDetailPage: React.FC = () => {
         status: data.status || "active",
         startDate: data.startDate ? data.startDate.split("T")[0] : "",
         endDate: data.endDate ? data.endDate.split("T")[0] : "",
-        contratoEmpresa: data.contratoEmpresa || "",
-        releaseEmpresa: data.releaseEmpresa || "",
+        contratoEmpresas: data.contratoEmpresas || [],
+        releaseEmpresas: data.releaseEmpresas || [],
         objectives: data.objectives?.length ? data.objectives : [""],
         targetAudience: data.targetAudience || "",
         turnos: (data.turnos || []).map((t: any) => (typeof t === "string" ? t : (t as any)._id)),
@@ -476,16 +477,11 @@ export const ProjectDetailPage: React.FC = () => {
                         <FontAwesomeIcon icon={faInfoCircle} />
                       </button>
                     </label>
-                    <select
-                      className="input-field py-2.5"
-                      value={projectForm.contratoEmpresa}
-                      onChange={(e) => setProjectForm((p) => ({ ...p, contratoEmpresa: e.target.value }))}
-                    >
-                      <option value="">Seleccionar empresa...</option>
-                      {companies.map((c) => (
-                        <option key={c._id} value={c._id}>{c.razonSocial}</option>
-                      ))}
-                    </select>
+                    <CompanyMultiSelect
+                      companies={companies}
+                      value={projectForm.contratoEmpresas}
+                      onChange={(ids) => setProjectForm((p) => ({ ...p, contratoEmpresas: ids }))}
+                    />
                   </div>
 
                   <div>
@@ -495,16 +491,11 @@ export const ProjectDetailPage: React.FC = () => {
                         <FontAwesomeIcon icon={faInfoCircle} />
                       </button>
                     </label>
-                    <select
-                      className="input-field py-2.5"
-                      value={projectForm.releaseEmpresa}
-                      onChange={(e) => setProjectForm((p) => ({ ...p, releaseEmpresa: e.target.value }))}
-                    >
-                      <option value="">Seleccionar empresa...</option>
-                      {companies.map((c) => (
-                        <option key={c._id} value={c._id}>{c.razonSocial}</option>
-                      ))}
-                    </select>
+                    <CompanyMultiSelect
+                      companies={companies}
+                      value={projectForm.releaseEmpresas}
+                      onChange={(ids) => setProjectForm((p) => ({ ...p, releaseEmpresas: ids }))}
+                    />
                   </div>
                 </div>
 

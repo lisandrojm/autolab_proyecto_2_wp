@@ -28,9 +28,9 @@ export interface Project {
   /** puede venir como string o como objeto ligero del cliente */
   clientId: string | { _id: string; name?: string };
 
-  /** ObjectId de la empresa (colección companies) para el contrato / release */
-  contratoEmpresa?: string;
-  releaseEmpresa?: string;
+  /** ObjectIds de las empresas (colección companies) para el contrato / release */
+  contratoEmpresas?: string[];
+  releaseEmpresas?: string[];
 
   name: string;
   description?: string;
@@ -118,8 +118,8 @@ function normalizeProject(raw: any): Project {
     _id: String(raw?._id ?? ""),
     tenant: normalizeTenant(raw),
     clientId: raw?.clientId && typeof raw.clientId === "object" ? { _id: String(raw.clientId._id ?? raw.clientId.id ?? ""), name: raw.clientId.name } : String(raw?.clientId ?? ""),
-    contratoEmpresa: raw?.contratoEmpresa ? String(raw.contratoEmpresa._id ?? raw.contratoEmpresa) : undefined,
-    releaseEmpresa: raw?.releaseEmpresa ? String(raw.releaseEmpresa._id ?? raw.releaseEmpresa) : undefined,
+    contratoEmpresas: Array.isArray(raw?.contratoEmpresas) ? raw.contratoEmpresas.map((e: any) => String(e?._id ?? e)) : [],
+    releaseEmpresas: Array.isArray(raw?.releaseEmpresas) ? raw.releaseEmpresas.map((e: any) => String(e?._id ?? e)) : [],
     name: raw?.name ?? "",
     description: raw?.description ?? "",
     status: raw?.status ?? "active",
@@ -252,8 +252,8 @@ class ProjectsAPI {
       description?: string;
       objectives?: string[];
       targetAudience?: string;
-      contratoEmpresa?: string;
-      releaseEmpresa?: string;
+      contratoEmpresas?: string[];
+      releaseEmpresas?: string[];
       turnos?: string[];
       areasConfig?: {
         areaId: string;
@@ -283,8 +283,8 @@ class ProjectsAPI {
       description?: string;
       objectives?: string[];
       targetAudience?: string;
-      contratoEmpresa?: string;
-      releaseEmpresa?: string;
+      contratoEmpresas?: string[];
+      releaseEmpresas?: string[];
       assignedUsers?: string[];
       vacationConfig?: {
         useGlobalConfig: boolean;

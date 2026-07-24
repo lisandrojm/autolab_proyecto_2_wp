@@ -102,7 +102,7 @@ router.get("/:id/download", authenticateToken, requireTenant, async (req: Authen
 
 // GET /releases/:id/download-filled?userId=&projectId=&contractIndex=
 // Genera el PDF del release con las variables reemplazadas por los datos de la persona/contrato
-// y de la empresa seteada en el proyecto (releaseEmpresa).
+// y de la empresa seteada en el proyecto (releaseEmpresas).
 router.get("/:id/download-filled", authenticateToken, requireTenant, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const release = await Release.findOne({ _id: req.params.id, tenantId: req.tenantObjectId });
@@ -115,7 +115,7 @@ router.get("/:id/download-filled", authenticateToken, requireTenant, async (req:
       return;
     }
 
-    const { userId, projectId, contractIndex } = req.query as { userId?: string; projectId?: string; contractIndex?: string };
+    const { userId, projectId, contractIndex, empresaId } = req.query as { userId?: string; projectId?: string; contractIndex?: string; empresaId?: string };
 
     const user = await User.findOne({ _id: userId, tenantId: req.tenantObjectId }).populate({ path: "metadata.projects", model: UserProject }).lean();
     if (!user) {
@@ -135,10 +135,13 @@ router.get("/:id/download-filled", authenticateToken, requireTenant, async (req:
     if (!Number.isInteger(idx) || idx < 0 || idx >= contracts.length) idx = contracts.length - 1;
     const contract: any = contracts[idx] || {};
 
-    // Empresa/Productora seteada en el PROYECTO (releaseEmpresa) → variables empresa* en la plantilla
+    // Empresa/Productora del PROYECTO (releaseEmpresas) → variables empresa* en la plantilla.
+    // El cliente elige con cuál descargar (empresaId); si no llega o no pertenece al proyecto, se usa la primera.
     const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).lean();
-    const empresaId = (project as any)?.releaseEmpresa;
-    const empresa = empresaId ? await Company.findById(empresaId).lean() : null;
+    const empresas: any[] = (project as any)?.releaseEmpresas || [];
+    const empresasIds = empresas.map((e) => String(e));
+    const chosenId = empresaId && empresasIds.includes(String(empresaId)) ? empresaId : empresasIds[0];
+    const empresa = chosenId ? await Company.findById(chosenId).lean() : null;
     const data = await buildEmployeeDocData(user, up, contract, empresa);
 
     const buffer = await buildDocPdf(release.content, data);

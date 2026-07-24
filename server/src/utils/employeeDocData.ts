@@ -38,7 +38,7 @@ export function buildDocFileName(opts: { tipo: "Contrato" | "Release"; user: any
 /**
  * Variables de la Empresa/Productora ("La Empleadora") para las plantillas.
  * Se toman del ABM de Empresas (colección companies), seteada por empresa en el proyecto
- * (contratoEmpresa / releaseEmpresa) y tagueada en cada contrato/release.
+ * (contratoEmpresas / releaseEmpresas) y tagueada en cada contrato/release.
  * Van con prefijo `empresa*` para no chocar con los datos personales del empleado
  * (que ya usan cuit, localidad, codigoPostal).
  */

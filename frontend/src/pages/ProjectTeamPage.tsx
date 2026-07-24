@@ -307,9 +307,14 @@ export const ProjectTeamPage: React.FC = () => {
     setDetailRefsLoaded(true);
   };
 
-  // Empresa (razón social) seteada en el proyecto para contratos/releases → se muestra en el modal
-  const contratoEmpresaLabel = companies.find((c) => c._id === project?.contratoEmpresa)?.razonSocial || "";
-  const releaseEmpresaLabel = companies.find((c) => c._id === project?.releaseEmpresa)?.razonSocial || "";
+  // Empresas (razón social) seteadas en el proyecto para contratos/releases → se muestran en el modal
+  // y permiten elegir con cuál descargar el documento.
+  const contratoEmpresas = (project?.contratoEmpresas || [])
+    .map((id) => ({ id, label: companies.find((c) => c._id === id)?.razonSocial || "" }))
+    .filter((e) => e.label);
+  const releaseEmpresas = (project?.releaseEmpresas || [])
+    .map((id) => ({ id, label: companies.find((c) => c._id === id)?.razonSocial || "" }))
+    .filter((e) => e.label);
 
   // Persistence for view mode
   useEffect(() => {
@@ -2913,8 +2918,8 @@ export const ProjectTeamPage: React.FC = () => {
         projectId={projectId || ""}
         contratoFrames={contratoFrames}
         releases={releases}
-        contratoEmpresaLabel={contratoEmpresaLabel}
-        releaseEmpresaLabel={releaseEmpresaLabel}
+        contratoEmpresas={contratoEmpresas}
+        releaseEmpresas={releaseEmpresas}
         onEdit={(u) => {
           setSelectedMemberForDetail(null);
           handleOpenScheduleModal(u);

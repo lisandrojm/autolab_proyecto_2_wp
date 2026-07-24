@@ -107,7 +107,7 @@ export const releasesAPI = {
   },
 
   /** Descarga el PDF con las variables reemplazadas por los datos del empleado/contrato. */
-  downloadFilled: async (release: Release, ctx: { userId: string; projectId: string; contractIndex: number }, fileNameOverride?: string): Promise<void> => {
+  downloadFilled: async (release: Release, ctx: { userId: string; projectId: string; contractIndex: number; empresaId?: string }, fileNameOverride?: string): Promise<void> => {
     const response = await axios.get(`/releases/${release._id}/download-filled`, { params: ctx, responseType: "blob" });
     const fileName = fileNameOverride || fileNameFromDisposition(response.headers?.["content-disposition"], `${release.name}.pdf`);
     downloadBlob(response.data, fileName);

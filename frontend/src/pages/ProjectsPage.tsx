@@ -12,6 +12,7 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { Card } from "../components/ui/Card";
 import { Modal } from "../components/ui/Modal";
 import { InfoModal } from "../components/ui/InfoModal";
+import { CompanyMultiSelect } from "../components/CompanyMultiSelect";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -61,8 +62,8 @@ export const ProjectsPage: React.FC = () => {
     status: "active" as "active" | "completed" | "on_hold" | "archived",
     startDate: "",
     endDate: "",
-    contratoEmpresa: "",
-    releaseEmpresa: "",
+    contratoEmpresas: [] as string[],
+    releaseEmpresas: [] as string[],
     areasConfig: [] as { areaId: string; shiftIds: string[] }[],
     metadata: {
       centroCostoId: undefined as number | undefined,
@@ -188,8 +189,8 @@ export const ProjectsPage: React.FC = () => {
       status: "active",
       startDate: "",
       endDate: "",
-      contratoEmpresa: "",
-      releaseEmpresa: "",
+      contratoEmpresas: [] as string[],
+      releaseEmpresas: [] as string[],
       areasConfig: [],
       metadata: {
         centroCostoId: undefined,
@@ -213,8 +214,8 @@ export const ProjectsPage: React.FC = () => {
       status: project.status || "active",
       startDate: project.startDate ? project.startDate.split("T")[0] : "",
       endDate: project.endDate ? project.endDate.split("T")[0] : "",
-      contratoEmpresa: project.contratoEmpresa || "",
-      releaseEmpresa: project.releaseEmpresa || "",
+      contratoEmpresas: project.contratoEmpresas || [],
+      releaseEmpresas: project.releaseEmpresas || [],
       areasConfig: (project.areasConfig || []).map((ac: any) => ({
         areaId: typeof ac.areaId === "string" ? ac.areaId : ac.areaId._id,
         shiftIds: ac.shiftIds.map((s: any) => (typeof s === "string" ? s : s._id)),
@@ -683,16 +684,11 @@ export const ProjectsPage: React.FC = () => {
                     <FontAwesomeIcon icon={faInfoCircle} />
                   </button>
                 </label>
-                <select
-                  className="input-field py-2.5"
-                  value={formData.contratoEmpresa}
-                  onChange={(e) => setFormData((p) => ({ ...p, contratoEmpresa: e.target.value }))}
-                >
-                  <option value="">Seleccionar empresa...</option>
-                  {companies.map((c) => (
-                    <option key={c._id} value={c._id}>{c.razonSocial}</option>
-                  ))}
-                </select>
+                <CompanyMultiSelect
+                  companies={companies}
+                  value={formData.contratoEmpresas}
+                  onChange={(ids) => setFormData((p) => ({ ...p, contratoEmpresas: ids }))}
+                />
               </div>
 
               <div>
@@ -702,16 +698,11 @@ export const ProjectsPage: React.FC = () => {
                     <FontAwesomeIcon icon={faInfoCircle} />
                   </button>
                 </label>
-                <select
-                  className="input-field py-2.5"
-                  value={formData.releaseEmpresa}
-                  onChange={(e) => setFormData((p) => ({ ...p, releaseEmpresa: e.target.value }))}
-                >
-                  <option value="">Seleccionar empresa...</option>
-                  {companies.map((c) => (
-                    <option key={c._id} value={c._id}>{c.razonSocial}</option>
-                  ))}
-                </select>
+                <CompanyMultiSelect
+                  companies={companies}
+                  value={formData.releaseEmpresas}
+                  onChange={(ids) => setFormData((p) => ({ ...p, releaseEmpresas: ids }))}
+                />
               </div>
             </div>
 

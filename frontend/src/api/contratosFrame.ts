@@ -117,7 +117,7 @@ class ContratoFrameAPI {
   }
 
   /** Descarga el PDF con las variables reemplazadas por los datos del empleado/contrato. */
-  async downloadFilled(item: ContratoFrameItem, ctx: { userId: string; projectId: string; contractIndex: number }, fileNameOverride?: string): Promise<void> {
+  async downloadFilled(item: ContratoFrameItem, ctx: { userId: string; projectId: string; contractIndex: number; empresaId?: string }, fileNameOverride?: string): Promise<void> {
     const response = await axios.get(`/contratos-frame/${item._id}/download-filled`, { params: ctx, responseType: "blob" });
     const fileName = fileNameOverride || fileNameFromDisposition(response.headers?.["content-disposition"], `${item.name}.pdf`);
     downloadBlob(response.data, fileName);
