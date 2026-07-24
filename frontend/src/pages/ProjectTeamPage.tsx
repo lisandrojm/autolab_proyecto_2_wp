@@ -1219,6 +1219,10 @@ export const ProjectTeamPage: React.FC = () => {
       const cfSel = contratoFrames.find((c) => c._id === wizardData.contrato_frame_id);
       const esTiempoIndeterminado = cfSel ? (cfSel.data?.esTiempoIndeterminado ?? /indetermin/i.test(cfSel.name)) : false;
 
+      // El rol frame se toma de `roles_frame`; el backend no lo resuelve desde `infos`, así que
+      // mandamos el nombre elegido para que no quede "Sin rol frame".
+      const rfSel = allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id));
+
       await projectsAPI.assignMember(project._id, {
         userId: selectedUserForWizard._id,
         isUpdate: isExistingMember,
@@ -1235,6 +1239,7 @@ export const ProjectTeamPage: React.FC = () => {
           categoria_sat_id: Number(wizardData.categoria_sat_id),
           nombre_contrato: wizardData.nombre_contrato,
           tipo_contrato_id: wizardData.tipo_contrato_id ? Number(wizardData.tipo_contrato_id) : null,
+          nombre_rol_frame: rfSel?.name || "",
           rol_frame_id: Number(wizardData.rol_frame_id),
           empleado_id_reemplezado: wizardData.empleado_id_reemplezado ? Number(wizardData.empleado_id_reemplezado) : null,
         },

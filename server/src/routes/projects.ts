@@ -1056,12 +1056,15 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
       }
     }
 
-    // Resolve role frame name
+    // Resolve role frame name. El wizard toma los roles frame de la colección `roles_frame`, pero acá
+    // el catálogo `infos` (type: "role-frame") puede no tenerlos → se honra el nombre que manda el
+    // cliente, con fallback al lookup en `infos` (para flujos viejos / sync FRAME).
     let rolFrameName = "";
     if (contract.rol_frame_id) {
       const rfInfo = await Info.findOne({ type: "role-frame", "data.rol.id": Number(contract.rol_frame_id) }).lean();
       if (rfInfo) rolFrameName = rfInfo.name;
     }
+    if (!rolFrameName && contract.nombre_rol_frame) rolFrameName = String(contract.nombre_rol_frame);
 
     // Sanitize areaShiftAssignments to ensure valid ObjectIds
     let sanitizedAssignments = [];
