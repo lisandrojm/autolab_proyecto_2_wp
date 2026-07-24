@@ -248,6 +248,11 @@ export const ProjectTeamPage: React.FC = () => {
   // Índice (en el array original de contracts del UserProject) del contrato que se está editando desde el
   // modal de contratos. null = no se edita uno puntual (alta nueva o edición genérica → se toca el último).
   const [editingContractIndex, setEditingContractIndex] = useState<number | null>(null);
+  // Si el wizard se abrió para APROBAR una solicitud, guardamos su id: al guardar, el backend marca la
+  // solicitud como aprobada. null = alta/edición normal.
+  const [approvingSolicitudId, setApprovingSolicitudId] = useState<string | null>(null);
+  // Se incrementa tras aprobar para que la pestaña Solicitudes recargue su lista.
+  const [solicitudesRefresh, setSolicitudesRefresh] = useState(0);
   const [viewingShiftsData, setViewingShiftsData] = useState<{ user: User; areaId: string; areaName: string } | null>(null);
   const [wizardData, setWizardData] = useState({
     // Step 1: Contrato
@@ -974,10 +979,12 @@ export const ProjectTeamPage: React.FC = () => {
 
   /* ------------------------------- Actions -------------------------------- */
 
-  const handleOpenWizard = async (userId: string, contractOverride?: Contract, contractIndex?: number) => {
+  const handleOpenWizard = async (userId: string, contractOverride?: Contract, contractIndex?: number, approveSolicitudId?: string) => {
     // Si viene de editar una tarjeta puntual del modal de contratos, guardamos ese índice para
     // actualizar EXACTAMENTE ese contrato al guardar (si no, el backend toca el último).
     setEditingContractIndex(typeof contractIndex === "number" ? contractIndex : null);
+    // Si viene de aprobar una solicitud, recordamos el id para marcarla aprobada al guardar.
+    setApprovingSolicitudId(approveSolicitudId ?? null);
     // La lista de candidatos viene "slim" (sin contratos) para no cargar 100 historiales
     // de una. Traemos el usuario completo (con contratos) on-demand para el pre-fill.
     const cached = allUsers.find((u) => u._id === userId) || candidateUsers.find((u) => u._id === userId);
@@ -1240,6 +1247,8 @@ export const ProjectTeamPage: React.FC = () => {
         isUpdate: isExistingMember,
         // Si se está editando un contrato puntual, el backend actualiza ESE índice (no el último).
         contractIndex: editingContractIndex ?? undefined,
+        // Si el wizard se abrió para aprobar una solicitud, el backend la marca aprobada.
+        approveSolicitud: approvingSolicitudId ? true : undefined,
         contract: {
           ...wizardData,
           fecha_baja_contrato: esTiempoIndeterminado ? "" : wizardData.fecha_baja_contrato,
@@ -1259,7 +1268,12 @@ export const ProjectTeamPage: React.FC = () => {
         },
       });
 
-      sweetAlert.success(isExistingMember ? "Miembro Actualizado" : "Miembro Agregado", `${selectedUserForWizard.firstName} ha sido ${isExistingMember ? "actualizado" : "incorporado al equipo"}.`);
+      const wasApproving = !!approvingSolicitudId;
+      const nombre = selectedUserForWizard.metadata?.fullName || selectedUserForWizard.firstName || "El usuario";
+      sweetAlert.success(
+        wasApproving ? "Solicitud Aprobada" : isExistingMember ? "Miembro Actualizado" : "Miembro Agregado",
+        `${nombre} ha sido ${wasApproving ? "aprobado e incorporado al equipo" : isExistingMember ? "actualizado" : "incorporado al equipo"}.`,
+      );
 
       // Refresh Data
       const updatedProject = await projectsAPI.getProject(project._id);
@@ -1268,6 +1282,16 @@ export const ProjectTeamPage: React.FC = () => {
 
       await fetchFullTeamLite();
       fetchTeamPage(teamPage);
+
+      // Si se aprobó una solicitud, refrescar la pestaña Solicitudes y su contador.
+      if (wasApproving) {
+        setSolicitudesRefresh((x) => x + 1);
+        try {
+          const solis = await usersAPI.listSolicitudes();
+          setSolicitudesCount(solis.filter((u) => u.metadata?.projectIds?.includes(projectId!)).length);
+        } catch { /* noop */ }
+      }
+      setApprovingSolicitudId(null);
 
       setSelectedUserForWizard(null);
       setShowAddModal(false);
@@ -1943,15 +1967,8 @@ export const ProjectTeamPage: React.FC = () => {
               <TeamSolicitudesTab
                 projectId={projectId!}
                 project={project}
-                onApproved={async () => {
-                  const projectData = await projectsAPI.getProject(projectId!);
-                  setProject(projectData);
-                  setTeamConfig(projectData.teamConfig || []);
-                  await fetchFullTeamLite();
-                  fetchTeamPage(teamPage);
-                  const solis = await usersAPI.listSolicitudes();
-                  setSolicitudesCount(solis.filter((u) => u.metadata?.projectIds?.includes(projectId!)).length);
-                }}
+                refreshSignal={solicitudesRefresh}
+                onApprove={(u) => handleOpenWizard(u._id, undefined, undefined, u._id)}
               />
             )}
           </div>
