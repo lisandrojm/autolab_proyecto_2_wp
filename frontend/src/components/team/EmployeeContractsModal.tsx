@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileContract, faDownload, faEdit, faTrash, faFileLines } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
@@ -189,7 +190,18 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                         <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
                       </button>
                       ) : (
-                        <span className="text-xs text-amber-600 dark:text-amber-400 shrink-0" title="La plantilla de este tipo de contrato no tiene contenido redactado">Sin contenido</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Link
+                            to={template?._id ? `/contratos-frame?edit=${template._id}` : "/contratos-frame"}
+                            className="text-xs font-medium text-amber-600 dark:text-amber-400 hover:underline"
+                            title="Redactar el contenido de esta plantilla de contrato"
+                          >
+                            Sin contenido
+                          </Link>
+                          <span className="p-1.5 text-gray-400 dark:text-gray-500 opacity-40 cursor-not-allowed" title="La plantilla de este tipo de contrato no tiene contenido redactado">
+                            <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
+                          </span>
+                        </div>
                       )}
                     </div>
                   </div>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileContract, faDownload, faPlus, faEdit, faTrash, faEye } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -30,6 +31,7 @@ export const ContratosFramePage: React.FC = () => {
   const [items, setItems] = useState<ContratoFrameItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Vista (Tabla vs Tarjetas)
   const [viewMode, setViewMode] = useState<ViewMode>("table");
@@ -96,6 +98,21 @@ export const ContratosFramePage: React.FC = () => {
     setEsTiempoIndeterminado(!!item.data?.esTiempoIndeterminado);
     setShowModal(true);
   };
+
+  // Abrir el editor de una plantilla puntual cuando se llega con ?edit=<id> (ej. desde el modal de
+  // contratos de una persona, link "Sin contenido"). Se limpia el query param para no reabrirlo.
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (!editId || items.length === 0) return;
+    const item = items.find((it) => it._id === editId);
+    if (item) {
+      openEdit(item);
+      const next = new URLSearchParams(searchParams);
+      next.delete("edit");
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, searchParams]);
 
   const handleSave = async () => {
     if (!form.nombre.trim()) {
