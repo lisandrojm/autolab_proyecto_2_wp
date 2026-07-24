@@ -2,8 +2,8 @@ import mongoose, { Schema } from "mongoose";
 const projectSchema = new Schema({
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     clientId: { type: Schema.Types.ObjectId, ref: "Client", index: true },
-    contratoEmpresa: { type: Schema.Types.ObjectId, ref: "Company" },
-    releaseEmpresa: { type: Schema.Types.ObjectId, ref: "Company" },
+    contratoEmpresas: [{ type: Schema.Types.ObjectId, ref: "Company" }],
+    releaseEmpresas: [{ type: Schema.Types.ObjectId, ref: "Company" }],
     name: { type: String, required: true, trim: true },
     description: { type: String, trim: true },
     status: {

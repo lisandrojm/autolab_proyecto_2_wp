@@ -8,7 +8,7 @@ import UserProject from "../models/UserProject.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { buildEmployeeDocData, buildDocFileName } from "../utils/employeeDocData.js";
-import { buildDocPdf, getDummyDocVariables } from "../utils/documentPdf.js";
+import { buildDocPdf, getDummyDocVariables, htmlHasText } from "../utils/documentPdf.js";
 const router = Router();
 // El release se redacta en la plataforma (editor con formato) y se guarda como HTML en `content`.
 // El PDF se genera al descargar, reemplazando las variables `{{variable}}`.
@@ -80,7 +80,7 @@ router.get("/:id/download", authenticateToken, requireTenant, async (req, res) =
             res.status(404).json({ error: "Release no encontrado" });
             return;
         }
-        if (!release.content) {
+        if (!htmlHasText(release.content)) {
             res.status(400).json({ error: "El release no tiene contenido redactado" });
             return;
         }
@@ -94,7 +94,7 @@ router.get("/:id/download", authenticateToken, requireTenant, async (req, res) =
 });
 // GET /releases/:id/download-filled?userId=&projectId=&contractIndex=
 // Genera el PDF del release con las variables reemplazadas por los datos de la persona/contrato
-// y de la empresa seteada en el proyecto (releaseEmpresa).
+// y de la empresa seteada en el proyecto (releaseEmpresas).
 router.get("/:id/download-filled", authenticateToken, requireTenant, async (req, res) => {
     try {
         const release = await Release.findOne({ _id: req.params.id, tenantId: req.tenantObjectId });
@@ -102,11 +102,11 @@ router.get("/:id/download-filled", authenticateToken, requireTenant, async (req,
             res.status(404).json({ error: "Release no encontrado" });
             return;
         }
-        if (!release.content) {
+        if (!htmlHasText(release.content)) {
             res.status(400).json({ error: "El release no tiene contenido redactado" });
             return;
         }
-        const { userId, projectId, contractIndex } = req.query;
+        const { userId, projectId, contractIndex, empresaId } = req.query;
         const user = await User.findOne({ _id: userId, tenantId: req.tenantObjectId }).populate({ path: "metadata.projects", model: UserProject }).lean();
         if (!user) {
             res.status(404).json({ error: "Empleado no encontrado" });
@@ -124,10 +124,13 @@ router.get("/:id/download-filled", authenticateToken, requireTenant, async (req,
         if (!Number.isInteger(idx) || idx < 0 || idx >= contracts.length)
             idx = contracts.length - 1;
         const contract = contracts[idx] || {};
-        // Empresa/Productora seteada en el PROYECTO (releaseEmpresa) → variables empresa* en la plantilla
+        // Empresa/Productora del PROYECTO (releaseEmpresas) → variables empresa* en la plantilla.
+        // El cliente elige con cuál descargar (empresaId); si no llega o no pertenece al proyecto, se usa la primera.
         const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).lean();
-        const empresaId = project?.releaseEmpresa;
-        const empresa = empresaId ? await Company.findById(empresaId).lean() : null;
+        const empresas = project?.releaseEmpresas || [];
+        const empresasIds = empresas.map((e) => String(e));
+        const chosenId = empresaId && empresasIds.includes(String(empresaId)) ? empresaId : empresasIds[0];
+        const empresa = chosenId ? await Company.findById(chosenId).lean() : null;
         const data = await buildEmployeeDocData(user, up, contract, empresa);
         const buffer = await buildDocPdf(release.content, data);
         const baseName = buildDocFileName({ tipo: "Release", user, up, contract, docName: release.name });
@@ -143,6 +146,7 @@ router.post("/", authenticateToken, requireTenant, async (req, res) => {
         const validatedData = ReleaseSchema.parse(req.body);
         const release = new Release({
             ...validatedData,
+            content: htmlHasText(validatedData.content) ? validatedData.content : "",
             tenantId: req.tenantObjectId,
         });
         await release.save();
@@ -173,7 +177,7 @@ router.put("/:id", authenticateToken, requireTenant, async (req, res) => {
         if (validatedData.description !== undefined)
             release.description = validatedData.description;
         if (validatedData.content !== undefined)
-            release.content = validatedData.content;
+            release.content = htmlHasText(validatedData.content) ? validatedData.content : "";
         if (validatedData.isActive !== undefined)
             release.isActive = validatedData.isActive;
         await release.save();

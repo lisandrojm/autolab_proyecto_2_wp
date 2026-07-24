@@ -6,7 +6,7 @@ import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { buildEmployeeDocData, buildDocFileName } from "../utils/employeeDocData.js";
-import { buildDocPdf, getDummyDocVariables } from "../utils/documentPdf.js";
+import { buildDocPdf, getDummyDocVariables, htmlHasText } from "../utils/documentPdf.js";
 const router = Router();
 const parseNum = (val) => {
     if (val === undefined || val === null || val === "")
@@ -54,7 +54,7 @@ router.get("/:id/download", authenticateToken, async (req, res) => {
             res.status(404).json({ error: "Contrato no encontrado" });
             return;
         }
-        if (!item.content) {
+        if (!htmlHasText(item.content)) {
             res.status(400).json({ error: "El contrato no tiene contenido redactado" });
             return;
         }
@@ -68,7 +68,7 @@ router.get("/:id/download", authenticateToken, async (req, res) => {
 });
 // GET /:id/download-filled?userId=&projectId=&contractIndex=
 // Genera el PDF del contrato con las variables reemplazadas por los datos de la persona/contrato
-// y de la empresa seteada en el proyecto (contratoEmpresa).
+// y de la empresa seteada en el proyecto (contratoEmpresas).
 router.get("/:id/download-filled", authenticateToken, async (req, res) => {
     try {
         const item = await ContratoFrame.findById(req.params.id);
@@ -76,11 +76,11 @@ router.get("/:id/download-filled", authenticateToken, async (req, res) => {
             res.status(404).json({ error: "Contrato no encontrado" });
             return;
         }
-        if (!item.content) {
+        if (!htmlHasText(item.content)) {
             res.status(400).json({ error: "El contrato no tiene contenido redactado" });
             return;
         }
-        const { userId, projectId, contractIndex } = req.query;
+        const { userId, projectId, contractIndex, empresaId } = req.query;
         const user = await User.findOne({ _id: userId, tenantId: req.tenantObjectId }).populate({ path: "metadata.projects", model: UserProject }).lean();
         if (!user) {
             res.status(404).json({ error: "Empleado no encontrado" });
@@ -97,10 +97,13 @@ router.get("/:id/download-filled", authenticateToken, async (req, res) => {
         if (!Number.isInteger(idx) || idx < 0 || idx >= contracts.length)
             idx = contracts.length - 1;
         const contract = contracts[idx] || {};
-        // Empresa/Productora seteada en el PROYECTO (contratoEmpresa) → variables empresa* en la plantilla
+        // Empresa/Productora del PROYECTO (contratoEmpresas) → variables empresa* en la plantilla.
+        // El cliente elige con cuál descargar (empresaId); si no llega o no pertenece al proyecto, se usa la primera.
         const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).lean();
-        const empresaId = project?.contratoEmpresa;
-        const empresa = empresaId ? await Company.findById(empresaId).lean() : null;
+        const empresas = project?.contratoEmpresas || [];
+        const empresasIds = empresas.map((e) => String(e));
+        const chosenId = empresaId && empresasIds.includes(String(empresaId)) ? empresaId : empresasIds[0];
+        const empresa = chosenId ? await Company.findById(chosenId).lean() : null;
         const data = await buildEmployeeDocData(user, up, contract, empresa);
         const buffer = await buildDocPdf(item.content, data);
         const baseName = buildDocFileName({ tipo: "Contrato", user, up, contract });
@@ -123,7 +126,7 @@ router.post("/", authenticateToken, async (req, res) => {
         const created = await ContratoFrame.create({
             name: String(nombre).trim(),
             externalId: externalId ? String(externalId).trim() : "",
-            content: content ? String(content) : "",
+            content: htmlHasText(content) ? String(content) : "",
             data: {
                 id: idNum !== undefined && !isNaN(idNum) ? idNum : undefined,
                 nombre: String(nombre).trim(),
@@ -160,7 +163,7 @@ router.put("/:id", authenticateToken, async (req, res) => {
                 item.data.id = idNum;
         }
         if (content !== undefined)
-            item.content = String(content);
+            item.content = htmlHasText(content) ? String(content) : "";
         if (cantidadJornadas !== undefined)
             item.data.cantidadJornadas = parseNum(cantidadJornadas);
         if (multiplicadorDiario !== undefined)

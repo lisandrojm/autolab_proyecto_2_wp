@@ -34,8 +34,8 @@ export interface IWorkSchedule {
 export interface IProject extends Document {
     tenantId: Types.ObjectId;
     clientId?: Types.ObjectId;
-    contratoEmpresa?: Types.ObjectId;
-    releaseEmpresa?: Types.ObjectId;
+    contratoEmpresas?: Types.ObjectId[];
+    releaseEmpresas?: Types.ObjectId[];
     name: string;
     description?: string;
     status: "active" | "completed" | "on_hold" | "archived";

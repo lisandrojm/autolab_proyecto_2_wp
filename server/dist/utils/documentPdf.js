@@ -14,6 +14,13 @@ function escapeHtml(value) {
     return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 /**
+ * ¿El HTML del editor tiene texto real? El editor devuelve "<p></p>" cuando está vacío, que como
+ * string es truthy → hay que mirar el texto sin etiquetas. Sirve para no generar/descargar PDFs vacíos.
+ */
+export function htmlHasText(html) {
+    return !!html && html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim().length > 0;
+}
+/**
  * Reemplaza `{{variable}}` (y también `{variable}`) por su valor dentro del HTML.
  * Reemplaza todas las claves presentes en `data` (aunque estén vacías); el resto queda intacto.
  */

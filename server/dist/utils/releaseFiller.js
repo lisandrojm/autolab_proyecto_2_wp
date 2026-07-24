@@ -26,8 +26,15 @@ export function fillDocxTemplate(content, data) {
 export function formatDateAr(s) {
     if (!s)
         return "";
-    if (typeof s === "string" && /^\d{2}\/\d{2}\/\d{4}/.test(s))
-        return s.slice(0, 10);
+    if (typeof s === "string") {
+        if (/^\d{2}\/\d{2}\/\d{4}/.test(s))
+            return s.slice(0, 10);
+        // Fechas "YYYY-MM-DD" (o ISO): armar DD/MM/YYYY con la parte de fecha tal cual, sin new Date().
+        // new Date("2026-03-17") se interpreta como UTC medianoche y en AR (UTC-3) retrocede al día anterior.
+        const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+        if (m)
+            return `${m[3]}/${m[2]}/${m[1]}`;
+    }
     const d = new Date(s);
     if (isNaN(d.getTime()))
         return typeof s === "string" ? s : "";

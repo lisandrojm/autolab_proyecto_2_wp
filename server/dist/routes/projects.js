@@ -120,16 +120,16 @@ const createProjectSchema = z.object({
     }))
         .optional(),
     clientId: z.string().optional(),
-    contratoEmpresa: z
-        .string()
+    contratoEmpresas: z
+        .array(z.string())
         .optional()
         .nullable()
-        .transform((s) => s || undefined),
-    releaseEmpresa: z
-        .string()
+        .transform((v) => v ?? undefined),
+    releaseEmpresas: z
+        .array(z.string())
         .optional()
         .nullable()
-        .transform((s) => s || undefined),
+        .transform((v) => v ?? undefined),
 });
 const updateTeamConfigSchema = z.object({
     config: z.array(z.object({
