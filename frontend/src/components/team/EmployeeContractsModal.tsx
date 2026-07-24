@@ -172,15 +172,18 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                         {tipoContrato}
                         {contratoEmpresa && <span className="text-gray-500 dark:text-gray-400"> | {contratoEmpresa}</span>}
                       </span>
+                      {canDownloadContract ? (
                       <button
                         type="button"
                         onClick={() => handleDownloadContract(contract, idx)}
-                        disabled={!canDownloadContract}
-                        title={canDownloadContract ? "Descargar contrato" : "La plantilla de este tipo de contrato no tiene contenido"}
-                        className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                        title="Descargar contrato"
+                        className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shrink-0"
                       >
                         <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
                       </button>
+                      ) : (
+                        <span className="text-xs text-amber-600 dark:text-amber-400 shrink-0" title="La plantilla de este tipo de contrato no tiene contenido redactado">Sin contenido</span>
+                      )}
                     </div>
                   </div>
 
