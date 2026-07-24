@@ -1,8 +1,9 @@
 import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileContract, faDownload, faEdit, faTrash, faFileLines } from "@fortawesome/free-solid-svg-icons";
+import { faFileContract, faDownload, faEdit, faTrash, faFileLines, faArrowUpRightFromSquare, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
+import { InfoModal } from "../ui/InfoModal";
 import { User, Contract } from "../../api/users";
 import { contratoFrameAPI, ContratoFrameItem } from "../../api/contratosFrame";
 import { releasesAPI, Release } from "../../api/release";
@@ -27,6 +28,10 @@ const formatMoney = (n?: number): string => (n != null && !isNaN(n) ? `$${Number
 const formatDate = (s?: string): string => {
   if (!s) return "";
   if (/^\d{2}\/\d{2}\/\d{4}/.test(s)) return s.slice(0, 10);
+  // Fechas "YYYY-MM-DD" (o ISO): armar DD/MM/YYYY con la parte de fecha tal cual, sin new Date().
+  // new Date("2026-03-17") se interpreta como UTC medianoche y en AR (UTC-3) retrocede al día anterior.
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
   const d = new Date(s);
   if (isNaN(d.getTime())) return s;
   return d.toLocaleDateString("es-AR");
@@ -50,8 +55,12 @@ const findTemplate = (contract: Contract, contratoFrames: ContratoFrameItem[]): 
   return null;
 };
 
-/** El contrato se puede generar si la plantilla tiene contenido redactado en la plataforma. */
-const templateHasContent = (cf: ContratoFrameItem | null): boolean => !!cf?.content;
+/**
+ * El contrato se puede generar si la plantilla tiene contenido REAL redactado. El editor devuelve
+ * "<p></p>" cuando está vacío (truthy como string), así que se mira el texto sin etiquetas.
+ */
+const templateHasContent = (cf: ContratoFrameItem | null): boolean =>
+  !!cf?.content && cf.content.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim().length > 0;
 
 /**
  * Nomenclatura de descargas de contratos y releases:
@@ -73,6 +82,7 @@ const buildDownloadFileName = (tipo: "Contrato" | "Release", user: User | null, 
 
 export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ isOpen, onClose, user, projectId, contratoFrames, releases, contratoEmpresaLabel, releaseEmpresaLabel, onEdit, onDelete }) => {
   const fullName = user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email : "";
+  const [showInexistenteInfo, setShowInexistenteInfo] = React.useState(false);
 
   const contracts = useMemo(() => {
     if (!user) return [];
@@ -117,6 +127,7 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
   };
 
   return (
+    <>
     <Modal isOpen={isOpen} onClose={onClose} title={fullName || "Empleado"} subtitle="Contratos en el proyecto" size="lg" zIndex={60}>
       <div className="space-y-4">
         {/* Pestaña Contratos */}
@@ -137,6 +148,7 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
             {contracts.map((contract, idx) => {
               const cargo = contract.nombre_rol_frame || (contract as any).nombre_cargo || "Contrato";
               const template = findTemplate(contract, contratoFrames);
+              const existeTemplate = !!template; // la plantilla existe en contratos-frame (aunque esté vacía)
               const canDownloadContract = templateHasContent(template);
               const tipoContrato = contract.nombre_contrato || template?.data?.nombre || template?.name || "Contrato";
               const contratoEmpresa = contratoEmpresaLabel || "";
@@ -189,18 +201,42 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                       >
                         <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
                       </button>
-                      ) : (
+                      ) : existeTemplate ? (
+                        // La plantilla existe pero está vacía → redactarla en /contratos-frame.
                         <div className="flex items-center gap-2 shrink-0">
                           <Link
-                            to={template?._id ? `/contratos-frame?edit=${template._id}` : "/contratos-frame"}
-                            className="text-xs font-medium text-amber-600 dark:text-amber-400 hover:underline"
+                            to={`/contratos-frame?edit=${template!._id}`}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400 hover:underline"
                             title="Redactar el contenido de esta plantilla de contrato"
                           >
                             Sin contenido
+                            <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3 w-3" />
                           </Link>
                           <span className="p-1.5 text-gray-400 dark:text-gray-500 opacity-40 cursor-not-allowed" title="La plantilla de este tipo de contrato no tiene contenido redactado">
                             <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
                           </span>
+                        </div>
+                      ) : (
+                        // El tipo de contrato no existe como plantilla → info (qué hacer) + link a editar el miembro.
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setShowInexistenteInfo(true)}
+                            className="text-red-500 hover:text-red-600 transition-colors"
+                            title="Qué significa 'Contrato inexistente'"
+                            aria-label="Información: contrato inexistente"
+                          >
+                            <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => user && onEdit(user)}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400 hover:underline"
+                            title="Editar el miembro para asignar un contrato existente"
+                          >
+                            Contrato inexistente
+                            <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3 w-3" />
+                          </button>
                         </div>
                       )}
                     </div>
@@ -242,5 +278,38 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
         )}
       </div>
     </Modal>
+
+    <InfoModal
+      isOpen={showInexistenteInfo}
+      onClose={() => setShowInexistenteInfo(false)}
+      title="Contrato inexistente"
+      subtitle="Qué significa y cómo resolverlo"
+      size="sm"
+      zIndex={100}
+      actions={[{ label: "Entendido", onClick: () => setShowInexistenteInfo(false), variant: "primary" }]}
+    >
+      <div className="space-y-4">
+        <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+          El tipo de contrato de esta persona <strong>no existe como plantilla</strong> en Plantillas | Contratos,
+          así que no se puede generar el PDF para enviar a firmar.
+        </p>
+        <ul className="space-y-3">
+          <li className="flex items-start gap-3">
+            <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+            <span className="text-sm text-gray-700 dark:text-gray-300">
+              Editá el miembro (el link <strong>"Contrato inexistente"</strong> abre <strong>Configurar Miembro</strong>) y
+              elegí un <strong>tipo de contrato existente</strong> en el selector.
+            </span>
+          </li>
+          <li className="flex items-start gap-3">
+            <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+            <span className="text-sm text-gray-700 dark:text-gray-300">
+              Si el tipo que necesitás no está en la lista, creá su plantilla en <strong>Plantillas | Contratos</strong> y volvé a asignarla.
+            </span>
+          </li>
+        </ul>
+      </div>
+    </InfoModal>
+    </>
   );
 };

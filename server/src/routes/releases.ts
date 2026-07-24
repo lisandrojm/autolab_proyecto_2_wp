@@ -8,7 +8,7 @@ import UserProject from "../models/UserProject.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { buildEmployeeDocData, buildDocFileName } from "../utils/employeeDocData.js";
-import { buildDocPdf, getDummyDocVariables } from "../utils/documentPdf.js";
+import { buildDocPdf, getDummyDocVariables, htmlHasText } from "../utils/documentPdf.js";
 
 const router = Router();
 
@@ -87,7 +87,7 @@ router.get("/:id/download", authenticateToken, requireTenant, async (req: Authen
       res.status(404).json({ error: "Release no encontrado" });
       return;
     }
-    if (!release.content) {
+    if (!htmlHasText(release.content)) {
       res.status(400).json({ error: "El release no tiene contenido redactado" });
       return;
     }
@@ -110,7 +110,7 @@ router.get("/:id/download-filled", authenticateToken, requireTenant, async (req:
       res.status(404).json({ error: "Release no encontrado" });
       return;
     }
-    if (!release.content) {
+    if (!htmlHasText(release.content)) {
       res.status(400).json({ error: "El release no tiene contenido redactado" });
       return;
     }
@@ -156,6 +156,7 @@ router.post("/", authenticateToken, requireTenant, async (req: AuthenticatedRequ
 
     const release = new Release({
       ...validatedData,
+      content: htmlHasText(validatedData.content) ? validatedData.content : "",
       tenantId: req.tenantObjectId,
     });
 
@@ -188,7 +189,7 @@ router.put("/:id", authenticateToken, requireTenant, async (req: AuthenticatedRe
     release.name = validatedData.name;
     release.version = validatedData.version;
     if (validatedData.description !== undefined) release.description = validatedData.description;
-    if (validatedData.content !== undefined) release.content = validatedData.content;
+    if (validatedData.content !== undefined) release.content = htmlHasText(validatedData.content) ? validatedData.content : "";
     if (validatedData.isActive !== undefined) release.isActive = validatedData.isActive;
 
     await release.save();

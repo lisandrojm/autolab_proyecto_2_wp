@@ -6,7 +6,7 @@ import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { buildEmployeeDocData, buildDocFileName } from "../utils/employeeDocData.js";
-import { buildDocPdf, getDummyDocVariables } from "../utils/documentPdf.js";
+import { buildDocPdf, getDummyDocVariables, htmlHasText } from "../utils/documentPdf.js";
 
 const router = Router();
 
@@ -57,7 +57,7 @@ router.get("/:id/download", authenticateToken, async (req: AuthenticatedRequest,
       res.status(404).json({ error: "Contrato no encontrado" });
       return;
     }
-    if (!item.content) {
+    if (!htmlHasText(item.content)) {
       res.status(400).json({ error: "El contrato no tiene contenido redactado" });
       return;
     }
@@ -79,7 +79,7 @@ router.get("/:id/download-filled", authenticateToken, async (req: AuthenticatedR
       res.status(404).json({ error: "Contrato no encontrado" });
       return;
     }
-    if (!item.content) {
+    if (!htmlHasText(item.content)) {
       res.status(400).json({ error: "El contrato no tiene contenido redactado" });
       return;
     }
@@ -130,7 +130,7 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
     const created = await ContratoFrame.create({
       name: String(nombre).trim(),
       externalId: externalId ? String(externalId).trim() : "",
-      content: content ? String(content) : "",
+      content: htmlHasText(content) ? String(content) : "",
       data: {
         id: idNum !== undefined && !isNaN(idNum) ? idNum : undefined,
         nombre: String(nombre).trim(),
@@ -165,7 +165,7 @@ router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Res
       const idNum = Number(externalId);
       if (!isNaN(idNum)) item.data.id = idNum;
     }
-    if (content !== undefined) item.content = String(content);
+    if (content !== undefined) item.content = htmlHasText(content) ? String(content) : "";
     if (cantidadJornadas !== undefined) item.data.cantidadJornadas = parseNum(cantidadJornadas);
     if (multiplicadorDiario !== undefined) item.data.multiplicadorDiario = parseNum(multiplicadorDiario);
     if (esTiempoIndeterminado !== undefined) item.data.esTiempoIndeterminado = esTiempoIndeterminado === "true" || esTiempoIndeterminado === true;

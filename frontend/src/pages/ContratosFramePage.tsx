@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileContract, faDownload, faPlus, faEdit, faTrash, faEye } from "@fortawesome/free-solid-svg-icons";
+import { faFileContract, faDownload, faPlus, faEdit, faTrash, faEye, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Modal } from "../components/ui/Modal";
+import { InfoModal } from "../components/ui/InfoModal";
 import { Card } from "../components/ui/Card";
 import { ViewToggle, ViewMode } from "../components/ui/ViewToggle";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -54,6 +55,7 @@ export const ContratosFramePage: React.FC = () => {
   }, [viewMode, isLarge]);
   const effectiveViewMode: ViewMode = isLarge ? viewMode : "cards";
 
+  const [showSinContenidoInfo, setShowSinContenidoInfo] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<ContratoFrameItem | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
@@ -275,30 +277,45 @@ export const ContratosFramePage: React.FC = () => {
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Jornadas</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Mult. Diario</th>
-                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID Externo</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Contenido</th>
                 <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
-              {filtered.map((item) => (
-                <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20 cursor-pointer" onClick={() => openEdit(item)}>
-                  <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">{item.name}</td>
+              {filtered.map((item) => {
+                const sinContenido = !hasContent(item.content || "");
+                return (
+                <tr key={item._id} className={`cursor-pointer ${sinContenido ? "bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30" : "hover:bg-gray-50 dark:hover:bg-gray-900/20"}`} onClick={() => openEdit(item)}>
+                  <td className={`px-5 py-3 text-sm font-medium ${sinContenido ? "text-red-700 dark:text-red-300" : "text-gray-900 dark:text-white"}`}>
+                    <span className="inline-flex items-center gap-2">
+                      {item.name}
+                      {sinContenido && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setShowSinContenidoInfo(true); }}
+                          className="text-red-500 hover:text-red-600 transition-colors"
+                          title="Sin contenido"
+                          aria-label="Sin contenido"
+                        >
+                          <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                        </button>
+                      )}
+                    </span>
+                  </td>
                   <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{item.data?.cantidadJornadas ?? "—"}</td>
                   <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{item.data?.multiplicadorDiario ?? "—"}</td>
-                  <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono">{item.externalId || "—"}</td>
-                  <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
-                    {hasContent(item.content || "") ? (
-                      <span className="truncate max-w-[280px] block" title="Contenido redactado">
+                  <td className="px-5 py-3 text-sm hidden lg:table-cell">
+                    {sinContenido ? (
+                      <span className="font-medium text-red-600 dark:text-red-400">Sin contenido</span>
+                    ) : (
+                      <span className="truncate max-w-[280px] block text-gray-500 dark:text-gray-400" title="Contenido redactado">
                         {contentPreview(item.content || "")}
                       </span>
-                    ) : (
-                      "—"
                     )}
                   </td>
                   <td className="px-5 py-3 text-sm text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-2">
-                      {item.content && (
+                      {!sinContenido && (
                         <button onClick={() => handleDownloadFile(item)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Descargar PDF de ejemplo">
                           <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
                         </button>
@@ -312,7 +329,8 @@ export const ContratosFramePage: React.FC = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -391,6 +409,36 @@ export const ContratosFramePage: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      <InfoModal
+        isOpen={showSinContenidoInfo}
+        onClose={() => setShowSinContenidoInfo(false)}
+        title="Contrato sin contenido"
+        subtitle="Por qué está marcado en rojo"
+        size="sm"
+        zIndex={100}
+        actions={[{ label: "Entendido", onClick: () => setShowSinContenidoInfo(false), variant: "primary" }]}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            Este contrato todavía <strong>no tiene contenido redactado</strong>.
+          </p>
+          <ul className="space-y-3">
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                Los contratos sin contenido <strong>no se pueden descargar desde los proyectos</strong> para enviarse a firmar.
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                Editá el contrato y redactá su contenido para habilitarlo.
+              </span>
+            </li>
+          </ul>
+        </div>
+      </InfoModal>
 
     </PageLayout>
   );

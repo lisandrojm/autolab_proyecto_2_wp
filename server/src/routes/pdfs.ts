@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Pdf } from "../models/Pdf.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
+import { htmlHasText } from "../utils/documentPdf.js";
 
 const router = Router();
 
@@ -10,7 +11,9 @@ const PdfSchema = z.object({
   code: z.enum(["dinero", "fechaRango", "fechaUnica", "fechasMultiples", "vacaciones", "objeto", "otros", "datosPersonales"]),
   name: z.string().min(1).max(100),
   title: z.string().optional(),
-  content: z.string().min(10).max(50000),
+  // El editor devuelve "<p></p>" cuando está vacío (pasa min(10) con "<p><br></p>"), así que además
+  // se exige texto real para no guardar/generar PDFs en blanco.
+  content: z.string().min(10).max(50000).refine((v) => htmlHasText(v), { message: "El contenido no puede estar vacío" }),
   variablesHint: z.string().max(1000).optional(),
   isActive: z.boolean().optional(),
 });
