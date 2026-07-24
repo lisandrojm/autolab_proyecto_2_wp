@@ -110,6 +110,25 @@ const formatDate = (s?: string): string => {
   return d.toLocaleDateString("es-AR");
 };
 
+/** Un contrato está vigente si no tiene fecha de baja o su baja es hoy o futura (comparación en fecha local). */
+const isContractVigente = (baja?: string): boolean => {
+  if (!baja) return true; // sin baja → tiempo indeterminado → vigente
+  const iso = String(baja).substring(0, 10);
+  const parts = iso.split("-");
+  let bajaDate: Date | null = null;
+  if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
+    bajaDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  } else {
+    const d = new Date(baja);
+    if (!isNaN(d.getTime())) bajaDate = d;
+  }
+  if (!bajaDate) return true;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  bajaDate.setHours(0, 0, 0, 0);
+  return bajaDate.getTime() >= today.getTime();
+};
+
 /** Busca la plantilla de contrato (ContratoFrame) que corresponde al contrato. */
 const findTemplate = (contract: Contract, contratoFrames: ContratoFrameItem[]): ContratoFrameItem | null => {
   // El nombre es la clave confiable: el wizard guarda el nombre exacto de la contratos-frame.
@@ -226,9 +245,17 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
               const tipoContrato = contract.nombre_contrato || template?.data?.nombre || template?.name || "Contrato";
               const contratoEmpresa = contratoEmpresas.map((e) => e.label).join(", ");
               const dateRange = `${formatDate(contract.fecha_alta_contrato)}${contract.fecha_baja_contrato ? ` - ${formatDate(contract.fecha_baja_contrato)}` : ""}`;
+              // El modal muestra los contratos invertidos (más reciente primero). La primera tarjeta (idx 0)
+              // es el ÚLTIMO contrato del array = el que se ve en la fila de la tabla → se resalta en azul; el resto en gris.
+              const isActiveInTable = idx === 0;
+              const vigente = isContractVigente(contract.fecha_baja_contrato);
+              const cardClass = isActiveInTable
+                ? "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20"
+                : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40";
+              const dividerClass = isActiveInTable ? "border-blue-200/70 dark:border-blue-800/70" : "border-gray-200/70 dark:border-gray-700/70";
 
               return (
-                <div key={idx} className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
+                <div key={idx} className={`rounded-xl border ${cardClass} p-4`}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <h4 className="text-lg font-bold text-gray-900 dark:text-white truncate">{cargo}</h4>
@@ -237,9 +264,14 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                     {dateRange.trim() && <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap shrink-0">{dateRange}</span>}
                   </div>
 
-                  {contract.nombre_estado_empleado && (
-                    <span className="mt-2 inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border border-green-300 text-green-700 bg-green-50 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800">{contract.nombre_estado_empleado}</span>
-                  )}
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold uppercase ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>
+                      {vigente ? "Vigente" : "No vigente"}
+                    </span>
+                    {contract.nombre_estado_empleado && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border border-green-300 text-green-700 bg-green-50 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800">{contract.nombre_estado_empleado}</span>
+                    )}
+                  </div>
 
                   <div className="mt-3 flex items-center justify-between gap-2">
                     <span className="text-base font-semibold text-gray-900 dark:text-white">{formatMoney(contract.sueldo_mano)}</span>
@@ -258,7 +290,7 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                   </div>
 
                   {/* Contrato: descarga con el nombre del tipo de contrato */}
-                  <div className="mt-3 pt-3 border-t border-blue-200/70 dark:border-blue-800/70">
+                  <div className={`mt-3 pt-3 border-t ${dividerClass}`}>
                     <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Contrato | Empresa</p>
                     <div className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
                       <span className="text-sm text-gray-700 dark:text-gray-200 truncate" title={contratoEmpresa ? `${tipoContrato} | ${contratoEmpresa}` : tipoContrato}>
@@ -313,7 +345,7 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                   </div>
 
                   {/* Releases: lista con descarga directa */}
-                  <div className="mt-3 pt-3 border-t border-blue-200/70 dark:border-blue-800/70">
+                  <div className={`mt-3 pt-3 border-t ${dividerClass}`}>
                     <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Release | Empresa</p>
                     {activeReleases.length === 0 ? (
                       <p className="text-xs text-gray-500">No hay releases disponibles.</p>
