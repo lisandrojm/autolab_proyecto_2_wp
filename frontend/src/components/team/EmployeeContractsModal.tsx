@@ -25,7 +25,11 @@ interface EmployeeContractsModalProps {
   /** Empresas seteadas en el proyecto (contratoEmpresas / releaseEmpresas). Si hay varias, se elige al descargar. */
   contratoEmpresas?: EmpresaOption[];
   releaseEmpresas?: EmpresaOption[];
-  onEdit: (user: User) => void;
+  /**
+   * Abre el wizard de edición del miembro. Si se pasa `contract` + `contractIndex`, precarga y guarda
+   * en ESE contrato (no en el último). `contractIndex` es el índice en el array original del UserProject.
+   */
+  onEdit: (user: User, contract?: Contract, contractIndex?: number) => void;
   onDelete: (userId: string) => void;
 }
 
@@ -241,7 +245,7 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                     <span className="text-base font-semibold text-gray-900 dark:text-white">{formatMoney(contract.sueldo_mano)}</span>
                     <div className="flex items-center gap-1">
                       {user && (
-                        <button type="button" onClick={() => onEdit(user)} title="Editar contrato" className="p-2 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+                        <button type="button" onClick={() => onEdit(user, contract, contracts.length - 1 - idx)} title="Editar contrato" className="p-2 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
                           <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
                         </button>
                       )}
@@ -296,7 +300,7 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                           </button>
                           <button
                             type="button"
-                            onClick={() => user && onEdit(user)}
+                            onClick={() => user && onEdit(user, contract, contracts.length - 1 - idx)}
                             className="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400 hover:underline"
                             title="Editar el miembro para asignar un contrato existente"
                           >

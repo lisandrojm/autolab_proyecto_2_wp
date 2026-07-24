@@ -990,7 +990,7 @@ router.post("/projects/:projectId/cleanup-team", requireTenant, authenticateToke
 router.post("/projects/:projectId/assign-member", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { projectId } = req.params;
-    const { userId, contract, isUpdate } = req.body;
+    const { userId, contract, isUpdate, contractIndex } = req.body;
 
     if (!userId || !contract) {
       return res.status(400).json({ error: "userId and contract data are required" });
@@ -1118,11 +1118,17 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         contracts: [enrichedContract],
       });
     } else {
-      if (isUpdate && userProject.contracts.length > 0) {
+      // Índice explícito (editar una tarjeta puntual del modal de contratos) → actualizar ESE contrato.
+      const idxNum = Number(contractIndex);
+      const hasExplicitIndex = contractIndex !== undefined && contractIndex !== null && Number.isInteger(idxNum) && idxNum >= 0 && idxNum < userProject.contracts.length;
+      if (hasExplicitIndex) {
+        userProject.contracts[idxNum] = enrichedContract as any;
+      } else if (isUpdate && userProject.contracts.length > 0) {
         userProject.contracts[userProject.contracts.length - 1] = enrichedContract as any;
       } else {
         userProject.contracts.push(enrichedContract as any);
       }
+      userProject.markModified("contracts");
       userProject.projectId = project._id;
       userProject.userId = user._id;
       if (enrichedContract.proyecto_id) userProject.externalProjectId = enrichedContract.proyecto_id;

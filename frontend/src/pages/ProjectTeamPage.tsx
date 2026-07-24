@@ -245,6 +245,9 @@ export const ProjectTeamPage: React.FC = () => {
   const [filterAreaTurno, setFilterAreaTurno] = useState<string>(""); // "" | "__none__" | "areaId::shiftId" (client-side sobre la página)
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [selectedUserForWizard, setSelectedUserForWizard] = useState<User | null>(null);
+  // Índice (en el array original de contracts del UserProject) del contrato que se está editando desde el
+  // modal de contratos. null = no se edita uno puntual (alta nueva o edición genérica → se toca el último).
+  const [editingContractIndex, setEditingContractIndex] = useState<number | null>(null);
   const [viewingShiftsData, setViewingShiftsData] = useState<{ user: User; areaId: string; areaName: string } | null>(null);
   const [wizardData, setWizardData] = useState({
     // Step 1: Contrato
@@ -965,13 +968,16 @@ export const ProjectTeamPage: React.FC = () => {
       sweetAlert.error("Error", "No se pudo guardar la configuración del equipo.");
     }
   };
-  const handleOpenScheduleModal = (user: User) => {
-    handleOpenWizard(user._id);
+  const handleOpenScheduleModal = (user: User, contractOverride?: Contract, contractIndex?: number) => {
+    handleOpenWizard(user._id, contractOverride, contractIndex);
   };
 
   /* ------------------------------- Actions -------------------------------- */
 
-  const handleOpenWizard = async (userId: string) => {
+  const handleOpenWizard = async (userId: string, contractOverride?: Contract, contractIndex?: number) => {
+    // Si viene de editar una tarjeta puntual del modal de contratos, guardamos ese índice para
+    // actualizar EXACTAMENTE ese contrato al guardar (si no, el backend toca el último).
+    setEditingContractIndex(typeof contractIndex === "number" ? contractIndex : null);
     // La lista de candidatos viene "slim" (sin contratos) para no cargar 100 historiales
     // de una. Traemos el usuario completo (con contratos) on-demand para el pre-fill.
     const cached = allUsers.find((u) => u._id === userId) || candidateUsers.find((u) => u._id === userId);
@@ -991,7 +997,8 @@ export const ProjectTeamPage: React.FC = () => {
     const currentProjectMeta = metadataProjects.find((p: any) => String(typeof p.projectId === "string" ? p.projectId : p.projectId?._id) === String(project?._id));
 
     const lastProject = currentProjectMeta || (metadataProjects.length > 0 ? metadataProjects[metadataProjects.length - 1] : null);
-    const lastContract = lastProject?.contracts?.length ? lastProject.contracts[lastProject.contracts.length - 1] : null;
+    // Si se editó una tarjeta puntual del modal de contratos, precargar ESE contrato; si no, el último.
+    const lastContract = contractOverride || (lastProject?.contracts?.length ? lastProject.contracts[lastProject.contracts.length - 1] : null);
 
     console.log("[Wizard] user:", user._id, "lastProject:", lastProject?._id, "lastContract keys:", lastContract ? Object.keys(lastContract) : "null");
     console.log("[Wizard] lastContract:", lastContract ? JSON.stringify({ categoria_sat_id: (lastContract as any).categoria_sat_id, nombre_categoria_sat: (lastContract as any).nombre_categoria_sat, estado_id: (lastContract as any).estado_id, nombre_estado_empleado: (lastContract as any).nombre_estado_empleado }) : "null");
@@ -1231,6 +1238,8 @@ export const ProjectTeamPage: React.FC = () => {
       await projectsAPI.assignMember(project._id, {
         userId: selectedUserForWizard._id,
         isUpdate: isExistingMember,
+        // Si se está editando un contrato puntual, el backend actualiza ESE índice (no el último).
+        contractIndex: editingContractIndex ?? undefined,
         contract: {
           ...wizardData,
           fecha_baja_contrato: esTiempoIndeterminado ? "" : wizardData.fecha_baja_contrato,
@@ -1420,7 +1429,14 @@ export const ProjectTeamPage: React.FC = () => {
         <td className="px-4 py-3">
           <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${user.metadata?.activo ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{user.metadata?.activo ? "ACTIVO" : "INACTIVO"}</span>
         </td>
-        <td className="px-4 py-3">
+        <td
+          className="px-4 py-3 cursor-pointer"
+          title="Editar miembro"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleOpenScheduleModal(user);
+          }}
+        >
           {(() => {
             const isCoord = checkIsCoordinator(user);
 
@@ -1553,7 +1569,10 @@ export const ProjectTeamPage: React.FC = () => {
         </td>
         <td className="px-4 py-3">
           <div className="flex flex-col gap-1">
-            <span className="text-xs text-gray-700 dark:text-gray-300">{activeContract?.nombre_contrato || "-"}</span>
+            <span className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300" title="Ver contratos para descargar">
+              <FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-blue-500 dark:text-blue-400 shrink-0" />
+              {activeContract?.nombre_contrato || "-"}
+            </span>
             {activeContract?.reemplazo && (
               <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded border border-amber-200/50 dark:border-amber-800/50 w-fit">
                 <FontAwesomeIcon icon={faIdCard} className="text-[9px]" />
@@ -1591,7 +1610,7 @@ export const ProjectTeamPage: React.FC = () => {
         <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">{activeContract?.hora_inicio ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : "-"}</td>
         <td className="px-4 py-3 text-right">
           <div className="flex items-center justify-end gap-1">
-            <button onClick={(e) => { e.stopPropagation(); handleOpenScheduleModal(user); }} className="p-1 text-gray-400 hover:text-blue-500 transition-colors" title="Editar horario/área">
+            <button onClick={(e) => { e.stopPropagation(); handleOpenScheduleModal(user); }} className="p-1 text-gray-400 hover:text-blue-500 transition-colors" title="Editar miembro">
               <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
             </button>
             <button onClick={(e) => { e.stopPropagation(); handleRemoveUser(user._id); }} className="p-1 text-gray-400 hover:text-red-500 transition-colors ml-1" title="Retirar del proyecto">
@@ -2920,9 +2939,9 @@ export const ProjectTeamPage: React.FC = () => {
         releases={releases}
         contratoEmpresas={contratoEmpresas}
         releaseEmpresas={releaseEmpresas}
-        onEdit={(u) => {
+        onEdit={(u, contract, contractIndex) => {
           setSelectedMemberForDetail(null);
-          handleOpenScheduleModal(u);
+          handleOpenScheduleModal(u, contract, contractIndex);
         }}
         onDelete={(id) => {
           setSelectedMemberForDetail(null);
