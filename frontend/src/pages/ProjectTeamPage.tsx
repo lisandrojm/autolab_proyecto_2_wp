@@ -1182,6 +1182,13 @@ export const ProjectTeamPage: React.FC = () => {
       }
     };
 
+    // Horario de la solicitud (metadata.schedule = "HH:MM - HH:MM") como fallback cuando no hay contrato
+    // previo (p.ej. al aprobar una solicitud desde el wizard).
+    const metaSchedule = String((user.metadata as any)?.schedule || "");
+    const [metaHoraInicio, metaHoraFin] = metaSchedule.includes("-")
+      ? metaSchedule.split("-").map((s) => s.trim())
+      : ["", ""];
+
     // Reset wizard data with pulled data or defaults
     setWizardData({
       rol_frame_id: initialRolFrameId,
@@ -1190,8 +1197,8 @@ export const ProjectTeamPage: React.FC = () => {
       nombre_contrato: initialNombreContrato,
       tipo_contrato_id: initialTipoContratoId,
       estado_id: initialEstadoId,
-      hora_inicio: lastContract?.hora_inicio || "09:00",
-      hora_fin: lastContract?.hora_fin || "18:00",
+      hora_inicio: lastContract?.hora_inicio || metaHoraInicio || "09:00",
+      hora_fin: lastContract?.hora_fin || metaHoraFin || "18:00",
       fecha_alta_contrato: formatDate(lastContract?.fecha_alta_contrato) || formatDate(new Date()),
       fecha_baja_contrato: formatDate(lastContract?.fecha_baja_contrato),
       cantidad_jornadas_laborales: lastContract?.cantidad_jornadas_laborales || 5,
