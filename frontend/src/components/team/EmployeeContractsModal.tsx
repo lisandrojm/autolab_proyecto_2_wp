@@ -33,13 +33,20 @@ const formatDate = (s?: string): string => {
 
 /** Busca la plantilla de contrato (ContratoFrame) que corresponde al contrato. */
 const findTemplate = (contract: Contract, contratoFrames: ContratoFrameItem[]): ContratoFrameItem | null => {
-  if (contract.tipo_contrato_id != null) {
-    const byId = contratoFrames.find((cf) => String(cf.data?.id) === String(contract.tipo_contrato_id));
+  // El nombre es la clave confiable: el wizard guarda el nombre exacto de la contratos-frame.
+  const name = (contract.nombre_contrato || "").trim().toLowerCase();
+  if (name) {
+    const byName = contratoFrames.find((cf) => (cf.data?.nombre || cf.name || "").trim().toLowerCase() === name);
+    if (byName) return byName;
+  }
+  // Fallback por ID Externo, solo con ids válidos (> 0). El 0 es un sentinel de "sin id" y matchearía
+  // cualquier contratos-frame con data.id 0 → descargaría un contrato equivocado.
+  const tid = Number(contract.tipo_contrato_id);
+  if (Number.isFinite(tid) && tid > 0) {
+    const byId = contratoFrames.find((cf) => cf.data?.id != null && Number(cf.data.id) === tid);
     if (byId) return byId;
   }
-  const name = (contract.nombre_contrato || "").trim().toLowerCase();
-  if (!name) return null;
-  return contratoFrames.find((cf) => (cf.data?.nombre || cf.name || "").trim().toLowerCase() === name) || null;
+  return null;
 };
 
 /** El contrato se puede generar si la plantilla tiene contenido redactado en la plataforma. */
