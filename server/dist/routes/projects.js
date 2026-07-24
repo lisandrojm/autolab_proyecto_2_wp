@@ -871,7 +871,7 @@ router.post("/projects/:projectId/cleanup-team", requireTenant, authenticateToke
 router.post("/projects/:projectId/assign-member", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
     try {
         const { projectId } = req.params;
-        const { userId, contract, isUpdate, contractIndex } = req.body;
+        const { userId, contract, isUpdate, contractIndex, approveSolicitud } = req.body;
         if (!userId || !contract) {
             return res.status(400).json({ error: "userId and contract data are required" });
         }
@@ -1036,12 +1036,22 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         }
         await project.save();
         // Update User metadata and projectIds
-        await User.findByIdAndUpdate(userId, {
+        const userUpdate = {
             $addToSet: {
                 projectIds: project._id,
-                "metadata.projects": userProject._id
-            }
-        });
+                "metadata.projects": userProject._id,
+            },
+        };
+        // Si el alta viene de aprobar una solicitud (desde el wizard), marcamos la solicitud como aprobada
+        // y activamos al usuario (ya tiene login). Así deja de aparecer en la pestaña Solicitudes.
+        if (approveSolicitud) {
+            userUpdate.$set = {
+                "metadata.isSolicitud": false,
+                "metadata.solicitudStatus": "aprobada",
+                "metadata.activo": true,
+            };
+        }
+        await User.findByIdAndUpdate(userId, userUpdate);
         res.json({ message: isUpdate ? "Member updated successfully" : "Member assigned successfully", userProject });
     }
     catch (error) {
