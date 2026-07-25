@@ -26,7 +26,7 @@ interface AdminCounts {
  * Subgrupo "Plantillas" (dentro de Configuración): agrupa las tres plantillas de documentos.
  * El orden del array es el que se muestra en el menú.
  */
-const PLANTILLAS_PATHS = ['/pdfs', '/contratos-frame', '/releases'];
+const PLANTILLAS_PATHS = ['/pdfs', '/contratos-frame', '/releases', '/empresas-membretes'];
 
 export const MobileNavbar: React.FC = () => {
   const { user, logout, hasPermission } = useAuthStore();
@@ -187,6 +187,7 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission('config_centros_costo:view')) base.push({ path: '/centros-costo', icon: faPiggyBank, label: 'Centros de Costos', scope: 'global' });
       if (hasPermission('config_contratos_frame:view')) base.push({ path: '/contratos-frame', icon: faFilePdf, label: 'Contratos', scope: 'global' });
       if (hasPermission('config_contratos_frame:view')) base.push({ path: '/empresas', icon: faBuilding, label: 'Empresas', scope: 'global' });
+      if (hasPermission('config_contratos_frame:view')) base.push({ path: '/empresas-membretes', icon: faFilePdf, label: 'Empresa/s | Membrete/s', scope: 'global' });
     }
 
     return base;

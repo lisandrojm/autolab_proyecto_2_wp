@@ -15,6 +15,9 @@ export interface Company {
   firmanteCargo?: string;
   representanteLegalNombre?: string;
   representanteLegalEmail?: string;
+  // Membrete: logo y firma (imágenes). La aclaración/cargo reutilizan firmanteNombre/firmanteCargo.
+  logoUrl?: string;
+  signatureUrl?: string;
   createdAt?: string;
   updatedAt?: string;
 }

@@ -13,6 +13,8 @@ export interface ICompany extends Document {
     firmanteCargo?: string;
     representanteLegalNombre?: string;
     representanteLegalEmail?: string;
+    logoUrl?: string;
+    signatureUrl?: string;
     createdAt: Date;
     updatedAt: Date;
 }

@@ -13,6 +13,8 @@ const companySchema = new Schema({
     firmanteCargo: { type: String },
     representanteLegalNombre: { type: String },
     representanteLegalEmail: { type: String },
+    logoUrl: { type: String },
+    signatureUrl: { type: String },
 }, {
     timestamps: true,
     collection: "companies",

@@ -19,6 +19,8 @@ const companySchema = z.object({
     firmanteCargo: z.string().optional().default(""),
     representanteLegalNombre: z.string().optional().default(""),
     representanteLegalEmail: z.string().optional().default(""),
+    logoUrl: z.string().optional().default(""),
+    signatureUrl: z.string().optional().default(""),
 });
 // GET /companies
 router.get("/", authenticateToken, async (_req, res) => {

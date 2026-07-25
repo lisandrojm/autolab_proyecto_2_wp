@@ -18,6 +18,10 @@ export interface ICompany extends Document {
   // Representante legal / apoderado
   representanteLegalNombre?: string;
   representanteLegalEmail?: string;
+  // Membrete: logo y firma (imágenes) de la empresa para encabezar/firmar los documentos.
+  // La aclaración de firma y el cargo reutilizan firmanteNombre / firmanteCargo.
+  logoUrl?: string;
+  signatureUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,6 +41,8 @@ const companySchema = new Schema<ICompany>(
     firmanteCargo: { type: String },
     representanteLegalNombre: { type: String },
     representanteLegalEmail: { type: String },
+    logoUrl: { type: String },
+    signatureUrl: { type: String },
   },
   {
     timestamps: true,
