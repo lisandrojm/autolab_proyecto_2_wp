@@ -41,6 +41,11 @@ export interface Contract {
   sueldo_mano_texto?: string;
   reemplazo?: boolean;
   empleado_id_reemplezado?: number;
+  // Empresas (contrato / release) elegidas para este miembro
+  empresaContratoId?: string;
+  empresaReleaseId?: string;
+  nombre_empresa_contrato?: string;
+  nombre_empresa_release?: string;
   areaShiftAssignments?: {
     areaId: string | any;
     shiftIds: string[] | any[];

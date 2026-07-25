@@ -41,6 +41,10 @@ const contractSchema = new Schema({
     nombre_cargo: { type: String },
     nombre_nivel: { type: String },
     nombre_turno: { type: String },
+    empresaContratoId: { type: Schema.Types.ObjectId, ref: "Company" },
+    empresaReleaseId: { type: Schema.Types.ObjectId, ref: "Company" },
+    nombre_empresa_contrato: { type: String },
+    nombre_empresa_release: { type: String },
     areaShiftAssignments: [
         {
             areaId: { type: Schema.Types.ObjectId, ref: "Area" },

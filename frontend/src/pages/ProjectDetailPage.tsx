@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { projectsAPI, Project, Client } from "../api/projects";
 import { companiesAPI, Company } from "../api/companies";
@@ -261,6 +261,14 @@ export const ProjectDetailPage: React.FC = () => {
     }
   };
 
+  // Mapa id -> razón social de empresas. Debe declararse ANTES de cualquier early return
+  // para no romper el orden de hooks.
+  const companyNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    companies.forEach((c) => m.set(String(c._id), c.razonSocial));
+    return m;
+  }, [companies]);
+
   /* --------------------------------- UI ---------------------------------- */
 
   if (!projectId) {
@@ -332,6 +340,14 @@ export const ProjectDetailPage: React.FC = () => {
   const assignedUsers = (project as any).assignedUsers || [];
   const assignedCount = assignedUsers.length;
   const assignedSubtitle = assignedCount === 1 ? "1 persona asignada" : `${assignedCount} personas asignadas`;
+
+  // Empresas guardadas del proyecto (contrato / release). getProject devuelve solo los
+  // ObjectIds; los resolvemos a razón social contra la lista de empresas ya cargada.
+  const resolveEmpresaNames = (ids?: string[]) =>
+    (ids || []).map((id) => companyNameById.get(String(id))).filter((n): n is string => Boolean(n));
+
+  const contratoEmpresaNames = resolveEmpresaNames(project.contratoEmpresas);
+  const releaseEmpresaNames = resolveEmpresaNames(project.releaseEmpresas);
 
   const getModalActions = () => {
     if (modalMode === "editProject") {
@@ -795,7 +811,14 @@ export const ProjectDetailPage: React.FC = () => {
                     {/* Cliente */}
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Cliente</span>
-                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{project.metadataResolutions?.cliente?.name || project.metadata?.nombre || "—"}</span>
+                      {(() => {
+                        const val = project.metadataResolutions?.cliente?.name || project.metadata?.nombre;
+                        return val ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-bold bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-400 border border-cyan-100 dark:border-cyan-800/50 w-fit">{val}</span>
+                        ) : (
+                          <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">—</span>
+                        );
+                      })()}
                     </div>
 
                     {/* Responsable */}
@@ -807,19 +830,66 @@ export const ProjectDetailPage: React.FC = () => {
                     {/* Sede */}
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Sede / Ubicación</span>
-                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{project.metadataResolutions?.sede?.name || project.metadataResolutions?.sede?.data?.nombre || (project.metadata?.sedeId ? `ID: ${project.metadata.sedeId}` : "—")}</span>
+                      {(() => {
+                        const val = project.metadataResolutions?.sede?.name || project.metadataResolutions?.sede?.data?.nombre || (project.metadata?.sedeId ? `ID: ${project.metadata.sedeId}` : "");
+                        return val ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-800/50 w-fit">{val}</span>
+                        ) : (
+                          <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">—</span>
+                        );
+                      })()}
                     </div>
 
                     {/* Centro de Costo */}
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Centro de Costo</span>
-                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{project.metadataResolutions?.centroCosto?.name || project.metadataResolutions?.centroCosto?.data?.nombre || (project.metadata?.centroCostoId ? `ID: ${project.metadata.centroCostoId}` : "—")}</span>
+                      {(() => {
+                        const val = project.metadataResolutions?.centroCosto?.name || project.metadataResolutions?.centroCosto?.data?.nombre || (project.metadata?.centroCostoId ? `ID: ${project.metadata.centroCostoId}` : "");
+                        return val ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50 w-fit">{val}</span>
+                        ) : (
+                          <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">—</span>
+                        );
+                      })()}
                     </div>
 
                     {/* Otros datos */}
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Fecha Alta</span>
                       <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{project.metadata?.fechaAlta ? new Date(project.metadata.fechaAlta).toLocaleDateString() : "—"}</span>
+                    </div>
+
+                    {/* Empresas (Contrato / Release) apiladas en la columna izquierda */}
+                    <div className="flex flex-col gap-4 md:col-start-1">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Empresa del Contrato</span>
+                        {contratoEmpresaNames.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {contratoEmpresaNames.map((n, i) => (
+                              <span key={i} className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-bold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/50 w-fit">
+                                {n}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">—</span>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Empresa del Release</span>
+                        {releaseEmpresaNames.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {releaseEmpresaNames.map((n, i) => (
+                              <span key={i} className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-bold bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 border border-teal-100 dark:border-teal-800/50 w-fit">
+                                {n}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">—</span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Áreas y Turnos */}
@@ -1002,6 +1072,45 @@ export const ProjectDetailPage: React.FC = () => {
                 ) : (
                   <span className="text-[10px] text-gray-400 italic">Sin áreas configuradas</span>
                 )}
+              </div>
+            </div>
+
+            {/* Empresas del Contrato / Release */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-gray-100 dark:border-gray-800/50">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+                  <FontAwesomeIcon icon={faBuilding} className="text-indigo-500/50" />
+                  Empresa del Contrato
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {contratoEmpresaNames.length > 0 ? (
+                    contratoEmpresaNames.map((n, i) => (
+                      <span key={i} className="inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/50 w-fit">
+                        {n}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-[10px] text-gray-400 italic">Sin empresa</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+                  <FontAwesomeIcon icon={faBuilding} className="text-teal-500/50" />
+                  Empresa del Release
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {releaseEmpresaNames.length > 0 ? (
+                    releaseEmpresaNames.map((n, i) => (
+                      <span key={i} className="inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-bold bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 border border-teal-100 dark:border-teal-800/50 w-fit">
+                        {n}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-[10px] text-gray-400 italic">Sin empresa</span>
+                  )}
+                </div>
               </div>
             </div>
           </div>

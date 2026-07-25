@@ -41,6 +41,10 @@ interface IContract {
     nombre_cargo: string;
     nombre_nivel: string;
     nombre_turno: string;
+    empresaContratoId?: Types.ObjectId | string | null;
+    empresaReleaseId?: Types.ObjectId | string | null;
+    nombre_empresa_contrato?: string;
+    nombre_empresa_release?: string;
     areaShiftAssignments?: {
         areaId: Types.ObjectId | string;
         shiftIds: (Types.ObjectId | string)[];

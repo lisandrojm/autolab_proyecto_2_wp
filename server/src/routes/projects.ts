@@ -14,6 +14,7 @@ import { Area } from "../models/Area.js";
 import { Position } from "../models/Position.js";
 import { Level } from "../models/Level.js";
 import { Shift } from "../models/Shift.js";
+import { Company } from "../models/Company.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
 
@@ -1077,8 +1078,17 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         .filter((asa: any) => asa.areaId !== null);
     }
 
+    // Empresas (contrato / release) elegidas para este miembro: resolvemos la razón social
+    // para guardarla junto al id (parity con los otros nombre_*; útil para el detalle y el PDF).
+    const empresaContratoDoc = contract.empresaContratoId ? await Company.findById(contract.empresaContratoId).select("razonSocial").lean() : null;
+    const empresaReleaseDoc = contract.empresaReleaseId ? await Company.findById(contract.empresaReleaseId).select("razonSocial").lean() : null;
+
     const enrichedContract = {
       ...contract,
+      empresaContratoId: contract.empresaContratoId || null,
+      empresaReleaseId: contract.empresaReleaseId || null,
+      nombre_empresa_contrato: (empresaContratoDoc as any)?.razonSocial || "",
+      nombre_empresa_release: (empresaReleaseDoc as any)?.razonSocial || "",
       areaShiftAssignments: sanitizedAssignments,
       nombre_sede: sede?.name || "Sin sede",
       nombre_categoria_sat: cat?.name || "Sin categoria",

@@ -243,7 +243,18 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
               const existeTemplate = !!template; // la plantilla existe en contratos-frame (aunque esté vacía)
               const canDownloadContract = templateHasContent(template);
               const tipoContrato = contract.nombre_contrato || template?.data?.nombre || template?.name || "Contrato";
-              const contratoEmpresa = contratoEmpresas.map((e) => e.label).join(", ");
+
+              // Empresa efectiva por-contrato: si el contrato tiene una empresa guardada, se usa SOLO esa
+              // (descarga directa con ella); si no, se ofrecen todas las empresas del proyecto para elegir.
+              const savedContratoEmpresaId = contract.empresaContratoId ? String(contract.empresaContratoId) : "";
+              const savedContratoEmpresaLabel = contract.nombre_empresa_contrato || contratoEmpresas.find((e) => e.id === savedContratoEmpresaId)?.label || savedContratoEmpresaId;
+              const effectiveContratoEmpresas: EmpresaOption[] = savedContratoEmpresaId ? [{ id: savedContratoEmpresaId, label: savedContratoEmpresaLabel }] : contratoEmpresas;
+
+              const savedReleaseEmpresaId = contract.empresaReleaseId ? String(contract.empresaReleaseId) : "";
+              const savedReleaseEmpresaLabel = contract.nombre_empresa_release || releaseEmpresas.find((e) => e.id === savedReleaseEmpresaId)?.label || savedReleaseEmpresaId;
+              const effectiveReleaseEmpresas: EmpresaOption[] = savedReleaseEmpresaId ? [{ id: savedReleaseEmpresaId, label: savedReleaseEmpresaLabel }] : releaseEmpresas;
+
+              const contratoEmpresa = effectiveContratoEmpresas.map((e) => e.label).join(", ");
               const dateRange = `${formatDate(contract.fecha_alta_contrato)}${contract.fecha_baja_contrato ? ` - ${formatDate(contract.fecha_baja_contrato)}` : ""}`;
               // El modal muestra los contratos invertidos (más reciente primero). La primera tarjeta (idx 0)
               // es el ÚLTIMO contrato del array = el que se ve en la fila de la tabla → se resalta en azul; el resto en gris.
@@ -293,13 +304,19 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                   <div className={`mt-3 pt-3 border-t ${dividerClass}`}>
                     <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Contrato | Empresa</p>
                     <div className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
-                      <span className="text-sm text-gray-700 dark:text-gray-200 truncate" title={contratoEmpresa ? `${tipoContrato} | ${contratoEmpresa}` : tipoContrato}>
-                        {tipoContrato}
-                        {contratoEmpresa && <span className="text-gray-500 dark:text-gray-400"> | {contratoEmpresa}</span>}
+                      <span className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-1.5 min-w-0" title={contratoEmpresa ? `${tipoContrato} | ${contratoEmpresa}` : tipoContrato}>
+                        <span className="truncate">{tipoContrato}</span>
+                        {savedContratoEmpresaId ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/50 shrink-0" title="Empresa fija del contrato">
+                            {savedContratoEmpresaLabel}
+                          </span>
+                        ) : (
+                          contratoEmpresa && <span className="text-gray-500 dark:text-gray-400 truncate">| {contratoEmpresa}</span>
+                        )}
                       </span>
                       {canDownloadContract ? (
                         <DownloadMenu
-                          empresas={contratoEmpresas}
+                          empresas={effectiveContratoEmpresas}
                           onDownload={(empresaId) => handleDownloadContract(contract, idx, empresaId)}
                           title="Descargar contrato"
                         />
@@ -352,15 +369,21 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                     ) : (
                       <div className="space-y-1.5">
                         {activeReleases.map((r) => {
-                          const releaseEmpresa = releaseEmpresas.map((e) => e.label).join(", ");
+                          const releaseEmpresa = effectiveReleaseEmpresas.map((e) => e.label).join(", ");
                           return (
                           <div key={r._id} className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
-                            <span className="text-sm text-gray-700 dark:text-gray-200 truncate" title={releaseEmpresa ? `${r.name} | ${releaseEmpresa}` : r.name}>
-                              {r.name}
-                              {releaseEmpresa && <span className="text-gray-500 dark:text-gray-400"> | {releaseEmpresa}</span>}
+                            <span className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-1.5 min-w-0" title={releaseEmpresa ? `${r.name} | ${releaseEmpresa}` : r.name}>
+                              <span className="truncate">{r.name}</span>
+                              {savedReleaseEmpresaId ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 border border-teal-100 dark:border-teal-800/50 shrink-0" title="Empresa fija del release">
+                                  {savedReleaseEmpresaLabel}
+                                </span>
+                              ) : (
+                                releaseEmpresa && <span className="text-gray-500 dark:text-gray-400 truncate">| {releaseEmpresa}</span>
+                              )}
                             </span>
                             <DownloadMenu
-                              empresas={releaseEmpresas}
+                              empresas={effectiveReleaseEmpresas}
                               onDownload={(empresaId) => handleDownloadRelease(r, idx, empresaId)}
                               title="Descargar release"
                             />

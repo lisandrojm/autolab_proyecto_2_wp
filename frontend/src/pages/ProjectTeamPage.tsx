@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "../api/axiosConfig";
 import { projectsAPI, Project } from "../api/projects";
-import { usersAPI, User } from "../api/users";
+import { usersAPI, User, Contract } from "../api/users";
 import { useAuthStore } from "../stores/authStore";
 import { sweetAlert } from "../utils/sweetAlert";
 
@@ -262,6 +262,9 @@ export const ProjectTeamPage: React.FC = () => {
     nombre_contrato: "", // nombre de la contratos-frame elegida (identificador estable / match PDF)
     tipo_contrato_id: "", // ID Externo numérico, solo si la contratos-frame lo tiene
     estado_id: "",
+    // Empresas del proyecto elegidas para el contrato / release de este miembro (ObjectId o "")
+    empresaContratoId: "",
+    empresaReleaseId: "",
     hora_inicio: "09:00",
     hora_fin: "18:00",
     fecha_alta_contrato: new Date().toISOString().split("T")[0],
@@ -1170,6 +1173,11 @@ export const ProjectTeamPage: React.FC = () => {
     setSelectedUserForWizard(user);
     setWizardStep(1);
 
+    // Aseguramos tener la lista de empresas para poblar los selects de Empresa del Contrato / Release.
+    if (companies.length === 0) {
+      companiesAPI.list().then(setCompanies).catch(() => {});
+    }
+
     // Helper for date formatting
     const formatDate = (dateStr: any) => {
       if (!dateStr) return "";
@@ -1197,6 +1205,8 @@ export const ProjectTeamPage: React.FC = () => {
       nombre_contrato: initialNombreContrato,
       tipo_contrato_id: initialTipoContratoId,
       estado_id: initialEstadoId,
+      empresaContratoId: lastContract?.empresaContratoId ? String(lastContract.empresaContratoId) : "",
+      empresaReleaseId: lastContract?.empresaReleaseId ? String(lastContract.empresaReleaseId) : "",
       hora_inicio: lastContract?.hora_inicio || metaHoraInicio || "09:00",
       hora_fin: lastContract?.hora_fin || metaHoraFin || "18:00",
       fecha_alta_contrato: formatDate(lastContract?.fecha_alta_contrato) || formatDate(new Date()),
@@ -1272,6 +1282,9 @@ export const ProjectTeamPage: React.FC = () => {
           nombre_rol_frame: rfSel?.name || "",
           rol_frame_id: Number(wizardData.rol_frame_id),
           empleado_id_reemplezado: wizardData.empleado_id_reemplezado ? Number(wizardData.empleado_id_reemplezado) : null,
+          // Enviar null (no "") para que Mongoose no falle al castear a ObjectId cuando no se elige empresa.
+          empresaContratoId: wizardData.empresaContratoId || null,
+          empresaReleaseId: wizardData.empresaReleaseId || null,
         },
       });
 
@@ -2615,6 +2628,30 @@ export const ProjectTeamPage: React.FC = () => {
                       {allEstados.map((e) => (
                         <option key={e._id} value={e.data.id}>
                           {e.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empresa del Contrato</label>
+                    <select className="input-field w-full" value={wizardData.empresaContratoId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaContratoId: e.target.value }))}>
+                      <option value="">{contratoEmpresas.length ? "Selecciona empresa..." : "Sin empresas configuradas en el proyecto"}</option>
+                      {contratoEmpresas.map((emp) => (
+                        <option key={emp.id} value={emp.id}>
+                          {emp.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empresa del Release</label>
+                    <select className="input-field w-full" value={wizardData.empresaReleaseId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaReleaseId: e.target.value }))}>
+                      <option value="">{releaseEmpresas.length ? "Selecciona empresa..." : "Sin empresas configuradas en el proyecto"}</option>
+                      {releaseEmpresas.map((emp) => (
+                        <option key={emp.id} value={emp.id}>
+                          {emp.label}
                         </option>
                       ))}
                     </select>

@@ -43,6 +43,12 @@ interface IContract {
   nombre_cargo: string;
   nombre_nivel: string;
   nombre_turno: string;
+  // Empresa (razón social) elegida para el contrato / release de ESTE miembro.
+  // Debe ser una de las empresas activadas en el proyecto (project.contratoEmpresas / releaseEmpresas).
+  empresaContratoId?: Types.ObjectId | string | null;
+  empresaReleaseId?: Types.ObjectId | string | null;
+  nombre_empresa_contrato?: string;
+  nombre_empresa_release?: string;
   areaShiftAssignments?: {
     areaId: Types.ObjectId | string;
     shiftIds: (Types.ObjectId | string)[];
@@ -105,6 +111,10 @@ const contractSchema = new Schema<IContract>(
     nombre_cargo: { type: String },
     nombre_nivel: { type: String },
     nombre_turno: { type: String },
+    empresaContratoId: { type: Schema.Types.ObjectId, ref: "Company" },
+    empresaReleaseId: { type: Schema.Types.ObjectId, ref: "Company" },
+    nombre_empresa_contrato: { type: String },
+    nombre_empresa_release: { type: String },
     areaShiftAssignments: [
       {
         areaId: { type: Schema.Types.ObjectId, ref: "Area" },
