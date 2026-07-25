@@ -254,7 +254,7 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
               const savedReleaseEmpresaLabel = contract.nombre_empresa_release || releaseEmpresas.find((e) => e.id === savedReleaseEmpresaId)?.label || savedReleaseEmpresaId;
               const effectiveReleaseEmpresas: EmpresaOption[] = savedReleaseEmpresaId ? [{ id: savedReleaseEmpresaId, label: savedReleaseEmpresaLabel }] : releaseEmpresas;
 
-              const contratoEmpresa = effectiveContratoEmpresas.map((e) => e.label).join(", ");
+              const contratoEmpresa = effectiveContratoEmpresas.map((e) => e.label).join(" | ");
               const dateRange = `${formatDate(contract.fecha_alta_contrato)}${contract.fecha_baja_contrato ? ` - ${formatDate(contract.fecha_baja_contrato)}` : ""}`;
               // El modal muestra los contratos invertidos (más reciente primero). La primera tarjeta (idx 0)
               // es el ÚLTIMO contrato del array = el que se ve en la fila de la tabla → se resalta en azul; el resto en gris.
@@ -304,15 +304,13 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                   <div className={`mt-3 pt-3 border-t ${dividerClass}`}>
                     <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Contrato | Empresa</p>
                     <div className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
-                      <span className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-1.5 min-w-0" title={contratoEmpresa ? `${tipoContrato} | ${contratoEmpresa}` : tipoContrato}>
+                      <span className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-1.5 flex-wrap min-w-0" title={contratoEmpresa ? `${tipoContrato} | ${contratoEmpresa}` : tipoContrato}>
                         <span className="truncate">{tipoContrato}</span>
-                        {savedContratoEmpresaId ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/50 shrink-0" title="Empresa fija del contrato">
-                            {savedContratoEmpresaLabel}
+                        {effectiveContratoEmpresas.map((emp) => (
+                          <span key={emp.id} className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/50 shrink-0" title={savedContratoEmpresaId ? "Empresa fija del contrato" : "Empresa del proyecto"}>
+                            {emp.label}
                           </span>
-                        ) : (
-                          contratoEmpresa && <span className="text-gray-500 dark:text-gray-400 truncate">| {contratoEmpresa}</span>
-                        )}
+                        ))}
                       </span>
                       {canDownloadContract ? (
                         <DownloadMenu
@@ -369,18 +367,16 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                     ) : (
                       <div className="space-y-1.5">
                         {activeReleases.map((r) => {
-                          const releaseEmpresa = effectiveReleaseEmpresas.map((e) => e.label).join(", ");
+                          const releaseEmpresa = effectiveReleaseEmpresas.map((e) => e.label).join(" | ");
                           return (
                           <div key={r._id} className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
-                            <span className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-1.5 min-w-0" title={releaseEmpresa ? `${r.name} | ${releaseEmpresa}` : r.name}>
+                            <span className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-1.5 flex-wrap min-w-0" title={releaseEmpresa ? `${r.name} | ${releaseEmpresa}` : r.name}>
                               <span className="truncate">{r.name}</span>
-                              {savedReleaseEmpresaId ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 border border-teal-100 dark:border-teal-800/50 shrink-0" title="Empresa fija del release">
-                                  {savedReleaseEmpresaLabel}
+                              {effectiveReleaseEmpresas.map((emp) => (
+                                <span key={emp.id} className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 border border-teal-100 dark:border-teal-800/50 shrink-0" title={savedReleaseEmpresaId ? "Empresa fija del release" : "Empresa del proyecto"}>
+                                  {emp.label}
                                 </span>
-                              ) : (
-                                releaseEmpresa && <span className="text-gray-500 dark:text-gray-400 truncate">| {releaseEmpresa}</span>
-                              )}
+                              ))}
                             </span>
                             <DownloadMenu
                               empresas={effectiveReleaseEmpresas}
