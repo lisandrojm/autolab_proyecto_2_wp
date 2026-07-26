@@ -30,6 +30,17 @@ router.get("/", authenticateToken, async (_req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
+// Membrete de EJEMPLO para previews/descargas sin persona: usa una empresa real con membrete
+// cargado (logo/firma) si existe; si no, datos de ejemplo. Solo cuando la plantilla lleva membrete.
+async function getExampleMembrete(usaMembrete) {
+    if (!usaMembrete)
+        return undefined;
+    const empresa = (await Company.findOne({ $or: [{ logoUrl: { $nin: [null, ""] } }, { signatureUrl: { $nin: [null, ""] } }] }).lean()) ||
+        (await Company.findOne().lean());
+    if (empresa)
+        return empresaToMembrete(empresa);
+    return { razonSocial: "2030 S.R.L.", cuit: "30-71234567-9", domicilio: "Av. Corrientes 1234, Piso 5, CABA, Buenos Aires", firmanteNombre: "María González", firmanteCargo: "Apoderada" };
+}
 // POST /preview — genera un PDF de ejemplo con el contenido del editor (sin guardar).
 router.post("/preview", authenticateToken, async (req, res) => {
     try {
@@ -38,7 +49,8 @@ router.post("/preview", authenticateToken, async (req, res) => {
             res.status(400).json({ error: "El contenido es obligatorio" });
             return;
         }
-        const buffer = await buildDocPdf(content, getDummyDocVariables());
+        const membrete = await getExampleMembrete(req.body?.usaMembrete === true || req.body?.usaMembrete === "true");
+        const buffer = await buildDocPdf(content, getDummyDocVariables(), membrete);
         sendPdf(res, buffer, "Preview_Contrato");
     }
     catch (error) {
@@ -58,7 +70,8 @@ router.get("/:id/download", authenticateToken, async (req, res) => {
             res.status(400).json({ error: "El contrato no tiene contenido redactado" });
             return;
         }
-        const buffer = await buildDocPdf(item.content, getDummyDocVariables());
+        const membrete = await getExampleMembrete(!!item.usaMembrete);
+        const buffer = await buildDocPdf(item.content, getDummyDocVariables(), membrete);
         sendPdf(res, buffer, `${item.name || "Contrato"}`);
     }
     catch (error) {

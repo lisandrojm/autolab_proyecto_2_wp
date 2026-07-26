@@ -43,11 +43,25 @@ router.get("/", authenticateToken, requireTenant, async (req, res) => {
         res.status(500).json({ error: "Error al obtener releases" });
     }
 });
+// Membrete de EJEMPLO para previews/descargas sin persona: usa una empresa real con membrete
+// cargado (logo/firma) si existe; si no, datos de ejemplo. Solo cuando la plantilla lleva membrete.
+async function getExampleMembrete(usaMembrete) {
+    if (!usaMembrete)
+        return undefined;
+    const empresa = (await Company.findOne({ $or: [{ logoUrl: { $nin: [null, ""] } }, { signatureUrl: { $nin: [null, ""] } }] }).lean()) ||
+        (await Company.findOne().lean());
+    if (empresa)
+        return empresaToMembrete(empresa);
+    return { razonSocial: "2030 S.R.L.", cuit: "30-71234567-9", domicilio: "Av. Corrientes 1234, Piso 5, CABA, Buenos Aires", firmanteNombre: "María González", firmanteCargo: "Apoderada" };
+}
 // POST /releases/preview — genera un PDF de ejemplo con el contenido del editor (sin guardar).
 router.post("/preview", authenticateToken, requireTenant, async (req, res) => {
     try {
-        const { content } = z.object({ content: z.string().max(200000) }).parse(req.body);
-        const buffer = await buildDocPdf(content, getDummyDocVariables());
+        const { content, usaMembrete } = z
+            .object({ content: z.string().max(200000), usaMembrete: z.union([z.boolean(), z.string()]).optional() })
+            .parse(req.body);
+        const membrete = await getExampleMembrete(usaMembrete === true || usaMembrete === "true");
+        const buffer = await buildDocPdf(content, getDummyDocVariables(), membrete);
         sendPdf(res, buffer, "Preview_Release");
     }
     catch (error) {
@@ -88,7 +102,8 @@ router.get("/:id/download", authenticateToken, requireTenant, async (req, res) =
             res.status(400).json({ error: "El release no tiene contenido redactado" });
             return;
         }
-        const buffer = await buildDocPdf(release.content, getDummyDocVariables());
+        const membrete = await getExampleMembrete(!!release.usaMembrete);
+        const buffer = await buildDocPdf(release.content, getDummyDocVariables(), membrete);
         sendPdf(res, buffer, `${release.name || "Release"}`);
     }
     catch (error) {
