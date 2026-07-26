@@ -6,7 +6,7 @@ import { PdfConfig } from "../models/PdfConfig.js";
 import { ProjectPdfConfig } from "../models/ProjectPdfConfig.js";
 import { prepareVariables, prepareVacationVariables, replacePdfVariables, getDummyVariables, getSystemVariables, sanitizeHtml } from "./pdfVariableReplacer.js";
 // Helper function to build the full HTML with layout
-async function buildPdfHtml(tenantId, bodyContent, additionalVars = {}, title = "", user) {
+async function buildPdfHtml(tenantId, bodyContent, additionalVars = {}, title = "", user, usaMembrete = true) {
     let config = null;
     if (user && user.projectIds && user.projectIds.length > 0) {
         config = await ProjectPdfConfig.findOne({ tenantId, projects: { $in: user.projectIds } }).lean();
@@ -85,6 +85,28 @@ async function buildPdfHtml(tenantId, bodyContent, additionalVars = {}, title = 
     if (!signatureImgTag) {
         signatureImgTag = `<div style="border-top: 1px solid #000; display: inline-block; padding-top: 5px; min-width: 200px;">Firma</div>`;
     }
+    // El membrete (encabezado con logo/empresa) y la firma de la empresa se muestran solo si la
+    // plantilla lo pide (usaMembrete). La firma del empleado (user-signature) va siempre.
+    const headerHtml = usaMembrete
+        ? `<div class="header">
+          <div class="logo">${logoImgTag}</div>
+          <div class="company-info">
+            <strong>${systemVars.razonSocial}</strong><br>
+            CUIT: ${systemVars.cuit}<br>
+            ${systemVars.direccion ? `${systemVars.direccion}<br>` : ""}
+            ${systemVars.ciudad}<br>
+          </div>
+        </div>`
+        : "";
+    const companySignatureHtml = usaMembrete
+        ? `<div class="company-signature">
+            ${signatureImgTag}
+            <div class="signer-info" style="margin-top: 5px; font-size: 10pt; color: #555;">
+              <strong>${systemVars.signerName}</strong><br>
+              ${systemVars.signerRole}
+            </div>
+          </div>`
+        : "";
     const html = `
       <!DOCTYPE html>
       <html>
@@ -110,17 +132,7 @@ async function buildPdfHtml(tenantId, bodyContent, additionalVars = {}, title = 
         </style>
       </head>
       <body>
-        <div class="header">
-          <div class="logo">
-            ${logoImgTag}
-          </div>
-          <div class="company-info">
-            <strong>${systemVars.razonSocial}</strong><br>
-            CUIT: ${systemVars.cuit}<br>
-            ${systemVars.direccion ? `${systemVars.direccion}<br>` : ""}
-            ${systemVars.ciudad}<br>
-          </div>
-        </div>
+        ${headerHtml}
 
         ${title ? `<div class="title">${title}</div>` : ""}
 
@@ -135,20 +147,14 @@ async function buildPdfHtml(tenantId, bodyContent, additionalVars = {}, title = 
             <div style="margin-bottom: 15px;">Firma: __________________________</div>
             <div>Aclaración: ${allVars.nombreUsuario || ""}</div>
           </div>
-          <div class="company-signature">
-            ${signatureImgTag}
-            <div class="signer-info" style="margin-top: 5px; font-size: 10pt; color: #555;">
-              <strong>${systemVars.signerName}</strong><br>
-              ${systemVars.signerRole}
-            </div>
-          </div>
+          ${companySignatureHtml}
         </div>
       </body>
       </html>
     `;
     return html;
 }
-export async function generatePreviewPDF(content, code, tenantId, isGlobalPreview = false, title = "", pdfText) {
+export async function generatePreviewPDF(content, code, tenantId, isGlobalPreview = false, title = "", pdfText, usaMembrete = false) {
     try {
         console.log("[PDF PREVIEW] Starting generation...");
         console.log("[PDF PREVIEW] CWD:", process.cwd());
@@ -167,7 +173,9 @@ export async function generatePreviewPDF(content, code, tenantId, isGlobalPrevie
             bodyContent += `\n\n<div style="margin-top: 20px; font-size: 11pt; white-space: pre-wrap; color: #333;">${sanitizeHtml(pdfText)}</div>`;
         }
         console.log("[PDF PREVIEW] Building HTML...");
-        const html = await buildPdfHtml(tenantId, bodyContent, dummyVars, title);
+        // La preview global (desde Configuración Global) siempre muestra el membrete; la preview de una
+        // plantilla puntual respeta su toggle `usaMembrete`.
+        const html = await buildPdfHtml(tenantId, bodyContent, dummyVars, title, undefined, isGlobalPreview ? true : usaMembrete);
         console.log("[PDF PREVIEW] HTML built successfully. Length:", html.length);
         const options = {
             format: "A4",
@@ -209,7 +217,7 @@ export async function generateOrderPDF(order, category, template, user, tenantId
         const variables = await prepareVariables(order, category, user, tenantName);
         console.log("[PDF GENERATOR] Variables prepared:", Object.keys(variables));
         // Use buildPdfHtml to generate HTML with global layout
-        const htmlContent = await buildPdfHtml(tenantId, bodyContent, variables, template.title, user);
+        const htmlContent = await buildPdfHtml(tenantId, bodyContent, variables, template.title, user, template.usaMembrete ?? false);
         console.log("[PDF GENERATOR] HTML content generated using global layout, length:", htmlContent.length, "characters");
         const options = {
             format: "A4",
@@ -275,7 +283,7 @@ export async function generateVacationPDF(vacation, template, user, tenantId, te
         const variables = prepareVacationVariables(vacation, user, tenantName, vacationNumber);
         console.log("[PDF GENERATOR] Variables prepared:", Object.keys(variables));
         // Use buildPdfHtml to generate HTML with global layout
-        const htmlContent = await buildPdfHtml(tenantId, template.content, variables, template.title, user);
+        const htmlContent = await buildPdfHtml(tenantId, template.content, variables, template.title, user, template.usaMembrete ?? false);
         console.log("[PDF GENERATOR] HTML content generated using global layout, length:", htmlContent.length, "characters");
         const options = {
             format: "A4",

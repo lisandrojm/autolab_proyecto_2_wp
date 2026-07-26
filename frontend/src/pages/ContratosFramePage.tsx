@@ -6,6 +6,7 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Modal } from "../components/ui/Modal";
+import { MembreteToggle } from "../components/MembreteToggle";
 import { InfoModal } from "../components/ui/InfoModal";
 import { Card } from "../components/ui/Card";
 import { ViewToggle, ViewMode } from "../components/ui/ViewToggle";
@@ -396,15 +397,7 @@ export const ContratosFramePage: React.FC = () => {
               Es tiempo indeterminado
             </label>
 
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={usaMembrete}
-                onChange={(e) => setUsaMembrete(e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-              />
-              Incluir membrete y firma (logo y firma de la empresa elegida al descargar)
-            </label>
+            <MembreteToggle checked={usaMembrete} onChange={setUsaMembrete} />
 
             {/* Contenido del contrato */}
             <div>

@@ -13,6 +13,7 @@ import { releasesAPI, Release, releaseVariables } from "../api/release";
 
 import Swal from "sweetalert2";
 import { Modal } from "../components/ui/Modal";
+import { MembreteToggle } from "../components/MembreteToggle";
 import { RichTextEditor } from "../components/ui/RichTextEditor";
 import { ViewToggle, ViewMode } from "../components/ui/ViewToggle";
 
@@ -469,10 +470,7 @@ export function ReleasesPage() {
               Release activo
             </label>
 
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={formData.usaMembrete} onChange={(e) => setFormData({ ...formData, usaMembrete: e.target.checked })} className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" />
-              Incluir membrete y firma (logo y firma de la empresa elegida al descargar)
-            </label>
+            <MembreteToggle checked={formData.usaMembrete} onChange={(v) => setFormData({ ...formData, usaMembrete: v })} />
 
             {/* Contenido del release */}
             <div>

@@ -8,7 +8,7 @@ import UserProject from "../models/UserProject.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { buildEmployeeDocData, buildDocFileName } from "../utils/employeeDocData.js";
-import { buildDocPdf, getDummyDocVariables, htmlHasText } from "../utils/documentPdf.js";
+import { buildDocPdf, getDummyDocVariables, htmlHasText, empresaToMembrete } from "../utils/documentPdf.js";
 const router = Router();
 // El release se redacta en la plataforma (editor con formato) y se guarda como HTML en `content`.
 // El PDF se genera al descargar, reemplazando las variables `{{variable}}`.
@@ -18,6 +18,10 @@ const ReleaseSchema = z.object({
     description: z.string().max(2000).optional(),
     content: z.string().max(200000).optional(),
     isActive: z
+        .union([z.boolean(), z.string()])
+        .optional()
+        .transform((v) => (typeof v === "string" ? v === "true" : v)),
+    usaMembrete: z
         .union([z.boolean(), z.string()])
         .optional()
         .transform((v) => (typeof v === "string" ? v === "true" : v)),
@@ -132,7 +136,9 @@ router.get("/:id/download-filled", authenticateToken, requireTenant, async (req,
         const chosenId = empresaId && empresasIds.includes(String(empresaId)) ? empresaId : empresasIds[0];
         const empresa = chosenId ? await Company.findById(chosenId).lean() : null;
         const data = await buildEmployeeDocData(user, up, contract, empresa);
-        const buffer = await buildDocPdf(release.content, data);
+        // Si la plantilla lleva membrete, se encabeza/firma con la empresa elegida.
+        const membrete = release.usaMembrete && empresa ? empresaToMembrete(empresa) : undefined;
+        const buffer = await buildDocPdf(release.content, data, membrete);
         const baseName = buildDocFileName({ tipo: "Release", user, up, contract, docName: release.name });
         sendPdf(res, buffer, baseName);
     }
@@ -180,6 +186,8 @@ router.put("/:id", authenticateToken, requireTenant, async (req, res) => {
             release.content = htmlHasText(validatedData.content) ? validatedData.content : "";
         if (validatedData.isActive !== undefined)
             release.isActive = validatedData.isActive;
+        if (validatedData.usaMembrete !== undefined)
+            release.usaMembrete = validatedData.usaMembrete;
         await release.save();
         res.json(release);
     }

@@ -166,7 +166,7 @@ async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVar
   return html;
 }
 
-export async function generatePreviewPDF(content: string, code: string, tenantId: string, isGlobalPreview: boolean = false, title: string = "", pdfText?: string): Promise<Buffer> {
+export async function generatePreviewPDF(content: string, code: string, tenantId: string, isGlobalPreview: boolean = false, title: string = "", pdfText?: string, usaMembrete: boolean = false): Promise<Buffer> {
   try {
     console.log("[PDF PREVIEW] Starting generation...");
     console.log("[PDF PREVIEW] CWD:", process.cwd());
@@ -186,7 +186,9 @@ export async function generatePreviewPDF(content: string, code: string, tenantId
     }
 
     console.log("[PDF PREVIEW] Building HTML...");
-    const html = await buildPdfHtml(tenantId, bodyContent, dummyVars as Record<string, string>, title);
+    // La preview global (desde Configuración Global) siempre muestra el membrete; la preview de una
+    // plantilla puntual respeta su toggle `usaMembrete`.
+    const html = await buildPdfHtml(tenantId, bodyContent, dummyVars as Record<string, string>, title, undefined, isGlobalPreview ? true : usaMembrete);
     console.log("[PDF PREVIEW] HTML built successfully. Length:", html.length);
 
     const options = {

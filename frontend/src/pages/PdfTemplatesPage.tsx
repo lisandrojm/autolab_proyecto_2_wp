@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Card } from "../components/ui/Card";
+import { MembreteToggle } from "../components/MembreteToggle";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { EmptyState } from "../components/ui/EmptyState";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
@@ -108,7 +109,7 @@ export function PdfTemplatesPage() {
         },
       });
 
-      const blob = await pdfPreviewAPI.preview(formData.content, formData.code, formData.title);
+      const blob = await pdfPreviewAPI.preview(formData.content, formData.code, formData.title, undefined, formData.usaMembrete ?? false);
       Swal.close();
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
@@ -121,7 +122,7 @@ export function PdfTemplatesPage() {
   /** Descarga el PDF de la plantilla ya guardada, con valores de ejemplo (igual que en Releases). */
   const handleDownload = async (template: Pdf) => {
     try {
-      const blob = await pdfPreviewAPI.preview(template.content, template.code, template.title);
+      const blob = await pdfPreviewAPI.preview(template.content, template.code, template.title, undefined, template.usaMembrete ?? false);
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -588,15 +589,7 @@ export function PdfTemplatesPage() {
               Plantilla activa
             </label>
 
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={formData.usaMembrete ?? false}
-                onChange={(e) => setFormData({ ...formData, usaMembrete: e.target.checked })}
-                className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-              />
-              Incluir membrete y firma
-            </label>
+            <MembreteToggle checked={formData.usaMembrete ?? false} onChange={(v) => setFormData({ ...formData, usaMembrete: v })} />
 
             {/* contenido */}
             <div>

@@ -11,6 +11,8 @@ export interface IContratoFrame extends Document {
         multiplicadorDiario: number;
         esTiempoIndeterminado: boolean;
     };
+    /** Si el contrato lleva membrete (logo + encabezado de empresa) y firma al generar el PDF. */
+    usaMembrete: boolean;
     createdAt: Date;
     updatedAt: Date;
 }

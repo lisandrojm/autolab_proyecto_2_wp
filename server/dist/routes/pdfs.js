@@ -14,6 +14,7 @@ const PdfSchema = z.object({
     content: z.string().min(10).max(50000).refine((v) => htmlHasText(v), { message: "El contenido no puede estar vacío" }),
     variablesHint: z.string().max(1000).optional(),
     isActive: z.boolean().optional(),
+    usaMembrete: z.boolean().optional(),
 });
 router.get("/", authenticateToken, requireTenant, async (req, res) => {
     try {

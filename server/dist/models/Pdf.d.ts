@@ -7,6 +7,8 @@ export interface IPdf extends Document {
     content: string;
     variablesHint?: string;
     isActive: boolean;
+    /** Si la plantilla lleva membrete (logo + encabezado de empresa) y firma al generar el PDF. */
+    usaMembrete: boolean;
     createdAt: Date;
     updatedAt: Date;
 }

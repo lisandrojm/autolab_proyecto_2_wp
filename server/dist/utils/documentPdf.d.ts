@@ -9,10 +9,25 @@ export declare function htmlHasText(html?: string | null): boolean;
  */
 export declare function replaceDocVariables(html: string, data: Record<string, any>): string;
 /**
+ * Datos del membrete de la empresa para encabezar/firmar el documento (contratos/releases).
+ * Se arma desde la Company elegida al descargar (logo/firma como paths en disco).
+ */
+export interface MembreteInput {
+    logoUrl?: string;
+    signatureUrl?: string;
+    razonSocial?: string;
+    cuit?: string;
+    domicilio?: string;
+    firmanteNombre?: string;
+    firmanteCargo?: string;
+}
+/** Mapea una Company (empresa elegida) al membrete del documento. */
+export declare function empresaToMembrete(empresa: any): MembreteInput;
+/**
  * Construye el PDF final: reemplaza las variables en el contenido y lo renderiza.
  * Devuelve el Buffer listo para enviar en la respuesta.
  */
-export declare function buildDocPdf(content: string, data: Record<string, any>): Promise<Buffer>;
+export declare function buildDocPdf(content: string, data: Record<string, any>, membrete?: MembreteInput): Promise<Buffer>;
 /**
  * Valores de ejemplo para la previsualización del documento desde el editor
  * (equivalente a getDummyVariables de las plantillas PDF).

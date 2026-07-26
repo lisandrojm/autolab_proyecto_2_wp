@@ -36,6 +36,10 @@ const pdfSchema = new Schema({
         default: true,
         index: true,
     },
+    usaMembrete: {
+        type: Boolean,
+        default: false,
+    },
 }, { timestamps: true, collection: "pdf" });
 pdfSchema.index({ tenantId: 1, code: 1 }, { unique: true });
 pdfSchema.index({ tenantId: 1, isActive: 1 });

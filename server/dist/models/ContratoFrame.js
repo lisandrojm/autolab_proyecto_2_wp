@@ -14,6 +14,7 @@ const contratoFrameSchema = new Schema({
         multiplicadorDiario: { type: Number },
         esTiempoIndeterminado: { type: Boolean, default: false },
     },
+    usaMembrete: { type: Boolean, default: false },
 }, {
     timestamps: true,
     collection: "contratos-frame",

@@ -1,4 +1,6 @@
 import htmlPdf from "html-pdf-node";
+import path from "path";
+import fs from "fs";
 /**
  * Generación del PDF de un documento (Release / Contrato) a partir del contenido redactado en la plataforma.
  *
@@ -47,8 +49,82 @@ export function replaceDocVariables(html, data) {
 function neutralizeHandlebars(html) {
     return html.replace(/\{\{/g, "&#123;&#123;").replace(/\}\}/g, "&#125;&#125;");
 }
+/** Lee una imagen del storage (path o URL con /storage/) y la devuelve como data URI base64. */
+function imagePathToDataUri(url) {
+    if (!url)
+        return null;
+    try {
+        let absolutePath = url;
+        if (url.includes("/storage/")) {
+            absolutePath = path.join(process.cwd(), url.substring(url.indexOf("/storage/")));
+        }
+        else if (url.startsWith("/")) {
+            absolutePath = path.join(process.cwd(), url);
+        }
+        if (fs.existsSync(absolutePath)) {
+            const bitmap = fs.readFileSync(absolutePath);
+            const base64 = bitmap.toString("base64");
+            const ext = path.extname(absolutePath).substring(1).toLowerCase();
+            const mime = ext === "jpg" ? "jpeg" : ext;
+            return `data:image/${mime};base64,${base64}`;
+        }
+    }
+    catch (e) {
+        console.error("Error loading image for membrete:", e);
+    }
+    return null;
+}
+/** Encabezado del membrete: logo (o razón social) a la izquierda + datos de la empresa a la derecha. */
+function buildMembreteHeader(m) {
+    const logoUri = imagePathToDataUri(m.logoUrl);
+    const logo = logoUri ? `<img src="${logoUri}" style="max-height: 70px; max-width: 220px; object-fit: contain;" />` : `<div style="font-size: 18pt; font-weight: bold; color: #222;">${escapeHtml(m.razonSocial || "")}</div>`;
+    return `<div class="membrete-header">
+    <div class="membrete-logo">${logo}</div>
+    <div class="membrete-empresa">
+      ${m.razonSocial ? `<strong>${escapeHtml(m.razonSocial)}</strong><br/>` : ""}
+      ${m.cuit ? `CUIT: ${escapeHtml(m.cuit)}<br/>` : ""}
+      ${m.domicilio ? `${escapeHtml(m.domicilio)}` : ""}
+    </div>
+  </div>`;
+}
+/** Pie de firma de la empresa: imagen de firma (o línea) + aclaración + cargo. */
+function buildFirmaFooter(m) {
+    const firmaUri = imagePathToDataUri(m.signatureUrl);
+    const firma = firmaUri ? `<img src="${firmaUri}" style="max-height: 90px; object-fit: contain;" />` : `<div style="border-top: 1px solid #000; display: inline-block; padding-top: 4px; min-width: 200px;">Firma</div>`;
+    return `<div class="membrete-firma">
+    ${firma}
+    <div class="membrete-firma-info">
+      ${m.firmanteNombre ? `<strong>${escapeHtml(m.firmanteNombre)}</strong><br/>` : ""}
+      ${m.firmanteCargo ? `${escapeHtml(m.firmanteCargo)}` : ""}
+    </div>
+  </div>`;
+}
+/** Mapea una Company (empresa elegida) al membrete del documento. */
+export function empresaToMembrete(empresa) {
+    const e = empresa || {};
+    const domicilio = [[e.domicilioCalle, e.domicilioNumero].filter(Boolean).join(" "), e.domicilioPisoDepto, e.localidad, e.provincia].filter(Boolean).join(", ");
+    return {
+        logoUrl: e.logoUrl,
+        signatureUrl: e.signatureUrl,
+        razonSocial: e.razonSocial,
+        cuit: e.cuit,
+        domicilio,
+        firmanteNombre: e.firmanteNombre,
+        firmanteCargo: e.firmanteCargo,
+    };
+}
+/** Estilos extra para el membrete/firma (se inyectan solo cuando el documento lleva membrete). */
+const MEMBRETE_STYLES = `
+  .membrete-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #eee; padding-bottom: 12pt; margin-bottom: 16pt; }
+  .membrete-empresa { text-align: right; font-size: 9pt; color: #555; line-height: 1.4; }
+  .membrete-firma { margin-top: 40pt; text-align: center; page-break-inside: avoid; }
+  .membrete-firma-info { margin-top: 4pt; font-size: 9pt; color: #555; }
+`;
 /** Envuelve el HTML del editor en un documento completo con estilos base para el PDF. */
-function wrapHtml(bodyHtml) {
+function wrapHtml(bodyHtml, membrete) {
+    const header = membrete ? buildMembreteHeader(membrete) : "";
+    const footer = membrete ? buildFirmaFooter(membrete) : "";
+    const extraStyles = membrete ? MEMBRETE_STYLES : "";
     return `<!DOCTYPE html><html><head><meta charset="utf-8" /><style>
     body { font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.45; color: #222; margin: 0; }
     p { margin: 0 0 10pt 0; }
@@ -64,14 +140,15 @@ function wrapHtml(bodyHtml) {
     tr, td, th { break-inside: auto; }
     td, th { border: 1px solid #999; padding: 5pt; vertical-align: top; }
     hr { border: none; border-top: 1px solid #ccc; margin: 10pt 0; }
-  </style></head><body>${bodyHtml || ""}</body></html>`;
+    ${extraStyles}
+  </style></head><body>${header}${bodyHtml || ""}${footer}</body></html>`;
 }
 /**
  * Construye el PDF final: reemplaza las variables en el contenido y lo renderiza.
  * Devuelve el Buffer listo para enviar en la respuesta.
  */
-export async function buildDocPdf(content, data) {
-    const html = wrapHtml(neutralizeHandlebars(replaceDocVariables(content, data)));
+export async function buildDocPdf(content, data, membrete) {
+    const html = wrapHtml(neutralizeHandlebars(replaceDocVariables(content, data)), membrete);
     const options = {
         format: "A4",
         margin: { top: "20mm", right: "20mm", bottom: "20mm", left: "20mm" },

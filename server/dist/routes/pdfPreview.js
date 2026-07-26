@@ -10,11 +10,12 @@ const previewSchema = z.object({
     isGlobalPreview: z.boolean().optional(),
     title: z.string().optional(),
     pdfText: z.string().optional(),
+    usaMembrete: z.boolean().optional(),
 });
 router.post("/preview", authenticateToken, requireTenant, async (req, res) => {
     try {
-        const { content, code, isGlobalPreview, title, pdfText } = previewSchema.parse(req.body);
-        const pdfBuffer = await generatePreviewPDF(content || "", code || "dinero", req.tenantObjectId.toString(), isGlobalPreview, title, pdfText);
+        const { content, code, isGlobalPreview, title, pdfText, usaMembrete } = previewSchema.parse(req.body);
+        const pdfBuffer = await generatePreviewPDF(content || "", code || "dinero", req.tenantObjectId.toString(), isGlobalPreview, title, pdfText, usaMembrete);
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader("Content-Disposition", "inline; filename=preview.pdf");
         res.send(pdfBuffer);
