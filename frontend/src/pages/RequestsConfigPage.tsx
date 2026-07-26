@@ -633,7 +633,7 @@ export const RequestsConfigPage: React.FC = () => {
                     </button>
                   </div>
                   <div className="flex items-center gap-3">
-                    <button onClick={openCreateModal} disabled={isReorderMode} className="bg-blue-600 hover:bg-blue-700 text-white w-8 h-8 rounded flex items-center justify-center">
+                    <button onClick={openCreateModal} disabled={isReorderMode} title="Nuevo tipo de actividad" aria-label="Nuevo tipo de actividad" className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
                       <FontAwesomeIcon icon={faPlus} />
                     </button>
                     {/* Button to open Project Novelties Modal */}

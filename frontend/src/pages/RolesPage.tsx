@@ -10,7 +10,7 @@ import { Card } from '../components/ui/Card';
 import { InfoModal } from '../components/ui/InfoModal';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faSquareCheck, faBuilding, faUserGear, faInfoCircle, faLock, faEye, faMobileAlt, faUsers, faUsersGear, faCog, faUserGraduate, faTable, faGrip, faUserTie, faLayerGroup, faClock, faBriefcase } from '@fortawesome/free-solid-svg-icons';
+import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faSquareCheck, faBuilding, faUserGear, faInfoCircle, faLock, faEye, faMobileAlt, faUsers, faUsersGear, faCog, faUserGraduate, faTable, faGrip, faUserTie, faLayerGroup, faClock, faBriefcase, faCheckDouble, faBroom } from '@fortawesome/free-solid-svg-icons';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { useNavigate } from 'react-router-dom';
 
@@ -47,7 +47,7 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
     label: 'Configuración',
     icon: faCog,
     description: 'Configuración de módulos y plantillas',
-    permissions: ['config_orders:view', 'config_shifts:view', 'config_vacations:view', 'config_activity_logs:view', 'config_holidays:view', 'config_pdf_templates:view', 'config_releases:view', 'config_frame_functions:view', 'config_categorias_sat:view', 'config_bancos:view', 'config_obras_sociales:view', 'config_centros_costo:view', 'config_contratos_frame:view', 'config_profile:view'],
+    permissions: ['config_orders:view', 'config_shifts:view', 'config_vacations:view', 'config_activity_logs:view', 'config_holidays:view', 'config_pdf_templates:view', 'config_releases:view', 'config_frame_functions:view', 'config_categorias_sat:view', 'config_bancos:view', 'config_obras_sociales:view', 'config_centros_costo:view', 'config_contratos_frame:view', 'config_empresas:view', 'config_membretes:view', 'config_profile:view'],
   },
   mobile: {
     label: 'Mobile',
@@ -62,6 +62,12 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
     permissions: ['project_responsible:eligible'],
   },
 };
+
+// Todos los permisos seleccionables con "Seleccionar todos" (se excluye Mobile: colaborador y
+// coordinador son mutuamente excluyentes, se eligen aparte).
+const ALL_SELECTABLE_PERMISSIONS: string[] = Object.entries(AVAILABLE_PERMISSIONS)
+  .filter(([module]) => module !== 'mobile')
+  .flatMap(([, mod]) => mod.permissions);
 
 const MODULE_LABELS: Record<string, string> = {
   'client:view': 'Cliente (Ver/Select)',
@@ -93,6 +99,8 @@ const MODULE_LABELS: Record<string, string> = {
   'config_obras_sociales:view': 'Obras Sociales',
   'config_centros_costo:view': 'Centros de Costos',
   'config_contratos_frame:view': 'Contratos FRAME',
+  'config_empresas:view': 'Empresas',
+  'config_membretes:view': 'Empresa/s | Membrete/s y firma',
   'config_profile:view': 'Mi Perfil',
 
   'mobile_collaborator:view': 'Colaborador',
@@ -353,6 +361,17 @@ export const RolesPage: React.FC = () => {
     }
   };
 
+  // Marca todos los permisos seleccionables (sin tocar los de Mobile ya elegidos).
+  const selectAllPermissions = () => {
+    setFormData((prev) => {
+      const mobileSelected = prev.permissions.filter((p) => p.startsWith('mobile_'));
+      return { ...prev, permissions: Array.from(new Set([...ALL_SELECTABLE_PERMISSIONS, ...mobileSelected])) };
+    });
+  };
+
+  // Limpia todos los permisos.
+  const clearAllPermissions = () => setFormData((prev) => ({ ...prev, permissions: [] }));
+
   const togglePermission = (permission: string) => {
     setFormData((prev) => {
       const currentPermissions = [...prev.permissions];
@@ -423,8 +442,8 @@ export const RolesPage: React.FC = () => {
       headerActions={
         <div className="flex items-center gap-3">
           {canManage && (
-            <button onClick={openCreate} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-              <FontAwesomeIcon icon={faPlus} className="h-3 w-3 lg:h-4 lg:w-4" />
+            <button onClick={openCreate} title="Nuevo rol" aria-label="Nuevo rol" className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+              <FontAwesomeIcon icon={faPlus} />
             </button>
           )}
           <button onClick={() => navigate('/users')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
@@ -616,6 +635,16 @@ export const RolesPage: React.FC = () => {
                   <button type="button" onClick={() => setShowPermissionsInfo(true)} className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors" title="Información sobre permisos">
                     <FontAwesomeIcon icon={faInfoCircle} className="h-4 w-4" />
                   </button>
+                  <div className="ml-auto flex items-center gap-2">
+                    <button type="button" onClick={selectAllPermissions} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors" title="Marcar todos los permisos">
+                      <FontAwesomeIcon icon={faCheckDouble} className="h-3.5 w-3.5" />
+                      Seleccionar todos
+                    </button>
+                    <button type="button" onClick={clearAllPermissions} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Desmarcar todos los permisos">
+                      <FontAwesomeIcon icon={faBroom} className="h-3.5 w-3.5" />
+                      Limpiar
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-3">
                   {/* Permisos de Sistema */}

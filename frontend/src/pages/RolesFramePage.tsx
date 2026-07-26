@@ -190,9 +190,8 @@ export const RolesFramePage: React.FC = () => {
       itemCount={filteredRoles.length}
       faIcon={{ icon: faUserShield }}
       headerActions={
-        <button onClick={openCreate} className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center gap-2 text-sm font-semibold shadow-md shadow-blue-500/20 active:scale-95 animate-fadeIn" title="Nueva Función">
-          <FontAwesomeIcon icon={faPlus} className="h-4 w-4" />
-          <span className="hidden md:block">Nueva Función</span>
+        <button onClick={openCreate} aria-label="Nueva función" title="Nueva función" className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+          <FontAwesomeIcon icon={faPlus} />
         </button>
       }
       searchAndFilters={

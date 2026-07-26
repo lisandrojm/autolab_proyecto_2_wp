@@ -209,8 +209,8 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
       <button onClick={() => setShowImport(true)} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30">
         <FontAwesomeIcon icon={faUpload} /> Importar Excel
       </button>
-      <button onClick={openCreate} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
-        <FontAwesomeIcon icon={faPlus} /> Nuevo
+      <button onClick={openCreate} title={`Nuevo ${entityLabel}`} aria-label={`Nuevo ${entityLabel}`} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+        <FontAwesomeIcon icon={faPlus} />
       </button>
     </div>
   );

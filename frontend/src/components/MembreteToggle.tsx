@@ -1,29 +1,57 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { InfoModal } from "./ui/InfoModal";
+import { companiesAPI } from "../api/companies";
 
 /**
  * Checkbox reutilizable "Membrete con datos de la empresa y firma de la empresa" para las plantillas
  * (Pedidos/Vacaciones, Contratos, Releases). Incluye un ícono de info que explica el comportamiento.
+ * Solo se puede activar si existe al menos un membrete (empresa con logo/firma) en el ABM.
  */
 export const MembreteToggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void }> = ({ checked, onChange }) => {
   const [open, setOpen] = useState(false);
+  // null = cargando; true/false = si existe algún membrete en el ABM.
+  const [membreteExists, setMembreteExists] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    companiesAPI
+      .list()
+      .then((cs) => {
+        if (!cancelled) setMembreteExists(cs.some((c) => c.logoUrl || c.signatureUrl));
+      })
+      .catch(() => {
+        if (!cancelled) setMembreteExists(true); // ante error, no bloquear
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Se deshabilita solo si confirmamos que NO hay membretes (y la casilla no está ya activada).
+  const disabled = membreteExists === false && !checked;
 
   return (
     <>
-      <label className="flex items-center gap-2 text-sm">
+      <label className={`flex items-center gap-2 text-sm ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}>
         <input
           type="checkbox"
           checked={checked}
+          disabled={disabled}
           onChange={(e) => onChange(e.target.checked)}
-          className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+          className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 disabled:cursor-not-allowed"
         />
         Membrete con datos de la empresa y firma de la empresa
         <button type="button" onClick={() => setOpen(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Qué significa?" aria-label="Información sobre membrete y firma">
           <FontAwesomeIcon icon={faCircleInfo} />
         </button>
       </label>
+      {disabled && (
+        <p className="text-xs text-amber-600 dark:text-amber-400 ml-6 -mt-1">
+          Para poder activar esta opción, primero creá un membrete (logo y firma de la empresa) en <strong>Empresa/s | Membrete/s y firma</strong>.
+        </p>
+      )}
 
       <InfoModal
         isOpen={open}

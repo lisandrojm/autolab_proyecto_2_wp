@@ -299,8 +299,8 @@ export const TenantsPage: React.FC = () => {
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         canManage ? (
-          <button onClick={openCreate} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">
-            <FontAwesomeIcon icon={faPlus} className="h-3 w-3 lg:h-4 lg:w-4" />
+          <button onClick={openCreate} title="Nuevo tenant" aria-label="Nuevo tenant" className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+            <FontAwesomeIcon icon={faPlus} />
           </button>
         ) : undefined
       }

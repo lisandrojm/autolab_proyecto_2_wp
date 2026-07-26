@@ -63,7 +63,6 @@ import { positionRoutes } from "./routes/positions.js";
 import { areaRoutes } from "./routes/areas.js";
 import { levelRoutes } from "./routes/levels.js";
 import { PdfRoutes } from "./routes/pdfs.js";
-import { PdfConfigRoutes } from "./routes/pdfConfig.js";
 import { ReleaseRoutes } from "./routes/releases.js";
 import { pdfTemplatePreviewRoutes } from "./routes/pdfPreview.js";
 import { vacationConfigRoutes } from "./routes/vacationConfig.js";
@@ -71,7 +70,6 @@ import { vacationsRoutes } from "./routes/vacations.js";
 import { vacationOverlapRoutes } from "./routes/vacationOverlaps.js";
 import { RequestConfigRoutes } from "./routes/requestConfig.js";
 import { RequestRoutes } from "./routes/activityReports.js";
-import { ProjectPdfConfigRoutes } from "./routes/projectPdfConfig.js";
 import { shiftRoutes } from "./routes/shifts.js";
 import { holidayRoutes } from "./routes/holidays.js";
 
@@ -203,8 +201,6 @@ app.use("/api/v1/positions", positionRoutes);
 app.use("/api/v1/areas", areaRoutes);
 app.use("/api/v1/levels", levelRoutes);
 app.use("/api/v1/pdfs", PdfRoutes);
-app.use("/api/v1/pdf-config", PdfConfigRoutes);
-app.use("/api/v1/project-pdf-configs", ProjectPdfConfigRoutes);
 app.use("/api/v1/releases", ReleaseRoutes);
 app.use("/api/v1/pdf-preview", pdfTemplatePreviewRoutes);
 

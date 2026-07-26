@@ -309,10 +309,11 @@ export const ProjectsPage: React.FC = () => {
       headerActions={
         <button
           onClick={handleOpenCreate}
-          className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary-600 hover:bg-primary-700 text-white transition-all duration-200 shadow-sm hover:shadow-md"
-          title="Nuevo Proyecto"
+          className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+          title="Nuevo proyecto"
+          aria-label="Nuevo proyecto"
         >
-          <FontAwesomeIcon icon={faPlus} className="h-4 w-4" />
+          <FontAwesomeIcon icon={faPlus} />
         </button>
       }
       infoModal={{

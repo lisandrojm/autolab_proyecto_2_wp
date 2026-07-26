@@ -7,19 +7,34 @@ import { IPdf } from "../models/Pdf.js";
 import { IUser } from "../models/User.js";
 import { IVacation } from "../models/Vacation.js";
 import { savePdfToStorage, savePdfVacationToStorage } from "./pdfStorage.js";
-import { PdfConfig } from "../models/PdfConfig.js";
-import { ProjectPdfConfig } from "../models/ProjectPdfConfig.js";
+import { Company } from "../models/Company.js";
 import { prepareVariables, prepareVacationVariables, replacePdfVariables, getDummyVariables, getSystemVariables, sanitizeHtml } from "./pdfVariableReplacer.js";
 
+/**
+ * Mapea la empresa (Company) al `config` que espera getSystemVariables / buildPdfHtml
+ * (razón social, cuit, ciudad, dirección, firmante + logo/firma). El membrete de los PDF
+ * de Pedidos/Vacaciones sale de la empresa marcada como default (Empresa/s | Membrete/s).
+ */
+function companyToPdfConfig(c: any) {
+  const domicilio = [[c.domicilioCalle, c.domicilioNumero].filter(Boolean).join(" "), c.domicilioPisoDepto].filter(Boolean).join(", ");
+  return {
+    razonSocial: c.razonSocial || "",
+    cuit: c.cuit || "",
+    ciudad: c.localidad || "",
+    direccion: domicilio,
+    signerName: c.firmanteNombre || "",
+    signerRole: c.firmanteCargo || "",
+    logoUrl: c.logoUrl || "",
+    signatureUrl: c.signatureUrl || "",
+  };
+}
+
 // Helper function to build the full HTML with layout
-async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVars: Record<string, string> = {}, title: string = "", user?: IUser, usaMembrete: boolean = true): Promise<string> {
-  let config: any = null;
-  if (user && user.projectIds && user.projectIds.length > 0) {
-    config = await ProjectPdfConfig.findOne({ tenantId, projects: { $in: user.projectIds } }).lean();
-  }
-  if (!config) {
-    config = (await PdfConfig.findOne({ tenantId }).lean()) || {};
-  }
+async function buildPdfHtml(_tenantId: string, bodyContent: string, additionalVars: Record<string, string> = {}, title: string = "", _user?: IUser, usaMembrete: boolean = true): Promise<string> {
+  // El membrete (y las variables {{razonSocial}}/{{cuit}}/{{ciudad}}) para Pedidos/Vacaciones salen
+  // de la primera empresa con membrete cargado (esos PDF no están atados a un proyecto).
+  const company = await Company.findOne({ $or: [{ logoUrl: { $nin: [null, ""] } }, { signatureUrl: { $nin: [null, ""] } }] }).lean();
+  const config: any = company ? companyToPdfConfig(company) : {};
 
   const systemVars = getSystemVariables(config);
   const allVars = { ...additionalVars, ...systemVars };

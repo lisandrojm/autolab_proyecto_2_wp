@@ -188,6 +188,20 @@ export const ContratosFramePage: React.FC = () => {
     }
   };
 
+  /** Abre la previsualización del contrato (PDF de ejemplo) en una pestaña nueva, sin entrar a editar. */
+  const handlePreviewItem = async (item: ContratoFrameItem) => {
+    if (!hasContent(item.content || "")) {
+      sweetAlert.error("Sin contenido", "Este contrato no tiene contenido para previsualizar.");
+      return;
+    }
+    try {
+      const blob = await contratoFrameAPI.preview(item.content || "", item.usaMembrete);
+      window.open(URL.createObjectURL(blob), "_blank");
+    } catch {
+      sweetAlert.error("Error", "No se pudo generar la previsualización.");
+    }
+  };
+
   /** Genera y descarga un PDF de ejemplo con el contenido actual del editor (sin guardar). */
   const handlePreview = async () => {
     if (!hasContent(form.content)) {
@@ -272,6 +286,7 @@ export const ContratosFramePage: React.FC = () => {
                 actions: [
                   ...(item.content
                     ? [
+                        { icon: faEye, onClick: (e: React.MouseEvent) => { e.stopPropagation(); handlePreviewItem(item); }, title: "Previsualizar", variant: "default" as const },
                         { icon: faDownload, onClick: (e: React.MouseEvent) => { e.stopPropagation(); handleDownloadFile(item); }, title: "Descargar PDF de ejemplo", variant: "default" as const },
                       ]
                     : []),
@@ -348,6 +363,11 @@ export const ContratosFramePage: React.FC = () => {
                   </td>
                   <td className="px-5 py-3 text-sm text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-2">
+                      {!sinContenido && (
+                        <button onClick={() => handlePreviewItem(item)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Previsualizar">
+                          <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
+                        </button>
+                      )}
                       {!sinContenido && (
                         <button onClick={() => handleDownloadFile(item)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Descargar PDF de ejemplo">
                           <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />

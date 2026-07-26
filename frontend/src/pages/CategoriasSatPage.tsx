@@ -379,8 +379,8 @@ export const CategoriasSatPage: React.FC = () => {
       headerActions={
         <div className="flex items-center gap-3">
           {canManage && (
-            <button onClick={openCreate} className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center gap-2 text-sm font-semibold shadow-md shadow-blue-500/20 active:scale-95" title="Nueva Categoría">
-              <FontAwesomeIcon icon={faPlus} className="h-4 w-4" />
+            <button onClick={openCreate} title="Nueva categoría" aria-label="Nueva categoría" className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+              <FontAwesomeIcon icon={faPlus} />
             </button>
           )}
           <button onClick={handleDownloadTemplate} className="px-3 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all flex items-center gap-2 text-sm font-semibold active:scale-95" title="Descargar Plantilla">

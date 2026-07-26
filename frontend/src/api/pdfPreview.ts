@@ -5,9 +5,4 @@ export const pdfPreviewAPI = {
     const response = await axios.post("/pdf-preview/preview", { content, code, title, pdfText, usaMembrete }, { responseType: "blob" });
     return response.data;
   },
-
-  previewGlobal: async (): Promise<Blob> => {
-    const response = await axios.post("/pdf-preview/preview", { isGlobalPreview: true }, { responseType: "blob" });
-    return response.data;
-  },
 };

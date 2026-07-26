@@ -648,7 +648,7 @@ export const OrderTypesTab: React.FC = () => {
           </>
         ) : (
           <>
-            <button onClick={openCreateModal} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+            <button onClick={openCreateModal} title="Nuevo tipo de pedido" aria-label="Nuevo tipo de pedido" className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
               <FontAwesomeIcon icon={faPlus} />
             </button>
             <button onClick={handleStartReorder} disabled={orderTypes.length < 2} className="px-4 py-2 rounded border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm">

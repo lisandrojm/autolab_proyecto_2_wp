@@ -17,8 +17,6 @@ import { getHelp, hasHelp } from "../data/help/helpContent";
 import { Modal } from "../components/ui/Modal";
 import { RichTextEditor } from "../components/ui/RichTextEditor";
 import { ViewToggle, ViewMode } from "../components/ui/ViewToggle";
-import { PdfGlobalConfigTab } from "./PdfGlobalConfigTab";
-import { PdfProjectConfigTab } from "./PdfProjectConfigTab";
 import { PdfAssignmentStatus } from "./PdfAssignmentStatus";
 
 const HELP_KEY = "pdfTemplates" as const;
@@ -53,7 +51,7 @@ export function PdfTemplatesPage() {
   const [isFetching, setIsFetching] = useState(false);
 
   // Vista (Tabla vs Tarjetas)
-  const [viewMode, setViewMode] = useState<ViewMode>("cards");
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
   useEffect(() => {
     const handleResize = () => {
@@ -62,14 +60,14 @@ export function PdfTemplatesPage() {
       if (!isNowLarge) setViewMode("cards");
     };
     if (window.innerWidth >= 1024) {
-      const saved = localStorage.getItem("pdfTemplatesViewMode");
+      const saved = localStorage.getItem("pdfTemplatesViewMode_v2");
       if (saved === "table" || saved === "cards") setViewMode(saved as ViewMode);
     }
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
   useEffect(() => {
-    if (isLarge) localStorage.setItem("pdfTemplatesViewMode", viewMode);
+    if (isLarge) localStorage.setItem("pdfTemplatesViewMode_v2", viewMode);
   }, [viewMode, isLarge]);
   const effectiveViewMode: ViewMode = isLarge ? viewMode : "cards";
 
@@ -96,7 +94,6 @@ export function PdfTemplatesPage() {
   const helpEntry = showHelp ? getHelp(HELP_KEY) : { title: "Ayuda", size: "md" as const, content: <div /> };
 
   // tabs
-  const [activeTab, setActiveTab] = useState<"global" | "projectConfig" | "templates">("global");
 
   const handlePreview = async () => {
     try {
@@ -134,6 +131,17 @@ export function PdfTemplatesPage() {
     } catch (error) {
       console.error(error);
       Swal.fire("Error", "No se pudo generar el PDF de la plantilla", "error");
+    }
+  };
+
+  /** Abre la previsualización de la plantilla en una pestaña nueva, sin entrar a editar. */
+  const handlePreviewItem = async (template: Pdf) => {
+    try {
+      const blob = await pdfPreviewAPI.preview(template.content, template.code, template.title, undefined, template.usaMembrete ?? false);
+      window.open(URL.createObjectURL(blob), "_blank");
+    } catch (error) {
+      console.error(error);
+      Swal.fire("Error", "No se pudo generar la previsualización", "error");
     }
   };
 
@@ -268,7 +276,7 @@ export function PdfTemplatesPage() {
   return (
     <PageLayout
       title="Plantillas | Pedidos | Vacaciones"
-      itemCount={activeTab === "templates" ? filteredTemplates.length : undefined}
+      itemCount={filteredTemplates.length}
       subtitle="Crea y gestiona plantillas PDF para pedidos y vacaciones"
       faIcon={{ icon: faFileContract }}
       infoModal={{
@@ -281,59 +289,37 @@ export function PdfTemplatesPage() {
       }}
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
-        activeTab !== "global" ? (
-          <div className="flex gap-2">
-            <button onClick={isAddDisabled ? undefined : openCreate} disabled={isAddDisabled} className={`flex items-center justify-center text-sm px-4 py-2 gap-2 rounded-md transition-colors ${isAddDisabled ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500" : "bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700"}`} title={isAddDisabled ? "Todos los códigos ya tienen asignada una plantilla" : "Crear nueva plantilla"}>
-              <FontAwesomeIcon icon={faPlus} className="h-4 w-4" />
-              <span>Nueva Plantilla</span>
-            </button>
-            {activeTab === "templates" && (
-              <button onClick={() => setShowStatusModal(true)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors" title="Ver estado de asignación">
-                <FontAwesomeIcon icon={faList} className="h-4 w-4" />
-                <span>Estado</span>
-              </button>
-            )}
-          </div>
-        ) : null
+        <div className="flex gap-2">
+          <button onClick={isAddDisabled ? undefined : openCreate} disabled={isAddDisabled} aria-label="Nueva plantilla" className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${isAddDisabled ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500" : "bg-blue-600 text-white hover:bg-blue-700"}`} title={isAddDisabled ? "Todos los códigos ya tienen asignada una plantilla" : "Nueva plantilla"}>
+            <FontAwesomeIcon icon={faPlus} />
+          </button>
+          <button onClick={() => setShowStatusModal(true)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors" title="Ver estado de asignación">
+            <FontAwesomeIcon icon={faList} className="h-4 w-4" />
+            <span>Estado</span>
+          </button>
+        </div>
       }
       searchAndFilters={
-        <div className="flex flex-col gap-4">
-          {/* TABS */}
-          <div className="flex space-x-4 border-b border-gray-200 dark:border-gray-700">
-            <button onClick={() => setActiveTab("global")} className={`py-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "global" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
-              Configuración Global
-            </button>
-            <button onClick={() => setActiveTab("projectConfig")} className={`py-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "projectConfig" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
-              Configuración por proyecto
-            </button>
-            <button onClick={() => setActiveTab("templates")} className={`py-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "templates" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
-              Plantillas
-            </button>
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
+          <div className="flex-1 w-full">
+            <SearchAndFilters
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              searchPlaceholder="Buscar por nombre o contenido..."
+              filters={[
+                {
+                  value: filterActive,
+                  onChange: (v) => setFilterActive(v as any),
+                  options: [
+                    { value: "all", label: "Todas" },
+                    { value: "active", label: "Activas" },
+                    { value: "inactive", label: "Inactivas" },
+                  ],
+                },
+              ]}
+            />
           </div>
-
-          {activeTab === "templates" && (
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
-              <div className="flex-1 w-full">
-                <SearchAndFilters
-                  searchTerm={searchTerm}
-                  onSearchChange={setSearchTerm}
-                  searchPlaceholder="Buscar por nombre o contenido..."
-                  filters={[
-                    {
-                      value: filterActive,
-                      onChange: (v) => setFilterActive(v as any),
-                      options: [
-                        { value: "all", label: "Todas" },
-                        { value: "active", label: "Activas" },
-                        { value: "inactive", label: "Inactivas" },
-                      ],
-                    },
-                  ]}
-                />
-              </div>
-              {isLarge && <ViewToggle value={viewMode} onChange={setViewMode} />}
-            </div>
-          )}
+          {isLarge && <ViewToggle value={viewMode} onChange={setViewMode} />}
         </div>
       }
     >
@@ -342,10 +328,6 @@ export function PdfTemplatesPage() {
         <div className="flex justify-center items-center py-20">
           <LoadingSpinner message="Cargando plantillas..." />
         </div>
-      ) : activeTab === "global" ? (
-        <PdfGlobalConfigTab />
-      ) : activeTab === "projectConfig" ? (
-        <PdfProjectConfigTab />
       ) : (
         <>
           {/* Todos los códigos ya tienen su plantilla: no hace falta (ni se puede) crear más. */}
@@ -395,6 +377,9 @@ export function PdfTemplatesPage() {
                         </td>
                         <td className="px-5 py-3 text-sm text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-2">
+                            <button onClick={() => handlePreviewItem(template)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Previsualizar">
+                              <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
+                            </button>
                             <button onClick={() => handleDownload(template)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Descargar PDF de ejemplo">
                               <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
                             </button>
@@ -430,6 +415,14 @@ export function PdfTemplatesPage() {
                   footer={{
                     leftContent: null,
                     actions: [
+                      {
+                        icon: faEye,
+                        title: "Previsualizar",
+                        onClick: (e) => {
+                          e.stopPropagation();
+                          handlePreviewItem(template);
+                        },
+                      },
                       {
                         icon: faDownload,
                         title: "Descargar PDF de ejemplo",

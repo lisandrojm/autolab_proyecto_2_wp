@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBuilding, faImage, faSignature, faSpinner, faPlus, faFilePdf, faPenToSquare, faIdCard } from "@fortawesome/free-solid-svg-icons";
+import { faBuilding, faImage, faSignature, faSpinner, faPlus, faFilePdf, faPenToSquare, faIdCard, faTrash, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2";
 import { companiesAPI, Company } from "../api/companies";
 import { clientAssetsAPI } from "../api/clientAssets";
@@ -8,6 +8,8 @@ import { useAuthStore } from "../stores/authStore";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
+import { ViewToggle, ViewMode } from "../components/ui/ViewToggle";
+import { getHelp } from "../data/help/helpContent";
 
 /**
  * ABM "Empresa/s | Membrete/s": se crea un membrete (logo + firma + aclaración/cargo) y se le asigna
@@ -33,6 +35,29 @@ export function MembretesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [showInfo, setShowInfo] = useState(false);
+  const helpEntry = getHelp("membretes");
+
+  // Vista (Tabla por defecto vs Tarjetas)
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
+  useEffect(() => {
+    const handleResize = () => {
+      const isNowLarge = window.innerWidth >= 1024;
+      setIsLarge(isNowLarge);
+      if (!isNowLarge) setViewMode("cards");
+    };
+    if (window.innerWidth >= 1024) {
+      const saved = localStorage.getItem("membretesViewMode");
+      if (saved === "table" || saved === "cards") setViewMode(saved as ViewMode);
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+  useEffect(() => {
+    if (isLarge) localStorage.setItem("membretesViewMode", viewMode);
+  }, [viewMode, isLarge]);
+  const effectiveViewMode: ViewMode = isLarge ? viewMode : "cards";
 
   // Editor (modal)
   const [modalOpen, setModalOpen] = useState(false);
@@ -88,6 +113,26 @@ export function MembretesPage() {
     setModalOpen(true);
   };
 
+  // "Eliminar membrete": quita logo/firma/default de la empresa (la empresa sigue en el ABM de Empresas).
+  const handleDeleteMembrete = async (c: Company) => {
+    const r = await Swal.fire({
+      title: "¿Eliminar membrete?",
+      text: `Se quitará el logo y la firma de "${c.razonSocial}". La empresa seguirá existiendo en el ABM de Empresas.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Eliminar",
+      cancelButtonText: "Cancelar",
+    });
+    if (!r.isConfirmed) return;
+    try {
+      await companiesAPI.update(c._id, { logoUrl: "", signatureUrl: "" });
+      setCompanies(await companiesAPI.list());
+      Swal.fire("Eliminado", "El membrete fue eliminado.", "success");
+    } catch (error: any) {
+      Swal.fire("Error", error?.response?.data?.error || "No se pudo eliminar el membrete", "error");
+    }
+  };
+
   // Al elegir empresa (modo creación), pre-cargar su firmante si ya lo tiene del ABM de Empresas.
   const onSelectEmpresa = (id: string) => {
     setEmpresaId(id);
@@ -134,7 +179,8 @@ export function MembretesPage() {
       }
 
       const updated = await companiesAPI.update(targetId, payload);
-      setCompanies((prev) => prev.map((c) => (c._id === updated._id ? updated : c)));
+      // Recargamos la lista completa: al marcar una empresa como default, el backend desmarca las demás.
+      setCompanies(await companiesAPI.list());
       // Si el backend no persistió el logo/firma (schema viejo sin reiniciar), avisamos.
       if ((logoFile && !updated.logoUrl) || (signatureFile && !updated.signatureUrl)) {
         Swal.fire("Atención", "Se guardó, pero el logo/firma no quedó persistido. Reiniciá el backend (tomó campos nuevos del modelo) y volvé a intentar.", "warning");
@@ -154,17 +200,19 @@ export function MembretesPage() {
   if (loading) return <LoadingSpinner message="Cargando empresas..." />;
 
   const empresaSeleccionada = companies.find((c) => c._id === empresaId) || editingCompany || null;
+  // Todas las empresas ya tienen membrete → no se puede crear uno nuevo.
+  const allCovered = companies.length > 0 && empresasSinMembrete.length === 0;
 
   return (
     <PageLayout
-      title="Empresa/s | Membrete/s"
+      title="Empresa/s | Membrete/s y firma"
       faIcon={{ icon: faFilePdf }}
       subtitle="Creá un membrete (logo + firma) y asignale una empresa del ABM. Se usa en los documentos que llevan membrete."
+      infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: helpEntry.title, size: helpEntry.size, content: helpEntry.content }}
       itemCount={membretes.length}
       headerActions={
-        <button type="button" onClick={openCreate} className="btn-primary px-4 py-2 flex items-center gap-2">
+        <button type="button" onClick={allCovered ? undefined : openCreate} disabled={allCovered} aria-label="Nuevo membrete" title={allCovered ? "Todas las empresas ya tienen membrete" : "Nuevo membrete"} className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${allCovered ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500" : "bg-blue-600 text-white hover:bg-blue-700"}`}>
           <FontAwesomeIcon icon={faPlus} />
-          Nuevo Membrete
         </button>
       }
     >
@@ -173,9 +221,66 @@ export function MembretesPage() {
           No hay empresas creadas. Creá empresas en el ABM de <strong>Empresas</strong> para poder configurar su membrete.
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <>
+          {isLarge && (
+            <div className="mb-4 flex justify-end">
+              <ViewToggle value={viewMode} onChange={setViewMode} />
+            </div>
+          )}
+          {allCovered && (
+            <div className="mb-6 flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-800 dark:bg-blue-900/20">
+              <FontAwesomeIcon icon={faInfoCircle} className="h-5 w-5 mt-0.5 shrink-0 text-blue-600 dark:text-blue-400" />
+              <div className="text-sm">
+                <p className="font-semibold text-blue-800 dark:text-blue-300">Todas las empresas ya tienen su membrete</p>
+                <p className="text-blue-700 dark:text-blue-300/80 mt-0.5">No es necesario crear más. Para cambiar un membrete, hacé click en la empresa correspondiente y editá su logo, firma o datos.</p>
+              </div>
+            </div>
+          )}
+          {effectiveViewMode === "table" ? (
+            <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-900/50">
+                  <tr>
+                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Empresa</th>
+                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">CUIT</th>
+                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Logo</th>
+                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Firma</th>
+                    <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                  {membretes.map((c) => (
+                    <tr key={c._id} onClick={() => openEdit(c)} className="hover:bg-gray-50 dark:hover:bg-gray-900/20 cursor-pointer">
+                      <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-700 flex items-center justify-center overflow-hidden shrink-0">
+                            {c.logoUrl ? <img src={getImageUrl(c.logoUrl)} alt="" className="w-full h-full object-contain" /> : <FontAwesomeIcon icon={faBuilding} className="text-gray-400 h-3.5 w-3.5" />}
+                          </div>
+                          <span className="truncate">{c.razonSocial}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{c.cuit || "—"}</td>
+                      <td className="px-5 py-3 text-sm"><FontAwesomeIcon icon={faImage} className={c.logoUrl ? "text-emerald-500" : "text-gray-300 dark:text-gray-600"} /></td>
+                      <td className="px-5 py-3 text-sm"><FontAwesomeIcon icon={faSignature} className={c.signatureUrl ? "text-emerald-500" : "text-gray-300 dark:text-gray-600"} /></td>
+                      <td className="px-5 py-3 text-sm text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          <button type="button" onClick={() => openEdit(c)} className="p-1.5 rounded text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors" title="Editar membrete">
+                            <FontAwesomeIcon icon={faPenToSquare} className="h-4 w-4" />
+                          </button>
+                          <button type="button" onClick={() => handleDeleteMembrete(c)} className="p-1.5 rounded text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors" title="Eliminar membrete">
+                            <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {membretes.map((c) => (
-            <div key={c._id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex flex-col gap-3">
+            <div key={c._id} onClick={() => openEdit(c)} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex flex-col gap-3 cursor-pointer hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md transition-all">
               <div className="flex items-start gap-3">
                 <div className="w-14 h-14 rounded-lg bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-700 flex items-center justify-center overflow-hidden shrink-0">
                   {c.logoUrl ? <img src={getImageUrl(c.logoUrl)} alt="" className="w-full h-full object-contain" /> : <FontAwesomeIcon icon={faBuilding} className="text-gray-400" />}
@@ -194,23 +299,32 @@ export function MembretesPage() {
                     <FontAwesomeIcon icon={faSignature} className={c.signatureUrl ? "text-emerald-500" : "text-gray-300 dark:text-gray-600"} /> Firma
                   </span>
                 </div>
-                <button type="button" onClick={() => openEdit(c)} className="p-2 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors" title="Editar membrete">
-                  <FontAwesomeIcon icon={faPenToSquare} className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button type="button" onClick={(e) => { e.stopPropagation(); openEdit(c); }} className="p-1.5 rounded text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors" title="Editar membrete">
+                    <FontAwesomeIcon icon={faPenToSquare} className="h-4 w-4" />
+                  </button>
+                  <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteMembrete(c); }} className="p-1.5 rounded text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors" title="Eliminar membrete">
+                    <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
           ))}
 
-          {/* Card "Nuevo Membrete" */}
-          <button
-            type="button"
-            onClick={openCreate}
-            className="min-h-[7rem] rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center gap-2 text-gray-500 hover:border-blue-400 hover:text-blue-500 transition-colors"
-          >
-            <FontAwesomeIcon icon={faPlus} className="h-6 w-6" />
-            <span className="text-sm font-semibold">Nuevo Membrete</span>
-          </button>
-        </div>
+          {/* Card "Nuevo Membrete" — solo si quedan empresas sin membrete */}
+          {!allCovered && (
+            <button
+              type="button"
+              onClick={openCreate}
+              className="min-h-[7rem] rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center gap-2 text-gray-500 hover:border-blue-400 hover:text-blue-500 transition-colors"
+            >
+              <FontAwesomeIcon icon={faPlus} className="h-6 w-6" />
+              <span className="text-sm font-semibold">Nuevo Membrete</span>
+            </button>
+          )}
+          </div>
+          )}
+        </>
       )}
 
       {/* Modal Crear / Editar */}
@@ -324,6 +438,7 @@ export function MembretesPage() {
               <input value={firmanteCargo} onChange={(e) => setFirmanteCargo(e.target.value)} type="text" className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Ej. Socio Gerente" />
             </div>
           </div>
+
         </div>
       </Modal>
     </PageLayout>

@@ -51,7 +51,7 @@ export function ReleasesPage() {
   const [filterActive, setFilterActive] = useState<"all" | "active" | "inactive">("all");
 
   // Vista (Tabla vs Tarjetas)
-  const [viewMode, setViewMode] = useState<ViewMode>("cards");
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
   useEffect(() => {
     const handleResize = () => {
@@ -60,14 +60,14 @@ export function ReleasesPage() {
       if (!isNowLarge) setViewMode("cards");
     };
     if (window.innerWidth >= 1024) {
-      const saved = localStorage.getItem("releasesViewMode");
+      const saved = localStorage.getItem("releasesViewMode_v2");
       if (saved === "table" || saved === "cards") setViewMode(saved as ViewMode);
     }
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
   useEffect(() => {
-    if (isLarge) localStorage.setItem("releasesViewMode", viewMode);
+    if (isLarge) localStorage.setItem("releasesViewMode_v2", viewMode);
   }, [viewMode, isLarge]);
   const effectiveViewMode: ViewMode = isLarge ? viewMode : "cards";
 
@@ -162,6 +162,20 @@ export function ReleasesPage() {
     }
   };
 
+  /** Abre la previsualización del release (PDF de ejemplo) en una pestaña nueva, sin entrar a editar. */
+  const handlePreviewItem = async (release: Release) => {
+    if (!hasContent(release.content || "")) {
+      Swal.fire("Sin contenido", "Este release no tiene contenido para previsualizar.", "error");
+      return;
+    }
+    try {
+      const blob = await releasesAPI.preview(release.content || "", release.usaMembrete);
+      window.open(URL.createObjectURL(blob), "_blank");
+    } catch {
+      Swal.fire("Error", "No se pudo generar la previsualización", "error");
+    }
+  };
+
   /** Genera y descarga un PDF de ejemplo con el contenido actual del editor (sin guardar). */
   const handlePreview = async () => {
     if (!hasContent(formData.content)) {
@@ -243,9 +257,8 @@ export function ReleasesPage() {
       shouldShowInfo={hasHelp(HELP_KEY)}
       infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: helpEntry.title, size: helpEntry.size, content: helpEntry.content }}
       headerActions={
-        <button onClick={openCreate} className="flex items-center justify-center text-sm px-4 py-2 gap-2 rounded-md transition-colors bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700" title="Crear nuevo release">
-          <FontAwesomeIcon icon={faPlus} className="h-4 w-4" />
-          <span>Nuevo Release</span>
+        <button onClick={openCreate} aria-label="Nuevo release" className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg transition-colors bg-blue-600 text-white hover:bg-blue-700" title="Nuevo release">
+          <FontAwesomeIcon icon={faPlus} />
         </button>
       }
       searchAndFilters={
@@ -299,6 +312,14 @@ export function ReleasesPage() {
                   actions: [
                     ...(release.content
                       ? [
+                          {
+                            icon: faEye,
+                            title: "Previsualizar",
+                            onClick: (e: any) => {
+                              e.stopPropagation();
+                              handlePreviewItem(release);
+                            },
+                          },
                           {
                             icon: faDownload,
                             title: "Descargar PDF de ejemplo",
@@ -377,6 +398,11 @@ export function ReleasesPage() {
                       </td>
                       <td className="px-5 py-3 text-sm text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
+                          {release.content && (
+                            <button onClick={() => handlePreviewItem(release)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Previsualizar">
+                              <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
+                            </button>
+                          )}
                           {release.content && (
                             <button onClick={() => handleDownload(release)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Descargar PDF de ejemplo">
                               <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />

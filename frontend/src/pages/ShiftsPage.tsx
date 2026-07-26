@@ -217,9 +217,8 @@ export const ShiftsPage: React.FC = () => {
       headerActions={
         <div className="flex items-center gap-3">
           {canManage && (
-            <button onClick={openCreate} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm shadow-sm">
+            <button onClick={openCreate} title="Nuevo turno" aria-label="Nuevo turno" className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
               <FontAwesomeIcon icon={faPlus} />
-              <span>Nuevo Turno</span>
             </button>
           )}
           {/* <button onClick={() => navigate("/shifts/config")} className="px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">

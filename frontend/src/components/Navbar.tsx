@@ -26,7 +26,9 @@ interface AdminCounts {
  * Subgrupo "Plantillas" (dentro de Configuración): agrupa las tres plantillas de documentos.
  * El orden del array es el que se muestra en el menú.
  */
-const PLANTILLAS_PATHS = ['/pdfs', '/contratos-frame', '/releases', '/empresas-membretes'];
+// El membrete va PRIMERO (es prerrequisito de las plantillas); el resto se ordena alfabéticamente.
+const MEMBRETE_PATH = '/empresas-membretes';
+const PLANTILLAS_PATHS = [MEMBRETE_PATH, '/pdfs', '/contratos-frame', '/releases'];
 
 export const MobileNavbar: React.FC = () => {
   const { user, logout, hasPermission } = useAuthStore();
@@ -186,8 +188,8 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission('config_obras_sociales:view')) base.push({ path: '/obras-sociales', icon: faBriefcaseMedical, label: 'Obras Sociales', scope: 'global' });
       if (hasPermission('config_centros_costo:view')) base.push({ path: '/centros-costo', icon: faPiggyBank, label: 'Centros de Costos', scope: 'global' });
       if (hasPermission('config_contratos_frame:view')) base.push({ path: '/contratos-frame', icon: faFilePdf, label: 'Contratos', scope: 'global' });
-      if (hasPermission('config_contratos_frame:view')) base.push({ path: '/empresas', icon: faBuilding, label: 'Empresas', scope: 'global' });
-      if (hasPermission('config_contratos_frame:view')) base.push({ path: '/empresas-membretes', icon: faFilePdf, label: 'Empresa/s | Membrete/s', scope: 'global' });
+      if (hasPermission('config_empresas:view')) base.push({ path: '/empresas', icon: faBuilding, label: 'Empresas', scope: 'global' });
+      if (hasPermission('config_membretes:view')) base.push({ path: '/empresas-membretes', icon: faFilePdf, label: 'Empresa/s | Membrete/s y firma', scope: 'global' });
     }
 
     return base;
@@ -255,9 +257,12 @@ export const MobileNavbar: React.FC = () => {
     // "Mi Perfil" se incluye como un item más para que entre en el orden alfabético
     const profileItem = { path: '/mi-perfil', icon: faIdCard, label: 'Mi Perfil', scope: 'global' as const };
 
-    // Subgrupo "Plantillas": respeta el orden de PLANTILLAS_PATHS (no alfabético) y solo incluye
-    // los items a los que el usuario tenga permiso.
-    const plantillasChildren = PLANTILLAS_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems;
+    // Subgrupo "Plantillas": el membrete va primero (prerrequisito) y el resto alfabético.
+    const plantillasBuilt = PLANTILLAS_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems;
+    const plantillasChildren = [
+      ...plantillasBuilt.filter((i) => i.path === MEMBRETE_PATH),
+      ...plantillasBuilt.filter((i) => i.path !== MEMBRETE_PATH).sort(byLabel),
+    ];
     const plantillasGroup = { path: '#plantillas', icon: faFilePdf, label: 'Plantillas', scope: 'global' as const, children: plantillasChildren };
 
     const configItems = [
@@ -269,7 +274,7 @@ export const MobileNavbar: React.FC = () => {
     const importItem = adminItems.find((item) => item.path === '/users/import-wp');
     if (importItem) configItems.push(importItem);
 
-    const renderMenuItem = (item: any) => {
+    const renderMenuItem = (item: any, isChild = false) => {
       // Subgrupo colapsable (ej: "Plantillas"). Debe ir primero: no es un link navegable.
       if (item.children) {
         return (
@@ -288,7 +293,7 @@ export const MobileNavbar: React.FC = () => {
               <FontAwesomeIcon icon={openPlantillas ? faChevronDown : faChevronRight} className="h-3 w-3 shrink-0" />
             </button>
 
-            {openPlantillas && <nav className="space-y-1 mt-1 ml-5 pl-2 border-l-2 border-gray-200 dark:border-gray-700">{item.children.map((child: any) => renderMenuItem(child))}</nav>}
+            {openPlantillas && <nav className="space-y-1 mt-1 ml-5 pl-2 border-l-2 border-gray-200 dark:border-gray-700">{item.children.map((child: any) => renderMenuItem(child, true))}</nav>}
           </div>
         );
       }
@@ -348,11 +353,17 @@ export const MobileNavbar: React.FC = () => {
         );
       }
       return (
-        <Link key={item.path} to={item.path} onClick={onItemClick} aria-current={isActive(item.path) ? 'page' : undefined} className={`group relative flex items-center justify-between px-2 py-2 rounded transition-all ${isActive(item.path) ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-blue-300 dark:border-blue-800' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/50'}`}>
+        <Link key={item.path} to={item.path} onClick={onItemClick} aria-current={isActive(item.path) ? 'page' : undefined} className={`group relative flex items-center justify-between px-2 py-2 rounded border transition-all ${isActive(item.path) ? (isChild ? 'border-transparent text-primary-700 dark:text-primary-300 font-semibold hover:bg-gray-100 dark:hover:bg-blue-900/50' : 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border-blue-300 dark:border-blue-800') : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/50'}`}>
           <div className="flex items-center space-x-3 flex-1 min-w-0">
-            <div className={`h-8 w-8 flex items-center justify-center rounded-md transition-colors ${isActive(item.path) ? 'bg-primary-600 text-white dark:bg-primary-700/30' : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 group-hover:bg-gray-300 dark:group-hover:bg-blue-800'}`}>
-              <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
-            </div>
+            {isChild ? (
+              <span className="h-8 w-8 flex items-center justify-center shrink-0 text-gray-500 dark:text-gray-400">
+                <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
+              </span>
+            ) : (
+              <div className={`h-8 w-8 flex items-center justify-center rounded-md transition-colors ${isActive(item.path) ? 'bg-primary-600 text-white dark:bg-primary-700/30' : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 group-hover:bg-gray-300 dark:group-hover:bg-blue-800'}`}>
+                <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
+              </div>
+            )}
             <span className="font-medium truncate">{item.label}</span>
             {item.badge && <span className={`ml-1 px-2 py-0.5 rounded text-[8px] font-bold ${item.badgeColor || 'bg-green-500'} text-white uppercase`}>{item.badge}</span>}
           </div>

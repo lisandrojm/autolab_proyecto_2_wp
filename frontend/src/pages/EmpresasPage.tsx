@@ -160,9 +160,8 @@ export const EmpresasPage: React.FC = () => {
         content: helpEntry.content,
       }}
       headerActions={
-        <button onClick={openCreate} className="btn-primary flex items-center gap-2 text-sm">
-          <FontAwesomeIcon icon={faPlus} className="h-4 w-4" />
-          Nueva Empresa
+        <button onClick={openCreate} title="Nueva empresa" aria-label="Nueva empresa" className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+          <FontAwesomeIcon icon={faPlus} />
         </button>
       }
       searchAndFilters={

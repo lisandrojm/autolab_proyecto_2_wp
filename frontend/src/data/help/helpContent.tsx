@@ -1,6 +1,6 @@
 import React from "react";
 
-export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels" | "pdfTemplates" | "vacations" | "vacationsRules" | "activityLogs" | "projectTeam" | "projects" | "sedes" | "contracts" | "categoriasSat" | "centrosCosto" | "contratosFrame" | "empresas" | "bancos" | "holidays" | "funcionesFrame" | "miPerfil" | "requestsConfig" | "obrasSociales" | "orderTypes" | "releases" | "shifts" | "importUsersWp";
+export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels" | "pdfTemplates" | "vacations" | "vacationsRules" | "activityLogs" | "projectTeam" | "projects" | "sedes" | "contracts" | "categoriasSat" | "centrosCosto" | "contratosFrame" | "empresas" | "membretes" | "bancos" | "holidays" | "funcionesFrame" | "miPerfil" | "requestsConfig" | "obrasSociales" | "orderTypes" | "releases" | "shifts" | "importUsersWp";
 
 export type HelpEntry = {
   title: string;
@@ -150,7 +150,7 @@ const helpResources = {
       //
       "pdfTemplates.title": "Plantillas | Pedidos | Vacaciones",
       "pdfTemplates.description": "Configura los documentos PDF generados automáticamente cuando un pedido o solicitud de vacaciones es aprobado.",
-      "pdfTemplates.items": ["**Plantillas**: Cada plantilla define el texto base que se usa para generar el PDF del documento.", "**Códigos y Tipos**: Existen plantillas para diferentes tipos de pedidos (Dinero, Fecha Rango, etc.) y para Vacaciones.", "**Variables dinámicas**: El sistema reemplaza automáticamente valores como {{categoria}}, {{monto}}, {{fechaInicio}}, {{dias}} según el contexto.", "**Plantilla activa**: Si está activa y coincide el código de la solicitud, se usa esa plantilla para generar el PDF.", "**Objetivo**: Personalizar los documentos que reciben los colaboradores."],
+      "pdfTemplates.items": ["**Plantillas**: Cada plantilla define el texto base que se usa para generar el PDF del documento.", "**Códigos y Tipos**: Existen plantillas para diferentes tipos de pedidos (Dinero, Fecha Rango, etc.) y para Vacaciones.", "**Variables dinámicas**: El sistema reemplaza automáticamente valores como {{categoria}}, {{monto}}, {{fechaInicio}}, {{dias}} según el contexto.", "**Plantilla activa**: Si está activa y coincide el código de la solicitud, se usa esa plantilla para generar el PDF.", "**Membrete y firma**: Con la opción 'Membrete con datos de la empresa y firma' activada, el PDF se genera con el encabezado (logo + razón social, CUIT y domicilio) y la firma de la empresa. Como estos PDF no están atados a un proyecto, se toma la primera empresa con membrete cargado (en Empresa/s | Membrete/s y firma). Sin membrete cargado, esta opción no se puede activar.", "**Objetivo**: Personalizar los documentos que reciben los colaboradores."],
 
       //
       // ---------------------------------------------------------
@@ -198,7 +198,7 @@ const helpResources = {
       // Contratos (config / contratos-frame)
       "contratosFrame.title": "Información de Contratos",
       "contratosFrame.description": "Catálogo de tipos de contrato con sus parámetros para armar los contratos del personal.",
-      "contratosFrame.items": ["**Tipo de contrato**: Modalidad de contratación (ej. Jornada, Plazo fijo, Tiempo Indeterminado, Eventual).", "**Parámetros**: Cantidad de jornadas y multiplicador diario que definen el cálculo de la liquidación.", "**ID externo**: Vincula el tipo con FRAME para la sincronización.", "**Gestión**: Crear, editar, eliminar e importar tipos de contrato desde un Excel."],
+      "contratosFrame.items": ["**Tipo de contrato**: Modalidad de contratación (ej. Jornada, Plazo fijo, Tiempo Indeterminado, Eventual).", "**Parámetros**: Cantidad de jornadas y multiplicador diario que definen el cálculo de la liquidación.", "**ID externo**: Vincula el tipo con FRAME para la sincronización.", "**Membrete y firma**: Con la opción 'Membrete con datos de la empresa y firma' activada, el contrato se genera con el encabezado (logo + razón social, CUIT y domicilio) y la firma de la empresa. La empresa se elige al descargar (de las asignadas al proyecto). El membrete —logo y firma— se carga en Empresa/s | Membrete/s y firma; sin membrete cargado, esta opción no se puede activar.", "**Gestión**: Crear, editar, eliminar e importar tipos de contrato desde un Excel."],
 
       // Empresas
       "empresas.title": "Información de Empresas",
@@ -243,7 +243,12 @@ const helpResources = {
       // Releases
       "releases.title": "Información de Releases",
       "releases.description": "Documentos de release / cesión de derechos usados en los proyectos.",
-      "releases.items": ["**Release**: Documento de cesión de derechos o autorización asociado a un contrato o proyecto.", "**Uso**: Respalda la cesión de titularidad de la obra por parte del personal.", "**Gestión**: Crear, editar y eliminar releases."],
+      "releases.items": ["**Release**: Documento de cesión de derechos o autorización asociado a un contrato o proyecto.", "**Uso**: Respalda la cesión de titularidad de la obra por parte del personal.", "**Membrete y firma**: Con la opción 'Membrete con datos de la empresa y firma' activada, el release se genera con el encabezado (logo + razón social, CUIT y domicilio) y la firma de la empresa. La empresa se elige al descargar (de las asignadas al proyecto). El membrete se carga en Empresa/s | Membrete/s y firma; sin membrete cargado, esta opción no se puede activar.", "**Gestión**: Crear, editar y eliminar releases."],
+
+      // Empresa/s | Membrete/s y firma
+      "membretes.title": "Información de Membrete/s y firma",
+      "membretes.description": "El membrete es el logo y la firma de una empresa que encabezan y firman los documentos (contratos, releases y pedidos/vacaciones).",
+      "membretes.items": ["**Qué es**: El membrete de una empresa = su logo + su firma (más la aclaración y el cargo del firmante). Es lo que aparece como encabezado y pie de firma en los PDF.", "**Empresa**: Se elige del ABM de Empresas; sus datos (razón social, CUIT, domicilio) se editan ahí. Acá se le cargan el logo y la firma.", "**Uso en las plantillas**: En cada plantilla (Contratos, Releases, Pedidos/Vacaciones) el check 'Membrete con datos de la empresa y firma' solo se puede activar si existe al menos un membrete cargado.", "**Contratos y Releases**: La empresa del membrete se elige al descargar el documento, entre las asignadas al proyecto.", "**Pedidos/Vacaciones**: Como esos PDF no están atados a un proyecto, usan la primera empresa que tenga membrete cargado.", "**Gestión**: Crear, editar y eliminar el membrete de cada empresa (eliminar solo quita el logo/firma; la empresa sigue en el ABM)."],
 
       // Turnos
       "shifts.title": "Información de Turnos",
@@ -385,6 +390,7 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
   projects: { title: "Gestión de Proyectos", size: "sm", content: buildHelpContent("projects") },
   sedes: { title: "Gestión de Sedes", size: "sm", content: buildHelpContent("sedes") },
   contracts: { title: "Gestión de Contratos", size: "sm", content: buildHelpContent("contracts") },
+  membretes: { title: "Información de Membrete/s y firma", size: "sm", content: buildHelpContent("membretes") },
 
   //
   // FINAL — CORRECTO

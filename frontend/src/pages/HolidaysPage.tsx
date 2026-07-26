@@ -273,10 +273,11 @@ export const HolidaysPage: React.FC = () => {
             <>
               <button
                 onClick={openCreate}
-                className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center gap-2 text-sm font-semibold shadow-md shadow-blue-500/20 active:scale-95"
-                title="Nuevo Feriado"
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                title="Nuevo feriado"
+                aria-label="Nuevo feriado"
               >
-                <FontAwesomeIcon icon={faPlus} className="h-4 w-4" />
+                <FontAwesomeIcon icon={faPlus} />
               </button>
               <button
                 onClick={handleDownloadTemplate}
