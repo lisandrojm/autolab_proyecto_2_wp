@@ -62,6 +62,8 @@ export const ContratosFramePage: React.FC = () => {
   const [form, setForm] = useState({ ...emptyForm });
   const [esTiempoIndeterminado, setEsTiempoIndeterminado] = useState(false);
   const [usaMembrete, setUsaMembrete] = useState(false);
+  const [isActive, setIsActive] = useState(true);
+  const [filterActive, setFilterActive] = useState<"all" | "active" | "inactive">("all");
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState(false);
 
@@ -81,13 +83,18 @@ export const ContratosFramePage: React.FC = () => {
     load();
   }, []);
 
-  const filtered = items.filter((it) => !search.trim() || fuzzyMatch(it.name || "", search));
+  const filtered = items.filter((it) => {
+    if (filterActive === "active" && it.isActive === false) return false;
+    if (filterActive === "inactive" && it.isActive !== false) return false;
+    return !search.trim() || fuzzyMatch(it.name || "", search);
+  });
 
   const openCreate = () => {
     setEditing(null);
     setForm({ ...emptyForm });
     setEsTiempoIndeterminado(false);
     setUsaMembrete(false);
+    setIsActive(true);
     setShowModal(true);
   };
 
@@ -101,7 +108,8 @@ export const ContratosFramePage: React.FC = () => {
       multiplicadorDiario: String(item.data?.multiplicadorDiario ?? ""),
     });
     setEsTiempoIndeterminado(!!item.data?.esTiempoIndeterminado);
-    setUsaMembrete(!!(item as any).usaMembrete);
+    setUsaMembrete(!!item.usaMembrete);
+    setIsActive(item.isActive ?? true);
     setShowModal(true);
   };
 
@@ -136,6 +144,7 @@ export const ContratosFramePage: React.FC = () => {
         multiplicadorDiario: form.multiplicadorDiario,
         esTiempoIndeterminado,
         usaMembrete,
+        isActive,
       };
 
       if (editing) {
@@ -226,7 +235,14 @@ export const ContratosFramePage: React.FC = () => {
     <PageLayout title="Plantillas | Contratos" subtitle="Catálogo de contratos de FRAME. Cargá registros manualmente o importá un Excel." faIcon={{ icon: faFileContract }} headerActions={headerActions} shouldShowInfo={hasHelp(HELP_KEY)} infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: helpEntry.title, size: helpEntry.size, content: helpEntry.content }}>
       <div className="mb-4 flex flex-col md:flex-row gap-4 items-center justify-between">
         <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar contrato..." className="w-full max-w-md px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white" />
-        {isLarge && <ViewToggle value={viewMode} onChange={setViewMode} />}
+        <div className="flex items-center gap-3 shrink-0">
+          <select value={filterActive} onChange={(e) => setFilterActive(e.target.value as "all" | "active" | "inactive")} className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white">
+            <option value="all">Todos</option>
+            <option value="active">Activos</option>
+            <option value="inactive">Inactivos</option>
+          </select>
+          {isLarge && <ViewToggle value={viewMode} onChange={setViewMode} />}
+        </div>
       </div>
 
       {loading ? (
@@ -245,7 +261,11 @@ export const ContratosFramePage: React.FC = () => {
               header={{
                 title: item.name,
                 icon: faFileContract,
-                badges: item.externalId ? [{ text: `ID ${item.externalId}`, variant: "blue" }] : [],
+                badges: [
+                  item.isActive === false ? { text: "Inactivo", variant: "destructive" } : { text: "Activo", variant: "green" },
+                  item.usaMembrete ? { text: "Membrete activo", variant: "green" } : { text: "Membrete inactivo", variant: "default" },
+                  ...(item.externalId ? [{ text: `ID ${item.externalId}`, variant: "blue" as const }] : []),
+                ],
               }}
               footer={{
                 leftContent: undefined,
@@ -282,6 +302,8 @@ export const ContratosFramePage: React.FC = () => {
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Jornadas</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Mult. Diario</th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Membrete</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Contenido</th>
                 <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
               </tr>
@@ -309,6 +331,12 @@ export const ContratosFramePage: React.FC = () => {
                   </td>
                   <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{item.data?.cantidadJornadas ?? "—"}</td>
                   <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{item.data?.multiplicadorDiario ?? "—"}</td>
+                  <td className="px-5 py-3 text-sm whitespace-nowrap">
+                    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${item.isActive === false ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300" : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"}`}>{item.isActive === false ? "Inactivo" : "Activo"}</span>
+                  </td>
+                  <td className="px-5 py-3 text-sm whitespace-nowrap">
+                    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${item.usaMembrete ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"}`}>{item.usaMembrete ? "Membrete activo" : "Membrete inactivo"}</span>
+                  </td>
                   <td className="px-5 py-3 text-sm hidden lg:table-cell">
                     {sinContenido ? (
                       <span className="font-medium text-red-600 dark:text-red-400">Sin contenido</span>
@@ -395,6 +423,16 @@ export const ContratosFramePage: React.FC = () => {
                 className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
               />
               Es tiempo indeterminado
+            </label>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+                className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+              />
+              Contrato activo
             </label>
 
             <MembreteToggle checked={usaMembrete} onChange={setUsaMembrete} />

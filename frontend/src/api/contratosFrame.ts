@@ -14,6 +14,7 @@ export interface ContratoFrameItem {
     esTiempoIndeterminado?: boolean;
   };
   usaMembrete?: boolean;
+  isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -26,6 +27,7 @@ export interface ContratoFrameInput {
   multiplicadorDiario?: string | number;
   esTiempoIndeterminado?: boolean;
   usaMembrete?: boolean;
+  isActive?: boolean;
 }
 
 /**

@@ -289,7 +289,10 @@ export function ReleasesPage() {
                   icon: faRocket,
                   title: release.name,
                   subtitle: `Versión ${release.version}`,
-                  badges: [getBadge(release)],
+                  badges: [
+                    getBadge(release),
+                    release.usaMembrete ? { text: "Membrete activo", variant: "green" as const } : { text: "Membrete inactivo", variant: "default" as const },
+                  ],
                 }}
                 footer={{
                   leftContent: null,
@@ -358,7 +361,10 @@ export function ReleasesPage() {
                       <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">{release.name}</td>
                       <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{release.version}</td>
                       <td className="px-5 py-3 text-sm whitespace-nowrap">
-                        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${release.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"}`}>{release.isActive ? "Activo" : "Inactivo"}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${release.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"}`}>{release.isActive ? "Activo" : "Inactivo"}</span>
+                          <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${release.usaMembrete ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"}`}>{release.usaMembrete ? "Membrete activo" : "Membrete inactivo"}</span>
+                        </div>
                       </td>
                       <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
                         {hasContent(release.content || "") ? (

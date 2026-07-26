@@ -14,6 +14,8 @@ export interface IContratoFrame extends Document {
   };
   /** Si el contrato lleva membrete (logo + encabezado de empresa) y firma al generar el PDF. */
   usaMembrete: boolean;
+  /** Contrato activo/inactivo (para habilitarlo o no en el catálogo). */
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -35,6 +37,7 @@ const contratoFrameSchema = new Schema<IContratoFrame>(
       esTiempoIndeterminado: { type: Boolean, default: false },
     },
     usaMembrete: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true },
   },
   {
     timestamps: true,

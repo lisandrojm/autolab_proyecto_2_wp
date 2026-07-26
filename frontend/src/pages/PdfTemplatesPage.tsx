@@ -7,7 +7,7 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faEdit, faTrash, faFileContract, faCheckCircle, faTimesCircle, faEye, faList, faInfoCircle, faDownload } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faEdit, faTrash, faFileContract, faEye, faList, faInfoCircle, faDownload } from "@fortawesome/free-solid-svg-icons";
 
 import { pdfsAPI, Pdf, PdfInput, codeOptions, variablesByCode, systemVariables } from "../api/pdf";
 import { pdfPreviewAPI } from "../api/pdfPreview";
@@ -256,20 +256,6 @@ export function PdfTemplatesPage() {
     }
   };
 
-  const getBadge = (template: Pdf) => {
-    if (template.isActive) {
-      return {
-        text: "Activa",
-        color: "emerald",
-        icon: faCheckCircle,
-      };
-    }
-    return {
-      text: "Inactiva",
-      color: "slate",
-      icon: faTimesCircle,
-    };
-  };
 
   const usedCodes = templates.map((t) => t.code);
   const availableCodes = codeOptions.filter((c) => !usedCodes.includes(c.value));
@@ -396,7 +382,10 @@ export function PdfTemplatesPage() {
                         <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">{template.name}</td>
                         <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{codeOptions.find((c) => c.value === template.code)?.label || template.code}</td>
                         <td className="px-5 py-3 text-sm whitespace-nowrap">
-                          <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${template.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"}`}>{template.isActive ? "Activa" : "Inactiva"}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${template.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"}`}>{template.isActive ? "Activa" : "Inactiva"}</span>
+                            <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${template.usaMembrete ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"}`}>{template.usaMembrete ? "Membrete activo" : "Membrete inactivo"}</span>
+                          </div>
                         </td>
                         <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
                           <span className="truncate max-w-[320px] block" title="Contenido de la plantilla">
@@ -433,7 +422,10 @@ export function PdfTemplatesPage() {
                     icon: faFileContract,
                     title: template.name,
                     subtitle: codeOptions.find((c) => c.value === template.code)?.label || template.code,
-                    badges: [getBadge(template)],
+                    badges: [
+                      template.isActive ? { text: "Activa", variant: "green" } : { text: "Inactiva", variant: "destructive" },
+                      template.usaMembrete ? { text: "Membrete activo", variant: "green" } : { text: "Membrete inactivo", variant: "default" },
+                    ],
                   }}
                   footer={{
                     leftContent: null,
