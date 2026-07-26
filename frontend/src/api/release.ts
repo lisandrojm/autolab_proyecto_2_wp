@@ -9,6 +9,7 @@ export interface Release {
   /** Contenido redactado en la plataforma (HTML) con variables `{{variable}}` */
   content?: string;
   isActive: boolean;
+  usaMembrete?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -19,6 +20,7 @@ export interface ReleaseInput {
   description?: string;
   content?: string;
   isActive?: boolean;
+  usaMembrete?: boolean;
 }
 
 /**

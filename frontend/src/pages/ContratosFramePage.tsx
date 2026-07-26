@@ -60,6 +60,7 @@ export const ContratosFramePage: React.FC = () => {
   const [editing, setEditing] = useState<ContratoFrameItem | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [esTiempoIndeterminado, setEsTiempoIndeterminado] = useState(false);
+  const [usaMembrete, setUsaMembrete] = useState(false);
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState(false);
 
@@ -85,6 +86,7 @@ export const ContratosFramePage: React.FC = () => {
     setEditing(null);
     setForm({ ...emptyForm });
     setEsTiempoIndeterminado(false);
+    setUsaMembrete(false);
     setShowModal(true);
   };
 
@@ -98,6 +100,7 @@ export const ContratosFramePage: React.FC = () => {
       multiplicadorDiario: String(item.data?.multiplicadorDiario ?? ""),
     });
     setEsTiempoIndeterminado(!!item.data?.esTiempoIndeterminado);
+    setUsaMembrete(!!(item as any).usaMembrete);
     setShowModal(true);
   };
 
@@ -131,6 +134,7 @@ export const ContratosFramePage: React.FC = () => {
         cantidadJornadas: form.cantidadJornadas,
         multiplicadorDiario: form.multiplicadorDiario,
         esTiempoIndeterminado,
+        usaMembrete,
       };
 
       if (editing) {
@@ -390,6 +394,16 @@ export const ContratosFramePage: React.FC = () => {
                 className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
               />
               Es tiempo indeterminado
+            </label>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={usaMembrete}
+                onChange={(e) => setUsaMembrete(e.target.checked)}
+                className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+              />
+              Incluir membrete y firma (logo y firma de la empresa elegida al descargar)
             </label>
 
             {/* Contenido del contrato */}

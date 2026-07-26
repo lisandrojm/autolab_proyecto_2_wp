@@ -8,6 +8,8 @@ export interface IPdf extends Document {
   content: string;
   variablesHint?: string;
   isActive: boolean;
+  /** Si la plantilla lleva membrete (logo + encabezado de empresa) y firma al generar el PDF. */
+  usaMembrete: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,6 +51,10 @@ const pdfSchema = new Schema<IPdf>(
       type: Boolean,
       default: true,
       index: true,
+    },
+    usaMembrete: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true, collection: "pdf" },

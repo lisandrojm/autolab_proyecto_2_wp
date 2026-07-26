@@ -13,6 +13,7 @@ export interface ContratoFrameItem {
     multiplicadorDiario: number;
     esTiempoIndeterminado?: boolean;
   };
+  usaMembrete?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -24,6 +25,7 @@ export interface ContratoFrameInput {
   cantidadJornadas?: string | number;
   multiplicadorDiario?: string | number;
   esTiempoIndeterminado?: boolean;
+  usaMembrete?: boolean;
 }
 
 /**

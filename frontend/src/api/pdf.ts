@@ -9,6 +9,7 @@ export interface Pdf {
   content: string;
   variablesHint?: string;
   isActive: boolean;
+  usaMembrete?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -20,6 +21,7 @@ export interface PdfInput {
   content: string;
   variablesHint?: string;
   isActive?: boolean;
+  usaMembrete?: boolean;
 }
 
 export const pdfsAPI = {

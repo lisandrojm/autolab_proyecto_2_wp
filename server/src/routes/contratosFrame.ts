@@ -6,7 +6,7 @@ import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { buildEmployeeDocData, buildDocFileName } from "../utils/employeeDocData.js";
-import { buildDocPdf, getDummyDocVariables, htmlHasText } from "../utils/documentPdf.js";
+import { buildDocPdf, getDummyDocVariables, htmlHasText, empresaToMembrete } from "../utils/documentPdf.js";
 
 const router = Router();
 
@@ -112,7 +112,9 @@ router.get("/:id/download-filled", authenticateToken, async (req: AuthenticatedR
     const empresa = chosenId ? await Company.findById(chosenId).lean() : null;
     const data = await buildEmployeeDocData(user, up, contract, empresa);
 
-    const buffer = await buildDocPdf(item.content, data);
+    // Si la plantilla lleva membrete, se encabeza/firma con la empresa elegida.
+    const membrete = item.usaMembrete && empresa ? empresaToMembrete(empresa) : undefined;
+    const buffer = await buildDocPdf(item.content, data, membrete);
     const baseName = buildDocFileName({ tipo: "Contrato", user, up, contract });
     sendPdf(res, buffer, baseName);
   } catch (error) {
@@ -124,7 +126,7 @@ router.get("/:id/download-filled", authenticateToken, async (req: AuthenticatedR
 // POST / - crear
 router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { nombre, externalId, content, cantidadJornadas, multiplicadorDiario, esTiempoIndeterminado } = req.body;
+    const { nombre, externalId, content, cantidadJornadas, multiplicadorDiario, esTiempoIndeterminado, usaMembrete } = req.body;
     if (!nombre || !String(nombre).trim()) {
       res.status(400).json({ error: "El nombre es obligatorio" });
       return;
@@ -134,6 +136,7 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
       name: String(nombre).trim(),
       externalId: externalId ? String(externalId).trim() : "",
       content: htmlHasText(content) ? String(content) : "",
+      usaMembrete: usaMembrete === "true" || usaMembrete === true,
       data: {
         id: idNum !== undefined && !isNaN(idNum) ? idNum : undefined,
         nombre: String(nombre).trim(),
@@ -153,12 +156,13 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
 router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { nombre, externalId, content, cantidadJornadas, multiplicadorDiario, esTiempoIndeterminado } = req.body;
+    const { nombre, externalId, content, cantidadJornadas, multiplicadorDiario, esTiempoIndeterminado, usaMembrete } = req.body;
     const item = await ContratoFrame.findById(id);
     if (!item) {
       res.status(404).json({ error: "Contrato no encontrado" });
       return;
     }
+    if (usaMembrete !== undefined) item.usaMembrete = usaMembrete === "true" || usaMembrete === true;
     if (nombre !== undefined) {
       item.name = String(nombre).trim();
       item.data.nombre = String(nombre).trim();

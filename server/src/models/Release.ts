@@ -8,6 +8,8 @@ export interface IRelease extends Document {
   /** Contenido del release redactado en la plataforma (HTML del editor, con variables `{{variable}}`). */
   content: string;
   isActive: boolean;
+  /** Si el release lleva membrete (logo + encabezado de empresa) y firma al generar el PDF. */
+  usaMembrete: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,6 +46,10 @@ const releaseSchema = new Schema<IRelease>(
       type: Boolean,
       default: true,
       index: true,
+    },
+    usaMembrete: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true, collection: "release" },

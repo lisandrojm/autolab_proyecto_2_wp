@@ -12,7 +12,7 @@ import { ProjectPdfConfig } from "../models/ProjectPdfConfig.js";
 import { prepareVariables, prepareVacationVariables, replacePdfVariables, getDummyVariables, getSystemVariables, sanitizeHtml } from "./pdfVariableReplacer.js";
 
 // Helper function to build the full HTML with layout
-async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVars: Record<string, string> = {}, title: string = "", user?: IUser): Promise<string> {
+async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVars: Record<string, string> = {}, title: string = "", user?: IUser, usaMembrete: boolean = true): Promise<string> {
   let config: any = null;
   if (user && user.projectIds && user.projectIds.length > 0) {
     config = await ProjectPdfConfig.findOne({ tenantId, projects: { $in: user.projectIds } }).lean();
@@ -95,6 +95,29 @@ async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVar
     signatureImgTag = `<div style="border-top: 1px solid #000; display: inline-block; padding-top: 5px; min-width: 200px;">Firma</div>`;
   }
 
+  // El membrete (encabezado con logo/empresa) y la firma de la empresa se muestran solo si la
+  // plantilla lo pide (usaMembrete). La firma del empleado (user-signature) va siempre.
+  const headerHtml = usaMembrete
+    ? `<div class="header">
+          <div class="logo">${logoImgTag}</div>
+          <div class="company-info">
+            <strong>${systemVars.razonSocial}</strong><br>
+            CUIT: ${systemVars.cuit}<br>
+            ${systemVars.direccion ? `${systemVars.direccion}<br>` : ""}
+            ${systemVars.ciudad}<br>
+          </div>
+        </div>`
+    : "";
+  const companySignatureHtml = usaMembrete
+    ? `<div class="company-signature">
+            ${signatureImgTag}
+            <div class="signer-info" style="margin-top: 5px; font-size: 10pt; color: #555;">
+              <strong>${systemVars.signerName}</strong><br>
+              ${systemVars.signerRole}
+            </div>
+          </div>`
+    : "";
+
   const html = `
       <!DOCTYPE html>
       <html>
@@ -120,17 +143,7 @@ async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVar
         </style>
       </head>
       <body>
-        <div class="header">
-          <div class="logo">
-            ${logoImgTag}
-          </div>
-          <div class="company-info">
-            <strong>${systemVars.razonSocial}</strong><br>
-            CUIT: ${systemVars.cuit}<br>
-            ${systemVars.direccion ? `${systemVars.direccion}<br>` : ""}
-            ${systemVars.ciudad}<br>
-          </div>
-        </div>
+        ${headerHtml}
 
         ${title ? `<div class="title">${title}</div>` : ""}
 
@@ -145,13 +158,7 @@ async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVar
             <div style="margin-bottom: 15px;">Firma: __________________________</div>
             <div>Aclaración: ${allVars.nombreUsuario || ""}</div>
           </div>
-          <div class="company-signature">
-            ${signatureImgTag}
-            <div class="signer-info" style="margin-top: 5px; font-size: 10pt; color: #555;">
-              <strong>${systemVars.signerName}</strong><br>
-              ${systemVars.signerRole}
-            </div>
-          </div>
+          ${companySignatureHtml}
         </div>
       </body>
       </html>
@@ -233,7 +240,7 @@ export async function generateOrderPDF(order: IOrder, category: IOrderConfig, te
     console.log("[PDF GENERATOR] Variables prepared:", Object.keys(variables));
 
     // Use buildPdfHtml to generate HTML with global layout
-    const htmlContent = await buildPdfHtml(tenantId, bodyContent, variables as Record<string, string>, (template as any).title, user);
+    const htmlContent = await buildPdfHtml(tenantId, bodyContent, variables as Record<string, string>, (template as any).title, user, (template as any).usaMembrete ?? false);
     console.log("[PDF GENERATOR] HTML content generated using global layout, length:", htmlContent.length, "characters");
 
     const options = {
@@ -310,7 +317,7 @@ export async function generateVacationPDF(vacation: IVacation, template: IPdf, u
     console.log("[PDF GENERATOR] Variables prepared:", Object.keys(variables));
 
     // Use buildPdfHtml to generate HTML with global layout
-    const htmlContent = await buildPdfHtml(tenantId, template.content, variables as Record<string, string>, (template as any).title, user);
+    const htmlContent = await buildPdfHtml(tenantId, template.content, variables as Record<string, string>, (template as any).title, user, (template as any).usaMembrete ?? false);
     console.log("[PDF GENERATOR] HTML content generated using global layout, length:", htmlContent.length, "characters");
 
     const options = {

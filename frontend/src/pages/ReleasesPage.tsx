@@ -22,6 +22,7 @@ interface ReleaseFormData {
   description: string;
   content: string;
   isActive: boolean;
+  usaMembrete: boolean;
 }
 
 const EMPTY_FORM: ReleaseFormData = {
@@ -30,6 +31,7 @@ const EMPTY_FORM: ReleaseFormData = {
   description: "",
   content: "",
   isActive: true,
+  usaMembrete: false,
 };
 
 /** El editor devuelve "<p></p>" cuando está vacío: chequeamos que haya texto real. */
@@ -123,6 +125,7 @@ export function ReleasesPage() {
       description: release.description || "",
       content: release.content || "",
       isActive: release.isActive,
+      usaMembrete: release.usaMembrete ?? false,
     });
     setErrors({});
     setShowModal(true);
@@ -203,6 +206,7 @@ export function ReleasesPage() {
         description: formData.description,
         content: formData.content,
         isActive: formData.isActive,
+        usaMembrete: formData.usaMembrete,
       };
 
       if (editingRelease) {
@@ -463,6 +467,11 @@ export function ReleasesPage() {
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" />
               Release activo
+            </label>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={formData.usaMembrete} onChange={(e) => setFormData({ ...formData, usaMembrete: e.target.checked })} className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" />
+              Incluir membrete y firma (logo y firma de la empresa elegida al descargar)
             </label>
 
             {/* Contenido del release */}

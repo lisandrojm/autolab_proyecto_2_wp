@@ -8,7 +8,7 @@ import UserProject from "../models/UserProject.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { buildEmployeeDocData, buildDocFileName } from "../utils/employeeDocData.js";
-import { buildDocPdf, getDummyDocVariables, htmlHasText } from "../utils/documentPdf.js";
+import { buildDocPdf, getDummyDocVariables, htmlHasText, empresaToMembrete } from "../utils/documentPdf.js";
 
 const router = Router();
 
@@ -20,6 +20,10 @@ const ReleaseSchema = z.object({
   description: z.string().max(2000).optional(),
   content: z.string().max(200000).optional(),
   isActive: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((v) => (typeof v === "string" ? v === "true" : v)),
+  usaMembrete: z
     .union([z.boolean(), z.string()])
     .optional()
     .transform((v) => (typeof v === "string" ? v === "true" : v)),
@@ -144,7 +148,9 @@ router.get("/:id/download-filled", authenticateToken, requireTenant, async (req:
     const empresa = chosenId ? await Company.findById(chosenId).lean() : null;
     const data = await buildEmployeeDocData(user, up, contract, empresa);
 
-    const buffer = await buildDocPdf(release.content, data);
+    // Si la plantilla lleva membrete, se encabeza/firma con la empresa elegida.
+    const membrete = release.usaMembrete && empresa ? empresaToMembrete(empresa) : undefined;
+    const buffer = await buildDocPdf(release.content, data, membrete);
     const baseName = buildDocFileName({ tipo: "Release", user, up, contract, docName: release.name });
     sendPdf(res, buffer, baseName);
   } catch (error) {
@@ -194,6 +200,7 @@ router.put("/:id", authenticateToken, requireTenant, async (req: AuthenticatedRe
     if (validatedData.description !== undefined) release.description = validatedData.description;
     if (validatedData.content !== undefined) release.content = htmlHasText(validatedData.content) ? validatedData.content : "";
     if (validatedData.isActive !== undefined) release.isActive = validatedData.isActive;
+    if (validatedData.usaMembrete !== undefined) release.usaMembrete = validatedData.usaMembrete;
 
     await release.save();
     res.json(release);

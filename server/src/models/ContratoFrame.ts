@@ -12,6 +12,8 @@ export interface IContratoFrame extends Document {
     multiplicadorDiario: number;
     esTiempoIndeterminado: boolean;
   };
+  /** Si el contrato lleva membrete (logo + encabezado de empresa) y firma al generar el PDF. */
+  usaMembrete: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,6 +34,7 @@ const contratoFrameSchema = new Schema<IContratoFrame>(
       multiplicadorDiario: { type: Number },
       esTiempoIndeterminado: { type: Boolean, default: false },
     },
+    usaMembrete: { type: Boolean, default: false },
   },
   {
     timestamps: true,

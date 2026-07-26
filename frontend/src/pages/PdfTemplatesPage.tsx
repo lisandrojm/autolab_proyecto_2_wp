@@ -85,6 +85,7 @@ export function PdfTemplatesPage() {
     content: "",
     variablesHint: "",
     isActive: true,
+    usaMembrete: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -179,6 +180,7 @@ export function PdfTemplatesPage() {
       content: "",
       variablesHint: "",
       isActive: true,
+      usaMembrete: false,
     });
 
     setErrors({});
@@ -194,6 +196,7 @@ export function PdfTemplatesPage() {
       content: toEditorHtml(template.content),
       variablesHint: template.variablesHint || "",
       isActive: template.isActive,
+      usaMembrete: template.usaMembrete ?? false,
     });
     setErrors({});
     setShowModal(true);
@@ -583,6 +586,16 @@ export function PdfTemplatesPage() {
                 className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
               />
               Plantilla activa
+            </label>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={formData.usaMembrete ?? false}
+                onChange={(e) => setFormData({ ...formData, usaMembrete: e.target.checked })}
+                className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+              />
+              Incluir membrete y firma
             </label>
 
             {/* contenido */}
