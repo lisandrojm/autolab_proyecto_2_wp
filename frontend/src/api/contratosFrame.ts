@@ -109,8 +109,8 @@ class ContratoFrameAPI {
   }
 
   /** Genera un PDF de ejemplo con el contenido del editor (sin guardar). */
-  async preview(content: string): Promise<Blob> {
-    const { data } = await axios.post("/contratos-frame/preview", { content }, { responseType: "blob" });
+  async preview(content: string, usaMembrete?: boolean): Promise<Blob> {
+    const { data } = await axios.post("/contratos-frame/preview", { content, usaMembrete }, { responseType: "blob" });
     return data as Blob;
   }
 

@@ -97,8 +97,8 @@ export const releasesAPI = {
   },
 
   /** Genera un PDF de ejemplo con el contenido del editor (sin guardar). */
-  preview: async (content: string): Promise<Blob> => {
-    const response = await axios.post("/releases/preview", { content }, { responseType: "blob" });
+  preview: async (content: string, usaMembrete?: boolean): Promise<Blob> => {
+    const response = await axios.post("/releases/preview", { content, usaMembrete }, { responseType: "blob" });
     return response.data as Blob;
   },
 

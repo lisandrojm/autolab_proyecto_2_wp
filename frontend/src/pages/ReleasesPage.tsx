@@ -170,7 +170,7 @@ export function ReleasesPage() {
     }
     try {
       setPreviewing(true);
-      const blob = await releasesAPI.preview(formData.content);
+      const blob = await releasesAPI.preview(formData.content, formData.usaMembrete);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;

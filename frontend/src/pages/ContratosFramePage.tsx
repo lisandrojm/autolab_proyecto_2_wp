@@ -196,7 +196,7 @@ export const ContratosFramePage: React.FC = () => {
     }
     try {
       setPreviewing(true);
-      const blob = await contratoFrameAPI.preview(form.content);
+      const blob = await contratoFrameAPI.preview(form.content, usaMembrete);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
