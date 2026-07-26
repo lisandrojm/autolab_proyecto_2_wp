@@ -15,6 +15,7 @@ const contratoFrameSchema = new Schema({
         esTiempoIndeterminado: { type: Boolean, default: false },
     },
     usaMembrete: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true },
 }, {
     timestamps: true,
     collection: "contratos-frame",

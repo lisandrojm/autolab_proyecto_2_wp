@@ -119,7 +119,7 @@ router.get("/:id/download-filled", authenticateToken, async (req, res) => {
 // POST / - crear
 router.post("/", authenticateToken, async (req, res) => {
     try {
-        const { nombre, externalId, content, cantidadJornadas, multiplicadorDiario, esTiempoIndeterminado, usaMembrete } = req.body;
+        const { nombre, externalId, content, cantidadJornadas, multiplicadorDiario, esTiempoIndeterminado, usaMembrete, isActive } = req.body;
         if (!nombre || !String(nombre).trim()) {
             res.status(400).json({ error: "El nombre es obligatorio" });
             return;
@@ -130,6 +130,7 @@ router.post("/", authenticateToken, async (req, res) => {
             externalId: externalId ? String(externalId).trim() : "",
             content: htmlHasText(content) ? String(content) : "",
             usaMembrete: usaMembrete === "true" || usaMembrete === true,
+            isActive: isActive === undefined ? true : isActive === "true" || isActive === true,
             data: {
                 id: idNum !== undefined && !isNaN(idNum) ? idNum : undefined,
                 nombre: String(nombre).trim(),
@@ -149,7 +150,7 @@ router.post("/", authenticateToken, async (req, res) => {
 router.put("/:id", authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
-        const { nombre, externalId, content, cantidadJornadas, multiplicadorDiario, esTiempoIndeterminado, usaMembrete } = req.body;
+        const { nombre, externalId, content, cantidadJornadas, multiplicadorDiario, esTiempoIndeterminado, usaMembrete, isActive } = req.body;
         const item = await ContratoFrame.findById(id);
         if (!item) {
             res.status(404).json({ error: "Contrato no encontrado" });
@@ -157,6 +158,8 @@ router.put("/:id", authenticateToken, async (req, res) => {
         }
         if (usaMembrete !== undefined)
             item.usaMembrete = usaMembrete === "true" || usaMembrete === true;
+        if (isActive !== undefined)
+            item.isActive = isActive === "true" || isActive === true;
         if (nombre !== undefined) {
             item.name = String(nombre).trim();
             item.data.nombre = String(nombre).trim();
