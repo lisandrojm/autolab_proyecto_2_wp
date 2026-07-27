@@ -1,33 +1,33 @@
-import React, { useState, useEffect } from "react";
-import { PageLayout } from "../components/ui/PageLayout";
-import { SearchAndFilters } from "../components/ui/SearchAndFilters";
-import { Shift, ShiftFormData } from "../api/shifts";
-import { shiftsAPI } from "../api/shifts";
-import { useAuthStore } from "../stores/authStore";
-import { LoadingSpinner } from "../components/ui/LoadingSpinner";
-import { EmptyState } from "../components/ui/EmptyState";
-import { Card } from "../components/ui/Card";
-import { sweetAlert } from "../utils/sweetAlert";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useNavigate } from "react-router-dom";
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { faEdit, faTrash, faPlus, faClock, faTable, faGrip, faGripVertical, faCheck, faMultiply, faLock } from "@fortawesome/free-solid-svg-icons";
+import React, { useState, useEffect } from 'react';
+import { PageLayout } from '../components/ui/PageLayout';
+import { SearchAndFilters } from '../components/ui/SearchAndFilters';
+import { Shift, ShiftFormData } from '../api/shifts';
+import { shiftsAPI } from '../api/shifts';
+import { useAuthStore } from '../stores/authStore';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { EmptyState } from '../components/ui/EmptyState';
+import { Card } from '../components/ui/Card';
+import { sweetAlert } from '../utils/sweetAlert';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { useNavigate } from 'react-router-dom';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { faEdit, faTrash, faPlus, faClock, faTable, faGrip, faGripVertical, faCheck, faMultiply, faLock } from '@fortawesome/free-solid-svg-icons';
 
 // Helper para días
-const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const DAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Lunes a Domingo
 
 export const ShiftsPage: React.FC = () => {
   const navigate = useNavigate();
   const { hasPermission } = useAuthStore();
-  const canManage = hasPermission("admin_users:view");
+  const canManage = hasPermission('admin_users:view');
 
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [totalShifts, setTotalShifts] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
@@ -35,38 +35,35 @@ export const ShiftsPage: React.FC = () => {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [formData, setFormData] = useState<ShiftFormData>({
-    name: "",
+    name: '',
     days: [1, 2, 3, 4, 5],
-    startTime: "09:00",
-    endTime: "18:00",
-    description: "",
+    startTime: '09:00',
+    endTime: '18:00',
+    description: '',
   });
-
-
 
   const [isReorderMode, setIsReorderMode] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
-
-  const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
   const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
 
   useEffect(() => {
     const handleResize = () => {
       const isNowLarge = window.innerWidth >= 1024;
       setIsLarge(isNowLarge);
-      if (!isNowLarge) setViewMode("cards");
+      if (!isNowLarge) setViewMode('cards');
     };
     if (window.innerWidth >= 1024) {
-      const saved = localStorage.getItem("shiftsViewMode");
-      if (saved === "table" || saved === "cards") setViewMode(saved);
+      const saved = localStorage.getItem('shiftsViewMode');
+      if (saved === 'table' || saved === 'cards') setViewMode(saved);
     }
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
-    if (isLarge) localStorage.setItem("shiftsViewMode", viewMode);
+    if (isLarge) localStorage.setItem('shiftsViewMode', viewMode);
   }, [viewMode, isLarge]);
 
   useEffect(() => {
@@ -80,22 +77,20 @@ export const ShiftsPage: React.FC = () => {
       setShifts(resp.shifts);
       setTotalShifts(resp.pagination.total);
     } catch (error) {
-      console.error("Error fetching shifts", error);
+      console.error('Error fetching shifts', error);
     } finally {
       setLoading(false);
     }
   };
 
-
-
   const openCreate = () => {
     setEditingShift(null);
     setFormData({
-      name: "",
+      name: '',
       days: [1, 2, 3, 4, 5],
-      startTime: "09:00",
-      endTime: "18:00",
-      description: "",
+      startTime: '09:00',
+      endTime: '18:00',
+      description: '',
     });
     setShowModal(true);
   };
@@ -107,7 +102,7 @@ export const ShiftsPage: React.FC = () => {
       days: shift.days,
       startTime: shift.startTime,
       endTime: shift.endTime,
-      description: shift.description || "",
+      description: shift.description || '',
     });
     setShowModal(true);
   };
@@ -115,33 +110,33 @@ export const ShiftsPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.days.length === 0) {
-      sweetAlert.error("Error", "Debes seleccionar al menos un día");
+      sweetAlert.error('Error', 'Debes seleccionar al menos un día');
       return;
     }
     try {
       if (editingShift) {
         await shiftsAPI.update(editingShift._id, formData);
-        sweetAlert.success("Turno actualizado", "Los cambios se guardaron con éxito");
+        sweetAlert.success('Turno actualizado', 'Los cambios se guardaron con éxito');
       } else {
         await shiftsAPI.create(formData);
-        sweetAlert.success("Turno creado", "El turno se creó con éxito");
+        sweetAlert.success('Turno creado', 'El turno se creó con éxito');
       }
       setShowModal(false);
       fetchShifts();
     } catch (error) {
-      sweetAlert.error("Error", "Hubo un error al guardar el turno");
+      sweetAlert.error('Error', 'Hubo un error al guardar el turno');
     }
   };
 
   const handleDelete = async (shift: Shift) => {
-    const result = await sweetAlert.confirm("¿Eliminar turno?", `¿Estás seguro de que quieres eliminar el turno "${shift.name}"?`);
+    const result = await sweetAlert.confirm('¿Eliminar turno?', `¿Estás seguro de que quieres eliminar el turno "${shift.name}"?`);
     if (result.isConfirmed) {
       try {
         await shiftsAPI.remove(shift._id);
-        sweetAlert.success("Eliminado", "El turno fue eliminado");
+        sweetAlert.success('Eliminado', 'El turno fue eliminado');
         fetchShifts();
       } catch (error: any) {
-        sweetAlert.error("Error", error.response?.data?.error || "Error al eliminar");
+        sweetAlert.error('Error', error.response?.data?.error || 'Error al eliminar');
       }
     }
   };
@@ -160,10 +155,10 @@ export const ShiftsPage: React.FC = () => {
     try {
       await shiftsAPI.reorder(reorderedItems);
       setIsReorderMode(false);
-      sweetAlert.success("Orden Guardado", "El nuevo orden ha sido guardado.");
+      sweetAlert.success('Orden Guardado', 'El nuevo orden ha sido guardado.');
       fetchShifts();
     } catch (error) {
-      sweetAlert.error("Error", "No se pudo guardar el orden");
+      sweetAlert.error('Error', 'No se pudo guardar el orden');
       fetchShifts();
     }
   };
@@ -196,7 +191,7 @@ export const ShiftsPage: React.FC = () => {
         isOpen: showInfoModal,
         onOpen: () => setShowInfoModal(true),
         onClose: () => setShowInfoModal(false),
-        title: "Guía de Turnos",
+        title: 'Guía de Turnos',
         content: (
           <div className="space-y-4 text-gray-400">
             <p>
@@ -217,7 +212,7 @@ export const ShiftsPage: React.FC = () => {
       headerActions={
         <div className="flex items-center gap-3">
           {canManage && (
-            <button onClick={openCreate} title="Nuevo turno" aria-label="Nuevo turno" className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+            <button onClick={openCreate} title="Nuevo turno" aria-label="Nuevo turno" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
               <FontAwesomeIcon icon={faPlus} />
             </button>
           )}
@@ -256,10 +251,10 @@ export const ShiftsPage: React.FC = () => {
             )}
             {isLarge && !isReorderMode && (
               <div className="flex items-center gap-2 shrink-0">
-                <button onClick={() => setViewMode("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "cards" ? "bg-blue-500 text-white border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>
+                <button onClick={() => setViewMode('cards')} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'cards' ? 'bg-blue-500 text-white border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
                   <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
                 </button>
-                <button onClick={() => setViewMode("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "table" ? "bg-blue-500 text-white border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>
+                <button onClick={() => setViewMode('table')} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'table' ? 'bg-blue-500 text-white border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
                   <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
                 </button>
               </div>
@@ -270,33 +265,20 @@ export const ShiftsPage: React.FC = () => {
       modal={{
         isOpen: showModal,
         onClose: () => setShowModal(false),
-        title: editingShift ? "Editar Turno" : "Nuevo Turno",
-        subtitle: "Completa la información del horario laboral",
-        size: "lg",
+        title: editingShift ? 'Editar Turno' : 'Nuevo Turno',
+        subtitle: 'Completa la información del horario laboral',
+        size: 'lg',
         actions: [
-          { label: editingShift ? "Actualizar" : "Crear", onClick: () => document.querySelector<HTMLFormElement>("#shift-form")?.requestSubmit(), variant: "primary" },
-          { label: "Cancelar", onClick: () => setShowModal(false), variant: "ghost" },
+          { label: editingShift ? 'Actualizar' : 'Crear', onClick: () => document.querySelector<HTMLFormElement>('#shift-form')?.requestSubmit(), variant: 'primary' },
+          { label: 'Cancelar', onClick: () => setShowModal(false), variant: 'ghost' },
         ],
         content: (
           <form id="shift-form" onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Nombre del Turno * {editingShift?.isSystem && <span className="text-[10px] bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded ml-2 uppercase font-bold">Sistema</span>}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                  className="input-field"
-                  placeholder="Ej: Mañana 9-18"
-                />
-
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre del Turno * {editingShift?.isSystem && <span className="text-[10px] bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded ml-2 uppercase font-bold">Sistema</span>}</label>
+                <input type="text" required value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} className="input-field" placeholder="Ej: Mañana 9-18" />
               </div>
-
-
-
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -317,7 +299,7 @@ export const ShiftsPage: React.FC = () => {
                 {DAY_ORDER.map((index) => {
                   const day = DAYS[index];
                   return (
-                    <button key={day} type="button" onClick={() => toggleDay(index)} className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${formData.days.includes(index) ? "bg-blue-600 text-white border-blue-600 shadow-sm" : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"}`}>
+                    <button key={day} type="button" onClick={() => toggleDay(index)} className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${formData.days.includes(index) ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
                       {day}
                     </button>
                   );
@@ -340,14 +322,14 @@ export const ShiftsPage: React.FC = () => {
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <>
-            {viewMode === "cards" ? (
+            {viewMode === 'cards' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 <SortableContext items={shifts.map((s) => s._id)}>
                   {shifts.map((shift) => (
                     <SortableShiftCard key={shift._id} shift={shift} isReorderMode={isReorderMode} canManage={canManage} openEdit={openEdit} handleDelete={handleDelete} />
                   ))}
                 </SortableContext>
-                {canManage && !isReorderMode && <Card variant="create" onClick={openCreate} header={{ title: "Nuevo Turno", subtitle: "Definir horario", icon: faPlus }} />}
+                {canManage && !isReorderMode && <Card variant="create" onClick={openCreate} header={{ title: 'Nuevo Turno', subtitle: 'Definir horario', icon: faPlus }} />}
               </div>
             ) : (
               <div className="overflow-x-auto rounded border dark:border-slate-800">
@@ -374,7 +356,7 @@ export const ShiftsPage: React.FC = () => {
               </div>
             )}
 
-            {!loading && shifts.length === 0 && <EmptyState icon={faClock} title="No hay turnos" description="No se encontraron turnos. Comienza creando el primero." action={canManage ? { label: "Crear Turno", onClick: openCreate, icon: faPlus } : undefined} />}
+            {!loading && shifts.length === 0 && <EmptyState icon={faClock} title="No hay turnos" description="No se encontraron turnos. Comienza creando el primero." action={canManage ? { label: 'Crear Turno', onClick: openCreate, icon: faPlus } : undefined} />}
 
             {/* Pagination */}
             {totalShifts > itemsPerPage && !isReorderMode && (
@@ -417,7 +399,7 @@ const SortableShiftRow: React.FC<SortableShiftRowProps> = ({ shift, index, isReo
   };
 
   return (
-    <tr ref={setNodeRef} style={style} className={`border-b border-gray-100 dark:border-gray-700 transition-colors ${isReorderMode ? "bg-blue-50/50 dark:bg-blue-900/10 cursor-grab" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"}`}>
+    <tr ref={setNodeRef} style={style} className={`border-b border-gray-100 dark:border-gray-700 transition-colors ${isReorderMode ? 'bg-blue-50/50 dark:bg-blue-900/10 cursor-grab' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}>
       {isReorderMode && (
         <td className="py-3 px-4 text-center">
           <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-blue-500 hover:text-blue-600">
@@ -433,8 +415,6 @@ const SortableShiftRow: React.FC<SortableShiftRowProps> = ({ shift, index, isReo
         </div>
       </td>
 
-
-
       <td className="py-3 px-4">
         <span className="text-sm text-gray-600 dark:text-gray-400">
           {shift.startTime} - {shift.endTime}
@@ -442,15 +422,17 @@ const SortableShiftRow: React.FC<SortableShiftRowProps> = ({ shift, index, isReo
       </td>
       <td className="py-3 px-4">
         <div className="flex gap-1 flex-wrap">
-          {[...shift.days].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b)).map((d) => (
-            <span key={d} className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">
-              {DAYS[d].slice(0, 3)}
-            </span>
-          ))}
+          {[...shift.days]
+            .sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b))
+            .map((d) => (
+              <span key={d} className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">
+                {DAYS[d].slice(0, 3)}
+              </span>
+            ))}
         </div>
       </td>
       <td className="py-3 px-4 text-right space-x-2">
-        <div className={`flex items-center justify-end gap-2 ${isReorderMode ? "opacity-20 pointer-events-none" : ""}`}>
+        <div className={`flex items-center justify-end gap-2 ${isReorderMode ? 'opacity-20 pointer-events-none' : ''}`}>
           <button onClick={() => openEdit(shift)} className="p-1.5 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors" title="Editar">
             <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
           </button>
@@ -464,7 +446,6 @@ const SortableShiftRow: React.FC<SortableShiftRowProps> = ({ shift, index, isReo
             </div>
           )}
         </div>
-
       </td>
     </tr>
   );
@@ -510,27 +491,25 @@ const SortableShiftCard: React.FC<SortableShiftCardProps> = ({ shift, isReorderM
           subtitle: undefined,
           icon: faClock,
         }}
-
-        className={isReorderMode ? "border-2 border-blue-500/50 shadow-blue-500/10" : ""}
+        className={isReorderMode ? 'border-2 border-blue-500/50 shadow-blue-500/10' : ''}
         footer={
           canManage && !isReorderMode
             ? {
                 actions: [
-                  { icon: faEdit, onClick: () => openEdit(shift), title: "Editar" },
+                  { icon: faEdit, onClick: () => openEdit(shift), title: 'Editar' },
                   ...(!shift.isSystem
-                    ? [{ icon: faTrash, onClick: () => handleDelete(shift), title: "Eliminar" }]
+                    ? [{ icon: faTrash, onClick: () => handleDelete(shift), title: 'Eliminar' }]
                     : [
                         {
                           icon: faLock,
                           onClick: () => {},
-                          title: "Turno de sistema protegido",
+                          title: 'Turno de sistema protegido',
                           disabled: true,
                         },
                       ]),
                 ],
               }
             : undefined
-
         }
       >
         <div className="space-y-3">
@@ -541,11 +520,13 @@ const SortableShiftCard: React.FC<SortableShiftCardProps> = ({ shift, isReorderM
             </span>
           </div>
           <div className="flex flex-wrap gap-1">
-            {[...shift.days].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b)).map((d) => (
-              <span key={d} className="text-[10px] px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-md font-medium uppercase">
-                {DAYS[d].slice(0, 3)}
-              </span>
-            ))}
+            {[...shift.days]
+              .sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b))
+              .map((d) => (
+                <span key={d} className="text-[10px] px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-md font-medium uppercase">
+                  {DAYS[d].slice(0, 3)}
+                </span>
+              ))}
           </div>
         </div>
       </Card>

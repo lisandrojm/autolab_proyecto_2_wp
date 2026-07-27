@@ -1,21 +1,21 @@
-import React, { useEffect, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import { faDownload, faUpload, faPlus, faEdit, faTrash, faTimes, faFileExcel } from "@fortawesome/free-solid-svg-icons";
-import { PageLayout } from "../ui/PageLayout";
-import { LoadingSpinner } from "../ui/LoadingSpinner";
-import { Card } from "../ui/Card";
-import { ViewToggle, ViewMode } from "../ui/ViewToggle";
-import { sweetAlert } from "../../utils/sweetAlert";
-import { fuzzyMatch } from "../../utils/searchHelpers";
-import { SimpleCatalogApi, SimpleCatalogItem } from "../../api/simpleCatalog";
-import { getHelp, hasHelp, HelpKey } from "../../data/help/helpContent";
+import React, { useEffect, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import { faDownload, faUpload, faPlus, faEdit, faTrash, faTimes, faFileExcel } from '@fortawesome/free-solid-svg-icons';
+import { PageLayout } from '../ui/PageLayout';
+import { LoadingSpinner } from '../ui/LoadingSpinner';
+import { Card } from '../ui/Card';
+import { ViewToggle, ViewMode } from '../ui/ViewToggle';
+import { sweetAlert } from '../../utils/sweetAlert';
+import { fuzzyMatch } from '../../utils/searchHelpers';
+import { SimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
+import { getHelp, hasHelp, HelpKey } from '../../data/help/helpContent';
 
 /** Descriptor de un campo extra propio de un catálogo (además de nombre / ID externo). */
 export interface CatalogExtraField {
   key: string;
   label: string;
-  type?: "text" | "select";
+  type?: 'text' | 'select';
   /** Opciones para type "select". El value es lo que se persiste; el label lo que se muestra. */
   options?: Array<{ value: string; label: string }>;
   required?: boolean;
@@ -44,48 +44,48 @@ interface SimpleCatalogManagerProps {
 export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], helpKey }) => {
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [showInfo, setShowInfo] = useState(false);
   const helpEntry = helpKey ? getHelp(helpKey) : null;
 
   // Vista (Tabla vs Tarjetas)
   const storageKey = `catalog_${templateBaseName}_viewMode`;
-  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
   useEffect(() => {
     const handleResize = () => {
       const isNowLarge = window.innerWidth >= 1024;
       setIsLarge(isNowLarge);
-      if (!isNowLarge) setViewMode("cards");
+      if (!isNowLarge) setViewMode('cards');
     };
     if (window.innerWidth >= 1024) {
       const saved = localStorage.getItem(storageKey);
-      if (saved === "table" || saved === "cards") setViewMode(saved as ViewMode);
+      if (saved === 'table' || saved === 'cards') setViewMode(saved as ViewMode);
     }
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     if (isLarge) localStorage.setItem(storageKey, viewMode);
   }, [viewMode, isLarge, storageKey]);
-  const effectiveViewMode: ViewMode = isLarge ? viewMode : "cards";
+  const effectiveViewMode: ViewMode = isLarge ? viewMode : 'cards';
 
   // ABM modal
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<SimpleCatalogItem | null>(null);
-  const [nombre, setNombre] = useState("");
-  const [externalId, setExternalId] = useState("");
+  const [nombre, setNombre] = useState('');
+  const [externalId, setExternalId] = useState('');
   const [extraValues, setExtraValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
   // Valor por defecto de un campo extra al crear (primer option del select, o "").
-  const defaultExtra = (f: CatalogExtraField): string => (f.type === "select" && f.options && f.options.length > 0 ? f.options[0].value : "");
+  const defaultExtra = (f: CatalogExtraField): string => (f.type === 'select' && f.options && f.options.length > 0 ? f.options[0].value : '');
   // Etiqueta legible de un valor guardado (mapea value → label en selects).
   const extraDisplay = (f: CatalogExtraField, value: unknown): string => {
-    const v = value == null ? "" : String(value);
-    if (!v) return "—";
-    if (f.type === "select") return f.options?.find((o) => o.value === v)?.label ?? v;
+    const v = value == null ? '' : String(value);
+    if (!v) return '—';
+    if (f.type === 'select') return f.options?.find((o) => o.value === v)?.label ?? v;
     return v;
   };
 
@@ -100,7 +100,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
       const data = await api.list();
       setItems(data);
     } catch {
-      sweetAlert.error("Error", `No se pudieron cargar los registros de ${entityLabel}.`);
+      sweetAlert.error('Error', `No se pudieron cargar los registros de ${entityLabel}.`);
     } finally {
       setLoading(false);
     }
@@ -111,62 +111,62 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const filtered = items.filter((it) => !search.trim() || fuzzyMatch(it.name || "", search));
+  const filtered = items.filter((it) => !search.trim() || fuzzyMatch(it.name || '', search));
 
   const openCreate = () => {
     setEditing(null);
-    setNombre("");
-    setExternalId("");
+    setNombre('');
+    setExternalId('');
     setExtraValues(Object.fromEntries(extraFields.map((f) => [f.key, defaultExtra(f)])));
     setShowModal(true);
   };
 
   const openEdit = (item: SimpleCatalogItem) => {
     setEditing(item);
-    setNombre(item.name || "");
-    setExternalId(item.externalId || "");
+    setNombre(item.name || '');
+    setExternalId(item.externalId || '');
     setExtraValues(Object.fromEntries(extraFields.map((f) => [f.key, item[f.key] != null ? String(item[f.key]) : defaultExtra(f)])));
     setShowModal(true);
   };
 
   const handleSave = async () => {
     if (!nombre.trim()) {
-      sweetAlert.error("Falta el nombre", "El nombre es obligatorio.");
+      sweetAlert.error('Falta el nombre', 'El nombre es obligatorio.');
       return;
     }
-    const missing = extraFields.find((f) => f.required && !String(extraValues[f.key] ?? "").trim());
+    const missing = extraFields.find((f) => f.required && !String(extraValues[f.key] ?? '').trim());
     if (missing) {
       sweetAlert.error(`Falta ${missing.label.toLowerCase()}`, `El campo "${missing.label}" es obligatorio.`);
       return;
     }
-    const extraPayload = Object.fromEntries(extraFields.map((f) => [f.key, String(extraValues[f.key] ?? "").trim()]));
+    const extraPayload = Object.fromEntries(extraFields.map((f) => [f.key, String(extraValues[f.key] ?? '').trim()]));
     setSaving(true);
     try {
       if (editing) {
         await api.update(editing._id, { nombre: nombre.trim(), externalId: externalId.trim(), ...extraPayload });
-        sweetAlert.success("Actualizado", `${title} actualizado correctamente.`);
+        sweetAlert.success('Actualizado', `${title} actualizado correctamente.`);
       } else {
         await api.create({ nombre: nombre.trim(), externalId: externalId.trim(), ...extraPayload });
-        sweetAlert.success("Creado", `Registro de ${entityLabel} creado.`);
+        sweetAlert.success('Creado', `Registro de ${entityLabel} creado.`);
       }
       setShowModal(false);
       await load();
     } catch {
-      sweetAlert.error("Error", "No se pudo guardar el registro.");
+      sweetAlert.error('Error', 'No se pudo guardar el registro.');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (item: SimpleCatalogItem) => {
-    const result = await sweetAlert.confirm("¿Eliminar?", `Se eliminará "${item.name}". Esta acción no se puede deshacer.`);
+    const result = await sweetAlert.confirm('¿Eliminar?', `Se eliminará "${item.name}". Esta acción no se puede deshacer.`);
     if (!result.isConfirmed) return;
     try {
       await api.remove(item._id);
-      sweetAlert.success("Eliminado", "Registro eliminado correctamente.");
+      sweetAlert.success('Eliminado', 'Registro eliminado correctamente.');
       await load();
     } catch {
-      sweetAlert.error("Error", "No se pudo eliminar el registro.");
+      sweetAlert.error('Error', 'No se pudo eliminar el registro.');
     }
   };
 
@@ -174,13 +174,13 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
     try {
       const blob = await api.downloadTemplate();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
+      const a = document.createElement('a');
       a.href = url;
       a.download = `plantilla_${templateBaseName}.xlsx`;
       a.click();
       window.URL.revokeObjectURL(url);
     } catch {
-      sweetAlert.error("Error", "No se pudo descargar la plantilla.");
+      sweetAlert.error('Error', 'No se pudo descargar la plantilla.');
     }
   };
 
@@ -189,13 +189,13 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
     setImporting(true);
     try {
       const res = await api.importExcel(importFile);
-      sweetAlert.success("Importación completada", `${res.count} registros procesados.`);
+      sweetAlert.success('Importación completada', `${res.count} registros procesados.`);
       setShowImport(false);
       setImportFile(null);
       await load();
     } catch (err: any) {
       const details = err?.response?.data?.details;
-      sweetAlert.error("Error al importar", Array.isArray(details) ? details.slice(0, 5).join("\n") : err?.response?.data?.error || "No se pudo importar el archivo.");
+      sweetAlert.error('Error al importar', Array.isArray(details) ? details.slice(0, 5).join('\n') : err?.response?.data?.error || 'No se pudo importar el archivo.');
     } finally {
       setImporting(false);
     }
@@ -209,7 +209,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
       <button onClick={() => setShowImport(true)} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30">
         <FontAwesomeIcon icon={faUpload} /> Importar Excel
       </button>
-      <button onClick={openCreate} title={`Nuevo ${entityLabel}`} aria-label={`Nuevo ${entityLabel}`} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+      <button onClick={openCreate} title={`Nuevo ${entityLabel}`} aria-label={`Nuevo ${entityLabel}`} className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
         <FontAwesomeIcon icon={faPlus} />
       </button>
     </div>
@@ -236,23 +236,15 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
       }
     >
       <div className="mb-4 flex flex-col md:flex-row gap-4 items-center justify-between">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={`Buscar ${entityLabel}...`}
-          className="w-full max-w-md px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white"
-        />
+        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Buscar ${entityLabel}...`} className="w-full max-w-md px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white" />
         {isLarge && <ViewToggle value={viewMode} onChange={setViewMode} />}
       </div>
 
       {loading ? (
         <LoadingSpinner />
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-gray-500 dark:text-gray-400 text-sm">
-          {items.length === 0 ? `Todavía no hay registros de ${entityLabel}. Cargá uno con "Nuevo" o importá un Excel.` : "No hay resultados para la búsqueda."}
-        </div>
-      ) : effectiveViewMode === "cards" ? (
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400 text-sm">{items.length === 0 ? `Todavía no hay registros de ${entityLabel}. Cargá uno con "Nuevo" o importá un Excel.` : 'No hay resultados para la búsqueda.'}</div>
+      ) : effectiveViewMode === 'cards' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
           {filtered.map((item) => (
             <Card
@@ -262,17 +254,28 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
               header={{
                 title: item.name,
                 icon,
-                badges: [
-                  ...extraFields
-                    .filter((f) => f.showColumn && item[f.key])
-                    .map((f) => ({ text: extraDisplay(f, item[f.key]), variant: "cyan" as const })),
-                  ...(item.externalId ? [{ text: `ID ${item.externalId}`, variant: "blue" as const }] : []),
-                ],
+                badges: [...extraFields.filter((f) => f.showColumn && item[f.key]).map((f) => ({ text: extraDisplay(f, item[f.key]), variant: 'cyan' as const })), ...(item.externalId ? [{ text: `ID ${item.externalId}`, variant: 'blue' as const }] : [])],
               }}
               footer={{
                 actions: [
-                  { icon: faEdit, onClick: (e) => { e.stopPropagation(); openEdit(item); }, title: "Editar", variant: "default" },
-                  { icon: faTrash, onClick: (e) => { e.stopPropagation(); handleDelete(item); }, title: "Eliminar", variant: "default" },
+                  {
+                    icon: faEdit,
+                    onClick: (e) => {
+                      e.stopPropagation();
+                      openEdit(item);
+                    },
+                    title: 'Editar',
+                    variant: 'default',
+                  },
+                  {
+                    icon: faTrash,
+                    onClick: (e) => {
+                      e.stopPropagation();
+                      handleDelete(item);
+                    },
+                    title: 'Eliminar',
+                    variant: 'default',
+                  },
                 ],
               }}
             />
@@ -285,9 +288,13 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
             <thead className="bg-gray-50 dark:bg-gray-900/50">
               <tr>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
-                {extraFields.filter((f) => f.showColumn).map((f) => (
-                  <th key={f.key} className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{f.columnLabel || f.label}</th>
-                ))}
+                {extraFields
+                  .filter((f) => f.showColumn)
+                  .map((f) => (
+                    <th key={f.key} className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      {f.columnLabel || f.label}
+                    </th>
+                  ))}
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID Externo</th>
                 <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
               </tr>
@@ -296,10 +303,14 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
               {filtered.map((item) => (
                 <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
                   <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">{item.name}</td>
-                  {extraFields.filter((f) => f.showColumn).map((f) => (
-                    <td key={f.key} className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{extraDisplay(f, item[f.key])}</td>
-                  ))}
-                  <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono">{item.externalId || "—"}</td>
+                  {extraFields
+                    .filter((f) => f.showColumn)
+                    .map((f) => (
+                      <td key={f.key} className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">
+                        {extraDisplay(f, item[f.key])}
+                      </td>
+                    ))}
+                  <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono">{item.externalId || '—'}</td>
                   <td className="px-5 py-3 text-sm text-right">
                     <button onClick={() => openEdit(item)} className="text-blue-600 hover:text-blue-800 dark:text-blue-400 mr-3" title="Editar">
                       <FontAwesomeIcon icon={faEdit} />
@@ -320,7 +331,9 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-xl bg-white dark:bg-gray-800 shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{editing ? "Editar" : "Nuevo"} {title}</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {editing ? 'Editar' : 'Nuevo'} {title}
+              </h3>
               <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                 <FontAwesomeIcon icon={faTimes} />
               </button>
@@ -333,27 +346,20 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
               {extraFields.map((f) => (
                 <div key={f.key}>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {f.label}{f.required ? " *" : ""}
+                    {f.label}
+                    {f.required ? ' *' : ''}
                   </label>
-                  {f.type === "select" ? (
-                    <select
-                      value={extraValues[f.key] ?? ""}
-                      onChange={(e) => setExtraValues((prev) => ({ ...prev, [f.key]: e.target.value }))}
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white"
-                    >
+                  {f.type === 'select' ? (
+                    <select value={extraValues[f.key] ?? ''} onChange={(e) => setExtraValues((prev) => ({ ...prev, [f.key]: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white">
                       {!f.required && <option value="">—</option>}
                       {(f.options || []).map((o) => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
                       ))}
                     </select>
                   ) : (
-                    <input
-                      type="text"
-                      value={extraValues[f.key] ?? ""}
-                      onChange={(e) => setExtraValues((prev) => ({ ...prev, [f.key]: e.target.value }))}
-                      placeholder={f.placeholder}
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white"
-                    />
+                    <input type="text" value={extraValues[f.key] ?? ''} onChange={(e) => setExtraValues((prev) => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.placeholder} className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white" />
                   )}
                 </div>
               ))}
@@ -363,8 +369,12 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
               </div>
             </div>
             <div className="flex justify-end gap-2 border-t border-gray-200 dark:border-gray-700 px-5 py-4">
-              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200">Cancelar</button>
-              <button onClick={handleSave} disabled={saving} className="px-4 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60">{saving ? "Guardando..." : "Guardar"}</button>
+              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200">
+                Cancelar
+              </button>
+              <button onClick={handleSave} disabled={saving} className="px-4 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60">
+                {saving ? 'Guardando...' : 'Guardar'}
+              </button>
             </div>
           </div>
         </div>
@@ -376,7 +386,13 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
           <div className="w-full max-w-md rounded-xl bg-white dark:bg-gray-800 shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Importar {title} desde Excel</h3>
-              <button onClick={() => { setShowImport(false); setImportFile(null); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+              <button
+                onClick={() => {
+                  setShowImport(false);
+                  setImportFile(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
                 <FontAwesomeIcon icon={faTimes} />
               </button>
             </div>
@@ -384,13 +400,23 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
               <p className="text-sm text-gray-500 dark:text-gray-400">Descargá la plantilla, completala y subila acá. Los registros se actualizan/crean por nombre o ID externo.</p>
               <label className="flex items-center gap-3 px-4 py-6 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900/30">
                 <FontAwesomeIcon icon={faFileExcel} className="text-emerald-600 text-xl" />
-                <span className="text-sm text-gray-600 dark:text-gray-300">{importFile ? importFile.name : "Seleccionar archivo .xlsx"}</span>
+                <span className="text-sm text-gray-600 dark:text-gray-300">{importFile ? importFile.name : 'Seleccionar archivo .xlsx'}</span>
                 <input type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => setImportFile(e.target.files?.[0] || null)} />
               </label>
             </div>
             <div className="flex justify-end gap-2 border-t border-gray-200 dark:border-gray-700 px-5 py-4">
-              <button onClick={() => { setShowImport(false); setImportFile(null); }} className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200">Cancelar</button>
-              <button onClick={handleImport} disabled={!importFile || importing} className="px-4 py-2 text-sm font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60">{importing ? "Importando..." : "Importar"}</button>
+              <button
+                onClick={() => {
+                  setShowImport(false);
+                  setImportFile(null);
+                }}
+                className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
+              >
+                Cancelar
+              </button>
+              <button onClick={handleImport} disabled={!importFile || importing} className="px-4 py-2 text-sm font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60">
+                {importing ? 'Importando...' : 'Importar'}
+              </button>
             </div>
           </div>
         </div>

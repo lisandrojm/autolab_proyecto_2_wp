@@ -1,52 +1,52 @@
-import React, { useEffect, useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import axios from "../api/axiosConfig";
-import { projectsAPI, Project } from "../api/projects";
-import { usersAPI, User, Contract } from "../api/users";
-import { useAuthStore } from "../stores/authStore";
-import { sweetAlert } from "../utils/sweetAlert";
+import React, { useEffect, useState, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import axios from '../api/axiosConfig';
+import { projectsAPI, Project } from '../api/projects';
+import { usersAPI, User, Contract } from '../api/users';
+import { useAuthStore } from '../stores/authStore';
+import { sweetAlert } from '../utils/sweetAlert';
 
-import { PageLayout } from "../components/ui/PageLayout";
-import { LoadingSpinner } from "../components/ui/LoadingSpinner";
-import { EmptyState } from "../components/ui/EmptyState";
-import { UserCard } from "../components/users/UserCard";
-import { Modal } from "../components/ui/Modal";
-import { SearchAndFilters } from "../components/ui/SearchAndFilters";
+import { PageLayout } from '../components/ui/PageLayout';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { EmptyState } from '../components/ui/EmptyState';
+import { UserCard } from '../components/users/UserCard';
+import { Modal } from '../components/ui/Modal';
+import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 
-import { getHelp } from "../data/help/helpContent";
+import { getHelp } from '../data/help/helpContent';
 
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faChevronDown, faXmark, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
-import { vacationsAPI, VacationRequest } from "../api/vacations";
-import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
-import { TeamCoordinadoresTab } from "../components/team/TeamCoordinadoresTab";
-import { EmployeeContractsModal } from "../components/team/EmployeeContractsModal";
-import { contratoFrameAPI, ContratoFrameItem } from "../api/contratosFrame";
-import { releasesAPI, Release } from "../api/release";
-import { companiesAPI, Company } from "../api/companies";
-import { Area, areasAPI } from "../api/areas";
-import { positionsAPI, Position } from "../api/positions";
-import { levelsAPI, Level } from "../api/levels";
-import { userProjectsAPI } from "../api/userProjects";
-import { shiftsAPI, Shift } from "../api/shifts";
-import { clientsAPI } from "../api/clients";
-import { infoAPI, InfoItem } from "../api/info";
-import { categoriaSatAPI, CategoriaSatItem } from "../api/categoriasSat";
-import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
-import { cachedFetch } from "../utils/refCache";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faChevronDown, faXmark, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { vacationsAPI, VacationRequest } from '../api/vacations';
+import { TeamSolicitudesTab } from '../components/team/TeamSolicitudesTab';
+import { TeamCoordinadoresTab } from '../components/team/TeamCoordinadoresTab';
+import { EmployeeContractsModal } from '../components/team/EmployeeContractsModal';
+import { contratoFrameAPI, ContratoFrameItem } from '../api/contratosFrame';
+import { releasesAPI, Release } from '../api/release';
+import { companiesAPI, Company } from '../api/companies';
+import { Area, areasAPI } from '../api/areas';
+import { positionsAPI, Position } from '../api/positions';
+import { levelsAPI, Level } from '../api/levels';
+import { userProjectsAPI } from '../api/userProjects';
+import { shiftsAPI, Shift } from '../api/shifts';
+import { clientsAPI } from '../api/clients';
+import { infoAPI, InfoItem } from '../api/info';
+import { categoriaSatAPI, CategoriaSatItem } from '../api/categoriasSat';
+import { roleFrameAPI, RoleFrameItem } from '../api/roleFrames';
+import { cachedFetch } from '../utils/refCache';
 
-const HELP_KEY = "projectTeam" as const;
+const HELP_KEY = 'projectTeam' as const;
 
 // Formatea una fecha de contrato (ISO "YYYY-MM-DD...") a d/m/yyyy sin corrimiento de zona horaria.
 function formatContractDate(d?: string): string {
-  if (!d) return "—";
+  if (!d) return '—';
   const iso = String(d).substring(0, 10);
-  const parts = iso.split("-");
+  const parts = iso.split('-');
   if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
     return `${Number(parts[2])}/${Number(parts[1])}/${parts[0]}`;
   }
   const dt = new Date(d);
-  return isNaN(dt.getTime()) ? "—" : dt.toLocaleDateString();
+  return isNaN(dt.getTime()) ? '—' : dt.toLocaleDateString();
 }
 
 // Un contrato está VIGENTE si no tiene baja (tiempo indeterminado) o si la baja es hoy o futura.
@@ -54,7 +54,7 @@ function formatContractDate(d?: string): string {
 function isContractVigente(baja?: string): boolean {
   if (!baja) return true; // sin baja → tiempo indeterminado → vigente
   const iso = String(baja).substring(0, 10);
-  const parts = iso.split("-");
+  const parts = iso.split('-');
   let bajaDate: Date | null = null;
   if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
     bajaDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
@@ -72,16 +72,26 @@ function isContractVigente(baja?: string): boolean {
 function numeroALetras(num: number): string {
   const Unidades = (num: number): string => {
     switch (num) {
-      case 1: return "UN";
-      case 2: return "DOS";
-      case 3: return "TRES";
-      case 4: return "CUATRO";
-      case 5: return "CINCO";
-      case 6: return "SEIS";
-      case 7: return "SIETE";
-      case 8: return "OCHO";
-      case 9: return "NUEVE";
-      default: return "";
+      case 1:
+        return 'UN';
+      case 2:
+        return 'DOS';
+      case 3:
+        return 'TRES';
+      case 4:
+        return 'CUATRO';
+      case 5:
+        return 'CINCO';
+      case 6:
+        return 'SEIS';
+      case 7:
+        return 'SIETE';
+      case 8:
+        return 'OCHO';
+      case 9:
+        return 'NUEVE';
+      default:
+        return '';
     }
   };
 
@@ -91,25 +101,40 @@ function numeroALetras(num: number): string {
     switch (decena) {
       case 1:
         switch (unidad) {
-          case 0: return "DIEZ";
-          case 1: return "ONCE";
-          case 2: return "DOCE";
-          case 3: return "TRECE";
-          case 4: return "CATORCE";
-          case 5: return "QUINCE";
-          default: return "DIECI" + Unidades(unidad);
+          case 0:
+            return 'DIEZ';
+          case 1:
+            return 'ONCE';
+          case 2:
+            return 'DOCE';
+          case 3:
+            return 'TRECE';
+          case 4:
+            return 'CATORCE';
+          case 5:
+            return 'QUINCE';
+          default:
+            return 'DIECI' + Unidades(unidad);
         }
       case 2:
-        if (unidad === 0) return "VEINTE";
-        return "VEINTI" + Unidades(unidad);
-      case 3: return "TREINTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
-      case 4: return "CUARENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
-      case 5: return "CINCUENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
-      case 6: return "SESENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
-      case 7: return "SETENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
-      case 8: return "OCHENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
-      case 9: return "NOVENTA" + (unidad > 0 ? " Y " + Unidades(unidad) : "");
-      default: return Unidades(num);
+        if (unidad === 0) return 'VEINTE';
+        return 'VEINTI' + Unidades(unidad);
+      case 3:
+        return 'TREINTA' + (unidad > 0 ? ' Y ' + Unidades(unidad) : '');
+      case 4:
+        return 'CUARENTA' + (unidad > 0 ? ' Y ' + Unidades(unidad) : '');
+      case 5:
+        return 'CINCUENTA' + (unidad > 0 ? ' Y ' + Unidades(unidad) : '');
+      case 6:
+        return 'SESENTA' + (unidad > 0 ? ' Y ' + Unidades(unidad) : '');
+      case 7:
+        return 'SETENTA' + (unidad > 0 ? ' Y ' + Unidades(unidad) : '');
+      case 8:
+        return 'OCHENTA' + (unidad > 0 ? ' Y ' + Unidades(unidad) : '');
+      case 9:
+        return 'NOVENTA' + (unidad > 0 ? ' Y ' + Unidades(unidad) : '');
+      default:
+        return Unidades(num);
     }
   };
 
@@ -118,27 +143,36 @@ function numeroALetras(num: number): string {
     const centenaDigito = Math.floor(num / 100);
     switch (centenaDigito) {
       case 1:
-        if (decenas === 0) return "CIEN";
-        return "CIENTO " + Decenas(decenas);
-      case 2: return "DOSCIENTOS " + Decenas(decenas);
-      case 3: return "TRESCIENTOS " + Decenas(decenas);
-      case 4: return "CUATROCIENTOS " + Decenas(decenas);
-      case 5: return "QUINIENTOS " + Decenas(decenas);
-      case 6: return "SEISCIENTOS " + Decenas(decenas);
-      case 7: return "SETECIENTOS " + Decenas(decenas);
-      case 8: return "OCHOCIENTOS " + Decenas(decenas);
-      case 9: return "NOVECIENTOS " + Decenas(decenas);
-      default: return Decenas(num);
+        if (decenas === 0) return 'CIEN';
+        return 'CIENTO ' + Decenas(decenas);
+      case 2:
+        return 'DOSCIENTOS ' + Decenas(decenas);
+      case 3:
+        return 'TRESCIENTOS ' + Decenas(decenas);
+      case 4:
+        return 'CUATROCIENTOS ' + Decenas(decenas);
+      case 5:
+        return 'QUINIENTOS ' + Decenas(decenas);
+      case 6:
+        return 'SEISCIENTOS ' + Decenas(decenas);
+      case 7:
+        return 'SETECIENTOS ' + Decenas(decenas);
+      case 8:
+        return 'OCHOCIENTOS ' + Decenas(decenas);
+      case 9:
+        return 'NOVECIENTOS ' + Decenas(decenas);
+      default:
+        return Decenas(num);
     }
   };
 
   const Seccion = (num: number, divisor: number, strSingular: string, strPlural: string): string => {
     const cientos = Math.floor(num / divisor);
-    let letras = "";
+    let letras = '';
 
     if (cientos > 0) {
       if (cientos > 1) {
-        letras = Centenas(cientos) + " " + strPlural;
+        letras = Centenas(cientos) + ' ' + strPlural;
       } else {
         letras = strSingular;
       }
@@ -150,35 +184,35 @@ function numeroALetras(num: number): string {
   const Miles = (num: number): string => {
     const divisor = 1000;
     const resto = num % divisor;
-    let strMiles = Seccion(num, divisor, "MIL", "MIL");
+    let strMiles = Seccion(num, divisor, 'MIL', 'MIL');
     let strCentenas = Centenas(resto);
 
-    if (strMiles === "") return strCentenas;
-    if (strMiles === "UN MIL") strMiles = "MIL";
-    if (strCentenas === "") return strMiles;
-    return strMiles + " " + strCentenas;
+    if (strMiles === '') return strCentenas;
+    if (strMiles === 'UN MIL') strMiles = 'MIL';
+    if (strCentenas === '') return strMiles;
+    return strMiles + ' ' + strCentenas;
   };
 
   const Millones = (num: number): string => {
     const divisor = 1000000;
     const resto = num % divisor;
-    let strMillones = Seccion(num, divisor, "UN MILLÓN", "MILLONES");
+    let strMillones = Seccion(num, divisor, 'UN MILLÓN', 'MILLONES');
     let strMiles = Miles(resto);
 
-    if (strMillones === "") return strMiles;
-    if (strMiles === "") return strMillones;
-    return strMillones + " " + strMiles;
+    if (strMillones === '') return strMiles;
+    if (strMiles === '') return strMillones;
+    return strMillones + ' ' + strMiles;
   };
 
   const entero = Math.floor(num);
   const centavosVal = Math.round((num - entero) * 100);
-  const centavosStr = centavosVal.toString().padStart(2, "0") + "/100";
+  const centavosStr = centavosVal.toString().padStart(2, '0') + '/100';
 
   if (entero === 0) {
-    return "CERO " + centavosStr;
+    return 'CERO ' + centavosStr;
   }
 
-  return (Millones(entero) + " " + centavosStr).replace(/\s+/g, " ").trim();
+  return (Millones(entero) + ' ' + centavosStr).replace(/\s+/g, ' ').trim();
 }
 
 export const ProjectTeamPage: React.FC = () => {
@@ -194,7 +228,7 @@ export const ProjectTeamPage: React.FC = () => {
 
   // Data
   const [project, setProject] = useState<Project | null>(null);
-   const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
 
   // --- Paginación server-side del Equipo (misma lógica que Usuarios) ---
   // allUsers = equipo completo pero liviano (para Coordinadores/contadores/lookups).
@@ -206,14 +240,14 @@ export const ProjectTeamPage: React.FC = () => {
   const [teamTotalPages, setTeamTotalPages] = useState(1);
   const [teamFetching, setTeamFetching] = useState(false);
   const teamReqIdRef = React.useRef(0);
-   const [candidateUsers, setCandidateUsers] = useState<User[]>([]);
-   const [searchingCandidates, setSearchingCandidates] = useState(false);
-   // Paginación server-side del listado de candidatos (Agregar Miembros).
-   const CAND_PAGE_SIZE = 25;
-   const [candPage, setCandPage] = useState(1);
-   const [candTotal, setCandTotal] = useState(0);
-   const [candTotalPages, setCandTotalPages] = useState(1);
-   const candReqIdRef = React.useRef(0);
+  const [candidateUsers, setCandidateUsers] = useState<User[]>([]);
+  const [searchingCandidates, setSearchingCandidates] = useState(false);
+  // Paginación server-side del listado de candidatos (Agregar Miembros).
+  const CAND_PAGE_SIZE = 25;
+  const [candPage, setCandPage] = useState(1);
+  const [candTotal, setCandTotal] = useState(0);
+  const [candTotalPages, setCandTotalPages] = useState(1);
+  const candReqIdRef = React.useRef(0);
   const [loading, setLoading] = useState(true);
   const [teamConfig, setTeamConfig] = useState<any[]>([]);
   const [vacations, setVacations] = useState<VacationRequest[]>([]);
@@ -233,16 +267,16 @@ export const ProjectTeamPage: React.FC = () => {
   const [userLookup, setUserLookup] = useState<Map<number | string, string>>(new Map());
 
   // Filters
-  const [searchTerm, setSearchTerm] = useState(""); // For Disponibles (Modal)
-  const [filterRole, setFilterRole] = useState(""); // Filter by Role
-  const [filterRoleFrame, setFilterRoleFrame] = useState(""); // Filter by Role Frame
-  const [filterProject, setFilterProject] = useState(""); // Filter by Project
+  const [searchTerm, setSearchTerm] = useState(''); // For Disponibles (Modal)
+  const [filterRole, setFilterRole] = useState(''); // Filter by Role
+  const [filterRoleFrame, setFilterRoleFrame] = useState(''); // Filter by Role Frame
+  const [filterProject, setFilterProject] = useState(''); // Filter by Project
   const [showFilters, setShowFilters] = useState(false); // Toggle filters UI
-  const [searchTermTeam, setSearchTermTeam] = useState(""); // For Equipo Actual
-  const [filterUserStatus, setFilterUserStatus] = useState<string>("");
-  const [filterVigencia, setFilterVigencia] = useState<string>(""); // "" | "vigente" | "novigente" (client-side sobre la página)
-  const [filterTipoContrato, setFilterTipoContrato] = useState<string>(""); // nombre_contrato (client-side sobre la página)
-  const [filterAreaTurno, setFilterAreaTurno] = useState<string>(""); // "" | "__none__" | "areaId::shiftId" (client-side sobre la página)
+  const [searchTermTeam, setSearchTermTeam] = useState(''); // For Equipo Actual
+  const [filterUserStatus, setFilterUserStatus] = useState<string>('');
+  const [filterVigencia, setFilterVigencia] = useState<string>(''); // "" | "vigente" | "novigente" (client-side sobre la página)
+  const [filterTipoContrato, setFilterTipoContrato] = useState<string>(''); // nombre_contrato (client-side sobre la página)
+  const [filterAreaTurno, setFilterAreaTurno] = useState<string>(''); // "" | "__none__" | "areaId::shiftId" (client-side sobre la página)
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [selectedUserForWizard, setSelectedUserForWizard] = useState<User | null>(null);
   // Índice (en el array original de contracts del UserProject) del contrato que se está editando desde el
@@ -256,43 +290,43 @@ export const ProjectTeamPage: React.FC = () => {
   const [viewingShiftsData, setViewingShiftsData] = useState<{ user: User; areaId: string; areaName: string } | null>(null);
   const [wizardData, setWizardData] = useState({
     // Step 1: Contrato
-    rol_frame_id: "",
-    categoria_sat_id: "",
-    contrato_frame_id: "", // _id de la contratos-frame elegida (valor del select)
-    nombre_contrato: "", // nombre de la contratos-frame elegida (identificador estable / match PDF)
-    tipo_contrato_id: "", // ID Externo numérico, solo si la contratos-frame lo tiene
-    estado_id: "",
+    rol_frame_id: '',
+    categoria_sat_id: '',
+    contrato_frame_id: '', // _id de la contratos-frame elegida (valor del select)
+    nombre_contrato: '', // nombre de la contratos-frame elegida (identificador estable / match PDF)
+    tipo_contrato_id: '', // ID Externo numérico, solo si la contratos-frame lo tiene
+    estado_id: '',
     // Empresas del proyecto elegidas para el contrato / release de este miembro (ObjectId o "")
-    empresaContratoId: "",
-    empresaReleaseId: "",
-    hora_inicio: "09:00",
-    hora_fin: "18:00",
-    fecha_alta_contrato: new Date().toISOString().split("T")[0],
-    fecha_baja_contrato: "",
+    empresaContratoId: '',
+    empresaReleaseId: '',
+    hora_inicio: '09:00',
+    hora_fin: '18:00',
+    fecha_alta_contrato: new Date().toISOString().split('T')[0],
+    fecha_baja_contrato: '',
     // Step 2: Sueldo
     cantidad_jornadas_laborales: 5,
     sueldo_jornada: 0,
     sueldo_mano: 0,
-    sueldo_mano_texto: "",
+    sueldo_mano_texto: '',
     sueldo_diario_neto: 0,
     diferencia_diaria_neto: 0,
     sueldo_neto: 0,
     sueldo_bruto: 0,
     // Step 3: Extras
-    sede_id: "",
+    sede_id: '',
     reemplazo: false,
-    empleado_id_reemplezado: "",
-    observaciones: "",
+    empleado_id_reemplezado: '',
+    observaciones: '',
     areaShiftAssignments: [] as { areaId: string; shiftIds: string[] }[],
-    positionId: "",
-    levelId: "",
+    positionId: '',
+    levelId: '',
   });
 
   // UI States
-  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [showAddModal, setShowAddModal] = useState(false);
   const [isLg, setIsLg] = useState(window.innerWidth >= 1024);
-  const [activeTab, setActiveTab] = useState<"equipo" | "solicitudes" | "coordinadores">("equipo");
+  const [activeTab, setActiveTab] = useState<'equipo' | 'solicitudes' | 'coordinadores'>('equipo');
   const [solicitudesCount, setSolicitudesCount] = useState(0);
   const [showCandidatesInfo, setShowCandidatesInfo] = useState(false);
 
@@ -307,11 +341,7 @@ export const ProjectTeamPage: React.FC = () => {
     setSelectedMemberForDetail(user);
     if (detailRefsLoaded) return;
     // Carga perezosa de plantillas de contrato, releases y empresas (puede fallar por permisos → listas vacías)
-    const [cf, rel, emp] = await Promise.all([
-      contratoFrameAPI.list().catch(() => [] as ContratoFrameItem[]),
-      releasesAPI.getAll().catch(() => [] as Release[]),
-      companiesAPI.list().catch(() => [] as Company[]),
-    ]);
+    const [cf, rel, emp] = await Promise.all([contratoFrameAPI.list().catch(() => [] as ContratoFrameItem[]), releasesAPI.getAll().catch(() => [] as Release[]), companiesAPI.list().catch(() => [] as Company[])]);
     setContratoFrames(cf);
     setReleases(rel);
     setCompanies(emp);
@@ -320,33 +350,29 @@ export const ProjectTeamPage: React.FC = () => {
 
   // Empresas (razón social) seteadas en el proyecto para contratos/releases → se muestran en el modal
   // y permiten elegir con cuál descargar el documento.
-  const contratoEmpresas = (project?.contratoEmpresas || [])
-    .map((id) => ({ id, label: companies.find((c) => c._id === id)?.razonSocial || "" }))
-    .filter((e) => e.label);
-  const releaseEmpresas = (project?.releaseEmpresas || [])
-    .map((id) => ({ id, label: companies.find((c) => c._id === id)?.razonSocial || "" }))
-    .filter((e) => e.label);
+  const contratoEmpresas = (project?.contratoEmpresas || []).map((id) => ({ id, label: companies.find((c) => c._id === id)?.razonSocial || '' })).filter((e) => e.label);
+  const releaseEmpresas = (project?.releaseEmpresas || []).map((id) => ({ id, label: companies.find((c) => c._id === id)?.razonSocial || '' })).filter((e) => e.label);
 
   // Persistence for view mode
   useEffect(() => {
-    const saved = localStorage.getItem("projectTeamViewMode");
-    if (saved === "table" || saved === "cards") {
-      setViewMode(saved as "table" | "cards");
+    const saved = localStorage.getItem('projectTeamViewMode');
+    if (saved === 'table' || saved === 'cards') {
+      setViewMode(saved as 'table' | 'cards');
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("projectTeamViewMode", viewMode);
+    localStorage.setItem('projectTeamViewMode', viewMode);
   }, [viewMode]);
 
   useEffect(() => {
     const handleResize = () => setIsLg(window.innerWidth >= 1024);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const effectiveViewMode = isLg ? viewMode : "cards";
-  
+  const effectiveViewMode = isLg ? viewMode : 'cards';
+
   /* -------------------------- Auto-Calculations ---------------------------
    * El Sueldo NETO y BRUTO salen de la Categoría SAT seleccionada (ya vienen
    * calculados en el catálogo: bruto = básico + adicional + presentismo; neto = bruto × 0.81).
@@ -363,14 +389,7 @@ export const ProjectTeamPage: React.FC = () => {
     const diferencia_diaria_neto = cat ? Number((wizardData.sueldo_jornada - sueldo_diario_neto).toFixed(2)) : 0;
     const sueldo_mano_texto = numeroALetras(sueldo_mano);
 
-    if (
-      sueldo_mano !== wizardData.sueldo_mano ||
-      sueldo_neto !== wizardData.sueldo_neto ||
-      sueldo_bruto !== wizardData.sueldo_bruto ||
-      sueldo_diario_neto !== wizardData.sueldo_diario_neto ||
-      diferencia_diaria_neto !== wizardData.diferencia_diaria_neto ||
-      sueldo_mano_texto !== wizardData.sueldo_mano_texto
-    ) {
+    if (sueldo_mano !== wizardData.sueldo_mano || sueldo_neto !== wizardData.sueldo_neto || sueldo_bruto !== wizardData.sueldo_bruto || sueldo_diario_neto !== wizardData.sueldo_diario_neto || diferencia_diaria_neto !== wizardData.diferencia_diaria_neto || sueldo_mano_texto !== wizardData.sueldo_mano_texto) {
       setWizardData((prev) => ({
         ...prev,
         sueldo_mano,
@@ -393,17 +412,17 @@ export const ProjectTeamPage: React.FC = () => {
     const reqId = ++teamReqIdRef.current;
     try {
       setTeamFetching(true);
-      const params: any = { projectId, page, limit: TEAM_PAGE_SIZE, sort: "name" };
+      const params: any = { projectId, page, limit: TEAM_PAGE_SIZE, sort: 'name' };
       if (search) params.email = search; // el backend busca fuzzy en nombre/email
-      if (status === "active") params.metadataActivo = "true";
-      if (status === "inactive") params.metadataActivo = "false";
+      if (status === 'active') params.metadataActivo = 'true';
+      if (status === 'inactive') params.metadataActivo = 'false';
       const resp = await usersAPI.list(params);
       if (reqId !== teamReqIdRef.current) return; // descartar respuestas viejas
       setTeamRows(resp.users);
       setTeamTotal(resp.pagination.total);
       setTeamTotalPages(resp.pagination.pages);
     } catch (e) {
-      if (reqId === teamReqIdRef.current) console.error("Error fetching team page:", e);
+      if (reqId === teamReqIdRef.current) console.error('Error fetching team page:', e);
     } finally {
       if (reqId === teamReqIdRef.current) setTeamFetching(false);
     }
@@ -417,7 +436,7 @@ export const ProjectTeamPage: React.FC = () => {
       setAllUsers(resp.users);
       return resp.users;
     } catch (e) {
-      console.error("Error fetching full team (lite):", e);
+      console.error('Error fetching full team (lite):', e);
       return [];
     }
   };
@@ -430,11 +449,11 @@ export const ProjectTeamPage: React.FC = () => {
         setLoading(true);
         const [projectData, vacationsData, areasData, positionsData, levelsData, shiftsData] = await Promise.all([
           projectsAPI.getProject(projectId), // específico del proyecto: no se cachea
-          cachedFetch("vacations:all", () => vacationsAPI.getAll()),
-          cachedFetch("areas:all", () => areasAPI.listAll()),
-          cachedFetch("positions:all", () => positionsAPI.listAll()),
-          cachedFetch("levels:all", () => levelsAPI.listAll()),
-          cachedFetch("shifts:all", () => shiftsAPI.getAll()),
+          cachedFetch('vacations:all', () => vacationsAPI.getAll()),
+          cachedFetch('areas:all', () => areasAPI.listAll()),
+          cachedFetch('positions:all', () => positionsAPI.listAll()),
+          cachedFetch('levels:all', () => levelsAPI.listAll()),
+          cachedFetch('shifts:all', () => shiftsAPI.getAll()),
         ]);
 
         setAllPositions(positionsData);
@@ -455,7 +474,7 @@ export const ProjectTeamPage: React.FC = () => {
             setTeamConfig(projectData.teamConfig || []);
           }
         } catch (cleanupError) {
-          console.warn("Could not cleanup team:", cleanupError);
+          console.warn('Could not cleanup team:', cleanupError);
           setProject(projectData);
           setTeamConfig(projectData.teamConfig || []);
         }
@@ -468,23 +487,13 @@ export const ProjectTeamPage: React.FC = () => {
         setAllAreas(areasData);
 
         // Fetch additional data for user cards
-        const [allClientsData, allProjectsResponse] = await Promise.all([
-          cachedFetch("clients:all", () => clientsAPI.listAll()),
-          cachedFetch("projects:all", () => projectsAPI.listAll({ limit: 500 })),
-        ]);
+        const [allClientsData, allProjectsResponse] = await Promise.all([cachedFetch('clients:all', () => clientsAPI.listAll()), cachedFetch('projects:all', () => projectsAPI.listAll({ limit: 500 }))]);
 
         setAllClients(allClientsData);
         setAllProjects(allProjectsResponse);
 
         // Fetch Metadata Info (datos de referencia estables → cacheados)
-        const [sedes, cats, estados, tipos, rf, cfs] = await Promise.all([
-          cachedFetch("info:sede", () => infoAPI.listByType("sede")),
-          cachedFetch("categoriaSat:all", () => categoriaSatAPI.list()),
-          cachedFetch("info:estado-empleado", () => infoAPI.listByType("estado-empleado")),
-          cachedFetch("info:contrato", () => infoAPI.listByType("contrato")),
-          cachedFetch("roleFrames:all", () => roleFrameAPI.list()),
-          cachedFetch("contratoFrames:all", () => contratoFrameAPI.list()),
-        ]);
+        const [sedes, cats, estados, tipos, rf, cfs] = await Promise.all([cachedFetch('info:sede', () => infoAPI.listByType('sede')), cachedFetch('categoriaSat:all', () => categoriaSatAPI.list()), cachedFetch('info:estado-empleado', () => infoAPI.listByType('estado-empleado')), cachedFetch('info:contrato', () => infoAPI.listByType('contrato')), cachedFetch('roleFrames:all', () => roleFrameAPI.list()), cachedFetch('contratoFrames:all', () => contratoFrameAPI.list())]);
         setAllSedes(sedes);
         setAllCategoriasSat(cats);
         setAllEstados(estados);
@@ -503,14 +512,14 @@ export const ProjectTeamPage: React.FC = () => {
         teamUsers.forEach((u: User) => {
           const metaId = (u.metadata as any)?.id;
           if (metaId) {
-            const name = u.firstName || u.lastName ? `${u.firstName || ""} ${u.lastName || ""}`.trim() : u.email.split("@")[0];
+            const name = u.firstName || u.lastName ? `${u.firstName || ''} ${u.lastName || ''}`.trim() : u.email.split('@')[0];
             lookupMap.set(metaId, name);
           }
         });
         setUserLookup(lookupMap);
       } catch (error) {
-        console.error("Error loading data:", error);
-        sweetAlert.error("Error", "No se pudieron cargar los datos del equipo.");
+        console.error('Error loading data:', error);
+        sweetAlert.error('Error', 'No se pudieron cargar los datos del equipo.');
       } finally {
         setLoading(false);
       }
@@ -556,7 +565,7 @@ export const ProjectTeamPage: React.FC = () => {
         const count = solis.filter((u) => u.metadata?.projectIds?.includes(projectId)).length;
         setSolicitudesCount(count);
       } catch (e) {
-        console.error("Error fetching solicitudes count:", e);
+        console.error('Error fetching solicitudes count:', e);
       }
     };
     fetchCount();
@@ -572,7 +581,7 @@ export const ProjectTeamPage: React.FC = () => {
   useEffect(() => {
     if (!showAddModal) {
       setCandidateUsers([]);
-      setSearchTerm("");
+      setSearchTerm('');
       setCandTotal(0);
       setCandTotalPages(1);
       setCandPage(1);
@@ -584,13 +593,13 @@ export const ProjectTeamPage: React.FC = () => {
       try {
         setSearchingCandidates(true);
         // slimProjects (sin contratos) → carga liviana; el contrato se trae on-demand en handleOpenWizard.
-        const response = await usersAPI.list({ page: candPage, limit: CAND_PAGE_SIZE, metadataActivo: "true", email: searchTerm || undefined, slimProjects: true });
+        const response = await usersAPI.list({ page: candPage, limit: CAND_PAGE_SIZE, metadataActivo: 'true', email: searchTerm || undefined, slimProjects: true });
         if (reqId !== candReqIdRef.current) return;
         setCandidateUsers(response.users);
         setCandTotal(response.pagination.total);
         setCandTotalPages(response.pagination.pages);
       } catch (error) {
-        if (reqId === candReqIdRef.current) console.error("Error fetching candidates:", error);
+        if (reqId === candReqIdRef.current) console.error('Error fetching candidates:', error);
       } finally {
         if (reqId === candReqIdRef.current) setSearchingCandidates(false);
       }
@@ -604,11 +613,11 @@ export const ProjectTeamPage: React.FC = () => {
 
   // Derived state
   const clientName = useMemo(() => {
-    if (!project) return "";
-    if (typeof project.clientId === "object" && project.clientId?.name) {
+    if (!project) return '';
+    if (typeof project.clientId === 'object' && project.clientId?.name) {
       return project.clientId.name;
     }
-    return "";
+    return '';
   }, [project]);
 
   const projectMap = useMemo(() => new Map(allProjects.map((p) => [p._id, p])), [allProjects]);
@@ -619,12 +628,12 @@ export const ProjectTeamPage: React.FC = () => {
     const opts: { value: string; label: string }[] = [];
     const seen = new Set<string>();
     (project?.areasConfig || []).forEach((ac: any) => {
-      const aId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
-      const aName = typeof ac.areaId === "object" ? ac.areaId?.name : allAreas.find((a) => String(a._id) === String(aId))?.name;
+      const aId = typeof ac.areaId === 'object' ? ac.areaId?._id : ac.areaId;
+      const aName = typeof ac.areaId === 'object' ? ac.areaId?.name : allAreas.find((a) => String(a._id) === String(aId))?.name;
       if (!aId || !aName) return;
       (ac.shiftIds || []).forEach((sid: any) => {
-        const sId = typeof sid === "object" ? sid?._id : sid;
-        const sName = typeof sid === "object" ? sid?.name : allShifts.find((s) => String(s._id) === String(sId))?.name;
+        const sId = typeof sid === 'object' ? sid?._id : sid;
+        const sName = typeof sid === 'object' ? sid?.name : allShifts.find((s) => String(s._id) === String(sId))?.name;
         if (!sId || !sName) return;
         const key = `${aId}::${sId}`;
         if (seen.has(key)) return;
@@ -643,20 +652,20 @@ export const ProjectTeamPage: React.FC = () => {
   const [client, setClient] = useState<any>(null);
 
   useEffect(() => {
-    if (project && typeof project.clientId === "string" && !clientName) {
+    if (project && typeof project.clientId === 'string' && !clientName) {
       // fetch client
       projectsAPI.getClient(project.clientId).then(setClient).catch(console.error);
     }
   }, [project, clientName]);
 
-  const displayedClientName = client?.name || clientName || "Cliente";
+  const displayedClientName = client?.name || clientName || 'Cliente';
 
   // Unificamos los IDs de usuarios asignados (cruce entre la lista del proyecto y los metadatos de los usuarios)
   const assignedUserIds = useMemo(() => {
     if (!project || !projectId) return [];
 
     // 1. Usuarios explícitamente asignados en el objeto Proyecto
-    const fromProject = ((project.assignedUsers as any[]) || []).map((u) => (typeof u === "string" ? u : u._id));
+    const fromProject = ((project.assignedUsers as any[]) || []).map((u) => (typeof u === 'string' ? u : u._id));
 
     return Array.from(new Set(fromProject));
   }, [project, projectId]);
@@ -664,10 +673,10 @@ export const ProjectTeamPage: React.FC = () => {
   const activeAddFiltersCount = useMemo(() => [filterRole, filterRoleFrame, filterProject].filter(Boolean).length, [filterRole, filterRoleFrame, filterProject]);
 
   // Filtered Users (candidates to add) - only search by name or email
-   const filteredCandidates = useMemo(() => {
+  const filteredCandidates = useMemo(() => {
     // When in Add Modal, we use candidateUsers (which contains active users from API)
     const source = showAddModal ? candidateUsers : allUsers;
-    
+
     return source.filter((user) => {
       // 1. Exclude already assigned
       if (assignedUserIds.includes(user._id)) return false;
@@ -681,9 +690,7 @@ export const ProjectTeamPage: React.FC = () => {
 
       // 4. Filter by Role Frame (contratos/proyectos + propios del usuario en metadata.roles_frame)
       if (filterRoleFrame) {
-        const ownRFNames = (((user.metadata as any)?.rolesFrameIds || (user.metadata as any)?.roles_frame || []) as any[])
-          .map((rf: any) => (typeof rf === "object" ? rf?.name : allRoleFrames.find((i) => i._id === rf)?.name))
-          .filter(Boolean) as string[];
+        const ownRFNames = (((user.metadata as any)?.rolesFrameIds || (user.metadata as any)?.roles_frame || []) as any[]).map((rf: any) => (typeof rf === 'object' ? rf?.name : allRoleFrames.find((i) => i._id === rf)?.name)).filter(Boolean) as string[];
         const userRFs = Array.from(new Set([...(user.externalInfo?.rolFrames || []), ...ownRFNames]));
         if (!userRFs.includes(filterRoleFrame)) return false;
       }
@@ -704,30 +711,27 @@ export const ProjectTeamPage: React.FC = () => {
   const teamMembers = useMemo(() => allUsers, [allUsers]);
 
   const displayedCount = useMemo(() => {
-    if (activeTab === "equipo") {
+    if (activeTab === 'equipo') {
       return teamTotal;
     }
-    if (activeTab === "coordinadores") {
-      const coordIds = new Set(
-        (project?.coordinatorAssignments || [])
-          .map((asm) => typeof asm.userId === "object" ? asm.userId?._id : asm.userId)
-          .filter(Boolean)
-      );
+    if (activeTab === 'coordinadores') {
+      const coordIds = new Set((project?.coordinatorAssignments || []).map((asm) => (typeof asm.userId === 'object' ? asm.userId?._id : asm.userId)).filter(Boolean));
       return coordIds.size;
     }
-    if (activeTab === "solicitudes") {
+    if (activeTab === 'solicitudes') {
       return solicitudesCount;
     }
     return teamMembers.length;
   }, [activeTab, teamTotal, project?.coordinatorAssignments, solicitudesCount, teamMembers.length]);
 
   const hasMobileCoordinator = useMemo(() => {
-    return teamMembers.some((u) => u.roles?.some((r) => {
-      const n = r.name.toLowerCase();
-      return n.includes("mobile") && n.includes("coordinador");
-    }));
+    return teamMembers.some((u) =>
+      u.roles?.some((r) => {
+        const n = r.name.toLowerCase();
+        return n.includes('mobile') && n.includes('coordinador');
+      }),
+    );
   }, [teamMembers]);
-
 
   const availableCategoriasSat = useMemo(() => {
     let list: any[] = [];
@@ -743,7 +747,7 @@ export const ProjectTeamPage: React.FC = () => {
       list = allCategoriasSat.map((c) => ({
         id: c.data?.id,
         nombre: c.name,
-        numeroCategoria: c.data?.numeroCategoria || c.data?.id
+        numeroCategoria: c.data?.numeroCategoria || c.data?.id,
       }));
     }
 
@@ -757,7 +761,7 @@ export const ProjectTeamPage: React.FC = () => {
           list.push({
             id: globalCat.data?.id,
             nombre: globalCat.name,
-            numeroCategoria: globalCat.data?.numeroCategoria || globalCat.data?.id
+            numeroCategoria: globalCat.data?.numeroCategoria || globalCat.data?.id,
           });
         }
       }
@@ -771,7 +775,7 @@ export const ProjectTeamPage: React.FC = () => {
 
     const assignedNames = selectedUserForWizard.externalInfo?.rolFrames || [];
     const projectsRFNames = (selectedUserForWizard.metadata?.projects || []).map((p) => p.nombre_rol_frame).filter(Boolean);
-    
+
     // Add names from all contracts in projects as well!
     const contractRFNames: string[] = [];
     (selectedUserForWizard.metadata?.projects || []).forEach((p: any) => {
@@ -786,7 +790,7 @@ export const ProjectTeamPage: React.FC = () => {
 
     // Role frames propios del usuario (colección users.metadata.roles_frame / rolesFrameIds)
     const ownRoleFrameIds = (((selectedUserForWizard.metadata as any)?.rolesFrameIds || (selectedUserForWizard.metadata as any)?.roles_frame || []) as any[])
-      .map((rf: any) => (typeof rf === "object" ? rf?._id : rf))
+      .map((rf: any) => (typeof rf === 'object' ? rf?._id : rf))
       .filter(Boolean)
       .map(String);
     if (ownRoleFrameIds.length > 0) {
@@ -800,7 +804,7 @@ export const ProjectTeamPage: React.FC = () => {
       const rfId = String(selectedUserForWizard.metadata.roleFrameId);
       filtered = allRoleFrames.filter((rf) => String(rf.data?.rol?.id) === rfId);
     }
-    
+
     // Check contracts' rol_frame_id
     if (filtered.length === 0) {
       const contractRFIds: string[] = [];
@@ -823,7 +827,7 @@ export const ProjectTeamPage: React.FC = () => {
   }, [allRoleFrames, selectedUserForWizard]);
 
   // Check Is Coordinator Helper
-  const checkIsCoordinator = (user: User) => (typeof user.positionId === "object" && user.positionId?.name?.toLowerCase().includes("coordinador")) || (user.roles && user.roles.some((r) => r.name.toLowerCase().includes("coordinador"))) || user.firstName?.toLowerCase().includes("coordinador") || user.lastName?.toLowerCase().includes("coordinador");
+  const checkIsCoordinator = (user: User) => (typeof user.positionId === 'object' && user.positionId?.name?.toLowerCase().includes('coordinador')) || (user.roles && user.roles.some((r) => r.name.toLowerCase().includes('coordinador'))) || user.firstName?.toLowerCase().includes('coordinador') || user.lastName?.toLowerCase().includes('coordinador');
 
   // Get standard shifts for a user assigned to an area
   const getStandardShifts = (user: User, userConfig: any, activeContract: any, areaId: string, areaName: string) => {
@@ -835,11 +839,11 @@ export const ProjectTeamPage: React.FC = () => {
       if (!project?.coordinatorAssignments) return [];
       return project.coordinatorAssignments
         .filter((asm) => {
-          const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
-          const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
+          const uid = typeof asm.userId === 'object' ? (asm.userId as any)?._id : asm.userId;
+          const aid = typeof asm.areaId === 'object' ? (asm.areaId as any)?._id : asm.areaId;
           return String(uid) === String(user._id) && String(aid) === String(areaId);
         })
-        .map((asm) => typeof asm.shiftId === "object" ? (asm.shiftId as any)?._id : asm.shiftId);
+        .map((asm) => (typeof asm.shiftId === 'object' ? (asm.shiftId as any)?._id : asm.shiftId));
     };
 
     const coordShiftIds = getCoordinatedShiftIds();
@@ -847,7 +851,7 @@ export const ProjectTeamPage: React.FC = () => {
     // 1. Check team configuration assignments (Wizard) and EXCLUDE coordinated ones
     const assignments = userConfig?.areaShiftAssignments || [];
     const areaAssign = assignments.find((a: any) => {
-      const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
+      const aid = typeof a.areaId === 'object' ? a.areaId?._id : a.areaId;
       if (String(aid) === String(areaId)) return true;
       const aData = allAreas.find((area) => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
       return aData && areaName && aData.name.toLowerCase() === areaName.toLowerCase();
@@ -856,7 +860,7 @@ export const ProjectTeamPage: React.FC = () => {
     if (areaAssign) {
       const sids = areaAssign.shiftIds || [];
       sids.forEach((sid: any) => {
-        const actualSid = typeof sid === "object" ? sid?._id : sid;
+        const actualSid = typeof sid === 'object' ? sid?._id : sid;
         if (coordShiftIds.includes(actualSid)) return;
         const shift = allShifts.find((s) => String(s._id) === String(actualSid));
         if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) {
@@ -869,7 +873,7 @@ export const ProjectTeamPage: React.FC = () => {
     if (shifts.length === 0) {
       if (activeContract?.areaShiftAssignments && activeContract.areaShiftAssignments.length > 0) {
         const fallbackAssign = activeContract.areaShiftAssignments.find((a: any) => {
-          const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
+          const aid = typeof a.areaId === 'object' ? a.areaId?._id : a.areaId;
           if (String(aid) === String(areaId)) return true;
           const aData = allAreas.find((area) => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
           return aData && areaName && aData.name.toLowerCase() === areaName.toLowerCase();
@@ -878,7 +882,7 @@ export const ProjectTeamPage: React.FC = () => {
         if (fallbackAssign) {
           const sids = fallbackAssign.shiftIds || [];
           sids.forEach((sid: any) => {
-            const actualSid = typeof sid === "object" ? sid?._id : sid;
+            const actualSid = typeof sid === 'object' ? sid?._id : sid;
             if (coordShiftIds.includes(actualSid)) return;
             const shift = allShifts.find((s) => String(s._id) === String(actualSid));
             if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) {
@@ -891,7 +895,7 @@ export const ProjectTeamPage: React.FC = () => {
 
     // 3. Legacy members fallback
     if (shifts.length === 0) {
-      const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : undefined;
+      const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === 'object' ? user.turnos[0]._id : user.turnos[0]) : undefined;
       const finalShiftId = userConfig?.shiftId || shiftIdFromUser;
       const shift = allShifts.find((sh) => String(sh._id) === String(finalShiftId));
       if (shift) shifts = [shift];
@@ -906,12 +910,12 @@ export const ProjectTeamPage: React.FC = () => {
     if (!user) return shifts;
     if (project?.coordinatorAssignments) {
       const myCoordAsgn = project.coordinatorAssignments.filter((asm) => {
-        const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
-        const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
+        const uid = typeof asm.userId === 'object' ? (asm.userId as any)?._id : asm.userId;
+        const aid = typeof asm.areaId === 'object' ? (asm.areaId as any)?._id : asm.areaId;
         return String(uid) === String(user._id) && String(aid) === String(areaId);
       });
       myCoordAsgn.forEach((asm) => {
-        const sid = typeof asm.shiftId === "object" ? (asm.shiftId as any)?._id : asm.shiftId;
+        const sid = typeof asm.shiftId === 'object' ? (asm.shiftId as any)?._id : asm.shiftId;
         const shift = allShifts.find((s) => String(s._id) === String(sid));
         if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) {
           shifts.push(shift);
@@ -927,7 +931,7 @@ export const ProjectTeamPage: React.FC = () => {
 
     return vacations.find((v) => {
       if (v.userId !== userId) return false;
-      const isFinal = v.status === "delivered" || v.signatureStatus === "signed" || (v.status === "approved" && v.signatureStatus === "not_required");
+      const isFinal = v.status === 'delivered' || v.signatureStatus === 'signed' || (v.status === 'approved' && v.signatureStatus === 'not_required');
       if (!isFinal) return false;
 
       const start = new Date(v.startDate);
@@ -940,11 +944,11 @@ export const ProjectTeamPage: React.FC = () => {
   };
 
   const calculateDuration = (start: string, end: string) => {
-    if (!start || !end) return "";
+    if (!start || !end) return '';
     try {
-      const [startH, startM] = start.split(":").map(Number);
-      const [endH, endM] = end.split(":").map(Number);
-      if (isNaN(startH) || isNaN(startM) || isNaN(endH) || isNaN(endM)) return "";
+      const [startH, startM] = start.split(':').map(Number);
+      const [endH, endM] = end.split(':').map(Number);
+      if (isNaN(startH) || isNaN(startM) || isNaN(endH) || isNaN(endM)) return '';
 
       let startTotal = startH * 60 + startM;
       let endTotal = endH * 60 + endM;
@@ -960,7 +964,7 @@ export const ProjectTeamPage: React.FC = () => {
       if (mins === 0) return `${hours}hs`;
       return `${hours}h ${mins}m`;
     } catch (e) {
-      return "";
+      return '';
     }
   };
 
@@ -972,8 +976,8 @@ export const ProjectTeamPage: React.FC = () => {
       const updatedProject = await projectsAPI.updateTeamConfig(project._id, newConfig);
       setTeamConfig(updatedProject.teamConfig || []);
     } catch (err) {
-      console.error("Error updating team config", err);
-      sweetAlert.error("Error", "No se pudo guardar la configuración del equipo.");
+      console.error('Error updating team config', err);
+      sweetAlert.error('Error', 'No se pudo guardar la configuración del equipo.');
     }
   };
   const handleOpenScheduleModal = (user: User, contractOverride?: Contract, contractIndex?: number) => {
@@ -985,7 +989,7 @@ export const ProjectTeamPage: React.FC = () => {
   const handleOpenWizard = async (userId: string, contractOverride?: Contract, contractIndex?: number, approveSolicitudId?: string) => {
     // Si viene de editar una tarjeta puntual del modal de contratos, guardamos ese índice para
     // actualizar EXACTAMENTE ese contrato al guardar (si no, el backend toca el último).
-    setEditingContractIndex(typeof contractIndex === "number" ? contractIndex : null);
+    setEditingContractIndex(typeof contractIndex === 'number' ? contractIndex : null);
     // Si viene de aprobar una solicitud, recordamos el id para marcarla aprobada al guardar.
     setApprovingSolicitudId(approveSolicitudId ?? null);
     // La lista de candidatos viene "slim" (sin contratos) para no cargar 100 historiales
@@ -996,7 +1000,7 @@ export const ProjectTeamPage: React.FC = () => {
       const full = await usersAPI.get(userId);
       if (full) user = full;
     } catch (e) {
-      console.error("No se pudo traer el usuario completo, uso el de la lista:", e);
+      console.error('No se pudo traer el usuario completo, uso el de la lista:', e);
     }
     if (!user) return;
 
@@ -1004,35 +1008,37 @@ export const ProjectTeamPage: React.FC = () => {
     const metadataProjects = user.metadata?.projects || [];
 
     // Prioritize current project if existing
-    const currentProjectMeta = metadataProjects.find((p: any) => String(typeof p.projectId === "string" ? p.projectId : p.projectId?._id) === String(project?._id));
+    const currentProjectMeta = metadataProjects.find((p: any) => String(typeof p.projectId === 'string' ? p.projectId : p.projectId?._id) === String(project?._id));
 
     const lastProject = currentProjectMeta || (metadataProjects.length > 0 ? metadataProjects[metadataProjects.length - 1] : null);
     // Si se editó una tarjeta puntual del modal de contratos, precargar ESE contrato; si no, el último.
     const lastContract = contractOverride || (lastProject?.contracts?.length ? lastProject.contracts[lastProject.contracts.length - 1] : null);
 
-    console.log("[Wizard] user:", user._id, "lastProject:", lastProject?._id, "lastContract keys:", lastContract ? Object.keys(lastContract) : "null");
-    console.log("[Wizard] lastContract:", lastContract ? JSON.stringify({ categoria_sat_id: (lastContract as any).categoria_sat_id, nombre_categoria_sat: (lastContract as any).nombre_categoria_sat, estado_id: (lastContract as any).estado_id, nombre_estado_empleado: (lastContract as any).nombre_estado_empleado }) : "null");
+    console.log('[Wizard] user:', user._id, 'lastProject:', lastProject?._id, 'lastContract keys:', lastContract ? Object.keys(lastContract) : 'null');
+    console.log('[Wizard] lastContract:', lastContract ? JSON.stringify({ categoria_sat_id: (lastContract as any).categoria_sat_id, nombre_categoria_sat: (lastContract as any).nombre_categoria_sat, estado_id: (lastContract as any).estado_id, nombre_estado_empleado: (lastContract as any).nombre_estado_empleado }) : 'null');
 
     // Default statuses and IDs
-    const activoEstado = allEstados.find((e) => e.name.toLowerCase().includes("activo"));
+    const activoEstado = allEstados.find((e) => e.name.toLowerCase().includes('activo'));
 
     // Prioritize IDs from last contract if they exist (numeric IDs stored in UserProject)
-    let initialCatId = "";
+    let initialCatId = '';
     if (lastContract) {
       const catIdFromDb = (lastContract as any).categoria_sat_id;
       const catNameFromDb = (lastContract as any).nombre_categoria_sat;
 
-      console.log("[Wizard] lastContract categoria_sat_id:", catIdFromDb, "nombre_categoria_sat:", catNameFromDb);
-      console.log("[Wizard] allCategoriasSat count:", allCategoriasSat.length, "sample:", allCategoriasSat.slice(0, 3).map(c => ({ _id: c._id, dataId: c.data?.id, name: c.name })));
+      console.log('[Wizard] lastContract categoria_sat_id:', catIdFromDb, 'nombre_categoria_sat:', catNameFromDb);
+      console.log(
+        '[Wizard] allCategoriasSat count:',
+        allCategoriasSat.length,
+        'sample:',
+        allCategoriasSat.slice(0, 3).map((c) => ({ _id: c._id, dataId: c.data?.id, name: c.name })),
+      );
 
       // Try to find the category in the global list first by numeric ID, MongoDB ID, or Name
       let matchedCat = allCategoriasSat.find((c) => {
-        const numericIdMatch = catIdFromDb != null && catIdFromDb !== "" && String(c.data?.id) === String(catIdFromDb);
-        const mongoIdMatch = catIdFromDb != null && catIdFromDb !== "" && String(c._id) === String(catIdFromDb);
-        const nameMatch = catNameFromDb && catNameFromDb !== "Sin categoria" && (
-          c.name?.toLowerCase() === catNameFromDb.toLowerCase() ||
-          c.data?.nombre?.toLowerCase() === catNameFromDb.toLowerCase()
-        );
+        const numericIdMatch = catIdFromDb != null && catIdFromDb !== '' && String(c.data?.id) === String(catIdFromDb);
+        const mongoIdMatch = catIdFromDb != null && catIdFromDb !== '' && String(c._id) === String(catIdFromDb);
+        const nameMatch = catNameFromDb && catNameFromDb !== 'Sin categoria' && (c.name?.toLowerCase() === catNameFromDb.toLowerCase() || c.data?.nombre?.toLowerCase() === catNameFromDb.toLowerCase());
         return numericIdMatch || mongoIdMatch || nameMatch;
       });
 
@@ -1041,29 +1047,26 @@ export const ProjectTeamPage: React.FC = () => {
         const foundRF = allRoleFrames.find((rf) => rf.name === lastProject?.nombre_rol_frame);
         const rfCats = foundRF?.data?.categoriasSat || [];
         const matchedInRF = rfCats.find((c: any) => {
-          const numericIdMatch = catIdFromDb != null && catIdFromDb !== "" && String(c.id) === String(catIdFromDb);
-          const nameMatch = catNameFromDb && catNameFromDb !== "Sin categoria" && c.nombre?.toLowerCase() === catNameFromDb.toLowerCase();
+          const numericIdMatch = catIdFromDb != null && catIdFromDb !== '' && String(c.id) === String(catIdFromDb);
+          const nameMatch = catNameFromDb && catNameFromDb !== 'Sin categoria' && c.nombre?.toLowerCase() === catNameFromDb.toLowerCase();
           return numericIdMatch || nameMatch;
         });
 
         if (matchedInRF) {
           // Find global category matching that name
-          matchedCat = allCategoriasSat.find((c) => 
-            c.name?.toLowerCase() === matchedInRF.nombre?.toLowerCase() ||
-            c.data?.nombre?.toLowerCase() === matchedInRF.nombre?.toLowerCase()
-          );
+          matchedCat = allCategoriasSat.find((c) => c.name?.toLowerCase() === matchedInRF.nombre?.toLowerCase() || c.data?.nombre?.toLowerCase() === matchedInRF.nombre?.toLowerCase());
         }
       }
 
       if (matchedCat) {
         initialCatId = String(matchedCat.data?.id ?? matchedCat._id);
-        console.log("[Wizard] Matched cat:", matchedCat.name, "-> initialCatId:", initialCatId);
+        console.log('[Wizard] Matched cat:', matchedCat.name, '-> initialCatId:', initialCatId);
       } else {
-        console.log("[Wizard] No matched cat found. catIdFromDb:", catIdFromDb, "catNameFromDb:", catNameFromDb);
+        console.log('[Wizard] No matched cat found. catIdFromDb:', catIdFromDb, 'catNameFromDb:', catNameFromDb);
         // Last resort: if we have a numeric catIdFromDb, just use it directly
-        if (catIdFromDb != null && catIdFromDb !== "" && catIdFromDb !== 0) {
+        if (catIdFromDb != null && catIdFromDb !== '' && catIdFromDb !== 0) {
           initialCatId = String(catIdFromDb);
-          console.log("[Wizard] Using catIdFromDb directly as initialCatId:", initialCatId);
+          console.log('[Wizard] Using catIdFromDb directly as initialCatId:', initialCatId);
         }
       }
     }
@@ -1075,11 +1078,11 @@ export const ProjectTeamPage: React.FC = () => {
       initialCatId = String((user.metadata as any).categoria_sat_id);
     }
 
-    console.log("[Wizard] FINAL initialCatId:", initialCatId);
+    console.log('[Wizard] FINAL initialCatId:', initialCatId);
 
-    let initialTipoContratoId = lastContract?.tipo_contrato_id ? String(lastContract.tipo_contrato_id) : "";
+    let initialTipoContratoId = lastContract?.tipo_contrato_id ? String(lastContract.tipo_contrato_id) : '';
     if (!initialTipoContratoId && lastContract?.nombre_contrato) {
-      initialTipoContratoId = String(allTiposContrato.find((t) => t.name === lastContract.nombre_contrato)?.data.id || "");
+      initialTipoContratoId = String(allTiposContrato.find((t) => t.name === lastContract.nombre_contrato)?.data.id || '');
     }
     if (!initialTipoContratoId && (user.metadata as any)?.tipoContratoId) {
       initialTipoContratoId = String((user.metadata as any).tipoContratoId);
@@ -1090,38 +1093,41 @@ export const ProjectTeamPage: React.FC = () => {
 
     // Preseleccionar la contratos-frame del último contrato: primero por nombre (identificador estable),
     // fallback por ID Externo numérico.
-    const initialCf =
-      contratoFrames.find((cf) => cf.name === lastContract?.nombre_contrato) ||
-      (initialTipoContratoId ? contratoFrames.find((cf) => cf.data?.id != null && String(cf.data.id) === initialTipoContratoId) : undefined);
-    const initialContratoFrameId = initialCf?._id || "";
-    const initialNombreContrato = initialCf?.name || lastContract?.nombre_contrato || "";
+    const initialCf = contratoFrames.find((cf) => cf.name === lastContract?.nombre_contrato) || (initialTipoContratoId ? contratoFrames.find((cf) => cf.data?.id != null && String(cf.data.id) === initialTipoContratoId) : undefined);
+    const initialContratoFrameId = initialCf?._id || '';
+    const initialNombreContrato = initialCf?.name || lastContract?.nombre_contrato || '';
     if (initialCf?.data?.id != null) initialTipoContratoId = String(initialCf.data.id);
 
-    let initialEstadoId = "";
+    let initialEstadoId = '';
     if (lastContract) {
       const estadoIdFromDb = (lastContract as any).estado_id;
       const estadoNameFromDb = (lastContract as any).nombre_estado_empleado;
-      console.log("[Wizard] lastContract estado_id:", estadoIdFromDb, "nombre_estado_empleado:", estadoNameFromDb);
-      console.log("[Wizard] allEstados count:", allEstados.length, "sample:", allEstados.slice(0, 3).map(e => ({ _id: e._id, dataId: e.data?.id, name: e.name })));
+      console.log('[Wizard] lastContract estado_id:', estadoIdFromDb, 'nombre_estado_empleado:', estadoNameFromDb);
+      console.log(
+        '[Wizard] allEstados count:',
+        allEstados.length,
+        'sample:',
+        allEstados.slice(0, 3).map((e) => ({ _id: e._id, dataId: e.data?.id, name: e.name })),
+      );
 
       // Match by numeric ID first
-      if (estadoIdFromDb != null && estadoIdFromDb !== "" && estadoIdFromDb !== 0) {
+      if (estadoIdFromDb != null && estadoIdFromDb !== '' && estadoIdFromDb !== 0) {
         const matchedEstado = allEstados.find((e) => String(e.data?.id) === String(estadoIdFromDb) || String(e._id) === String(estadoIdFromDb));
         if (matchedEstado) {
           initialEstadoId = String(matchedEstado.data?.id ?? matchedEstado._id);
-          console.log("[Wizard] Matched estado by ID:", matchedEstado.name, "-> initialEstadoId:", initialEstadoId);
+          console.log('[Wizard] Matched estado by ID:', matchedEstado.name, '-> initialEstadoId:', initialEstadoId);
         } else {
           // Use the numeric ID directly as fallback
           initialEstadoId = String(estadoIdFromDb);
-          console.log("[Wizard] Using estadoIdFromDb directly:", initialEstadoId);
+          console.log('[Wizard] Using estadoIdFromDb directly:', initialEstadoId);
         }
       }
       // Match by name as fallback
-      if (!initialEstadoId && estadoNameFromDb && estadoNameFromDb !== "Activo") {
+      if (!initialEstadoId && estadoNameFromDb && estadoNameFromDb !== 'Activo') {
         const matchedEstado = allEstados.find((e) => e.name?.toLowerCase() === estadoNameFromDb.toLowerCase());
         if (matchedEstado) {
           initialEstadoId = String(matchedEstado.data?.id ?? matchedEstado._id);
-          console.log("[Wizard] Matched estado by name:", matchedEstado.name, "-> initialEstadoId:", initialEstadoId);
+          console.log('[Wizard] Matched estado by name:', matchedEstado.name, '-> initialEstadoId:', initialEstadoId);
         }
       }
     }
@@ -1132,11 +1138,11 @@ export const ProjectTeamPage: React.FC = () => {
       initialEstadoId = String((user.metadata as any).estado_id);
     }
     if (!initialEstadoId) {
-      initialEstadoId = String(activoEstado?.data?.id || "");
+      initialEstadoId = String(activoEstado?.data?.id || '');
     }
-    console.log("[Wizard] FINAL initialEstadoId:", initialEstadoId);
+    console.log('[Wizard] FINAL initialEstadoId:', initialEstadoId);
 
-    let initialSedeId = lastContract?.sede_id ? String(lastContract.sede_id) : project?.metadata?.sedeId ? String(project.metadata.sedeId) : "";
+    let initialSedeId = lastContract?.sede_id ? String(lastContract.sede_id) : project?.metadata?.sedeId ? String(project.metadata.sedeId) : '';
     if (!initialSedeId && lastContract?.nombre_sede) {
       const foundSede = allSedes.find((s) => s.name === lastContract.nombre_sede);
       if (foundSede) initialSedeId = String(foundSede.data.id);
@@ -1145,7 +1151,7 @@ export const ProjectTeamPage: React.FC = () => {
       initialSedeId = String((user.metadata as any).sedeId);
     }
 
-    let initialRolFrameId = lastContract?.rol_frame_id ? String(lastContract.rol_frame_id) : "";
+    let initialRolFrameId = lastContract?.rol_frame_id ? String(lastContract.rol_frame_id) : '';
     if (!initialRolFrameId && lastProject?.nombre_rol_frame) {
       // Find role frame by name
       const foundRF = allRoleFrames.find((rf) => rf.name === lastProject.nombre_rol_frame);
@@ -1166,7 +1172,7 @@ export const ProjectTeamPage: React.FC = () => {
 
     // Map existing assignments to the wizard format, ensuring we use string IDs
     const areaShiftAssignments = (existingAssignments || []).map((a: any) => ({
-      areaId: String(a.areaId?._id || a.areaId || ""),
+      areaId: String(a.areaId?._id || a.areaId || ''),
       shiftIds: (a.shiftIds || []).map((s: any) => String(s?._id || s)),
     }));
 
@@ -1175,27 +1181,28 @@ export const ProjectTeamPage: React.FC = () => {
 
     // Aseguramos tener la lista de empresas para poblar los selects de Empresa del Contrato / Release.
     if (companies.length === 0) {
-      companiesAPI.list().then(setCompanies).catch(() => {});
+      companiesAPI
+        .list()
+        .then(setCompanies)
+        .catch(() => {});
     }
 
     // Helper for date formatting
     const formatDate = (dateStr: any) => {
-      if (!dateStr) return "";
+      if (!dateStr) return '';
       try {
         const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return "";
-        return d.toISOString().split("T")[0];
+        if (isNaN(d.getTime())) return '';
+        return d.toISOString().split('T')[0];
       } catch {
-        return "";
+        return '';
       }
     };
 
     // Horario de la solicitud (metadata.schedule = "HH:MM - HH:MM") como fallback cuando no hay contrato
     // previo (p.ej. al aprobar una solicitud desde el wizard).
-    const metaSchedule = String((user.metadata as any)?.schedule || "");
-    const [metaHoraInicio, metaHoraFin] = metaSchedule.includes("-")
-      ? metaSchedule.split("-").map((s) => s.trim())
-      : ["", ""];
+    const metaSchedule = String((user.metadata as any)?.schedule || '');
+    const [metaHoraInicio, metaHoraFin] = metaSchedule.includes('-') ? metaSchedule.split('-').map((s) => s.trim()) : ['', ''];
 
     // Reset wizard data with pulled data or defaults
     setWizardData({
@@ -1205,27 +1212,27 @@ export const ProjectTeamPage: React.FC = () => {
       nombre_contrato: initialNombreContrato,
       tipo_contrato_id: initialTipoContratoId,
       estado_id: initialEstadoId,
-      empresaContratoId: lastContract?.empresaContratoId ? String(lastContract.empresaContratoId) : "",
-      empresaReleaseId: lastContract?.empresaReleaseId ? String(lastContract.empresaReleaseId) : "",
-      hora_inicio: lastContract?.hora_inicio || metaHoraInicio || "09:00",
-      hora_fin: lastContract?.hora_fin || metaHoraFin || "18:00",
+      empresaContratoId: lastContract?.empresaContratoId ? String(lastContract.empresaContratoId) : '',
+      empresaReleaseId: lastContract?.empresaReleaseId ? String(lastContract.empresaReleaseId) : '',
+      hora_inicio: lastContract?.hora_inicio || metaHoraInicio || '09:00',
+      hora_fin: lastContract?.hora_fin || metaHoraFin || '18:00',
       fecha_alta_contrato: formatDate(lastContract?.fecha_alta_contrato) || formatDate(new Date()),
       fecha_baja_contrato: formatDate(lastContract?.fecha_baja_contrato),
       cantidad_jornadas_laborales: lastContract?.cantidad_jornadas_laborales || 5,
       sueldo_jornada: lastContract?.sueldo_jornada || 0,
       sueldo_mano: lastContract?.sueldo_mano || 0,
-      sueldo_mano_texto: lastContract?.sueldo_mano_texto || "",
+      sueldo_mano_texto: lastContract?.sueldo_mano_texto || '',
       sueldo_diario_neto: lastContract?.sueldo_diario_neto || 0,
       diferencia_diaria_neto: lastContract?.diferencia_diaria_neto || 0,
       sueldo_neto: lastContract?.sueldo_neto || 0,
       sueldo_bruto: lastContract?.sueldo_bruto || 0,
       sede_id: initialSedeId,
       reemplazo: lastContract?.reemplazo || false,
-      empleado_id_reemplezado: lastContract?.empleado_id_reemplezado || "",
-      observaciones: lastContract?.observaciones || "",
+      empleado_id_reemplezado: lastContract?.empleado_id_reemplezado || '',
+      observaciones: lastContract?.observaciones || '',
       areaShiftAssignments: areaShiftAssignments,
-      positionId: lastContract?.positionId || "",
-      levelId: lastContract?.levelId || "",
+      positionId: lastContract?.positionId || '',
+      levelId: lastContract?.levelId || '',
     });
   };
 
@@ -1234,7 +1241,7 @@ export const ProjectTeamPage: React.FC = () => {
 
     // Validate area/shift assignment is required
     if (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0) {
-      sweetAlert.error("Campo requerido", "Debes seleccionar al menos un área y turno para el miembro.");
+      sweetAlert.error('Campo requerido', 'Debes seleccionar al menos un área y turno para el miembro.');
       setWizardStep(1);
       return;
     }
@@ -1248,8 +1255,8 @@ export const ProjectTeamPage: React.FC = () => {
       // backend will handle UserProject and internal assignedUsers
       // Extract first assignment for backward-compatible contract fields
       const firstAssignment = wizardData.areaShiftAssignments[0];
-      const primaryShiftId = firstAssignment?.shiftIds?.[0] || "";
-      const primaryAreaId = firstAssignment?.areaId || "";
+      const primaryShiftId = firstAssignment?.shiftIds?.[0] || '';
+      const primaryAreaId = firstAssignment?.areaId || '';
 
       // Los contratos de tiempo indeterminado no llevan fecha de baja
       const cfSel = contratoFrames.find((c) => c._id === wizardData.contrato_frame_id);
@@ -1268,7 +1275,7 @@ export const ProjectTeamPage: React.FC = () => {
         approveSolicitud: approvingSolicitudId ? true : undefined,
         contract: {
           ...wizardData,
-          fecha_baja_contrato: esTiempoIndeterminado ? "" : wizardData.fecha_baja_contrato,
+          fecha_baja_contrato: esTiempoIndeterminado ? '' : wizardData.fecha_baja_contrato,
           areaId: primaryAreaId,
           shiftId: primaryShiftId,
           areaShiftAssignments: wizardData.areaShiftAssignments,
@@ -1279,7 +1286,7 @@ export const ProjectTeamPage: React.FC = () => {
           categoria_sat_id: Number(wizardData.categoria_sat_id),
           nombre_contrato: wizardData.nombre_contrato,
           tipo_contrato_id: wizardData.tipo_contrato_id ? Number(wizardData.tipo_contrato_id) : null,
-          nombre_rol_frame: rfSel?.name || "",
+          nombre_rol_frame: rfSel?.name || '',
           rol_frame_id: Number(wizardData.rol_frame_id),
           empleado_id_reemplezado: wizardData.empleado_id_reemplezado ? Number(wizardData.empleado_id_reemplezado) : null,
           // Enviar null (no "") para que Mongoose no falle al castear a ObjectId cuando no se elige empresa.
@@ -1289,11 +1296,8 @@ export const ProjectTeamPage: React.FC = () => {
       });
 
       const wasApproving = !!approvingSolicitudId;
-      const nombre = selectedUserForWizard.metadata?.fullName || selectedUserForWizard.firstName || "El usuario";
-      sweetAlert.success(
-        wasApproving ? "Solicitud Aprobada" : isExistingMember ? "Miembro Actualizado" : "Miembro Agregado",
-        `${nombre} ha sido ${wasApproving ? "aprobado e incorporado al equipo" : isExistingMember ? "actualizado" : "incorporado al equipo"}.`,
-      );
+      const nombre = selectedUserForWizard.metadata?.fullName || selectedUserForWizard.firstName || 'El usuario';
+      sweetAlert.success(wasApproving ? 'Solicitud Aprobada' : isExistingMember ? 'Miembro Actualizado' : 'Miembro Agregado', `${nombre} ha sido ${wasApproving ? 'aprobado e incorporado al equipo' : isExistingMember ? 'actualizado' : 'incorporado al equipo'}.`);
 
       // Refresh Data
       const updatedProject = await projectsAPI.getProject(project._id);
@@ -1309,22 +1313,24 @@ export const ProjectTeamPage: React.FC = () => {
         try {
           const solis = await usersAPI.listSolicitudes();
           setSolicitudesCount(solis.filter((u) => u.metadata?.projectIds?.includes(projectId!)).length);
-        } catch { /* noop */ }
+        } catch {
+          /* noop */
+        }
       }
       setApprovingSolicitudId(null);
 
       setSelectedUserForWizard(null);
       setShowAddModal(false);
     } catch (error: any) {
-      console.error("Assign member error:", error);
-      let errorMsg = "Internal server error during assignment";
+      console.error('Assign member error:', error);
+      let errorMsg = 'Internal server error during assignment';
       if (error.response?.data?.error) {
         errorMsg = error.response.data.error;
         if (error.response?.data?.details) {
-           errorMsg += `\nDetalles: ${error.response.data.details}`;
+          errorMsg += `\nDetalles: ${error.response.data.details}`;
         }
       }
-      sweetAlert.error("Error", errorMsg);
+      sweetAlert.error('Error', errorMsg);
     } finally {
       setLoading(false);
     }
@@ -1332,7 +1338,7 @@ export const ProjectTeamPage: React.FC = () => {
 
   const handleRemoveUser = async (userId: string) => {
     if (!project) return;
-    const result = await sweetAlert.confirm("¿Retirar del equipo?", "El usuario será retirado del proyecto y se eliminarán sus asignaciones de áreas y turnos.");
+    const result = await sweetAlert.confirm('¿Retirar del equipo?', 'El usuario será retirado del proyecto y se eliminarán sus asignaciones de áreas y turnos.');
     if (!result.isConfirmed) return;
 
     try {
@@ -1348,10 +1354,10 @@ export const ProjectTeamPage: React.FC = () => {
       await fetchFullTeamLite();
       fetchTeamPage(teamPage);
 
-      sweetAlert.success("Usuario Retirado", "El usuario ha sido retirado del equipo y sus asignaciones han sido limpiadas.");
+      sweetAlert.success('Usuario Retirado', 'El usuario ha sido retirado del equipo y sus asignaciones han sido limpiadas.');
     } catch (error: any) {
-      console.error("Error removing user:", error);
-      sweetAlert.error("Error", error.response?.data?.error || "No se pudo retirar al usuario.");
+      console.error('Error removing user:', error);
+      sweetAlert.error('Error', error.response?.data?.error || 'No se pudo retirar al usuario.');
     } finally {
       setLoading(false);
     }
@@ -1360,7 +1366,7 @@ export const ProjectTeamPage: React.FC = () => {
   /* --------------------------------View ---------------------------------- */
 
   if (!project && !loading) {
-    return <EmptyState icon={faBriefcase} title="Proyecto no encontrado" description="El proyecto no existe o no tienes acceso." action={{ label: "volver", onClick: () => navigate(-1) }} />;
+    return <EmptyState icon={faBriefcase} title="Proyecto no encontrado" description="El proyecto no existe o no tienes acceso." action={{ label: 'volver', onClick: () => navigate(-1) }} />;
   }
 
   // Combinaciones "areaId::shiftId" asignadas al miembro (config del equipo + coordinaciones).
@@ -1368,19 +1374,19 @@ export const ProjectTeamPage: React.FC = () => {
     const keys = new Set<string>();
     const config = teamConfig.find((c) => String(c.userId) === String(user._id));
     (config?.areaShiftAssignments || []).forEach((asa: any) => {
-      const aId = typeof asa.areaId === "object" ? asa.areaId?._id : asa.areaId;
+      const aId = typeof asa.areaId === 'object' ? asa.areaId?._id : asa.areaId;
       if (!aId) return;
       (asa.shiftIds || []).forEach((sid: any) => {
-        const sId = typeof sid === "object" ? sid?._id : sid;
+        const sId = typeof sid === 'object' ? sid?._id : sid;
         if (sId) keys.add(`${aId}::${sId}`);
       });
     });
     if (checkIsCoordinator(user)) {
       (project?.coordinatorAssignments || []).forEach((asm: any) => {
-        const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
+        const uid = typeof asm.userId === 'object' ? asm.userId?._id : asm.userId;
         if (String(uid) !== String(user._id)) return;
-        const aId = typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId;
-        const sId = typeof asm.shiftId === "object" ? asm.shiftId?._id : asm.shiftId;
+        const aId = typeof asm.areaId === 'object' ? asm.areaId?._id : asm.areaId;
+        const sId = typeof asm.shiftId === 'object' ? asm.shiftId?._id : asm.shiftId;
         if (aId && sId) keys.add(`${aId}::${sId}`);
       });
     }
@@ -1391,7 +1397,7 @@ export const ProjectTeamPage: React.FC = () => {
   const getActiveContract = (user: User): any => {
     const projectMeta = user.metadata?.projects?.find((p: any) => {
       const pId = p.projectId;
-      const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
+      const idToCheck = typeof pId === 'object' ? (pId as any)?._id : pId;
       return String(idToCheck) === String(projectId);
     });
     return projectMeta?.contracts?.length ? projectMeta.contracts[projectMeta.contracts.length - 1] : null;
@@ -1402,10 +1408,10 @@ export const ProjectTeamPage: React.FC = () => {
     const userConfig = teamConfig.find((c) => c.userId === user._id);
     const projectMeta = user.metadata?.projects?.find((p: any) => {
       const pId = p.projectId;
-      const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
+      const idToCheck = typeof pId === 'object' ? (pId as any)?._id : pId;
       return String(idToCheck) === String(projectId);
     });
-    const rolFrame = projectMeta?.nombre_rol_frame || (user.externalInfo?.rolFrames?.length ? user.externalInfo.rolFrames[0] : "-");
+    const rolFrame = projectMeta?.nombre_rol_frame || (user.externalInfo?.rolFrames?.length ? user.externalInfo.rolFrames[0] : '-');
     const activeContract = projectMeta?.contracts?.length ? projectMeta.contracts[projectMeta.contracts.length - 1] : null;
 
     return (
@@ -1416,7 +1422,7 @@ export const ProjectTeamPage: React.FC = () => {
               <FontAwesomeIcon icon={faUser} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="min-w-0">
-              <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</p>
+              <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}` : user.email}</p>
               <div className="flex flex-col gap-1.5 mt-0.5 min-w-0">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <p className="text-xs text-gray-500 truncate">{user.email}</p>
@@ -1431,7 +1437,7 @@ export const ProjectTeamPage: React.FC = () => {
                   const projectRespId = project?.metadata?.responsableId;
                   const userMetaId = user.metadata?.id;
                   const isReallyResponsable = projectRespId && userMetaId && Number(projectRespId) === Number(userMetaId);
-                  
+
                   if (isReallyResponsable) {
                     return <span className="w-fit text-[10px] px-2 py-0.5 rounded font-medium border whitespace-nowrap border-green-500/30 text-green-700 bg-green-50 dark:bg-green-900/20 dark:text-green-400">Responsable de Proyecto</span>;
                   }
@@ -1444,17 +1450,17 @@ export const ProjectTeamPage: React.FC = () => {
         <td className="px-4 py-3">
           <div className="flex flex-wrap gap-1">
             {(() => {
-              const filteredRoles = user.roles.filter((r) => !r.name.toLowerCase().includes("responsable"));
+              const filteredRoles = user.roles.filter((r) => !r.name.toLowerCase().includes('responsable'));
 
               return (
                 <>
                   {filteredRoles.slice(0, 3).map((r) => {
                     const lower = r.name.toLowerCase();
-                    const isCoordinador = lower.includes("coordinador");
+                    const isCoordinador = lower.includes('coordinador');
 
-                    let badgeClasses = "border-blue-500/30 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400";
+                    let badgeClasses = 'border-blue-500/30 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400';
                     if (isCoordinador) {
-                      badgeClasses = "border-amber-500/30 text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400";
+                      badgeClasses = 'border-amber-500/30 text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400';
                     }
 
                     return (
@@ -1471,7 +1477,7 @@ export const ProjectTeamPage: React.FC = () => {
         </td>
         <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{rolFrame}</td>
         <td className="px-4 py-3">
-          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${user.metadata?.activo ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{user.metadata?.activo ? "ACTIVO" : "INACTIVO"}</span>
+          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${user.metadata?.activo ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{user.metadata?.activo ? 'ACTIVO' : 'INACTIVO'}</span>
         </td>
         <td
           className="px-4 py-3 cursor-pointer"
@@ -1492,8 +1498,8 @@ export const ProjectTeamPage: React.FC = () => {
             if (config?.areaShiftAssignments && config.areaShiftAssignments.length > 0) {
               areaData = config.areaShiftAssignments
                 .map((asa: any) => {
-                  const aId = typeof asa.areaId === "object" ? asa.areaId?._id : asa.areaId;
-                  const aName = typeof asa.areaId === "object" ? asa.areaId?.name : allAreas.find((a) => String(a._id) === String(aId) || String(a.data?.id) === String(aId))?.name;
+                  const aId = typeof asa.areaId === 'object' ? asa.areaId?._id : asa.areaId;
+                  const aName = typeof asa.areaId === 'object' ? asa.areaId?.name : allAreas.find((a) => String(a._id) === String(aId) || String(a.data?.id) === String(aId))?.name;
                   return aName ? { id: String(aId), name: aName } : null;
                 })
                 .filter(Boolean) as { id: string; name: string }[];
@@ -1503,8 +1509,8 @@ export const ProjectTeamPage: React.FC = () => {
             if (areaData.length === 0 && activeContract?.areaShiftAssignments && activeContract.areaShiftAssignments.length > 0) {
               areaData = activeContract.areaShiftAssignments
                 .map((asa: any) => {
-                  const aId = typeof asa.areaId === "object" ? asa.areaId?._id : asa.areaId;
-                  const aName = typeof asa.areaId === "object" ? asa.areaId?.name : allAreas.find((a) => String(a._id) === String(aId))?.name;
+                  const aId = typeof asa.areaId === 'object' ? asa.areaId?._id : asa.areaId;
+                  const aName = typeof asa.areaId === 'object' ? asa.areaId?.name : allAreas.find((a) => String(a._id) === String(aId))?.name;
                   return aName ? { id: String(aId), name: aName } : null;
                 })
                 .filter(Boolean) as { id: string; name: string }[];
@@ -1512,10 +1518,10 @@ export const ProjectTeamPage: React.FC = () => {
             // 2. Secondary: If coordinator and no detailed config, check coordinatorAssignments
             if (areaData.length === 0 && isCoord && project?.coordinatorAssignments) {
               const myAssignments = project.coordinatorAssignments.filter((asm) => {
-                const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
+                const uid = typeof asm.userId === 'object' ? asm.userId?._id : asm.userId;
                 return String(uid) === String(user._id);
               });
-              const areaIds = Array.from(new Set(myAssignments.map((asm) => (typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId))));
+              const areaIds = Array.from(new Set(myAssignments.map((asm) => (typeof asm.areaId === 'object' ? asm.areaId?._id : asm.areaId))));
               areaData = areaIds
                 .map((id) => {
                   const a = allAreas.find((area) => String(area._id) === String(id));
@@ -1526,8 +1532,8 @@ export const ProjectTeamPage: React.FC = () => {
 
             // 3. Fallback: Global user area (legacy/basic)
             if (areaData.length === 0) {
-              const userAreaId = typeof user.areaId === "object" ? user.areaId?._id : user.areaId;
-              const userAreaName = typeof user.areaId === "object" ? user.areaId?.name : allAreas.find((a) => String(a._id) === String(userAreaId))?.name;
+              const userAreaId = typeof user.areaId === 'object' ? user.areaId?._id : user.areaId;
+              const userAreaName = typeof user.areaId === 'object' ? user.areaId?.name : allAreas.find((a) => String(a._id) === String(userAreaId))?.name;
               if (userAreaId && userAreaName) {
                 areaData = [{ id: String(userAreaId), name: userAreaName }];
               }
@@ -1543,7 +1549,15 @@ export const ProjectTeamPage: React.FC = () => {
                     <div key={i} className="flex flex-col gap-1">
                       <div className="group relative flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 pl-2 pr-1 py-1 rounded-lg border border-blue-100 dark:border-blue-800 hover:border-blue-300 dark:hover:border-blue-600 transition-all w-fit">
                         <span className="text-blue-700 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{ad.name}</span>
-                        <button type="button" onClick={(e) => { e.stopPropagation(); setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: 'standard' }); }} className="flex items-center justify-center w-4 h-4 rounded-md text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors text-xs font-black" title="Ver turnos">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: 'standard' });
+                          }}
+                          className="flex items-center justify-center w-4 h-4 rounded-md text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors text-xs font-black"
+                          title="Ver turnos"
+                        >
                           +
                         </button>
                       </div>
@@ -1565,17 +1579,18 @@ export const ProjectTeamPage: React.FC = () => {
         </td>
         <td className="px-4 py-3">
           {(() => {
-            const myCoordinatedAssignments = project?.coordinatorAssignments?.filter((asm) => {
-              const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
-              return String(uid) === String(user._id);
-            }) || [];
+            const myCoordinatedAssignments =
+              project?.coordinatorAssignments?.filter((asm) => {
+                const uid = typeof asm.userId === 'object' ? (asm.userId as any)?._id : asm.userId;
+                return String(uid) === String(user._id);
+              }) || [];
 
             if (myCoordinatedAssignments.length === 0) return <span className="text-xs text-gray-400">—</span>;
 
             const coordAreaDataMap = new Map<string, { id: string; name: string }>();
             myCoordinatedAssignments.forEach((asm) => {
-              const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
-              const aName = typeof asm.areaId === "object" ? (asm.areaId as any)?.name : allAreas.find((a) => String(a._id) === String(aid))?.name;
+              const aid = typeof asm.areaId === 'object' ? (asm.areaId as any)?._id : asm.areaId;
+              const aName = typeof asm.areaId === 'object' ? (asm.areaId as any)?.name : allAreas.find((a) => String(a._id) === String(aid))?.name;
               if (aid && aName) {
                 coordAreaDataMap.set(String(aid), { id: String(aid), name: aName });
               }
@@ -1591,7 +1606,15 @@ export const ProjectTeamPage: React.FC = () => {
                     <div key={i} className="flex flex-col gap-1">
                       <div className="group relative flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 pl-2 pr-1 py-1 rounded-lg border border-amber-100 dark:border-amber-800 hover:border-amber-300 dark:hover:border-amber-600 transition-all w-fit">
                         <span className="text-amber-700 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{ad.name}</span>
-                        <button type="button" onClick={(e) => { e.stopPropagation(); setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: 'coordinated' }); }} className="flex items-center justify-center w-4 h-4 rounded-md text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 transition-colors text-xs font-black" title="Ver turnos coordinados">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: 'coordinated' });
+                          }}
+                          className="flex items-center justify-center w-4 h-4 rounded-md text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 transition-colors text-xs font-black"
+                          title="Ver turnos coordinados"
+                        >
                           +
                         </button>
                       </div>
@@ -1615,13 +1638,13 @@ export const ProjectTeamPage: React.FC = () => {
           <div className="flex flex-col gap-1">
             <span className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300" title="Ver contratos para descargar">
               <FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-blue-500 dark:text-blue-400 shrink-0" />
-              {activeContract?.nombre_contrato || "-"}
+              {activeContract?.nombre_contrato || '-'}
             </span>
             {activeContract?.reemplazo && (
               <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded border border-amber-200/50 dark:border-amber-800/50 w-fit">
                 <FontAwesomeIcon icon={faIdCard} className="text-[9px]" />
                 <span>
-                  Reemplaza a:{" "}
+                  Reemplaza a:{' '}
                   {(() => {
                     const replaced = allUsers.find((u) => (u.metadata as any)?.id === activeContract.empleado_id_reemplezado);
                     return replaced ? `${replaced.firstName} ${replaced.lastName}` : `ID: ${activeContract.empleado_id_reemplezado}`;
@@ -1636,28 +1659,42 @@ export const ProjectTeamPage: React.FC = () => {
             <div className="flex flex-col gap-1">
               {(() => {
                 const vigente = isContractVigente(activeContract.fecha_baja_contrato);
-                return (
-                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>
-                    {vigente ? "VIGENTE" : "NO VIGENTE"}
-                  </span>
-                );
+                return <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>;
               })()}
               <div className="flex flex-col gap-0.5">
-                <span><span className="text-gray-400">Alta:</span> {formatContractDate(activeContract.fecha_alta_contrato)}</span>
-                <span><span className="text-gray-400">Baja:</span> {activeContract.fecha_baja_contrato ? formatContractDate(activeContract.fecha_baja_contrato) : "—"}</span>
+                <span>
+                  <span className="text-gray-400">Alta:</span> {formatContractDate(activeContract.fecha_alta_contrato)}
+                </span>
+                <span>
+                  <span className="text-gray-400">Baja:</span> {activeContract.fecha_baja_contrato ? formatContractDate(activeContract.fecha_baja_contrato) : '—'}
+                </span>
               </div>
             </div>
           ) : (
-            "—"
+            '—'
           )}
         </td>
-        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">{activeContract?.hora_inicio ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : "-"}</td>
+        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">{activeContract?.hora_inicio ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : '-'}</td>
         <td className="px-4 py-3 text-right">
           <div className="flex items-center justify-end gap-1">
-            <button onClick={(e) => { e.stopPropagation(); handleOpenScheduleModal(user); }} className="p-1 text-gray-400 hover:text-blue-500 transition-colors" title="Editar miembro">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenScheduleModal(user);
+              }}
+              className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
+              title="Editar miembro"
+            >
               <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
             </button>
-            <button onClick={(e) => { e.stopPropagation(); handleRemoveUser(user._id); }} className="p-1 text-gray-400 hover:text-red-500 transition-colors ml-1" title="Retirar del proyecto">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRemoveUser(user._id);
+              }}
+              className="p-1 text-gray-400 hover:text-red-500 transition-colors ml-1"
+              title="Retirar del proyecto"
+            >
               <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
             </button>
           </div>
@@ -1682,14 +1719,14 @@ export const ProjectTeamPage: React.FC = () => {
         actions={[
           {
             icon: faEdit,
-            title: "Editar Horario",
+            title: 'Editar Horario',
             onClick: () => handleOpenScheduleModal(user),
           },
           {
             icon: faTrash,
-            title: "Retirar del equipo",
+            title: 'Retirar del equipo',
             onClick: () => handleRemoveUser(user._id),
-            className: "text-red-500 hover:text-red-700",
+            className: 'text-red-500 hover:text-red-700',
           },
         ]}
       />
@@ -1712,13 +1749,13 @@ export const ProjectTeamPage: React.FC = () => {
             }
           : undefined
       }
-      badge={project ? { text: project.name, variant: "default" } : undefined}
-      badgeSecondary={sedeName ? { text: sedeName, variant: "default" } : undefined}
+      badge={project ? { text: project.name, variant: 'default' } : undefined}
+      badgeSecondary={sedeName ? { text: sedeName, variant: 'default' } : undefined}
       infoModal={{
         isOpen: openInfo,
         onOpen: () => setOpenInfo(true),
         onClose: () => setOpenInfo(false),
-        title: helpEntry?.title || "Información",
+        title: helpEntry?.title || 'Información',
         content: helpEntry?.content,
       }}
       modal={
@@ -1726,13 +1763,13 @@ export const ProjectTeamPage: React.FC = () => {
           ? {
               isOpen: true,
               onClose: () => setOpenCoordinadoresInfo(false),
-              title: "Asignación de Coordinadores",
+              title: 'Asignación de Coordinadores',
               content: <p className="text-gray-600 dark:text-gray-300">Asigna un coordinador designado para cada combinación de Área y Turno del proyecto. Todas las combinaciones deben estar cubiertas.</p>,
             }
           : undefined
       }
       headerActions={
-        <button onClick={() => setShowAddModal(true)} title="Agregar miembro" aria-label="Agregar miembro" className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+        <button onClick={() => setShowAddModal(true)} title="Agregar miembro" aria-label="Agregar miembro" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
           <FontAwesomeIcon icon={faPlus} />
         </button>
       }
@@ -1747,11 +1784,11 @@ export const ProjectTeamPage: React.FC = () => {
           {/* TABS */}
           <div className="sticky top-[144px] pb-1 pt-3 z-[40] bg-[#f3f4f6] dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 flex items-center justify-between shadow-sm lg:shadow-none hover:shadow-md transition-shadow">
             <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar flex-nowrap">
-              <button onClick={() => setActiveTab("equipo")} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "equipo" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+              <button onClick={() => setActiveTab('equipo')} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'equipo' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}>
                 <FontAwesomeIcon icon={faUsers} className="text-xs" />
                 Equipo
               </button>
-              <button onClick={() => setActiveTab("coordinadores")} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "coordinadores" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+              <button onClick={() => setActiveTab('coordinadores')} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'coordinadores' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}>
                 <FontAwesomeIcon icon={faUserTie} className="text-xs" />
                 Coordinadores
                 <span
@@ -1760,13 +1797,13 @@ export const ProjectTeamPage: React.FC = () => {
                     e.stopPropagation();
                     setOpenCoordinadoresInfo(true);
                   }}
-                  className={`ml-1.5 text-gray-400 hover:text-blue-500 transition-colors cursor-pointer ${activeTab === "coordinadores" ? "text-blue-400" : ""}`}
+                  className={`ml-1.5 text-gray-400 hover:text-blue-500 transition-colors cursor-pointer ${activeTab === 'coordinadores' ? 'text-blue-400' : ''}`}
                   title="Información de asignación"
                 >
                   <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
                 </span>
               </button>
-              <button onClick={() => setActiveTab("solicitudes")} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === "solicitudes" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+              <button onClick={() => setActiveTab('solicitudes')} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'solicitudes' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}>
                 <FontAwesomeIcon icon={faClipboardList} className="text-xs" />
                 Solicitudes
                 {solicitudesCount > 0 && <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] text-[10px] font-bold rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1">{solicitudesCount}</span>}
@@ -1778,7 +1815,7 @@ export const ProjectTeamPage: React.FC = () => {
 
           {/* Tab Content */}
           <div className="mt-0">
-            {activeTab === "equipo" && (
+            {activeTab === 'equipo' && (
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row gap-4 items-start justify-between">
                   <div className="flex-1 w-full">
@@ -1788,55 +1825,55 @@ export const ProjectTeamPage: React.FC = () => {
                       searchPlaceholder="Buscar en equipo actual..."
                       radioFilters={[
                         {
-                          label: "Estado de usuarios",
+                          label: 'Estado de usuarios',
                           value: filterUserStatus,
                           onChange: setFilterUserStatus,
                           options: [
-                            { label: "Usuarios Activos", value: "active" },
-                            { label: "Usuarios Inactivos", value: "inactive" },
-                            { label: "Todos los usuarios", value: "" },
+                            { label: 'Usuarios Activos', value: 'active' },
+                            { label: 'Usuarios Inactivos', value: 'inactive' },
+                            { label: 'Todos los usuarios', value: '' },
                           ],
                         },
                         {
-                          label: "Contratos",
+                          label: 'Contratos',
                           value: filterVigencia,
                           onChange: setFilterVigencia,
                           options: [
-                            { label: "Vigentes", value: "vigente" },
-                            { label: "No Vigentes", value: "novigente" },
-                            { label: "Todos los contratos", value: "" },
+                            { label: 'Vigentes', value: 'vigente' },
+                            { label: 'No Vigentes', value: 'novigente' },
+                            { label: 'Todos los contratos', value: '' },
                           ],
                         },
                       ]}
                       selectFilters={[
                         {
-                          label: "Tipo de contrato",
+                          label: 'Tipo de contrato',
                           value: filterTipoContrato,
                           onChange: setFilterTipoContrato,
-                          placeholder: "Todos los tipos",
+                          placeholder: 'Todos los tipos',
                           options: contratoFrames.map((cf) => ({ value: cf.name, label: cf.name })),
                         },
                         {
-                          label: "Área / Turno",
+                          label: 'Área / Turno',
                           value: filterAreaTurno,
                           onChange: setFilterAreaTurno,
-                          placeholder: "Todas las áreas/turnos",
-                          options: [{ value: "__none__", label: "Sin área/turno" }, ...areaTurnoOptions],
+                          placeholder: 'Todas las áreas/turnos',
+                          options: [{ value: '__none__', label: 'Sin área/turno' }, ...areaTurnoOptions],
                         },
                       ]}
                     />
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <button onClick={() => setViewMode("cards")} className={`px-3 py-2 rounded-md transition-all border dark:border-gray-700 ${effectiveViewMode === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas">
+                    <button onClick={() => setViewMode('cards')} className={`px-3 py-2 rounded-md transition-all border dark:border-gray-700 ${effectiveViewMode === 'cards' ? 'bg-blue-500 text-white shadow-sm border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`} title="Vista de tarjetas">
                       <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
                     </button>
-                    <button onClick={() => setViewMode("table")} className={`px-3 py-2 rounded-md transition-all border dark:border-gray-700 ${effectiveViewMode === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla">
+                    <button onClick={() => setViewMode('table')} className={`px-3 py-2 rounded-md transition-all border dark:border-gray-700 ${effectiveViewMode === 'table' ? 'bg-blue-500 text-white shadow-sm border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`} title="Vista de tabla">
                       <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
-                
+
                 {!hasMobileCoordinator && teamMembers.length > 0 && (
                   <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 rounded-xl space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
                     <p className="text-amber-800 dark:text-amber-400 font-bold flex items-center gap-2 text-sm">
@@ -1849,52 +1886,48 @@ export const ProjectTeamPage: React.FC = () => {
                   </div>
                 )}
 
-
                 {(() => {
                   // Filtros client-side sobre la página cargada (contrato + área/turno).
-                  const rows = filterVigencia || filterTipoContrato || filterAreaTurno
-                    ? teamRows.filter((u) => {
-                        const ac = getActiveContract(u);
-                        if (filterVigencia) {
-                          const vig = isContractVigente(ac?.fecha_baja_contrato);
-                          if (filterVigencia === "vigente" ? !vig : vig) return false;
-                        }
-                        if (filterTipoContrato) {
-                          if (String(ac?.nombre_contrato ?? "") !== String(filterTipoContrato)) return false;
-                        }
-                        if (filterAreaTurno) {
-                          const keys = getUserAreaShiftKeys(u);
-                          if (filterAreaTurno === "__none__") {
-                            if (keys.size > 0) return false;
-                          } else if (!keys.has(filterAreaTurno)) {
-                            return false;
+                  const rows =
+                    filterVigencia || filterTipoContrato || filterAreaTurno
+                      ? teamRows.filter((u) => {
+                          const ac = getActiveContract(u);
+                          if (filterVigencia) {
+                            const vig = isContractVigente(ac?.fecha_baja_contrato);
+                            if (filterVigencia === 'vigente' ? !vig : vig) return false;
                           }
-                        }
-                        return true;
-                      })
-                    : teamRows;
+                          if (filterTipoContrato) {
+                            if (String(ac?.nombre_contrato ?? '') !== String(filterTipoContrato)) return false;
+                          }
+                          if (filterAreaTurno) {
+                            const keys = getUserAreaShiftKeys(u);
+                            if (filterAreaTurno === '__none__') {
+                              if (keys.size > 0) return false;
+                            } else if (!keys.has(filterAreaTurno)) {
+                              return false;
+                            }
+                          }
+                          return true;
+                        })
+                      : teamRows;
 
                   // Orden alfabético tal como lo devuelve el server (sort=name).
                   if (teamTotal === 0 && !teamFetching) {
                     return (
                       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center h-64 text-gray-500">
                         <FontAwesomeIcon icon={faUsers} className="h-12 w-12 mb-4 opacity-10" />
-                        <p className="text-base font-medium">{searchTermTeam || filterUserStatus ? "No se encontraron miembros" : "Aún no hay miembros en el equipo"}</p>
-                        <p className="text-sm mt-1">{searchTermTeam || filterUserStatus ? "Probá ajustar la búsqueda o el filtro." : 'Usa el botón "Agregar Miembro" para comenzar.'}</p>
+                        <p className="text-base font-medium">{searchTermTeam || filterUserStatus ? 'No se encontraron miembros' : 'Aún no hay miembros en el equipo'}</p>
+                        <p className="text-sm mt-1">{searchTermTeam || filterUserStatus ? 'Probá ajustar la búsqueda o el filtro.' : 'Usa el botón "Agregar Miembro" para comenzar.'}</p>
                       </div>
                     );
                   }
 
                   if (rows.length === 0) {
-                    return (
-                      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center h-40 text-gray-500 text-sm">
-                        Ningún contrato coincide con los filtros en esta página.
-                      </div>
-                    );
+                    return <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center h-40 text-gray-500 text-sm">Ningún contrato coincide con los filtros en esta página.</div>;
                   }
 
-                  return effectiveViewMode === "table" ? (
-                    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-opacity ${teamFetching ? "opacity-60" : ""}`}>
+                  return effectiveViewMode === 'table' ? (
+                    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-opacity ${teamFetching ? 'opacity-60' : ''}`}>
                       <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                           <thead>
@@ -1911,16 +1944,12 @@ export const ProjectTeamPage: React.FC = () => {
                               <th className="px-4 py-3 font-semibold text-right">Acciones</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                            {rows.map((u) => renderUserRow(u))}
-                          </tbody>
+                          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">{rows.map((u) => renderUserRow(u))}</tbody>
                         </table>
                       </div>
                     </div>
                   ) : (
-                    <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 transition-opacity ${teamFetching ? "opacity-60" : ""}`}>
-                      {rows.map((u) => renderUserCard(u))}
-                    </div>
+                    <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 transition-opacity ${teamFetching ? 'opacity-60' : ''}`}>{rows.map((u) => renderUserCard(u))}</div>
                   );
                 })()}
 
@@ -1929,8 +1958,12 @@ export const ProjectTeamPage: React.FC = () => {
                   <div className="mt-6 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4 gap-4">
                     {/* Mobile */}
                     <div className="flex-1 flex justify-between sm:hidden w-full">
-                      <button onClick={() => setTeamPage((p) => Math.max(p - 1, 1))} disabled={teamPage === 1} className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed">Anterior</button>
-                      <button onClick={() => setTeamPage((p) => Math.min(p + 1, teamTotalPages))} disabled={teamPage === teamTotalPages} className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed">Siguiente</button>
+                      <button onClick={() => setTeamPage((p) => Math.max(p - 1, 1))} disabled={teamPage === 1} className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                        Anterior
+                      </button>
+                      <button onClick={() => setTeamPage((p) => Math.min(p + 1, teamTotalPages))} disabled={teamPage === teamTotalPages} className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                        Siguiente
+                      </button>
                     </div>
 
                     {/* Desktop */}
@@ -1946,13 +1979,17 @@ export const ProjectTeamPage: React.FC = () => {
                           const p = i + 1;
                           if (p === 1 || p === teamTotalPages || (p >= teamPage - 2 && p <= teamPage + 2)) {
                             return (
-                              <button key={p} onClick={() => setTeamPage(p)} className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${teamPage === p ? "bg-primary-600 border-primary-600 text-white z-10" : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}>
+                              <button key={p} onClick={() => setTeamPage(p)} className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${teamPage === p ? 'bg-primary-600 border-primary-600 text-white z-10' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
                                 {p}
                               </button>
                             );
                           }
                           if ((p === 2 && teamPage > 4) || (p === teamTotalPages - 1 && teamPage < teamTotalPages - 3)) {
-                            return <span key={`dots-${p}`} className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-sm">...</span>;
+                            return (
+                              <span key={`dots-${p}`} className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-sm">
+                                ...
+                              </span>
+                            );
                           }
                           return null;
                         })}
@@ -1966,13 +2003,13 @@ export const ProjectTeamPage: React.FC = () => {
               </div>
             )}
 
-            {activeTab === "coordinadores" && project && (
+            {activeTab === 'coordinadores' && project && (
               <TeamCoordinadoresTab
                 projectId={projectId!}
                 project={project}
                 allUsers={allUsers}
                 teamMembers={teamMembers}
-                onGoToTeam={() => setActiveTab("equipo")}
+                onGoToTeam={() => setActiveTab('equipo')}
                 onUpdated={async () => {
                   const updatedProject = await projectsAPI.getProject(projectId!);
                   setProject(updatedProject);
@@ -1981,36 +2018,23 @@ export const ProjectTeamPage: React.FC = () => {
               />
             )}
 
-
-            {activeTab === "solicitudes" && project && (
-              <TeamSolicitudesTab
-                projectId={projectId!}
-                project={project}
-                refreshSignal={solicitudesRefresh}
-                onApprove={(u) => handleOpenWizard(u._id, undefined, undefined, u._id)}
-              />
-            )}
+            {activeTab === 'solicitudes' && project && <TeamSolicitudesTab projectId={projectId!} project={project} refreshSignal={solicitudesRefresh} onApprove={(u) => handleOpenWizard(u._id, undefined, undefined, u._id)} />}
           </div>
 
           {/* Modals */}
 
-          <Modal 
-            isOpen={showAddModal} 
-            onClose={() => setShowAddModal(false)} 
-            title="Agregar Miembros al Equipo" 
+          <Modal
+            isOpen={showAddModal}
+            onClose={() => setShowAddModal(false)}
+            title="Agregar Miembros al Equipo"
             subtitle={
               <div className="flex items-center gap-2">
                 <span>Disponibles para asignar ({filteredCandidates.length})</span>
-                <button 
-                  type="button"
-                  onClick={() => setShowCandidatesInfo(true)}
-                  className="text-gray-400 hover:text-blue-500 transition-colors"
-                  title="¿Qué usuarios se muestran?"
-                >
+                <button type="button" onClick={() => setShowCandidatesInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Qué usuarios se muestran?">
                   <FontAwesomeIcon icon={faInfoCircle} className="text-xs" />
                 </button>
               </div>
-            } 
+            }
             size="xl"
           >
             <div className="space-y-4 max-h-[85vh] flex flex-col">
@@ -2022,17 +2046,10 @@ export const ProjectTeamPage: React.FC = () => {
                     </div>
                     <input type="text" placeholder="Buscar usuario por nombre o email..." className="input-field pl-10 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} autoFocus />
                   </div>
-                  <button 
-                    onClick={() => setShowFilters(true)} 
-                    className={`relative px-4 py-2 rounded-lg border transition-all flex items-center gap-2 text-sm font-medium ${activeAddFiltersCount > 0 ? "bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400"}`}
-                  >
+                  <button onClick={() => setShowFilters(true)} className={`relative px-4 py-2 rounded-lg border transition-all flex items-center gap-2 text-sm font-medium ${activeAddFiltersCount > 0 ? 'bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}>
                     <FontAwesomeIcon icon={faFilter} className="text-xs" />
                     Filtros
-                    {activeAddFiltersCount > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center bg-blue-500 text-white text-[10px] font-bold rounded-full border-2 border-white dark:border-gray-800 shadow-sm">
-                        {activeAddFiltersCount}
-                      </span>
-                    )}
+                    {activeAddFiltersCount > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center bg-blue-500 text-white text-[10px] font-bold rounded-full border-2 border-white dark:border-gray-800 shadow-sm">{activeAddFiltersCount}</span>}
                   </button>
                 </div>
 
@@ -2042,7 +2059,7 @@ export const ProjectTeamPage: React.FC = () => {
                     {filterRole && (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                         <span className="opacity-60">Rol:</span> {filterRole}
-                        <button onClick={() => setFilterRole("")} className="hover:text-blue-900 dark:hover:text-blue-100 transition-colors">
+                        <button onClick={() => setFilterRole('')} className="hover:text-blue-900 dark:hover:text-blue-100 transition-colors">
                           <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
                         </button>
                       </span>
@@ -2050,7 +2067,7 @@ export const ProjectTeamPage: React.FC = () => {
                     {filterRoleFrame && (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                         <span className="opacity-60">Role Frame:</span> {filterRoleFrame}
-                        <button onClick={() => setFilterRoleFrame("")} className="hover:text-purple-900 dark:hover:text-purple-100 transition-colors">
+                        <button onClick={() => setFilterRoleFrame('')} className="hover:text-purple-900 dark:hover:text-purple-100 transition-colors">
                           <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
                         </button>
                       </span>
@@ -2058,13 +2075,17 @@ export const ProjectTeamPage: React.FC = () => {
                     {filterProject && (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">
                         <span className="opacity-60">Proyecto:</span> {filterProject}
-                        <button onClick={() => setFilterProject("")} className="hover:text-green-900 dark:hover:text-green-100 transition-colors">
+                        <button onClick={() => setFilterProject('')} className="hover:text-green-900 dark:hover:text-green-100 transition-colors">
                           <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
                         </button>
                       </span>
                     )}
-                    <button 
-                      onClick={() => { setFilterRole(""); setFilterRoleFrame(""); setFilterProject(""); }}
+                    <button
+                      onClick={() => {
+                        setFilterRole('');
+                        setFilterRoleFrame('');
+                        setFilterProject('');
+                      }}
                       className="text-[10px] text-gray-500 hover:text-red-500 font-bold ml-1 transition-colors uppercase tracking-wider"
                     >
                       Limpiar Todo
@@ -2097,102 +2118,102 @@ export const ProjectTeamPage: React.FC = () => {
                       ) : filteredCandidates.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                            {searchTerm ? `No se encontraron usuarios para "${searchTerm}"` : "No hay usuarios disponibles para asignar"}
+                            {searchTerm ? `No se encontraron usuarios para "${searchTerm}"` : 'No hay usuarios disponibles para asignar'}
                           </td>
                         </tr>
                       ) : (
                         filteredCandidates.map((user) => {
-                        const isCoordinator = checkIsCoordinator(user);
-                        const metadataProjects = user.metadata?.projects || [];
-                        // Role frames desde contratos/proyectos (unificados por el backend) + los propios del usuario (metadata.roles_frame)
-                        const ownRolFrameNames = (((user.metadata as any)?.rolesFrameIds || (user.metadata as any)?.roles_frame || []) as any[])
-                          .map((rf: any) => (typeof rf === "object" ? rf?.name : allRoleFrames.find((i) => i._id === rf)?.name))
-                          .filter(Boolean) as string[];
-                        const rolFrames = Array.from(new Set([...(user.externalInfo?.rolFrames || []), ...ownRolFrameNames])).filter(Boolean);
-                        const activeProjects = Array.from(new Set(metadataProjects.map((p) => p.nombre_proyecto))).filter(Boolean);
+                          const isCoordinator = checkIsCoordinator(user);
+                          const metadataProjects = user.metadata?.projects || [];
+                          // Role frames desde contratos/proyectos (unificados por el backend) + los propios del usuario (metadata.roles_frame)
+                          const ownRolFrameNames = (((user.metadata as any)?.rolesFrameIds || (user.metadata as any)?.roles_frame || []) as any[]).map((rf: any) => (typeof rf === 'object' ? rf?.name : allRoleFrames.find((i) => i._id === rf)?.name)).filter(Boolean) as string[];
+                          const rolFrames = Array.from(new Set([...(user.externalInfo?.rolFrames || []), ...ownRolFrameNames])).filter(Boolean);
+                          const activeProjects = Array.from(new Set(metadataProjects.map((p) => p.nombre_proyecto))).filter(Boolean);
 
-                        return (
-                          <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col">
-                                <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</span>
-                                <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[180px]">{user.email}</span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-wrap gap-1 max-w-[150px]">
-                                {(user.roles || []).map((r) => {
-                                  const lower = r.name.toLowerCase();
-                                  const isCoord = lower.includes("coordinador");
-                                  const isResp = lower.includes("responsable");
-
-                                  let classes = "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-100 dark:border-blue-800";
-                                  if (isCoord) {
-                                    classes = "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800";
-                                  } else if (isResp) {
-                                    classes = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800";
-                                  }
-
-                                  return (
-                                    <span key={r._id} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap border ${classes}`}>
-                                      {r.name}
-                                    </span>
-                                  );
-                                })}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              {rolFrames.length > 0 ? (
-                                <div className="flex flex-wrap gap-1 max-w-[180px]">
-                                  {rolFrames.map((rf, idx) => (
-                                    <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase whitespace-nowrap bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800">{rf}</span>
-                                  ))}
+                          return (
+                            <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+                              <td className="px-4 py-3">
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}` : user.email}</span>
+                                  <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[180px]">{user.email}</span>
                                 </div>
-                              ) : (
-                                <span className="text-xs text-gray-400">-</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col gap-0.5">
-                                {activeProjects.length > 0 ? (
-                                  activeProjects.map((p, idx) => (
-                                    <span key={idx} className="text-[10px] text-gray-500 dark:text-gray-400 italic truncate max-w-[150px]">
-                                      {p}
-                                    </span>
-                                  ))
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex flex-wrap gap-1 max-w-[150px]">
+                                  {(user.roles || []).map((r) => {
+                                    const lower = r.name.toLowerCase();
+                                    const isCoord = lower.includes('coordinador');
+                                    const isResp = lower.includes('responsable');
+
+                                    let classes = 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-100 dark:border-blue-800';
+                                    if (isCoord) {
+                                      classes = 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800';
+                                    } else if (isResp) {
+                                      classes = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800';
+                                    }
+
+                                    return (
+                                      <span key={r._id} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap border ${classes}`}>
+                                        {r.name}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                {rolFrames.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1 max-w-[180px]">
+                                    {rolFrames.map((rf, idx) => (
+                                      <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase whitespace-nowrap bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
+                                        {rf}
+                                      </span>
+                                    ))}
+                                  </div>
                                 ) : (
-                                  <span className="text-xs text-gray-400">—</span>
+                                  <span className="text-xs text-gray-400">-</span>
                                 )}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col gap-1.5">
-                                {user.turnos && user.turnos.length > 0 ? (
-                                  user.turnos.map((t) => (
-                                    <div key={typeof t === "string" ? t : t._id} className="flex flex-col gap-0.5">
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700 uppercase w-fit">{typeof t === "object" ? t.name : "Turno"}</span>
-                                      {typeof t === "object" && t.startTime && t.endTime && (
-                                        <span className="text-[9px] text-gray-400 dark:text-gray-500 font-medium ml-0.5 italic">
-                                          {t.startTime} - {t.endTime}
-                                        </span>
-                                      )}
-                                    </div>
-                                  ))
-                                ) : (
-                                  <span className="text-xs text-gray-400">—</span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <button onClick={() => handleOpenWizard(user._id)} className="btn-secondary text-[11px] py-1.5 px-3 flex items-center gap-2 ml-auto hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all font-bold">
-                                <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
-                                Agregar
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex flex-col gap-0.5">
+                                  {activeProjects.length > 0 ? (
+                                    activeProjects.map((p, idx) => (
+                                      <span key={idx} className="text-[10px] text-gray-500 dark:text-gray-400 italic truncate max-w-[150px]">
+                                        {p}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="text-xs text-gray-400">—</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex flex-col gap-1.5">
+                                  {user.turnos && user.turnos.length > 0 ? (
+                                    user.turnos.map((t) => (
+                                      <div key={typeof t === 'string' ? t : t._id} className="flex flex-col gap-0.5">
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700 uppercase w-fit">{typeof t === 'object' ? t.name : 'Turno'}</span>
+                                        {typeof t === 'object' && t.startTime && t.endTime && (
+                                          <span className="text-[9px] text-gray-400 dark:text-gray-500 font-medium ml-0.5 italic">
+                                            {t.startTime} - {t.endTime}
+                                          </span>
+                                        )}
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <span className="text-xs text-gray-400">—</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <button onClick={() => handleOpenWizard(user._id)} className="btn-secondary text-[11px] py-1.5 px-3 flex items-center gap-2 ml-auto hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all font-bold">
+                                  <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
+                                  Agregar
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -2229,8 +2250,13 @@ export const ProjectTeamPage: React.FC = () => {
             size="sm"
             footer={
               <div className="flex items-center justify-between w-full">
-                <button 
-                  onClick={() => { setFilterRole(""); setFilterRoleFrame(""); setFilterProject(""); setShowFilters(false); }}
+                <button
+                  onClick={() => {
+                    setFilterRole('');
+                    setFilterRoleFrame('');
+                    setFilterProject('');
+                    setShowFilters(false);
+                  }}
                   className="btn-secondary"
                 >
                   Limpiar Todo
@@ -2295,7 +2321,7 @@ export const ProjectTeamPage: React.FC = () => {
               {activeAddFiltersCount > 0 && (
                 <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
                   <p className="text-[11px] text-blue-700 dark:text-blue-300 font-medium">
-                    Tienes <strong>{activeAddFiltersCount}</strong> filtro{activeAddFiltersCount > 1 ? "s" : ""} aplicado{activeAddFiltersCount > 1 ? "s" : ""}.
+                    Tienes <strong>{activeAddFiltersCount}</strong> filtro{activeAddFiltersCount > 1 ? 's' : ''} aplicado{activeAddFiltersCount > 1 ? 's' : ''}.
                   </p>
                 </div>
               )}
@@ -2303,18 +2329,15 @@ export const ProjectTeamPage: React.FC = () => {
           </Modal>
 
           {/* Info Modal for Candidates */}
-          <Modal
-            isOpen={showCandidatesInfo}
-            onClose={() => setShowCandidatesInfo(false)}
-            title="Usuarios Disponibles"
-            size="md"
-          >
+          <Modal isOpen={showCandidatesInfo} onClose={() => setShowCandidatesInfo(false)} title="Usuarios Disponibles" size="md">
             <div className="space-y-4">
               <div className="flex items-start gap-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl">
                 <FontAwesomeIcon icon={faInfoCircle} className="text-blue-600 dark:text-blue-400 mt-1" />
                 <div className="text-sm text-gray-700 dark:text-gray-300">
                   <p className="font-bold mb-2">¿Quiénes aparecen en esta lista?</p>
-                  <p>La lista muestra a todos los <strong>usuarios activos</strong> de la plataforma que actualmente <strong>no forman parte del equipo</strong> de este proyecto.</p>
+                  <p>
+                    La lista muestra a todos los <strong>usuarios activos</strong> de la plataforma que actualmente <strong>no forman parte del equipo</strong> de este proyecto.
+                  </p>
                 </div>
               </div>
               <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400 ml-4 list-disc">
@@ -2336,7 +2359,7 @@ export const ProjectTeamPage: React.FC = () => {
                   {viewingShiftsData.user.firstName} {viewingShiftsData.user.lastName}
                 </p>
               ) : (
-                ""
+                ''
               )
             }
             size="md"
@@ -2353,11 +2376,11 @@ export const ProjectTeamPage: React.FC = () => {
                   if (!project?.coordinatorAssignments) return [];
                   return project.coordinatorAssignments
                     .filter((asm) => {
-                      const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
-                      const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
+                      const uid = typeof asm.userId === 'object' ? (asm.userId as any)?._id : asm.userId;
+                      const aid = typeof asm.areaId === 'object' ? (asm.areaId as any)?._id : asm.areaId;
                       return String(uid) === String(user._id) && String(aid) === String(areaId);
                     })
-                    .map((asm) => typeof asm.shiftId === "object" ? (asm.shiftId as any)?._id : asm.shiftId);
+                    .map((asm) => (typeof asm.shiftId === 'object' ? (asm.shiftId as any)?._id : asm.shiftId));
                 };
 
                 const coordShiftIds = getCoordinatedShiftIds();
@@ -2366,12 +2389,12 @@ export const ProjectTeamPage: React.FC = () => {
                 if (assignmentType === 'coordinated') {
                   if (project?.coordinatorAssignments) {
                     const myCoordAsgn = project.coordinatorAssignments.filter((asm) => {
-                      const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
-                      const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
+                      const uid = typeof asm.userId === 'object' ? (asm.userId as any)?._id : asm.userId;
+                      const aid = typeof asm.areaId === 'object' ? (asm.areaId as any)?._id : asm.areaId;
                       return String(uid) === String(user._id) && String(aid) === String(areaId);
                     });
                     myCoordAsgn.forEach((asm) => {
-                      const sid = typeof asm.shiftId === "object" ? (asm.shiftId as any)?._id : asm.shiftId;
+                      const sid = typeof asm.shiftId === 'object' ? (asm.shiftId as any)?._id : asm.shiftId;
                       const shift = allShifts.find((s) => String(s._id) === String(sid));
                       if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) shifts.push(shift);
                     });
@@ -2380,7 +2403,7 @@ export const ProjectTeamPage: React.FC = () => {
                   // 2. If viewing standard, check team configuration assignments (Wizard) and EXCLUDE coordinated ones
                   const assignments = userConfig?.areaShiftAssignments || [];
                   const areaAssign = assignments.find((a: any) => {
-                    const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
+                    const aid = typeof a.areaId === 'object' ? a.areaId?._id : a.areaId;
                     if (String(aid) === String(areaId)) return true;
                     const aData = allAreas.find((area) => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
                     const targetName = viewingShiftsData.areaName;
@@ -2390,8 +2413,8 @@ export const ProjectTeamPage: React.FC = () => {
                   if (areaAssign) {
                     const sids = areaAssign.shiftIds || [];
                     sids.forEach((sid: any) => {
-                      const actualSid = typeof sid === "object" ? sid?._id : sid;
-                      
+                      const actualSid = typeof sid === 'object' ? sid?._id : sid;
+
                       // EXCLUDE if it's in coordinated
                       if (coordShiftIds.includes(actualSid)) return;
 
@@ -2406,14 +2429,14 @@ export const ProjectTeamPage: React.FC = () => {
                   if (shifts.length === 0) {
                     const projectMeta = user.metadata?.projects?.find((p: any) => {
                       const pId = p.projectId;
-                      const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
+                      const idToCheck = typeof pId === 'object' ? (pId as any)?._id : pId;
                       return String(idToCheck) === String(project?._id);
                     });
                     const activeContract = projectMeta?.contracts?.length ? projectMeta.contracts[projectMeta.contracts.length - 1] : null;
 
                     if (activeContract?.areaShiftAssignments && activeContract.areaShiftAssignments.length > 0) {
                       const fallbackAssign = activeContract.areaShiftAssignments.find((a: any) => {
-                        const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
+                        const aid = typeof a.areaId === 'object' ? a.areaId?._id : a.areaId;
                         if (String(aid) === String(areaId)) return true;
                         const aData = allAreas.find((area) => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
                         const targetName = viewingShiftsData.areaName;
@@ -2423,8 +2446,8 @@ export const ProjectTeamPage: React.FC = () => {
                       if (fallbackAssign) {
                         const sids = fallbackAssign.shiftIds || [];
                         sids.forEach((sid: any) => {
-                          const actualSid = typeof sid === "object" ? sid?._id : sid;
-                          
+                          const actualSid = typeof sid === 'object' ? sid?._id : sid;
+
                           // EXCLUDE if it's in coordinated
                           if (coordShiftIds.includes(actualSid)) return;
 
@@ -2441,7 +2464,7 @@ export const ProjectTeamPage: React.FC = () => {
                 // 4. Legacy members fallback
                 if (shifts.length === 0) {
                   // Fallback for legacy members (only if nothing found yet)
-                  const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : undefined;
+                  const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === 'object' ? user.turnos[0]._id : user.turnos[0]) : undefined;
                   const finalShiftId = userConfig?.shiftId || shiftIdFromUser;
                   const shift = allShifts.find((sh) => String(sh._id) === String(finalShiftId));
                   if (shift) shifts = [shift];
@@ -2459,8 +2482,8 @@ export const ProjectTeamPage: React.FC = () => {
                     </div>
                     {s.days && s.days.length > 0 && (
                       <div className="flex gap-1.5 mt-1">
-                        {["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"].map((label, dIdx) => (
-                          <span key={dIdx} className={`text-[10px] font-black px-2 py-1 rounded-md transition-all ${s.days.includes(dIdx) ? "bg-white dark:bg-blue-800 text-blue-600 dark:text-blue-300 shadow-sm ring-1 ring-blue-200 dark:ring-blue-700" : "text-gray-300 dark:text-gray-600"}`}>
+                        {['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'].map((label, dIdx) => (
+                          <span key={dIdx} className={`text-[10px] font-black px-2 py-1 rounded-md transition-all ${s.days.includes(dIdx) ? 'bg-white dark:bg-blue-800 text-blue-600 dark:text-blue-300 shadow-sm ring-1 ring-blue-200 dark:ring-blue-700' : 'text-gray-300 dark:text-gray-600'}`}>
                             {label}
                           </span>
                         ))}
@@ -2476,7 +2499,7 @@ export const ProjectTeamPage: React.FC = () => {
           <Modal
             isOpen={!!selectedUserForWizard}
             onClose={() => setSelectedUserForWizard(null)}
-            title={teamMembers.some((m) => m._id === selectedUserForWizard?._id) ? "Configurar Miembro" : "Agregar Miembro"}
+            title={teamMembers.some((m) => m._id === selectedUserForWizard?._id) ? 'Configurar Miembro' : 'Agregar Miembro'}
             subtitle={
               selectedUserForWizard ? (
                 <div className="flex flex-col gap-0.5">
@@ -2493,11 +2516,7 @@ export const ProjectTeamPage: React.FC = () => {
             footer={
               <div className="flex gap-3 w-full">
                 {wizardStep > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => setWizardStep((wizardStep - 1) as any)}
-                    className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-all uppercase tracking-wider"
-                  >
+                  <button type="button" onClick={() => setWizardStep((wizardStep - 1) as any)} className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-all uppercase tracking-wider">
                     ANTERIOR
                   </button>
                 )}
@@ -2507,7 +2526,7 @@ export const ProjectTeamPage: React.FC = () => {
                     onClick={() => {
                       // Validate step 1: at least one area/shift must be selected
                       if (wizardStep === 1 && (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0)) {
-                        sweetAlert.error("Campo requerido", "Debes seleccionar al menos un área y turno para el miembro.");
+                        sweetAlert.error('Campo requerido', 'Debes seleccionar al menos un área y turno para el miembro.');
                         return;
                       }
                       setWizardStep((wizardStep + 1) as any);
@@ -2517,11 +2536,7 @@ export const ProjectTeamPage: React.FC = () => {
                     SIGUIENTE
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={handleSaveWizard}
-                    className="flex-1 py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 shadow-lg shadow-green-600/20 transition-all active:scale-95 uppercase tracking-wider"
-                  >
+                  <button type="button" onClick={handleSaveWizard} className="flex-1 py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 shadow-lg shadow-green-600/20 transition-all active:scale-95 uppercase tracking-wider">
                     GUARDAR
                   </button>
                 )}
@@ -2533,25 +2548,21 @@ export const ProjectTeamPage: React.FC = () => {
               <div className="bg-white dark:bg-gray-800 pb-4 border-b border-gray-100 dark:border-gray-700 shrink-0 mb-4">
                 <div className="flex items-center bg-gray-50 dark:bg-gray-900/50 rounded-lg p-1">
                   {[
-                    { step: 1, label: "Contrato" },
-                    { step: 2, label: "Sueldo" },
-                    { step: 3, label: "Extras" },
+                    { step: 1, label: 'Contrato' },
+                    { step: 2, label: 'Sueldo' },
+                    { step: 3, label: 'Extras' },
                   ].map((s) => (
                     <button
                       key={s.step}
                       type="button"
                       onClick={() => {
                         if (wizardStep === 1 && s.step > 1 && (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0)) {
-                          sweetAlert.error("Campo requerido", "Debes seleccionar al menos un área y turno para el miembro.");
+                          sweetAlert.error('Campo requerido', 'Debes seleccionar al menos un área y turno para el miembro.');
                           return;
                         }
                         setWizardStep(s.step as any);
                       }}
-                      className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
-                        wizardStep === s.step
-                          ? "bg-white dark:bg-gray-800 text-blue-600 shadow-sm border border-gray-100 dark:border-gray-700"
-                          : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                      }`}
+                      className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${wizardStep === s.step ? 'bg-white dark:bg-gray-800 text-blue-600 shadow-sm border border-gray-100 dark:border-gray-700' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
                     >
                       {s.label}
                     </button>
@@ -2563,426 +2574,414 @@ export const ProjectTeamPage: React.FC = () => {
               <div className="flex-1 overflow-y-auto pr-1 space-y-6">
                 {/* Step 1: Contrato */}
                 {wizardStep === 1 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2 space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empleado *</label>
-                    <input type="text" className="input-field w-full bg-gray-50 dark:bg-transparent" value={`${selectedUserForWizard?.firstName} ${selectedUserForWizard?.lastName}`} readOnly />
-                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2 space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empleado *</label>
+                      <input type="text" className="input-field w-full bg-gray-50 dark:bg-transparent" value={`${selectedUserForWizard?.firstName} ${selectedUserForWizard?.lastName}`} readOnly />
+                    </div>
 
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Role Frame a Desempeñar *</label>
-                    <select className="input-field w-full" value={wizardData.rol_frame_id} onChange={(e) => setWizardData((prev) => ({ ...prev, rol_frame_id: e.target.value, categoria_sat_id: "" }))} required>
-                      <option value="">Selecciona role frame...</option>
-                      {userAssignedRoleFrames.map((rf) => (
-                        <option key={rf._id} value={rf.data.rol.id}>
-                          {rf.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Categoria SAT *</label>
-                    <select className="input-field w-full" value={wizardData.categoria_sat_id} onChange={(e) => setWizardData((prev) => ({ ...prev, categoria_sat_id: e.target.value }))} required>
-                      <option value="">Selecciona categoria...</option>
-                      {availableCategoriasSat.map((c: any) => (
-                        <option key={c.id} value={c.id}>
-                          Cat {c.numeroCategoria || c.id} - {c.nombre}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Tipo de contrato *</label>
-                    <select
-                      className="input-field w-full"
-                      value={wizardData.contrato_frame_id}
-                      onChange={(e) => {
-                        const cf = contratoFrames.find((c) => c._id === e.target.value);
-                        const esIndeterminado = cf ? (cf.data?.esTiempoIndeterminado ?? /indetermin/i.test(cf.name)) : false;
-                        setWizardData((prev) => ({
-                          ...prev,
-                          contrato_frame_id: cf?._id || "",
-                          nombre_contrato: cf?.name || "",
-                          tipo_contrato_id: cf?.data?.id != null ? String(cf.data.id) : "",
-                          fecha_baja_contrato: esIndeterminado ? "" : prev.fecha_baja_contrato,
-                        }));
-                      }}
-                      required
-                    >
-                      <option value="">Selecciona tipo...</option>
-                      {contratoFrames.map((cf) => (
-                        <option key={cf._id} value={cf._id}>
-                          {cf.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Estado *</label>
-                    <select className="input-field w-full" value={wizardData.estado_id} onChange={(e) => setWizardData((prev) => ({ ...prev, estado_id: e.target.value }))} required>
-                      <option value="">Selecciona estado...</option>
-                      {allEstados.map((e) => (
-                        <option key={e._id} value={e.data.id}>
-                          {e.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empresa del Contrato</label>
-                    <select className="input-field w-full" value={wizardData.empresaContratoId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaContratoId: e.target.value }))}>
-                      <option value="">{contratoEmpresas.length ? "Selecciona empresa..." : "Sin empresas configuradas en el proyecto"}</option>
-                      {contratoEmpresas.map((emp) => (
-                        <option key={emp.id} value={emp.id}>
-                          {emp.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empresa del Release</label>
-                    <select className="input-field w-full" value={wizardData.empresaReleaseId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaReleaseId: e.target.value }))}>
-                      <option value="">{releaseEmpresas.length ? "Selecciona empresa..." : "Sin empresas configuradas en el proyecto"}</option>
-                      {releaseEmpresas.map((emp) => (
-                        <option key={emp.id} value={emp.id}>
-                          {emp.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Cargo *</label>
-                    <select className="input-field w-full" value={wizardData.positionId} onChange={(e) => setWizardData((prev) => ({ ...prev, positionId: e.target.value, levelId: "" }))} required>
-                      <option value="">Selecciona cargo...</option>
-                      {allPositions.map((p) => (
-                        <option key={p._id} value={p._id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Nivel *</label>
-                    <select className="input-field w-full" value={wizardData.levelId} onChange={(e) => setWizardData((prev) => ({ ...prev, levelId: e.target.value }))} disabled={!wizardData.positionId} required>
-                      <option value="">{wizardData.positionId ? "Selecciona nivel..." : "Primero selecciona cargo"}</option>
-                      {allLevels
-                        .filter((l) => String(typeof l.positionId === "object" ? (l.positionId as any)?._id : l.positionId) === String(wizardData.positionId))
-                        .map((l) => (
-                          <option key={l._id} value={l._id}>
-                            {l.name}
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Role Frame a Desempeñar *</label>
+                      <select className="input-field w-full" value={wizardData.rol_frame_id} onChange={(e) => setWizardData((prev) => ({ ...prev, rol_frame_id: e.target.value, categoria_sat_id: '' }))} required>
+                        <option value="">Selecciona role frame...</option>
+                        {userAssignedRoleFrames.map((rf) => (
+                          <option key={rf._id} value={rf.data.rol.id}>
+                            {rf.name}
                           </option>
                         ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Hora inicio - HH:MM</label>
-                    <input type="time" className="input-field w-full opacity-60 cursor-not-allowed" value={wizardData.hora_inicio} readOnly disabled />
-                    <p className="text-[10px] text-gray-400 ml-1">Se toma del contrato del empleado (independiente de los turnos).</p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Hora fin - HH:MM</label>
-                    <input type="time" className="input-field w-full opacity-60 cursor-not-allowed" value={wizardData.hora_fin} readOnly disabled />
-                    <p className="text-[10px] text-gray-400 ml-1">Se toma del contrato del empleado (independiente de los turnos).</p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha alta contrato</label>
-                    <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_alta_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_alta_contrato: e.target.value }))} />
-                  </div>
-
-                  {!(() => { const cf = contratoFrames.find((c) => c._id === wizardData.contrato_frame_id); return cf ? (cf.data?.esTiempoIndeterminado ?? /indetermin/i.test(cf.name)) : false; })() && (
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha baja contrato</label>
-                      <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_baja_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_baja_contrato: e.target.value }))} />
+                      </select>
                     </div>
-                  )}
 
-                  {/* --- CONFIGURACIÓN POR ÁREA (visual toggle) --- */}
-                  <div className="md:col-span-2 space-y-3 pt-6 border-t border-gray-100 dark:border-gray-700">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
-                      <FontAwesomeIcon icon={faLayerGroup} className="mr-1" />
-                      Asignación por Área y Turno *
-                    </label>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 -mt-1 ml-1">Selecciona las áreas y turnos donde trabajará este miembro. Los turnos con horarios superpuestos se bloquean automáticamente.</p>
-
-                    {(project?.areasConfig || []).length === 0 && <div className="text-center py-4 text-gray-500 text-sm bg-gray-50 dark:bg-gray-900/30 rounded-lg">Este proyecto no tiene áreas configuradas.</div>}
-
-                    <div className="space-y-3">
-                      {(() => {
-                        const isCoordinadorRole = (selectedUserForWizard?.roles || []).some((r: any) => r.name.toLowerCase().includes("mobile-coordinador"));
-                        // Helper to check time overlap
-                        const timeToMinutes = (t: string) => {
-                          const [h, m] = t.split(":").map(Number);
-                          return h * 60 + m;
-                        };
-                        const timesOverlap = (s1Start: string, s1End: string, s2Start: string, s2End: string) => {
-                          let a1 = timeToMinutes(s1Start),
-                            b1 = timeToMinutes(s1End);
-                          let a2 = timeToMinutes(s2Start),
-                            b2 = timeToMinutes(s2End);
-                          if (b1 <= a1) b1 += 24 * 60;
-                          if (b2 <= a2) b2 += 24 * 60;
-                          return a1 < b2 && a2 < b1;
-                        };
-                        // Helper to check if two shifts share at least one work day
-                        const daysOverlap = (d1: number[], d2: number[]) => {
-                          if (d1.length === 0 || d2.length === 0) return true; // if no days configured, assume overlap
-                          return d1.some((d) => d2.includes(d));
-                        };
-
-                        return (project?.areasConfig || []).map((ac: any) => {
-                          const aId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
-                          const areaObj = allAreas.find((a) => a._id === aId);
-                          const aName = typeof ac.areaId === "object" ? ac.areaId?.name : areaObj?.name;
-                          const isCoordinadorArea = areaObj?.isSystem;
-                          const isAreaRestricted = isCoordinadorArea && !isCoordinadorRole;
-
-                          const shiftIdsForArea = (ac.shiftIds || []).map((s: any) => String(typeof s === "object" ? s._id : s));
-                          const shiftsForArea = allShifts.filter((s) => shiftIdsForArea.includes(String(s._id))).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-
-                        // Current assignment for this area
-                        const currentAssignment = wizardData.areaShiftAssignments.find((a) => a.areaId === aId);
-                        const selectedShiftIds = currentAssignment?.shiftIds || [];
-                        const isAreaActive = selectedShiftIds.length > 0;
-
-                        // Collect ALL selected shift data across ALL areas for overlap detection
-                        const allSelectedShiftData: { areaId: string; shiftId: string; name: string; start: string; end: string; days: number[] }[] = [];
-                        wizardData.areaShiftAssignments.forEach((asa) => {
-                          asa.shiftIds.forEach((sid) => {
-                            const sh = allShifts.find((s) => String(s._id) === sid);
-                            if (sh) allSelectedShiftData.push({ areaId: asa.areaId, shiftId: sid, name: sh.name, start: sh.startTime, end: sh.endTime, days: sh.days || [] });
-                          });
-                        });
-
-                        return (
-                          <div key={aId} className={`rounded-xl border transition-all ${isAreaActive ? "border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10" : isAreaRestricted ? "border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-900/10 opacity-75" : "border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/20"}`}>
-                            <div className="flex items-center justify-between px-4 py-3">
-                              <div className="flex items-center gap-2">
-                                <FontAwesomeIcon icon={faLayerGroup} className={`h-4 w-4 ${isAreaActive ? "text-blue-500" : isAreaRestricted ? "text-amber-500" : "text-gray-400"}`} />
-                                <span className="font-bold text-sm uppercase tracking-wide">{aName || aId}</span>
-                                {isAreaRestricted && (
-                                  <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-tighter">
-                                    Requiere Rol Coordinador
-                                  </span>
-                                )}
-                              </div>
-                              {isAreaActive && (
-                                <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase">
-                                  {selectedShiftIds.length} turno{selectedShiftIds.length > 1 ? "s" : ""}
-                                </span>
-                              )}
-                            </div>
-                            {isAreaRestricted && (
-                              <div className="px-4 pb-3">
-                                <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
-                                  Este usuario no tiene el rol "mobile-coordinador". Debes asignarle el rol primero para habilitar esta área.
-                                </p>
-                              </div>
-                            )}
-                            <div className={`px-4 pb-3 flex flex-wrap gap-3 ${isAreaRestricted ? "pointer-events-none grayscale-[0.5]" : ""}`}>
-
-                              {shiftsForArea.map((shift) => {
-                                const isSelected = selectedShiftIds.includes(String(shift._id));
-
-                                // Check if this shift overlaps with ANY currently selected shift
-                                const overlappingWith = allSelectedShiftData.find((sel) => (sel.areaId !== aId || sel.shiftId !== String(shift._id)) && timesOverlap(shift.startTime, shift.endTime, sel.start, sel.end) && daysOverlap(shift.days || [], sel.days));
-                                const isBlocked = !isSelected && !!overlappingWith;
-
-                                const DAY_LABELS = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"];
-
-                                return (
-                                  <button
-                                    key={shift._id}
-                                    type="button"
-                                    disabled={isAreaRestricted}
-                                    onClick={() => {
-                                      setWizardData((prev) => {
-                                        let assignments = [...prev.areaShiftAssignments];
-
-                                        if (isSelected) {
-                                          const idx = assignments.findIndex((a) => a.areaId === aId);
-                                          if (idx !== -1) {
-                                            assignments[idx] = {
-                                              ...assignments[idx],
-                                              shiftIds: assignments[idx].shiftIds.filter((id) => id !== String(shift._id)),
-                                            };
-                                            if (assignments[idx].shiftIds.length === 0) assignments.splice(idx, 1);
-                                          }
-                                        } else {
-                                          // AUTO-DEACTIVATE OVERLAPPING SHIFTS
-                                          assignments = assignments
-                                            .map((a) => ({
-                                              ...a,
-                                              shiftIds: a.shiftIds.filter((sid) => {
-                                                const sh = allShifts.find((s) => String(s._id) === sid);
-                                                if (!sh) return true;
-                                                const overlaps = timesOverlap(shift.startTime, shift.endTime, sh.startTime, sh.endTime) && daysOverlap(shift.days || [], sh.days);
-                                                return !overlaps;
-                                              }),
-                                            }))
-                                            .filter((a) => a.shiftIds.length > 0);
-
-                                          // Add the new shift
-                                          const idx = assignments.findIndex((a) => a.areaId === aId);
-                                          if (idx !== -1) {
-                                            assignments[idx] = {
-                                              ...assignments[idx],
-                                              shiftIds: [...assignments[idx].shiftIds, String(shift._id)],
-                                            };
-                                          } else {
-                                            assignments.push({ areaId: aId, shiftIds: [String(shift._id)] });
-                                          }
-                                        }
-
-                                        // Los turnos NO tocan la hora del contrato: son entidades independientes.
-                                        // hora_inicio/hora_fin reflejan únicamente el contrato del empleado (DB).
-                                        return {
-                                          ...prev,
-                                          areaShiftAssignments: assignments,
-                                        };
-                                      });
-                                    }}
-                                    className={`px-3 py-2 rounded-xl border transition-all flex flex-col min-w-[120px] cursor-pointer ${isSelected ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 ring-2 ring-blue-400/50" : isBlocked ? "bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800 hover:border-blue-300 dark:hover:border-blue-600 opacity-80" : "bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10"}`}
-                                    title={isBlocked ? `Se superpone con "${overlappingWith?.name}"` : shift.name}
-                                  >
-                                    <span className={`text-xs font-bold uppercase tracking-wider ${isSelected ? "text-blue-700 dark:text-blue-400" : isBlocked ? "text-gray-400 dark:text-gray-500" : "text-gray-800 dark:text-gray-200"}`}>{shift.name}</span>
-                                    <span className={`text-[10px] font-medium uppercase mt-0.5 ${isSelected ? "text-blue-600 dark:text-blue-500" : isBlocked ? "text-gray-400" : "text-gray-500"}`}>
-                                      {shift.startTime} — {shift.endTime} hs
-                                    </span>
-                                    {shift.days && shift.days.length > 0 && (
-                                      <div className="flex gap-1 mt-1.5">
-                                        {DAY_LABELS.map((label, dayIdx) => (
-                                          <span key={dayIdx} className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${shift.days.includes(dayIdx) ? (isSelected ? "bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200" : isBlocked ? "text-gray-400 dark:text-gray-600" : "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300") : "text-gray-300 dark:text-gray-600"}`}>
-                                            {label}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    )}
-                                    {isBlocked && <span className="text-[9px] text-red-500 dark:text-red-400 mt-1 normal-case font-medium">⚠ Se superpone con "{overlappingWith?.name}"</span>}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      });
-                    })()}
-                  </div>
-
-                    {wizardData.areaShiftAssignments.length === 0 && (project?.areasConfig || []).length > 0 && <p className="text-[11px] text-amber-500 dark:text-amber-400 ml-1">⚠ Debes seleccionar al menos un área y turno.</p>}
-                  </div>
-                </div>
-              )}
-
-              {/* Step 2: Sueldo */}
-              {wizardStep === 2 && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Cantidad de jornadas laborales *</label>
-                      <input type="number" className="input-field w-full" value={wizardData.cantidad_jornadas_laborales} onChange={(e) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: Number(e.target.value) }))} />
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Categoria SAT *</label>
+                      <select className="input-field w-full" value={wizardData.categoria_sat_id} onChange={(e) => setWizardData((prev) => ({ ...prev, categoria_sat_id: e.target.value }))} required>
+                        <option value="">Selecciona categoria...</option>
+                        {availableCategoriasSat.map((c: any) => (
+                          <option key={c.id} value={c.id}>
+                            Cat {c.numeroCategoria || c.id} - {c.nombre}
+                          </option>
+                        ))}
+                      </select>
                     </div>
+
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo por jornada *</label>
-                      <input type="number" className="input-field w-full" value={wizardData.sueldo_jornada} onChange={(e) => setWizardData((prev) => ({ ...prev, sueldo_jornada: Number(e.target.value) }))} />
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Tipo de contrato *</label>
+                      <select
+                        className="input-field w-full"
+                        value={wizardData.contrato_frame_id}
+                        onChange={(e) => {
+                          const cf = contratoFrames.find((c) => c._id === e.target.value);
+                          const esIndeterminado = cf ? (cf.data?.esTiempoIndeterminado ?? /indetermin/i.test(cf.name)) : false;
+                          setWizardData((prev) => ({
+                            ...prev,
+                            contrato_frame_id: cf?._id || '',
+                            nombre_contrato: cf?.name || '',
+                            tipo_contrato_id: cf?.data?.id != null ? String(cf.data.id) : '',
+                            fecha_baja_contrato: esIndeterminado ? '' : prev.fecha_baja_contrato,
+                          }));
+                        }}
+                        required
+                      >
+                        <option value="">Selecciona tipo...</option>
+                        {contratoFrames.map((cf) => (
+                          <option key={cf._id} value={cf._id}>
+                            {cf.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                  </div>
 
-                  <div className="space-y-1.5 pt-2 border-t border-gray-100 dark:border-gray-700">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo en mano</label>
-                    <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_mano} readOnly />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo en mano texto *</label>
-                    <input type="text" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" placeholder="Ej: Cincuenta mil pesos" value={wizardData.sueldo_mano_texto} readOnly />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo diario neto</label>
-                      <input type="number" step="0.01" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_diario_neto} readOnly />
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Estado *</label>
+                      <select className="input-field w-full" value={wizardData.estado_id} onChange={(e) => setWizardData((prev) => ({ ...prev, estado_id: e.target.value }))} required>
+                        <option value="">Selecciona estado...</option>
+                        {allEstados.map((e) => (
+                          <option key={e._id} value={e.data.id}>
+                            {e.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
+
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Diferencia diaria neto</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed font-bold"
-                        style={{ color: wizardData.diferencia_diaria_neto < 0 ? "#ef4444" : "#22c55e" }}
-                        value={wizardData.diferencia_diaria_neto}
-                        readOnly
-                      />
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empresa del Contrato</label>
+                      <select className="input-field w-full" value={wizardData.empresaContratoId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaContratoId: e.target.value }))}>
+                        <option value="">{contratoEmpresas.length ? 'Selecciona empresa...' : 'Sin empresas configuradas en el proyecto'}</option>
+                        {contratoEmpresas.map((emp) => (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.label}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-100 dark:border-gray-700">
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo neto</label>
-                      <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_neto} readOnly />
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empresa del Release</label>
+                      <select className="input-field w-full" value={wizardData.empresaReleaseId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaReleaseId: e.target.value }))}>
+                        <option value="">{releaseEmpresas.length ? 'Selecciona empresa...' : 'Sin empresas configuradas en el proyecto'}</option>
+                        {releaseEmpresas.map((emp) => (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.label}
+                          </option>
+                        ))}
+                      </select>
                     </div>
+
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo bruto</label>
-                      <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_bruto} readOnly />
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Cargo *</label>
+                      <select className="input-field w-full" value={wizardData.positionId} onChange={(e) => setWizardData((prev) => ({ ...prev, positionId: e.target.value, levelId: '' }))} required>
+                        <option value="">Selecciona cargo...</option>
+                        {allPositions.map((p) => (
+                          <option key={p._id} value={p._id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                  </div>
-                </div>
-              )}
 
-              {/* Step 3: Extras */}
-              {wizardStep === 3 && (
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sede *</label>
-                    <select className="input-field w-full" value={wizardData.sede_id} onChange={(e) => setWizardData((prev) => ({ ...prev, sede_id: e.target.value }))}>
-                      <option value="">Selecciona sede...</option>
-                      {allSedes.map((s) => (
-                        <option key={s._id} value={s.data.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-100 dark:border-gray-800">
-                    <input type="checkbox" id="esReemplazo" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked={wizardData.reemplazo} onChange={(e) => setWizardData((prev) => ({ ...prev, reemplazo: e.target.checked }))} />
-                    <label htmlFor="esReemplazo" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Es reemplazo
-                    </label>
-                  </div>
-
-                  {wizardData.reemplazo && (
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empleado reemplazado</label>
-                      <select className="input-field w-full" value={wizardData.empleado_id_reemplezado} onChange={(e) => setWizardData((prev) => ({ ...prev, empleado_id_reemplezado: e.target.value }))}>
-                        <option value="">Selecciona empleado...</option>
-                        {teamMembers
-                          .filter((m) => String(m._id) !== String(selectedUserForWizard?._id))
-                          .map((m) => (
-                            <option key={m._id} value={(m.metadata as any)?.id}>
-                              {m.firstName} {m.lastName}
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Nivel *</label>
+                      <select className="input-field w-full" value={wizardData.levelId} onChange={(e) => setWizardData((prev) => ({ ...prev, levelId: e.target.value }))} disabled={!wizardData.positionId} required>
+                        <option value="">{wizardData.positionId ? 'Selecciona nivel...' : 'Primero selecciona cargo'}</option>
+                        {allLevels
+                          .filter((l) => String(typeof l.positionId === 'object' ? (l.positionId as any)?._id : l.positionId) === String(wizardData.positionId))
+                          .map((l) => (
+                            <option key={l._id} value={l._id}>
+                              {l.name}
                             </option>
                           ))}
                       </select>
                     </div>
-                  )}
 
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Observaciones</label>
-                    <textarea className="input-field w-full min-h-[100px] py-3" placeholder="Notas adicionales..." value={wizardData.observaciones} onChange={(e) => setWizardData((prev) => ({ ...prev, observaciones: e.target.value }))} />
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Hora inicio - HH:MM</label>
+                      <input type="time" className="input-field w-full opacity-60 cursor-not-allowed" value={wizardData.hora_inicio} readOnly disabled />
+                      <p className="text-[10px] text-gray-400 ml-1">Se toma del contrato del empleado (independiente de los turnos).</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Hora fin - HH:MM</label>
+                      <input type="time" className="input-field w-full opacity-60 cursor-not-allowed" value={wizardData.hora_fin} readOnly disabled />
+                      <p className="text-[10px] text-gray-400 ml-1">Se toma del contrato del empleado (independiente de los turnos).</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha alta contrato</label>
+                      <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_alta_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_alta_contrato: e.target.value }))} />
+                    </div>
+
+                    {!(() => {
+                      const cf = contratoFrames.find((c) => c._id === wizardData.contrato_frame_id);
+                      return cf ? (cf.data?.esTiempoIndeterminado ?? /indetermin/i.test(cf.name)) : false;
+                    })() && (
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha baja contrato</label>
+                        <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_baja_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_baja_contrato: e.target.value }))} />
+                      </div>
+                    )}
+
+                    {/* --- CONFIGURACIÓN POR ÁREA (visual toggle) --- */}
+                    <div className="md:col-span-2 space-y-3 pt-6 border-t border-gray-100 dark:border-gray-700">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                        <FontAwesomeIcon icon={faLayerGroup} className="mr-1" />
+                        Asignación por Área y Turno *
+                      </label>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 -mt-1 ml-1">Selecciona las áreas y turnos donde trabajará este miembro. Los turnos con horarios superpuestos se bloquean automáticamente.</p>
+
+                      {(project?.areasConfig || []).length === 0 && <div className="text-center py-4 text-gray-500 text-sm bg-gray-50 dark:bg-gray-900/30 rounded-lg">Este proyecto no tiene áreas configuradas.</div>}
+
+                      <div className="space-y-3">
+                        {(() => {
+                          const isCoordinadorRole = (selectedUserForWizard?.roles || []).some((r: any) => r.name.toLowerCase().includes('mobile-coordinador'));
+                          // Helper to check time overlap
+                          const timeToMinutes = (t: string) => {
+                            const [h, m] = t.split(':').map(Number);
+                            return h * 60 + m;
+                          };
+                          const timesOverlap = (s1Start: string, s1End: string, s2Start: string, s2End: string) => {
+                            let a1 = timeToMinutes(s1Start),
+                              b1 = timeToMinutes(s1End);
+                            let a2 = timeToMinutes(s2Start),
+                              b2 = timeToMinutes(s2End);
+                            if (b1 <= a1) b1 += 24 * 60;
+                            if (b2 <= a2) b2 += 24 * 60;
+                            return a1 < b2 && a2 < b1;
+                          };
+                          // Helper to check if two shifts share at least one work day
+                          const daysOverlap = (d1: number[], d2: number[]) => {
+                            if (d1.length === 0 || d2.length === 0) return true; // if no days configured, assume overlap
+                            return d1.some((d) => d2.includes(d));
+                          };
+
+                          return (project?.areasConfig || []).map((ac: any) => {
+                            const aId = typeof ac.areaId === 'object' ? ac.areaId?._id : ac.areaId;
+                            const areaObj = allAreas.find((a) => a._id === aId);
+                            const aName = typeof ac.areaId === 'object' ? ac.areaId?.name : areaObj?.name;
+                            const isCoordinadorArea = areaObj?.isSystem;
+                            const isAreaRestricted = isCoordinadorArea && !isCoordinadorRole;
+
+                            const shiftIdsForArea = (ac.shiftIds || []).map((s: any) => String(typeof s === 'object' ? s._id : s));
+                            const shiftsForArea = allShifts.filter((s) => shiftIdsForArea.includes(String(s._id))).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+                            // Current assignment for this area
+                            const currentAssignment = wizardData.areaShiftAssignments.find((a) => a.areaId === aId);
+                            const selectedShiftIds = currentAssignment?.shiftIds || [];
+                            const isAreaActive = selectedShiftIds.length > 0;
+
+                            // Collect ALL selected shift data across ALL areas for overlap detection
+                            const allSelectedShiftData: { areaId: string; shiftId: string; name: string; start: string; end: string; days: number[] }[] = [];
+                            wizardData.areaShiftAssignments.forEach((asa) => {
+                              asa.shiftIds.forEach((sid) => {
+                                const sh = allShifts.find((s) => String(s._id) === sid);
+                                if (sh) allSelectedShiftData.push({ areaId: asa.areaId, shiftId: sid, name: sh.name, start: sh.startTime, end: sh.endTime, days: sh.days || [] });
+                              });
+                            });
+
+                            return (
+                              <div key={aId} className={`rounded-xl border transition-all ${isAreaActive ? 'border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10' : isAreaRestricted ? 'border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-900/10 opacity-75' : 'border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/20'}`}>
+                                <div className="flex items-center justify-between px-4 py-3">
+                                  <div className="flex items-center gap-2">
+                                    <FontAwesomeIcon icon={faLayerGroup} className={`h-4 w-4 ${isAreaActive ? 'text-blue-500' : isAreaRestricted ? 'text-amber-500' : 'text-gray-400'}`} />
+                                    <span className="font-bold text-sm uppercase tracking-wide">{aName || aId}</span>
+                                    {isAreaRestricted && <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-tighter">Requiere Rol Coordinador</span>}
+                                  </div>
+                                  {isAreaActive && (
+                                    <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase">
+                                      {selectedShiftIds.length} turno{selectedShiftIds.length > 1 ? 's' : ''}
+                                    </span>
+                                  )}
+                                </div>
+                                {isAreaRestricted && (
+                                  <div className="px-4 pb-3">
+                                    <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Este usuario no tiene el rol "mobile-coordinador". Debes asignarle el rol primero para habilitar esta área.</p>
+                                  </div>
+                                )}
+                                <div className={`px-4 pb-3 flex flex-wrap gap-3 ${isAreaRestricted ? 'pointer-events-none grayscale-[0.5]' : ''}`}>
+                                  {shiftsForArea.map((shift) => {
+                                    const isSelected = selectedShiftIds.includes(String(shift._id));
+
+                                    // Check if this shift overlaps with ANY currently selected shift
+                                    const overlappingWith = allSelectedShiftData.find((sel) => (sel.areaId !== aId || sel.shiftId !== String(shift._id)) && timesOverlap(shift.startTime, shift.endTime, sel.start, sel.end) && daysOverlap(shift.days || [], sel.days));
+                                    const isBlocked = !isSelected && !!overlappingWith;
+
+                                    const DAY_LABELS = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'];
+
+                                    return (
+                                      <button
+                                        key={shift._id}
+                                        type="button"
+                                        disabled={isAreaRestricted}
+                                        onClick={() => {
+                                          setWizardData((prev) => {
+                                            let assignments = [...prev.areaShiftAssignments];
+
+                                            if (isSelected) {
+                                              const idx = assignments.findIndex((a) => a.areaId === aId);
+                                              if (idx !== -1) {
+                                                assignments[idx] = {
+                                                  ...assignments[idx],
+                                                  shiftIds: assignments[idx].shiftIds.filter((id) => id !== String(shift._id)),
+                                                };
+                                                if (assignments[idx].shiftIds.length === 0) assignments.splice(idx, 1);
+                                              }
+                                            } else {
+                                              // AUTO-DEACTIVATE OVERLAPPING SHIFTS
+                                              assignments = assignments
+                                                .map((a) => ({
+                                                  ...a,
+                                                  shiftIds: a.shiftIds.filter((sid) => {
+                                                    const sh = allShifts.find((s) => String(s._id) === sid);
+                                                    if (!sh) return true;
+                                                    const overlaps = timesOverlap(shift.startTime, shift.endTime, sh.startTime, sh.endTime) && daysOverlap(shift.days || [], sh.days);
+                                                    return !overlaps;
+                                                  }),
+                                                }))
+                                                .filter((a) => a.shiftIds.length > 0);
+
+                                              // Add the new shift
+                                              const idx = assignments.findIndex((a) => a.areaId === aId);
+                                              if (idx !== -1) {
+                                                assignments[idx] = {
+                                                  ...assignments[idx],
+                                                  shiftIds: [...assignments[idx].shiftIds, String(shift._id)],
+                                                };
+                                              } else {
+                                                assignments.push({ areaId: aId, shiftIds: [String(shift._id)] });
+                                              }
+                                            }
+
+                                            // Los turnos NO tocan la hora del contrato: son entidades independientes.
+                                            // hora_inicio/hora_fin reflejan únicamente el contrato del empleado (DB).
+                                            return {
+                                              ...prev,
+                                              areaShiftAssignments: assignments,
+                                            };
+                                          });
+                                        }}
+                                        className={`px-3 py-2 rounded-xl border transition-all flex flex-col min-w-[120px] cursor-pointer ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 ring-2 ring-blue-400/50' : isBlocked ? 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800 hover:border-blue-300 dark:hover:border-blue-600 opacity-80' : 'bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10'}`}
+                                        title={isBlocked ? `Se superpone con "${overlappingWith?.name}"` : shift.name}
+                                      >
+                                        <span className={`text-xs font-bold uppercase tracking-wider ${isSelected ? 'text-blue-700 dark:text-blue-400' : isBlocked ? 'text-gray-400 dark:text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>{shift.name}</span>
+                                        <span className={`text-[10px] font-medium uppercase mt-0.5 ${isSelected ? 'text-blue-600 dark:text-blue-500' : isBlocked ? 'text-gray-400' : 'text-gray-500'}`}>
+                                          {shift.startTime} — {shift.endTime} hs
+                                        </span>
+                                        {shift.days && shift.days.length > 0 && (
+                                          <div className="flex gap-1 mt-1.5">
+                                            {DAY_LABELS.map((label, dayIdx) => (
+                                              <span key={dayIdx} className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${shift.days.includes(dayIdx) ? (isSelected ? 'bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200' : isBlocked ? 'text-gray-400 dark:text-gray-600' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300') : 'text-gray-300 dark:text-gray-600'}`}>
+                                                {label}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        )}
+                                        {isBlocked && <span className="text-[9px] text-red-500 dark:text-red-400 mt-1 normal-case font-medium">⚠ Se superpone con "{overlappingWith?.name}"</span>}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+
+                      {wizardData.areaShiftAssignments.length === 0 && (project?.areasConfig || []).length > 0 && <p className="text-[11px] text-amber-500 dark:text-amber-400 ml-1">⚠ Debes seleccionar al menos un área y turno.</p>}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
+                {/* Step 2: Sueldo */}
+                {wizardStep === 2 && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Cantidad de jornadas laborales *</label>
+                        <input type="number" className="input-field w-full" value={wizardData.cantidad_jornadas_laborales} onChange={(e) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: Number(e.target.value) }))} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo por jornada *</label>
+                        <input type="number" className="input-field w-full" value={wizardData.sueldo_jornada} onChange={(e) => setWizardData((prev) => ({ ...prev, sueldo_jornada: Number(e.target.value) }))} />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 pt-2 border-t border-gray-100 dark:border-gray-700">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo en mano</label>
+                      <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_mano} readOnly />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo en mano texto *</label>
+                      <input type="text" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" placeholder="Ej: Cincuenta mil pesos" value={wizardData.sueldo_mano_texto} readOnly />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo diario neto</label>
+                        <input type="number" step="0.01" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_diario_neto} readOnly />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Diferencia diaria neto</label>
+                        <input type="number" step="0.01" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed font-bold" style={{ color: wizardData.diferencia_diaria_neto < 0 ? '#ef4444' : '#22c55e' }} value={wizardData.diferencia_diaria_neto} readOnly />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-100 dark:border-gray-700">
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo neto</label>
+                        <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_neto} readOnly />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo bruto</label>
+                        <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_bruto} readOnly />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 3: Extras */}
+                {wizardStep === 3 && (
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sede *</label>
+                      <select className="input-field w-full" value={wizardData.sede_id} onChange={(e) => setWizardData((prev) => ({ ...prev, sede_id: e.target.value }))}>
+                        <option value="">Selecciona sede...</option>
+                        {allSedes.map((s) => (
+                          <option key={s._id} value={s.data.id}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-100 dark:border-gray-800">
+                      <input type="checkbox" id="esReemplazo" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked={wizardData.reemplazo} onChange={(e) => setWizardData((prev) => ({ ...prev, reemplazo: e.target.checked }))} />
+                      <label htmlFor="esReemplazo" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Es reemplazo
+                      </label>
+                    </div>
+
+                    {wizardData.reemplazo && (
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empleado reemplazado</label>
+                        <select className="input-field w-full" value={wizardData.empleado_id_reemplezado} onChange={(e) => setWizardData((prev) => ({ ...prev, empleado_id_reemplezado: e.target.value }))}>
+                          <option value="">Selecciona empleado...</option>
+                          {teamMembers
+                            .filter((m) => String(m._id) !== String(selectedUserForWizard?._id))
+                            .map((m) => (
+                              <option key={m._id} value={(m.metadata as any)?.id}>
+                                {m.firstName} {m.lastName}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    )}
+
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Observaciones</label>
+                      <textarea className="input-field w-full min-h-[100px] py-3" placeholder="Notas adicionales..." value={wizardData.observaciones} onChange={(e) => setWizardData((prev) => ({ ...prev, observaciones: e.target.value }))} />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </Modal>
@@ -2994,7 +2993,7 @@ export const ProjectTeamPage: React.FC = () => {
         isOpen={!!selectedMemberForDetail}
         onClose={() => setSelectedMemberForDetail(null)}
         user={selectedMemberForDetail}
-        projectId={projectId || ""}
+        projectId={projectId || ''}
         contratoFrames={contratoFrames}
         releases={releases}
         contratoEmpresas={contratoEmpresas}

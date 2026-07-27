@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from "react";
-import { fuzzyMatch } from "../utils/searchHelpers";
-import { useAuthStore } from "../stores/authStore";
-import { areasAPI, Area } from "../api/areas";
-import { PageLayout } from "../components/ui/PageLayout";
-import { SearchAndFilters } from "../components/ui/SearchAndFilters";
-import { EmptyState } from "../components/ui/EmptyState";
-import { LoadingSpinner } from "../components/ui/LoadingSpinner";
-import { Card } from "../components/ui/Card";
-import { sweetAlert } from "../utils/sweetAlert";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faTrash, faPlus, faShieldHalved, faLayerGroup, faUserTie, faUserGraduate, faUserGear, faTable, faGrip, faClock, faUserShield, faLock } from "@fortawesome/free-solid-svg-icons";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { fuzzyMatch } from '../utils/searchHelpers';
+import { useAuthStore } from '../stores/authStore';
+import { areasAPI, Area } from '../api/areas';
+import { PageLayout } from '../components/ui/PageLayout';
+import { SearchAndFilters } from '../components/ui/SearchAndFilters';
+import { EmptyState } from '../components/ui/EmptyState';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { Card } from '../components/ui/Card';
+import { sweetAlert } from '../utils/sweetAlert';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEdit, faTrash, faPlus, faShieldHalved, faLayerGroup, faUserTie, faUserGraduate, faUserGear, faTable, faGrip, faClock, faUserShield, faLock } from '@fortawesome/free-solid-svg-icons';
+import { useNavigate } from 'react-router-dom';
 
 // const HELP_KEY = "areas" as const; // TODO: Add help content if needed
 
@@ -26,22 +26,22 @@ export const AreasPage: React.FC = () => {
   const [areas, setAreas] = useState<Area[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   const [showModal, setShowModal] = useState(false);
   const [editingArea, setEditingArea] = useState<Area | null>(null);
   const [formData, setFormData] = useState<AreaFormData>({
-    name: "",
-    description: "",
+    name: '',
+    description: '',
   });
 
   const [viewOpen, setViewOpen] = useState(false);
   const [viewArea, setViewArea] = useState<Area | null>(null);
 
   // View Mode Logic
-  const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
   const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
 
   useEffect(() => {
@@ -49,31 +49,31 @@ export const AreasPage: React.FC = () => {
       const isNowLarge = window.innerWidth >= 1024;
       setIsLarge(isNowLarge);
       if (!isNowLarge) {
-        setViewMode("cards");
+        setViewMode('cards');
       }
     };
 
     if (window.innerWidth >= 1024) {
-      const saved = localStorage.getItem("areasViewMode");
-      if (saved === "table" || saved === "cards") {
-        setViewMode(saved as "table" | "cards");
+      const saved = localStorage.getItem('areasViewMode');
+      if (saved === 'table' || saved === 'cards') {
+        setViewMode(saved as 'table' | 'cards');
       }
     }
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
     if (isLarge) {
-      localStorage.setItem("areasViewMode", viewMode);
+      localStorage.setItem('areasViewMode', viewMode);
     }
   }, [viewMode, isLarge]);
 
   // const [openInfo, setOpenInfo] = useState(false);
   // const helpEntry = getHelp(HELP_KEY);
 
-  const canManage = hasPermission("admin_areas:view"); // Assuming same permission as users/positions for now
+  const canManage = hasPermission('admin_areas:view'); // Assuming same permission as users/positions for now
 
   useEffect(() => {
     fetchAreas();
@@ -85,8 +85,8 @@ export const AreasPage: React.FC = () => {
       const response = await areasAPI.list({});
       setAreas(response.areas);
     } catch (error) {
-      console.error("Error fetching areas:", error);
-      sweetAlert.error("Error", "No se pudieron cargar las áreas");
+      console.error('Error fetching areas:', error);
+      sweetAlert.error('Error', 'No se pudieron cargar las áreas');
     } finally {
       setLoading(false);
     }
@@ -95,8 +95,8 @@ export const AreasPage: React.FC = () => {
   const openCreate = () => {
     setEditingArea(null);
     setFormData({
-      name: "",
-      description: "",
+      name: '',
+      description: '',
     });
     setShowModal(true);
   };
@@ -105,7 +105,7 @@ export const AreasPage: React.FC = () => {
     setEditingArea(area);
     setFormData({
       name: area.name,
-      description: area.description || "",
+      description: area.description || '',
     });
     setShowModal(true);
   };
@@ -130,36 +130,36 @@ export const AreasPage: React.FC = () => {
     try {
       if (editingArea) {
         await areasAPI.update(editingArea._id, formData);
-        sweetAlert.success("Área actualizada", "Los cambios se han guardado correctamente");
+        sweetAlert.success('Área actualizada', 'Los cambios se han guardado correctamente');
       } else {
         await areasAPI.create(formData);
-        sweetAlert.success("Área creada", "El área se ha creado correctamente");
+        sweetAlert.success('Área creada', 'El área se ha creado correctamente');
       }
       closeModal();
       fetchAreas();
     } catch (error: any) {
-      const message = error.response?.data?.error || "Error al guardar el área";
-      sweetAlert.error("Error", message);
+      const message = error.response?.data?.error || 'Error al guardar el área';
+      sweetAlert.error('Error', message);
     }
   };
 
   const handleDelete = async (area: Area) => {
-    const result = await sweetAlert.confirm("¿Eliminar área?", `¿Estás seguro de que quieres eliminar el área "${area.name}"?`);
+    const result = await sweetAlert.confirm('¿Eliminar área?', `¿Estás seguro de que quieres eliminar el área "${area.name}"?`);
     if (result.isConfirmed) {
       try {
         await areasAPI.remove(area._id);
-        sweetAlert.success("Área eliminada", "El área ha sido eliminada correctamente");
+        sweetAlert.success('Área eliminada', 'El área ha sido eliminada correctamente');
         fetchAreas();
       } catch (error: any) {
-        const message = error.response?.data?.error || "Error al eliminar el área";
-        sweetAlert.error("Error", message);
+        const message = error.response?.data?.error || 'Error al eliminar el área';
+        sweetAlert.error('Error', message);
       }
     }
   };
 
   const filteredAreas = areas.filter((a) => {
     const q = searchTerm.trim().toLowerCase();
-    const matchesSearch = q.length === 0 || fuzzyMatch(a.name, q) || fuzzyMatch(a.description || "", q);
+    const matchesSearch = q.length === 0 || fuzzyMatch(a.name, q) || fuzzyMatch(a.description || '', q);
 
     let matchesDate = true;
     if (startDate || endDate) {
@@ -187,27 +187,27 @@ export const AreasPage: React.FC = () => {
       headerActions={
         <div className="flex items-center gap-3">
           {canManage && (
-            <button onClick={openCreate} title="Nueva área" aria-label="Nueva área" className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+            <button onClick={openCreate} title="Nueva área" aria-label="Nueva área" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
               <FontAwesomeIcon icon={faPlus} />
             </button>
           )}
-          <button onClick={() => navigate("/users")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate('/users')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserGear} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Usuarios</span>
           </button>
-          <button onClick={() => navigate("/positions")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate('/positions')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserTie} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Cargos</span>
           </button>
-          <button onClick={() => navigate("/levels")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate('/levels')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Niveles</span>
           </button>
-          <button onClick={() => navigate("/shifts")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate('/shifts')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faClock} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Turnos</span>
           </button>
-          <button onClick={() => navigate("/roles")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate('/roles')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Roles</span>
           </button>
@@ -230,10 +230,10 @@ export const AreasPage: React.FC = () => {
           </div>
           {isLarge && (
             <div className="flex items-center gap-2 shrink-0">
-              <button onClick={() => setViewMode("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas">
+              <button onClick={() => setViewMode('cards')} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'cards' ? 'bg-blue-500 text-white shadow-sm border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`} title="Vista de tarjetas">
                 <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
               </button>
-              <button onClick={() => setViewMode("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla">
+              <button onClick={() => setViewMode('table')} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'table' ? 'bg-blue-500 text-white shadow-sm border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`} title="Vista de tabla">
                 <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
               </button>
             </div>
@@ -243,26 +243,26 @@ export const AreasPage: React.FC = () => {
       viewModal={{
         isOpen: viewOpen,
         onClose: closeView,
-        title: viewArea ? viewArea.name : "Área",
+        title: viewArea ? viewArea.name : 'Área',
         subtitle: viewArea?.description,
-        size: "md",
+        size: 'md',
         actions: [
           ...(canManage
             ? [
                 {
-                  label: "Editar área",
+                  label: 'Editar área',
                   onClick: () => {
                     if (viewArea) openEdit(viewArea);
                     closeView();
                   },
-                  variant: "secondary",
+                  variant: 'secondary',
                 } as const,
               ]
             : []),
           {
-            label: "Cancelar",
+            label: 'Cancelar',
             onClick: closeView,
-            variant: "ghost",
+            variant: 'ghost',
           },
         ],
         content: viewArea ? (
@@ -277,11 +277,11 @@ export const AreasPage: React.FC = () => {
             {/* Descripción */}
             <div>
               <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Descripción</h4>
-              <p className="text-sm text-gray-700 dark:text-gray-300">{viewArea.description || "—"}</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300">{viewArea.description || '—'}</p>
             </div>
             <div>
               <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Detalles</h4>
-              <p className="text-xs text-gray-500">Creado el: {viewArea.createdAt ? new Date(viewArea.createdAt).toLocaleDateString() : "-"}</p>
+              <p className="text-xs text-gray-500">Creado el: {viewArea.createdAt ? new Date(viewArea.createdAt).toLocaleDateString() : '-'}</p>
             </div>
           </div>
         ) : null,
@@ -289,22 +289,22 @@ export const AreasPage: React.FC = () => {
       modal={{
         isOpen: showModal,
         onClose: closeModal,
-        title: editingArea ? "Editar Área" : "Nueva Área",
-        subtitle: "Define nombre y descripción",
-        size: "md",
+        title: editingArea ? 'Editar Área' : 'Nueva Área',
+        subtitle: 'Define nombre y descripción',
+        size: 'md',
         actions: [
           {
-            label: editingArea ? "Actualizar" : "Crear",
+            label: editingArea ? 'Actualizar' : 'Crear',
             onClick: () => {
-              const form = document.querySelector<HTMLFormElement>("#area-form");
+              const form = document.querySelector<HTMLFormElement>('#area-form');
               form?.requestSubmit();
             },
-            variant: "primary",
+            variant: 'primary',
           },
           {
-            label: "Cancelar",
+            label: 'Cancelar',
             onClick: closeModal,
-            variant: "ghost",
+            variant: 'ghost',
           },
         ],
         content: (
@@ -312,9 +312,8 @@ export const AreasPage: React.FC = () => {
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre *</label>
-                <input type="text" required disabled={!!editingArea?.isSystem} value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} className={`input-field ${editingArea?.isSystem ? "bg-gray-100 dark:bg-gray-700 cursor-not-allowed" : ""}`} placeholder="Nombre del área" />
+                <input type="text" required disabled={!!editingArea?.isSystem} value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} className={`input-field ${editingArea?.isSystem ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' : ''}`} placeholder="Nombre del área" />
               </div>
-
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción</label>
@@ -326,14 +325,11 @@ export const AreasPage: React.FC = () => {
                   <FontAwesomeIcon icon={faShieldHalved} className="text-amber-600 dark:text-amber-500 mt-0.5" />
                   <div className="space-y-1">
                     <p className="text-xs font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wide">Área generada por sistema</p>
-                    <p className="text-[11px] text-amber-700 dark:text-amber-500 leading-tight">
-                      Esta área es esencial para el funcionamiento del sistema. No se puede eliminar y su nombre está protegido.
-                    </p>
+                    <p className="text-[11px] text-amber-700 dark:text-amber-500 leading-tight">Esta área es esencial para el funcionamiento del sistema. No se puede eliminar y su nombre está protegido.</p>
                   </div>
                 </div>
               )}
             </div>
-
           </form>
         ),
       }}
@@ -345,7 +341,7 @@ export const AreasPage: React.FC = () => {
         </div>
       ) : (
         <>
-          {viewMode === "cards" ? (
+          {viewMode === 'cards' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
               {filteredAreas.map((area) => {
                 return (
@@ -362,34 +358,33 @@ export const AreasPage: React.FC = () => {
                           ? [
                               {
                                 text: area.tenant.name,
-                                variant: "default" as const,
-                                className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+                                variant: 'default' as const,
+                                className: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800',
                               },
                               ...(area.isSystem
                                 ? [
                                     {
-                                      text: "Sistema",
-                                      variant: "default" as const,
-                                      className: "bg-orange-500/10 text-orange-500 border border-orange-500/50",
+                                      text: 'Sistema',
+                                      variant: 'default' as const,
+                                      className: 'bg-orange-500/10 text-orange-500 border border-orange-500/50',
                                     },
                                   ]
                                 : []),
                             ]
                           : area.isSystem
-                          ? [
-                              {
-                                text: "Sistema",
-                                variant: "default" as const,
-                                className: "bg-orange-500/10 text-orange-500 border border-orange-500/50",
-                              },
-                            ]
-                          : [],
-
+                            ? [
+                                {
+                                  text: 'Sistema',
+                                  variant: 'default' as const,
+                                  className: 'bg-orange-500/10 text-orange-500 border border-orange-500/50',
+                                },
+                              ]
+                            : [],
                     }}
                     footer={
                       canManage
                         ? {
-                            leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{area.createdAt ? new Date(area.createdAt).toLocaleDateString() : ""}</span>,
+                            leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{area.createdAt ? new Date(area.createdAt).toLocaleDateString() : ''}</span>,
                             actions: [
                               {
                                 icon: faEdit,
@@ -397,8 +392,8 @@ export const AreasPage: React.FC = () => {
                                   e.stopPropagation();
                                   openEdit(area);
                                 },
-                                title: "Editar",
-                                variant: "default",
+                                title: 'Editar',
+                                variant: 'default',
                               },
                               ...(!area.isSystem
                                 ? [
@@ -408,8 +403,8 @@ export const AreasPage: React.FC = () => {
                                         e.stopPropagation();
                                         handleDelete(area);
                                       },
-                                      title: "Eliminar",
-                                      variant: "default" as const,
+                                      title: 'Eliminar',
+                                      variant: 'default' as const,
                                     },
                                   ]
                                 : [
@@ -418,8 +413,8 @@ export const AreasPage: React.FC = () => {
                                       onClick: (e: any) => {
                                         e.stopPropagation();
                                       },
-                                      title: "Área de sistema protegida",
-                                      variant: "default" as const,
+                                      title: 'Área de sistema protegida',
+                                      variant: 'default' as const,
                                       disabled: true,
                                     },
                                   ]),
@@ -435,8 +430,8 @@ export const AreasPage: React.FC = () => {
                   variant="create"
                   onClick={openCreate}
                   header={{
-                    title: "Nueva Área",
-                    subtitle: "Crear una nueva área para la organización",
+                    title: 'Nueva Área',
+                    subtitle: 'Crear una nueva área para la organización',
                     icon: faLayerGroup,
                   }}
                 />
@@ -468,15 +463,14 @@ export const AreasPage: React.FC = () => {
                                 {area.tenant && area.tenant.name && <span className="text-[10px] text-gray-500">{area.tenant.name}</span>}
                                 {area.isSystem && <span className="text-[9px] font-bold bg-orange-500/10 text-orange-500 border border-orange-500/50 px-1.5 py-0.5 rounded uppercase tracking-wider">Sistema</span>}
                               </div>
-
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">{area.description || "—"}</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">{area.description || '—'}</span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-sm text-gray-600 dark:text-gray-400">{area.createdAt ? new Date(area.createdAt).toLocaleDateString() : "—"}</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{area.createdAt ? new Date(area.createdAt).toLocaleDateString() : '—'}</span>
                         </td>
                         {canManage && (
                           <td className="px-6 py-4 text-right">
@@ -508,7 +502,6 @@ export const AreasPage: React.FC = () => {
                                 </div>
                               )}
                             </div>
-
                           </td>
                         )}
                       </tr>
@@ -522,12 +515,12 @@ export const AreasPage: React.FC = () => {
           {!loading && filteredAreas.length === 0 && (
             <EmptyState
               icon={faShieldHalved}
-              title={startDate || endDate ? "No hay áreas en este rango de fechas" : "No hay áreas"}
-              description={startDate || endDate ? `No se encontraron áreas ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Crea tu primera área para comenzar."}
+              title={startDate || endDate ? 'No hay áreas en este rango de fechas' : 'No hay áreas'}
+              description={startDate || endDate ? `No se encontraron áreas ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : 'Crea tu primera área para comenzar.'}
               action={
                 canManage
                   ? {
-                      label: "Nueva Área",
+                      label: 'Nueva Área',
                       onClick: openCreate,
                       icon: faPlus,
                     }

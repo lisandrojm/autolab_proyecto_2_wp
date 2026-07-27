@@ -1,23 +1,23 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { fuzzyMatch } from "../utils/searchHelpers";
-import { useAuthStore } from "../stores/authStore";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { PageLayout } from "../components/ui/PageLayout";
-import { SearchAndFilters } from "../components/ui/SearchAndFilters";
-import { EmptyState } from "../components/ui/EmptyState";
-import { LoadingSpinner } from "../components/ui/LoadingSpinner";
-import { Card } from "../components/ui/Card";
-import { sweetAlert } from "../utils/sweetAlert";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faClone, faPlus, faTrash, faUsers } from "@fortawesome/free-solid-svg-icons";
-import { clientsAPI, type Client } from "../api/clients";
-import { customAlphabet } from "nanoid";
-import { getHelp, hasHelp } from "../data/help/helpContent";
+import React, { useEffect, useMemo, useState } from 'react';
+import { fuzzyMatch } from '../utils/searchHelpers';
+import { useAuthStore } from '../stores/authStore';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { PageLayout } from '../components/ui/PageLayout';
+import { SearchAndFilters } from '../components/ui/SearchAndFilters';
+import { EmptyState } from '../components/ui/EmptyState';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { Card } from '../components/ui/Card';
+import { sweetAlert } from '../utils/sweetAlert';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faClone, faPlus, faTrash, faUsers } from '@fortawesome/free-solid-svg-icons';
+import { clientsAPI, type Client } from '../api/clients';
+import { customAlphabet } from 'nanoid';
+import { getHelp, hasHelp } from '../data/help/helpContent';
 
-const HELP_KEY = "clients" as const;
+const HELP_KEY = 'clients' as const;
 
-type StatusFilter = "all" | "active" | "inactive" | "onboarding";
-type ModalMode = "create" | "edit" | "clone" | null;
+type StatusFilter = 'all' | 'active' | 'inactive' | 'onboarding';
+type ModalMode = 'create' | 'edit' | 'clone' | null;
 
 interface ClientFormData {
   name: string;
@@ -26,17 +26,17 @@ interface ClientFormData {
   company?: string;
   industry?: string;
   website?: string;
-  status: "active" | "inactive" | "onboarding";
+  status: 'active' | 'inactive' | 'onboarding';
 }
 
 /* Generador corto de IDs */
-const genId = customAlphabet("23456789ABCDEFGHJKLMNPQRSTUVWXYZ", 6);
+const genId = customAlphabet('23456789ABCDEFGHJKLMNPQRSTUVWXYZ', 6);
 
 /* Email único para clonación */
 const makeCloneEmail = (srcEmail?: string) => {
   const id = genId();
-  if (srcEmail && srcEmail.includes("@")) {
-    const [local, domain] = srcEmail.split("@");
+  if (srcEmail && srcEmail.includes('@')) {
+    const [local, domain] = srcEmail.split('@');
     return `${local}_copy-${id}@${domain}`;
   }
   return `client_copy-${id}@clone.local`;
@@ -52,15 +52,15 @@ export const ClientsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   // búsqueda + filtro
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus] = useState<StatusFilter>("all");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus] = useState<StatusFilter>('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   // info modal (ⓘ)
   const [openInfo, setOpenInfo] = useState(false);
   const showHelp = hasHelp(HELP_KEY);
-  const helpEntry = showHelp ? getHelp(HELP_KEY) : { title: "Ayuda", size: "md" as const, content: <div /> };
+  const helpEntry = showHelp ? getHelp(HELP_KEY) : { title: 'Ayuda', size: 'md' as const, content: <div /> };
 
   // modal (crear/editar/clonar)
   const [showModal, setShowModal] = useState(false);
@@ -69,16 +69,16 @@ export const ClientsPage: React.FC = () => {
   const [cloneSource, setCloneSource] = useState<Client | null>(null);
 
   const [formData, setFormData] = useState<ClientFormData>({
-    name: "",
-    email: "",
-    phone: "",
-    company: "",
-    industry: "",
-    website: "",
-    status: "active",
+    name: '',
+    email: '',
+    phone: '',
+    company: '',
+    industry: '',
+    website: '',
+    status: 'active',
   });
 
-  const canManage = hasPermission("admin_clients:view");
+  const canManage = hasPermission('admin_clients:view');
 
   useEffect(() => {
     fetchClients();
@@ -92,7 +92,7 @@ export const ClientsPage: React.FC = () => {
       setClients(resp.clients || []);
     } catch (e) {
       console.error(e);
-      sweetAlert.error("Error", "No se pudieron cargar los clientes");
+      sweetAlert.error('Error', 'No se pudieron cargar los clientes');
     } finally {
       setLoading(false);
     }
@@ -114,15 +114,15 @@ export const ClientsPage: React.FC = () => {
   const openClone = (client: Client) => {
     setCloneSource(client);
     setEditingClient(null);
-    setModalMode("clone");
+    setModalMode('clone');
     setFormData({
       name: `${client.name} (copia)`,
       email: makeCloneEmail(client.email),
-      phone: "",
-      company: "",
-      industry: "",
-      website: "",
-      status: client.status || "active",
+      phone: '',
+      company: '',
+      industry: '',
+      website: '',
+      status: client.status || 'active',
     });
     setShowModal(true);
   };
@@ -140,30 +140,30 @@ export const ClientsPage: React.FC = () => {
         website: cloneSource.website,
         attachments: cloneSource.attachments ? [...cloneSource.attachments] : [],
 
-        status: cloneSource.status || "active",
+        status: cloneSource.status || 'active',
         favorite: false,
       };
 
       const created = await clientsAPI.create(payload as any);
-      sweetAlert.success("Cliente clonado", "Se creó una copia del cliente");
+      sweetAlert.success('Cliente clonado', 'Se creó una copia del cliente');
       setClients((prev) => [created, ...prev]);
       closeModal();
     } catch (e: any) {
-      const msg = e?.response?.data?.error || "No se pudo clonar el cliente";
-      sweetAlert.error("Error", msg);
+      const msg = e?.response?.data?.error || 'No se pudo clonar el cliente';
+      sweetAlert.error('Error', msg);
     }
   };
 
   const handleDeleteClient = async (client: Client) => {
-    const res = await sweetAlert.confirm("¿Eliminar cliente?", `¿Estás seguro de eliminar a "${client.name}"?`);
+    const res = await sweetAlert.confirm('¿Eliminar cliente?', `¿Estás seguro de eliminar a "${client.name}"?`);
     if (!res.isConfirmed) return;
     try {
       await clientsAPI.remove(client._id);
       setClients((prev) => prev.filter((c) => c._id !== client._id));
-      sweetAlert.success("Cliente eliminado", "El cliente ha sido eliminado correctamente");
+      sweetAlert.success('Cliente eliminado', 'El cliente ha sido eliminado correctamente');
     } catch (e: any) {
-      const msg = e?.response?.data?.error || "No se pudo eliminar el cliente";
-      sweetAlert.error("Error", msg);
+      const msg = e?.response?.data?.error || 'No se pudo eliminar el cliente';
+      sweetAlert.error('Error', msg);
     }
   };
 
@@ -171,22 +171,22 @@ export const ClientsPage: React.FC = () => {
   const openCreate = () => {
     setEditingClient(null);
     setCloneSource(null);
-    setModalMode("create");
+    setModalMode('create');
     setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      company: "",
-      industry: "",
-      website: "",
-      status: "active",
+      name: '',
+      email: '',
+      phone: '',
+      company: '',
+      industry: '',
+      website: '',
+      status: 'active',
     });
     setShowModal(true);
   };
 
   // Detectar si debe abrir el modal automáticamente
   useEffect(() => {
-    if (searchParams.get("openModal") === "true" && canManage) {
+    if (searchParams.get('openModal') === 'true' && canManage) {
       openCreate();
       setSearchParams({});
     }
@@ -206,21 +206,21 @@ export const ClientsPage: React.FC = () => {
         ...formData,
       };
 
-      if (modalMode === "edit" && editingClient) {
+      if (modalMode === 'edit' && editingClient) {
         await clientsAPI.update(editingClient._id, payload);
-        sweetAlert.success("Cliente actualizado", "Los cambios se han guardado correctamente");
-      } else if (modalMode === "create") {
+        sweetAlert.success('Cliente actualizado', 'Los cambios se han guardado correctamente');
+      } else if (modalMode === 'create') {
         await clientsAPI.create(payload);
-        sweetAlert.success("Cliente creado", "El cliente se ha creado correctamente");
-      } else if (modalMode === "clone") {
+        sweetAlert.success('Cliente creado', 'El cliente se ha creado correctamente');
+      } else if (modalMode === 'clone') {
         await handleCloneSubmit();
         return;
       }
       closeModal();
       fetchClients();
     } catch (error: any) {
-      const message = error?.response?.data?.error || "Error al guardar el cliente";
-      sweetAlert.error("Error", message);
+      const message = error?.response?.data?.error || 'Error al guardar el cliente';
+      sweetAlert.error('Error', message);
     }
   };
 
@@ -228,9 +228,9 @@ export const ClientsPage: React.FC = () => {
   const filteredClients = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     return clients.filter((c) => {
-      const matchesSearch = q.length === 0 || fuzzyMatch(c.name || "", q) || fuzzyMatch(c.email || "", q) || fuzzyMatch(c.company || "", q) || fuzzyMatch(c.industry || "", q);
+      const matchesSearch = q.length === 0 || fuzzyMatch(c.name || '', q) || fuzzyMatch(c.email || '', q) || fuzzyMatch(c.company || '', q) || fuzzyMatch(c.industry || '', q);
 
-      const matchesStatus = filterStatus === "all" ? true : c.status === filterStatus;
+      const matchesStatus = filterStatus === 'all' ? true : c.status === filterStatus;
 
       // Filtro de fechas (createdAt)
       let matchesDate = true;
@@ -250,9 +250,9 @@ export const ClientsPage: React.FC = () => {
     });
   }, [clients, searchTerm, filterStatus, startDate, endDate]);
 
-  const modalTitle = modalMode === "clone" ? "Clonar Cliente" : modalMode === "edit" ? "Editar Cliente" : "Nuevo Cliente";
-  const modalPrimary = modalMode === "clone" ? "Clonar" : modalMode === "edit" ? "Actualizar" : "Crear";
-  const modalSubtitle = modalMode === "clone" ? "Completa los datos requeridos para la clonación" : "Datos básicos del cliente";
+  const modalTitle = modalMode === 'clone' ? 'Clonar Cliente' : modalMode === 'edit' ? 'Editar Cliente' : 'Nuevo Cliente';
+  const modalPrimary = modalMode === 'clone' ? 'Clonar' : modalMode === 'edit' ? 'Actualizar' : 'Crear';
+  const modalSubtitle = modalMode === 'clone' ? 'Completa los datos requeridos para la clonación' : 'Datos básicos del cliente';
 
   return (
     <PageLayout
@@ -270,7 +270,7 @@ export const ClientsPage: React.FC = () => {
       shouldShowInfo={showHelp}
       headerActions={
         canManage ? (
-          <button onClick={openCreate} title="Nuevo cliente" aria-label="Nuevo cliente" className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+          <button onClick={openCreate} title="Nuevo cliente" aria-label="Nuevo cliente" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
             <FontAwesomeIcon icon={faPlus} />
           </button>
         ) : undefined
@@ -305,22 +305,22 @@ export const ClientsPage: React.FC = () => {
         onClose: closeModal,
         title: modalTitle,
         subtitle: modalSubtitle,
-        size: "lg",
+        size: 'lg',
         actions: [
           {
             label: modalPrimary,
             onClick: () => {
-              const form = document.querySelector<HTMLFormElement>("#client-form");
+              const form = document.querySelector<HTMLFormElement>('#client-form');
               form?.requestSubmit();
             },
-            variant: "primary",
+            variant: 'primary',
           },
-          { label: "Cancelar", onClick: closeModal, variant: "ghost" },
+          { label: 'Cancelar', onClick: closeModal, variant: 'ghost' },
         ],
         content: (
           <form id="client-form" onSubmit={handleSubmit}>
             <div className="space-y-6">
-              {modalMode === "clone" ? (
+              {modalMode === 'clone' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="sm:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre *</label>
@@ -343,19 +343,19 @@ export const ClientsPage: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Teléfono</label>
-                    <input type="tel" value={formData.phone || ""} onChange={(e) => setFormData((p) => ({ ...p, phone: e.target.value }))} className="input-field" placeholder="+34 600 000 000" />
+                    <input type="tel" value={formData.phone || ''} onChange={(e) => setFormData((p) => ({ ...p, phone: e.target.value }))} className="input-field" placeholder="+34 600 000 000" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Empresa</label>
-                    <input type="text" value={formData.company || ""} onChange={(e) => setFormData((p) => ({ ...p, company: e.target.value }))} className="input-field" placeholder="Nombre de la empresa" />
+                    <input type="text" value={formData.company || ''} onChange={(e) => setFormData((p) => ({ ...p, company: e.target.value }))} className="input-field" placeholder="Nombre de la empresa" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Industria</label>
-                    <input type="text" value={formData.industry || ""} onChange={(e) => setFormData((p) => ({ ...p, industry: e.target.value }))} className="input-field" placeholder="Ej: Tecnología" />
+                    <input type="text" value={formData.industry || ''} onChange={(e) => setFormData((p) => ({ ...p, industry: e.target.value }))} className="input-field" placeholder="Ej: Tecnología" />
                   </div>
                   <div className="sm:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sitio web</label>
-                    <input type="url" value={formData.website || ""} onChange={(e) => setFormData((p) => ({ ...p, website: e.target.value }))} className="input-field" placeholder="https://ejemplo.com" />
+                    <input type="url" value={formData.website || ''} onChange={(e) => setFormData((p) => ({ ...p, website: e.target.value }))} className="input-field" placeholder="https://ejemplo.com" />
                   </div>
                 </div>
               )}
@@ -374,30 +374,30 @@ export const ClientsPage: React.FC = () => {
           {/* Grid de clientes */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
             {filteredClients.map((client) => {
-              const logoUrl = client.attachments?.find((a: any) => a.name?.toLowerCase().includes("logo") || a.fileType?.includes("image"))?.url;
+              const logoUrl = client.attachments?.find((a: any) => a.name?.toLowerCase().includes('logo') || a.fileType?.includes('image'))?.url;
               return (
                 <Card
                   key={client._id}
                   onClick={() => navigate(`/clients/${client._id}`)}
                   header={{
                     title: client.name,
-                    subtitle: client.company || "",
+                    subtitle: client.company || '',
                     icon: faUsers,
                     avatar: logoUrl
                       ? {
                           src: logoUrl,
-                          fallback: "?",
+                          fallback: '?',
                           alt: `${client.name} logo`,
                         }
                       : undefined,
-                    iconClassName: "text-primary-600 dark:text-primary-400",
+                    iconClassName: 'text-primary-600 dark:text-primary-400',
                     badges:
                       client.tenant && client.tenant.name
                         ? [
                             {
                               text: client.tenant.name,
-                              variant: "default" as const,
-                              className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+                              variant: 'default' as const,
+                              className: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800',
                             },
                           ]
                         : [],
@@ -407,7 +407,7 @@ export const ClientsPage: React.FC = () => {
                   }}
                   className="hover:scale-105 hover:shadow-lg transition-all duration-200"
                   footer={{
-                    leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{client.createdAt ? new Date(client.createdAt as any).toLocaleDateString() : "—"}</span>,
+                    leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{client.createdAt ? new Date(client.createdAt as any).toLocaleDateString() : '—'}</span>,
                     actions: canManage
                       ? [
                           {
@@ -416,8 +416,8 @@ export const ClientsPage: React.FC = () => {
                               e.stopPropagation();
                               openClone(client);
                             },
-                            title: "Clonar cliente",
-                            variant: "default" as const,
+                            title: 'Clonar cliente',
+                            variant: 'default' as const,
                           },
                           {
                             icon: faTrash,
@@ -425,8 +425,8 @@ export const ClientsPage: React.FC = () => {
                               e.stopPropagation();
                               handleDeleteClient(client);
                             },
-                            title: "Eliminar cliente",
-                            variant: "default" as const,
+                            title: 'Eliminar cliente',
+                            variant: 'default' as const,
                           },
                         ]
                       : [],
@@ -439,8 +439,8 @@ export const ClientsPage: React.FC = () => {
                 variant="create"
                 onClick={openCreate}
                 header={{
-                  title: "Nuevo Cliente",
-                  subtitle: "Crear un nuevo cliente en el sistema",
+                  title: 'Nuevo Cliente',
+                  subtitle: 'Crear un nuevo cliente en el sistema',
                   icon: faUsers,
                 }}
               />
@@ -450,12 +450,12 @@ export const ClientsPage: React.FC = () => {
           {!loading && filteredClients.length === 0 && (
             <EmptyState
               icon={faUsers}
-              title={startDate || endDate ? "No hay clientes en este rango de fechas" : "No hay clientes"}
-              description={startDate || endDate ? `No se encontraron clientes ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Crea tu primer cliente para comenzar."}
+              title={startDate || endDate ? 'No hay clientes en este rango de fechas' : 'No hay clientes'}
+              description={startDate || endDate ? `No se encontraron clientes ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : 'Crea tu primer cliente para comenzar.'}
               action={
                 canManage
                   ? {
-                      label: "Nuevo Cliente",
+                      label: 'Nuevo Cliente',
                       onClick: openCreate,
                     }
                   : undefined

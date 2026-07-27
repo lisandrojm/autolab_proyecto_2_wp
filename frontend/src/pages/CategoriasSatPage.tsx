@@ -1,84 +1,84 @@
-import React, { useState, useEffect } from "react";
-import { fuzzyMatch } from "../utils/searchHelpers";
-import { categoriaSatAPI, CategoriaSatItem } from "../api/categoriasSat";
-import { PageLayout } from "../components/ui/PageLayout";
-import { getHelp, hasHelp } from "../data/help/helpContent";
-import { SearchAndFilters } from "../components/ui/SearchAndFilters";
-import { EmptyState } from "../components/ui/EmptyState";
-import { LoadingSpinner } from "../components/ui/LoadingSpinner";
-import { Card } from "../components/ui/Card";
-import { ViewToggle, ViewMode } from "../components/ui/ViewToggle";
-import { sweetAlert } from "../utils/sweetAlert";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faListCheck, faChevronUp, faChevronDown, faDownload, faUpload, faFileExcel, faTimes, faPlus, faEdit, faTrash, faArrowLeft } from "@fortawesome/free-solid-svg-icons";
-import { useAuthStore } from "../stores/authStore";
+import React, { useState, useEffect } from 'react';
+import { fuzzyMatch } from '../utils/searchHelpers';
+import { categoriaSatAPI, CategoriaSatItem } from '../api/categoriasSat';
+import { PageLayout } from '../components/ui/PageLayout';
+import { getHelp, hasHelp } from '../data/help/helpContent';
+import { SearchAndFilters } from '../components/ui/SearchAndFilters';
+import { EmptyState } from '../components/ui/EmptyState';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { Card } from '../components/ui/Card';
+import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
+import { sweetAlert } from '../utils/sweetAlert';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faListCheck, faChevronUp, faChevronDown, faDownload, faUpload, faFileExcel, faTimes, faPlus, faEdit, faTrash, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { useAuthStore } from '../stores/authStore';
 
-type SortField = "numeroCategoria" | "nombre" | "sueldoBruto" | "neto" | "codigoAfip" | "presentismo" | "sueldoBasico" | "sueldoAdicional" | "fechaActualizacion";
-type SortDir = "asc" | "desc";
+type SortField = 'numeroCategoria' | 'nombre' | 'sueldoBruto' | 'neto' | 'codigoAfip' | 'presentismo' | 'sueldoBasico' | 'sueldoAdicional' | 'fechaActualizacion';
+type SortDir = 'asc' | 'desc';
 
 const formatCurrency = (value: number | undefined | null): string => {
-  if (value === undefined || value === null) return "—";
-  return value.toLocaleString("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 2 });
+  if (value === undefined || value === null) return '—';
+  return value.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2 });
 };
 
 const formatDate = (value: string | Date | undefined | null): string => {
-  if (!value) return "—";
+  if (!value) return '—';
   try {
-    return new Date(value).toLocaleDateString("es-AR");
+    return new Date(value).toLocaleDateString('es-AR');
   } catch {
     return String(value);
   }
 };
 
 export const CategoriasSatPage: React.FC = () => {
-  const HELP_KEY = "categoriasSat" as const;
+  const HELP_KEY = 'categoriasSat' as const;
   const helpEntry = getHelp(HELP_KEY);
   const [showInfo, setShowInfo] = useState(false);
   const [categorias, setCategorias] = useState<CategoriaSatItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sortField, setSortField] = useState<SortField>("numeroCategoria");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortField, setSortField] = useState<SortField>('numeroCategoria');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
 
   // Vista (Tabla vs Tarjetas)
-  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
   useEffect(() => {
     const handleResize = () => {
       const isNowLarge = window.innerWidth >= 1024;
       setIsLarge(isNowLarge);
-      if (!isNowLarge) setViewMode("cards");
+      if (!isNowLarge) setViewMode('cards');
     };
     if (window.innerWidth >= 1024) {
-      const saved = localStorage.getItem("categoriasSatViewMode");
-      if (saved === "table" || saved === "cards") setViewMode(saved as ViewMode);
+      const saved = localStorage.getItem('categoriasSatViewMode');
+      if (saved === 'table' || saved === 'cards') setViewMode(saved as ViewMode);
     }
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
   useEffect(() => {
-    if (isLarge) localStorage.setItem("categoriasSatViewMode", viewMode);
+    if (isLarge) localStorage.setItem('categoriasSatViewMode', viewMode);
   }, [viewMode, isLarge]);
-  const effectiveViewMode: ViewMode = isLarge ? viewMode : "cards";
+  const effectiveViewMode: ViewMode = isLarge ? viewMode : 'cards';
 
   const { hasPermission } = useAuthStore();
-  const canManage = hasPermission("config_holidays:view");
+  const canManage = hasPermission('config_holidays:view');
 
   // ABM Modal
   const [showModal, setShowModal] = useState(false);
   const [editingCategoria, setEditingCategoria] = useState<CategoriaSatItem | null>(null);
   const [formData, setFormData] = useState({
-    numeroCategoria: "",
-    nombre: "",
-    sueldoBasico: "",
-    sueldoAdicional: "",
-    sueldoBruto: "",
-    sueldoBrutoLetras: "",
-    presentismo: "",
-    neto: "",
-    sueldoNetoLetras: "",
-    codigoAfip: "",
-    fechaActualizacion: "",
+    numeroCategoria: '',
+    nombre: '',
+    sueldoBasico: '',
+    sueldoAdicional: '',
+    sueldoBruto: '',
+    sueldoBrutoLetras: '',
+    presentismo: '',
+    neto: '',
+    sueldoNetoLetras: '',
+    codigoAfip: '',
+    fechaActualizacion: '',
   });
 
   // Bulk Import Modal
@@ -89,30 +89,30 @@ export const CategoriasSatPage: React.FC = () => {
 
   // Global Update Modal State
   const [showGlobalModal, setShowGlobalModal] = useState(false);
-  const [selectedGlobalCat, setSelectedGlobalCat] = useState<number | "">("");
+  const [selectedGlobalCat, setSelectedGlobalCat] = useState<number | ''>('');
   const [globalFormData, setGlobalFormData] = useState({
-    sueldoBasico: "",
-    sueldoAdicional: "",
-    sueldoBruto: "",
-    sueldoBrutoLetras: "",
-    presentismo: "",
-    neto: "",
-    sueldoNetoLetras: "",
-    fechaActualizacion: "",
+    sueldoBasico: '',
+    sueldoAdicional: '',
+    sueldoBruto: '',
+    sueldoBrutoLetras: '',
+    presentismo: '',
+    neto: '',
+    sueldoNetoLetras: '',
+    fechaActualizacion: '',
   });
 
   const handleGlobalCategorySelect = (catNumVal: string) => {
     if (!catNumVal) {
-      setSelectedGlobalCat("");
+      setSelectedGlobalCat('');
       setGlobalFormData({
-        sueldoBasico: "",
-        sueldoAdicional: "",
-        sueldoBruto: "",
-        sueldoBrutoLetras: "",
-        presentismo: "",
-        neto: "",
-        sueldoNetoLetras: "",
-        fechaActualizacion: new Date().toISOString().split("T")[0],
+        sueldoBasico: '',
+        sueldoAdicional: '',
+        sueldoBruto: '',
+        sueldoBrutoLetras: '',
+        presentismo: '',
+        neto: '',
+        sueldoNetoLetras: '',
+        fechaActualizacion: new Date().toISOString().split('T')[0],
       });
       return;
     }
@@ -123,22 +123,22 @@ export const CategoriasSatPage: React.FC = () => {
     const match = categorias.find((c) => c.data?.numeroCategoria === num);
     if (match) {
       setGlobalFormData({
-        sueldoBasico: String(match.data?.sueldoBasico ?? ""),
-        sueldoAdicional: String(match.data?.sueldoAdicional ?? ""),
-        sueldoBruto: String(match.data?.sueldoBruto ?? ""),
-        sueldoBrutoLetras: match.data?.sueldoBrutoLetras || "",
-        presentismo: String(match.data?.presentismo ?? ""),
-        neto: String(match.data?.neto ?? ""),
-        sueldoNetoLetras: match.data?.sueldoNetoLetras || "",
-        fechaActualizacion: match.data?.fechaActualizacion ? new Date(match.data.fechaActualizacion).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+        sueldoBasico: String(match.data?.sueldoBasico ?? ''),
+        sueldoAdicional: String(match.data?.sueldoAdicional ?? ''),
+        sueldoBruto: String(match.data?.sueldoBruto ?? ''),
+        sueldoBrutoLetras: match.data?.sueldoBrutoLetras || '',
+        presentismo: String(match.data?.presentismo ?? ''),
+        neto: String(match.data?.neto ?? ''),
+        sueldoNetoLetras: match.data?.sueldoNetoLetras || '',
+        fechaActualizacion: match.data?.fechaActualizacion ? new Date(match.data.fechaActualizacion).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       });
     }
   };
 
   const handleGlobalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedGlobalCat === "") {
-      sweetAlert.error("Error", "Debe seleccionar un Nº de categoría");
+    if (selectedGlobalCat === '') {
+      sweetAlert.error('Error', 'Debe seleccionar un Nº de categoría');
       return;
     }
     try {
@@ -154,26 +154,26 @@ export const CategoriasSatPage: React.FC = () => {
       };
 
       await categoriaSatAPI.updateGlobal(selectedGlobalCat, payload);
-      sweetAlert.success("Categoría actualizada", `Los valores salariales se aplicaron globalmente a todos los ítems de la Categoría Nº ${selectedGlobalCat}`);
+      sweetAlert.success('Categoría actualizada', `Los valores salariales se aplicaron globalmente a todos los ítems de la Categoría Nº ${selectedGlobalCat}`);
       setShowGlobalModal(false);
       fetchCategorias();
     } catch (error: any) {
-      const message = error.response?.data?.error || "Error al actualizar la categoría globalmente";
-      sweetAlert.error("Error", message);
+      const message = error.response?.data?.error || 'Error al actualizar la categoría globalmente';
+      sweetAlert.error('Error', message);
     }
   };
 
   const openGlobalEdit = () => {
-    setSelectedGlobalCat("");
+    setSelectedGlobalCat('');
     setGlobalFormData({
-      sueldoBasico: "",
-      sueldoAdicional: "",
-      sueldoBruto: "",
-      sueldoBrutoLetras: "",
-      presentismo: "",
-      neto: "",
-      sueldoNetoLetras: "",
-      fechaActualizacion: new Date().toISOString().split("T")[0],
+      sueldoBasico: '',
+      sueldoAdicional: '',
+      sueldoBruto: '',
+      sueldoBrutoLetras: '',
+      presentismo: '',
+      neto: '',
+      sueldoNetoLetras: '',
+      fechaActualizacion: new Date().toISOString().split('T')[0],
     });
     setShowGlobalModal(true);
   };
@@ -181,17 +181,17 @@ export const CategoriasSatPage: React.FC = () => {
   const openCreate = () => {
     setEditingCategoria(null);
     setFormData({
-      numeroCategoria: "",
-      nombre: "",
-      sueldoBasico: "",
-      sueldoAdicional: "",
-      sueldoBruto: "",
-      sueldoBrutoLetras: "",
-      presentismo: "",
-      neto: "",
-      sueldoNetoLetras: "",
-      codigoAfip: "",
-      fechaActualizacion: new Date().toISOString().split("T")[0],
+      numeroCategoria: '',
+      nombre: '',
+      sueldoBasico: '',
+      sueldoAdicional: '',
+      sueldoBruto: '',
+      sueldoBrutoLetras: '',
+      presentismo: '',
+      neto: '',
+      sueldoNetoLetras: '',
+      codigoAfip: '',
+      fechaActualizacion: new Date().toISOString().split('T')[0],
     });
     setShowModal(true);
   };
@@ -199,17 +199,17 @@ export const CategoriasSatPage: React.FC = () => {
   const openEdit = (cat: CategoriaSatItem) => {
     setEditingCategoria(cat);
     setFormData({
-      numeroCategoria: String(cat.data?.numeroCategoria ?? ""),
-      nombre: cat.data?.nombre || cat.name || "",
-      sueldoBasico: String(cat.data?.sueldoBasico ?? ""),
-      sueldoAdicional: String(cat.data?.sueldoAdicional ?? ""),
-      sueldoBruto: String(cat.data?.sueldoBruto ?? ""),
-      sueldoBrutoLetras: cat.data?.sueldoBrutoLetras || "",
-      presentismo: String(cat.data?.presentismo ?? ""),
-      neto: String(cat.data?.neto ?? ""),
-      sueldoNetoLetras: cat.data?.sueldoNetoLetras || "",
-      codigoAfip: String(cat.data?.codigoAfip ?? ""),
-      fechaActualizacion: cat.data?.fechaActualizacion ? new Date(cat.data.fechaActualizacion).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+      numeroCategoria: String(cat.data?.numeroCategoria ?? ''),
+      nombre: cat.data?.nombre || cat.name || '',
+      sueldoBasico: String(cat.data?.sueldoBasico ?? ''),
+      sueldoAdicional: String(cat.data?.sueldoAdicional ?? ''),
+      sueldoBruto: String(cat.data?.sueldoBruto ?? ''),
+      sueldoBrutoLetras: cat.data?.sueldoBrutoLetras || '',
+      presentismo: String(cat.data?.presentismo ?? ''),
+      neto: String(cat.data?.neto ?? ''),
+      sueldoNetoLetras: cat.data?.sueldoNetoLetras || '',
+      codigoAfip: String(cat.data?.codigoAfip ?? ''),
+      fechaActualizacion: cat.data?.fechaActualizacion ? new Date(cat.data.fechaActualizacion).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
     });
     setShowModal(true);
   };
@@ -238,30 +238,30 @@ export const CategoriasSatPage: React.FC = () => {
 
       if (editingCategoria) {
         await categoriaSatAPI.update(editingCategoria._id, payload);
-        sweetAlert.success("Categoría actualizada", `Los cambios se han guardado y aplicado de manera global a todos los ítems con la Categoría Nº ${formData.numeroCategoria}`);
+        sweetAlert.success('Categoría actualizada', `Los cambios se han guardado y aplicado de manera global a todos los ítems con la Categoría Nº ${formData.numeroCategoria}`);
       } else {
         await categoriaSatAPI.create(payload);
-        sweetAlert.success("Categoría creada", "La categoría se ha creado correctamente");
+        sweetAlert.success('Categoría creada', 'La categoría se ha creado correctamente');
       }
       closeModal();
       fetchCategorias();
     } catch (error: any) {
-      const message = error.response?.data?.error || "Error al guardar la categoría";
-      sweetAlert.error("Error", message);
+      const message = error.response?.data?.error || 'Error al guardar la categoría';
+      sweetAlert.error('Error', message);
     }
   };
 
   const handleDelete = async (cat: CategoriaSatItem) => {
-    const name = cat.data?.nombre || cat.name || "Categoría";
-    const result = await sweetAlert.confirm("¿Eliminar categoría?", `¿Estás seguro de que quieres eliminar la categoría "${name}" (Nº ${cat.data?.numeroCategoria})?`);
+    const name = cat.data?.nombre || cat.name || 'Categoría';
+    const result = await sweetAlert.confirm('¿Eliminar categoría?', `¿Estás seguro de que quieres eliminar la categoría "${name}" (Nº ${cat.data?.numeroCategoria})?`);
     if (result.isConfirmed) {
       try {
         await categoriaSatAPI.remove(cat._id);
-        sweetAlert.success("Categoría eliminada", "La categoría ha sido eliminada correctamente");
+        sweetAlert.success('Categoría eliminada', 'La categoría ha sido eliminada correctamente');
         fetchCategorias();
       } catch (error: any) {
-        const message = error.response?.data?.error || "Error al eliminar la categoría";
-        sweetAlert.error("Error", message);
+        const message = error.response?.data?.error || 'Error al eliminar la categoría';
+        sweetAlert.error('Error', message);
       }
     }
   };
@@ -276,7 +276,7 @@ export const CategoriasSatPage: React.FC = () => {
       const data = await categoriaSatAPI.list();
       setCategorias(data);
     } catch (error) {
-      console.error("Error fetching categorias SAT:", error);
+      console.error('Error fetching categorias SAT:', error);
     } finally {
       setLoading(false);
     }
@@ -284,23 +284,23 @@ export const CategoriasSatPage: React.FC = () => {
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortField(field);
-      setSortDir("asc");
+      setSortDir('asc');
     }
   };
 
   const SortIcon: React.FC<{ field: SortField }> = ({ field }) => {
     if (sortField !== field) return <FontAwesomeIcon icon={faChevronUp} className="h-2.5 w-2.5 opacity-0 group-hover:opacity-30 ml-1" />;
-    return <FontAwesomeIcon icon={sortDir === "asc" ? faChevronUp : faChevronDown} className="h-2.5 w-2.5 text-blue-500 ml-1" />;
+    return <FontAwesomeIcon icon={sortDir === 'asc' ? faChevronUp : faChevronDown} className="h-2.5 w-2.5 text-blue-500 ml-1" />;
   };
 
   const filtered = categorias
     .filter((c) => {
       const q = searchTerm.trim().toLowerCase();
       if (q.length === 0) return true;
-      return fuzzyMatch(c.name || "", q) || fuzzyMatch(c.data?.nombre || "", q) || fuzzyMatch(String(c.data?.numeroCategoria ?? ""), q) || fuzzyMatch(String(c.data?.codigoAfip ?? ""), q) || fuzzyMatch(c.data?.sueldoBrutoLetras || "", q) || fuzzyMatch(c.data?.sueldoNetoLetras || "", q);
+      return fuzzyMatch(c.name || '', q) || fuzzyMatch(c.data?.nombre || '', q) || fuzzyMatch(String(c.data?.numeroCategoria ?? ''), q) || fuzzyMatch(String(c.data?.codigoAfip ?? ''), q) || fuzzyMatch(c.data?.sueldoBrutoLetras || '', q) || fuzzyMatch(c.data?.sueldoNetoLetras || '', q);
     })
     .sort((a, b) => {
       const valA = a.data?.[sortField];
@@ -308,27 +308,27 @@ export const CategoriasSatPage: React.FC = () => {
       if (valA == null && valB == null) return 0;
       if (valA == null) return 1;
       if (valB == null) return -1;
-      if (typeof valA === "number" && typeof valB === "number") {
-        return sortDir === "asc" ? valA - valB : valB - valA;
+      if (typeof valA === 'number' && typeof valB === 'number') {
+        return sortDir === 'asc' ? valA - valB : valB - valA;
       }
-      return sortDir === "asc" ? String(valA).localeCompare(String(valB)) : String(valB).localeCompare(String(valA));
+      return sortDir === 'asc' ? String(valA).localeCompare(String(valB)) : String(valB).localeCompare(String(valA));
     });
 
   const handleDownloadTemplate = async () => {
     try {
       const blob = await categoriaSatAPI.downloadTemplate();
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
+      const link = document.createElement('a');
       link.href = url;
-      link.setAttribute("download", "plantilla_categorias_sat.xlsx");
+      link.setAttribute('download', 'plantilla_categorias_sat.xlsx');
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      sweetAlert.success("Descarga exitosa", "La plantilla de Excel se ha descargado correctamente");
+      sweetAlert.success('Descarga exitosa', 'La plantilla de Excel se ha descargado correctamente');
     } catch (error) {
-      console.error("Error downloading template:", error);
-      sweetAlert.error("Error", "No se pudo descargar la plantilla");
+      console.error('Error downloading template:', error);
+      sweetAlert.error('Error', 'No se pudo descargar la plantilla');
     }
   };
 
@@ -347,19 +347,19 @@ export const CategoriasSatPage: React.FC = () => {
       setImporting(true);
       setImportErrors([]);
       const res = await categoriaSatAPI.importExcel(importFile);
-      sweetAlert.success("Actualización completada", res.message || `Se actualizaron ${res.count} categorías.`);
+      sweetAlert.success('Actualización completada', res.message || `Se actualizaron ${res.count} categorías.`);
       setShowImportModal(false);
       setImportFile(null);
       fetchCategorias();
     } catch (error: any) {
-      console.error("Import error:", error);
+      console.error('Import error:', error);
       const resErrors = error.response?.data?.details;
-      const resMsg = error.response?.data?.error || "Error al importar el archivo Excel";
+      const resMsg = error.response?.data?.error || 'Error al importar el archivo Excel';
 
       if (Array.isArray(resErrors)) {
         setImportErrors(resErrors);
       } else {
-        sweetAlert.error("Error de importación", resMsg);
+        sweetAlert.error('Error de importación', resMsg);
       }
     } finally {
       setImporting(false);
@@ -379,7 +379,7 @@ export const CategoriasSatPage: React.FC = () => {
       headerActions={
         <div className="flex items-center gap-3">
           {canManage && (
-            <button onClick={openCreate} title="Nueva categoría" aria-label="Nueva categoría" className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+            <button onClick={openCreate} title="Nueva categoría" aria-label="Nueva categoría" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
               <FontAwesomeIcon icon={faPlus} />
             </button>
           )}
@@ -418,22 +418,22 @@ export const CategoriasSatPage: React.FC = () => {
       modal={{
         isOpen: showModal,
         onClose: closeModal,
-        title: editingCategoria ? "Editar Categoría SAT" : "Nueva Categoría SAT",
-        subtitle: editingCategoria ? "Modifica los datos de la categoría" : "Agrega una categoría de forma manual",
-        size: "lg",
+        title: editingCategoria ? 'Editar Categoría SAT' : 'Nueva Categoría SAT',
+        subtitle: editingCategoria ? 'Modifica los datos de la categoría' : 'Agrega una categoría de forma manual',
+        size: 'lg',
         actions: [
           {
-            label: editingCategoria ? "Actualizar" : "Crear",
+            label: editingCategoria ? 'Actualizar' : 'Crear',
             onClick: () => {
-              const form = document.querySelector<HTMLFormElement>("#categoria-sat-form");
+              const form = document.querySelector<HTMLFormElement>('#categoria-sat-form');
               form?.requestSubmit();
             },
-            variant: "primary",
+            variant: 'primary',
           },
           {
-            label: "Cancelar",
+            label: 'Cancelar',
             onClick: closeModal,
-            variant: "ghost",
+            variant: 'ghost',
           },
         ],
         content: (
@@ -506,18 +506,18 @@ export const CategoriasSatPage: React.FC = () => {
         <EmptyState
           icon={faListCheck}
           title="No hay categorías SAT"
-          description={searchTerm ? "No se encontraron categorías que coincidan con la búsqueda." : "No se encontraron categorías SAT en la base de datos."}
+          description={searchTerm ? 'No se encontraron categorías que coincidan con la búsqueda.' : 'No se encontraron categorías SAT en la base de datos.'}
           action={
             canManage && !searchTerm
               ? {
-                  label: "Nueva Categoría",
+                  label: 'Nueva Categoría',
                   onClick: openCreate,
                   icon: faPlus,
                 }
               : undefined
           }
         />
-      ) : effectiveViewMode === "cards" ? (
+      ) : effectiveViewMode === 'cards' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
           {filtered.map((cat) => (
             <Card
@@ -525,18 +525,34 @@ export const CategoriasSatPage: React.FC = () => {
               onClick={canManage ? () => openEdit(cat) : undefined}
               className="cursor-pointer hover:scale-[1.03] hover:shadow-lg transition-all duration-200"
               header={{
-                title: cat.data?.nombre || cat.name || "—",
+                title: cat.data?.nombre || cat.name || '—',
                 subtitle: cat.data?.codigoAfip ? `Cód. AFIP ${cat.data.codigoAfip}` : undefined,
                 icon: faListCheck,
-                badges: [{ text: `Categoría ${cat.data?.numeroCategoria ?? "—"}`, variant: "blue" }],
+                badges: [{ text: `Categoría ${cat.data?.numeroCategoria ?? '—'}`, variant: 'blue' }],
               }}
               footer={
                 canManage
                   ? {
                       leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">Actualizado: {formatDate(cat.data?.fechaActualizacion)}</span>,
                       actions: [
-                        { icon: faEdit, onClick: (e) => { e.stopPropagation(); openEdit(cat); }, title: "Editar", variant: "default" },
-                        { icon: faTrash, onClick: (e) => { e.stopPropagation(); handleDelete(cat); }, title: "Eliminar", variant: "default" },
+                        {
+                          icon: faEdit,
+                          onClick: (e) => {
+                            e.stopPropagation();
+                            openEdit(cat);
+                          },
+                          title: 'Editar',
+                          variant: 'default',
+                        },
+                        {
+                          icon: faTrash,
+                          onClick: (e) => {
+                            e.stopPropagation();
+                            handleDelete(cat);
+                          },
+                          title: 'Eliminar',
+                          variant: 'default',
+                        },
                       ],
                     }
                   : undefined
@@ -566,13 +582,7 @@ export const CategoriasSatPage: React.FC = () => {
               </div>
             </Card>
           ))}
-          {canManage && (
-            <Card
-              variant="create"
-              onClick={openCreate}
-              header={{ title: "Nueva Categoría", subtitle: "Agregar categoría manualmente", icon: faListCheck }}
-            />
-          )}
+          {canManage && <Card variant="create" onClick={openCreate} header={{ title: 'Nueva Categoría', subtitle: 'Agregar categoría manualmente', icon: faListCheck }} />}
         </div>
       ) : (
         <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm mx-0.5 lg:mx-0">
@@ -580,55 +590,55 @@ export const CategoriasSatPage: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none" onClick={() => handleSort("numeroCategoria")}>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none" onClick={() => handleSort('numeroCategoria')}>
                     <div className="flex items-center">
                       Nº Cat.
                       <SortIcon field="numeroCategoria" />
                     </div>
                   </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none" onClick={() => handleSort("nombre")}>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none" onClick={() => handleSort('nombre')}>
                     <div className="flex items-center">
                       Nombre
                       <SortIcon field="nombre" />
                     </div>
                   </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none" onClick={() => handleSort("sueldoBasico")}>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none" onClick={() => handleSort('sueldoBasico')}>
                     <div className="flex items-center">
                       Sueldo Básico
                       <SortIcon field="sueldoBasico" />
                     </div>
                   </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none" onClick={() => handleSort("sueldoAdicional")}>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none" onClick={() => handleSort('sueldoAdicional')}>
                     <div className="flex items-center">
                       Adicional
                       <SortIcon field="sueldoAdicional" />
                     </div>
                   </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none" onClick={() => handleSort("sueldoBruto")}>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none" onClick={() => handleSort('sueldoBruto')}>
                     <div className="flex items-center">
                       Sueldo Bruto
                       <SortIcon field="sueldoBruto" />
                     </div>
                   </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none hidden xl:table-cell" onClick={() => handleSort("presentismo")}>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none hidden xl:table-cell" onClick={() => handleSort('presentismo')}>
                     <div className="flex items-center">
                       Presentismo
                       <SortIcon field="presentismo" />
                     </div>
                   </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none" onClick={() => handleSort("neto")}>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none" onClick={() => handleSort('neto')}>
                     <div className="flex items-center">
                       Neto
                       <SortIcon field="neto" />
                     </div>
                   </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none hidden lg:table-cell" onClick={() => handleSort("codigoAfip")}>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none hidden lg:table-cell" onClick={() => handleSort('codigoAfip')}>
                     <div className="flex items-center">
                       Cód. AFIP
                       <SortIcon field="codigoAfip" />
                     </div>
                   </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none hidden lg:table-cell" onClick={() => handleSort("fechaActualizacion")}>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none hidden lg:table-cell" onClick={() => handleSort('fechaActualizacion')}>
                     <div className="flex items-center">
                       Actualización
                       <SortIcon field="fechaActualizacion" />
@@ -641,10 +651,10 @@ export const CategoriasSatPage: React.FC = () => {
                 {filtered.map((cat) => (
                   <tr key={cat._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                     <td className="px-4 py-3">
-                      <span className="inline-flex items-center justify-center h-7 w-10 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-bold">{cat.data?.numeroCategoria ?? "—"}</span>
+                      <span className="inline-flex items-center justify-center h-7 w-10 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-bold">{cat.data?.numeroCategoria ?? '—'}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{cat.data?.nombre || cat.name || "—"}</span>
+                      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{cat.data?.nombre || cat.name || '—'}</span>
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">{formatCurrency(cat.data?.sueldoBasico)}</span>
@@ -672,7 +682,7 @@ export const CategoriasSatPage: React.FC = () => {
                       )}
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{cat.data?.codigoAfip ?? "—"}</span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{cat.data?.codigoAfip ?? '—'}</span>
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
                       <span className="text-xs text-gray-500 dark:text-gray-400">{formatDate(cat.data?.fechaActualizacion)}</span>
@@ -733,7 +743,7 @@ export const CategoriasSatPage: React.FC = () => {
               <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-8 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900/20 hover:border-blue-500 dark:hover:border-blue-500 transition-all cursor-pointer relative group">
                 <input type="file" accept=".xlsx, .xls" required onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
                 <FontAwesomeIcon icon={faFileExcel} className="h-10 w-10 text-green-500 dark:text-green-400 mb-3 group-hover:scale-110 transition-transform" />
-                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{importFile ? importFile.name : "Selecciona o arrastra tu archivo Excel"}</span>
+                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{importFile ? importFile.name : 'Selecciona o arrastra tu archivo Excel'}</span>
                 <span className="text-xs text-gray-500 mt-1">Soporta archivos .xlsx y .xls</span>
               </div>
 
@@ -751,7 +761,7 @@ export const CategoriasSatPage: React.FC = () => {
                   Cancelar
                 </button>
                 <button type="submit" disabled={importing || !importFile} className="flex-1 rounded-lg h-10 bg-green-600 hover:bg-green-700 text-white font-semibold shadow-md shadow-green-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">
-                  {importing ? "Importando..." : "Subir e Importar"}
+                  {importing ? 'Importando...' : 'Subir e Importar'}
                 </button>
               </div>
             </form>
@@ -793,7 +803,7 @@ export const CategoriasSatPage: React.FC = () => {
                 </select>
               </div>
 
-              {selectedGlobalCat !== "" && (
+              {selectedGlobalCat !== '' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slideDown">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sueldo Básico</label>
@@ -842,7 +852,7 @@ export const CategoriasSatPage: React.FC = () => {
                 <button type="button" onClick={() => setShowGlobalModal(false)} className="flex-1 rounded-lg h-10 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-semibold bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                   Cancelar
                 </button>
-                <button type="submit" disabled={selectedGlobalCat === ""} className="flex-1 rounded-lg h-10 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-md shadow-indigo-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">
+                <button type="submit" disabled={selectedGlobalCat === ''} className="flex-1 rounded-lg h-10 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-md shadow-indigo-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">
                   Guardar Cambios
                 </button>
               </div>

@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from "react";
-import { fuzzyMatch } from "../utils/searchHelpers";
-import { useAuthStore } from "../stores/authStore";
-import { positionsAPI, Position } from "../api/positions";
-import { PageLayout } from "../components/ui/PageLayout";
-import { SearchAndFilters } from "../components/ui/SearchAndFilters";
-import { EmptyState } from "../components/ui/EmptyState";
-import { LoadingSpinner } from "../components/ui/LoadingSpinner";
-import { Card } from "../components/ui/Card";
-import { sweetAlert } from "../utils/sweetAlert";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserTie, faUserGraduate, faEdit, faTrash, faPlus, faShieldHalved, faGlobe, faUserGear, faTable, faGrip, faClock, faUserShield, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
-import { getHelp, hasHelp } from "../data/help/helpContent";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { fuzzyMatch } from '../utils/searchHelpers';
+import { useAuthStore } from '../stores/authStore';
+import { positionsAPI, Position } from '../api/positions';
+import { PageLayout } from '../components/ui/PageLayout';
+import { SearchAndFilters } from '../components/ui/SearchAndFilters';
+import { EmptyState } from '../components/ui/EmptyState';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { Card } from '../components/ui/Card';
+import { sweetAlert } from '../utils/sweetAlert';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faUserTie, faUserGraduate, faEdit, faTrash, faPlus, faShieldHalved, faGlobe, faUserGear, faTable, faGrip, faClock, faUserShield, faLayerGroup } from '@fortawesome/free-solid-svg-icons';
+import { getHelp, hasHelp } from '../data/help/helpContent';
+import { useNavigate } from 'react-router-dom';
 
-const HELP_KEY = "positions" as const;
+const HELP_KEY = 'positions' as const;
 
 interface PositionFormData {
   name: string;
@@ -27,22 +27,22 @@ export const PositionsPage: React.FC = () => {
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   const [showModal, setShowModal] = useState(false);
   const [editingPosition, setEditingPosition] = useState<Position | null>(null);
   const [formData, setFormData] = useState<PositionFormData>({
-    name: "",
-    description: "",
+    name: '',
+    description: '',
   });
 
   const [viewOpen, setViewOpen] = useState(false);
   const [viewPosition, setViewPosition] = useState<Position | null>(null);
 
   // View Mode Logic
-  const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
   const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
 
   useEffect(() => {
@@ -50,31 +50,31 @@ export const PositionsPage: React.FC = () => {
       const isNowLarge = window.innerWidth >= 1024;
       setIsLarge(isNowLarge);
       if (!isNowLarge) {
-        setViewMode("cards");
+        setViewMode('cards');
       }
     };
 
     if (window.innerWidth >= 1024) {
-      const saved = localStorage.getItem("positionsViewMode");
-      if (saved === "table" || saved === "cards") {
-        setViewMode(saved as "table" | "cards");
+      const saved = localStorage.getItem('positionsViewMode');
+      if (saved === 'table' || saved === 'cards') {
+        setViewMode(saved as 'table' | 'cards');
       }
     }
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
     if (isLarge) {
-      localStorage.setItem("positionsViewMode", viewMode);
+      localStorage.setItem('positionsViewMode', viewMode);
     }
   }, [viewMode, isLarge]);
 
   const [openInfo, setOpenInfo] = useState(false);
   const helpEntry = getHelp(HELP_KEY);
 
-  const canManage = hasPermission("admin_positions:view");
+  const canManage = hasPermission('admin_positions:view');
 
   useEffect(() => {
     fetchPositions();
@@ -86,8 +86,8 @@ export const PositionsPage: React.FC = () => {
       const response = await positionsAPI.list({});
       setPositions(response.positions);
     } catch (error) {
-      console.error("Error fetching positions:", error);
-      sweetAlert.error("Error", "No se pudieron cargar los cargos");
+      console.error('Error fetching positions:', error);
+      sweetAlert.error('Error', 'No se pudieron cargar los cargos');
     } finally {
       setLoading(false);
     }
@@ -96,8 +96,8 @@ export const PositionsPage: React.FC = () => {
   const openCreate = () => {
     setEditingPosition(null);
     setFormData({
-      name: "",
-      description: "",
+      name: '',
+      description: '',
     });
     setShowModal(true);
   };
@@ -106,7 +106,7 @@ export const PositionsPage: React.FC = () => {
     setEditingPosition(position);
     setFormData({
       name: position.name,
-      description: position.description || "",
+      description: position.description || '',
     });
     setShowModal(true);
   };
@@ -117,7 +117,7 @@ export const PositionsPage: React.FC = () => {
       setViewPosition(fullPosition);
       setViewOpen(true);
     } catch (error) {
-      console.error("Error fetching position details:", error);
+      console.error('Error fetching position details:', error);
       setViewPosition(position);
       setViewOpen(true);
     }
@@ -138,36 +138,36 @@ export const PositionsPage: React.FC = () => {
     try {
       if (editingPosition) {
         await positionsAPI.update(editingPosition._id, formData);
-        sweetAlert.success("Cargo actualizado", "Los cambios se han guardado correctamente");
+        sweetAlert.success('Cargo actualizado', 'Los cambios se han guardado correctamente');
       } else {
         await positionsAPI.create(formData);
-        sweetAlert.success("Cargo creado", "El cargo se ha creado correctamente");
+        sweetAlert.success('Cargo creado', 'El cargo se ha creado correctamente');
       }
       closeModal();
       fetchPositions();
     } catch (error: any) {
-      const message = error.response?.data?.error || "Error al guardar el cargo";
-      sweetAlert.error("Error", message);
+      const message = error.response?.data?.error || 'Error al guardar el cargo';
+      sweetAlert.error('Error', message);
     }
   };
 
   const handleDelete = async (position: Position) => {
-    const result = await sweetAlert.confirm("¿Eliminar cargo?", `¿Estás seguro de que quieres eliminar el cargo "${position.name}"?`);
+    const result = await sweetAlert.confirm('¿Eliminar cargo?', `¿Estás seguro de que quieres eliminar el cargo "${position.name}"?`);
     if (result.isConfirmed) {
       try {
         await positionsAPI.remove(position._id);
-        sweetAlert.success("Cargo eliminado", "El cargo ha sido eliminado correctamente");
+        sweetAlert.success('Cargo eliminado', 'El cargo ha sido eliminado correctamente');
         fetchPositions();
       } catch (error: any) {
-        const message = error.response?.data?.error || "Error al eliminar el cargo";
-        sweetAlert.error("Error", message);
+        const message = error.response?.data?.error || 'Error al eliminar el cargo';
+        sweetAlert.error('Error', message);
       }
     }
   };
 
   const filteredPositions = positions.filter((p) => {
     const q = searchTerm.trim().toLowerCase();
-    const matchesSearch = q.length === 0 || fuzzyMatch(p.name, q) || fuzzyMatch(p.description || "", q);
+    const matchesSearch = q.length === 0 || fuzzyMatch(p.name, q) || fuzzyMatch(p.description || '', q);
 
     let matchesDate = true;
     if (startDate || endDate) {
@@ -203,27 +203,27 @@ export const PositionsPage: React.FC = () => {
       headerActions={
         <div className="flex items-center gap-3">
           {canManage && (
-            <button onClick={openCreate} title="Nuevo cargo" aria-label="Nuevo cargo" className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+            <button onClick={openCreate} title="Nuevo cargo" aria-label="Nuevo cargo" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
               <FontAwesomeIcon icon={faPlus} />
             </button>
           )}
-          <button onClick={() => navigate("/users")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate('/users')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserGear} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Usuarios</span>
           </button>
-          <button onClick={() => navigate("/levels")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate('/levels')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Niveles</span>
           </button>
-          <button onClick={() => navigate("/areas")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate('/areas')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Áreas</span>
           </button>
-          <button onClick={() => navigate("/shifts")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate('/shifts')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faClock} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Turnos</span>
           </button>
-          <button onClick={() => navigate("/roles")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate('/roles')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Roles</span>
           </button>
@@ -246,10 +246,10 @@ export const PositionsPage: React.FC = () => {
           </div>
           {isLarge && (
             <div className="flex items-center gap-2 shrink-0">
-              <button onClick={() => setViewMode("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas">
+              <button onClick={() => setViewMode('cards')} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'cards' ? 'bg-blue-500 text-white shadow-sm border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`} title="Vista de tarjetas">
                 <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
               </button>
-              <button onClick={() => setViewMode("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla">
+              <button onClick={() => setViewMode('table')} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'table' ? 'bg-blue-500 text-white shadow-sm border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`} title="Vista de tabla">
                 <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
               </button>
             </div>
@@ -259,26 +259,26 @@ export const PositionsPage: React.FC = () => {
       viewModal={{
         isOpen: viewOpen,
         onClose: closeView,
-        title: viewPosition ? viewPosition.name : "Cargo",
+        title: viewPosition ? viewPosition.name : 'Cargo',
         subtitle: viewPosition?.description,
-        size: "md",
+        size: 'md',
         actions: [
           ...(canManage
             ? [
                 {
-                  label: "Editar cargo",
+                  label: 'Editar cargo',
                   onClick: () => {
                     if (viewPosition) openEdit(viewPosition);
                     closeView();
                   },
-                  variant: "secondary",
+                  variant: 'secondary',
                 } as const,
               ]
             : []),
           {
-            label: "Cancelar",
+            label: 'Cancelar',
             onClick: closeView,
-            variant: "ghost",
+            variant: 'ghost',
           },
         ],
         content: viewPosition ? (
@@ -293,7 +293,7 @@ export const PositionsPage: React.FC = () => {
             {/* Descripción */}
             <div>
               <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Descripción</h4>
-              <p className="text-sm text-gray-700 dark:text-gray-300">{viewPosition.description || "—"}</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300">{viewPosition.description || '—'}</p>
             </div>
 
             {/* Niveles */}
@@ -304,15 +304,15 @@ export const PositionsPage: React.FC = () => {
                   Niveles Disponibles
                 </h4>
 
-                <button onClick={() => navigate("/levels")} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                <button onClick={() => navigate('/levels')} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
                   Administrar niveles
                 </button>
               </div>
 
               {/* Agrupar niveles */}
               {(() => {
-                const específicos = (viewPosition.levels || []).filter((lvl) => lvl.type !== "general");
-                const generales = (viewPosition.levels || []).filter((lvl) => lvl.type === "general");
+                const específicos = (viewPosition.levels || []).filter((lvl) => lvl.type !== 'general');
+                const generales = (viewPosition.levels || []).filter((lvl) => lvl.type === 'general');
 
                 return (
                   <div className="space-y-6">
@@ -375,22 +375,22 @@ export const PositionsPage: React.FC = () => {
       modal={{
         isOpen: showModal,
         onClose: closeModal,
-        title: editingPosition ? "Editar Cargo" : "Nuevo Cargo",
-        subtitle: "Define nombre y descripción",
-        size: "md",
+        title: editingPosition ? 'Editar Cargo' : 'Nuevo Cargo',
+        subtitle: 'Define nombre y descripción',
+        size: 'md',
         actions: [
           {
-            label: editingPosition ? "Actualizar" : "Crear",
+            label: editingPosition ? 'Actualizar' : 'Crear',
             onClick: () => {
-              const form = document.querySelector<HTMLFormElement>("#position-form");
+              const form = document.querySelector<HTMLFormElement>('#position-form');
               form?.requestSubmit();
             },
-            variant: "primary",
+            variant: 'primary',
           },
           {
-            label: "Cancelar",
+            label: 'Cancelar',
             onClick: closeModal,
-            variant: "ghost",
+            variant: 'ghost',
           },
         ],
         content: (
@@ -417,10 +417,10 @@ export const PositionsPage: React.FC = () => {
         </div>
       ) : (
         <>
-          {viewMode === "cards" ? (
+          {viewMode === 'cards' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
               {filteredPositions.map((position) => {
-                const specificLevels = position.levels ? position.levels.filter((level) => level.type !== "general") : [];
+                const specificLevels = position.levels ? position.levels.filter((level) => level.type !== 'general') : [];
 
                 return (
                   <Card
@@ -436,8 +436,8 @@ export const PositionsPage: React.FC = () => {
                           ? [
                               {
                                 text: position.tenant.name,
-                                variant: "default" as const,
-                                className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+                                variant: 'default' as const,
+                                className: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800',
                               },
                             ]
                           : [],
@@ -445,7 +445,7 @@ export const PositionsPage: React.FC = () => {
                     footer={
                       canManage
                         ? {
-                            leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{position.createdAt ? new Date(position.createdAt).toLocaleDateString() : ""}</span>,
+                            leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{position.createdAt ? new Date(position.createdAt).toLocaleDateString() : ''}</span>,
                             actions: [
                               {
                                 icon: faEdit,
@@ -453,8 +453,8 @@ export const PositionsPage: React.FC = () => {
                                   e.stopPropagation();
                                   openEdit(position);
                                 },
-                                title: "Editar",
-                                variant: "default",
+                                title: 'Editar',
+                                variant: 'default',
                               },
                               {
                                 icon: faTrash,
@@ -462,8 +462,8 @@ export const PositionsPage: React.FC = () => {
                                   e.stopPropagation();
                                   handleDelete(position);
                                 },
-                                title: "Eliminar",
-                                variant: "default",
+                                title: 'Eliminar',
+                                variant: 'default',
                               },
                             ],
                           }
@@ -494,8 +494,8 @@ export const PositionsPage: React.FC = () => {
                   variant="create"
                   onClick={openCreate}
                   header={{
-                    title: "Nuevo Cargo",
-                    subtitle: "Crear un nuevo cargo para la organización",
+                    title: 'Nuevo Cargo',
+                    subtitle: 'Crear un nuevo cargo para la organización',
                     icon: faUserTie,
                   }}
                 />
@@ -516,7 +516,7 @@ export const PositionsPage: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
                     {filteredPositions.map((position) => {
-                      const specificLevels = position.levels ? position.levels.filter((level) => level.type !== "general") : [];
+                      const specificLevels = position.levels ? position.levels.filter((level) => level.type !== 'general') : [];
                       return (
                         <tr key={position._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer" onClick={() => openView(position)}>
                           <td className="px-6 py-4">
@@ -531,7 +531,7 @@ export const PositionsPage: React.FC = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">{position.description || "—"}</span>
+                            <span className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">{position.description || '—'}</span>
                           </td>
                           <td className="px-6 py-4">
                             {specificLevels.length > 0 ? (
@@ -544,7 +544,7 @@ export const PositionsPage: React.FC = () => {
                             )}
                           </td>
                           <td className="px-6 py-4">
-                            <span className="text-sm text-gray-600 dark:text-gray-400">{position.createdAt ? new Date(position.createdAt).toLocaleDateString() : "—"}</span>
+                            <span className="text-sm text-gray-600 dark:text-gray-400">{position.createdAt ? new Date(position.createdAt).toLocaleDateString() : '—'}</span>
                           </td>
                           {canManage && (
                             <td className="px-6 py-4 text-right">
@@ -584,12 +584,12 @@ export const PositionsPage: React.FC = () => {
           {!loading && filteredPositions.length === 0 && (
             <EmptyState
               icon={faShieldHalved}
-              title={startDate || endDate ? "No hay cargos en este rango de fechas" : "No hay cargos"}
-              description={startDate || endDate ? `No se encontraron cargos ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Crea tu primer cargo para comenzar."}
+              title={startDate || endDate ? 'No hay cargos en este rango de fechas' : 'No hay cargos'}
+              description={startDate || endDate ? `No se encontraron cargos ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : 'Crea tu primer cargo para comenzar.'}
               action={
                 canManage
                   ? {
-                      label: "Nuevo Cargo",
+                      label: 'Nuevo Cargo',
                       onClick: openCreate,
                       icon: faPlus,
                     }
