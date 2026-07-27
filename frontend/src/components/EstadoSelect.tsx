@@ -34,6 +34,17 @@ const ESTADO_STYLES: Record<string, { label?: string; cls: string }> = {
   "pedido servicios": { cls: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300" },
 };
 
+/** Orden fijo de los estados en el dropdown. Los no listados van al final (orden original). */
+const ESTADO_ORDER: Record<string, number> = {
+  "falta pedido de afip": 0,
+  "pedido de afip": 0,
+  "pedido servicios": 1,
+  "envio de documentacion": 2,
+  "firma pendiente": 3,
+  disponible: 4,
+};
+const orderOf = (name: string) => (normalize(name) in ESTADO_ORDER ? ESTADO_ORDER[normalize(name)] : 999);
+
 const styleFor = (name: string) => ESTADO_STYLES[normalize(name)] || { cls: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300" };
 const labelFor = (name: string) => styleFor(name).label || name;
 
@@ -56,6 +67,7 @@ export const EstadoSelect: React.FC<EstadoSelectProps> = ({ options, value, onCh
   }, [open]);
 
   const selected = useMemo(() => options.find((o) => String(o.value) === String(value)), [options, value]);
+  const sortedOptions = useMemo(() => [...options].sort((a, b) => orderOf(a.name) - orderOf(b.name)), [options]);
 
   return (
     <div className="relative" ref={ref}>
@@ -66,10 +78,10 @@ export const EstadoSelect: React.FC<EstadoSelectProps> = ({ options, value, onCh
 
       {open && (
         <div className="absolute z-50 mt-1 w-full max-h-60 overflow-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1">
-          {options.length === 0 ? (
+          {sortedOptions.length === 0 ? (
             <p className="px-3 py-2 text-sm text-gray-500">No hay estados.</p>
           ) : (
-            options.map((o) => (
+            sortedOptions.map((o) => (
               <button
                 key={o.value}
                 type="button"
