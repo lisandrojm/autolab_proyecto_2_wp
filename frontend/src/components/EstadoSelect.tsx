@@ -49,7 +49,7 @@ const styleFor = (name: string) => ESTADO_STYLES[normalize(name)] || { cls: "bg-
 const labelFor = (name: string) => styleFor(name).label || name;
 
 const Badge: React.FC<{ name: string }> = ({ name }) => (
-  <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold ${styleFor(name).cls}`}>{labelFor(name)}</span>
+  <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide ${styleFor(name).cls}`}>{labelFor(name)}</span>
 );
 
 /** Select de Estado que muestra cada opción como un badge de color (el <select> nativo no permite colorear opciones). */
