@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileContract, faDownload, faEdit, faTrash, faFileLines, faArrowUpRightFromSquare, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
+import { faFileContract, faDownload, faEdit, faTrash, faFileLines, faArrowUpRightFromSquare, faCircleInfo, faFilePdf } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
 import { InfoModal } from "../ui/InfoModal";
 import { User, Contract } from "../../api/users";
@@ -276,6 +276,11 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                   </div>
 
                   <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {isActiveInTable && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold uppercase bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                        Último contrato
+                      </span>
+                    )}
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold uppercase ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>
                       {vigente ? "Vigente" : "No vigente"}
                     </span>
@@ -305,6 +310,7 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                     <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Contrato | Empresa</p>
                     <div className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
                       <span className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-1.5 flex-wrap min-w-0" title={contratoEmpresa ? `${tipoContrato} | ${contratoEmpresa}` : tipoContrato}>
+                        <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
                         <span className="truncate">{tipoContrato}</span>
                         {effectiveContratoEmpresas.map((emp) => (
                           <span key={emp.id} className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/50 shrink-0" title={savedContratoEmpresaId ? "Empresa fija del contrato" : "Empresa del proyecto"}>
@@ -371,6 +377,7 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                           return (
                           <div key={r._id} className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
                             <span className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-1.5 flex-wrap min-w-0" title={releaseEmpresa ? `${r.name} | ${releaseEmpresa}` : r.name}>
+                              <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
                               <span className="truncate">{r.name}</span>
                               {effectiveReleaseEmpresas.map((emp) => (
                                 <span key={emp.id} className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 border border-teal-100 dark:border-teal-800/50 shrink-0" title={savedReleaseEmpresaId ? "Empresa fija del release" : "Empresa del proyecto"}>

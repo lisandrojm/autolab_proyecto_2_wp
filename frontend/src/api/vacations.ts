@@ -129,8 +129,14 @@ export const vacationsAPI = {
     return response.data;
   },
 
-  regeneratePDF: async (id: string): Promise<VacationRequest> => {
-    const response = await axios.post(`/vacations/${id}/regenerate-pdf`);
+  regeneratePDF: async (id: string, empresaId?: string): Promise<VacationRequest> => {
+    const response = await axios.post(`/vacations/${id}/regenerate-pdf`, { empresaId });
+    return response.data;
+  },
+
+  /** Info de empresa para descargar el PDF: si el contrato tiene empresa fija o hay que elegir. */
+  getEmpresaInfo: async (id: string): Promise<{ hasContractEmpresa: boolean; contractEmpresa: { id: string; label: string } | null; projectEmpresas: { id: string; label: string }[] }> => {
+    const response = await axios.get(`/vacations/${id}/empresa-info`);
     return response.data;
   },
 

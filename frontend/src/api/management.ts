@@ -272,8 +272,13 @@ export const hrManagementAPI = {
       const { data } = await axios.put<Order>(`/hr-management/orders/${orderId}/mark-signed`);
       return data;
     },
-    regeneratePdf: async (orderId: string) => {
-      const { data } = await axios.post<{ success: boolean; message: string; pdfUrl: string }>(`/hr-admin/orders/${orderId}/regenerate-pdf`);
+    regeneratePdf: async (orderId: string, empresaId?: string) => {
+      const { data } = await axios.post<{ success: boolean; message: string; pdfUrl: string }>(`/hr-admin/orders/${orderId}/regenerate-pdf`, { empresaId });
+      return data;
+    },
+    /** Info de empresa para descargar el PDF: si el contrato tiene empresa fija o hay que elegir. */
+    getEmpresaInfo: async (orderId: string) => {
+      const { data } = await axios.get<{ hasContractEmpresa: boolean; contractEmpresa: { id: string; label: string } | null; projectEmpresas: { id: string; label: string }[] }>(`/hr-admin/orders/${orderId}/empresa-info`);
       return data;
     },
   },

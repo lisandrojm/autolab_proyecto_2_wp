@@ -921,7 +921,11 @@ export const ClientProjectsPage: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
           {/* Tarjetas de proyecto */}
-          {visibleProjects.map((project) => (
+          {visibleProjects.map((project) => {
+            // Empresas del proyecto (contrato / release): resolvemos los ObjectIds a razón social.
+            const contratoEmpresaNames = (project.contratoEmpresas || []).map((id) => companies.find((c) => String(c._id) === String(id))?.razonSocial).filter((n): n is string => Boolean(n));
+            const releaseEmpresaNames = (project.releaseEmpresas || []).map((id) => companies.find((c) => String(c._id) === String(id))?.razonSocial).filter((n): n is string => Boolean(n));
+            return (
             <Card
               key={project._id}
               onClick={() => navigate(`/projects/${project._id}`)}
@@ -1052,8 +1056,47 @@ export const ClientProjectsPage: React.FC = () => {
                 </label>
                 <span className="text-sm font-semibold text-gray-900 dark:text-white">{project.metadataUserCount ?? 0}</span>
               </div>
+
+              {/* Empresas del Contrato / Release (misma UI que Información del Proyecto) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+                    <FontAwesomeIcon icon={faBuilding} className="text-indigo-500/50" />
+                    Empresa del Contrato
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {contratoEmpresaNames.length > 0 ? (
+                      contratoEmpresaNames.map((n, i) => (
+                        <span key={i} className="inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/50 w-fit">
+                          {n}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[10px] text-gray-400 italic">Sin empresa</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+                    <FontAwesomeIcon icon={faBuilding} className="text-teal-500/50" />
+                    Empresa del Release
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {releaseEmpresaNames.length > 0 ? (
+                      releaseEmpresaNames.map((n, i) => (
+                        <span key={i} className="inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-bold bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 border border-teal-100 dark:border-teal-800/50 w-fit">
+                          {n}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[10px] text-gray-400 italic">Sin empresa</span>
+                    )}
+                  </div>
+                </div>
+              </div>
             </Card>
-          ))}
+            );
+          })}
           {/* Nueva tarjeta de creación */}
           <Card
             variant="create"

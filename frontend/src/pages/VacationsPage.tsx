@@ -6,6 +6,7 @@ import { vacationsAPI } from "../api/vacations";
 import { projectsAPI, Project } from "../api/projects";
 import { clientsAPI, Client } from "../api/clients";
 import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
+import { companiesAPI, Company } from "../api/companies";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
 import { StatusBadge } from "../components/ui/StatusBadge";
@@ -59,6 +60,8 @@ export const VacationsPage: React.FC = () => {
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isRegeneratingPdf, setIsRegeneratingPdf] = useState(false);
+  const [empresaInfo, setEmpresaInfo] = useState<{ hasContractEmpresa: boolean; contractEmpresa: { id: string; label: string } | null; projectEmpresas: { id: string; label: string }[] } | null>(null);
+  const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages] = useState(1);
@@ -73,6 +76,7 @@ export const VacationsPage: React.FC = () => {
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allClients, setAllClients] = useState<Client[]>([]);
   const [allRoleFrames, setAllRoleFrames] = useState<RoleFrameItem[]>([]);
+  const [companiesList, setCompaniesList] = useState<Company[]>([]);
 
   useEffect(() => {
     let timeoutId: any;
@@ -124,6 +128,37 @@ export const VacationsPage: React.FC = () => {
     }
   }, [viewMode, isXXL]);
 
+  // Al abrir el detalle de una vacación con PDF, resolvemos la info de empresa para la descarga.
+  useEffect(() => {
+    setDownloadMenuOpen(false);
+    if (showDetailModal && selectedVacation?.id && selectedVacation?.pdfPreAprobacionUrl) {
+      vacationsAPI
+        .getEmpresaInfo(selectedVacation.id)
+        .then(setEmpresaInfo)
+        .catch(() => setEmpresaInfo(null));
+    } else {
+      setEmpresaInfo(null);
+    }
+  }, [showDetailModal, selectedVacation?.id, selectedVacation?.pdfPreAprobacionUrl]);
+
+  /** Descarga el PDF con una empresa (opcional): regenera SIEMPRE y abre el nuevo PDF. */
+  const handleDownloadWithEmpresa = async (empresaId?: string) => {
+    if (!selectedVacation) return;
+    try {
+      setIsRegeneratingPdf(true);
+      const item = await vacationsAPI.regeneratePDF(selectedVacation.id, empresaId);
+      setDownloadMenuOpen(false);
+      if (item.pdfPreAprobacionUrl) {
+        window.open(`${import.meta.env.VITE_API_URL}${item.pdfPreAprobacionUrl}`, "_blank");
+        setSelectedVacation((prev) => (prev ? { ...prev, pdfPreAprobacionUrl: item.pdfPreAprobacionUrl } : prev));
+      }
+    } catch {
+      /* noop */
+    } finally {
+      setIsRegeneratingPdf(false);
+    }
+  };
+
   useEffect(() => {
     if (!hasLoadedOnce) {
       loadRecords();
@@ -136,11 +171,12 @@ export const VacationsPage: React.FC = () => {
       setHasLoadedOnce(true);
 
       // Load vacations, projects, and clients in parallel
-      const [data, projectsData, clientsData, roleFramesData] = await Promise.all([vacationsAPI.getAll(), projectsAPI.listAll({ limit: 500 }), clientsAPI.listAll(), roleFrameAPI.list()]);
+      const [data, projectsData, clientsData, roleFramesData, companiesData] = await Promise.all([vacationsAPI.getAll(), projectsAPI.listAll({ limit: 500 }), clientsAPI.listAll(), roleFrameAPI.list(), companiesAPI.list()]);
 
       setAllProjects(Array.isArray(projectsData) ? projectsData : (projectsData as any).data || []);
       setAllClients(Array.isArray(clientsData) ? clientsData : (clientsData as any).data || []);
       setAllRoleFrames(roleFramesData);
+      setCompaniesList(companiesData);
       // Transform API data to match VacationRequestMock interface
       const transformedRecords: VacationRequestMock[] = data.map((item: any) => ({
         id: item._id,
@@ -558,6 +594,41 @@ export const VacationsPage: React.FC = () => {
     calculateStats(filteredVacations);
   }, [filteredVacations]);
 
+  const companyNameById = React.useMemo(() => {
+    const m = new Map<string, string>();
+    companiesList.forEach((c) => m.set(String(c._id), c.razonSocial));
+    return m;
+  }, [companiesList]);
+
+  // El snapshot de la vacación guarda NOMBRES de proyecto (no ids), así que mapeamos por nombre.
+  const projectEmpresasByName = React.useMemo(() => {
+    const m = new Map<string, string[]>();
+    allProjects.forEach((p: any) => {
+      const labels = ((p.contratoEmpresas as any[]) || []).map((id) => companyNameById.get(String(id))).filter((n): n is string => Boolean(n));
+      if (p.name) m.set(String(p.name), labels);
+    });
+    return m;
+  }, [allProjects, companyNameById]);
+
+  /** Badges con las empresas del proyecto de la vacación (o "Sin empresa" si el proyecto no tiene). */
+  const renderVacationProjectEmpresas = (vacation: VacationRequestMock) => {
+    const projs = vacation.userSnapshot?.projects || [];
+    if (projs.length === 0) return null; // sin proyecto → no mostramos nada
+    const labels = projectEmpresasByName.get(String(projs[0]?.name)) || [];
+    if (labels.length === 0) {
+      return <span className="text-[10px] text-gray-400 italic">Sin empresa</span>;
+    }
+    return (
+      <div className="flex flex-wrap gap-1">
+        {labels.map((n, i) => (
+          <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/50 w-fit">
+            {n}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
   const renderModalFooter = () => {
     if (updating) {
       return (
@@ -871,16 +942,19 @@ export const VacationsPage: React.FC = () => {
                             })()}
                           </td> */}
                           <td className="py-3 px-4">
-                            <div className="flex flex-wrap gap-1">
-                              {vacation.userSnapshot?.projects && vacation.userSnapshot.projects.length > 0 ? (
-                                vacation.userSnapshot.projects.map((p, idx) => (
-                                  <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-600 text-white shadow-sm">
-                                    {p.name}
-                                  </span>
-                                ))
-                              ) : (
-                                <span className="text-xs text-gray-500">-</span>
-                              )}
+                            <div className="flex flex-col gap-1">
+                              <div className="flex flex-wrap gap-1">
+                                {vacation.userSnapshot?.projects && vacation.userSnapshot.projects.length > 0 ? (
+                                  vacation.userSnapshot.projects.map((p, idx) => (
+                                    <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-600 text-white shadow-sm">
+                                      {p.name}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-xs text-gray-500">-</span>
+                                )}
+                              </div>
+                              {renderVacationProjectEmpresas(vacation)}
                             </div>
                           </td>
                           <td className="py-3 px-4">
@@ -1157,26 +1231,67 @@ export const VacationsPage: React.FC = () => {
                 </div>
               )}
 
-              {selectedVacation.pdfPreAprobacionUrl ? (
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <a href={`${import.meta.env.VITE_API_URL}${selectedVacation.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded hover:bg-violet-700 dark:bg-violet-800 dark:hover:bg-violet-600 transition-colors font-medium shadow-sm text-sm">
-                      <FontAwesomeIcon icon={faDownload} />
-                      Descargar PDF
-                      <FontAwesomeIcon icon={faFilePdf} className="text-lg" />
-                    </a>
-                    <button onClick={() => handleRegeneratePdf(selectedVacation.id)} disabled={isRegeneratingPdf} className="p-2.5 rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50" title="Regenerar documento PDF">
-                      <FontAwesomeIcon icon={isRegeneratingPdf ? faSpinner : faRotateRight} spin={isRegeneratingPdf} />
-                    </button>
+              {selectedVacation.pdfPreAprobacionUrl ? (() => {
+                // Empresa(s) para descargar: si el contrato del solicitante tiene empresa fija, se usa SOLO esa
+                // (descarga directa con ella); si no, se ofrecen todas las empresas del proyecto para elegir.
+                // Réplica de la fila "Contrato | Empresa" del modal de Contratos.
+                const effectiveEmpresas =
+                  empresaInfo?.hasContractEmpresa && empresaInfo.contractEmpresa
+                    ? [empresaInfo.contractEmpresa]
+                    : empresaInfo?.projectEmpresas ?? [];
+                const empresaLabel = effectiveEmpresas.map((e) => e.label).join(" | ");
+                const docLabel = "Solicitud de Vacaciones";
+                const multiEmpresa = effectiveEmpresas.length > 1;
+
+                return (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Documento | Empresa</p>
+                    <div className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
+                      <span className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-1.5 flex-wrap min-w-0" title={empresaLabel ? `${docLabel} | ${empresaLabel}` : docLabel}>
+                        <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
+                        <span className="truncate">{docLabel}</span>
+                        {effectiveEmpresas.map((emp) => (
+                          <span key={emp.id} className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/50 shrink-0" title={empresaInfo?.hasContractEmpresa ? "Empresa fija del contrato" : "Empresa del proyecto"}>
+                            {emp.label}
+                          </span>
+                        ))}
+                        {effectiveEmpresas.length === 0 && <span className="text-[10px] text-gray-400 italic shrink-0">Sin empresa</span>}
+                      </span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {multiEmpresa ? (
+                          <div className="relative shrink-0">
+                            <button type="button" onClick={() => setDownloadMenuOpen((o) => !o)} disabled={isRegeneratingPdf} title="Elegir empresa para descargar" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+                              <FontAwesomeIcon icon={isRegeneratingPdf ? faSpinner : faDownload} spin={isRegeneratingPdf} className="h-4 w-4" />
+                            </button>
+                            {downloadMenuOpen && !isRegeneratingPdf && (
+                              <div className="absolute right-0 z-50 mt-1 w-56 max-h-60 overflow-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1">
+                                <p className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Descargar con:</p>
+                                {effectiveEmpresas.map((e) => (
+                                  <button key={e.id} type="button" onClick={() => handleDownloadWithEmpresa(e.id)} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                                    <FontAwesomeIcon icon={faDownload} className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                                    <span className="truncate">{e.label}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          // Un solo (o ningún) valor de empresa: la descarga regenera SIEMPRE el PDF con esa empresa/membrete.
+                          <button type="button" onClick={() => handleDownloadWithEmpresa(effectiveEmpresas[0]?.id)} disabled={isRegeneratingPdf} title="Descargar documento" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shrink-0 disabled:opacity-60">
+                            <FontAwesomeIcon icon={isRegeneratingPdf ? faSpinner : faDownload} spin={isRegeneratingPdf} className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    {selectedVacation.estado === "pre_approved" && (
+                      <p className="text-sm text-green-600 dark:text-green-400 mt-2 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faCheckCircle} />
+                        Su pdf fue generado.
+                      </p>
+                    )}
                   </div>
-                  {selectedVacation.estado === "pre_approved" && (
-                    <p className="text-sm text-green-600 dark:text-green-400 mt-1 flex items-center gap-2">
-                      <FontAwesomeIcon icon={faCheckCircle} />
-                      Su pdf fue generado.
-                    </p>
-                  )}
-                </div>
-              ) : (
+                );
+              })() : (
                 selectedVacation.estado === "pre_approved" && (
                   <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded">
                     <div className="flex items-start gap-3">

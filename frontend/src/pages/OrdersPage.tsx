@@ -4,6 +4,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner, faSearch, faFilter, faCalendar, faShoppingCart, faListCheck, faTable, faGrip, faFileArrowUp, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faFilePdf, faDownload, faTrash, faCheck, faFileSignature, faChartSimple, faBell } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/management";
 import { OrderConfig } from "../api/orderConfig";
+import { projectsAPI } from "../api/projects";
+import { companiesAPI, Company } from "../api/companies";
 import { PageLayout } from "../components/ui/PageLayout";
 import { sweetAlert } from "../utils/sweetAlert";
 import { ImageModal } from "../components/ui/ImageModal";
@@ -37,7 +39,48 @@ export const OrdersPage: React.FC = () => {
 
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  // Empresa/membrete del PDF: sale del último contrato activo del usuario; si el contrato no tiene
+  // empresa fija y el proyecto tiene varias, se pregunta cuál usar al descargar (dropdown).
+  const [empresaInfo, setEmpresaInfo] = useState<{ hasContractEmpresa: boolean; contractEmpresa: { id: string; label: string } | null; projectEmpresas: { id: string; label: string }[] } | null>(null);
+  const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
+  const [regeneratingPdf, setRegeneratingPdf] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+
+  // Al abrir el detalle de un pedido con PDF, resolvemos la info de empresa para la descarga.
+  useEffect(() => {
+    setDownloadMenuOpen(false);
+    if (showDetailModal && selectedOrder?._id && selectedOrder?.pdfPreAprobacionUrl) {
+      hrManagementAPI.orders
+        .getEmpresaInfo(selectedOrder._id)
+        .then(setEmpresaInfo)
+        .catch(() => setEmpresaInfo(null));
+    } else {
+      setEmpresaInfo(null);
+    }
+  }, [showDetailModal, selectedOrder?._id, selectedOrder?.pdfPreAprobacionUrl]);
+
+  /** Descarga el PDF con una empresa elegida: regenera y abre el nuevo PDF. */
+  const handleDownloadWithEmpresa = async (empresaId: string) => {
+    if (!selectedOrder) return;
+    try {
+      setRegeneratingPdf(true);
+      const res = await hrManagementAPI.orders.regeneratePdf(selectedOrder._id, empresaId);
+      setDownloadMenuOpen(false);
+      if (res.pdfUrl) {
+        window.open(`${import.meta.env.VITE_API_URL}${res.pdfUrl}`, "_blank");
+        setSelectedOrder({ ...selectedOrder, pdfPreAprobacionUrl: res.pdfUrl } as Order);
+      }
+    } catch {
+      /* noop */
+    } finally {
+      setRegeneratingPdf(false);
+    }
+  };
+
+  // Proyectos + empresas para mostrar las empresas del proyecto en la tabla (badges por fila).
+  const [projectsList, setProjectsList] = useState<any[]>([]);
+  const [companiesList, setCompaniesList] = useState<Company[]>([]);
+
   const [showDocModal, setShowDocModal] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -148,6 +191,64 @@ export const OrdersPage: React.FC = () => {
   useEffect(() => {
     loadOrders();
   }, [page]);
+
+  // Cargamos proyectos (con sus contratoEmpresas) y empresas una sola vez para poder mostrar
+  // las empresas del proyecto en la tabla de pedidos.
+  useEffect(() => {
+    Promise.all([projectsAPI.listAll({ limit: 500 }), companiesAPI.list()])
+      .then(([p, c]) => {
+        setProjectsList(Array.isArray(p) ? p : (p as any).data || []);
+        setCompaniesList(c);
+      })
+      .catch(() => {});
+  }, []);
+
+  const companyNameById = React.useMemo(() => {
+    const m = new Map<string, string>();
+    companiesList.forEach((c) => m.set(String(c._id), c.razonSocial));
+    return m;
+  }, [companiesList]);
+
+  // projectId → razones sociales de las empresas del contrato del proyecto.
+  const projectEmpresasMap = React.useMemo(() => {
+    const m = new Map<string, string[]>();
+    projectsList.forEach((p: any) => {
+      const labels = ((p.contratoEmpresas as any[]) || []).map((id) => companyNameById.get(String(id))).filter((n): n is string => Boolean(n));
+      m.set(String(p._id), labels);
+    });
+    return m;
+  }, [projectsList, companyNameById]);
+
+  /** Id del proyecto del solicitante del pedido (mismo criterio que el badge de Proyecto/s). */
+  const getOrderProjectId = (order: Order): string => {
+    const user = order.userId as any;
+    if (user?.metadata?.projects?.length > 0) {
+      return user.metadata.projects[0]?.projectId?._id || user.metadata.projects[0]?.projectId || "";
+    }
+    if (user?.projectIds?.length > 0) {
+      return user.projectIds[0]?._id || user.projectIds[0] || "";
+    }
+    return "";
+  };
+
+  /** Badges con las empresas del proyecto del pedido (o "Sin empresa" si el proyecto no tiene). */
+  const renderProjectEmpresas = (order: Order) => {
+    const pid = getOrderProjectId(order);
+    if (!pid) return null; // sin proyecto (ej. usuario desconocido) → no mostramos nada
+    const labels = projectEmpresasMap.get(String(pid)) || [];
+    if (labels.length === 0) {
+      return <span className="text-[10px] text-gray-400 italic">Sin empresa</span>;
+    }
+    return (
+      <div className="flex flex-wrap gap-1">
+        {labels.map((n, i) => (
+          <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/50 w-fit">
+            {n}
+          </span>
+        ))}
+      </div>
+    );
+  };
 
   /*
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
@@ -970,7 +1071,12 @@ export const OrdersPage: React.FC = () => {
                             </td>
                             <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 text-nowrap">{getUserName(order.userId)}</td>
                             {/* <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{renderUserClientBadge(order.userId)}</td>*/}
-                            <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{renderUserProjectBadge(order.userId)}</td>
+                            <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">
+                              <div className="flex flex-col gap-1">
+                                {renderUserProjectBadge(order.userId)}
+                                {renderProjectEmpresas(order)}
+                              </div>
+                            </td>
                             <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{renderUserRoleBadge(order.userId)}</td>
                             <td className="py-3 px-4">
                               <StatusBadge type={mapOrderStatusToStatusType(order.status)} size="sm" />
@@ -1157,19 +1263,62 @@ export const OrdersPage: React.FC = () => {
                   </div>
                 )
               )}
-              {selectedOrder.pdfPreAprobacionUrl && (
-                <div className="border-slate-200 dark:border-slate-700">
-                  <a href={`${import.meta.env.VITE_API_URL}${selectedOrder.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded hover:bg-violet-700 dark:bg-violet-800 dark:hover:bg-violet-600 transition-colors font-medium shadow-sm text-sm">
-                    <FontAwesomeIcon icon={faDownload} />
-                    Descargar
-                    <FontAwesomeIcon icon={faFilePdf} className="text-lg" />
-                  </a>
-                  <p className="text-sm text-green-600 dark:text-green-400 mt-2 flex items-center gap-2">
-                    <FontAwesomeIcon icon={faCheckCircle} />
-                    Su pdf fue generado.
-                  </p>
-                </div>
-              )}
+              {selectedOrder.pdfPreAprobacionUrl && (() => {
+                // Empresa(s) para descargar: si el contrato del solicitante tiene empresa fija, se usa SOLO esa
+                // (descarga directa con ella); si no, se ofrecen todas las empresas del proyecto para elegir.
+                // Réplica de la fila "Contrato | Empresa" del modal de Contratos.
+                const effectiveEmpresas =
+                  empresaInfo?.hasContractEmpresa && empresaInfo.contractEmpresa
+                    ? [empresaInfo.contractEmpresa]
+                    : empresaInfo?.projectEmpresas ?? [];
+                const empresaLabel = effectiveEmpresas.map((e) => e.label).join(" | ");
+                const docLabel = getCategoryName(selectedOrder);
+                const multiEmpresa = effectiveEmpresas.length > 1;
+
+                return (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Documento | Empresa</p>
+                    <div className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
+                      <span className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-1.5 flex-wrap min-w-0" title={empresaLabel ? `${docLabel} | ${empresaLabel}` : docLabel}>
+                        <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
+                        <span className="truncate">{docLabel}</span>
+                        {effectiveEmpresas.map((emp) => (
+                          <span key={emp.id} className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/50 shrink-0" title={empresaInfo?.hasContractEmpresa ? "Empresa fija del contrato" : "Empresa del proyecto"}>
+                            {emp.label}
+                          </span>
+                        ))}
+                        {effectiveEmpresas.length === 0 && <span className="text-[10px] text-gray-400 italic shrink-0">Sin empresa</span>}
+                      </span>
+                      {multiEmpresa ? (
+                        <div className="relative shrink-0">
+                          <button type="button" onClick={() => setDownloadMenuOpen((o) => !o)} disabled={regeneratingPdf} title="Elegir empresa para descargar" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+                            <FontAwesomeIcon icon={regeneratingPdf ? faSpinner : faDownload} spin={regeneratingPdf} className="h-4 w-4" />
+                          </button>
+                          {downloadMenuOpen && !regeneratingPdf && (
+                            <div className="absolute right-0 z-50 mt-1 w-56 max-h-60 overflow-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1">
+                              <p className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Descargar con:</p>
+                              {effectiveEmpresas.map((e) => (
+                                <button key={e.id} type="button" onClick={() => handleDownloadWithEmpresa(e.id)} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                                  <FontAwesomeIcon icon={faDownload} className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                                  <span className="truncate">{e.label}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <a href={`${import.meta.env.VITE_API_URL}${selectedOrder.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" title="Descargar documento" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shrink-0">
+                          <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
+                        </a>
+                      )}
+                    </div>
+                    <p className="text-sm text-green-600 dark:text-green-400 mt-2 flex items-center gap-2">
+                      <FontAwesomeIcon icon={faCheckCircle} />
+                      Su pdf fue generado.
+                    </p>
+                  </div>
+                );
+              })()}
               <div className="flex gap-10 flex-wrap">
                 {selectedOrder.amount && (
                   <div>
