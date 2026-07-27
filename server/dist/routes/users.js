@@ -11,6 +11,7 @@ import { Position } from "../models/Position.js";
 import { Level } from "../models/Level.js";
 import { Area } from "../models/Area.js";
 import { Client } from "../models/Client.js";
+import { Company } from "../models/Company.js";
 import bcrypt from "bcryptjs";
 // Side-effect imports to be extra sure they are registered
 import "../models/User.js";
@@ -487,6 +488,56 @@ router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_us
     }
     catch (error) {
         console.error("Get user error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// GET /users/:id/all-contracts - Todos los contratos de la persona (cross-proyecto/cliente), enriquecidos
+// con proyecto, cliente y empresas de cada proyecto para poder listarlos, filtrarlos y descargarlos.
+router.get("/:id/all-contracts", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const ups = await UserProject.find({ userId, tenantId: req.tenantObjectId }).lean();
+        const projIds = [...new Set(ups.map((up) => String(up.projectId)).filter(Boolean))];
+        const projects = await Project.find({ _id: { $in: projIds }, tenantId: req.tenantObjectId })
+            .select("name clientId contratoEmpresas releaseEmpresas")
+            .lean();
+        const projMap = new Map(projects.map((p) => [String(p._id), p]));
+        const clientIds = [...new Set(projects.map((p) => p.clientId).filter(Boolean).map(String))];
+        const clients = await Client.find({ _id: { $in: clientIds }, tenantId: req.tenantObjectId }).select("name").lean();
+        const clientMap = new Map(clients.map((c) => [String(c._id), c.name]));
+        const companyIds = [
+            ...new Set(projects.flatMap((p) => [...(p.contratoEmpresas || []), ...(p.releaseEmpresas || [])]).map(String)),
+        ];
+        const companies = await Company.find({ _id: { $in: companyIds }, tenantId: req.tenantObjectId }).select("razonSocial").lean();
+        const companyMap = new Map(companies.map((c) => [String(c._id), c.razonSocial]));
+        const toEmpresas = (ids = []) => ids.map((id) => ({ id: String(id), label: companyMap.get(String(id)) || "" })).filter((e) => e.label);
+        const rows = [];
+        for (const up of ups) {
+            const proj = projMap.get(String(up.projectId));
+            const projectName = proj?.name || up.nombre_proyecto || "";
+            const clientId = proj?.clientId ? String(proj.clientId) : "";
+            const clientName = clientId ? clientMap.get(clientId) || "" : "";
+            const contratoEmpresas = toEmpresas(proj?.contratoEmpresas);
+            const releaseEmpresas = toEmpresas(proj?.releaseEmpresas);
+            (up.contracts || []).forEach((c, idx) => {
+                rows.push({
+                    projectId: String(up.projectId),
+                    projectName,
+                    clientId,
+                    clientName,
+                    contratoEmpresas,
+                    releaseEmpresas,
+                    contractIndex: idx,
+                    contract: c,
+                });
+            });
+        }
+        // Más reciente primero (por fecha de alta).
+        rows.sort((a, b) => new Date(b.contract?.fecha_alta_contrato || 0).getTime() - new Date(a.contract?.fecha_alta_contrato || 0).getTime());
+        res.json(rows);
+    }
+    catch (error) {
+        console.error("Get all contracts error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });
