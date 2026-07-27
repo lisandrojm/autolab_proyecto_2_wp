@@ -7,6 +7,7 @@ import { Tenant } from "../models/Tenant.js";
 import { Pdf } from "../models/Pdf.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { generateVacationPDF } from "../utils/pdfGenerator.js";
+import { resolveContractEmpresa } from "../utils/contractEmpresa.js";
 import { User } from "../models/User.js";
 import { UserProfile } from "../models/UserProfile.js";
 import { Area } from "../models/Area.js";
@@ -103,7 +104,8 @@ router.post("/:id/regenerate-pdf", async (req, res) => {
             res.status(404).json({ error: "User not found" });
             return;
         }
-        const pdfResult = await generateVacationPDF(vacation, template, user, tenantId.toString(), tenant.name, vacation.vacationNumber);
+        // empresaId opcional: la empresa elegida al descargar (cuando el contrato no tiene una fija).
+        const pdfResult = await generateVacationPDF(vacation, template, user, tenantId.toString(), tenant.name, vacation.vacationNumber, req.body?.empresaId);
         if (!pdfResult.success) {
             res.status(500).json({ error: `Error al generar PDF: ${pdfResult.error}` });
             return;
@@ -124,6 +126,30 @@ router.post("/:id/regenerate-pdf", async (req, res) => {
     }
     catch (error) {
         console.error("Regenerate vacation PDF error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// GET /api/vacations/:id/empresa-info - Empresa del membrete para descargar el PDF.
+// Si el contrato del usuario no tiene empresa fija y el proyecto tiene varias, el front pregunta cuál usar.
+router.get("/:id/empresa-info", async (req, res) => {
+    try {
+        const tenantObjectId = req.tenantObjectId;
+        const vacation = await Vacation.findOne({ _id: req.params.id, tenantId: tenantObjectId }).lean();
+        if (!vacation) {
+            res.status(404).json({ error: "Vacation request not found" });
+            return;
+        }
+        const uid = String(vacation.userId?._id || vacation.userId || "");
+        const info = await resolveContractEmpresa(uid);
+        const contractEmpresa = info.contractEmpresaId ? info.projectEmpresas.find((e) => e.id === info.contractEmpresaId) || null : null;
+        res.json({
+            hasContractEmpresa: !!info.contractEmpresaId,
+            contractEmpresa,
+            projectEmpresas: info.projectEmpresas,
+        });
+    }
+    catch (error) {
+        console.error("Vacation empresa-info error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });

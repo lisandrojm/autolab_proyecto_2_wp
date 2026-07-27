@@ -8,6 +8,7 @@ import { IUser } from "../models/User.js";
 import { IVacation } from "../models/Vacation.js";
 import { savePdfToStorage, savePdfVacationToStorage } from "./pdfStorage.js";
 import { Company } from "../models/Company.js";
+import { resolveContractEmpresa } from "./contractEmpresa.js";
 import { prepareVariables, prepareVacationVariables, replacePdfVariables, getDummyVariables, getSystemVariables, sanitizeHtml } from "./pdfVariableReplacer.js";
 
 /**
@@ -30,10 +31,11 @@ function companyToPdfConfig(c: any) {
 }
 
 // Helper function to build the full HTML with layout
-async function buildPdfHtml(_tenantId: string, bodyContent: string, additionalVars: Record<string, string> = {}, title: string = "", _user?: IUser, usaMembrete: boolean = true): Promise<string> {
+async function buildPdfHtml(_tenantId: string, bodyContent: string, additionalVars: Record<string, string> = {}, title: string = "", _user?: IUser, usaMembrete: boolean = true, companyOverride?: any): Promise<string> {
   // El membrete (y las variables {{razonSocial}}/{{cuit}}/{{ciudad}}) para Pedidos/Vacaciones salen
-  // de la primera empresa con membrete cargado (esos PDF no están atados a un proyecto).
-  const company = await Company.findOne({ $or: [{ logoUrl: { $nin: [null, ""] } }, { signatureUrl: { $nin: [null, ""] } }] }).lean();
+  // de la empresa del último contrato activo del usuario (companyOverride). Si no se resolvió, se
+  // usa la primera empresa con membrete cargado como respaldo.
+  const company = companyOverride || (await Company.findOne({ $or: [{ logoUrl: { $nin: [null, ""] } }, { signatureUrl: { $nin: [null, ""] } }] }).lean());
   const config: any = company ? companyToPdfConfig(company) : {};
 
   const systemVars = getSystemVariables(config);
@@ -237,7 +239,7 @@ interface GeneratePdfResult {
   error?: string;
 }
 
-export async function generateOrderPDF(order: IOrder, category: IOrderConfig, template: IPdf, user: IUser, tenantId: string, tenantName: string): Promise<GeneratePdfResult> {
+export async function generateOrderPDF(order: IOrder, category: IOrderConfig, template: IPdf, user: IUser, tenantId: string, tenantName: string, empresaIdOverride?: string): Promise<GeneratePdfResult> {
   try {
     console.log("[PDF GENERATOR] Starting PDF generation...");
     console.log("[PDF GENERATOR] Order ID:", order._id);
@@ -256,8 +258,17 @@ export async function generateOrderPDF(order: IOrder, category: IOrderConfig, te
     const variables = await prepareVariables(order, category, user, tenantName);
     console.log("[PDF GENERATOR] Variables prepared:", Object.keys(variables));
 
+    // Empresa del membrete: sale del último contrato activo del usuario (o la elegida al descargar).
+    let company: any = null;
+    try {
+      const uid = String((user as any)?._id || (order as any).userId || "");
+      company = (await resolveContractEmpresa(uid, empresaIdOverride)).empresa;
+    } catch (e) {
+      console.error("[PDF GENERATOR] resolveContractEmpresa error:", e);
+    }
+
     // Use buildPdfHtml to generate HTML with global layout
-    const htmlContent = await buildPdfHtml(tenantId, bodyContent, variables as Record<string, string>, (template as any).title, user, (template as any).usaMembrete ?? false);
+    const htmlContent = await buildPdfHtml(tenantId, bodyContent, variables as Record<string, string>, (template as any).title, user, (template as any).usaMembrete ?? false, company);
     console.log("[PDF GENERATOR] HTML content generated using global layout, length:", htmlContent.length, "characters");
 
     const options = {
@@ -322,7 +333,7 @@ export async function generateOrderPDF(order: IOrder, category: IOrderConfig, te
   }
 }
 
-export async function generateVacationPDF(vacation: IVacation, template: IPdf, user: IUser, tenantId: string, tenantName: string, vacationNumber: string): Promise<GeneratePdfResult> {
+export async function generateVacationPDF(vacation: IVacation, template: IPdf, user: IUser, tenantId: string, tenantName: string, vacationNumber: string, empresaIdOverride?: string): Promise<GeneratePdfResult> {
   try {
     console.log("[PDF GENERATOR] Starting vacation PDF generation...");
     console.log("[PDF GENERATOR] Vacation ID:", vacation._id);
@@ -333,8 +344,17 @@ export async function generateVacationPDF(vacation: IVacation, template: IPdf, u
     const variables = prepareVacationVariables(vacation, user, tenantName, vacationNumber);
     console.log("[PDF GENERATOR] Variables prepared:", Object.keys(variables));
 
+    // Empresa del membrete: sale del último contrato activo del usuario (o la elegida al descargar).
+    let company: any = null;
+    try {
+      const uid = String((user as any)?._id || (vacation as any).userId || "");
+      company = (await resolveContractEmpresa(uid, empresaIdOverride)).empresa;
+    } catch (e) {
+      console.error("[PDF GENERATOR] resolveContractEmpresa error:", e);
+    }
+
     // Use buildPdfHtml to generate HTML with global layout
-    const htmlContent = await buildPdfHtml(tenantId, template.content, variables as Record<string, string>, (template as any).title, user, (template as any).usaMembrete ?? false);
+    const htmlContent = await buildPdfHtml(tenantId, template.content, variables as Record<string, string>, (template as any).title, user, (template as any).usaMembrete ?? false, company);
     console.log("[PDF GENERATOR] HTML content generated using global layout, length:", htmlContent.length, "characters");
 
     const options = {

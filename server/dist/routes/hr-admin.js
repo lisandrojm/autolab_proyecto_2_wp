@@ -14,6 +14,7 @@ import { requireTenant } from "../middleware/tenant.js";
 import { Types } from "mongoose";
 import { getPlainOrderNumber } from "../utils/orderHelpers.js";
 import { generateOrderPDF, generateVacationPDF } from "../utils/pdfGenerator.js";
+import { resolveContractEmpresa } from "../utils/contractEmpresa.js";
 const router = Router();
 router.use(requireTenant, authenticateToken, requireRole(["admin", "manager", "superadmin"]));
 const updateEmployeeSchema = z.object({
@@ -691,6 +692,32 @@ router.put("/orders/:id/reject", async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
+/**
+ * Info de empresa/membrete para el PDF de un pedido: se resuelve desde el último contrato activo
+ * del usuario. Si el contrato tiene una empresa fija, se descarga con esa; si no, el front ofrece
+ * elegir entre las empresas del proyecto (igual que en Contratos).
+ */
+router.get("/orders/:id/empresa-info", async (req, res) => {
+    try {
+        const order = await Order.findOne({ _id: req.params.id, tenantId: req.tenantObjectId }).lean();
+        if (!order) {
+            res.status(404).json({ error: "Order not found" });
+            return;
+        }
+        const uid = String(order.userId?._id || order.userId || "");
+        const info = await resolveContractEmpresa(uid);
+        const contractEmpresa = info.contractEmpresaId ? info.projectEmpresas.find((e) => e.id === info.contractEmpresaId) || null : null;
+        res.json({
+            hasContractEmpresa: !!info.contractEmpresaId,
+            contractEmpresa,
+            projectEmpresas: info.projectEmpresas,
+        });
+    }
+    catch (error) {
+        console.error("Order empresa-info error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 router.post("/orders/:id/regenerate-pdf", async (req, res) => {
     try {
         const adminId = req.user.userId;
@@ -749,7 +776,8 @@ router.post("/orders/:id/regenerate-pdf", async (req, res) => {
         const user = order.userId;
         const tenant = await Tenant.findById(req.tenantObjectId);
         const tenantName = tenant?.name || tenant?.slug || "Organización";
-        const pdfResult = await generateOrderPDF(order, category, template, user, req.tenantObjectId.toString(), tenantName);
+        // empresaId opcional: la empresa elegida al descargar (cuando el contrato no tiene una fija).
+        const pdfResult = await generateOrderPDF(order, category, template, user, req.tenantObjectId.toString(), tenantName, req.body?.empresaId);
         if (!pdfResult.success) {
             res.status(500).json({ error: `Error al generar PDF: ${pdfResult.error}` });
             return;

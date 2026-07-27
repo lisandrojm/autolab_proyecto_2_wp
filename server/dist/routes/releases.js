@@ -151,7 +151,7 @@ router.get("/:id/download-filled", authenticateToken, requireTenant, async (req,
         const chosenId = empresaId && empresasIds.includes(String(empresaId)) ? empresaId : empresasIds[0];
         const empresa = chosenId ? await Company.findById(chosenId).lean() : null;
         const data = await buildEmployeeDocData(user, up, contract, empresa);
-        // Si la plantilla lleva membrete, se encabeza/firma con la empresa elegida.
+        // Si la plantilla lleva membrete, se encabeza/firma con la empresa elegida al descargar.
         const membrete = release.usaMembrete && empresa ? empresaToMembrete(empresa) : undefined;
         const buffer = await buildDocPdf(release.content, data, membrete);
         const baseName = buildDocFileName({ tipo: "Release", user, up, contract, docName: release.name });

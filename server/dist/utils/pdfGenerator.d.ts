@@ -9,6 +9,6 @@ interface GeneratePdfResult {
     success: boolean;
     error?: string;
 }
-export declare function generateOrderPDF(order: IOrder, category: IOrderConfig, template: IPdf, user: IUser, tenantId: string, tenantName: string): Promise<GeneratePdfResult>;
-export declare function generateVacationPDF(vacation: IVacation, template: IPdf, user: IUser, tenantId: string, tenantName: string, vacationNumber: string): Promise<GeneratePdfResult>;
+export declare function generateOrderPDF(order: IOrder, category: IOrderConfig, template: IPdf, user: IUser, tenantId: string, tenantName: string, empresaIdOverride?: string): Promise<GeneratePdfResult>;
+export declare function generateVacationPDF(vacation: IVacation, template: IPdf, user: IUser, tenantId: string, tenantName: string, vacationNumber: string, empresaIdOverride?: string): Promise<GeneratePdfResult>;
 export {};
