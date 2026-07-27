@@ -346,7 +346,7 @@ export const ContratosFramePage: React.FC = () => {
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Jornadas</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Mult. Diario</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
-                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Membrete</th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Membrete | Firma</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Contenido</th>
                 <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
               </tr>
@@ -381,7 +381,7 @@ export const ContratosFramePage: React.FC = () => {
                       <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${item.isActive === false ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'}`}>{item.isActive === false ? 'Inactivo' : 'Activo'}</span>
                     </td>
                     <td className="px-5 py-3 text-sm whitespace-nowrap">
-                      <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${item.usaMembrete ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`}>{item.usaMembrete ? 'Membrete activo' : 'Membrete inactivo'}</span>
+                      <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${item.usaMembrete ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`}>{item.usaMembrete ? 'Activo' : 'Inactivo'}</span>
                     </td>
                     <td className="px-5 py-3 text-sm hidden lg:table-cell">
                       {sinContenido ? (

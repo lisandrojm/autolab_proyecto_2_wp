@@ -10,7 +10,7 @@ import { releasesAPI, Release } from "../../api/release";
 import { sweetAlert } from "../../utils/sweetAlert";
 
 /** Empresa vinculada al proyecto (id + razón social) para elegir con cuál descargar. */
-interface EmpresaOption {
+export interface EmpresaOption {
   id: string;
   label: string;
 }
@@ -37,7 +37,7 @@ interface EmployeeContractsModalProps {
  * Botón de descarga que, si el proyecto tiene más de una empresa, abre un menú para elegir con cuál
  * generar el documento. Con 0 o 1 empresa descarga directo (usando esa empresa o el fallback del backend).
  */
-const DownloadMenu: React.FC<{ empresas: EmpresaOption[]; onDownload: (empresaId?: string) => void; title: string }> = ({ empresas, onDownload, title }) => {
+export const DownloadMenu: React.FC<{ empresas: EmpresaOption[]; onDownload: (empresaId?: string) => void; title: string }> = ({ empresas, onDownload, title }) => {
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
 
@@ -96,9 +96,9 @@ const DownloadMenu: React.FC<{ empresas: EmpresaOption[]; onDownload: (empresaId
   );
 };
 
-const formatMoney = (n?: number): string => (n != null && !isNaN(n) ? `$${Number(n).toLocaleString("es-AR")}` : "-");
+export const formatMoney = (n?: number): string => (n != null && !isNaN(n) ? `$${Number(n).toLocaleString("es-AR")}` : "-");
 
-const formatDate = (s?: string): string => {
+export const formatDate = (s?: string): string => {
   if (!s) return "";
   if (/^\d{2}\/\d{2}\/\d{4}/.test(s)) return s.slice(0, 10);
   // Fechas "YYYY-MM-DD" (o ISO): armar DD/MM/YYYY con la parte de fecha tal cual, sin new Date().
@@ -111,7 +111,7 @@ const formatDate = (s?: string): string => {
 };
 
 /** Un contrato está vigente si no tiene fecha de baja o su baja es hoy o futura (comparación en fecha local). */
-const isContractVigente = (baja?: string): boolean => {
+export const isContractVigente = (baja?: string): boolean => {
   if (!baja) return true; // sin baja → tiempo indeterminado → vigente
   const iso = String(baja).substring(0, 10);
   const parts = iso.split("-");
@@ -130,7 +130,7 @@ const isContractVigente = (baja?: string): boolean => {
 };
 
 /** Busca la plantilla de contrato (ContratoFrame) que corresponde al contrato. */
-const findTemplate = (contract: Contract, contratoFrames: ContratoFrameItem[]): ContratoFrameItem | null => {
+export const findTemplate = (contract: Contract, contratoFrames: ContratoFrameItem[]): ContratoFrameItem | null => {
   // El nombre es la clave confiable: el wizard guarda el nombre exacto de la contratos-frame.
   const name = (contract.nombre_contrato || "").trim().toLowerCase();
   if (name) {
@@ -151,7 +151,7 @@ const findTemplate = (contract: Contract, contratoFrames: ContratoFrameItem[]): 
  * El contrato se puede generar si la plantilla tiene contenido REAL redactado. El editor devuelve
  * "<p></p>" cuando está vacío (truthy como string), así que se mira el texto sin etiquetas.
  */
-const templateHasContent = (cf: ContratoFrameItem | null): boolean =>
+export const templateHasContent = (cf: ContratoFrameItem | null): boolean =>
   !!cf?.content && cf.content.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim().length > 0;
 
 /**
@@ -160,7 +160,7 @@ const templateHasContent = (cf: ContratoFrameItem | null): boolean =>
  * `docName` es opcional (para releases es el nombre del release). La fecha es la de la descarga.
  * Ambos (contratos y releases) se redactan en la plataforma y se generan en PDF.
  */
-const buildDownloadFileName = (tipo: "Contrato" | "Release", user: User | null, contract: Contract | undefined, docName?: string): string => {
+export const buildDownloadFileName = (tipo: "Contrato" | "Release", user: User | null, contract: Contract | undefined, docName?: string): string => {
   const proyecto = (contract as any)?.proyecto_id ?? contract?.nombre_proyecto ?? "";
   const nombres = (user?.firstName || "").trim();
   const apellido = (user?.lastName || "").trim();

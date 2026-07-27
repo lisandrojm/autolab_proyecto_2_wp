@@ -1,12 +1,12 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { format, startOfMonth, endOfMonth } from "date-fns";
-import * as XLSX from "xlsx";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBell, faFileExcel, faTriangleExclamation, faCircleCheck, faSpinner, faUser, faXmark, faUsers } from "@fortawesome/free-solid-svg-icons";
-import { ActivityLogCalendar } from "./ActivityLogCalendar";
-import { Modal } from "../ui/Modal";
-import { sweetAlert } from "../../utils/sweetAlert";
-import { complianceAPI, ComplianceResponse, CoordinatorCompliance } from "../../api/compliance";
+import React, { useEffect, useMemo, useState } from 'react';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
+import * as XLSX from 'xlsx';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faBell, faFileExcel, faTriangleExclamation, faCircleCheck, faSpinner, faUser, faXmark, faUsers } from '@fortawesome/free-solid-svg-icons';
+import { ActivityLogCalendar } from './ActivityLogCalendar';
+import { Modal } from '../ui/Modal';
+import { sweetAlert } from '../../utils/sweetAlert';
+import { complianceAPI, ComplianceResponse, CoordinatorCompliance } from '../../api/compliance';
 
 interface ComplianceViewProps {
   projectFilter: string; // "all" o id
@@ -16,22 +16,22 @@ interface ComplianceViewProps {
   onOpenReport?: (reportNumber: string) => void;
 }
 
-const todayStr = () => format(new Date(), "yyyy-MM-dd");
+const todayStr = () => format(new Date(), 'yyyy-MM-dd');
 const fmtDate = (d: string) => {
-  const [y, m, day] = d.split("-");
+  const [y, m, day] = d.split('-');
   return `${day}/${m}/${y}`;
 };
-const DIAS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 /** Día de la semana de un "YYYY-MM-DD" sin drift de timezone. */
 const weekdayOf = (d: string) => {
-  const [y, m, day] = d.split("-").map(Number);
+  const [y, m, day] = d.split('-').map(Number);
   return new Date(y, m - 1, day).getDay();
 };
 
 // Persistencia: al abrir el detalle de una novedad este componente se desmonta,
 // así que guardamos mes y coordinador elegido para restaurarlos al volver.
-const LS_MONTH = "novedades_compliance_month";
-const LS_COORD = "novedades_compliance_coordinator";
+const LS_MONTH = 'novedades_compliance_month';
+const LS_COORD = 'novedades_compliance_coordinator';
 const readLS = (k: string): string | null => {
   try {
     return localStorage.getItem(k);
@@ -52,7 +52,7 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
   const [viewMonth, setViewMonth] = useState<Date>(() => {
     const saved = readLS(LS_MONTH);
     if (saved && /^\d{4}-\d{2}$/.test(saved)) {
-      const [y, m] = saved.split("-").map(Number);
+      const [y, m] = saved.split('-').map(Number);
       return new Date(y, m - 1, 1);
     }
     return new Date();
@@ -65,7 +65,7 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
   const [showReport, setShowReport] = useState(false);
 
   useEffect(() => {
-    writeLS(LS_MONTH, format(viewMonth, "yyyy-MM"));
+    writeLS(LS_MONTH, format(viewMonth, 'yyyy-MM'));
   }, [viewMonth]);
   useEffect(() => {
     writeLS(LS_COORD, selectedCoordinatorId);
@@ -73,8 +73,8 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
   const [remindingIds, setRemindingIds] = useState<Set<string>>(new Set());
   const [remindingAll, setRemindingAll] = useState(false);
 
-  const from = format(startOfMonth(viewMonth), "yyyy-MM-dd");
-  const monthEnd = format(endOfMonth(viewMonth), "yyyy-MM-dd");
+  const from = format(startOfMonth(viewMonth), 'yyyy-MM-dd');
+  const monthEnd = format(endOfMonth(viewMonth), 'yyyy-MM-dd');
   const today = todayStr();
   const to = monthEnd < today ? monthEnd : today;
   const isFutureMonth = from > today;
@@ -83,9 +83,9 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
     () => ({
       from,
       to,
-      projectId: projectFilter !== "all" ? projectFilter : undefined,
-      areaId: areaFilter !== "all" ? areaFilter : undefined,
-      shiftId: shiftFilter !== "all" ? shiftFilter : undefined,
+      projectId: projectFilter !== 'all' ? projectFilter : undefined,
+      areaId: areaFilter !== 'all' ? areaFilter : undefined,
+      shiftId: shiftFilter !== 'all' ? shiftFilter : undefined,
     }),
     [from, to, projectFilter, areaFilter, shiftFilter],
   );
@@ -101,7 +101,7 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
       const res = await complianceAPI.get(params);
       setData(res);
     } catch (err: any) {
-      setError(err?.response?.data?.error || "No se pudo cargar el cumplimiento.");
+      setError(err?.response?.data?.error || 'No se pudo cargar el cumplimiento.');
       setData(null);
     } finally {
       setLoading(false);
@@ -113,14 +113,11 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.from, params.to, params.projectId, params.areaId, params.shiftId]);
 
-  const selectedCoordinator = useMemo(
-    () => (selectedCoordinatorId ? data?.coordinators.find((c) => c.userId === selectedCoordinatorId) || null : null),
-    [data, selectedCoordinatorId],
-  );
+  const selectedCoordinator = useMemo(() => (selectedCoordinatorId ? data?.coordinators.find((c) => c.userId === selectedCoordinatorId) || null : null), [data, selectedCoordinatorId]);
 
   // Calendario: agregado de todos, o sólo del coordinador elegido (se deriva de la data ya cargada).
   const complianceByDate = useMemo(() => {
-    const map: Record<string, "complete" | "partial" | "pending" | "missing" | "none"> = {};
+    const map: Record<string, 'complete' | 'partial' | 'pending' | 'missing' | 'none'> = {};
     if (!selectedCoordinator) {
       (data?.calendar || []).forEach((d) => (map[d.date] = d.status));
       return map;
@@ -134,11 +131,12 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
     });
     Object.entries(agg).forEach(([d, v]) => {
       const missing = v.exp - v.sub;
-      if (v.exp === 0) map[d] = "none";
-      else if (missing <= 0) map[d] = "complete";
-      else if (v.sub === 0 && v.pend >= missing) map[d] = "pending"; // todo lo que falta aún se puede cargar
-      else if (v.sub === 0) map[d] = "missing";
-      else map[d] = "partial";
+      if (v.exp === 0) map[d] = 'none';
+      else if (missing <= 0) map[d] = 'complete';
+      else if (v.sub === 0 && v.pend >= missing)
+        map[d] = 'pending'; // todo lo que falta aún se puede cargar
+      else if (v.sub === 0) map[d] = 'missing';
+      else map[d] = 'partial';
     });
     return map;
   }, [data, selectedCoordinator]);
@@ -153,7 +151,7 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
         map[d].push(num);
       });
     });
-    return Object.fromEntries(Object.entries(map).map(([d, nums]) => [d, nums.join(", ")]));
+    return Object.fromEntries(Object.entries(map).map(([d, nums]) => [d, nums.join(', ')]));
   }, [selectedCoordinator]);
 
   // Totales: del coordinador elegido, o globales.
@@ -182,10 +180,10 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
   const remind = async (coordinatorIds?: string[]) => {
     try {
       const res = await complianceAPI.remind({ from, to, projectId: params.projectId, coordinatorIds });
-      if (res.count > 0) sweetAlert.success("Recordatorios enviados", `Se notificó a ${res.count} coordinador(es).`);
-      else sweetAlert.info?.("Sin envíos", "No había coordinadores pendientes por notificar (o ya tenían un recordatorio hoy).") ?? sweetAlert.success("Listo", "Sin recordatorios nuevos que enviar.");
+      if (res.count > 0) sweetAlert.success('Recordatorios enviados', `Se notificó a ${res.count} coordinador(es).`);
+      else sweetAlert.info?.('Sin envíos', 'No había coordinadores pendientes por notificar (o ya tenían un recordatorio hoy).') ?? sweetAlert.success('Listo', 'Sin recordatorios nuevos que enviar.');
     } catch (err: any) {
-      sweetAlert.error("Error", err?.response?.data?.error || "No se pudieron enviar los recordatorios.");
+      sweetAlert.error('Error', err?.response?.data?.error || 'No se pudieron enviar los recordatorios.');
     }
   };
 
@@ -202,7 +200,7 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
   const remindAll = async () => {
     const behind = data?.coordinators.filter((c) => c.missingCount > 0) || [];
     if (behind.length === 0) return;
-    const r = await sweetAlert.confirm("¿Recordar a los que faltan?", `Se notificará a ${behind.length} coordinador(es) con novedades pendientes.`, "Sí, notificar");
+    const r = await sweetAlert.confirm('¿Recordar a los que faltan?', `Se notificará a ${behind.length} coordinador(es) con novedades pendientes.`, 'Sí, notificar');
     if (!r.isConfirmed) return;
     setRemindingAll(true);
     await remind();
@@ -213,27 +211,24 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
     if (!data) return;
     const wb = XLSX.utils.book_new();
     // Resumen por coordinador
-    const summary = [
-      ["Coordinador", "Esperadas", "Enviadas", "Faltantes", "Cumplimiento %"],
-      ...data.coordinators.map((c) => [c.name, c.expectedCount, c.submittedCount, c.missingCount, c.expectedCount ? Math.round((c.submittedCount / c.expectedCount) * 100) : 0]),
-    ];
+    const summary = [['Coordinador', 'Esperadas', 'Enviadas', 'Faltantes', 'Cumplimiento %'], ...data.coordinators.map((c) => [c.name, c.expectedCount, c.submittedCount, c.missingCount, c.expectedCount ? Math.round((c.submittedCount / c.expectedCount) * 100) : 0])];
     const wsS = XLSX.utils.aoa_to_sheet(summary);
-    wsS["!cols"] = [{ wch: 32 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }];
-    XLSX.utils.book_append_sheet(wb, wsS, "Resumen");
+    wsS['!cols'] = [{ wch: 32 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, wsS, 'Resumen');
     // Detalle de faltantes
-    const detail: (string | number)[][] = [["Coordinador", "Proyecto", "Área", "Turnos del día", "Día", "Fecha faltante"]];
+    const detail: (string | number)[][] = [['Coordinador', 'Proyecto', 'Área', 'Turnos del día', 'Día', 'Fecha faltante']];
     data.coordinators.forEach((c) =>
       c.projects.forEach((a) =>
         a.missingDates.forEach((d) => {
           const wd = weekdayOf(d);
           const turnosDelDia = a.turnosInfo ? a.turnosInfo.filter((t) => !t.days?.length || t.days.includes(wd)).map((t) => t.name) : a.turnos;
-          detail.push([c.name, a.projectName, a.areas.join(", "), turnosDelDia.join(", "), DIAS[wd], fmtDate(d)]);
+          detail.push([c.name, a.projectName, a.areas.join(', '), turnosDelDia.join(', '), DIAS[wd], fmtDate(d)]);
         }),
       ),
     );
     const wsD = XLSX.utils.aoa_to_sheet(detail);
-    wsD["!cols"] = [{ wch: 32 }, { wch: 22 }, { wch: 18 }, { wch: 40 }, { wch: 6 }, { wch: 14 }];
-    XLSX.utils.book_append_sheet(wb, wsD, "Faltantes");
+    wsD['!cols'] = [{ wch: 32 }, { wch: 22 }, { wch: 18 }, { wch: 40 }, { wch: 6 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, wsD, 'Faltantes');
     XLSX.writeFile(wb, `cumplimiento_novedades_${from}_a_${to}.xlsx`);
     setShowReport(false);
   };
@@ -249,11 +244,7 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
           <StatChip label="Cumplimiento" value={`${totals?.compliancePct ?? 0}%`} tone="blue" />
           {!selectedCoordinator && <StatChip label="Coord. atrasados" value={totals?.coordinatorsBehind ?? 0} tone="amber" />}
           {selectedCoordinator && (
-            <button
-              onClick={() => setSelectedCoordinatorId(null)}
-              title="Ver todos los coordinadores"
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/40"
-            >
+            <button onClick={() => setSelectedCoordinatorId(null)} title="Ver todos los coordinadores" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/40">
               <FontAwesomeIcon icon={faUser} />
               {selectedCoordinator.name}
               <FontAwesomeIcon icon={faXmark} className="opacity-70" />
@@ -264,8 +255,8 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
           <button onClick={() => setShowReport(true)} disabled={!data} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 disabled:opacity-50">
             <FontAwesomeIcon icon={faFileExcel} /> Informe
           </button>
-          <button onClick={remindAll} disabled={!data || remindingAll || !data.coordinators.some((c) => c.missingCount > 0)} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50">
-            <FontAwesomeIcon icon={remindingAll ? faSpinner : faBell} className={remindingAll ? "animate-spin" : ""} /> Recordar a los que faltan
+          <button onClick={remindAll} disabled={!data || remindingAll || !data.coordinators.some((c) => c.missingCount > 0)} className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50">
+            <FontAwesomeIcon icon={remindingAll ? faSpinner : faBell} className={remindingAll ? 'animate-spin' : ''} /> Recordar a los que faltan
           </button>
         </div>
       </div>
@@ -287,14 +278,14 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
             controlledMonth={viewMonth}
             onMonthChange={setViewMonth}
             onDayClick={(day, status) => {
-              const d = format(day, "yyyy-MM-dd");
+              const d = format(day, 'yyyy-MM-dd');
               // Día reportado con Nº de novedad → abrir su detalle.
               const code = dayLabels?.[d];
               if (code && onOpenReport) {
-                onOpenReport(code.split(",")[0].trim()); // si coordina varios proyectos, el primero
+                onOpenReport(code.split(',')[0].trim()); // si coordina varios proyectos, el primero
                 return;
               }
-              if (status === "missing" || status === "partial") setSelectedDay(d);
+              if (status === 'missing' || status === 'partial') setSelectedDay(d);
             }}
           />
         </div>
@@ -304,11 +295,7 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
           <div className="flex items-center justify-between gap-2 mb-2 px-1">
             <h4 className="text-sm font-bold text-gray-700 dark:text-gray-200">Coordinadores</h4>
             {selectedCoordinatorId ? (
-              <button
-                onClick={() => setSelectedCoordinatorId(null)}
-                title="Volver al calendario de todos los coordinadores"
-                className="shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-bold text-blue-600 dark:text-blue-400 border border-blue-300 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
-              >
+              <button onClick={() => setSelectedCoordinatorId(null)} title="Volver al calendario de todos los coordinadores" className="shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-bold text-blue-600 dark:text-blue-400 border border-blue-300 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
                 <FontAwesomeIcon icon={faUsers} /> Ver todos
               </button>
             ) : (
@@ -318,14 +305,7 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
           <div className="space-y-1.5 max-h-[560px] overflow-y-auto pr-1">
             {(data?.coordinators || []).length === 0 && !loading && <p className="text-xs text-gray-400 px-1 py-4 text-center">Sin coordinadores con asignaciones en este período/filtro.</p>}
             {(data?.coordinators || []).map((c) => (
-              <CoordinatorRow
-                key={c.userId}
-                c={c}
-                selected={selectedCoordinatorId === c.userId}
-                onSelect={() => setSelectedCoordinatorId((cur) => (cur === c.userId ? null : c.userId))}
-                reminding={remindingIds.has(c.userId)}
-                onRemind={() => remindOne(c.userId)}
-              />
+              <CoordinatorRow key={c.userId} c={c} selected={selectedCoordinatorId === c.userId} onSelect={() => setSelectedCoordinatorId((cur) => (cur === c.userId ? null : c.userId))} reminding={remindingIds.has(c.userId)} onRemind={() => remindOne(c.userId)} />
             ))}
           </div>
         </div>
@@ -336,7 +316,9 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
         <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
           <h4 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-1">
             Novedades que le faltan a {selectedCoordinator.name}
-            <span className="ml-2 text-xs font-normal text-gray-400">({selectedCoordinator.missingCount} en {fmtDate(from)} – {fmtDate(to)})</span>
+            <span className="ml-2 text-xs font-normal text-gray-400">
+              ({selectedCoordinator.missingCount} en {fmtDate(from)} – {fmtDate(to)})
+            </span>
           </h4>
           <p className="text-[11px] text-gray-400 mb-3">Cada novedad cubre el día completo del coordinador en el proyecto (incluye los turnos que corren ese día).</p>
           {selectedCoordinator.missingCount === 0 ? (
@@ -356,9 +338,11 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
                         {DIAS[wd]} {fmtDate(d)}
                       </span>
                       <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">{p.projectName}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold uppercase">{p.areas.join(", ")}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold uppercase">{p.areas.join(', ')}</span>
                       {turnosDelDia.map((t, i) => (
-                        <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-600 dark:text-purple-400 font-semibold">{t}</span>
+                        <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-600 dark:text-purple-400 font-semibold">
+                          {t}
+                        </span>
                       ))}
                     </div>
                   );
@@ -370,21 +354,25 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
       )}
 
       {/* Drill-down de un día */}
-      <Modal isOpen={!!selectedDay} onClose={() => setSelectedDay(null)} title={selectedDay ? `Faltantes del ${fmtDate(selectedDay)}` : ""} size="md">
+      <Modal isOpen={!!selectedDay} onClose={() => setSelectedDay(null)} title={selectedDay ? `Faltantes del ${fmtDate(selectedDay)}` : ''} size="md">
         {selectedDayData && selectedDayData.missingCells.length > 0 ? (
           <div className="space-y-2 max-h-[60vh] overflow-y-auto">
             {selectedDayData.missingCells.map((cell, i) => (
               <div key={i} className="flex items-center justify-between rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-3 py-2">
                 <div>
                   <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{cell.name}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{cell.projectName} · {cell.label}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {cell.projectName} · {cell.label}
+                  </p>
                 </div>
                 <FontAwesomeIcon icon={faTriangleExclamation} className="text-red-500" />
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-500 flex items-center gap-2"><FontAwesomeIcon icon={faCircleCheck} className="text-green-500" /> Sin faltantes ese día.</p>
+          <p className="text-sm text-gray-500 flex items-center gap-2">
+            <FontAwesomeIcon icon={faCircleCheck} className="text-green-500" /> Sin faltantes ese día.
+          </p>
         )}
       </Modal>
 
@@ -394,21 +382,25 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
           Se exporta un Excel con el resumen por coordinador y el detalle de novedades faltantes del período {fmtDate(from)} al {fmtDate(to)}.
         </p>
         <div className="flex justify-end gap-2">
-          <button onClick={() => setShowReport(false)} className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200">Cancelar</button>
-          <button onClick={exportReport} className="px-4 py-2 text-sm font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">Descargar Excel</button>
+          <button onClick={() => setShowReport(false)} className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200">
+            Cancelar
+          </button>
+          <button onClick={exportReport} className="px-4 py-2 text-sm font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">
+            Descargar Excel
+          </button>
         </div>
       </Modal>
     </div>
   );
 };
 
-const StatChip: React.FC<{ label: string; value: string | number; tone: "gray" | "green" | "red" | "blue" | "amber" }> = ({ label, value, tone }) => {
+const StatChip: React.FC<{ label: string; value: string | number; tone: 'gray' | 'green' | 'red' | 'blue' | 'amber' }> = ({ label, value, tone }) => {
   const tones: Record<string, string> = {
-    gray: "bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700",
-    green: "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
-    red: "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
-    blue: "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
-    amber: "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800",
+    gray: 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700',
+    green: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800',
+    red: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800',
+    blue: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+    amber: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
   };
   return (
     <div className={`px-3 py-1.5 rounded-lg border ${tones[tone]}`}>
@@ -424,11 +416,7 @@ const CoordinatorRow: React.FC<{ c: CoordinatorCompliance; selected: boolean; on
   const expired = c.expiredCount ?? Math.max(0, c.missingCount - pending);
   const isLate = expired > 0;
   const hasMissing = c.missingCount > 0;
-  const border = selected
-    ? "border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-400/40"
-    : isLate
-      ? "border-red-200 dark:border-red-800 bg-red-50/40 dark:bg-red-900/10"
-      : "border-gray-100 dark:border-gray-700";
+  const border = selected ? 'border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-400/40' : isLate ? 'border-red-200 dark:border-red-800 bg-red-50/40 dark:bg-red-900/10' : 'border-gray-100 dark:border-gray-700';
   return (
     <div onClick={onSelect} title="Ver el calendario de este coordinador" className={`cursor-pointer transition-all rounded-lg border px-3 py-2 hover:shadow-sm ${border}`}>
       <div className="flex items-center justify-between gap-2">
@@ -438,18 +426,25 @@ const CoordinatorRow: React.FC<{ c: CoordinatorCompliance; selected: boolean; on
             <span>
               {c.submittedCount}/{c.expectedCount} enviadas
             </span>
-            {expired > 0 && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/15 text-red-600 dark:text-red-400">{expired} vencida{expired > 1 ? "s" : ""}</span>}
+            {expired > 0 && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/15 text-red-600 dark:text-red-400">
+                {expired} vencida{expired > 1 ? 's' : ''}
+              </span>
+            )}
             {pending > 0 && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400">{pending} a tiempo</span>}
           </p>
         </div>
         {hasMissing && (
           <button
-            onClick={(e) => { e.stopPropagation(); onRemind(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemind();
+            }}
             disabled={reminding}
             title="Enviar recordatorio"
             className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/30 disabled:opacity-50"
           >
-            <FontAwesomeIcon icon={reminding ? faSpinner : faBell} className={reminding ? "animate-spin" : ""} /> Recordar
+            <FontAwesomeIcon icon={reminding ? faSpinner : faBell} className={reminding ? 'animate-spin' : ''} /> Recordar
           </button>
         )}
       </div>
@@ -457,7 +452,7 @@ const CoordinatorRow: React.FC<{ c: CoordinatorCompliance; selected: boolean; on
         <div className="mt-2 pt-2 border-t border-blue-200 dark:border-blue-800 space-y-1">
           {c.projects.map((p) => (
             <p key={p.projectId} className="text-[10px] text-gray-500 dark:text-gray-400">
-              <span className="font-semibold text-gray-700 dark:text-gray-300">{p.projectName}</span> · {p.areas.join(", ")} · {p.turnos.join(", ")}
+              <span className="font-semibold text-gray-700 dark:text-gray-300">{p.projectName}</span> · {p.areas.join(', ')} · {p.turnos.join(', ')}
             </p>
           ))}
         </div>

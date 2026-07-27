@@ -182,7 +182,7 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission('config_vacations:view')) base.push({ path: '/vacations-rules', icon: faUmbrellaBeach, label: 'Vacaciones', scope: 'global' });
       if (hasPermission('config_holidays:view')) base.push({ path: '/holidays', icon: faCalendar, label: 'Feriados', scope: 'global' });
       if (hasPermission('config_pdf_templates:view')) base.push({ path: '/pdfs', icon: faFilePdf, label: 'Pedidos | Vacaciones', scope: 'global' });
-      if (hasPermission('config_releases:view')) base.push({ path: '/releases', icon: faFilePdf, label: 'Releases', scope: 'global' });
+      if (hasPermission('config_releases:view')) base.push({ path: '/releases', icon: faFilePdf, label: 'Release', scope: 'global' });
       if (hasPermission('config_categorias_sat:view')) base.push({ path: '/categorias-sat', icon: faListCheck, label: 'Categorías SAT', scope: 'global' });
       if (hasPermission('config_bancos:view')) base.push({ path: '/bancos', icon: faBuildingColumns, label: 'Entidades Financieras', scope: 'global' });
       if (hasPermission('config_obras_sociales:view')) base.push({ path: '/obras-sociales', icon: faBriefcaseMedical, label: 'Obras Sociales', scope: 'global' });

@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { usersAPI } from "../api/users";
 import { projectsAPI } from "../api/projects";
+import { contratoFrameAPI, ContratoFrameItem } from "../api/contratosFrame";
+import { releasesAPI, Release } from "../api/release";
+import { MemberContractsManagerModal } from "../components/team/MemberContractsManagerModal";
 import { cachedFetch } from "../utils/refCache";
 import { infoAPI } from "../api/info";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -43,6 +46,15 @@ export const ContractsPage: React.FC = () => {
   const [hasLoaded, setHasLoaded] = useState(false);
   const [openInfo, setOpenInfo] = useState(false);
   const [contractTypes, setContractTypes] = useState<Record<number, string>>({});
+
+  // Modal de gestión de TODOS los contratos de una persona (cross-proyecto)
+  const [managedUser, setManagedUser] = useState<{ id: string; name: string } | null>(null);
+  const [contratoFrames, setContratoFrames] = useState<ContratoFrameItem[]>([]);
+  const [releases, setReleases] = useState<Release[]>([]);
+  useEffect(() => {
+    contratoFrameAPI.list().then(setContratoFrames).catch(() => setContratoFrames([]));
+    releasesAPI.getAll().then(setReleases).catch(() => setReleases([]));
+  }, []);
 
   // Filtering & Pagination
   const [searchTerm, setSearchTerm] = useState("");
@@ -277,7 +289,7 @@ export const ContractsPage: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {contracts.map((record) => (
-                  <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors group">
+                  <tr key={record.id} onClick={() => setManagedUser({ id: record.userId, name: record.userName })} title="Gestionar contratos de la persona" className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors group cursor-pointer">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="flex items-center justify-center shrink-0">
@@ -324,7 +336,7 @@ export const ContractsPage: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {contracts.map((record) => (
-            <Card key={record.id} className="p-0 overflow-hidden group hover:border-primary-500 transition-all border-gray-200 dark:border-gray-700">
+            <Card key={record.id} onClick={() => setManagedUser({ id: record.userId, name: record.userName })} className="p-0 overflow-hidden group hover:border-primary-500 transition-all border-gray-200 dark:border-gray-700 cursor-pointer">
               <div className="p-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700/50">
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-3">
@@ -415,6 +427,15 @@ export const ContractsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <MemberContractsManagerModal
+        isOpen={!!managedUser}
+        onClose={() => setManagedUser(null)}
+        userId={managedUser?.id || null}
+        userName={managedUser?.name}
+        contratoFrames={contratoFrames}
+        releases={releases}
+      />
     </PageLayout>
   );
 };

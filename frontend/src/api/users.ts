@@ -169,6 +169,18 @@ export interface UsersListResponse {
   };
 }
 
+/** Contrato de una persona enriquecido con su proyecto, cliente y empresas (para gestionarlo cross-proyecto). */
+export interface ManagedContract {
+  projectId: string;
+  projectName: string;
+  clientId: string;
+  clientName: string;
+  contratoEmpresas: { id: string; label: string }[];
+  releaseEmpresas: { id: string; label: string }[];
+  contractIndex: number;
+  contract: Contract;
+}
+
 /* ---------- Normalizadores ---------- */
 function normalizeTenant(raw: any): TenantRef | undefined {
   // Prioridad 1: Objeto completo en raw.tenant o raw.tenantId
@@ -397,6 +409,12 @@ class UsersAPI {
   }
 
 
+
+  /** Todos los contratos de una persona (cross-proyecto/cliente), enriquecidos para gestionarlos. */
+  async getAllContracts(userId: string): Promise<ManagedContract[]> {
+    const { data } = await axios.get(`/users/${userId}/all-contracts`, { headers: this.getHeaders() });
+    return Array.isArray(data) ? data : [];
+  }
 
   /** Trae las solicitudes de alta en CUALQUIER estado (pendiente/aprobada/rechazada/cancelada). */
   async listSolicitudes(): Promise<User[]> {

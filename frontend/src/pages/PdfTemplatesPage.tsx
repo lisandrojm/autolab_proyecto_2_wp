@@ -1,43 +1,48 @@
-import { useState, useEffect } from "react";
-import { PageLayout } from "../components/ui/PageLayout";
-import { Card } from "../components/ui/Card";
-import { MembreteToggle } from "../components/MembreteToggle";
-import { SearchAndFilters } from "../components/ui/SearchAndFilters";
-import { EmptyState } from "../components/ui/EmptyState";
-import { LoadingSpinner } from "../components/ui/LoadingSpinner";
+import { useState, useEffect } from 'react';
+import { PageLayout } from '../components/ui/PageLayout';
+import { Card } from '../components/ui/Card';
+import { MembreteToggle } from '../components/MembreteToggle';
+import { SearchAndFilters } from '../components/ui/SearchAndFilters';
+import { EmptyState } from '../components/ui/EmptyState';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faEdit, faTrash, faFileContract, faEye, faList, faInfoCircle, faDownload } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPlus, faEdit, faTrash, faFileContract, faEye, faList, faInfoCircle, faDownload } from '@fortawesome/free-solid-svg-icons';
 
-import { pdfsAPI, Pdf, PdfInput, codeOptions, variablesByCode, systemVariables } from "../api/pdf";
-import { pdfPreviewAPI } from "../api/pdfPreview";
+import { pdfsAPI, Pdf, PdfInput, codeOptions, variablesByCode, systemVariables } from '../api/pdf';
+import { pdfPreviewAPI } from '../api/pdfPreview';
 
-import Swal from "sweetalert2";
-import { getHelp, hasHelp } from "../data/help/helpContent";
-import { Modal } from "../components/ui/Modal";
-import { RichTextEditor } from "../components/ui/RichTextEditor";
-import { ViewToggle, ViewMode } from "../components/ui/ViewToggle";
-import { PdfAssignmentStatus } from "./PdfAssignmentStatus";
+import Swal from 'sweetalert2';
+import { getHelp, hasHelp } from '../data/help/helpContent';
+import { Modal } from '../components/ui/Modal';
+import { RichTextEditor } from '../components/ui/RichTextEditor';
+import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
+import { PdfAssignmentStatus } from './PdfAssignmentStatus';
 
-const HELP_KEY = "pdfTemplates" as const;
+const HELP_KEY = 'pdfTemplates' as const;
 
 /** El editor devuelve "<p></p>" cuando está vacío: chequeamos que haya texto real. */
-const hasContent = (html: string): boolean => !!html && html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim().length > 0;
+const hasContent = (html: string): boolean =>
+  !!html &&
+  html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .trim().length > 0;
 
-const looksLikeHtml = (s: string): boolean => /<\/?(p|div|h[1-6]|ul|ol|li|table|tr|td|strong|em|u|br)\b/i.test(s || "");
+const looksLikeHtml = (s: string): boolean => /<\/?(p|div|h[1-6]|ul|ol|li|table|tr|td|strong|em|u|br)\b/i.test(s || '');
 
 /**
  * Las plantillas creadas antes del editor con formato son texto plano con saltos de línea.
  * Al abrirlas hay que convertirlas a HTML para no perder esos saltos dentro del editor.
  */
 const toEditorHtml = (content: string): string => {
-  const text = content || "";
+  const text = content || '';
   if (!text.trim() || looksLikeHtml(text)) return text;
-  const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   return text
     .split(/\n{2,}/)
-    .map((block) => `<p>${escape(block).replace(/\n/g, "<br>")}</p>`)
-    .join("");
+    .map((block) => `<p>${escape(block).replace(/\n/g, '<br>')}</p>`)
+    .join('');
 };
 
 export function PdfTemplatesPage() {
@@ -46,30 +51,30 @@ export function PdfTemplatesPage() {
   const [loading, setLoading] = useState(true);
 
   // filters
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterActive, setFilterActive] = useState<"all" | "active" | "inactive">("all");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all');
   const [isFetching, setIsFetching] = useState(false);
 
   // Vista (Tabla vs Tarjetas)
-  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
   useEffect(() => {
     const handleResize = () => {
       const isNowLarge = window.innerWidth >= 1024;
       setIsLarge(isNowLarge);
-      if (!isNowLarge) setViewMode("cards");
+      if (!isNowLarge) setViewMode('cards');
     };
     if (window.innerWidth >= 1024) {
-      const saved = localStorage.getItem("pdfTemplatesViewMode_v2");
-      if (saved === "table" || saved === "cards") setViewMode(saved as ViewMode);
+      const saved = localStorage.getItem('pdfTemplatesViewMode_v2');
+      if (saved === 'table' || saved === 'cards') setViewMode(saved as ViewMode);
     }
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
   useEffect(() => {
-    if (isLarge) localStorage.setItem("pdfTemplatesViewMode_v2", viewMode);
+    if (isLarge) localStorage.setItem('pdfTemplatesViewMode_v2', viewMode);
   }, [viewMode, isLarge]);
-  const effectiveViewMode: ViewMode = isLarge ? viewMode : "cards";
+  const effectiveViewMode: ViewMode = isLarge ? viewMode : 'cards';
 
   // modal
   const [showModal, setShowModal] = useState(false);
@@ -79,10 +84,10 @@ export function PdfTemplatesPage() {
 
   // form
   const [formData, setFormData] = useState<PdfInput>({
-    code: "dinero",
-    name: "",
-    content: "",
-    variablesHint: "",
+    code: 'dinero',
+    name: '',
+    content: '',
+    variablesHint: '',
     isActive: true,
     usaMembrete: false,
   });
@@ -91,15 +96,15 @@ export function PdfTemplatesPage() {
   // help modal
   const [openInfo, setOpenInfo] = useState(false);
   const showHelp = hasHelp(HELP_KEY);
-  const helpEntry = showHelp ? getHelp(HELP_KEY) : { title: "Ayuda", size: "md" as const, content: <div /> };
+  const helpEntry = showHelp ? getHelp(HELP_KEY) : { title: 'Ayuda', size: 'md' as const, content: <div /> };
 
   // tabs
 
   const handlePreview = async () => {
     try {
       Swal.fire({
-        title: "Generando previsualización...",
-        text: "Por favor espere",
+        title: 'Generando previsualización...',
+        text: 'Por favor espere',
         allowOutsideClick: false,
         didOpen: () => {
           Swal.showLoading();
@@ -109,10 +114,10 @@ export function PdfTemplatesPage() {
       const blob = await pdfPreviewAPI.preview(formData.content, formData.code, formData.title, undefined, formData.usaMembrete ?? false);
       Swal.close();
       const url = URL.createObjectURL(blob);
-      window.open(url, "_blank");
+      window.open(url, '_blank');
     } catch (error) {
       console.error(error);
-      Swal.fire("Error", "No se pudo generar la previsualización", "error");
+      Swal.fire('Error', 'No se pudo generar la previsualización', 'error');
     }
   };
 
@@ -121,16 +126,16 @@ export function PdfTemplatesPage() {
     try {
       const blob = await pdfPreviewAPI.preview(template.content, template.code, template.title, undefined, template.usaMembrete ?? false);
       const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
+      const link = document.createElement('a');
       link.href = url;
-      link.setAttribute("download", `${template.name || "Plantilla"}.pdf`);
+      link.setAttribute('download', `${template.name || 'Plantilla'}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error(error);
-      Swal.fire("Error", "No se pudo generar el PDF de la plantilla", "error");
+      Swal.fire('Error', 'No se pudo generar el PDF de la plantilla', 'error');
     }
   };
 
@@ -138,10 +143,10 @@ export function PdfTemplatesPage() {
   const handlePreviewItem = async (template: Pdf) => {
     try {
       const blob = await pdfPreviewAPI.preview(template.content, template.code, template.title, undefined, template.usaMembrete ?? false);
-      window.open(URL.createObjectURL(blob), "_blank");
+      window.open(URL.createObjectURL(blob), '_blank');
     } catch (error) {
       console.error(error);
-      Swal.fire("Error", "No se pudo generar la previsualización", "error");
+      Swal.fire('Error', 'No se pudo generar la previsualización', 'error');
     }
   };
 
@@ -155,7 +160,7 @@ export function PdfTemplatesPage() {
       const data = await pdfsAPI.getAll();
       setTemplates(data);
     } catch {
-      Swal.fire("Error", "No se pudieron cargar las plantillas", "error");
+      Swal.fire('Error', 'No se pudieron cargar las plantillas', 'error');
     } finally {
       setLoading(false);
     }
@@ -169,8 +174,8 @@ export function PdfTemplatesPage() {
       if (!match) return false;
     }
 
-    if (filterActive === "active" && !t.isActive) return false;
-    if (filterActive === "inactive" && t.isActive) return false;
+    if (filterActive === 'active' && !t.isActive) return false;
+    if (filterActive === 'inactive' && t.isActive) return false;
 
     return true;
   });
@@ -185,9 +190,9 @@ export function PdfTemplatesPage() {
 
     setFormData({
       code: firstAvailable as any,
-      name: "",
-      content: "",
-      variablesHint: "",
+      name: '',
+      content: '',
+      variablesHint: '',
       isActive: true,
       usaMembrete: false,
     });
@@ -201,9 +206,9 @@ export function PdfTemplatesPage() {
     setFormData({
       code: template.code,
       name: template.name,
-      title: template.title || "",
+      title: template.title || '',
       content: toEditorHtml(template.content),
-      variablesHint: template.variablesHint || "",
+      variablesHint: template.variablesHint || '',
       isActive: template.isActive,
       usaMembrete: template.usaMembrete ?? false,
     });
@@ -213,30 +218,30 @@ export function PdfTemplatesPage() {
 
   const handleDelete = async (template: Pdf) => {
     const result = await Swal.fire({
-      title: "¿Eliminar plantilla?",
+      title: '¿Eliminar plantilla?',
       text: `Se eliminará la plantilla "${template.name}"`,
-      icon: "warning",
+      icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: "#ef4444",
-      cancelButtonColor: "#6b7280",
-      confirmButtonText: "Eliminar",
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Eliminar',
     });
 
     if (!result.isConfirmed) return;
 
     try {
       await pdfsAPI.delete(template._id);
-      Swal.fire("Eliminada", "La plantilla ha sido eliminada", "success");
+      Swal.fire('Eliminada', 'La plantilla ha sido eliminada', 'success');
       loadTemplates();
     } catch {
-      Swal.fire("Error", "No se pudo eliminar la plantilla", "error");
+      Swal.fire('Error', 'No se pudo eliminar la plantilla', 'error');
     }
   };
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.name.trim()) newErrors.name = "El nombre es requerido";
-    if (!hasContent(formData.content)) newErrors.content = "El contenido es requerido";
+    if (!formData.name.trim()) newErrors.name = 'El nombre es requerido';
+    if (!hasContent(formData.content)) newErrors.content = 'El contenido es requerido';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -249,21 +254,20 @@ export function PdfTemplatesPage() {
       setSaving(true);
       if (editingTemplate) {
         await pdfsAPI.update(editingTemplate._id, formData);
-        Swal.fire("Actualizada", "La plantilla ha sido actualizada", "success");
+        Swal.fire('Actualizada', 'La plantilla ha sido actualizada', 'success');
       } else {
         await pdfsAPI.create(formData);
-        Swal.fire("Creada", "La plantilla ha sido creada", "success");
+        Swal.fire('Creada', 'La plantilla ha sido creada', 'success');
       }
       setShowModal(false);
       setEditingTemplate(null);
       loadTemplates();
     } catch (error: any) {
-      Swal.fire("Error", error.response?.data?.error || "No se pudo guardar", "error");
+      Swal.fire('Error', error.response?.data?.error || 'No se pudo guardar', 'error');
     } finally {
       setSaving(false);
     }
   };
-
 
   const usedCodes = templates.map((t) => t.code);
   const availableCodes = codeOptions.filter((c) => !usedCodes.includes(c.value));
@@ -271,7 +275,7 @@ export function PdfTemplatesPage() {
 
   // Un código ya usado por OTRA plantilla no se puede elegir (índice único tenant+code):
   // se muestra igual en el select pero deshabilitado, para que se entienda por qué no está disponible.
-  const isCodeTaken = (code: (typeof codeOptions)[number]["value"]) => usedCodes.includes(code) && code !== editingTemplate?.code;
+  const isCodeTaken = (code: (typeof codeOptions)[number]['value']) => usedCodes.includes(code) && code !== editingTemplate?.code;
 
   return (
     <PageLayout
@@ -290,7 +294,7 @@ export function PdfTemplatesPage() {
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         <div className="flex gap-2">
-          <button onClick={isAddDisabled ? undefined : openCreate} disabled={isAddDisabled} aria-label="Nueva plantilla" className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${isAddDisabled ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500" : "bg-blue-600 text-white hover:bg-blue-700"}`} title={isAddDisabled ? "Todos los códigos ya tienen asignada una plantilla" : "Nueva plantilla"}>
+          <button onClick={isAddDisabled ? undefined : openCreate} disabled={isAddDisabled} aria-label="Nueva plantilla" className={`inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg transition-colors ${isAddDisabled ? 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500' : 'bg-blue-600 text-white hover:bg-blue-700'}`} title={isAddDisabled ? 'Todos los códigos ya tienen asignada una plantilla' : 'Nueva plantilla'}>
             <FontAwesomeIcon icon={faPlus} />
           </button>
           <button onClick={() => setShowStatusModal(true)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors" title="Ver estado de asignación">
@@ -311,9 +315,9 @@ export function PdfTemplatesPage() {
                   value: filterActive,
                   onChange: (v) => setFilterActive(v as any),
                   options: [
-                    { value: "all", label: "Todas" },
-                    { value: "active", label: "Activas" },
-                    { value: "inactive", label: "Inactivas" },
+                    { value: 'all', label: 'Todas' },
+                    { value: 'active', label: 'Activas' },
+                    { value: 'inactive', label: 'Inactivas' },
                   ],
                 },
               ]}
@@ -336,9 +340,7 @@ export function PdfTemplatesPage() {
               <FontAwesomeIcon icon={faInfoCircle} className="h-5 w-5 mt-0.5 shrink-0 text-blue-600 dark:text-blue-400" />
               <div className="text-sm">
                 <p className="font-semibold text-blue-800 dark:text-blue-300">Ya están creadas las {codeOptions.length} plantillas disponibles</p>
-                <p className="text-blue-700 dark:text-blue-300/80 mt-0.5">
-                  Cada código admite una sola plantilla, así que no es necesario crear más. Para cambiar un documento, editá la plantilla del código correspondiente.
-                </p>
+                <p className="text-blue-700 dark:text-blue-300/80 mt-0.5">Cada código admite una sola plantilla, así que no es necesario crear más. Para cambiar un documento, editá la plantilla del código correspondiente.</p>
               </div>
             </div>
           )}
@@ -346,7 +348,7 @@ export function PdfTemplatesPage() {
           <div className="relative">
             {isFetching && <div className="absolute -top-6 right-0 text-xs text-gray-500 dark:text-gray-400">Filtrando…</div>}
 
-            {effectiveViewMode === "table" ? (
+            {effectiveViewMode === 'table' ? (
               <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg mx-0.5 lg:mx-0">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                   <thead className="bg-gray-50 dark:bg-gray-900/50">
@@ -354,6 +356,7 @@ export function PdfTemplatesPage() {
                       <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
                       <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Código</th>
                       <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
+                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Membrete | Firma</th>
                       <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Contenido</th>
                       <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
                     </tr>
@@ -364,15 +367,19 @@ export function PdfTemplatesPage() {
                         <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">{template.name}</td>
                         <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{codeOptions.find((c) => c.value === template.code)?.label || template.code}</td>
                         <td className="px-5 py-3 text-sm whitespace-nowrap">
-                          <div className="flex items-center gap-1.5">
-                            <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${template.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"}`}>{template.isActive ? "Activa" : "Inactiva"}</span>
-                            <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${template.usaMembrete ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"}`}>{template.usaMembrete ? "Membrete activo" : "Membrete inactivo"}</span>
-                          </div>
+                          <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${template.isActive ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'}`}>{template.isActive ? 'Activa' : 'Inactiva'}</span>
+                        </td>
+                        <td className="px-5 py-3 text-sm whitespace-nowrap">
+                          <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${template.usaMembrete ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`}>{template.usaMembrete ? 'Activo' : 'Inactivo'}</span>
                         </td>
                         <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
                           <span className="truncate max-w-[320px] block" title="Contenido de la plantilla">
-                            {(template.content || "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").trim().slice(0, 70)}
-                            {(template.content || "").length > 70 ? "…" : ""}
+                            {(template.content || '')
+                              .replace(/<[^>]*>/g, ' ')
+                              .replace(/&nbsp;/g, ' ')
+                              .trim()
+                              .slice(0, 70)}
+                            {(template.content || '').length > 70 ? '…' : ''}
                           </span>
                         </td>
                         <td className="px-5 py-3 text-sm text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
@@ -397,76 +404,73 @@ export function PdfTemplatesPage() {
                 </table>
               </div>
             ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
-              {filteredTemplates.map((template) => (
-                <Card
-                  key={template._id}
-                  onClick={() => openEdit(template)}
-                  className="cursor-pointer hover:scale-[1.03] hover:shadow-lg transition-all duration-200"
-                  header={{
-                    icon: faFileContract,
-                    title: template.name,
-                    subtitle: codeOptions.find((c) => c.value === template.code)?.label || template.code,
-                    badges: [
-                      template.isActive ? { text: "Activa", variant: "green" } : { text: "Inactiva", variant: "destructive" },
-                      template.usaMembrete ? { text: "Membrete activo", variant: "green" } : { text: "Membrete inactivo", variant: "default" },
-                    ],
-                  }}
-                  footer={{
-                    leftContent: null,
-                    actions: [
-                      {
-                        icon: faEye,
-                        title: "Previsualizar",
-                        onClick: (e) => {
-                          e.stopPropagation();
-                          handlePreviewItem(template);
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
+                {filteredTemplates.map((template) => (
+                  <Card
+                    key={template._id}
+                    onClick={() => openEdit(template)}
+                    className="cursor-pointer hover:scale-[1.03] hover:shadow-lg transition-all duration-200"
+                    header={{
+                      icon: faFileContract,
+                      title: template.name,
+                      subtitle: codeOptions.find((c) => c.value === template.code)?.label || template.code,
+                      badges: [template.isActive ? { text: 'Activa', variant: 'green' } : { text: 'Inactiva', variant: 'destructive' }, template.usaMembrete ? { text: 'Membrete activo', variant: 'green' } : { text: 'Membrete inactivo', variant: 'default' }],
+                    }}
+                    footer={{
+                      leftContent: null,
+                      actions: [
+                        {
+                          icon: faEye,
+                          title: 'Previsualizar',
+                          onClick: (e) => {
+                            e.stopPropagation();
+                            handlePreviewItem(template);
+                          },
                         },
-                      },
-                      {
-                        icon: faDownload,
-                        title: "Descargar PDF de ejemplo",
-                        onClick: (e) => {
-                          e.stopPropagation();
-                          handleDownload(template);
+                        {
+                          icon: faDownload,
+                          title: 'Descargar PDF de ejemplo',
+                          onClick: (e) => {
+                            e.stopPropagation();
+                            handleDownload(template);
+                          },
                         },
-                      },
-                      {
-                        icon: faEdit,
-                        title: "Editar",
-                        onClick: (e) => {
-                          e.stopPropagation();
-                          openEdit(template);
+                        {
+                          icon: faEdit,
+                          title: 'Editar',
+                          onClick: (e) => {
+                            e.stopPropagation();
+                            openEdit(template);
+                          },
                         },
-                      },
-                      {
-                        icon: faTrash,
-                        title: "Eliminar",
-                        onClick: (e) => {
-                          e.stopPropagation();
-                          handleDelete(template);
+                        {
+                          icon: faTrash,
+                          title: 'Eliminar',
+                          onClick: (e) => {
+                            e.stopPropagation();
+                            handleDelete(template);
+                          },
                         },
-                      },
-                    ],
-                  }}
-                >
-                  {/* YA NO HAY preview ni variables */}
-                </Card>
-              ))}
+                      ],
+                    }}
+                  >
+                    {/* YA NO HAY preview ni variables */}
+                  </Card>
+                ))}
 
-              {/* CREATE CARD — oculta si ya no quedan códigos libres (igual que el botón del header) */}
-              {!isAddDisabled && (
-                <Card
-                  variant="create"
-                  onClick={openCreate}
-                  header={{
-                    icon: faFileContract,
-                    title: "Nueva Plantilla",
-                    subtitle: "Crear nueva plantilla",
-                  }}
-                />
-              )}
-            </div>
+                {/* CREATE CARD — oculta si ya no quedan códigos libres (igual que el botón del header) */}
+                {!isAddDisabled && (
+                  <Card
+                    variant="create"
+                    onClick={openCreate}
+                    header={{
+                      icon: faFileContract,
+                      title: 'Nueva Plantilla',
+                      subtitle: 'Crear nueva plantilla',
+                    }}
+                  />
+                )}
+              </div>
             )}
           </div>
           {filteredTemplates.length === 0 && !isFetching && (
@@ -478,7 +482,7 @@ export function PdfTemplatesPage() {
                 isAddDisabled
                   ? undefined
                   : {
-                      label: "Nueva Plantilla",
+                      label: 'Nueva Plantilla',
                       onClick: openCreate,
                       icon: faPlus,
                     }
@@ -495,7 +499,7 @@ export function PdfTemplatesPage() {
           setShowModal(false);
           setEditingTemplate(null);
         }}
-        title={editingTemplate ? "Editar Plantilla" : "Nueva Plantilla"}
+        title={editingTemplate ? 'Editar Plantilla' : 'Nueva Plantilla'}
         size="xl"
         footer={
           <div className="flex justify-between w-full">
@@ -515,7 +519,7 @@ export function PdfTemplatesPage() {
                 Cancelar
               </button>
               <button type="submit" form="template-form" disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                {saving ? "Guardando..." : editingTemplate ? "Actualizar" : "Crear"}
+                {saving ? 'Guardando...' : editingTemplate ? 'Actualizar' : 'Crear'}
               </button>
             </div>
           </div>
@@ -546,7 +550,7 @@ export function PdfTemplatesPage() {
                   {codeOptions.map((opt) => (
                     <option key={opt.value} value={opt.value} disabled={isCodeTaken(opt.value)}>
                       {opt.label}
-                      {isCodeTaken(opt.value) ? " — ya en uso" : ""}
+                      {isCodeTaken(opt.value) ? ' — ya en uso' : ''}
                     </option>
                   ))}
                 </select>
@@ -555,7 +559,7 @@ export function PdfTemplatesPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Título del Documento</label>
-              <input type="text" value={formData.title || ""} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="Ej: AUTORIZACIÓN GENERAL DE SOLICITUDES DE RECURSOS HUMANOS" className="input-field w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" />
+              <input type="text" value={formData.title || ''} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="Ej: AUTORIZACIÓN GENERAL DE SOLICITUDES DE RECURSOS HUMANOS" className="input-field w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" />
               <p className="text-xs text-gray-500 mt-1">Este título aparecerá centrado en el PDF, debajo del encabezado.</p>
             </div>
 
@@ -583,8 +587,8 @@ export function PdfTemplatesPage() {
                 value={formData.content}
                 onChange={(html) => setFormData({ ...formData, content: html })}
                 variables={[
-                  { grupo: formData.code === "vacaciones" ? "Variables de vacaciones" : "Variables del pedido", vars: variablesByCode[formData.code] || [] },
-                  { grupo: "Variables de la empresa", vars: systemVariables.map((s) => s.variable) },
+                  { grupo: formData.code === 'vacaciones' ? 'Variables de vacaciones' : 'Variables del pedido', vars: variablesByCode[formData.code] || [] },
+                  { grupo: 'Variables de la empresa', vars: systemVariables.map((s) => s.variable) },
                 ]}
                 variablesTitle="Variables disponibles (click para insertar)"
               />
