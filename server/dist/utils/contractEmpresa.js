@@ -51,17 +51,35 @@ export async function resolveContractEmpresa(userId, empresaIdOverride) {
         }
     }
     const chosen = best || fallback;
-    if (!chosen)
+    // Proyecto de referencia para las empresas de membrete: el del contrato elegido. Si el usuario NO
+    // tiene contratos (p. ej. un responsable/coordinador que igual pide vacaciones o cambios de datos),
+    // caemos al proyecto en el que está asignado — el primero que tenga empresas cargadas; si ninguno
+    // tiene, el primero disponible. Así el PDF puede tomar la empresa del proyecto igualmente.
+    let projectId = chosen ? String(chosen.projectId || "") : "";
+    if (!projectId && ups.length) {
+        for (const up of ups) {
+            if (!up.projectId)
+                continue;
+            const p = await Project.findById(up.projectId).lean();
+            if (p && (p.contratoEmpresas || []).length > 0) {
+                projectId = String(up.projectId);
+                break;
+            }
+        }
+        if (!projectId)
+            projectId = String(ups.find((u) => u.projectId)?.projectId || "");
+    }
+    if (!projectId)
         return empty;
-    const project = chosen.projectId ? await Project.findById(chosen.projectId).lean() : null;
+    const project = await Project.findById(projectId).lean();
     const projectEmpresaIds = (project?.contratoEmpresas || []).map((e) => String(e));
     const companies = projectEmpresaIds.length ? await Company.find({ _id: { $in: projectEmpresaIds } }).lean() : [];
     const projectEmpresas = projectEmpresaIds
         .map((id) => ({ id, label: companies.find((c) => String(c._id) === id)?.razonSocial || "" }))
         .filter((e) => e.label);
-    const contractEmpresaId = chosen.contract.empresaContratoId ? String(chosen.contract.empresaContratoId) : "";
+    const contractEmpresaId = chosen?.contract?.empresaContratoId ? String(chosen.contract.empresaContratoId) : "";
     const overrideValid = empresaIdOverride && projectEmpresaIds.includes(String(empresaIdOverride)) ? String(empresaIdOverride) : "";
     const chosenId = overrideValid || contractEmpresaId || projectEmpresaIds[0] || "";
     const empresa = chosenId ? await Company.findById(chosenId).lean() : null;
-    return { empresa, contractEmpresaId, projectEmpresas, projectId: String(chosen.projectId || "") };
+    return { empresa, contractEmpresaId, projectEmpresas, projectId };
 }
