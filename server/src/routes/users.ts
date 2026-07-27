@@ -553,7 +553,13 @@ router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_us
 router.get("/:id/all-contracts", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const userId = req.params.id;
-    const ups = await UserProject.find({ userId, tenantId: req.tenantObjectId }).lean();
+    // Validar que el usuario pertenece al tenant (UserProject no guarda tenantId; el scope viene por el usuario).
+    const user = await User.findOne({ _id: userId, tenantId: req.tenantObjectId }).select("_id").lean();
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    const ups = await UserProject.find({ userId }).lean();
 
     const projIds = [...new Set(ups.map((up: any) => String(up.projectId)).filter(Boolean))];
     const projects = await Project.find({ _id: { $in: projIds }, tenantId: req.tenantObjectId })
@@ -570,7 +576,7 @@ router.get("/:id/all-contracts", requireTenant, authenticateToken, requirePermis
         projects.flatMap((p: any) => [...(p.contratoEmpresas || []), ...(p.releaseEmpresas || [])]).map(String),
       ),
     ];
-    const companies = await Company.find({ _id: { $in: companyIds }, tenantId: req.tenantObjectId }).select("razonSocial").lean();
+    const companies = await Company.find({ _id: { $in: companyIds } }).select("razonSocial").lean();
     const companyMap = new Map(companies.map((c: any) => [String(c._id), c.razonSocial]));
 
     const toEmpresas = (ids: any[] = []) =>
