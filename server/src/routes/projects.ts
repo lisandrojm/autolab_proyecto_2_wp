@@ -1230,6 +1230,46 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
   }
 });
 
+// DELETE /projects/:projectId/members/:userId/contracts/:index - Elimina UN contrato puntual (por índice).
+// Si la persona queda sin contratos en el proyecto, se limpia el UserProject y sus referencias.
+router.delete("/projects/:projectId/members/:userId/contracts/:index", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { projectId, userId, index } = req.params;
+    const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("_id").lean();
+    if (!project) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+    const up = await UserProject.findOne({ projectId, userId });
+    if (!up) {
+      res.status(404).json({ error: "No hay contratos para esta persona en el proyecto" });
+      return;
+    }
+    const idx = Number(index);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= up.contracts.length) {
+      res.status(400).json({ error: "Índice de contrato inválido" });
+      return;
+    }
+
+    up.contracts.splice(idx, 1);
+    up.markModified("contracts");
+
+    if (up.contracts.length === 0) {
+      const upId = up._id;
+      await up.deleteOne();
+      await Project.findByIdAndUpdate(projectId, { $pull: { assignedUsers: userId, teamConfig: { userId }, coordinatorAssignments: { userId } } });
+      await User.findByIdAndUpdate(userId, { $pull: { projectIds: projectId, "metadata.projects": upId } });
+    } else {
+      await up.save();
+    }
+
+    res.json({ message: "Contrato eliminado" });
+  } catch (error) {
+    console.error("Delete member contract error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // DELETE /projects/:projectId/members/:userId - Complete removal of a member from a project
 router.delete("/projects/:projectId/members/:userId", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {

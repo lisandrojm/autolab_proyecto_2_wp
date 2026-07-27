@@ -1,8 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileContract, faFileLines, faXmark, faFilter } from "@fortawesome/free-solid-svg-icons";
+import { faFileContract, faFileLines, faXmark, faFilter, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
 import { usersAPI, ManagedContract } from "../../api/users";
+import { projectsAPI } from "../../api/projects";
 import { contratoFrameAPI, ContratoFrameItem } from "../../api/contratosFrame";
 import { releasesAPI, Release } from "../../api/release";
 import { sweetAlert } from "../../utils/sweetAlert";
@@ -49,24 +51,51 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
   const [fDesde, setFDesde] = useState("");
   const [fHasta, setFHasta] = useState("");
 
+  const navigate = useNavigate();
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
   const userLike = { firstName: userName || "", lastName: "" } as any;
 
+  const load = useCallback(() => {
+    if (!userId) return;
+    setLoading(true);
+    usersAPI
+      .getAllContracts(userId)
+      .then(setRows)
+      .catch(() => sweetAlert.error("Error", "No se pudieron cargar los contratos de la persona."))
+      .finally(() => setLoading(false));
+  }, [userId]);
+
   useEffect(() => {
     if (!isOpen || !userId) return;
-    setLoading(true);
     setFCliente("all");
     setFProyecto("all");
     setFTipo("all");
     setFVigencia("all");
     setFDesde("");
     setFHasta("");
-    usersAPI
-      .getAllContracts(userId)
-      .then(setRows)
-      .catch(() => sweetAlert.error("Error", "No se pudieron cargar los contratos de la persona."))
-      .finally(() => setLoading(false));
-  }, [isOpen, userId]);
+    load();
+  }, [isOpen, userId, load]);
+
+  // Editar: ir al equipo del proyecto y abrir el editor del miembro precargado con ese contrato.
+  const handleEdit = (r: ManagedContract) => {
+    if (!userId) return;
+    onClose();
+    navigate(`/projects/${r.projectId}/team`, { state: { openWizardFor: { userId, contractIndex: r.contractIndex } } });
+  };
+
+  // Eliminar: borra SOLO ese contrato (por índice) del proyecto.
+  const handleDelete = async (r: ManagedContract) => {
+    if (!userId) return;
+    const res = await sweetAlert.confirm("¿Eliminar contrato?", `Se eliminará este contrato de "${r.projectName}". Esta acción no se puede deshacer.`, "Sí, eliminar");
+    if (!res.isConfirmed) return;
+    try {
+      await projectsAPI.deleteMemberContract(r.projectId, userId, r.contractIndex);
+      sweetAlert.success("Contrato eliminado", "El contrato fue eliminado.");
+      load();
+    } catch {
+      sweetAlert.error("Error", "No se pudo eliminar el contrato.");
+    }
+  };
 
   // Opciones de filtro derivadas de los contratos
   const clientes = useMemo(() => {
@@ -220,8 +249,16 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
                     {c.nombre_estado_empleado && <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border border-green-300 text-green-700 bg-green-50 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800">{c.nombre_estado_empleado}</span>}
                   </div>
 
-                  <div className="mt-3">
+                  <div className="mt-3 flex items-center justify-between gap-2">
                     <span className="text-base font-semibold text-gray-900 dark:text-white">{formatMoney(c.sueldo_mano)}</span>
+                    <div className="flex items-center gap-1">
+                      <button type="button" onClick={() => handleEdit(r)} title="Editar contrato (ir al equipo del proyecto)" className="p-2 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+                        <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                      </button>
+                      <button type="button" onClick={() => handleDelete(r)} title="Eliminar este contrato" className="p-2 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                        <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Contrato | Empresa */}

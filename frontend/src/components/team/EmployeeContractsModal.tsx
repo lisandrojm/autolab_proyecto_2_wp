@@ -298,7 +298,7 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                         </button>
                       )}
                       {user && (
-                        <button type="button" onClick={() => onDelete(user._id)} title="Eliminar del proyecto" className="p-2 rounded text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
+                        <button type="button" onClick={() => onDelete(user._id)} title="Eliminar del proyecto" className="p-2 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors">
                           <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
                         </button>
                       )}

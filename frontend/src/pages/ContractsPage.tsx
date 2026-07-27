@@ -216,6 +216,13 @@ export const ContractsPage: React.FC = () => {
     localStorage.setItem("contractsViewMode", mode);
   };
 
+  // Cantidad de contratos por persona (dentro de lo cargado en la página; los contratos de una persona
+  // vienen juntos porque la paginación es por empleado).
+  const contractCountByUser: Record<string, number> = {};
+  contracts.forEach((r) => {
+    contractCountByUser[r.userId] = (contractCountByUser[r.userId] || 0) + 1;
+  });
+
   return (
     <PageLayout
       title="Contratos"
@@ -296,7 +303,10 @@ export const ContractsPage: React.FC = () => {
                           <FontAwesomeIcon icon={faFileContract} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div className="min-w-0">
-                          <div className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{record.userName}</div>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{record.userName}</span>
+                            <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" title="Contratos de esta persona">{contractCountByUser[record.userId] || 1} contr.</span>
+                          </div>
                           <div className="text-xs text-gray-400 truncate">{record.userEmail}</div>
                         </div>
                       </div>
@@ -344,7 +354,10 @@ export const ContractsPage: React.FC = () => {
                       <FontAwesomeIcon icon={faFileContract} className="h-8 w-8 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight">{record.userName}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight">{record.userName}</h3>
+                        <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" title="Contratos de esta persona">{contractCountByUser[record.userId] || 1} contr.</span>
+                      </div>
                       <p className="text-[10px] text-gray-500">{record.userEmail}</p>
                     </div>
                   </div>

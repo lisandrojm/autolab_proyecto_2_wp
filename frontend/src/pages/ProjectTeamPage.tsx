@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from '../api/axiosConfig';
 import { projectsAPI, Project } from '../api/projects';
 import { usersAPI, User, Contract } from '../api/users';
@@ -218,6 +218,7 @@ function numeroALetras(num: number): string {
 export const ProjectTeamPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { token } = useAuthStore();
 
   // Help
@@ -1012,7 +1013,13 @@ export const ProjectTeamPage: React.FC = () => {
 
     const lastProject = currentProjectMeta || (metadataProjects.length > 0 ? metadataProjects[metadataProjects.length - 1] : null);
     // Si se editó una tarjeta puntual del modal de contratos, precargar ESE contrato; si no, el último.
-    const lastContract = contractOverride || (lastProject?.contracts?.length ? lastProject.contracts[lastProject.contracts.length - 1] : null);
+    const lastContract =
+      contractOverride ||
+      (typeof contractIndex === "number" && lastProject?.contracts?.[contractIndex] != null
+        ? lastProject.contracts[contractIndex]
+        : lastProject?.contracts?.length
+          ? lastProject.contracts[lastProject.contracts.length - 1]
+          : null);
 
     console.log('[Wizard] user:', user._id, 'lastProject:', lastProject?._id, 'lastContract keys:', lastContract ? Object.keys(lastContract) : 'null');
     console.log('[Wizard] lastContract:', lastContract ? JSON.stringify({ categoria_sat_id: (lastContract as any).categoria_sat_id, nombre_categoria_sat: (lastContract as any).nombre_categoria_sat, estado_id: (lastContract as any).estado_id, nombre_estado_empleado: (lastContract as any).nombre_estado_empleado }) : 'null');
@@ -1235,6 +1242,20 @@ export const ProjectTeamPage: React.FC = () => {
       levelId: lastContract?.levelId || '',
     });
   };
+
+  // Al llegar desde "Editar" del modal de Contratos (admin), abrir el wizard precargado con ese contrato.
+  const wizardAutoOpenedRef = useRef(false);
+  useEffect(() => {
+    const st = location.state as any;
+    if (wizardAutoOpenedRef.current) return;
+    if (!st?.openWizardFor || !project) return;
+    const { userId, contractIndex } = st.openWizardFor;
+    if (!userId) return;
+    wizardAutoOpenedRef.current = true;
+    handleOpenWizard(userId, undefined, typeof contractIndex === "number" ? contractIndex : undefined);
+    navigate(location.pathname, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, project]);
 
   const handleSaveWizard = async () => {
     if (!selectedUserForWizard || !project) return;

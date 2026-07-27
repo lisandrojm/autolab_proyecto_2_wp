@@ -404,6 +404,13 @@ class ProjectsAPI {
     const clientId = typeof project.clientId === "string" ? project.clientId : project.clientId._id;
     emitProjectsChanged("update", projectId, clientId);
   }
+
+  /** Elimina un contrato puntual (por índice) de la persona en un proyecto. */
+  async deleteMemberContract(projectId: string, userId: string, index: number): Promise<void> {
+    await axios.delete(`/projects/${projectId}/members/${userId}/contracts/${index}`, {
+      headers: this.getHeaders(),
+    });
+  }
 }
 
 export const projectsAPI = new ProjectsAPI();
