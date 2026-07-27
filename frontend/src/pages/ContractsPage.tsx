@@ -299,7 +299,7 @@ export const ContractsPage: React.FC = () => {
               <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
                 <tr className="border-b border-gray-100 dark:border-gray-800">
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto / Contrato</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Contrato</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Sede / Rol</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Alta / Baja</th>
@@ -328,10 +328,6 @@ export const ContractsPage: React.FC = () => {
                     </td>
                     <td className="px-4 py-3">
                       <div className="text-sm font-bold text-gray-900 dark:text-gray-100">{record.projectName}</div>
-                      <div className="flex items-center gap-1.5 mt-0.5 text-xs text-gray-400">
-                        <FontAwesomeIcon icon={faFileContract} className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                        <span>{record.nombre_contrato}</span>
-                      </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                       <div className="flex items-center gap-1.5">
