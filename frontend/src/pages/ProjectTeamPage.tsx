@@ -21,6 +21,7 @@ import { vacationsAPI, VacationRequest } from '../api/vacations';
 import { TeamSolicitudesTab } from '../components/team/TeamSolicitudesTab';
 import { TeamCoordinadoresTab } from '../components/team/TeamCoordinadoresTab';
 import { EmployeeContractsModal } from '../components/team/EmployeeContractsModal';
+import { EstadoSelect } from '../components/EstadoSelect';
 import { contratoFrameAPI, ContratoFrameItem } from '../api/contratosFrame';
 import { releasesAPI, Release } from '../api/release';
 import { companiesAPI, Company } from '../api/companies';
@@ -2654,14 +2655,11 @@ export const ProjectTeamPage: React.FC = () => {
 
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Estado *</label>
-                      <select className="input-field w-full" value={wizardData.estado_id} onChange={(e) => setWizardData((prev) => ({ ...prev, estado_id: e.target.value }))} required>
-                        <option value="">Selecciona estado...</option>
-                        {allEstados.map((e) => (
-                          <option key={e._id} value={e.data.id}>
-                            {e.name}
-                          </option>
-                        ))}
-                      </select>
+                      <EstadoSelect
+                        options={allEstados.map((e) => ({ value: String(e.data.id), name: e.name }))}
+                        value={wizardData.estado_id}
+                        onChange={(v) => setWizardData((prev) => ({ ...prev, estado_id: v }))}
+                      />
                     </div>
 
                     <div className="space-y-1.5">
