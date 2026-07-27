@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { usersAPI } from "../api/users";
 import { projectsAPI } from "../api/projects";
 import { contratoFrameAPI, ContratoFrameItem } from "../api/contratosFrame";
 import { releasesAPI, Release } from "../api/release";
 import { MemberContractsManagerModal } from "../components/team/MemberContractsManagerModal";
+import { isContractVigente, formatDate } from "../components/team/EmployeeContractsModal";
 import { cachedFetch } from "../utils/refCache";
-import { infoAPI } from "../api/info";
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Card } from "../components/ui/Card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileContract, faBriefcase, faHourglassHalf, faTable, faGrip, faChevronLeft, faChevronRight, faSearch, faClock, faFilter } from "@fortawesome/free-solid-svg-icons";
+import { faFileContract, faBriefcase, faHourglassHalf, faTable, faGrip, faChevronLeft, faChevronRight, faSearch, faClock, faFilter, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { sweetAlert } from "../utils/sweetAlert";
 
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -32,9 +33,12 @@ interface ContractRecord {
   nombre_estado_empleado: string;
   cantidad_jornadas_laborales?: number;
   tipo_contrato_id?: number;
+  projectId: string;
+  contractIndex: number;
 }
 
 export const ContractsPage: React.FC = () => {
+  const navigate = useNavigate();
   // Data (paginado server-side POR EMPLEADO — usa endpoint existente en prod)
   const USERS_PER_PAGE = 25;
   const [contracts, setContracts] = useState<ContractRecord[]>([]);
@@ -45,7 +49,6 @@ export const ContractsPage: React.FC = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [openInfo, setOpenInfo] = useState(false);
-  const [contractTypes, setContractTypes] = useState<Record<number, string>>({});
 
   // Modal de gestión de TODOS los contratos de una persona (cross-proyecto)
   const [managedUser, setManagedUser] = useState<{ id: string; name: string } | null>(null);
@@ -85,7 +88,7 @@ export const ContractsPage: React.FC = () => {
     const fetchAllData = async () => {
       try {
         setInitialLoading(true);
-        await Promise.all([fetchContractTypes(), fetchProjectOptions(), fetchContracts(1)]);
+        await Promise.all([fetchProjectOptions(), fetchContracts(1)]);
       } finally {
         setInitialLoading(false);
       }
@@ -120,20 +123,6 @@ export const ContractsPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage]);
 
-  const fetchContractTypes = async () => {
-    try {
-      const types = await infoAPI.listByType("contrato");
-      const map: Record<number, string> = {};
-      types.forEach((t) => {
-        if (t.data && t.data.id) {
-          map[t.data.id] = t.data.nombre || t.name;
-        }
-      });
-      setContractTypes(map);
-    } catch (error) {
-      console.error("Error fetching contract types:", error);
-    }
-  };
 
   const fetchProjectOptions = async () => {
     try {
@@ -190,6 +179,8 @@ export const ContractsPage: React.FC = () => {
               nombre_estado_empleado: c.nombre_estado_empleado || "",
               cantidad_jornadas_laborales: c.cantidad_jornadas_laborales,
               tipo_contrato_id: c.tipo_contrato_id,
+              projectId: String(pProjId || ""),
+              contractIndex: cIdx,
             });
           });
         });
@@ -214,6 +205,29 @@ export const ContractsPage: React.FC = () => {
   const toggleViewMode = (mode: "table" | "cards") => {
     setViewMode(mode);
     localStorage.setItem("contractsViewMode", mode);
+  };
+
+  // Editar un contrato: ir al equipo del proyecto y abrir el editor precargado con ese contrato.
+  const handleEditContract = (record: ContractRecord) => {
+    if (!record.projectId) {
+      sweetAlert.error("Sin proyecto", "No se pudo determinar el proyecto de este contrato.");
+      return;
+    }
+    navigate(`/projects/${record.projectId}/team`, { state: { openWizardFor: { userId: record.userId, contractIndex: record.contractIndex } } });
+  };
+
+  // Eliminar SOLO ese contrato (por índice) del proyecto.
+  const handleDeleteContract = async (record: ContractRecord) => {
+    if (!record.projectId) return;
+    const res = await sweetAlert.confirm("¿Eliminar contrato?", `Se eliminará este contrato de "${record.projectName}". Esta acción no se puede deshacer.`, "Sí, eliminar");
+    if (!res.isConfirmed) return;
+    try {
+      await projectsAPI.deleteMemberContract(record.projectId, record.userId, record.contractIndex);
+      sweetAlert.success("Contrato eliminado", "El contrato fue eliminado.");
+      fetchContracts();
+    } catch {
+      sweetAlert.error("Error", "No se pudo eliminar el contrato.");
+    }
   };
 
   // Cantidad de contratos por persona (dentro de lo cargado en la página; los contratos de una persona
@@ -286,12 +300,13 @@ export const ContractsPage: React.FC = () => {
                 <tr className="border-b border-gray-100 dark:border-gray-800">
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto / Contrato</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Tipo</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Contrato</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Sede / Rol</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Periodo</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Alta / Baja</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Días</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Monto / Jorn.</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Estado</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -318,14 +333,29 @@ export const ContractsPage: React.FC = () => {
                         <span>{record.nombre_contrato}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{record.tipo_contrato_id && contractTypes[record.tipo_contrato_id] ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{contractTypes[record.tipo_contrato_id]}</span> : <span className="text-gray-400">-</span>}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                      <div className="flex items-center gap-1.5">
+                        <FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-blue-500 dark:text-blue-400 shrink-0" />
+                        <span>{record.nombre_contrato || "-"}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                       <div className="font-medium">{record.nombre_sede}</div>
                       <div className="text-xs opacity-70">{record.nombre_rol_frame}</div>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500">
-                      <div>{new Date(record.fecha_alta_contrato).toLocaleDateString()}</div>
-                      <div className="text-xs">{record.fecha_baja_contrato ? new Date(record.fecha_baja_contrato).toLocaleDateString() : "Presente"}</div>
+                      {(() => {
+                        const vigente = isContractVigente(record.fecha_baja_contrato);
+                        return (
+                          <div className="flex flex-col gap-1">
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "Vigente" : "No vigente"}</span>
+                            <div className="flex flex-col gap-0.5 text-xs">
+                              <span><span className="text-gray-400">Alta:</span> {formatDate(record.fecha_alta_contrato)}</span>
+                              <span><span className="text-gray-400">Baja:</span> {record.fecha_baja_contrato ? formatDate(record.fecha_baja_contrato) : "—"}</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className="text-sm font-bold px-2.5 py-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">{record.days}</span>
@@ -336,6 +366,16 @@ export const ContractsPage: React.FC = () => {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <span className={`text-xs font-bold px-2 py-1 rounded uppercase tracking-tight ${record.nombre_estado_empleado === "DISPONIBLE" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"}`}>{record.nombre_estado_empleado}</span>
+                    </td>
+                    <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => handleEditContract(record)} title="Editar contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+                          <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                        </button>
+                        <button onClick={() => handleDeleteContract(record)} title="Eliminar contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                          <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
