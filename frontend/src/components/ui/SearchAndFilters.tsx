@@ -28,6 +28,11 @@ export interface SelectFilter {
   options: FilterOption[];
   label: string;
   placeholder?: string;
+  /**
+   * Render alternativo de cada opción (p. ej. un badge de color). Si se pasa, el filtro se muestra como
+   * un dropdown propio en vez del <select> nativo, que no permite colorear sus <option>.
+   */
+  renderOption?: (option: FilterOption) => React.ReactNode;
 }
 
 export interface SwitchFilter {
@@ -82,6 +87,65 @@ const FilterSelect: React.FC<FilterProps> = ({ value, onChange, options, placeho
 
       {/* Ícono fijo, sin rotación */}
       <FontAwesomeIcon icon={faChevronDown} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+    </div>
+  );
+};
+
+/** Dropdown para filtros cuyas opciones se muestran con un render propio (badges de color). */
+const RenderedSelect: React.FC<SelectFilter> = ({ value, onChange, options, placeholder, renderOption }) => {
+  const [open, setOpen] = useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  const selected = options.find((o) => o.value === value);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded
+                   focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white text-sm text-left"
+      >
+        {selected ? renderOption?.(selected) : <span className="text-gray-500 dark:text-gray-400">{placeholder || "Todos"}</span>}
+        <FontAwesomeIcon icon={faChevronDown} className={`h-3 w-3 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        // Se abre hacia arriba: estos filtros quedan al pie del modal y la lista se cortaba.
+        <div className="absolute bottom-full z-50 mb-1 w-full max-h-60 overflow-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1">
+          <button
+            type="button"
+            onClick={() => {
+              onChange("");
+              setOpen(false);
+            }}
+            className="w-full px-3 py-2 text-left text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+          >
+            {placeholder || "Todos"}
+          </button>
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onChange(opt.value);
+                setOpen(false);
+              }}
+              className={`w-full flex items-center px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${opt.value === value ? "bg-gray-50 dark:bg-gray-700/40" : ""}`}
+            >
+              {renderOption?.(opt)}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -200,7 +264,8 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
                                bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200
                                border border-blue-300 dark:border-blue-700"
                 >
-                  {sf.label}: {sf.options.find((o) => o.value === sf.value)?.label || sf.value}
+                  {sf.label}:{" "}
+                  {sf.renderOption ? sf.renderOption(sf.options.find((o) => o.value === sf.value) || { value: sf.value, label: sf.value }) : sf.options.find((o) => o.value === sf.value)?.label || sf.value}
                   <button onClick={() => sf.onChange("")} className="p-0.5 rounded hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors" title={`Quitar filtro de ${sf.label}`}>
                     <FontAwesomeIcon icon={faXmark} className="h-3 w-3" />
                   </button>
@@ -341,6 +406,9 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
                 {selectFilters.map((sf, idx) => (
                   <div key={idx}>
                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{sf.label}</label>
+                    {sf.renderOption ? (
+                      <RenderedSelect {...sf} />
+                    ) : (
                     <div className="relative">
                       <select
                         value={sf.value}
@@ -357,6 +425,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
                       </select>
                       <FontAwesomeIcon icon={faChevronDown} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     </div>
+                    )}
                   </div>
                 ))}
               </div>

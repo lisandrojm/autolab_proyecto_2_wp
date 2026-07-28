@@ -48,6 +48,9 @@ const orderOf = (name: string) => (normalize(name) in ESTADO_ORDER ? ESTADO_ORDE
 const styleFor = (name: string) => ESTADO_STYLES[normalize(name)] || { cls: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300" };
 const labelFor = (name: string) => styleFor(name).label || name;
 
+/** Etiqueta canónica del estado ("Falta pedido de AFIP" y "Pedido de AFIP" son el mismo estado). */
+export const estadoLabel = (name: string): string => labelFor(name);
+
 /** Badge de estado del contrato (mismos colores que el select). Reutilizable desde tablas y tarjetas. */
 export const EstadoBadge: React.FC<{ name: string; className?: string }> = ({ name, className = "" }) => (
   <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide ${styleFor(name).cls} ${className}`}>{labelFor(name)}</span>

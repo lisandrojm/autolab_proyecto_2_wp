@@ -22,7 +22,7 @@ import { vacationsAPI, VacationRequest } from '../api/vacations';
 import { TeamSolicitudesTab } from '../components/team/TeamSolicitudesTab';
 import { TeamCoordinadoresTab } from '../components/team/TeamCoordinadoresTab';
 import { EmployeeContractsModal } from '../components/team/EmployeeContractsModal';
-import { EstadoSelect, EstadoBadge } from '../components/EstadoSelect';
+import { EstadoSelect, EstadoBadge, estadoLabel } from '../components/EstadoSelect';
 import { contratoFrameAPI, ContratoFrameItem } from '../api/contratosFrame';
 import { releasesAPI, Release } from '../api/release';
 import { companiesAPI, Company } from '../api/companies';
@@ -660,8 +660,9 @@ export const ProjectTeamPage: React.FC = () => {
   // Estados de contrato para filtrar: el catálogo (Info "estados") más los que aparezcan en los contratos
   // cargados, por si alguno quedó con un estado que ya no está en el catálogo.
   const estadoContratoOptions = useMemo(() => {
+    // Se deduplica por etiqueta canónica: "Falta pedido de AFIP" y "Pedido de AFIP" son el mismo estado.
     const seen = new Set<string>();
-    allEstados.forEach((e) => e.name && seen.add(e.name));
+    allEstados.forEach((e) => e.name && seen.add(estadoLabel(e.name)));
     // Último contrato del miembro en este proyecto (getActiveContract se declara más abajo, así que
     // acá se resuelve igual pero inline).
     teamRows.forEach((u) => {
@@ -671,7 +672,7 @@ export const ProjectTeamPage: React.FC = () => {
       });
       const contracts = projectMeta?.contracts || [];
       const estado = contracts.length ? (contracts[contracts.length - 1] as any)?.nombre_estado_empleado : null;
-      if (estado) seen.add(estado);
+      if (estado) seen.add(estadoLabel(estado));
     });
     return [...seen].map((name) => ({ value: name, label: name }));
   }, [allEstados, teamRows, projectId]);
@@ -1807,6 +1808,17 @@ export const ProjectTeamPage: React.FC = () => {
             '—'
           )}
         </td>
+        {/* Monto / Jornadas del contrato vigente (mismo formato que la tabla de Contratos). */}
+        <td className="px-4 py-3 text-right whitespace-nowrap">
+          {activeContract?.sueldo_mano != null ? (
+            <>
+              <div className="text-sm font-bold text-primary-600 dark:text-primary-400">${Number(activeContract.sueldo_mano).toLocaleString('es-AR')}</div>
+              {activeContract?.cantidad_jornadas_laborales ? <div className="text-xs text-gray-400">{activeContract.cantidad_jornadas_laborales} jor.</div> : null}
+            </>
+          ) : (
+            <span className="text-xs text-gray-400">—</span>
+          )}
+        </td>
         <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">{activeContract?.hora_inicio ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : '-'}</td>
         <td className="px-4 py-3 text-right">
           <div className="flex items-center justify-end gap-1">
@@ -1999,6 +2011,7 @@ export const ProjectTeamPage: React.FC = () => {
                           onChange: setFilterEstadoContrato,
                           placeholder: 'Todos los estados',
                           options: estadoContratoOptions,
+                          renderOption: (opt) => <EstadoBadge name={opt.label} />,
                         },
                       ]}
                     />
@@ -2074,7 +2087,7 @@ export const ProjectTeamPage: React.FC = () => {
                             if (String(ac?.nombre_contrato ?? '') !== String(filterTipoContrato)) return false;
                           }
                           if (filterEstadoContrato) {
-                            if (String(ac?.nombre_estado_empleado ?? '') !== String(filterEstadoContrato)) return false;
+                            if (estadoLabel(String(ac?.nombre_estado_empleado ?? '')) !== filterEstadoContrato) return false;
                           }
                           if (filterAreaTurno) {
                             const keys = getUserAreaShiftKeys(u);
@@ -2120,6 +2133,7 @@ export const ProjectTeamPage: React.FC = () => {
                               <th className="px-4 py-3 font-semibold whitespace-nowrap">Estado Contrato</th>
                               <th className="px-4 py-3 font-semibold">Reemplazo</th>
                               <th className="px-4 py-3 font-semibold whitespace-nowrap">Alta / Baja</th>
+                              <th className="px-4 py-3 font-semibold text-right whitespace-nowrap">Monto / Jorn.</th>
                               <th className="px-4 py-3 font-semibold">Horario</th>
                               <th className="px-4 py-3 font-semibold text-right">Acciones</th>
                             </tr>

@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { usersAPI } from "../api/users";
 import { projectsAPI } from "../api/projects";
 import { contratoFrameAPI, ContratoFrameItem } from "../api/contratosFrame";
+import { areasAPI, Area } from "../api/areas";
+import { shiftsAPI, Shift } from "../api/shifts";
+import { EstadoBadge } from "../components/EstadoSelect";
 import { releasesAPI, Release } from "../api/release";
 import { MemberContractsManagerModal } from "../components/team/MemberContractsManagerModal";
 import { isContractVigente, formatDate } from "../components/team/EmployeeContractsModal";
@@ -12,7 +15,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Card } from "../components/ui/Card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileContract, faBriefcase, faHourglassHalf, faTable, faGrip, faChevronLeft, faChevronRight, faSearch, faClock, faFilter, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faFileContract, faBriefcase, faHourglassHalf, faTable, faGrip, faChevronLeft, faChevronRight, faSearch, faClock, faFilter, faEdit, faTrash, faUser, faIdCard } from "@fortawesome/free-solid-svg-icons";
 import { sweetAlert } from "../utils/sweetAlert";
 
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -35,6 +38,16 @@ interface ContractRecord {
   tipo_contrato_id?: number;
   projectId: string;
   contractIndex: number;
+  // Datos del contrato/usuario para mostrar las mismas columnas que Gestionar Equipo
+  userRoles: { _id: string; name: string }[];
+  userActivo: boolean;
+  areaShiftAssignments: any[];
+  reemplazo: boolean;
+  empleado_id_reemplezado?: number | null;
+  hora_inicio?: string;
+  hora_fin?: string;
+  /** Contratos de la persona EN ESE PROYECTO (mismo criterio que la columna Contratos del equipo). */
+  contractsInProject: number;
 }
 
 export const ContractsPage: React.FC = () => {
@@ -42,6 +55,10 @@ export const ContractsPage: React.FC = () => {
   // Data (paginado server-side POR EMPLEADO — usa endpoint existente en prod)
   const USERS_PER_PAGE = 25;
   const [contracts, setContracts] = useState<ContractRecord[]>([]);
+  // Catálogos para mostrar área/turno con nombre (igual que la tabla de Gestionar Equipo).
+  const [allAreas, setAllAreas] = useState<Area[]>([]);
+  const [allShifts, setAllShifts] = useState<Shift[]>([]);
+  const [replacedNames, setReplacedNames] = useState<Record<string, string>>({});
   const [totalEmployees, setTotalEmployees] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [projectOptions, setProjectOptions] = useState<{ id: string; name: string }[]>([]);
@@ -57,6 +74,8 @@ export const ContractsPage: React.FC = () => {
   useEffect(() => {
     contratoFrameAPI.list().then(setContratoFrames).catch(() => setContratoFrames([]));
     releasesAPI.getAll().then(setReleases).catch(() => setReleases([]));
+    cachedFetch("areas:all", () => areasAPI.listAll()).then(setAllAreas).catch(() => setAllAreas([]));
+    cachedFetch("shifts:all", () => shiftsAPI.getAll()).then(setAllShifts).catch(() => setAllShifts([]));
   }, []);
 
   // Filtering & Pagination
@@ -153,6 +172,12 @@ export const ContractsPage: React.FC = () => {
       if (currentId !== requestIdRef.current) return;
 
       const rows: ContractRecord[] = [];
+      // Índice para resolver a quién reemplaza cada contrato (empleado_id_reemplezado es el id externo).
+      const nameByExternalId: Record<string, string> = {};
+      resp.users.forEach((u: any) => {
+        const ext = u.metadata?.id;
+        if (ext != null) nameByExternalId[String(ext)] = `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email;
+      });
       resp.users.forEach((user: any) => {
         const userName = user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : (user.email || "").split("@")[0];
         (user.metadata?.projects || []).forEach((p: any) => {
@@ -181,6 +206,14 @@ export const ContractsPage: React.FC = () => {
               tipo_contrato_id: c.tipo_contrato_id,
               projectId: String(pProjId || ""),
               contractIndex: cIdx,
+              userRoles: user.roles || [],
+              userActivo: !!user.metadata?.activo,
+              areaShiftAssignments: c.areaShiftAssignments || [],
+              reemplazo: !!c.reemplazo,
+              empleado_id_reemplezado: c.empleado_id_reemplezado ?? null,
+              hora_inicio: c.hora_inicio,
+              hora_fin: c.hora_fin,
+              contractsInProject: (p.contracts || []).length,
             });
           });
         });
@@ -190,6 +223,7 @@ export const ContractsPage: React.FC = () => {
       rows.sort((a, b) => new Date(b.fecha_alta_contrato).getTime() - new Date(a.fecha_alta_contrato).getTime());
 
       setContracts(rows);
+      setReplacedNames(nameByExternalId);
       setTotalEmployees(resp.pagination.total); // total de EMPLEADOS (la paginación es por empleado)
       setTotalPages(resp.pagination.pages);
       setHasLoaded(true);
@@ -229,13 +263,6 @@ export const ContractsPage: React.FC = () => {
       sweetAlert.error("Error", "No se pudo eliminar el contrato.");
     }
   };
-
-  // Cantidad de contratos por persona (dentro de lo cargado en la página; los contratos de una persona
-  // vienen juntos porque la paginación es por empleado).
-  const contractCountByUser: Record<string, number> = {};
-  contracts.forEach((r) => {
-    contractCountByUser[r.userId] = (contractCountByUser[r.userId] || 0) + 1;
-  });
 
   return (
     <PageLayout
@@ -295,18 +322,24 @@ export const ContractsPage: React.FC = () => {
       ) : effectiveViewMode === "table" ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
           <div className="overflow-x-auto custom-scrollbar max-h-[700px]">
-            <table className="w-full text-left border-collapse min-w-[1000px]">
+            <table className="w-full text-left border-collapse min-w-[1600px]">
               <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
                 <tr className="border-b border-gray-100 dark:border-gray-800">
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Contratos</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Rol/es</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Rol/es Frame</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Estado</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Área / Turno</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Sede</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Contrato</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Sede / Rol</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Alta / Baja</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Estado Contrato</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Reemplazo</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Alta / Baja</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Días</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Monto / Jorn.</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Estado</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Horario</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Acciones</th>
                 </tr>
               </thead>
@@ -316,36 +349,124 @@ export const ContractsPage: React.FC = () => {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="flex items-center justify-center shrink-0">
-                          <FontAwesomeIcon icon={faFileContract} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                          <FontAwesomeIcon icon={faUser} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div className="min-w-0">
-                          <span className="block text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{record.userName}</span>
-                          <div className="text-xs text-gray-400 truncate">{record.userEmail}</div>
+                          <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{record.userName}</p>
+                          <p className="text-xs text-gray-500 truncate">{record.userEmail}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className="text-sm font-bold px-2.5 py-1 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" title="Contratos de esta persona">{contractCountByUser[record.userId] || 1}</span>
+                      <span className="text-sm font-bold px-2.5 py-1 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" title="Contratos de esta persona en el proyecto">{record.contractsInProject}</span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="text-sm font-bold text-gray-900 dark:text-gray-100">{record.projectName}</div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                      <div className="flex items-center gap-1.5">
-                        <FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-blue-500 dark:text-blue-400 shrink-0" />
-                        <span>{record.nombre_contrato || "-"}</span>
+                    {/* Rol/es del usuario (mismos badges que Gestionar Equipo) */}
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {(() => {
+                          const filteredRoles = (record.userRoles || []).filter((r) => !r.name.toLowerCase().includes("responsable"));
+                          return (
+                            <>
+                              {filteredRoles.slice(0, 3).map((r) => {
+                                const isCoordinador = r.name.toLowerCase().includes("coordinador");
+                                const badgeClasses = isCoordinador
+                                  ? "border-amber-500/30 text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400"
+                                  : "border-blue-500/30 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400";
+                                return (
+                                  <span key={r._id} className={`text-[10px] px-2 py-0.5 rounded font-medium border whitespace-nowrap ${badgeClasses}`}>
+                                    {r.name}
+                                  </span>
+                                );
+                              })}
+                              {filteredRoles.length > 3 && <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">+{filteredRoles.length - 3}</span>}
+                            </>
+                          );
+                        })()}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                      <div className="font-medium">{record.nombre_sede}</div>
-                      <div className="text-xs opacity-70">{record.nombre_rol_frame}</div>
+                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{record.nombre_rol_frame || "-"}</td>
+                    {/* Estado del usuario (activo/inactivo), distinto del estado del contrato */}
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${record.userActivo ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>
+                        {record.userActivo ? "ACTIVO" : "INACTIVO"}
+                      </span>
+                    </td>
+                    {/* Área / Turno del contrato (mismo formato que la tabla del equipo) */}
+                    <td className="px-4 py-3">
+                      {(() => {
+                        const areaData = (record.areaShiftAssignments || [])
+                          .map((asa: any) => {
+                            const aId = typeof asa.areaId === "object" ? asa.areaId?._id : asa.areaId;
+                            const aName = typeof asa.areaId === "object" ? asa.areaId?.name : allAreas.find((a) => String(a._id) === String(aId))?.name;
+                            const shifts = (asa.shiftIds || [])
+                              .map((sid: any) => {
+                                const sId = typeof sid === "object" ? sid?._id : sid;
+                                return allShifts.find((sh) => String(sh._id) === String(sId));
+                              })
+                              .filter(Boolean);
+                            return aName ? { id: String(aId), name: aName, shifts } : null;
+                          })
+                          .filter(Boolean) as { id: string; name: string; shifts: Shift[] }[];
+
+                        if (areaData.length === 0) return <span className="text-xs text-gray-400">—</span>;
+
+                        return (
+                          <div className="flex flex-wrap items-start gap-1.5">
+                            {areaData.map((ad, i) => (
+                              <div key={i} className="flex flex-col gap-1">
+                                <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg border border-blue-100 dark:border-blue-800 w-fit">
+                                  <span className="text-blue-700 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{ad.name}</span>
+                                </div>
+                                {ad.shifts.length > 0 && (
+                                  <div className="flex flex-col gap-1 mt-0.5 pl-0.5">
+                                    {ad.shifts.map((sh, idx) => (
+                                      <span
+                                        key={idx}
+                                        className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-50/50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border border-blue-100/50 dark:border-blue-900/40 whitespace-nowrap w-fit"
+                                        title={`${sh.startTime} - ${sh.endTime}`}
+                                      >
+                                        {sh.name} ({sh.startTime} - {sh.endTime})
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{record.nombre_sede || "-"}</td>
+                    <td className="px-4 py-3">
+                      <span className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300">
+                        <FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-blue-500 dark:text-blue-400 shrink-0" />
+                        {record.nombre_contrato || "-"}
+                      </span>
+                    </td>
+                    {/* Estado del contrato con el color del catálogo de estados */}
+                    <td className="px-4 py-3">
+                      {record.nombre_estado_empleado ? <EstadoBadge name={record.nombre_estado_empleado} className="text-[10px] whitespace-nowrap" /> : <span className="text-xs text-gray-400">—</span>}
+                    </td>
+                    {/* Reemplazo: a quién reemplaza este contrato */}
+                    <td className="px-4 py-3">
+                      {record.reemplazo ? (
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded border border-amber-200/50 dark:border-amber-800/50 w-fit">
+                          <FontAwesomeIcon icon={faIdCard} className="text-[9px]" />
+                          <span>{replacedNames[String(record.empleado_id_reemplezado)] || `ID: ${record.empleado_id_reemplezado}`}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500">
                       {(() => {
                         const vigente = isContractVigente(record.fecha_baja_contrato);
                         return (
                           <div className="flex flex-col gap-1">
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "Vigente" : "No vigente"}</span>
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>
                             <div className="flex flex-col gap-0.5 text-xs">
                               <span><span className="text-gray-400">Alta:</span> {formatDate(record.fecha_alta_contrato)}</span>
                               <span><span className="text-gray-400">Baja:</span> {record.fecha_baja_contrato ? formatDate(record.fecha_baja_contrato) : "—"}</span>
@@ -361,9 +482,7 @@ export const ContractsPage: React.FC = () => {
                       <div className="text-sm font-bold text-primary-600 dark:text-primary-400">${record.sueldo_mano?.toLocaleString()}</div>
                       {record.cantidad_jornadas_laborales && <div className="text-xs text-gray-400">{record.cantidad_jornadas_laborales} jor.</div>}
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <span className={`text-xs font-bold px-2 py-1 rounded uppercase tracking-tight ${record.nombre_estado_empleado === "DISPONIBLE" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"}`}>{record.nombre_estado_empleado}</span>
-                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">{record.hora_inicio ? `${record.hora_inicio} - ${record.hora_fin}` : "-"}</td>
                     <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
                         <button onClick={() => handleEditContract(record)} title="Editar contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
@@ -393,7 +512,7 @@ export const ContractsPage: React.FC = () => {
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight">{record.userName}</h3>
-                        <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" title="Contratos de esta persona">{contractCountByUser[record.userId] || 1} contr.</span>
+                        <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" title="Contratos de esta persona en el proyecto">{record.contractsInProject} contr.</span>
                       </div>
                       <p className="text-[10px] text-gray-500">{record.userEmail}</p>
                     </div>
