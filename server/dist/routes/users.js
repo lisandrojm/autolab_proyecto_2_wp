@@ -511,12 +511,15 @@ router.get("/:id/all-contracts", requireTenant, authenticateToken, requirePermis
         const clientIds = [...new Set(projects.map((p) => p.clientId).filter(Boolean).map(String))];
         const clients = await Client.find({ _id: { $in: clientIds }, tenantId: req.tenantObjectId }).select("name").lean();
         const clientMap = new Map(clients.map((c) => [String(c._id), c.name]));
-        const companyIds = [
-            ...new Set(projects.flatMap((p) => [...(p.contratoEmpresas || []), ...(p.releaseEmpresas || [])]).map(String)),
-        ];
-        const companies = await Company.find({ _id: { $in: companyIds } }).select("razonSocial").lean();
+        // Todas las empresas del ABM: sirven para resolver la razón social y, además, como fallback para los
+        // proyectos que no tienen empresas configuradas (si no, no habría con qué generar el documento).
+        const companies = await Company.find({}).select("razonSocial").lean();
         const companyMap = new Map(companies.map((c) => [String(c._id), c.razonSocial]));
-        const toEmpresas = (ids = []) => ids.map((id) => ({ id: String(id), label: companyMap.get(String(id)) || "" })).filter((e) => e.label);
+        const allEmpresas = companies.map((c) => ({ id: String(c._id), label: c.razonSocial || "" })).filter((e) => e.label);
+        const toEmpresas = (ids = []) => {
+            const fromProject = ids.map((id) => ({ id: String(id), label: companyMap.get(String(id)) || "" })).filter((e) => e.label);
+            return fromProject.length > 0 ? fromProject : allEmpresas;
+        };
         const rows = [];
         for (const up of ups) {
             const proj = projMap.get(String(up.projectId));

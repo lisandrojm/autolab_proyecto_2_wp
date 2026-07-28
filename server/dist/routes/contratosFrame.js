@@ -115,7 +115,9 @@ router.get("/:id/download-filled", authenticateToken, async (req, res) => {
         const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).lean();
         const empresas = project?.contratoEmpresas || [];
         const empresasIds = empresas.map((e) => String(e));
-        const chosenId = empresaId && empresasIds.includes(String(empresaId)) ? empresaId : empresasIds[0];
+        // Si el proyecto no tiene empresas configuradas, el modal ofrece todas las del ABM → se acepta cualquiera.
+        const empresaIdValida = !!empresaId && (empresasIds.length === 0 || empresasIds.includes(String(empresaId)));
+        const chosenId = empresaIdValida ? String(empresaId) : empresasIds[0];
         const empresa = chosenId ? await Company.findById(chosenId).lean() : null;
         const data = await buildEmployeeDocData(user, up, contract, empresa);
         // Si la plantilla lleva membrete, se encabeza/firma con la empresa elegida al descargar.

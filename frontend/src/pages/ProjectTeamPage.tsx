@@ -351,9 +351,15 @@ export const ProjectTeamPage: React.FC = () => {
   };
 
   // Empresas (razón social) seteadas en el proyecto para contratos/releases → se muestran en el modal
-  // y permiten elegir con cuál descargar el documento.
-  const contratoEmpresas = (project?.contratoEmpresas || []).map((id) => ({ id, label: companies.find((c) => c._id === id)?.razonSocial || '' })).filter((e) => e.label);
-  const releaseEmpresas = (project?.releaseEmpresas || []).map((id) => ({ id, label: companies.find((c) => c._id === id)?.razonSocial || '' })).filter((e) => e.label);
+  // y permiten elegir con cuál descargar el documento. Si el proyecto no tiene ninguna configurada,
+  // se ofrecen TODAS las empresas del ABM (si no, no habría con qué generar el documento).
+  const allEmpresas = companies.map((c) => ({ id: c._id, label: c.razonSocial })).filter((e) => e.label);
+  const resolveEmpresas = (ids?: string[]) => {
+    const fromProject = (ids || []).map((id) => ({ id, label: companies.find((c) => c._id === id)?.razonSocial || '' })).filter((e) => e.label);
+    return fromProject.length > 0 ? fromProject : allEmpresas;
+  };
+  const contratoEmpresas = resolveEmpresas(project?.contratoEmpresas);
+  const releaseEmpresas = resolveEmpresas(project?.releaseEmpresas);
 
   // Persistence for view mode
   useEffect(() => {
@@ -2665,7 +2671,7 @@ export const ProjectTeamPage: React.FC = () => {
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empresa del Contrato</label>
                       <select className="input-field w-full" value={wizardData.empresaContratoId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaContratoId: e.target.value }))}>
-                        <option value="">{contratoEmpresas.length ? 'Selecciona empresa...' : 'Sin empresas configuradas en el proyecto'}</option>
+                        <option value="">{contratoEmpresas.length ? 'Selecciona empresa...' : 'No hay empresas cargadas'}</option>
                         {contratoEmpresas.map((emp) => (
                           <option key={emp.id} value={emp.id}>
                             {emp.label}
@@ -2677,7 +2683,7 @@ export const ProjectTeamPage: React.FC = () => {
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empresa del Release</label>
                       <select className="input-field w-full" value={wizardData.empresaReleaseId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaReleaseId: e.target.value }))}>
-                        <option value="">{releaseEmpresas.length ? 'Selecciona empresa...' : 'Sin empresas configuradas en el proyecto'}</option>
+                        <option value="">{releaseEmpresas.length ? 'Selecciona empresa...' : 'No hay empresas cargadas'}</option>
                         {releaseEmpresas.map((emp) => (
                           <option key={emp.id} value={emp.id}>
                             {emp.label}

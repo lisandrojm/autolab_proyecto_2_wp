@@ -1,22 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileContract, faFileLines, faXmark, faFilter, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faFileContract, faFileLines, faXmark, faFilter } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
 import { usersAPI, ManagedContract } from "../../api/users";
 import { projectsAPI } from "../../api/projects";
 import { contratoFrameAPI, ContratoFrameItem } from "../../api/contratosFrame";
 import { releasesAPI, Release } from "../../api/release";
 import { sweetAlert } from "../../utils/sweetAlert";
-import {
-  DownloadMenu,
-  findTemplate,
-  templateHasContent,
-  formatMoney,
-  formatDate,
-  isContractVigente,
-  buildDownloadFileName,
-} from "./EmployeeContractsModal";
+import { ContractCard, findTemplate, templateHasContent, isContractVigente, buildDownloadFileName } from "./ContractCard";
 
 interface Props {
   isOpen: boolean;
@@ -131,6 +123,17 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
     });
   }, [rows, fCliente, fProyecto, fTipo, fVigencia, fDesde, fHasta]);
 
+  // El "último contrato" de cada proyecto es el de mayor índice en su UserProject: es el que se ve en la
+  // fila de la tabla del equipo, y se resalta igual que en el modal de Gestionar equipo.
+  const lastIndexByProject = useMemo(() => {
+    const m = new Map<string, number>();
+    rows.forEach((r) => {
+      const cur = m.get(r.projectId);
+      if (cur == null || r.contractIndex > cur) m.set(r.projectId, r.contractIndex);
+    });
+    return m;
+  }, [rows]);
+
   const anyFilter = fCliente !== "all" || fProyecto !== "all" || fTipo !== "all" || fVigencia !== "all" || !!fDesde || !!fHasta;
   const clearAll = () => {
     setFCliente("all");
@@ -204,12 +207,13 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
           </div>
         </div>
 
-        <div className="flex items-center justify-between px-1">
-          <span className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-400">
+        {/* Pestaña Contratos (mismo header que el modal de contratos del proyecto) */}
+        <div className="flex items-end justify-between border-b border-gray-200 dark:border-gray-700">
+          <span className="inline-flex items-center gap-2 px-1 pb-2 text-sm font-semibold text-blue-600 dark:text-blue-400 border-b-2 border-blue-500">
             <FontAwesomeIcon icon={faFileContract} className="h-4 w-4" />
             Contratos
           </span>
-          <span className="text-xs text-gray-500">{filtered.length} de {rows.length}</span>
+          <span className="pb-2 text-xs text-gray-500">{filtered.length} de {rows.length}</span>
         </div>
 
         {loading ? (
@@ -221,84 +225,29 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
           </div>
         ) : (
           <div className="space-y-3">
-            {filtered.map((r, idx) => {
-              const c = r.contract;
-              const cargo = c.nombre_rol_frame || (c as any).nombre_cargo || "Contrato";
-              const template = findTemplate(c, contratoFrames);
-              const existeTemplate = !!template;
-              const canDownloadContract = templateHasContent(template);
-              const tipoContrato = c.nombre_contrato || template?.data?.nombre || template?.name || "Contrato";
-              const vigente = isContractVigente(c.fecha_baja_contrato);
-              const dateRange = `${formatDate(c.fecha_alta_contrato)}${c.fecha_baja_contrato ? ` - ${formatDate(c.fecha_baja_contrato)}` : ""}`;
-
-              return (
-                <div key={`${r.projectId}-${r.contractIndex}-${idx}`} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h4 className="text-lg font-bold text-gray-900 dark:text-white truncate">{cargo}</h4>
-                      {c.nombre_contrato && <p className="text-sm text-gray-600 dark:text-gray-300">{c.nombre_contrato}</p>}
-                    </div>
-                    {dateRange.trim() && <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap shrink-0">{dateRange}</span>}
-                  </div>
-
-                  {/* Badges: cliente / proyecto / vigencia / estado */}
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
+            {filtered.map((r, idx) => (
+              <ContractCard
+                key={`${r.projectId}-${r.contractIndex}-${idx}`}
+                contract={r.contract}
+                contratoFrames={contratoFrames}
+                activeReleases={activeReleases}
+                contratoEmpresas={r.contratoEmpresas}
+                releaseEmpresas={r.releaseEmpresas}
+                isLatest={lastIndexByProject.get(r.projectId) === r.contractIndex}
+                extraBadges={
+                  <>
                     {r.clientName && <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{r.clientName}</span>}
                     {r.projectName && <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">{r.projectName}</span>}
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold uppercase ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "Vigente" : "No vigente"}</span>
-                    {c.nombre_estado_empleado && <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border border-green-300 text-green-700 bg-green-50 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800">{c.nombre_estado_empleado}</span>}
-                  </div>
-
-                  <div className="mt-3 flex items-center justify-between gap-2">
-                    <span className="text-base font-semibold text-gray-900 dark:text-white">{formatMoney(c.sueldo_mano)}</span>
-                    <div className="flex items-center gap-1">
-                      <button type="button" onClick={() => handleEdit(r)} title="Editar contrato (ir al equipo del proyecto)" className="p-2 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
-                        <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
-                      </button>
-                      <button type="button" onClick={() => handleDelete(r)} title="Eliminar este contrato" className="p-2 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                        <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Contrato | Empresa */}
-                  <div className="mt-3 pt-3 border-t border-gray-200/70 dark:border-gray-700/70">
-                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Contrato | Empresa</p>
-                    <div className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
-                      <span className="text-sm text-gray-700 dark:text-gray-200 truncate">
-                        {tipoContrato}
-                        {r.contratoEmpresas.length > 0 && <span className="text-gray-500 dark:text-gray-400"> | {r.contratoEmpresas.map((e) => e.label).join(", ")}</span>}
-                      </span>
-                      {canDownloadContract ? (
-                        <DownloadMenu empresas={r.contratoEmpresas} onDownload={(empresaId) => handleDownloadContract(r, empresaId)} title="Descargar contrato" />
-                      ) : (
-                        <span className={`text-xs font-medium shrink-0 ${existeTemplate ? "text-red-500" : "text-gray-400"}`}>{existeTemplate ? "Sin contenido" : "Sin plantilla"}</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Release | Empresa */}
-                  <div className="mt-3 pt-3 border-t border-gray-200/70 dark:border-gray-700/70">
-                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Release | Empresa</p>
-                    {activeReleases.length === 0 ? (
-                      <p className="text-xs text-gray-500">No hay releases disponibles.</p>
-                    ) : (
-                      <div className="space-y-1.5">
-                        {activeReleases.map((rel) => (
-                          <div key={rel._id} className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
-                            <span className="text-sm text-gray-700 dark:text-gray-200 truncate">
-                              {rel.name}
-                              {r.releaseEmpresas.length > 0 && <span className="text-gray-500 dark:text-gray-400"> | {r.releaseEmpresas.map((e) => e.label).join(", ")}</span>}
-                            </span>
-                            <DownloadMenu empresas={r.releaseEmpresas} onDownload={(empresaId) => handleDownloadRelease(r, rel, empresaId)} title="Descargar release" />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                  </>
+                }
+                onEdit={() => handleEdit(r)}
+                onDelete={() => handleDelete(r)}
+                editTitle="Editar contrato (ir al equipo del proyecto)"
+                deleteTitle="Eliminar este contrato"
+                onDownloadContract={(empresaId) => handleDownloadContract(r, empresaId)}
+                onDownloadRelease={(release, empresaId) => handleDownloadRelease(r, release, empresaId)}
+              />
+            ))}
           </div>
         )}
       </div>
