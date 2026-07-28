@@ -299,6 +299,7 @@ export const ContractsPage: React.FC = () => {
               <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
                 <tr className="border-b border-gray-100 dark:border-gray-800">
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Contratos</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Contrato</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Sede / Rol</th>
@@ -318,13 +319,13 @@ export const ContractsPage: React.FC = () => {
                           <FontAwesomeIcon icon={faFileContract} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div className="min-w-0">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{record.userName}</span>
-                            <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" title="Contratos de esta persona">{contractCountByUser[record.userId] || 1} contr.</span>
-                          </div>
+                          <span className="block text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{record.userName}</span>
                           <div className="text-xs text-gray-400 truncate">{record.userEmail}</div>
                         </div>
                       </div>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="text-sm font-bold px-2.5 py-1 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" title="Contratos de esta persona">{contractCountByUser[record.userId] || 1}</span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="text-sm font-bold text-gray-900 dark:text-gray-100">{record.projectName}</div>

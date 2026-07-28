@@ -54,7 +54,8 @@ export const DownloadMenu: React.FC<{ empresas: EmpresaOption[]; onDownload: (em
         <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
       </button>
       {open && (
-        <div className="absolute right-0 z-50 mt-1 w-56 max-h-60 overflow-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1">
+        // Se abre hacia arriba: las tarjetas suelen quedar al pie del modal y el menú se cortaba.
+        <div className="absolute right-0 bottom-full z-50 mb-1 w-56 max-h-60 overflow-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1">
           <p className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Descargar con:</p>
           {empresas.map((e) => (
             <button

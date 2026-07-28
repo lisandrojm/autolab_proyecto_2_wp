@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileContract, faFileLines } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
@@ -7,6 +7,7 @@ import { contratoFrameAPI, ContratoFrameItem } from "../../api/contratosFrame";
 import { releasesAPI, Release } from "../../api/release";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { ContractCard, EmpresaOption, findTemplate, templateHasContent, buildDownloadFileName } from "./ContractCard";
+import { ContractFiltersBar, ContractFilterState, emptyContractFilters, matchesContractFilters } from "./ContractFilters";
 
 // La UI de la tarjeta y sus helpers viven en ContractCard (compartidos con MemberContractsManagerModal).
 // Se re-exportan para no romper los imports existentes (ContractsPage, etc.).
@@ -56,6 +57,21 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
 
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
 
+  // Filtros: los mismos que la gestión cross-proyecto, sin cliente/proyecto (acá son fijos).
+  const [filters, setFilters] = useState<ContractFilterState>(emptyContractFilters);
+  useEffect(() => {
+    if (isOpen) setFilters(emptyContractFilters);
+  }, [isOpen, user?._id, projectId]);
+
+  const tipos = useMemo(() => [...new Set(contracts.map((c) => c.nombre_contrato).filter((t): t is string => !!t))], [contracts]);
+
+  // Se filtra conservando el índice de la tarjeta en la lista completa: de él dependen el índice original
+  // en BD (edición/descarga) y el resaltado del último contrato.
+  const visible = useMemo(
+    () => contracts.map((contract, idx) => ({ contract, idx })).filter(({ contract, idx }) => matchesContractFilters(filters, { contract, isLatest: idx === 0 })),
+    [contracts, filters],
+  );
+
   const handleDownloadContract = async (contract: Contract, displayIndex: number, empresaId?: string) => {
     const template = findTemplate(contract, contratoFrames);
     if (!templateHasContent(template)) {
@@ -88,22 +104,25 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={fullName || "Empleado"} subtitle="Contratos en el proyecto" size="lg" zIndex={60}>
       <div className="space-y-4">
+        <ContractFiltersBar value={filters} onChange={setFilters} tipos={tipos} />
+
         {/* Pestaña Contratos */}
-        <div className="border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-end justify-between border-b border-gray-200 dark:border-gray-700">
           <span className="inline-flex items-center gap-2 px-1 pb-2 text-sm font-semibold text-blue-600 dark:text-blue-400 border-b-2 border-blue-500">
             <FontAwesomeIcon icon={faFileContract} className="h-4 w-4" />
             Contratos
           </span>
+          <span className="pb-2 text-xs text-gray-500">{visible.length} de {contracts.length}</span>
         </div>
 
-        {contracts.length === 0 ? (
+        {visible.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center gap-3 py-10">
             <FontAwesomeIcon icon={faFileLines} className="h-10 w-10 text-gray-300 dark:text-gray-600" />
-            <p className="text-sm text-gray-500">Este empleado no tiene contratos en el proyecto.</p>
+            <p className="text-sm text-gray-500">{contracts.length === 0 ? "Este empleado no tiene contratos en el proyecto." : "Ningún contrato coincide con los filtros."}</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {contracts.map((contract, idx) => (
+            {visible.map(({ contract, idx }) => (
               // El modal muestra los contratos invertidos (más reciente primero). La primera tarjeta (idx 0)
               // es el ÚLTIMO contrato del array = el que se ve en la fila de la tabla → se resalta en azul.
               <ContractCard

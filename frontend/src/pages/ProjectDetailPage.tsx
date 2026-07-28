@@ -61,6 +61,7 @@ export const ProjectDetailPage: React.FC = () => {
   const [openInfo, setOpenInfo] = useState(false);
   const [showResponsableInfo, setShowResponsableInfo] = useState(false);
   const [showEmpresaInfo, setShowEmpresaInfo] = useState(false);
+  const [showAreasInfo, setShowAreasInfo] = useState(false);
 
   const helpEntry = getHelp(HELP_KEY);
 
@@ -1061,6 +1062,18 @@ export const ProjectDetailPage: React.FC = () => {
               <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
                 <FontAwesomeIcon icon={faLayerGroup} className="text-blue-500/50" />
                 Áreas Configuradas
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowAreasInfo(true);
+                  }}
+                  className="text-blue-500 hover:text-blue-600 transition-colors"
+                  title="Qué pasa si el proyecto no tiene áreas configuradas"
+                  aria-label="Información: áreas configuradas"
+                >
+                  <FontAwesomeIcon icon={faInfoCircle} className="h-3 w-3" />
+                </button>
               </label>
               <div className="flex flex-wrap gap-1.5">
                 {(project.areasConfig || []).length > 0 ? (
@@ -1081,6 +1094,18 @@ export const ProjectDetailPage: React.FC = () => {
                 <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
                   <FontAwesomeIcon icon={faBuilding} className="text-indigo-500/50" />
                   Empresa del Contrato
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowEmpresaInfo(true);
+                    }}
+                    className="text-blue-500 hover:text-blue-600 transition-colors"
+                    title="Qué pasa si el proyecto no tiene empresas configuradas"
+                    aria-label="Información: empresa del contrato"
+                  >
+                    <FontAwesomeIcon icon={faInfoCircle} className="h-3 w-3" />
+                  </button>
                 </label>
                 <div className="flex flex-wrap gap-1.5">
                   {contratoEmpresaNames.length > 0 ? (
@@ -1099,6 +1124,18 @@ export const ProjectDetailPage: React.FC = () => {
                 <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
                   <FontAwesomeIcon icon={faBuilding} className="text-teal-500/50" />
                   Empresa del Release
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowEmpresaInfo(true);
+                    }}
+                    className="text-blue-500 hover:text-blue-600 transition-colors"
+                    title="Qué pasa si el proyecto no tiene empresas configuradas"
+                    aria-label="Información: empresa del release"
+                  >
+                    <FontAwesomeIcon icon={faInfoCircle} className="h-3 w-3" />
+                  </button>
                 </label>
                 <div className="flex flex-wrap gap-1.5">
                   {releaseEmpresaNames.length > 0 ? (
@@ -1353,6 +1390,52 @@ export const ProjectDetailPage: React.FC = () => {
               <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
               <span className="text-sm text-gray-700 dark:text-gray-300">
                 En el equipo del proyecto, al cargar los contratos y releases de una persona <strong>solo se mostrarán los que pertenezcan a la empresa seteada</strong>. Los que no tienen empresa no aparecen.
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                Si el proyecto <strong>no tiene ninguna empresa configurada</strong>, al crear un contrato se ofrecen <strong>todas las empresas existentes</strong> y se elige con cuál generar el documento.
+              </span>
+            </li>
+          </ul>
+        </div>
+      </InfoModal>
+
+      {/* Info: qué implica no tener áreas configuradas en el proyecto */}
+      <InfoModal
+        isOpen={showAreasInfo}
+        onClose={() => setShowAreasInfo(false)}
+        title="Áreas Configuradas"
+        subtitle="Qué pasa si el proyecto no tiene ninguna"
+        size="sm"
+        zIndex={100}
+        actions={[
+          { label: "Editar proyecto", onClick: () => { setShowAreasInfo(false); openEditProject(); }, variant: "primary" },
+          { label: "Entendido", onClick: () => setShowAreasInfo(false), variant: "secondary" },
+        ]}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            Las áreas del proyecto definen dónde y en qué turno trabaja cada miembro del equipo. Sin ninguna configurada:
+          </p>
+          <ul className="space-y-3">
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                Los usuarios <strong>no pueden cargar su área</strong> y los coordinadores <strong>no pueden informar novedades</strong> sobre ellos.
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                Al configurar un miembro del equipo, la <strong>asignación por área y turno es obligatoria</strong>: sin áreas no se puede guardar ningún cambio del miembro (contrato, sueldo o extras).
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                Se resuelve en <strong>Editar Proyecto → Configuración por Área</strong>, agregando al menos un área con sus turnos.
               </span>
             </li>
           </ul>

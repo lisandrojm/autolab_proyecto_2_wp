@@ -11,12 +11,13 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
 import { UserCard } from '../components/users/UserCard';
 import { Modal } from '../components/ui/Modal';
+import { InfoModal } from '../components/ui/InfoModal';
 import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 
 import { getHelp } from '../data/help/helpContent';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faChevronDown, faXmark, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faTriangleExclamation, faChevronDown, faXmark, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import { vacationsAPI, VacationRequest } from '../api/vacations';
 import { TeamSolicitudesTab } from '../components/team/TeamSolicitudesTab';
 import { TeamCoordinadoresTab } from '../components/team/TeamCoordinadoresTab';
@@ -331,6 +332,7 @@ export const ProjectTeamPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'equipo' | 'solicitudes' | 'coordinadores'>('equipo');
   const [solicitudesCount, setSolicitudesCount] = useState(0);
   const [showCandidatesInfo, setShowCandidatesInfo] = useState(false);
+  const [showSinAreasInfo, setShowSinAreasInfo] = useState(false);
 
   // Modal de detalle del empleado (contratos del proyecto + descargas)
   const [selectedMemberForDetail, setSelectedMemberForDetail] = useState<User | null>(null);
@@ -1475,6 +1477,12 @@ export const ProjectTeamPage: React.FC = () => {
             </div>
           </div>
         </td>
+        {/* Cantidad de contratos de la persona EN ESTE PROYECTO (la columna Contrato muestra el último). */}
+        <td className="px-4 py-3 text-center">
+          <span className="text-sm font-bold px-2.5 py-1 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" title="Contratos de esta persona en el proyecto">
+            {projectMeta?.contracts?.length || 0}
+          </span>
+        </td>
         <td className="px-4 py-3">
           <div className="flex flex-wrap gap-1">
             {(() => {
@@ -1902,6 +1910,40 @@ export const ProjectTeamPage: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Sin áreas en el proyecto no se puede guardar ningún cambio de miembro (área/turno es obligatorio). */}
+                {(project?.areasConfig || []).length === 0 && (
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-xl space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <p className="text-red-800 dark:text-red-400 font-bold flex items-center gap-2 text-sm">
+                      <FontAwesomeIcon icon={faTriangleExclamation} />
+                      El proyecto no tiene áreas asignadas
+                    </p>
+                    <p className="text-red-700 dark:text-red-500 text-xs leading-normal">
+                      La asignación por área y turno es obligatoria: hasta que el proyecto tenga al menos un área, no vas a poder
+                      configurar ni editar a los miembros del equipo.
+                    </p>
+                    <div className="flex items-center gap-3 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/projects/${projectId}`, { state: { openEdit: true } })}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 dark:text-red-400 hover:underline"
+                        title="Ir a Editar Proyecto para agregar áreas"
+                      >
+                        <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3" />
+                        Editar proyecto para agregar áreas
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowSinAreasInfo(true)}
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-red-700/80 dark:text-red-400/80 hover:underline"
+                        title="Qué implica que el proyecto no tenga áreas"
+                      >
+                        <FontAwesomeIcon icon={faInfoCircle} className="h-3 w-3" />
+                        Más información
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {!hasMobileCoordinator && teamMembers.length > 0 && (
                   <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 rounded-xl space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
                     <p className="text-amber-800 dark:text-amber-400 font-bold flex items-center gap-2 text-sm">
@@ -1961,6 +2003,7 @@ export const ProjectTeamPage: React.FC = () => {
                           <thead>
                             <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                               <th className="px-4 py-3 font-semibold">Usuario</th>
+                              <th className="px-4 py-3 font-semibold text-center">Contratos</th>
                               <th className="px-4 py-3 font-semibold">Rol/es</th>
                               <th className="px-4 py-3 font-semibold">Rol/es Frame</th>
                               <th className="px-4 py-3 font-semibold">Estado</th>
@@ -2753,7 +2796,32 @@ export const ProjectTeamPage: React.FC = () => {
                       </label>
                       <p className="text-[11px] text-gray-500 dark:text-gray-400 -mt-1 ml-1">Selecciona las áreas y turnos donde trabajará este miembro. Los turnos con horarios superpuestos se bloquean automáticamente.</p>
 
-                      {(project?.areasConfig || []).length === 0 && <div className="text-center py-4 text-gray-500 text-sm bg-gray-50 dark:bg-gray-900/30 rounded-lg">Este proyecto no tiene áreas configuradas.</div>}
+                      {(project?.areasConfig || []).length === 0 && (
+                        // Sin áreas en el proyecto no se puede completar este paso (es obligatorio) → link a Editar Proyecto.
+                        <div className="flex flex-col items-center gap-2 py-4 text-center bg-gray-50 dark:bg-gray-900/30 rounded-lg">
+                          <p className="text-sm text-gray-500">Este proyecto no tiene áreas configuradas.</p>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/projects/${projectId}`, { state: { openEdit: true } })}
+                              className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                              title="Ir a Editar Proyecto para agregar áreas"
+                            >
+                              <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3" />
+                              Editar proyecto para agregar áreas
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setShowSinAreasInfo(true)}
+                              className="text-blue-500 hover:text-blue-600 transition-colors"
+                              title="Por qué no puedo guardar los cambios del miembro"
+                              aria-label="Información: el proyecto no tiene áreas configuradas"
+                            >
+                              <FontAwesomeIcon icon={faInfoCircle} className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
 
                       <div className="space-y-3">
                         {(() => {
@@ -3032,6 +3100,47 @@ export const ProjectTeamPage: React.FC = () => {
           handleRemoveUser(id);
         }}
       />
+
+      {/* Info: por qué no se puede guardar el miembro si el proyecto no tiene áreas */}
+      <InfoModal
+        isOpen={showSinAreasInfo}
+        onClose={() => setShowSinAreasInfo(false)}
+        title="El proyecto no tiene áreas configuradas"
+        subtitle="Por qué no podés guardar los cambios del miembro"
+        size="sm"
+        zIndex={100}
+        actions={[
+          { label: 'Ir a Editar Proyecto', onClick: () => { setShowSinAreasInfo(false); navigate(`/projects/${projectId}`, { state: { openEdit: true } }); }, variant: 'primary' },
+          { label: 'Entendido', onClick: () => setShowSinAreasInfo(false), variant: 'secondary' },
+        ]}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            La <strong>asignación por área y turno es obligatoria</strong> para guardar un miembro. Si el proyecto no tiene
+            áreas, no hay nada para seleccionar y cualquier cambio del miembro (sueldo, contrato, extras) queda bloqueado.
+          </p>
+          <ul className="space-y-3">
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                Entrá a <strong>Editar Proyecto → Configuración por Área</strong> y agregá al menos un área con sus turnos.
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                Volvé al equipo y configurá el miembro: ya vas a poder elegir área y turno, y guardar.
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                Sin áreas, además, los usuarios no pueden cargar su área y los coordinadores no pueden informar novedades sobre ellos.
+              </span>
+            </li>
+          </ul>
+        </div>
+      </InfoModal>
     </PageLayout>
   );
 };
