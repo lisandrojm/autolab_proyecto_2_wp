@@ -22,6 +22,8 @@
     "diag:missing-members": "dotenv -e .env.production -- tsx src/scripts/diagnoseMissingProjectMembers.ts",
     "backfill:roles-frame:dry": "dotenv -e .env.production -v DRY=true -- tsx src/scripts/backfillUserRolesFrame.ts",
     "backfill:roles-frame": "dotenv -e .env.production -- tsx src/scripts/backfillUserRolesFrame.ts",
+    "fix:reemplazo-areas:dry": "dotenv -e .env.production -v DRY=true -- tsx src/scripts/backfillReplacementAreaShifts.ts",
+    "fix:reemplazo-areas": "dotenv -e .env.production -- tsx src/scripts/backfillReplacementAreaShifts.ts",
     "test:additive": "tsx --test src/utils/additiveSync.test.ts"
   },
   "dependencies": {

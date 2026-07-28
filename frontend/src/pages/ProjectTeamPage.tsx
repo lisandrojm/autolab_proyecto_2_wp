@@ -22,7 +22,7 @@ import { vacationsAPI, VacationRequest } from '../api/vacations';
 import { TeamSolicitudesTab } from '../components/team/TeamSolicitudesTab';
 import { TeamCoordinadoresTab } from '../components/team/TeamCoordinadoresTab';
 import { EmployeeContractsModal } from '../components/team/EmployeeContractsModal';
-import { EstadoSelect } from '../components/EstadoSelect';
+import { EstadoSelect, EstadoBadge } from '../components/EstadoSelect';
 import { contratoFrameAPI, ContratoFrameItem } from '../api/contratosFrame';
 import { releasesAPI, Release } from '../api/release';
 import { companiesAPI, Company } from '../api/companies';
@@ -280,6 +280,7 @@ export const ProjectTeamPage: React.FC = () => {
   const [filterVigencia, setFilterVigencia] = useState<string>(''); // "" | "vigente" | "novigente" (client-side sobre la página)
   const [filterTipoContrato, setFilterTipoContrato] = useState<string>(''); // nombre_contrato (client-side sobre la página)
   const [filterAreaTurno, setFilterAreaTurno] = useState<string>(''); // "" | "__none__" | "areaId::shiftId" (client-side sobre la página)
+  const [filterEstadoContrato, setFilterEstadoContrato] = useState<string>(''); // nombre_estado_empleado (client-side sobre la página)
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [selectedUserForWizard, setSelectedUserForWizard] = useState<User | null>(null);
   // Índice (en el array original de contracts del UserProject) del contrato que se está editando desde el
@@ -333,6 +334,8 @@ export const ProjectTeamPage: React.FC = () => {
   const [solicitudesCount, setSolicitudesCount] = useState(0);
   const [showCandidatesInfo, setShowCandidatesInfo] = useState(false);
   const [showSinAreasInfo, setShowSinAreasInfo] = useState(false);
+  // Aviso de la herencia de área/turno al marcar un reemplazo (qué se copió o por qué no se pudo).
+  const [herenciaReemplazo, setHerenciaReemplazo] = useState<{ ok: boolean; replacedName: string; detalle: string } | null>(null);
 
   // Modal de detalle del empleado (contratos del proyecto + descargas)
   const [selectedMemberForDetail, setSelectedMemberForDetail] = useState<User | null>(null);
@@ -653,6 +656,25 @@ export const ProjectTeamPage: React.FC = () => {
     });
     return opts;
   }, [project, allAreas, allShifts]);
+
+  // Estados de contrato para filtrar: el catálogo (Info "estados") más los que aparezcan en los contratos
+  // cargados, por si alguno quedó con un estado que ya no está en el catálogo.
+  const estadoContratoOptions = useMemo(() => {
+    const seen = new Set<string>();
+    allEstados.forEach((e) => e.name && seen.add(e.name));
+    // Último contrato del miembro en este proyecto (getActiveContract se declara más abajo, así que
+    // acá se resuelve igual pero inline).
+    teamRows.forEach((u) => {
+      const projectMeta = u.metadata?.projects?.find((p: any) => {
+        const pId = p.projectId;
+        return String(typeof pId === 'object' ? (pId as any)?._id : pId) === String(projectId);
+      });
+      const contracts = projectMeta?.contracts || [];
+      const estado = contracts.length ? (contracts[contracts.length - 1] as any)?.nombre_estado_empleado : null;
+      if (estado) seen.add(estado);
+    });
+    return [...seen].map((name) => ({ value: name, label: name }));
+  }, [allEstados, teamRows, projectId]);
 
   const sedeName = useMemo(() => {
     if (!project) return null;
@@ -1194,6 +1216,7 @@ export const ProjectTeamPage: React.FC = () => {
 
     setSelectedUserForWizard(user);
     setWizardStep(1);
+    setHerenciaReemplazo(null); // el aviso de herencia es por cada vez que se elige a quién reemplaza
 
     // Aseguramos tener la lista de empresas para poblar los selects de Empresa del Contrato / Release.
     if (companies.length === 0) {
@@ -1431,6 +1454,74 @@ export const ProjectTeamPage: React.FC = () => {
       return String(idToCheck) === String(projectId);
     });
     return projectMeta?.contracts?.length ? projectMeta.contracts[projectMeta.contracts.length - 1] : null;
+  };
+
+  // Áreas/turnos de un miembro en el proyecto: misma fuente que usa el wizard al abrirse (teamConfig y,
+  // si ahí no está, el último contrato del miembro).
+  const getMemberAssignments = (memberId: string): { areaId: string; shiftIds: string[] }[] => {
+    const config = teamConfig.find((c) => String(c.userId) === String(memberId));
+    let assignments: any[] = config?.areaShiftAssignments || [];
+    if (assignments.length === 0) {
+      const member = teamMembers.find((m) => String(m._id) === String(memberId));
+      const lastContract = member ? getActiveContract(member) : null;
+      assignments = lastContract?.areaShiftAssignments || [];
+    }
+    return (assignments || []).map((a: any) => ({
+      areaId: String(a.areaId?._id || a.areaId || ''),
+      shiftIds: (a.shiftIds || []).map((s: any) => String(s?._id || s)),
+    }));
+  };
+
+  /**
+   * Al elegir a quién reemplaza, el miembro hereda por defecto el área/turno de esa persona. Se descarta
+   * lo que ya no aplique: áreas que el proyecto no tiene, turnos que el área ya no ofrece y áreas de
+   * sistema (coordinador) si el miembro no tiene ese rol.
+   */
+  const applyReplacedMemberAssignments = (empleadoExternoId: string) => {
+    const replaced = teamMembers.find((m) => String((m.metadata as any)?.id) === String(empleadoExternoId));
+    if (!replaced) {
+      setHerenciaReemplazo(null);
+      return;
+    }
+    const replacedName = `${replaced.firstName || ''} ${replaced.lastName || ''}`.trim() || replaced.email;
+    const isCoordinadorRole = (selectedUserForWizard?.roles || []).some((r: any) => r.name.toLowerCase().includes('mobile-coordinador'));
+
+    const assignments = getMemberAssignments(replaced._id)
+      .map((a) => {
+        const areaConfig = (project?.areasConfig || []).find((c: any) => String(typeof c.areaId === 'object' ? c.areaId?._id : c.areaId) === a.areaId);
+        if (!areaConfig) return null;
+        const areaObj = allAreas.find((ar) => String(ar._id) === a.areaId);
+        if (areaObj?.isSystem && !isCoordinadorRole) return null;
+        const allowedShiftIds = ((areaConfig as any).shiftIds || []).map((s: any) => String(typeof s === 'object' ? s._id : s));
+        const shiftIds = a.shiftIds.filter((s) => allowedShiftIds.includes(s));
+        return shiftIds.length > 0 ? { areaId: a.areaId, shiftIds } : null;
+      })
+      .filter(Boolean) as { areaId: string; shiftIds: string[] }[];
+
+    if (assignments.length === 0) {
+      // Sin nada heredable se deja lo que ya eligió el usuario, pero se avisa para que lo cargue a mano.
+      const origen = getMemberAssignments(replaced._id);
+      setHerenciaReemplazo({
+        ok: false,
+        replacedName,
+        detalle:
+          origen.length === 0
+            ? 'Esa persona no tiene área ni turno cargados en el proyecto. Elegí el área y el turno abajo.'
+            : 'Su área o sus turnos ya no están disponibles en la configuración del proyecto. Elegí el área y el turno abajo.',
+      });
+      return;
+    }
+
+    const detalle = assignments
+      .map((a) => {
+        const areaName = allAreas.find((ar) => String(ar._id) === a.areaId)?.name || a.areaId;
+        const turnos = a.shiftIds.map((s) => allShifts.find((sh) => String(sh._id) === s)?.name || s).join(', ');
+        return `${areaName} (${turnos})`;
+      })
+      .join(' + ');
+
+    setWizardData((prev) => ({ ...prev, areaShiftAssignments: assignments }));
+    setHerenciaReemplazo({ ok: true, replacedName, detalle });
   };
 
   // Render function for Table Row
@@ -1671,24 +1762,30 @@ export const ProjectTeamPage: React.FC = () => {
           })()}
         </td>
         <td className="px-4 py-3">
-          <div className="flex flex-col gap-1">
-            <span className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300" title="Ver contratos para descargar">
-              <FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-blue-500 dark:text-blue-400 shrink-0" />
-              {activeContract?.nombre_contrato || '-'}
-            </span>
-            {activeContract?.reemplazo && (
-              <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded border border-amber-200/50 dark:border-amber-800/50 w-fit">
-                <FontAwesomeIcon icon={faIdCard} className="text-[9px]" />
-                <span>
-                  Reemplaza a:{' '}
-                  {(() => {
-                    const replaced = allUsers.find((u) => (u.metadata as any)?.id === activeContract.empleado_id_reemplezado);
-                    return replaced ? `${replaced.firstName} ${replaced.lastName}` : `ID: ${activeContract.empleado_id_reemplezado}`;
-                  })()}
-                </span>
-              </div>
-            )}
-          </div>
+          <span className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300" title="Ver contratos para descargar">
+            <FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-blue-500 dark:text-blue-400 shrink-0" />
+            {activeContract?.nombre_contrato || '-'}
+          </span>
+        </td>
+        {/* Estado del contrato (Pedido servicios, Disponible, ...) — distinto del estado del usuario. */}
+        <td className="px-4 py-3">
+          {activeContract?.nombre_estado_empleado ? <EstadoBadge name={activeContract.nombre_estado_empleado} className="text-[10px] whitespace-nowrap" /> : <span className="text-xs text-gray-400">—</span>}
+        </td>
+        {/* Reemplazo: a quién reemplaza esta persona en su contrato vigente. */}
+        <td className="px-4 py-3">
+          {activeContract?.reemplazo ? (
+            <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded border border-amber-200/50 dark:border-amber-800/50 w-fit">
+              <FontAwesomeIcon icon={faIdCard} className="text-[9px]" />
+              <span>
+                {(() => {
+                  const replaced = allUsers.find((u) => (u.metadata as any)?.id === activeContract.empleado_id_reemplezado);
+                  return replaced ? `${replaced.firstName} ${replaced.lastName}` : `ID: ${activeContract.empleado_id_reemplezado}`;
+                })()}
+              </span>
+            </div>
+          ) : (
+            <span className="text-xs text-gray-400">—</span>
+          )}
         </td>
         <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
           {activeContract ? (
@@ -1896,6 +1993,13 @@ export const ProjectTeamPage: React.FC = () => {
                           placeholder: 'Todas las áreas/turnos',
                           options: [{ value: '__none__', label: 'Sin área/turno' }, ...areaTurnoOptions],
                         },
+                        {
+                          label: 'Estado de contrato',
+                          value: filterEstadoContrato,
+                          onChange: setFilterEstadoContrato,
+                          placeholder: 'Todos los estados',
+                          options: estadoContratoOptions,
+                        },
                       ]}
                     />
                   </div>
@@ -1959,7 +2063,7 @@ export const ProjectTeamPage: React.FC = () => {
                 {(() => {
                   // Filtros client-side sobre la página cargada (contrato + área/turno).
                   const rows =
-                    filterVigencia || filterTipoContrato || filterAreaTurno
+                    filterVigencia || filterTipoContrato || filterAreaTurno || filterEstadoContrato
                       ? teamRows.filter((u) => {
                           const ac = getActiveContract(u);
                           if (filterVigencia) {
@@ -1968,6 +2072,9 @@ export const ProjectTeamPage: React.FC = () => {
                           }
                           if (filterTipoContrato) {
                             if (String(ac?.nombre_contrato ?? '') !== String(filterTipoContrato)) return false;
+                          }
+                          if (filterEstadoContrato) {
+                            if (String(ac?.nombre_estado_empleado ?? '') !== String(filterEstadoContrato)) return false;
                           }
                           if (filterAreaTurno) {
                             const keys = getUserAreaShiftKeys(u);
@@ -2010,6 +2117,8 @@ export const ProjectTeamPage: React.FC = () => {
                               <th className="px-4 py-3 font-semibold">Área / Turno</th>
                               <th className="px-4 py-3 font-semibold text-amber-600 dark:text-amber-400">Área/Turno Coordinada</th>
                               <th className="px-4 py-3 font-semibold">Contrato</th>
+                              <th className="px-4 py-3 font-semibold whitespace-nowrap">Estado Contrato</th>
+                              <th className="px-4 py-3 font-semibold">Reemplazo</th>
                               <th className="px-4 py-3 font-semibold whitespace-nowrap">Alta / Baja</th>
                               <th className="px-4 py-3 font-semibold">Horario</th>
                               <th className="px-4 py-3 font-semibold text-right">Acciones</th>
@@ -2788,6 +2897,71 @@ export const ProjectTeamPage: React.FC = () => {
                       </div>
                     )}
 
+                    {/* --- REEMPLAZO --- va antes del área porque define el área/turno por defecto --- */}
+                    <div className="md:col-span-2 space-y-3 pt-6 border-t border-gray-100 dark:border-gray-700">
+                      <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-100 dark:border-gray-800">
+                        <input
+                          type="checkbox"
+                          id="esReemplazo"
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          checked={wizardData.reemplazo}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setWizardData((prev) => ({ ...prev, reemplazo: checked, empleado_id_reemplezado: checked ? prev.empleado_id_reemplezado : '' }));
+                            if (!checked) setHerenciaReemplazo(null);
+                          }}
+                        />
+                        <label htmlFor="esReemplazo" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Es reemplazo
+                        </label>
+                      </div>
+
+                      {wizardData.reemplazo && (
+                        <div className="space-y-1.5">
+                          <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empleado reemplazado</label>
+                          <select
+                            className="input-field w-full"
+                            value={wizardData.empleado_id_reemplezado}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setWizardData((prev) => ({ ...prev, empleado_id_reemplezado: value }));
+                              // Por defecto, el reemplazo trabaja en el mismo área/turno que la persona reemplazada.
+                              if (value) applyReplacedMemberAssignments(value);
+                              else setHerenciaReemplazo(null);
+                            }}
+                          >
+                            <option value="">Selecciona empleado...</option>
+                            {teamMembers
+                              .filter((m) => String(m._id) !== String(selectedUserForWizard?._id))
+                              .map((m) => (
+                                <option key={m._id} value={(m.metadata as any)?.id}>
+                                  {m.firstName} {m.lastName}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Aviso de la herencia: qué se copió (o por qué no se pudo) antes de mostrar las áreas. */}
+                      {herenciaReemplazo && (
+                        <div className={`rounded-lg border p-3 text-xs ${herenciaReemplazo.ok ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300'}`}>
+                          <p className="font-bold flex items-center gap-2">
+                            <FontAwesomeIcon icon={herenciaReemplazo.ok ? faInfoCircle : faTriangleExclamation} />
+                            {herenciaReemplazo.ok ? `Área y turno heredados de ${herenciaReemplazo.replacedName}` : `No se pudo heredar el área de ${herenciaReemplazo.replacedName}`}
+                          </p>
+                          <p className="mt-1 leading-normal">
+                            {herenciaReemplazo.ok ? (
+                              <>
+                                Se preseleccionó <strong>{herenciaReemplazo.detalle}</strong>. Si necesitás otra cosa, cambiala abajo.
+                              </>
+                            ) : (
+                              herenciaReemplazo.detalle
+                            )}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
                     {/* --- CONFIGURACIÓN POR ÁREA (visual toggle) --- */}
                     <div className="md:col-span-2 space-y-3 pt-6 border-t border-gray-100 dark:border-gray-700">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
@@ -3046,28 +3220,6 @@ export const ProjectTeamPage: React.FC = () => {
                       </select>
                     </div>
 
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-100 dark:border-gray-800">
-                      <input type="checkbox" id="esReemplazo" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked={wizardData.reemplazo} onChange={(e) => setWizardData((prev) => ({ ...prev, reemplazo: e.target.checked }))} />
-                      <label htmlFor="esReemplazo" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Es reemplazo
-                      </label>
-                    </div>
-
-                    {wizardData.reemplazo && (
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empleado reemplazado</label>
-                        <select className="input-field w-full" value={wizardData.empleado_id_reemplezado} onChange={(e) => setWizardData((prev) => ({ ...prev, empleado_id_reemplezado: e.target.value }))}>
-                          <option value="">Selecciona empleado...</option>
-                          {teamMembers
-                            .filter((m) => String(m._id) !== String(selectedUserForWizard?._id))
-                            .map((m) => (
-                              <option key={m._id} value={(m.metadata as any)?.id}>
-                                {m.firstName} {m.lastName}
-                              </option>
-                            ))}
-                        </select>
-                      </div>
-                    )}
 
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Observaciones</label>
