@@ -23,6 +23,7 @@ import { TeamSolicitudesTab } from '../components/team/TeamSolicitudesTab';
 import { TeamCoordinadoresTab } from '../components/team/TeamCoordinadoresTab';
 import { EmployeeContractsModal } from '../components/team/EmployeeContractsModal';
 import { EstadoSelect, EstadoBadge, estadoLabel } from '../components/EstadoSelect';
+import { esContratoVigente, getContratoActivo } from '../utils/contratoVigencia';
 import { contratoFrameAPI, ContratoFrameItem } from '../api/contratosFrame';
 import { releasesAPI, Release } from '../api/release';
 import { companiesAPI, Company } from '../api/companies';
@@ -49,26 +50,6 @@ function formatContractDate(d?: string): string {
   }
   const dt = new Date(d);
   return isNaN(dt.getTime()) ? '—' : dt.toLocaleDateString();
-}
-
-// Un contrato está VIGENTE si no tiene baja (tiempo indeterminado) o si la baja es hoy o futura.
-// NO VIGENTE si la fecha de baja es anterior a hoy.
-function isContractVigente(baja?: string): boolean {
-  if (!baja) return true; // sin baja → tiempo indeterminado → vigente
-  const iso = String(baja).substring(0, 10);
-  const parts = iso.split('-');
-  let bajaDate: Date | null = null;
-  if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
-    bajaDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-  } else {
-    const d = new Date(baja);
-    if (!isNaN(d.getTime())) bajaDate = d;
-  }
-  if (!bajaDate) return true;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  bajaDate.setHours(0, 0, 0, 0);
-  return bajaDate.getTime() >= today.getTime();
 }
 
 // Roles de sistema con acceso a la app mobile. El valor viaja al server como `roleName=mobile-<value>`,
@@ -1530,7 +1511,7 @@ export const ProjectTeamPage: React.FC = () => {
       const idToCheck = typeof pId === 'object' ? (pId as any)?._id : pId;
       return String(idToCheck) === String(projectId);
     });
-    return projectMeta?.contracts?.length ? projectMeta.contracts[projectMeta.contracts.length - 1] : null;
+    return getContratoActivo(projectMeta?.contracts as any[]);
   };
 
   // Áreas/turnos de un miembro en el proyecto: misma fuente que usa el wizard al abrirse (teamConfig y,
@@ -1893,7 +1874,7 @@ export const ProjectTeamPage: React.FC = () => {
           {activeContract ? (
             <div className="flex flex-col gap-1">
               {(() => {
-                const vigente = isContractVigente(activeContract.fecha_baja_contrato);
+                const vigente = esContratoVigente(activeContract);
                 return <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>;
               })()}
               <div className="flex flex-col gap-0.5">
