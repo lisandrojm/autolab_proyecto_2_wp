@@ -1258,6 +1258,8 @@ export const ProjectTeamPage: React.FC = () => {
     const initialContratoFrameId = initialCf?._id || '';
     const initialNombreContrato = initialCf?.name || lastContract?.nombre_contrato || '';
     if (initialCf?.data?.id != null) initialTipoContratoId = String(initialCf.data.id);
+    // El Contrato (tipo) se resuelve a partir de la Plantilla del último contrato del miembro.
+    const initialContratoId = (typeof initialCf?.contratoId === 'object' ? initialCf?.contratoId?._id : initialCf?.contratoId) || '';
 
     let initialEstadoId = '';
     if (lastContract) {
