@@ -38,6 +38,7 @@ import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { toObjectIdArray } from "../utils/mongoIds.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
+import { esContratoVigente, getContratoActivo } from "../utils/contratoVigencia.js";
 
 const router = Router();
 
@@ -62,14 +63,6 @@ const estadoCanonico = (s: string): string => {
   return ESTADO_ALIAS[n] || n;
 };
 
-// Un contrato está vigente si no tiene baja o si la baja es de hoy en adelante. Sin contrato se
-// considera vigente, que es como se venía comportando el filtro en el front.
-const contratoVigente = (baja: string | undefined | null): boolean => {
-  if (!baja) return true;
-  const iso = String(baja).substring(0, 10);
-  const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date());
-  return iso >= hoy;
-};
 
 interface TeamFilters {
   vigencia?: string; // "vigente" | "novigente"
@@ -106,22 +99,25 @@ async function resolveProjectTeamFilterIds(projectId: string, filtros: TeamFilte
   for (const member of members) {
     const up: any = ((member as any).metadata?.projects || []).find((p: any) => p && String(p.projectId) === String(projectId));
     const contracts: any[] = up?.contracts || [];
-    const ultimoContrato = contracts.length > 0 ? contracts[contracts.length - 1] : null;
+    // El contrato que representa su situación actual: el vigente más reciente (un tiempo
+    // indeterminado no tiene baja y siempre lo es), no simplemente el último cargado.
+    const contratoActivo = getContratoActivo(contracts);
 
     if (filtros.vigencia) {
-      const vigente = contratoVigente(ultimoContrato?.fecha_baja_contrato);
+      // Sin contratos se considera vigente, como se venía comportando el filtro.
+      const vigente = contracts.length === 0 || esContratoVigente(contratoActivo);
       if (filtros.vigencia === "vigente" ? !vigente : vigente) continue;
     }
 
-    if (filtros.tipoContrato && String(ultimoContrato?.nombre_contrato ?? "") !== String(filtros.tipoContrato)) continue;
+    if (filtros.tipoContrato && String(contratoActivo?.nombre_contrato ?? "") !== String(filtros.tipoContrato)) continue;
 
     if (filtros.reemplazo) {
       // Igual que la columna Reemplazo: el contrato marca que la persona reemplaza a otra.
-      const esReemplazo = !!ultimoContrato?.reemplazo;
+      const esReemplazo = !!contratoActivo?.reemplazo;
       if (filtros.reemplazo === "con" ? !esReemplazo : esReemplazo) continue;
     }
 
-    if (filtros.estadoContrato && estadoCanonico(String(ultimoContrato?.nombre_estado_empleado ?? "")) !== estadoCanonico(String(filtros.estadoContrato))) continue;
+    if (filtros.estadoContrato && estadoCanonico(String(contratoActivo?.nombre_estado_empleado ?? "")) !== estadoCanonico(String(filtros.estadoContrato))) continue;
 
     if (filtros.areaTurno) {
       // Área/turno del miembro: teamConfig + lo que coordina (si es coordinador).

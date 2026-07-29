@@ -20,6 +20,8 @@ import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { InfoModal } from "../../../../components/ui/InfoModal";
 import { overtimeUtils, splitOvertime } from "../../../../utils/overtimeUtils";
 
+import { esContratoVigente, getContratoActivo } from "../../../../utils/contratoVigencia";
+
 interface EmployeeOption {
   id: string;
   name: string;
@@ -65,15 +67,16 @@ const isContractVigente = (fechaBaja?: string | null): boolean => {
 };
 
 /**
- * Vigencia del ÚLTIMO contrato del miembro en el proyecto (el que muestra el panel web).
- * OJO: no alcanza con "algún contrato vigente" — quien tiene contratos viejos sin fecha de baja
- * daría vigente para siempre aunque su último contrato ya haya vencido.
- * Si el backend no mandó los contratos no se asume vencido, para no vaciar la lista.
+ * Vigencia del contrato que rige hoy para el miembro en el proyecto: el vigente más reciente.
+ * OJO: no alcanza con "el último cargado" (un tiempo indeterminado abierto puede tener detrás un
+ * contrato viejo ya vencido) ni con "algún contrato vigente" (los contratos viejos sin fecha de
+ * baja darían vigente para siempre). Si el backend no mandó los contratos no se asume vencido,
+ * para no vaciar la lista.
  */
 const lastContractIsVigente = (contracts?: any[]): boolean => {
   if (!Array.isArray(contracts)) return true;
   if (contracts.length === 0) return false;
-  return isContractVigente(contracts[contracts.length - 1]?.fecha_baja_contrato);
+  return esContratoVigente(getContratoActivo(contracts));
 };
 
 interface LocalAttendanceRecord {
@@ -961,30 +964,9 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               u.metadata?.projects?.map((p: any) => {
                 const pId = typeof p.projectId === "string" ? p.projectId : p.projectId?._id;
 
-                let activeContract = undefined;
-                const hasActive =
-                  p.contracts?.some((c: any) => {
-                    if (!c.fecha_baja_contrato) {
-                      if (!activeContract) activeContract = c;
-                      return true;
-                    }
-                    let endDate = new Date(c.fecha_baja_contrato);
-                    if (isNaN(endDate.getTime()) && typeof c.fecha_baja_contrato === "string") {
-                      const parts = c.fecha_baja_contrato.split(/[-/]/);
-                      if (parts.length === 3 && parts[2].length === 4) {
-                        endDate = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
-                      }
-                    }
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    const isActive = endDate >= today;
-                    if (isActive && !activeContract) activeContract = c;
-                    return isActive;
-                  }) ?? false;
-
-                if (!activeContract && p.contracts && p.contracts.length > 0) {
-                  activeContract = p.contracts[p.contracts.length - 1];
-                }
+                // Contrato que rige hoy (el vigente más reciente); si no hay ninguno, el último cargado.
+                const activeContract: any = getContratoActivo(p.contracts);
+                const hasActive = (p.contracts || []).some((c: any) => esContratoVigente(c));
 
                 return {
                   projectId: pId,
@@ -1200,30 +1182,9 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                   au.metadata?.projects?.map((p: any) => {
                     const pId = typeof p.projectId === "string" ? p.projectId : p.projectId?._id;
 
-                    let activeContract = undefined;
-                    const hasActive =
-                      p.contracts?.some((c: any) => {
-                        if (!c.fecha_baja_contrato) {
-                          if (!activeContract) activeContract = c;
-                          return true;
-                        }
-                        let endDate = new Date(c.fecha_baja_contrato);
-                        if (isNaN(endDate.getTime()) && typeof c.fecha_baja_contrato === "string") {
-                          const parts = c.fecha_baja_contrato.split(/[-/]/);
-                          if (parts.length === 3 && parts[2].length === 4) {
-                            endDate = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
-                          }
-                        }
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        const isActive = endDate >= today;
-                        if (isActive && !activeContract) activeContract = c;
-                        return isActive;
-                      }) ?? false;
-
-                    if (!activeContract && p.contracts && p.contracts.length > 0) {
-                      activeContract = p.contracts[p.contracts.length - 1];
-                    }
+                    // Contrato que rige hoy (el vigente más reciente); si no hay ninguno, el último cargado.
+                    const activeContract: any = getContratoActivo(p.contracts);
+                    const hasActive = (p.contracts || []).some((c: any) => esContratoVigente(c));
 
                     return {
                       projectId: pId,

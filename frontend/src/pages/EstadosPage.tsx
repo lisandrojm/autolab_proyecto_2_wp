@@ -10,6 +10,7 @@ import { faPlus, faEdit, faTrash, faTags, faFileContract } from '@fortawesome/fr
 import { infoAPI, InfoItem, EstadoPayload } from '../api/info';
 import { contratoFrameAPI, ContratoFrameItem } from '../api/contratosFrame';
 import { useEstadoCatalogStore } from '../stores/estadoCatalogStore';
+import { estadoColorPorDefecto } from '../components/EstadoSelect';
 
 /** Paleta sugerida: solo se elige el color de la tipografía; el fondo es ese color con transparencia. */
 const COLORES = [
@@ -24,6 +25,9 @@ const COLORES = [
   { hex: '#0d9488', label: 'Verde azulado' },
   { hex: '#64748b', label: 'Gris' },
 ];
+
+/** Color que muestra un estado que todavía no tiene uno propio: el histórico de la app. */
+const colorEfectivo = (estado: InfoItem): string => estado.data?.color || estadoColorPorDefecto(estado.name);
 
 const COLOR_POR_DEFECTO = '#64748b';
 
@@ -116,7 +120,7 @@ export const EstadosPage: React.FC = () => {
     setForm({
       name: estado.name,
       nombreEnContrato: estado.data?.nombreEnContrato || '',
-      color: estado.data?.color || COLOR_POR_DEFECTO,
+      color: colorEfectivo(estado),
       contratoFrameIds: estado.data?.contratoFrameIds || [],
     });
     setShowModal(true);
@@ -226,7 +230,7 @@ export const EstadosPage: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtrados.map((estado) => {
-            const color = estado.data?.color || COLOR_POR_DEFECTO;
+            const color = colorEfectivo(estado);
             const tipos = estado.data?.contratoFrameIds || [];
             return (
               <div key={estado._id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex flex-col gap-3">

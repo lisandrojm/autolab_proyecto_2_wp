@@ -17,6 +17,7 @@ import { Shift } from "../models/Shift.js";
 import { Company } from "../models/Company.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
+import { esContratoVigente, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
 
 async function resolveProjectGlobalConfig(project: any, tenantId: any) {
   if (!project) return;
@@ -761,17 +762,6 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
   }
 });
 
-// "Hoy" en hora de Argentina (el VPS puede correr en UTC), como "YYYY-MM-DD".
-function hoyArgentina(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date());
-}
-
-// Un contrato está vigente si no tiene baja o si la baja es de hoy en adelante. La comparación es
-// como string ISO para evitar corrimientos de zona horaria al parsear la fecha.
-function esContratoVigente(baja: string | undefined | null, hoy: string): boolean {
-  return !baja || String(baja).substring(0, 10) >= hoy;
-}
-
 // Área/turno de un miembro en el proyecto, con la misma precedencia que usa la UI:
 // `project.teamConfig` y, si ahí no está, las asignaciones de su último contrato.
 function claveAreaTurnoDelMiembro(assignments: any[]): Set<string> {
@@ -817,11 +807,13 @@ router.get("/projects/:projectId/area-shift-counts", requireTenant, authenticate
 
       const up: any = ((member as any).metadata?.projects || []).find((p: any) => p && String(p.projectId) === String(projectId));
       const contracts: any[] = up?.contracts || [];
-      const ultimoContrato = contracts.length > 0 ? contracts[contracts.length - 1] : null;
-      if (!ultimoContrato || !esContratoVigente(ultimoContrato.fecha_baja_contrato, hoy)) continue;
+      // Contrato que representa su situación actual: el vigente más reciente (un tiempo
+      // indeterminado no tiene baja y siempre lo es), no simplemente el último cargado.
+      const contratoActivo = getContratoActivo(contracts, hoy);
+      if (!contratoActivo || !esContratoVigente(contratoActivo, hoy)) continue;
 
       let assignments: any[] = configByUser.get(String(member._id))?.areaShiftAssignments || [];
-      if (assignments.length === 0) assignments = ultimoContrato.areaShiftAssignments || [];
+      if (assignments.length === 0) assignments = contratoActivo.areaShiftAssignments || [];
 
       // Un miembro cuenta UNA vez por combinación, aunque la tenga repetida en sus asignaciones.
       for (const key of claveAreaTurnoDelMiembro(assignments)) counts[key] = (counts[key] || 0) + 1;
@@ -874,10 +866,10 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
     for (const member of members) {
       const up: any = ((member as any).metadata?.projects || []).find((p: any) => p && String(p.projectId) === String(projectId));
       const contracts: any[] = up?.contracts || [];
-      const ultimoContrato = contracts.length > 0 ? contracts[contracts.length - 1] : null;
+      const contratoActivo = getContratoActivo(contracts, hoy);
 
       let assignments: any[] = configByUser.get(String(member._id))?.areaShiftAssignments || [];
-      if (assignments.length === 0) assignments = ultimoContrato?.areaShiftAssignments || [];
+      if (assignments.length === 0) assignments = contratoActivo?.areaShiftAssignments || [];
       const keys = claveAreaTurnoDelMiembro(assignments);
 
       // Turnos que la persona tiene en esta área (uno solo si se pidió un turno puntual).
@@ -885,7 +877,7 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
       if (shiftIds.length === 0) continue;
 
       const activo = (member as any).metadata?.activo === true;
-      const vigente = !!ultimoContrato && esContratoVigente(ultimoContrato.fecha_baja_contrato, hoy);
+      const vigente = esContratoVigente(contratoActivo, hoy);
 
       rows.push({
         _id: member._id,
@@ -896,10 +888,10 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
         vigente,
         cuenta: activo && vigente,
         shiftIds,
-        nombreContrato: ultimoContrato?.nombre_contrato || "",
-        estadoContrato: ultimoContrato?.nombre_estado_empleado || "",
-        fechaAlta: ultimoContrato?.fecha_alta_contrato || "",
-        fechaBaja: ultimoContrato?.fecha_baja_contrato || "",
+        nombreContrato: contratoActivo?.nombre_contrato || "",
+        estadoContrato: contratoActivo?.nombre_estado_empleado || "",
+        fechaAlta: contratoActivo?.fecha_alta_contrato || "",
+        fechaBaja: contratoActivo?.fecha_baja_contrato || "",
       });
     }
 

@@ -49,6 +49,25 @@ const orderOf = (name: string) => (normalize(name) in ESTADO_ORDER ? ESTADO_ORDE
 const styleFor = (name: string) => ESTADO_STYLES[normalize(name)] || { cls: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300" };
 const labelFor = (name: string) => styleFor(name).label || name;
 
+/**
+ * Equivalente hexadecimal de los colores históricos de cada estado (los de ESTADO_STYLES).
+ * Lo usa el ABM para arrancar con el color que el estado ya venía mostrando en la app, en vez de
+ * pintarlos todos de gris hasta que alguien elija uno.
+ */
+const ESTADO_COLOR_HEX: Record<string, string> = {
+  disponible: "#15803d",
+  "envio de documentacion": "#1d4ed8",
+  "falta pedido de afip": "#b91c1c",
+  "pedido de afip": "#b91c1c",
+  "firma pendiente": "#b45309",
+  "pedido servicios": "#c2410c",
+};
+
+const COLOR_HEX_GENERICO = "#64748b";
+
+/** Color con el que se muestra un estado que todavía no tiene color propio configurado. */
+export const estadoColorPorDefecto = (name: string): string => ESTADO_COLOR_HEX[normalize(name)] || COLOR_HEX_GENERICO;
+
 /** Etiqueta canónica del estado ("Falta pedido de AFIP" y "Pedido de AFIP" son el mismo estado). */
 export const estadoLabel = (name: string): string => labelFor(name);
 
