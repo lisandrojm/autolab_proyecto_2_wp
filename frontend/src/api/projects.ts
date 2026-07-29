@@ -276,6 +276,17 @@ class ProjectsAPI {
     return normalizeProject(resp.data);
   }
 
+  /**
+   * Personas del equipo por combinación exacta de área + turno, indexadas por "areaId::shiftId".
+   * Se calcula en el server porque el equipo se lista paginado.
+   */
+  async getAreaShiftCounts(projectId: string): Promise<Record<string, number>> {
+    const resp = await axios.get(`/projects/${projectId}/area-shift-counts`, {
+      headers: this.getHeaders(),
+    });
+    return resp.data?.counts || {};
+  }
+
   async updateProject(
     projectId: string,
     data: {

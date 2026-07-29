@@ -234,6 +234,7 @@ export const ProjectTeamPage: React.FC = () => {
   // Help
   const [openInfo, setOpenInfo] = useState(false);
   const [openCoordinadoresInfo, setOpenCoordinadoresInfo] = useState(false);
+  const [openCoordCountInfo, setOpenCoordCountInfo] = useState(false);
   const helpEntry = getHelp(HELP_KEY);
 
   // Data
@@ -260,6 +261,9 @@ export const ProjectTeamPage: React.FC = () => {
   const candReqIdRef = React.useRef(0);
   const [loading, setLoading] = useState(true);
   const [teamConfig, setTeamConfig] = useState<any[]>([]);
+  // Personas por área+turno exacto ("areaId::shiftId" → cantidad). Viene del server porque el
+  // equipo se lista paginado y acá solo tenemos la página actual.
+  const [areaShiftCounts, setAreaShiftCounts] = useState<Record<string, number>>({});
   const [vacations, setVacations] = useState<VacationRequest[]>([]);
   const [allAreas, setAllAreas] = useState<Area[]>([]);
   const [allPositions, setAllPositions] = useState<Position[]>([]);
@@ -568,6 +572,22 @@ export const ProjectTeamPage: React.FC = () => {
     return () => clearTimeout(h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTermTeam, filterUserStatus, filterRolMobile]);
+
+  // Cantidad de personas por área/turno: se recalcula en el server (equipo completo, no la página).
+  // Se refresca cuando cambia `teamConfig`, o sea después de cada alta/edición de miembro.
+  useEffect(() => {
+    if (!projectId || !token) return;
+    let cancelled = false;
+    projectsAPI
+      .getAreaShiftCounts(projectId)
+      .then((counts) => {
+        if (!cancelled) setAreaShiftCounts(counts);
+      })
+      .catch((e) => console.error('Error fetching area/shift counts:', e));
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, token, teamConfig]);
 
   // Cambio de página → traer esa página del server.
   const teamPageInitedRef = React.useRef(false);
@@ -948,6 +968,10 @@ export const ProjectTeamPage: React.FC = () => {
 
     return shifts;
   };
+
+  // Personas del equipo asignadas a ese área + turno exacto (incluye al coordinador si él también
+  // pertenece a esa combinación). Lo calcula el server sobre el equipo completo.
+  const getAreaShiftPeopleCount = (areaId: string, shiftId: string): number => areaShiftCounts[`${areaId}::${shiftId}`] || 0;
 
   // Get coordinated shifts for a user assigned to an area
   const getCoordinatedShifts = (user: User, areaId: string) => {
@@ -1760,11 +1784,17 @@ export const ProjectTeamPage: React.FC = () => {
                       </div>
                       {shifts.length > 0 && (
                         <div className="flex flex-col gap-1 mt-0.5 pl-0.5">
-                          {shifts.map((s, idx) => (
-                            <span key={idx} className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-50/50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100/50 dark:border-amber-900/40 whitespace-nowrap w-fit" title={`${s.startTime} - ${s.endTime}`}>
-                              {s.name} ({s.startTime} - {s.endTime})
-                            </span>
-                          ))}
+                          {shifts.map((s, idx) => {
+                            const coordinados = getAreaShiftPeopleCount(ad.id, String(s._id));
+                            return (
+                              <span key={idx} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-50/50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100/50 dark:border-amber-900/40 whitespace-nowrap w-fit" title={`${s.startTime} - ${s.endTime}`}>
+                                {s.name} ({s.startTime} - {s.endTime})
+                                <span className="font-black text-amber-800 dark:text-amber-300" title={`${coordinados} persona${coordinados === 1 ? '' : 's'} en ${ad.name} / ${s.name}`}>
+                                  ({coordinados})
+                                </span>
+                              </span>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -2149,7 +2179,20 @@ export const ProjectTeamPage: React.FC = () => {
                               <th className="px-4 py-3 font-semibold">Rol/es Frame</th>
                               <th className="px-4 py-3 font-semibold">Estado</th>
                               <th className="px-4 py-3 font-semibold">Área / Turno</th>
-                              <th className="px-4 py-3 font-semibold text-amber-600 dark:text-amber-400">Área/Turno Coordinada</th>
+                              <th className="px-4 py-3 font-semibold text-amber-600 dark:text-amber-400">
+                                <span className="inline-flex items-center gap-1.5">
+                                  Área/Turno Coordinada
+                                  <button
+                                    type="button"
+                                    onClick={() => setOpenCoordCountInfo(true)}
+                                    className="text-amber-500/70 hover:text-amber-500 transition-colors"
+                                    title="Qué significa el número entre paréntesis"
+                                    aria-label="Información del número de personas coordinadas"
+                                  >
+                                    <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
+                                  </button>
+                                </span>
+                              </th>
                               <th className="px-4 py-3 font-semibold">Contrato</th>
                               <th className="px-4 py-3 font-semibold whitespace-nowrap">Estado Contrato</th>
                               <th className="px-4 py-3 font-semibold">Reemplazo</th>
@@ -2690,7 +2733,10 @@ export const ProjectTeamPage: React.FC = () => {
                 return shifts.map((s, idx) => (
                   <div key={idx} className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 flex flex-col gap-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">{s.name}</span>
+                      <span className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">
+                        {s.name}
+                        {assignmentType === 'coordinated' && <span className="ml-1.5 text-amber-600 dark:text-amber-400">({getAreaShiftPeopleCount(areaId, String(s._id))})</span>}
+                      </span>
                       <span className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[10px] font-black shadow-sm">
                         {s.startTime} — {s.endTime} HS
                       </span>
@@ -3323,6 +3369,45 @@ export const ProjectTeamPage: React.FC = () => {
               <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
               <span className="text-sm text-gray-700 dark:text-gray-300">
                 Sin áreas, además, los usuarios no pueden cargar su área y los coordinadores no pueden informar novedades sobre ellos.
+              </span>
+            </li>
+          </ul>
+        </div>
+      </InfoModal>
+
+      {/* Info: qué significa el número entre paréntesis en Área/Turno Coordinada */}
+      <InfoModal
+        isOpen={openCoordCountInfo}
+        onClose={() => setOpenCoordCountInfo(false)}
+        title="Personas coordinadas por área y turno"
+        subtitle="Qué significa el número entre paréntesis"
+        size="sm"
+        zIndex={100}
+        actions={[{ label: 'Entendido', onClick: () => setOpenCoordCountInfo(false), variant: 'primary' }]}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            El número al lado de cada turno es la <strong>cantidad de personas del equipo asignadas a esa combinación exacta
+            de área y turno</strong>, o sea a quiénes coordina esa persona en ese horario.
+          </p>
+          <ul className="space-y-3">
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                Se cuenta el <strong>área y el turno exactos</strong>: alguien de la misma área en otro horario no suma.
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                El <strong>coordinador se incluye a sí mismo</strong> si además pertenece a esa área y turno.
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                Se calcula sobre <strong>todo el equipo del proyecto</strong>, no solo sobre la página que estás viendo, y se
+                actualiza cuando cambian las asignaciones de los miembros.
               </span>
             </li>
           </ul>
