@@ -47,7 +47,7 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
     label: 'Configuración',
     icon: faCog,
     description: 'Configuración de módulos y plantillas',
-    permissions: ['config_orders:view', 'config_shifts:view', 'config_vacations:view', 'config_activity_logs:view', 'config_holidays:view', 'config_pdf_templates:view', 'config_releases:view', 'config_frame_functions:view', 'config_categorias_sat:view', 'config_bancos:view', 'config_obras_sociales:view', 'config_centros_costo:view', 'config_contratos_frame:view', 'config_estados:view', 'config_empresas:view', 'config_membretes:view', 'config_profile:view'],
+    permissions: ['config_orders:view', 'config_shifts:view', 'config_vacations:view', 'config_activity_logs:view', 'config_holidays:view', 'config_pdf_templates:view', 'config_releases:view', 'config_frame_functions:view', 'config_categorias_sat:view', 'config_bancos:view', 'config_obras_sociales:view', 'config_centros_costo:view', 'config_contratos:view', 'config_contratos_frame:view', 'config_estados:view', 'config_empresas:view', 'config_membretes:view', 'config_profile:view'],
   },
   mobile: {
     label: 'Mobile',
@@ -98,6 +98,7 @@ const MODULE_LABELS: Record<string, string> = {
   'config_bancos:view': 'Bancos',
   'config_obras_sociales:view': 'Obras Sociales',
   'config_centros_costo:view': 'Centros de Costos',
+  'config_contratos:view': 'Contratos',
   'config_contratos_frame:view': 'Contratos FRAME',
   'config_estados:view': 'Estados',
   'config_empresas:view': 'Empresas',

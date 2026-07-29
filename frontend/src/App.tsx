@@ -50,6 +50,7 @@ import { BancosPage } from "./pages/BancosPage";
 import { ObrasSocialesPage } from "./pages/ObrasSocialesPage";
 import { CentrosCostoPage } from "./pages/CentrosCostoPage";
 import { EstadosPage } from "./pages/EstadosPage";
+import { ContratosPage } from "./pages/ContratosPage";
 import { EmpresasPage } from "./pages/EmpresasPage";
 import { MembretesPage } from "./pages/MembretesPage";
 import { ContratosFramePage } from "./pages/ContratosFramePage";
@@ -507,6 +508,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <EstadosPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/contratos"
+                element={
+                  <ProtectedRoute>
+                    <ContratosPage />
                   </ProtectedRoute>
                 }
               />
