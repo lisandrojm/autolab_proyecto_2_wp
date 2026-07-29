@@ -63,17 +63,28 @@ export const esFechaBajaVigente = (fechaBaja?: string | null): boolean => {
   return !baja || baja >= hoyISO();
 };
 
+/** Un contrato es de tiempo indeterminado cuando no tiene fecha de baja: no vence. */
+export const esTiempoIndeterminado = (contrato?: ContratoVigenciaLike | null): boolean => !!contrato && !fechaISO(contrato.fecha_baja_contrato);
+
 /**
- * Contrato que representa la situación actual de la persona en el proyecto:
- * el más reciente de los VIGENTES (un indeterminado sin baja siempre lo es) y, si no hay ninguno
- * vigente, el último cargado, para poder mostrar el histórico con su badge NO VIGENTE.
+ * Contrato que representa la situación actual de la persona en el proyecto, por orden de prioridad:
+ *
+ *  1. TIEMPO INDETERMINADO: si tiene uno (sin fecha de baja) ese es el que rige, aunque después
+ *     figuren cargados contratos a plazo. Un contrato sin fecha de fin sigue abierto.
+ *  2. Si no hay indeterminado, el vigente de alta más reciente.
+ *  3. Si no hay ninguno vigente, el último cargado, para mostrar el histórico con su NO VIGENTE.
  */
 export const getContratoActivo = <T extends ContratoVigenciaLike>(contratos?: T[] | null): T | null => {
   if (!Array.isArray(contratos) || contratos.length === 0) return null;
 
-  const vigentes = contratos.filter((c) => esContratoVigente(c));
-  if (vigentes.length === 0) return contratos[contratos.length - 1];
+  // A igual fecha de alta (o sin fecha) gana el último cargado, por eso el >=.
+  const masReciente = (lista: T[]) => lista.reduce((mejor, actual) => (fechaISO(actual.fecha_alta_contrato) >= fechaISO(mejor.fecha_alta_contrato) ? actual : mejor));
 
-  // Entre los vigentes gana el de alta más reciente; a igual fecha (o sin fecha), el último cargado.
-  return vigentes.reduce((mejor, actual) => (fechaISO(actual.fecha_alta_contrato) >= fechaISO(mejor.fecha_alta_contrato) ? actual : mejor));
+  const indeterminados = contratos.filter((c) => esTiempoIndeterminado(c));
+  if (indeterminados.length > 0) return masReciente(indeterminados);
+
+  const vigentes = contratos.filter((c) => esContratoVigente(c));
+  if (vigentes.length > 0) return masReciente(vigentes);
+
+  return contratos[contratos.length - 1];
 };

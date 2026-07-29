@@ -26,8 +26,14 @@ export declare function fechaISO(valor?: string | null): string;
 export declare function esContratoVigente(contrato: ContratoVigenciaLike | null | undefined, hoy?: string): boolean;
 /** Igual que `esContratoVigente`, recibiendo solo la fecha de baja. */
 export declare function esFechaBajaVigente(fechaBaja: string | null | undefined, hoy?: string): boolean;
+/** Un contrato es de tiempo indeterminado cuando no tiene fecha de baja: no vence. */
+export declare function esTiempoIndeterminado(contrato: ContratoVigenciaLike | null | undefined): boolean;
 /**
- * Contrato que representa la situación actual: el más reciente de los VIGENTES y, si no hay
- * ninguno vigente, el último cargado (para seguir mostrando el histórico).
+ * Contrato que representa la situación actual, por orden de prioridad:
+ *
+ *  1. TIEMPO INDETERMINADO: si tiene uno (sin fecha de baja) ese es el que rige, aunque después
+ *     figuren cargados contratos a plazo. Un contrato sin fecha de fin sigue abierto.
+ *  2. Si no hay indeterminado, el vigente de alta más reciente.
+ *  3. Si no hay ninguno vigente, el último cargado (para seguir mostrando el histórico).
  */
 export declare function getContratoActivo<T extends ContratoVigenciaLike>(contratos: T[] | null | undefined, hoy?: string): T | null;

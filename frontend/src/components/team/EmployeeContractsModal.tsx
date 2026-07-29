@@ -60,7 +60,10 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
    * El contrato resaltado es el que RIGE hoy (el vigente más reciente), no el último cargado:
    * un tiempo indeterminado abierto puede tener detrás un contrato viejo ya vencido.
    */
-  const contratoQueRige = useMemo(() => getContratoActivo(contracts as any[]), [contracts]);
+  const idxQueRige = useMemo(() => {
+    const queRige = getContratoActivo(contracts as any[]);
+    return queRige ? contracts.indexOf(queRige as any) : -1;
+  }, [contracts]);
 
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
 
@@ -75,8 +78,8 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
   // Se filtra conservando el índice de la tarjeta en la lista completa: de él dependen el índice original
   // en BD (edición/descarga) y el resaltado del último contrato.
   const visible = useMemo(
-    () => contracts.map((contract, idx) => ({ contract, idx })).filter(({ contract }) => matchesContractFilters(filters, { contract, isLatest: contract === contratoQueRige })),
-    [contracts, filters, contratoQueRige],
+    () => contracts.map((contract, idx) => ({ contract, idx })).filter(({ contract, idx }) => matchesContractFilters(filters, { contract, isLatest: idx === idxQueRige })),
+    [contracts, filters, idxQueRige],
   );
 
   const handleDownloadContract = async (contract: Contract, displayIndex: number, empresaId?: string) => {
@@ -130,8 +133,8 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
         ) : (
           <div className="space-y-3">
             {visible.map(({ contract, idx }) => (
-              // El modal muestra los contratos invertidos (más reciente primero). La primera tarjeta (idx 0)
-              // es el ÚLTIMO contrato del array = el que se ve en la fila de la tabla → se resalta en azul.
+              // Se resalta el contrato que RIGE hoy (tiempo indeterminado primero), que es el que
+              // muestra la fila de la tabla del equipo — no necesariamente el último cargado.
               <ContractCard
                 key={idx}
                 contract={contract}
@@ -139,7 +142,7 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                 activeReleases={activeReleases}
                 contratoEmpresas={contratoEmpresas}
                 releaseEmpresas={releaseEmpresas}
-                isLatest={contract === contratoQueRige}
+                isLatest={idx === idxQueRige}
                 onEdit={user ? () => onEdit(user, contract, contracts.length - 1 - idx) : undefined}
                 onDelete={user ? () => onDelete(user._id) : undefined}
                 deleteTitle="Eliminar del proyecto"
