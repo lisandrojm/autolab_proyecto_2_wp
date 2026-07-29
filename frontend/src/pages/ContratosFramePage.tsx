@@ -13,9 +13,10 @@ import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { sweetAlert } from '../utils/sweetAlert';
 import { fuzzyMatch } from '../utils/searchHelpers';
 import { contratoFrameAPI, ContratoFrameItem, contratoVariables } from '../api/contratosFrame';
+import { contratosAPI, ContratoItem } from '../api/contratos';
 import { RichTextEditor } from '../components/ui/RichTextEditor';
 
-const emptyForm = { nombre: '', externalId: '', content: '', cantidadJornadas: '', multiplicadorDiario: '' };
+const emptyForm = { nombre: '', externalId: '', content: '', contratoId: '' };
 
 /** El editor devuelve "<p></p>" cuando está vacío: chequeamos que haya texto real. */
 const hasContent = (html: string): boolean =>
@@ -69,17 +70,26 @@ export const ContratosFramePage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<ContratoFrameItem | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
-  const [esTiempoIndeterminado, setEsTiempoIndeterminado] = useState(false);
   const [usaMembrete, setUsaMembrete] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all');
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState(false);
 
+  // Contratos (ABM Configuración → Contratos): cada Plantilla elige a cuál pertenece.
+  const [contratos, setContratos] = useState<ContratoItem[]>([]);
+  const contratoElegido = contratos.find((c) => c._id === form.contratoId) || null;
+  const nombreContrato = (id?: string | { _id: string; name: string }) => {
+    const contratoId = typeof id === 'object' ? id?._id : id;
+    return contratos.find((c) => c._id === contratoId)?.name || (typeof id === 'object' ? id?.name : '') || 'Sin contrato';
+  };
+
   const load = async () => {
     setLoading(true);
     try {
-      setItems(await contratoFrameAPI.list());
+      const [plantillas, tiposDeContrato] = await Promise.all([contratoFrameAPI.list(), contratosAPI.list()]);
+      setItems(plantillas);
+      setContratos(tiposDeContrato);
     } catch {
       sweetAlert.error('Error', 'No se pudieron cargar los contratos.');
     } finally {
@@ -100,7 +110,6 @@ export const ContratosFramePage: React.FC = () => {
   const openCreate = () => {
     setEditing(null);
     setForm({ ...emptyForm });
-    setEsTiempoIndeterminado(false);
     setUsaMembrete(false);
     setIsActive(true);
     setShowModal(true);
@@ -112,10 +121,8 @@ export const ContratosFramePage: React.FC = () => {
       nombre: item.name || '',
       externalId: item.externalId || '',
       content: item.content || '',
-      cantidadJornadas: String(item.data?.cantidadJornadas ?? ''),
-      multiplicadorDiario: String(item.data?.multiplicadorDiario ?? ''),
+      contratoId: typeof item.contratoId === 'object' ? item.contratoId?._id || '' : item.contratoId || '',
     });
-    setEsTiempoIndeterminado(!!item.data?.esTiempoIndeterminado);
     setUsaMembrete(!!item.usaMembrete);
     setIsActive(item.isActive ?? true);
     setShowModal(true);
@@ -138,19 +145,21 @@ export const ContratosFramePage: React.FC = () => {
 
   const handleSave = async () => {
     if (!form.nombre.trim()) {
-      sweetAlert.error('Falta el nombre', 'El nombre del contrato es obligatorio.');
+      sweetAlert.error('Falta el nombre', 'El nombre de la plantilla es obligatorio.');
       return;
     }
-    // El contenido es opcional: se puede crear el tipo de contrato y redactarlo más adelante.
+    if (!form.contratoId) {
+      sweetAlert.error('Falta el Contrato', 'Elegí a qué Contrato pertenece esta plantilla.');
+      return;
+    }
+    // El contenido es opcional: se puede crear la plantilla y redactarla más adelante.
     setSaving(true);
     try {
       const payload = {
         nombre: form.nombre.trim(),
+        contratoId: form.contratoId,
         externalId: form.externalId.trim(),
         content: form.content,
-        cantidadJornadas: form.cantidadJornadas,
-        multiplicadorDiario: form.multiplicadorDiario,
-        esTiempoIndeterminado,
         usaMembrete,
         isActive,
       };
@@ -323,14 +332,10 @@ export const ContratosFramePage: React.FC = () => {
                 ],
               }}
             >
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Jornadas</label>
-                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">{item.data?.cantidadJornadas ?? '—'}</div>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Mult. Diario</label>
-                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">{item.data?.multiplicadorDiario ?? '—'}</div>
+              <div>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Contrato</label>
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300" title={`${item.data?.cantidadJornadas ?? 0} jornadas · x${item.data?.multiplicadorDiario ?? 0}${item.data?.esTiempoIndeterminado ? ' · Tiempo indeterminado' : ''}`}>
+                  {nombreContrato(item.contratoId)}
                 </div>
               </div>
             </Card>
@@ -343,8 +348,7 @@ export const ContratosFramePage: React.FC = () => {
             <thead className="bg-gray-50 dark:bg-gray-900/50">
               <tr>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
-                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Jornadas</th>
-                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Mult. Diario</th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contrato</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Membrete | Firma</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Contenido</th>
@@ -375,8 +379,9 @@ export const ContratosFramePage: React.FC = () => {
                         )}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{item.data?.cantidadJornadas ?? '—'}</td>
-                    <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{item.data?.multiplicadorDiario ?? '—'}</td>
+                    <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300" title={`${item.data?.cantidadJornadas ?? 0} jornadas · x${item.data?.multiplicadorDiario ?? 0}${item.data?.esTiempoIndeterminado ? ' · Tiempo indeterminado' : ''}`}>
+                      {nombreContrato(item.contratoId)}
+                    </td>
                     <td className="px-5 py-3 text-sm whitespace-nowrap">
                       <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${item.isActive === false ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'}`}>{item.isActive === false ? 'Inactivo' : 'Activo'}</span>
                     </td>
@@ -456,15 +461,37 @@ export const ContratosFramePage: React.FC = () => {
           <div className="space-y-6">
             {field('Nombre *', 'nombre')}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {field('Cantidad de Jornadas', 'cantidadJornadas', 'number')}
-              {field('Multiplicador Diario', 'multiplicadorDiario', 'number')}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contrato *</label>
+              <select
+                value={form.contratoId}
+                onChange={(e) => setForm((f) => ({ ...f, contratoId: e.target.value }))}
+                className="input-field w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              >
+                <option value="">{contratos.length ? 'Selecciona un contrato...' : 'No hay contratos cargados'}</option>
+                {contratos.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.name}
+                    {c.isActive === false ? ' (inactivo)' : ''}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Define jornadas, multiplicador y vigencia. Se administra en <strong>Configuración → Contratos</strong>.
+                {!contratos.length && ' Todavía no hay contratos cargados: creá uno primero.'}
+              </p>
+              {contratoElegido && (
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-400">
+                  <span>
+                    <strong>{contratoElegido.data.cantidadJornadas}</strong> jornadas
+                  </span>
+                  <span>
+                    Multiplicador <strong>{contratoElegido.data.multiplicadorDiario}</strong>
+                  </span>
+                  {contratoElegido.data.esTiempoIndeterminado && <span className="font-semibold text-blue-600 dark:text-blue-400">Tiempo indeterminado</span>}
+                </div>
+              )}
             </div>
-
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={esTiempoIndeterminado} onChange={(e) => setEsTiempoIndeterminado(e.target.checked)} className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" />
-              Es tiempo indeterminado
-            </label>
 
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" />

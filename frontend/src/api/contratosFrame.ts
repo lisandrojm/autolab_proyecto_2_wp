@@ -6,9 +6,12 @@ export interface ContratoFrameItem {
   name: string;
   /** Contenido redactado en la plataforma (HTML) con variables `{{variable}}` */
   content?: string;
+  /** Contrato (tipo) al que pertenece esta plantilla. Viaja populado con `{ _id, name, isActive }`. */
+  contratoId?: string | { _id: string; name: string; isActive?: boolean };
   data: {
     id?: number;
     nombre: string;
+    /** Copiados del Contrato elegido: se muestran acá pero se editan desde el ABM de Contratos. */
     cantidadJornadas: number;
     multiplicadorDiario: number;
     esTiempoIndeterminado?: boolean;
@@ -21,11 +24,10 @@ export interface ContratoFrameItem {
 
 export interface ContratoFrameInput {
   nombre: string;
+  /** Obligatorio: a qué Contrato pertenece esta plantilla. */
+  contratoId: string;
   externalId?: string;
   content?: string;
-  cantidadJornadas?: string | number;
-  multiplicadorDiario?: string | number;
-  esTiempoIndeterminado?: boolean;
   usaMembrete?: boolean;
   isActive?: boolean;
 }

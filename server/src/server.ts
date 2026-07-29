@@ -51,6 +51,7 @@ import { obraSocialRoutes } from "./routes/obrasSociales.js";
 import { centroCostoRoutes } from "./routes/centrosCosto.js";
 import { companyRoutes } from "./routes/companies.js";
 import { contratoFrameRoutes } from "./routes/contratosFrame.js";
+import { contratoRoutes } from "./routes/contratos.js";
 
 import { orderRoutes } from "./routes/orders.js";
 import { orderConfigRoutes } from "./routes/orderConfig.js";
@@ -189,6 +190,7 @@ app.use("/api/v1/obras-sociales", obraSocialRoutes);
 app.use("/api/v1/centros-costo", centroCostoRoutes);
 app.use("/api/v1/companies", companyRoutes);
 app.use("/api/v1/contratos-frame", contratoFrameRoutes);
+app.use("/api/v1/contratos", contratoRoutes);
 
 app.use("/api/v1/orders", orderRoutes);
 app.use("/api/v1/order-config", orderConfigRoutes);

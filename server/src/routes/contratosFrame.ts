@@ -1,5 +1,6 @@
 import { Router, Response } from "express";
 import { ContratoFrame } from "../models/ContratoFrame.js";
+import { Contrato } from "../models/Contrato.js";
 import { Company } from "../models/Company.js";
 import { Project } from "../models/Project.js";
 import { User } from "../models/User.js";
@@ -7,6 +8,7 @@ import UserProject from "../models/UserProject.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { buildEmployeeDocData, buildDocFileName } from "../utils/employeeDocData.js";
 import { buildDocPdf, getDummyDocVariables, htmlHasText, empresaToMembrete } from "../utils/documentPdf.js";
+import { ensureContratosBackfilled } from "./contratos.js";
 
 const router = Router();
 
@@ -25,7 +27,8 @@ const sendPdf = (res: Response, buffer: Buffer, baseName: string) => {
 // GET / - listar
 router.get("/", authenticateToken, async (_req: AuthenticatedRequest, res: Response) => {
   try {
-    const items = await ContratoFrame.find().sort({ name: 1 }).lean();
+    await ensureContratosBackfilled();
+    const items = await ContratoFrame.find().sort({ name: 1 }).populate({ path: "contratoId", select: "name isActive", model: Contrato }).lean();
     res.json(items);
   } catch (error) {
     console.error("Get contratos-frame error:", error);
@@ -141,24 +144,37 @@ router.get("/:id/download-filled", authenticateToken, async (req: AuthenticatedR
 // POST / - crear
 router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { nombre, externalId, content, cantidadJornadas, multiplicadorDiario, esTiempoIndeterminado, usaMembrete, isActive } = req.body;
+    const { nombre, externalId, content, contratoId, usaMembrete, isActive } = req.body;
     if (!nombre || !String(nombre).trim()) {
       res.status(400).json({ error: "El nombre es obligatorio" });
       return;
     }
+    if (!contratoId) {
+      res.status(400).json({ error: "Elegí a qué Contrato pertenece esta plantilla" });
+      return;
+    }
+    const contrato = await Contrato.findById(contratoId).lean();
+    if (!contrato) {
+      res.status(400).json({ error: "El Contrato elegido no existe" });
+      return;
+    }
+
     const idNum = externalId ? Number(externalId) : undefined;
     const created = await ContratoFrame.create({
       name: String(nombre).trim(),
       externalId: externalId ? String(externalId).trim() : "",
       content: htmlHasText(content) ? String(content) : "",
+      contratoId: contrato._id,
       usaMembrete: usaMembrete === "true" || usaMembrete === true,
       isActive: isActive === undefined ? true : isActive === "true" || isActive === true,
+      // Se copian del Contrato: son la fuente de verdad. Se mantienen acá porque todo el resto del
+      // código (wizard, PDF, filtros) lee estos campos directamente de la Plantilla.
       data: {
         id: idNum !== undefined && !isNaN(idNum) ? idNum : undefined,
         nombre: String(nombre).trim(),
-        cantidadJornadas: parseNum(cantidadJornadas),
-        multiplicadorDiario: parseNum(multiplicadorDiario),
-        esTiempoIndeterminado: esTiempoIndeterminado === "true" || esTiempoIndeterminado === true,
+        cantidadJornadas: contrato.data?.cantidadJornadas || 0,
+        multiplicadorDiario: contrato.data?.multiplicadorDiario || 0,
+        esTiempoIndeterminado: !!contrato.data?.esTiempoIndeterminado,
       },
     });
     res.status(201).json(created);
@@ -172,7 +188,7 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
 router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { nombre, externalId, content, cantidadJornadas, multiplicadorDiario, esTiempoIndeterminado, usaMembrete, isActive } = req.body;
+    const { nombre, externalId, content, contratoId, usaMembrete, isActive } = req.body;
     const item = await ContratoFrame.findById(id);
     if (!item) {
       res.status(404).json({ error: "Contrato no encontrado" });
@@ -190,9 +206,23 @@ router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Res
       if (!isNaN(idNum)) item.data.id = idNum;
     }
     if (content !== undefined) item.content = htmlHasText(content) ? String(content) : "";
-    if (cantidadJornadas !== undefined) item.data.cantidadJornadas = parseNum(cantidadJornadas);
-    if (multiplicadorDiario !== undefined) item.data.multiplicadorDiario = parseNum(multiplicadorDiario);
-    if (esTiempoIndeterminado !== undefined) item.data.esTiempoIndeterminado = esTiempoIndeterminado === "true" || esTiempoIndeterminado === true;
+
+    if (contratoId !== undefined) {
+      if (!contratoId) {
+        res.status(400).json({ error: "Elegí a qué Contrato pertenece esta plantilla" });
+        return;
+      }
+      const contrato = await Contrato.findById(contratoId).lean();
+      if (!contrato) {
+        res.status(400).json({ error: "El Contrato elegido no existe" });
+        return;
+      }
+      item.contratoId = contrato._id as any;
+      // Se sincronizan con el Contrato elegido (fuente de verdad de estos tres campos).
+      item.data.cantidadJornadas = contrato.data?.cantidadJornadas || 0;
+      item.data.multiplicadorDiario = contrato.data?.multiplicadorDiario || 0;
+      item.data.esTiempoIndeterminado = !!contrato.data?.esTiempoIndeterminado;
+    }
 
     item.markModified("data");
     await item.save();
