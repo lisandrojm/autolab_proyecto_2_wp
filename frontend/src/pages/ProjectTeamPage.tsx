@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from '../api/axiosConfig';
-import { projectsAPI, Project } from '../api/projects';
+import { projectsAPI, Project, AreaShiftMembersResponse } from '../api/projects';
 import { usersAPI, User, Contract } from '../api/users';
 import { useAuthStore } from '../stores/authStore';
 import { sweetAlert } from '../utils/sweetAlert';
@@ -264,6 +264,10 @@ export const ProjectTeamPage: React.FC = () => {
   // Personas por área+turno exacto ("areaId::shiftId" → cantidad). Viene del server porque el
   // equipo se lista paginado y acá solo tenemos la página actual.
   const [areaShiftCounts, setAreaShiftCounts] = useState<Record<string, number>>({});
+  // Detalle (modal) de las personas de un área+turno: qué combinación se está viendo y sus filas.
+  const [viewingAreaShift, setViewingAreaShift] = useState<{ areaId: string; areaName: string; shift: any } | null>(null);
+  const [areaShiftMembers, setAreaShiftMembers] = useState<AreaShiftMembersResponse | null>(null);
+  const [loadingAreaShiftMembers, setLoadingAreaShiftMembers] = useState(false);
   const [vacations, setVacations] = useState<VacationRequest[]>([]);
   const [allAreas, setAllAreas] = useState<Area[]>([]);
   const [allPositions, setAllPositions] = useState<Position[]>([]);
@@ -972,6 +976,23 @@ export const ProjectTeamPage: React.FC = () => {
   // Personas ACTIVAS y con contrato VIGENTE asignadas a ese área + turno exacto (incluye al
   // coordinador si él también pertenece a esa combinación). Lo calcula el server sobre el equipo completo.
   const getAreaShiftPeopleCount = (areaId: string, shiftId: string): number => areaShiftCounts[`${areaId}::${shiftId}`] || 0;
+
+  // Detalle de quiénes están en ese área + turno (todo el equipo, no solo la página cargada).
+  const handleOpenAreaShiftDetail = async (areaId: string, areaName: string, shift: any) => {
+    if (!projectId) return;
+    setViewingAreaShift({ areaId, areaName, shift });
+    setAreaShiftMembers(null);
+    setLoadingAreaShiftMembers(true);
+    try {
+      setAreaShiftMembers(await projectsAPI.getAreaShiftMembers(projectId, areaId, String(shift._id)));
+    } catch (e) {
+      console.error('Error fetching area/shift members:', e);
+      sweetAlert.error('Error', 'No se pudo cargar el detalle del área/turno.');
+      setViewingAreaShift(null);
+    } finally {
+      setLoadingAreaShiftMembers(false);
+    }
+  };
 
   // Get coordinated shifts for a user assigned to an area
   const getCoordinatedShifts = (user: User, areaId: string) => {
@@ -1787,12 +1808,19 @@ export const ProjectTeamPage: React.FC = () => {
                           {shifts.map((s, idx) => {
                             const coordinados = getAreaShiftPeopleCount(ad.id, String(s._id));
                             return (
-                              <span key={idx} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-50/50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100/50 dark:border-amber-900/40 whitespace-nowrap w-fit" title={`${s.startTime} - ${s.endTime}`}>
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenAreaShiftDetail(ad.id, ad.name, s);
+                                }}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-50/50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100/50 dark:border-amber-900/40 hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:border-amber-300 dark:hover:border-amber-700 transition-colors whitespace-nowrap w-fit cursor-pointer"
+                                title={`Ver las ${coordinados} persona${coordinados === 1 ? '' : 's'} activa${coordinados === 1 ? '' : 's'} con contrato vigente en ${ad.name} / ${s.name}`}
+                              >
                                 {s.name} ({s.startTime} - {s.endTime})
-                                <span className="font-black text-amber-800 dark:text-amber-300" title={`${coordinados} persona${coordinados === 1 ? '' : 's'} activa${coordinados === 1 ? '' : 's'} con contrato vigente en ${ad.name} / ${s.name}`}>
-                                  ({coordinados})
-                                </span>
-                              </span>
+                                <span className="font-black text-amber-800 dark:text-amber-300">({coordinados})</span>
+                              </button>
                             );
                           })}
                         </div>
@@ -2754,6 +2782,83 @@ export const ProjectTeamPage: React.FC = () => {
                 ));
               })()}
             </div>
+          </Modal>
+
+          {/* Detalle de personas de un área + turno (click en el chip de turno coordinado) */}
+          <Modal
+            isOpen={!!viewingAreaShift}
+            onClose={() => {
+              setViewingAreaShift(null);
+              setAreaShiftMembers(null);
+            }}
+            title={viewingAreaShift ? `Personas en ${viewingAreaShift.areaName}` : 'Personas'}
+            subtitle={
+              viewingAreaShift ? (
+                <p className="text-sm font-bold text-amber-600 dark:text-amber-400 mt-1">
+                  {viewingAreaShift.shift?.name} ({viewingAreaShift.shift?.startTime} - {viewingAreaShift.shift?.endTime})
+                </p>
+              ) : (
+                ''
+              )
+            }
+            size="lg"
+          >
+            {loadingAreaShiftMembers ? (
+              <div className="py-12">
+                <LoadingSpinner message="Cargando personas..." />
+              </div>
+            ) : !areaShiftMembers || areaShiftMembers.total === 0 ? (
+              <p className="text-center text-gray-500 py-12">No hay personas asignadas a esta área y turno.</p>
+            ) : (
+              (() => {
+                const cuentan = areaShiftMembers.members.filter((m) => m.cuenta);
+                const noCuentan = areaShiftMembers.members.filter((m) => !m.cuenta);
+
+                const renderMember = (m: (typeof areaShiftMembers.members)[number]) => (
+                  <div key={m._id} className={`flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl border ${m.cuenta ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700' : 'bg-gray-50 dark:bg-gray-900/40 border-gray-200/70 dark:border-gray-700/60 opacity-80'}`}>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{m.firstName || m.lastName ? `${m.firstName} ${m.lastName}`.trim() : m.email}</span>
+                      <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{m.email}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${m.activo ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{m.activo ? 'ACTIVO' : 'INACTIVO'}</span>
+                      {m.estadoContrato ? <EstadoBadge name={m.estadoContrato} className="text-[10px] whitespace-nowrap" /> : <span className="text-[10px] text-gray-400">Sin contrato</span>}
+                      <div className="flex flex-col items-end gap-0.5 text-[10px] text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded uppercase font-bold ${m.vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{m.vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
+                        <span>Alta: {formatContractDate(m.fechaAlta)}</span>
+                        <span>Baja: {m.fechaBaja ? formatContractDate(m.fechaBaja) : '—'}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+
+                return (
+                  <div className="space-y-4">
+                    <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                      <p className="text-xs text-amber-800 dark:text-amber-300">
+                        <strong>{areaShiftMembers.cuentan}</strong> persona{areaShiftMembers.cuentan === 1 ? '' : 's'} activa{areaShiftMembers.cuentan === 1 ? '' : 's'} con contrato vigente
+                        {areaShiftMembers.total !== areaShiftMembers.cuentan ? (
+                          <>
+                            {' '}
+                            · <strong>{areaShiftMembers.total}</strong> asignada{areaShiftMembers.total === 1 ? '' : 's'} en total
+                          </>
+                        ) : null}
+                        . El número de la columna Área/Turno Coordinada es el primero.
+                      </p>
+                    </div>
+
+                    {cuentan.length > 0 && <div className="space-y-2">{cuentan.map(renderMember)}</div>}
+
+                    {noCuentan.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest pt-2">No suman al total ({noCuentan.length})</p>
+                        {noCuentan.map(renderMember)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()
+            )}
           </Modal>
 
           {/* Wizard Modal */}

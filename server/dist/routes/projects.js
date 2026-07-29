@@ -678,6 +678,31 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
         res.status(500).json({ error: "Internal server error" });
     }
 });
+// "Hoy" en hora de Argentina (el VPS puede correr en UTC), como "YYYY-MM-DD".
+function hoyArgentina() {
+    return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date());
+}
+// Un contrato está vigente si no tiene baja o si la baja es de hoy en adelante. La comparación es
+// como string ISO para evitar corrimientos de zona horaria al parsear la fecha.
+function esContratoVigente(baja, hoy) {
+    return !baja || String(baja).substring(0, 10) >= hoy;
+}
+// Área/turno de un miembro en el proyecto, con la misma precedencia que usa la UI:
+// `project.teamConfig` y, si ahí no está, las asignaciones de su último contrato.
+function claveAreaTurnoDelMiembro(assignments) {
+    const keys = new Set();
+    for (const asa of assignments || []) {
+        const areaId = asa?.areaId?._id || asa?.areaId;
+        if (!areaId)
+            continue;
+        for (const sid of asa?.shiftIds || []) {
+            const shiftId = sid?._id || sid;
+            if (shiftId)
+                keys.add(`${areaId}::${shiftId}`);
+        }
+    }
+    return keys;
+}
 // GET /projects/:projectId/area-shift-counts
 // Cuántas personas del equipo pertenecen a cada combinación exacta de área + turno.
 // Solo cuentan los miembros ACTIVOS con su último contrato VIGENTE (sin fecha de baja o con
@@ -696,10 +721,7 @@ router.get("/projects/:projectId/area-shift-counts", requireTenant, authenticate
             .select("_id metadata.activo metadata.projects")
             .populate({ path: "metadata.projects", model: UserProject, select: "projectId contracts.areaShiftAssignments contracts.fecha_baja_contrato" })
             .lean();
-        // "Hoy" en hora de Argentina (el VPS puede estar en UTC) y comparación como string ISO,
-        // que evita cualquier corrimiento de zona horaria al parsear la fecha de baja.
-        const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date());
-        const contratoVigente = (baja) => !baja || String(baja).substring(0, 10) >= hoy;
+        const hoy = hoyArgentina();
         const configByUser = new Map((project.teamConfig || []).map((c) => [String(c.userId), c]));
         const counts = {};
         for (const member of members) {
@@ -708,30 +730,82 @@ router.get("/projects/:projectId/area-shift-counts", requireTenant, authenticate
             const up = (member.metadata?.projects || []).find((p) => p && String(p.projectId) === String(projectId));
             const contracts = up?.contracts || [];
             const ultimoContrato = contracts.length > 0 ? contracts[contracts.length - 1] : null;
-            if (!ultimoContrato || !contratoVigente(ultimoContrato.fecha_baja_contrato))
+            if (!ultimoContrato || !esContratoVigente(ultimoContrato.fecha_baja_contrato, hoy))
                 continue;
             let assignments = configByUser.get(String(member._id))?.areaShiftAssignments || [];
             if (assignments.length === 0)
                 assignments = ultimoContrato.areaShiftAssignments || [];
             // Un miembro cuenta UNA vez por combinación, aunque la tenga repetida en sus asignaciones.
-            const keys = new Set();
-            for (const asa of assignments) {
-                const areaId = asa?.areaId?._id || asa?.areaId;
-                if (!areaId)
-                    continue;
-                for (const sid of asa?.shiftIds || []) {
-                    const shiftId = sid?._id || sid;
-                    if (shiftId)
-                        keys.add(`${areaId}::${shiftId}`);
-                }
-            }
-            for (const key of keys)
+            for (const key of claveAreaTurnoDelMiembro(assignments))
                 counts[key] = (counts[key] || 0) + 1;
         }
         res.json({ counts });
     }
     catch (error) {
         console.error("Get area/shift counts error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// GET /projects/:projectId/area-shift-members?areaId=&shiftId=
+// Detalle de las personas asignadas a esa combinación exacta de área + turno: estado del usuario,
+// estado y fechas del contrato. `cuenta` marca a los que suman en el número de la columna
+// Área/Turno Coordinada (activos con contrato vigente); los demás se devuelven igual para poder
+// mostrarlos aparte y explicar la diferencia.
+router.get("/projects/:projectId/area-shift-members", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        const { areaId, shiftId } = req.query;
+        if (!areaId || !shiftId) {
+            res.status(400).json({ error: "areaId y shiftId son obligatorios" });
+            return;
+        }
+        const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("teamConfig").lean();
+        if (!project) {
+            res.status(404).json({ error: "Project not found" });
+            return;
+        }
+        const members = await User.find({ projectIds: projectId })
+            .select("_id firstName lastName email metadata.activo metadata.projects")
+            .populate({
+            path: "metadata.projects",
+            model: UserProject,
+            select: "projectId contracts.areaShiftAssignments contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.nombre_estado_empleado contracts.nombre_contrato",
+        })
+            .lean();
+        const hoy = hoyArgentina();
+        const configByUser = new Map((project.teamConfig || []).map((c) => [String(c.userId), c]));
+        const target = `${areaId}::${shiftId}`;
+        const rows = [];
+        for (const member of members) {
+            const up = (member.metadata?.projects || []).find((p) => p && String(p.projectId) === String(projectId));
+            const contracts = up?.contracts || [];
+            const ultimoContrato = contracts.length > 0 ? contracts[contracts.length - 1] : null;
+            let assignments = configByUser.get(String(member._id))?.areaShiftAssignments || [];
+            if (assignments.length === 0)
+                assignments = ultimoContrato?.areaShiftAssignments || [];
+            if (!claveAreaTurnoDelMiembro(assignments).has(target))
+                continue;
+            const activo = member.metadata?.activo === true;
+            const vigente = !!ultimoContrato && esContratoVigente(ultimoContrato.fecha_baja_contrato, hoy);
+            rows.push({
+                _id: member._id,
+                firstName: member.firstName || "",
+                lastName: member.lastName || "",
+                email: member.email || "",
+                activo,
+                vigente,
+                cuenta: activo && vigente,
+                nombreContrato: ultimoContrato?.nombre_contrato || "",
+                estadoContrato: ultimoContrato?.nombre_estado_empleado || "",
+                fechaAlta: ultimoContrato?.fecha_alta_contrato || "",
+                fechaBaja: ultimoContrato?.fecha_baja_contrato || "",
+            });
+        }
+        rows.sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, "es", { sensitivity: "base" }));
+        res.json({ members: rows, total: rows.length, cuentan: rows.filter((r) => r.cuenta).length });
+    }
+    catch (error) {
+        console.error("Get area/shift members error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });
