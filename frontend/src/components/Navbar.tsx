@@ -257,7 +257,7 @@ export const MobileNavbar: React.FC = () => {
     const generalAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ['/tenants'].includes(item.path)) : adminItems.filter((item) => ['/admin/projects', '/admin/sedes', '/admin/contracts', '/orders', '/vacations', '/requests', '/documents'].includes(item.path))).sort(byLabel);
 
     // Ojo: los paths de PLANTILLAS_PATHS NO van acá, se agrupan aparte en el subgrupo "Plantillas".
-    const configPaths = ['/requests/config', '/order-types', '/shifts', '/vacations-rules', '/holidays', '/funciones-frame', '/categorias-sat', '/clients', '/centros-costo', '/bancos', '/obras-sociales', '/empresas', '/estados'];
+    const configPaths = ['/requests/config', '/order-types', '/shifts', '/vacations-rules', '/holidays', '/funciones-frame', '/categorias-sat', '/clients', '/centros-costo', '/bancos', '/obras-sociales', '/empresas', '/estados', '/contratos'];
     // "Mi Perfil" se incluye como un item más para que entre en el orden alfabético
     const profileItem = { path: '/mi-perfil', icon: faIdCard, label: 'Mi Perfil', scope: 'global' as const };
 
