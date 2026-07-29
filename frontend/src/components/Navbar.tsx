@@ -188,7 +188,9 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission('config_obras_sociales:view')) base.push({ path: '/obras-sociales', icon: faBriefcaseMedical, label: 'Obras Sociales', scope: 'global' });
       if (hasPermission('config_centros_costo:view')) base.push({ path: '/centros-costo', icon: faPiggyBank, label: 'Centros de Costos', scope: 'global' });
       if (hasPermission('config_contratos_frame:view')) base.push({ path: '/contratos-frame', icon: faFilePdf, label: 'Contratos', scope: 'global' });
-      // `config_estados:view` es nuevo: hasta que se tilde en los roles, se muestra a quien administra los tipos de contrato.
+      // `config_contratos:view` y `config_estados:view` son nuevos: hasta que se tilden en los roles,
+      // se muestran a quien ya administra los tipos de contrato (Contratos FRAME).
+      if (hasPermission('config_contratos:view') || hasPermission('config_contratos_frame:view')) base.push({ path: '/contratos', icon: faFileContract, label: 'Contratos', scope: 'global' });
       if (hasPermission('config_estados:view') || hasPermission('config_contratos_frame:view')) base.push({ path: '/estados', icon: faTags, label: 'Contratos | Estados', scope: 'global' });
       if (hasPermission('config_empresas:view')) base.push({ path: '/empresas', icon: faBuilding, label: 'Empresas', scope: 'global' });
       if (hasPermission('config_membretes:view')) base.push({ path: '/empresas-membretes', icon: faFilePdf, label: 'Empresa/s | Membrete/s y firma', scope: 'global' });
