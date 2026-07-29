@@ -21,10 +21,15 @@ export function hoyArgentina(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date());
 }
 
-/** Normaliza "YYYY-MM-DD...", "DD/MM/YYYY" y "DD-MM-YYYY" a "YYYY-MM-DD". "" si no se puede. */
+/**
+ * Normaliza "YYYY-MM-DD...", "DD/MM/YYYY" y "DD-MM-YYYY" a "YYYY-MM-DD". "" si no se puede.
+ * OJO: en la base hay contratos con la fecha de baja guardada como el STRING "null" (no el valor
+ * null), así que hay que tratarla explícitamente como vacía: un `if (!baja)` la daría por válida.
+ */
 export function fechaISO(valor?: string | null): string {
   if (!valor) return "";
   const texto = String(valor).trim();
+  if (!texto || ["null", "undefined", "-", "—"].includes(texto.toLowerCase())) return "";
   if (/^\d{4}-\d{2}-\d{2}/.test(texto)) return texto.substring(0, 10);
   const partes = texto.split(/[-/]/);
   if (partes.length === 3 && partes[2].length === 4) {
