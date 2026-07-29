@@ -9,6 +9,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faEdit, faTrash, faFileContract, faGrip, faTable } from '@fortawesome/free-solid-svg-icons';
 import { contratosAPI, ContratoItem } from '../api/contratos';
 import { contratoFrameAPI, ContratoFrameItem } from '../api/contratosFrame';
+import { infoAPI, InfoItem } from '../api/info';
+import { EstadoBadge } from '../components/EstadoSelect';
 
 const normalizar = (s: string): string =>
   (s || '')
@@ -30,6 +32,7 @@ const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDia
 export const ContratosPage: React.FC = () => {
   const [contratos, setContratos] = useState<ContratoItem[]>([]);
   const [plantillas, setPlantillas] = useState<ContratoFrameItem[]>([]);
+  const [estados, setEstados] = useState<InfoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -63,9 +66,10 @@ export const ContratosPage: React.FC = () => {
   const cargar = async () => {
     try {
       setLoading(true);
-      const [tiposDeContrato, listaPlantillas] = await Promise.all([contratosAPI.list(), contratoFrameAPI.list()]);
+      const [tiposDeContrato, listaPlantillas, listaEstados] = await Promise.all([contratosAPI.list(), contratoFrameAPI.list(), infoAPI.listEstados()]);
       setContratos(tiposDeContrato);
       setPlantillas(listaPlantillas);
+      setEstados(listaEstados);
     } catch (e) {
       console.error('Error cargando contratos:', e);
       sweetAlert.error('Error', 'No se pudieron cargar los contratos.');
@@ -93,6 +97,33 @@ export const ContratosPage: React.FC = () => {
     });
     return conteo;
   }, [plantillas]);
+
+  /**
+   * Estados (Configuración → Estados) que aplican a cada Contrato: los Estados no se vinculan al
+   * Contrato directamente sino a sus Plantillas, así que se resuelve por ahí. Un Estado sin ningún
+   * tipo de contrato marcado se ofrece para todos, así que aplica igual.
+   */
+  const estadosPorContrato = useMemo(() => {
+    const plantillaIdsPorContrato = new Map<string, Set<string>>();
+    plantillas.forEach((p) => {
+      const contratoId = typeof p.contratoId === 'object' ? p.contratoId?._id : p.contratoId;
+      if (!contratoId) return;
+      if (!plantillaIdsPorContrato.has(contratoId)) plantillaIdsPorContrato.set(contratoId, new Set());
+      plantillaIdsPorContrato.get(contratoId)!.add(p._id);
+    });
+
+    const mapa = new Map<string, InfoItem[]>();
+    contratos.forEach((c) => {
+      const misPlantillas = plantillaIdsPorContrato.get(c._id) || new Set<string>();
+      const aplican = estados.filter((e) => {
+        const vinculados: string[] = e.data?.contratoFrameIds || [];
+        if (vinculados.length === 0) return true; // sin ninguno marcado = aplica a todos
+        return vinculados.some((id) => misPlantillas.has(String(id)));
+      });
+      mapa.set(c._id, aplican);
+    });
+    return mapa;
+  }, [contratos, plantillas, estados]);
 
   const abrirCrear = () => {
     setEditando(null);
@@ -187,6 +218,13 @@ export const ContratosPage: React.FC = () => {
               </p>
             </div>
             <div className="space-y-2">
+              <h4 className="text-white font-medium">Estados</h4>
+              <p className="text-sm">
+                La columna <strong>Estados</strong> muestra qué estados (Configuración → Estados) se pueden elegir para este Contrato: los vinculados a alguna de sus Plantillas, más los que no
+                restringen ningún tipo de contrato (esos aplican a todos).
+              </p>
+            </div>
+            <div className="space-y-2">
               <h4 className="text-white font-medium">Eliminar</h4>
               <p className="text-sm">No se puede eliminar un Contrato mientras tenga Plantillas asignadas: primero hay que reasignarlas o eliminarlas.</p>
             </div>
@@ -234,12 +272,14 @@ export const ContratosPage: React.FC = () => {
                   <th className="px-4 py-3 font-semibold">Tiempo Indet.</th>
                   <th className="px-4 py-3 font-semibold">Estado</th>
                   <th className="px-4 py-3 font-semibold">Plantillas</th>
+                  <th className="px-4 py-3 font-semibold">Estados</th>
                   <th className="px-4 py-3 font-semibold text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {filtrados.map((contrato) => {
                   const cantPlantillas = plantillasPorContrato.get(contrato._id) || 0;
+                  const misEstados = estadosPorContrato.get(contrato._id) || [];
                   return (
                     <tr key={contrato._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
                       <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100">{contrato.name}</td>
@@ -253,6 +293,17 @@ export const ContratosPage: React.FC = () => {
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                         {cantPlantillas} plantilla{cantPlantillas === 1 ? '' : 's'}
+                      </td>
+                      <td className="px-4 py-3">
+                        {misEstados.length === 0 ? (
+                          <span className="text-xs text-gray-400">—</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1 max-w-xs">
+                            {misEstados.map((e) => (
+                              <EstadoBadge key={e._id} name={e.name} className="text-[10px]" />
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
@@ -275,6 +326,7 @@ export const ContratosPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtrados.map((contrato) => {
             const cantPlantillas = plantillasPorContrato.get(contrato._id) || 0;
+            const misEstados = estadosPorContrato.get(contrato._id) || [];
             return (
               <div key={contrato._id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex flex-col gap-3">
                 <div className="flex items-start justify-between gap-2">
@@ -307,6 +359,17 @@ export const ContratosPage: React.FC = () => {
                 <div className="text-[11px] text-gray-500 dark:text-gray-400">
                   {cantPlantillas} plantilla{cantPlantillas === 1 ? '' : 's'} asignada{cantPlantillas === 1 ? '' : 's'}
                 </div>
+
+                {misEstados.length > 0 && (
+                  <div className="flex flex-col gap-1 pt-1 border-t border-gray-100 dark:border-gray-700/60">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Estados</label>
+                    <div className="flex flex-wrap gap-1">
+                      {misEstados.map((e) => (
+                        <EstadoBadge key={e._id} name={e.name} className="text-[10px]" />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
