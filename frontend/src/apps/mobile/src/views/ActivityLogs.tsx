@@ -30,8 +30,51 @@ interface EmployeeOption {
   positionName?: string;
   isActive?: boolean;
   hasActiveContract?: boolean;
-  metadataProjects?: Array<{ projectId: string; roleFrame: string; hasActiveContract: boolean; contractStartTime?: string; contractEndTime?: string; areaId?: string; shiftId?: string }>;
+  metadataProjects?: Array<{
+    projectId: string;
+    roleFrame: string;
+    /** Tiene ALGÚN contrato del proyecto sin baja o con baja futura. */
+    hasActiveContract: boolean;
+    /** El ÚLTIMO contrato del proyecto está vigente: mismo criterio que la columna Alta/Baja del panel web. */
+    lastContractVigente: boolean;
+    contractStartTime?: string;
+    contractEndTime?: string;
+    areaId?: string;
+    shiftId?: string;
+  }>;
 }
+
+/**
+ * Un contrato está vigente si no tiene fecha de baja, o si la baja es de hoy en adelante.
+ * Acepta ISO ("YYYY-MM-DD...") y el formato con día primero ("DD/MM/YYYY" o "DD-MM-YYYY").
+ */
+const isContractVigente = (fechaBaja?: string | null): boolean => {
+  if (!fechaBaja) return true;
+  let endDate = new Date(fechaBaja);
+  if (isNaN(endDate.getTime()) && typeof fechaBaja === "string") {
+    const parts = fechaBaja.split(/[-/]/);
+    if (parts.length === 3 && parts[2].length === 4) {
+      endDate = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+    }
+  }
+  if (isNaN(endDate.getTime())) return true;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  endDate.setHours(0, 0, 0, 0);
+  return endDate >= today;
+};
+
+/**
+ * Vigencia del ÚLTIMO contrato del miembro en el proyecto (el que muestra el panel web).
+ * OJO: no alcanza con "algún contrato vigente" — quien tiene contratos viejos sin fecha de baja
+ * daría vigente para siempre aunque su último contrato ya haya vencido.
+ * Si el backend no mandó los contratos no se asume vencido, para no vaciar la lista.
+ */
+const lastContractIsVigente = (contracts?: any[]): boolean => {
+  if (!Array.isArray(contracts)) return true;
+  if (contracts.length === 0) return false;
+  return isContractVigente(contracts[contracts.length - 1]?.fecha_baja_contrato);
+};
 
 interface LocalAttendanceRecord {
   tempId: string;
@@ -947,6 +990,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                   projectId: pId,
                   roleFrame: p.nombre_rol_frame,
                   hasActiveContract: hasActive,
+                  lastContractVigente: lastContractIsVigente(p.contracts),
                   contractStartTime: activeContract?.hora_inicio || undefined,
                   contractEndTime: activeContract?.hora_fin || undefined,
                   areaId: p.areaId || activeContract?.areaId || undefined,
@@ -1185,6 +1229,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                       projectId: pId,
                       roleFrame: p.nombre_rol_frame,
                       hasActiveContract: hasActive,
+                      lastContractVigente: lastContractIsVigente(p.contracts),
                       contractStartTime: activeContract?.hora_inicio || undefined,
                       contractEndTime: activeContract?.hora_fin || undefined,
                       areaId: p.areaId || activeContract?.areaId || undefined,
@@ -1204,6 +1249,12 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       }
 
       const projMeta = e.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId));
+
+      // Solo se pasan novedades de gente con contrato VIGENTE en este proyecto (mismo criterio que
+      // la columna Alta/Baja del panel web: sin fecha de baja o baja de hoy en adelante).
+      if (projMeta && !projMeta.lastContractVigente) {
+        return false;
+      }
 
       // Determine ALL of employee's area and shift combinations
       const employeeCombinations: { areaId: string; shiftId: string }[] = [];
