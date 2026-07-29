@@ -1438,8 +1438,10 @@ export const ProjectTeamPage: React.FC = () => {
       const primaryAreaId = firstAssignment?.areaId || '';
 
       // Los contratos de tiempo indeterminado no llevan fecha de baja
-      const cfSel = contratoFrames.find((c) => c._id === wizardData.contrato_frame_id);
-      const esTiempoIndeterminado = cfSel ? (cfSel.data?.esTiempoIndeterminado ?? /indetermin/i.test(cfSel.name)) : false;
+      // El Contrato (tipo) es la fuente de verdad de "tiempo indeterminado"; se resuelve por ahí y no
+      // por la Plantilla, para que funcione aunque el Contrato todavía no tenga ninguna asignada.
+      const contratoSel = contratos.find((c) => c._id === wizardData.contrato_id);
+      const esTiempoIndeterminado = contratoSel ? contratoSel.data.esTiempoIndeterminado : false;
 
       // El rol frame se toma de `roles_frame`; el backend no lo resuelve desde `infos`, así que
       // mandamos el nombre elegido para que no quede "Sin rol frame".
@@ -3029,28 +3031,84 @@ export const ProjectTeamPage: React.FC = () => {
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Tipo de contrato *</label>
                       <select
                         className="input-field w-full"
-                        value={wizardData.contrato_frame_id}
+                        value={wizardData.contrato_id}
                         onChange={(e) => {
-                          const cf = contratoFrames.find((c) => c._id === e.target.value);
-                          const esIndeterminado = cf ? (cf.data?.esTiempoIndeterminado ?? /indetermin/i.test(cf.name)) : false;
+                          const contratoId = e.target.value;
+                          const contrato = contratos.find((c) => c._id === contratoId);
+                          // Plantilla(s) de este Contrato: si hay una sola, se resuelve sola; si hay
+                          // varias, la elige el select de abajo; si no hay ninguna, queda pendiente.
+                          const plantillasDelContrato = contratoFrames.filter((cf) => (typeof cf.contratoId === 'object' ? cf.contratoId?._id : cf.contratoId) === contratoId);
+                          const unicaPlantilla = plantillasDelContrato.length === 1 ? plantillasDelContrato[0] : undefined;
                           setWizardData((prev) => ({
                             ...prev,
-                            contrato_frame_id: cf?._id || '',
-                            nombre_contrato: cf?.name || '',
-                            tipo_contrato_id: cf?.data?.id != null ? String(cf.data.id) : '',
-                            fecha_baja_contrato: esIndeterminado ? '' : prev.fecha_baja_contrato,
+                            contrato_id: contratoId,
+                            contrato_frame_id: unicaPlantilla?._id || '',
+                            nombre_contrato: unicaPlantilla?.name || '',
+                            tipo_contrato_id: unicaPlantilla?.data?.id != null ? String(unicaPlantilla.data.id) : '',
+                            fecha_baja_contrato: contrato?.data.esTiempoIndeterminado ? '' : prev.fecha_baja_contrato,
                           }));
                         }}
                         required
                       >
                         <option value="">Selecciona tipo...</option>
-                        {contratoFrames.map((cf) => (
-                          <option key={cf._id} value={cf._id}>
-                            {cf.name}
+                        {contratos.map((c) => (
+                          <option key={c._id} value={c._id}>
+                            {c.name}
+                            {c.isActive === false ? ' (inactivo)' : ''}
                           </option>
                         ))}
                       </select>
                     </div>
+
+                    {(() => {
+                      if (!wizardData.contrato_id) return null;
+                      const plantillasDelContrato = contratoFrames.filter((cf) => (typeof cf.contratoId === 'object' ? cf.contratoId?._id : cf.contratoId) === wizardData.contrato_id);
+
+                      // Varias Plantillas para el mismo Contrato: hay que elegir cuál usar para el PDF.
+                      if (plantillasDelContrato.length > 1) {
+                        return (
+                          <div className="space-y-1.5">
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Plantilla *</label>
+                            <select
+                              className="input-field w-full"
+                              value={wizardData.contrato_frame_id}
+                              onChange={(e) => {
+                                const cf = plantillasDelContrato.find((p) => p._id === e.target.value);
+                                setWizardData((prev) => ({
+                                  ...prev,
+                                  contrato_frame_id: cf?._id || '',
+                                  nombre_contrato: cf?.name || '',
+                                  tipo_contrato_id: cf?.data?.id != null ? String(cf.data.id) : '',
+                                }));
+                              }}
+                              required
+                            >
+                              <option value="">Selecciona plantilla...</option>
+                              {plantillasDelContrato.map((cf) => (
+                                <option key={cf._id} value={cf._id}>
+                                  {cf.name}
+                                </option>
+                              ))}
+                            </select>
+                            <p className="text-[10px] text-gray-400 ml-1">Este contrato tiene más de una plantilla: elegí cuál se usa para generar el PDF.</p>
+                          </div>
+                        );
+                      }
+
+                      // Ninguna Plantilla asignada todavía: se puede guardar, pero no se podrá generar el PDF.
+                      if (plantillasDelContrato.length === 0) {
+                        return (
+                          <div className="md:col-span-2 -mt-2">
+                            <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                              Este contrato todavía no tiene ninguna Plantilla asignada: se puede guardar, pero no se va a poder generar el PDF hasta asignarle una desde{' '}
+                              <strong>Plantillas | Contratos</strong>.
+                            </p>
+                          </div>
+                        );
+                      }
+
+                      return null;
+                    })()}
 
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Estado *</label>
@@ -3128,10 +3186,7 @@ export const ProjectTeamPage: React.FC = () => {
                       <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_alta_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_alta_contrato: e.target.value }))} />
                     </div>
 
-                    {!(() => {
-                      const cf = contratoFrames.find((c) => c._id === wizardData.contrato_frame_id);
-                      return cf ? (cf.data?.esTiempoIndeterminado ?? /indetermin/i.test(cf.name)) : false;
-                    })() && (
+                    {!(contratos.find((c) => c._id === wizardData.contrato_id)?.data.esTiempoIndeterminado ?? false) && (
                       <div className="space-y-1.5">
                         <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha baja contrato</label>
                         <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_baja_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_baja_contrato: e.target.value }))} />

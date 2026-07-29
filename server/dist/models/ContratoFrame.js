@@ -7,6 +7,7 @@ const contratoFrameSchema = new Schema({
         default: "",
         maxlength: 200000,
     },
+    contratoId: { type: Schema.Types.ObjectId, ref: "Contrato" },
     data: {
         id: { type: Number },
         nombre: { type: String },
