@@ -87,6 +87,30 @@ export interface Project {
   metadataUserCount?: number;
 }
 
+/** Fila del detalle de personas de un área + turno (endpoint area-shift-members). */
+export interface AreaShiftMember {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  /** Estado del usuario (metadata.activo). */
+  activo: boolean;
+  /** Último contrato sin baja o con baja de hoy en adelante. */
+  vigente: boolean;
+  /** Suma al número que muestra la columna Área/Turno Coordinada: activo + contrato vigente. */
+  cuenta: boolean;
+  nombreContrato: string;
+  estadoContrato: string;
+  fechaAlta: string;
+  fechaBaja: string;
+}
+
+export interface AreaShiftMembersResponse {
+  members: AreaShiftMember[];
+  total: number;
+  cuentan: number;
+}
+
 export interface ProjectsListResponse {
   projects: Project[];
   pagination: {
