@@ -680,9 +680,10 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
 });
 // GET /projects/:projectId/area-shift-counts
 // Cuántas personas del equipo pertenecen a cada combinación exacta de área + turno.
-// Se calcula en el server porque el listado del equipo está paginado: el front solo tiene
-// la página cargada y contaría de menos. Misma precedencia que usa la UI para mostrar el
-// área/turno de cada miembro: `project.teamConfig` y, si ahí no está, su último contrato.
+// Solo cuentan los miembros ACTIVOS con su último contrato VIGENTE (sin fecha de baja o con
+// baja de hoy en adelante). Se calcula en el server porque el listado del equipo está paginado:
+// el front solo tiene la página cargada y contaría de menos. Misma precedencia que usa la UI
+// para el área/turno de cada miembro: `project.teamConfig` y, si ahí no está, su último contrato.
 router.get("/projects/:projectId/area-shift-counts", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
     try {
         const { projectId } = req.params;
@@ -692,18 +693,26 @@ router.get("/projects/:projectId/area-shift-counts", requireTenant, authenticate
             return;
         }
         const members = await User.find({ projectIds: projectId })
-            .select("_id metadata.projects")
-            .populate({ path: "metadata.projects", model: UserProject, select: "projectId contracts.areaShiftAssignments" })
+            .select("_id metadata.activo metadata.projects")
+            .populate({ path: "metadata.projects", model: UserProject, select: "projectId contracts.areaShiftAssignments contracts.fecha_baja_contrato" })
             .lean();
+        // "Hoy" en hora de Argentina (el VPS puede estar en UTC) y comparación como string ISO,
+        // que evita cualquier corrimiento de zona horaria al parsear la fecha de baja.
+        const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date());
+        const contratoVigente = (baja) => !baja || String(baja).substring(0, 10) >= hoy;
         const configByUser = new Map((project.teamConfig || []).map((c) => [String(c.userId), c]));
         const counts = {};
         for (const member of members) {
+            if (member.metadata?.activo !== true)
+                continue;
+            const up = (member.metadata?.projects || []).find((p) => p && String(p.projectId) === String(projectId));
+            const contracts = up?.contracts || [];
+            const ultimoContrato = contracts.length > 0 ? contracts[contracts.length - 1] : null;
+            if (!ultimoContrato || !contratoVigente(ultimoContrato.fecha_baja_contrato))
+                continue;
             let assignments = configByUser.get(String(member._id))?.areaShiftAssignments || [];
-            if (assignments.length === 0) {
-                const up = (member.metadata?.projects || []).find((p) => p && String(p.projectId) === String(projectId));
-                const contracts = up?.contracts || [];
-                assignments = contracts.length > 0 ? contracts[contracts.length - 1]?.areaShiftAssignments || [] : [];
-            }
+            if (assignments.length === 0)
+                assignments = ultimoContrato.areaShiftAssignments || [];
             // Un miembro cuenta UNA vez por combinación, aunque la tenga repetida en sus asignaciones.
             const keys = new Set();
             for (const asa of assignments) {

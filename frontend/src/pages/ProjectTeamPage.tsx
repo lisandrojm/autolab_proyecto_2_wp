@@ -969,8 +969,8 @@ export const ProjectTeamPage: React.FC = () => {
     return shifts;
   };
 
-  // Personas del equipo asignadas a ese área + turno exacto (incluye al coordinador si él también
-  // pertenece a esa combinación). Lo calcula el server sobre el equipo completo.
+  // Personas ACTIVAS y con contrato VIGENTE asignadas a ese área + turno exacto (incluye al
+  // coordinador si él también pertenece a esa combinación). Lo calcula el server sobre el equipo completo.
   const getAreaShiftPeopleCount = (areaId: string, shiftId: string): number => areaShiftCounts[`${areaId}::${shiftId}`] || 0;
 
   // Get coordinated shifts for a user assigned to an area
@@ -1789,7 +1789,7 @@ export const ProjectTeamPage: React.FC = () => {
                             return (
                               <span key={idx} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-50/50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100/50 dark:border-amber-900/40 whitespace-nowrap w-fit" title={`${s.startTime} - ${s.endTime}`}>
                                 {s.name} ({s.startTime} - {s.endTime})
-                                <span className="font-black text-amber-800 dark:text-amber-300" title={`${coordinados} persona${coordinados === 1 ? '' : 's'} en ${ad.name} / ${s.name}`}>
+                                <span className="font-black text-amber-800 dark:text-amber-300" title={`${coordinados} persona${coordinados === 1 ? '' : 's'} activa${coordinados === 1 ? '' : 's'} con contrato vigente en ${ad.name} / ${s.name}`}>
                                   ({coordinados})
                                 </span>
                               </span>
@@ -3391,6 +3391,13 @@ export const ProjectTeamPage: React.FC = () => {
             de área y turno</strong>, o sea a quiénes coordina esa persona en ese horario.
           </p>
           <ul className="space-y-3">
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                Solo se cuentan personas con <strong>estado activo</strong> y <strong>contrato vigente</strong>: sin fecha de
+                baja, o con fecha de baja de hoy en adelante.
+              </span>
+            </li>
             <li className="flex items-start gap-3">
               <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
               <span className="text-sm text-gray-700 dark:text-gray-300">
