@@ -34,6 +34,107 @@ import { requirePermission } from "../middleware/permissions.js";
 import { toObjectIdArray } from "../utils/mongoIds.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 const router = Router();
+/* ------------------- Filtros del equipo de un proyecto (client-side → server) -------------------
+ * Estos filtros dependen del ÚLTIMO contrato del miembro en el proyecto o de su asignación de
+ * área/turno, así que no se pueden expresar como query de Mongo. Se resuelven acá y se aplican al
+ * listado como `_id in [...]`: de esa forma la paginación devuelve los resultados correlativos en
+ * vez de filtrar solo la página ya cargada. Replican exactamente el criterio que usaba el front.
+ */
+const normalizarEstado = (s) => (s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+// "Falta pedido de AFIP" y "Pedido de AFIP" son el mismo estado (igual que `estadoLabel` en el front).
+const ESTADO_ALIAS = { "falta pedido de afip": "pedido de afip" };
+const estadoCanonico = (s) => {
+    const n = normalizarEstado(s);
+    return ESTADO_ALIAS[n] || n;
+};
+// Un contrato está vigente si no tiene baja o si la baja es de hoy en adelante. Sin contrato se
+// considera vigente, que es como se venía comportando el filtro en el front.
+const contratoVigente = (baja) => {
+    if (!baja)
+        return true;
+    const iso = String(baja).substring(0, 10);
+    const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date());
+    return iso >= hoy;
+};
+async function resolveProjectTeamFilterIds(projectId, filtros) {
+    const project = await Project.findById(projectId).select("teamConfig coordinatorAssignments").lean();
+    if (!project)
+        return [];
+    const members = await User.find({ projectIds: projectId })
+        .select("_id firstName lastName roles metadata.projects")
+        .populate({ path: "roles", select: "name", model: Role })
+        .populate({
+        path: "metadata.projects",
+        model: UserProject,
+        select: "projectId contracts.areaShiftAssignments contracts.fecha_baja_contrato contracts.nombre_contrato contracts.nombre_estado_empleado contracts.reemplazo",
+    })
+        .lean();
+    const configByUser = new Map((project.teamConfig || []).map((c) => [String(c.userId), c]));
+    // Mismo criterio laxo que el front (`checkIsCoordinator`): rol o nombre que diga "coordinador".
+    const esCoordinador = (m) => {
+        if ((m.roles || []).some((r) => String(r?.name || "").toLowerCase().includes("coordinador")))
+            return true;
+        return `${m.firstName || ""} ${m.lastName || ""}`.toLowerCase().includes("coordinador");
+    };
+    const ids = [];
+    for (const member of members) {
+        const up = (member.metadata?.projects || []).find((p) => p && String(p.projectId) === String(projectId));
+        const contracts = up?.contracts || [];
+        const ultimoContrato = contracts.length > 0 ? contracts[contracts.length - 1] : null;
+        if (filtros.vigencia) {
+            const vigente = contratoVigente(ultimoContrato?.fecha_baja_contrato);
+            if (filtros.vigencia === "vigente" ? !vigente : vigente)
+                continue;
+        }
+        if (filtros.tipoContrato && String(ultimoContrato?.nombre_contrato ?? "") !== String(filtros.tipoContrato))
+            continue;
+        if (filtros.reemplazo) {
+            // Igual que la columna Reemplazo: el contrato marca que la persona reemplaza a otra.
+            const esReemplazo = !!ultimoContrato?.reemplazo;
+            if (filtros.reemplazo === "con" ? !esReemplazo : esReemplazo)
+                continue;
+        }
+        if (filtros.estadoContrato && estadoCanonico(String(ultimoContrato?.nombre_estado_empleado ?? "")) !== estadoCanonico(String(filtros.estadoContrato)))
+            continue;
+        if (filtros.areaTurno) {
+            // Área/turno del miembro: teamConfig + lo que coordina (si es coordinador).
+            const keys = new Set();
+            for (const asa of configByUser.get(String(member._id))?.areaShiftAssignments || []) {
+                const areaId = asa?.areaId?._id || asa?.areaId;
+                if (!areaId)
+                    continue;
+                for (const sid of asa?.shiftIds || []) {
+                    const shiftId = sid?._id || sid;
+                    if (shiftId)
+                        keys.add(`${areaId}::${shiftId}`);
+                }
+            }
+            if (esCoordinador(member)) {
+                for (const asm of project.coordinatorAssignments || []) {
+                    if (String(asm?.userId) !== String(member._id))
+                        continue;
+                    const areaId = asm?.areaId?._id || asm?.areaId;
+                    const shiftId = asm?.shiftId?._id || asm?.shiftId;
+                    if (areaId && shiftId)
+                        keys.add(`${areaId}::${shiftId}`);
+                }
+            }
+            if (filtros.areaTurno === "__none__") {
+                if (keys.size > 0)
+                    continue;
+            }
+            else if (!keys.has(String(filtros.areaTurno))) {
+                continue;
+            }
+        }
+        ids.push(member._id);
+    }
+    return ids;
+}
 const createUserSchema = z.object({
     email: z.string().email(),
     password: z.string().min(6),
@@ -195,6 +296,19 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
                 const roleIds = await Role.find(roleFilter).distinct("_id");
                 andConditions.push({ roles: { $in: roleIds } }); // sin roles que matcheen → 0 resultados
             }
+        }
+        // Filtros del equipo que dependen del último contrato o del área/turno del miembro. Resolverlos
+        // acá (y no en el front sobre la página cargada) es lo que hace que la paginación sea correlativa.
+        const teamFilters = {
+            vigencia: req.query.vigencia ? String(req.query.vigencia) : undefined,
+            tipoContrato: req.query.tipoContrato ? String(req.query.tipoContrato) : undefined,
+            estadoContrato: req.query.estadoContrato ? String(req.query.estadoContrato) : undefined,
+            areaTurno: req.query.areaTurno ? String(req.query.areaTurno) : undefined,
+            reemplazo: req.query.reemplazo ? String(req.query.reemplazo) : undefined,
+        };
+        if (req.query.projectId && Object.values(teamFilters).some(Boolean)) {
+            const teamIds = await resolveProjectTeamFilterIds(String(req.query.projectId), teamFilters);
+            andConditions.push({ _id: { $in: teamIds } }); // sin coincidencias → 0 resultados
         }
         const filter = andConditions.length > 0 ? { $and: andConditions } : {};
         const limitNum = Number(limit) || 50;

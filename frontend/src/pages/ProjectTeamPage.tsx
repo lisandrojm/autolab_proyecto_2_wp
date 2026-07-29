@@ -265,7 +265,8 @@ export const ProjectTeamPage: React.FC = () => {
   // equipo se lista paginado y acá solo tenemos la página actual.
   const [areaShiftCounts, setAreaShiftCounts] = useState<Record<string, number>>({});
   // Detalle (modal) de las personas de un área+turno: qué combinación se está viendo y sus filas.
-  const [viewingAreaShift, setViewingAreaShift] = useState<{ areaId: string; areaName: string; shift: any } | null>(null);
+  // `shift` en null = el área completa, sumando todos sus horarios.
+  const [viewingAreaShift, setViewingAreaShift] = useState<{ areaId: string; areaName: string; shift: any | null } | null>(null);
   const [areaShiftMembers, setAreaShiftMembers] = useState<AreaShiftMembersResponse | null>(null);
   const [loadingAreaShiftMembers, setLoadingAreaShiftMembers] = useState(false);
   const [vacations, setVacations] = useState<VacationRequest[]>([]);
@@ -297,6 +298,7 @@ export const ProjectTeamPage: React.FC = () => {
   const [filterAreaTurno, setFilterAreaTurno] = useState<string>(''); // "" | "__none__" | "areaId::shiftId" (client-side sobre la página)
   const [filterEstadoContrato, setFilterEstadoContrato] = useState<string>(''); // nombre_estado_empleado (client-side sobre la página)
   const [filterRolMobile, setFilterRolMobile] = useState<string>(''); // "" | "colaborador" | "coordinador" (server-side, paginado)
+  const [filterReemplazo, setFilterReemplazo] = useState<string>(''); // "" | "con" | "sin" (server-side, paginado)
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [selectedUserForWizard, setSelectedUserForWizard] = useState<User | null>(null);
   // Índice (en el array original de contracts del UserProject) del contrato que se está editando desde el
@@ -433,12 +435,21 @@ export const ProjectTeamPage: React.FC = () => {
 
   /* ------------------------------ Fetchers ------------------------------- */
 
-  // Página actual del equipo (datos completos), paginada en el server por proyecto + búsqueda + estado + rol.
-  const fetchTeamPage = async (page: number, opts?: { search?: string; status?: string; rolMobile?: string }) => {
+  // Página actual del equipo (datos completos). TODOS los filtros se resuelven en el server: si se
+  // aplicaran acá sobre la página cargada, la paginación mostraría resultados salteados y páginas vacías.
+  const fetchTeamPage = async (
+    page: number,
+    opts?: { search?: string; status?: string; rolMobile?: string; vigencia?: string; tipoContrato?: string; areaTurno?: string; estadoContrato?: string; reemplazo?: string },
+  ) => {
     if (!projectId) return;
     const search = opts?.search ?? searchTermTeam;
     const status = opts?.status ?? filterUserStatus;
     const rolMobile = opts?.rolMobile ?? filterRolMobile;
+    const vigencia = opts?.vigencia ?? filterVigencia;
+    const tipoContrato = opts?.tipoContrato ?? filterTipoContrato;
+    const areaTurno = opts?.areaTurno ?? filterAreaTurno;
+    const estadoContrato = opts?.estadoContrato ?? filterEstadoContrato;
+    const reemplazo = opts?.reemplazo ?? filterReemplazo;
     const reqId = ++teamReqIdRef.current;
     try {
       setTeamFetching(true);
@@ -446,9 +457,12 @@ export const ProjectTeamPage: React.FC = () => {
       if (search) params.email = search; // el backend busca fuzzy en nombre/email
       if (status === 'active') params.metadataActivo = 'true';
       if (status === 'inactive') params.metadataActivo = 'false';
-      // Rol server-side: si no, el filtro se aplicaría solo sobre la página cargada y la paginación
-      // quedaría con resultados salteados entre páginas.
       if (rolMobile) params.roleName = `mobile-${rolMobile}`;
+      if (vigencia) params.vigencia = vigencia;
+      if (tipoContrato) params.tipoContrato = tipoContrato;
+      if (areaTurno) params.areaTurno = areaTurno;
+      if (estadoContrato) params.estadoContrato = estadoContrato;
+      if (reemplazo) params.reemplazo = reemplazo;
       const resp = await usersAPI.list(params);
       if (reqId !== teamReqIdRef.current) return; // descartar respuestas viejas
       setTeamRows(resp.users);
@@ -561,7 +575,7 @@ export const ProjectTeamPage: React.FC = () => {
     init();
   }, [projectId, token]);
 
-  // Búsqueda / estado / rol en el Equipo → server-side, resetea a página 1 (debounced, como Usuarios).
+  // Cualquier filtro del Equipo → server-side, resetea a página 1 (debounced, como Usuarios).
   const teamFiltersInitedRef = React.useRef(false);
   useEffect(() => {
     if (!projectId) return;
@@ -571,11 +585,20 @@ export const ProjectTeamPage: React.FC = () => {
     }
     const h = setTimeout(() => {
       setTeamPage(1);
-      fetchTeamPage(1, { search: searchTermTeam, status: filterUserStatus, rolMobile: filterRolMobile });
+      fetchTeamPage(1, {
+        search: searchTermTeam,
+        status: filterUserStatus,
+        rolMobile: filterRolMobile,
+        vigencia: filterVigencia,
+        tipoContrato: filterTipoContrato,
+        areaTurno: filterAreaTurno,
+        estadoContrato: filterEstadoContrato,
+        reemplazo: filterReemplazo,
+      });
     }, 300);
     return () => clearTimeout(h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTermTeam, filterUserStatus, filterRolMobile]);
+  }, [searchTermTeam, filterUserStatus, filterRolMobile, filterVigencia, filterTipoContrato, filterAreaTurno, filterEstadoContrato, filterReemplazo]);
 
   // Cantidad de personas por área/turno: se recalcula en el server (equipo completo, no la página).
   // Se refresca cuando cambia `teamConfig`, o sea después de cada alta/edición de miembro.
@@ -978,13 +1001,14 @@ export const ProjectTeamPage: React.FC = () => {
   const getAreaShiftPeopleCount = (areaId: string, shiftId: string): number => areaShiftCounts[`${areaId}::${shiftId}`] || 0;
 
   // Detalle de quiénes están en ese área + turno (todo el equipo, no solo la página cargada).
-  const handleOpenAreaShiftDetail = async (areaId: string, areaName: string, shift: any) => {
+  // `shift` en null lista el área completa, sumando todos sus horarios.
+  const handleOpenAreaShiftDetail = async (areaId: string, areaName: string, shift: any | null) => {
     if (!projectId) return;
     setViewingAreaShift({ areaId, areaName, shift });
     setAreaShiftMembers(null);
     setLoadingAreaShiftMembers(true);
     try {
-      setAreaShiftMembers(await projectsAPI.getAreaShiftMembers(projectId, areaId, String(shift._id)));
+      setAreaShiftMembers(await projectsAPI.getAreaShiftMembers(projectId, areaId, shift ? String(shift._id) : undefined));
     } catch (e) {
       console.error('Error fetching area/shift members:', e);
       sweetAlert.error('Error', 'No se pudo cargar el detalle del área/turno.');
@@ -1480,30 +1504,6 @@ export const ProjectTeamPage: React.FC = () => {
     return <EmptyState icon={faBriefcase} title="Proyecto no encontrado" description="El proyecto no existe o no tienes acceso." action={{ label: 'volver', onClick: () => navigate(-1) }} />;
   }
 
-  // Combinaciones "areaId::shiftId" asignadas al miembro (config del equipo + coordinaciones).
-  const getUserAreaShiftKeys = (user: User): Set<string> => {
-    const keys = new Set<string>();
-    const config = teamConfig.find((c) => String(c.userId) === String(user._id));
-    (config?.areaShiftAssignments || []).forEach((asa: any) => {
-      const aId = typeof asa.areaId === 'object' ? asa.areaId?._id : asa.areaId;
-      if (!aId) return;
-      (asa.shiftIds || []).forEach((sid: any) => {
-        const sId = typeof sid === 'object' ? sid?._id : sid;
-        if (sId) keys.add(`${aId}::${sId}`);
-      });
-    });
-    if (checkIsCoordinator(user)) {
-      (project?.coordinatorAssignments || []).forEach((asm: any) => {
-        const uid = typeof asm.userId === 'object' ? asm.userId?._id : asm.userId;
-        if (String(uid) !== String(user._id)) return;
-        const aId = typeof asm.areaId === 'object' ? asm.areaId?._id : asm.areaId;
-        const sId = typeof asm.shiftId === 'object' ? asm.shiftId?._id : asm.shiftId;
-        if (aId && sId) keys.add(`${aId}::${sId}`);
-      });
-    }
-    return keys;
-  };
-
   // Último contrato del empleado en ESTE proyecto (mismo criterio que la columna Contrato).
   const getActiveContract = (user: User): any => {
     const projectMeta = user.metadata?.projects?.find((p: any) => {
@@ -1792,9 +1792,17 @@ export const ProjectTeamPage: React.FC = () => {
                   return (
                     <div key={i} className="flex flex-col gap-1">
                       <div className="group relative flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 pl-2 pr-1 py-1 rounded-lg border border-amber-100 dark:border-amber-800 hover:border-amber-300 dark:hover:border-amber-600 transition-all w-fit">
-                        <span className="text-amber-700 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap" title={`${totalArea} persona${totalArea === 1 ? '' : 's'} activa${totalArea === 1 ? '' : 's'} con contrato vigente en ${ad.name}, sumando todos sus horarios`}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenAreaShiftDetail(ad.id, ad.name, null);
+                          }}
+                          className="text-amber-700 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap hover:text-amber-900 dark:hover:text-amber-200 transition-colors cursor-pointer"
+                          title={`Ver las personas de ${ad.name}, sumando todos sus horarios (${totalArea} activa${totalArea === 1 ? '' : 's'} con contrato vigente)`}
+                        >
                           {ad.name} ({totalArea})
-                        </span>
+                        </button>
                         <button
                           type="button"
                           onClick={(e) => {
@@ -2094,6 +2102,16 @@ export const ProjectTeamPage: React.FC = () => {
                           options: estadoContratoOptions,
                           renderOption: (opt) => <EstadoBadge name={opt.label} />,
                         },
+                        {
+                          label: 'Reemplazo',
+                          value: filterReemplazo,
+                          onChange: setFilterReemplazo,
+                          placeholder: 'Con y sin reemplazo',
+                          options: [
+                            { value: 'con', label: 'Con reemplazo' },
+                            { value: 'sin', label: 'Sin reemplazo' },
+                          ],
+                        },
                       ]}
                     />
                   </div>
@@ -2155,48 +2173,20 @@ export const ProjectTeamPage: React.FC = () => {
                 )}
 
                 {(() => {
-                  // Filtros client-side sobre la página cargada (contrato + área/turno).
-                  // El filtro de Rol/es NO va acá: se resuelve server-side para que la paginación
-                  // muestre los resultados correlativos (ver fetchTeamPage → roleName).
-                  const rows =
-                    filterVigencia || filterTipoContrato || filterAreaTurno || filterEstadoContrato
-                      ? teamRows.filter((u) => {
-                          const ac = getActiveContract(u);
-                          if (filterVigencia) {
-                            const vig = isContractVigente(ac?.fecha_baja_contrato);
-                            if (filterVigencia === 'vigente' ? !vig : vig) return false;
-                          }
-                          if (filterTipoContrato) {
-                            if (String(ac?.nombre_contrato ?? '') !== String(filterTipoContrato)) return false;
-                          }
-                          if (filterEstadoContrato) {
-                            if (estadoLabel(String(ac?.nombre_estado_empleado ?? '')) !== filterEstadoContrato) return false;
-                          }
-                          if (filterAreaTurno) {
-                            const keys = getUserAreaShiftKeys(u);
-                            if (filterAreaTurno === '__none__') {
-                              if (keys.size > 0) return false;
-                            } else if (!keys.has(filterAreaTurno)) {
-                              return false;
-                            }
-                          }
-                          return true;
-                        })
-                      : teamRows;
+                  // Todos los filtros se aplican en el server (ver fetchTeamPage), así que la página
+                  // que llega ya viene filtrada y la paginación muestra los resultados correlativos.
+                  const rows = teamRows;
+                  const hayFiltros = !!(searchTermTeam || filterUserStatus || filterRolMobile || filterVigencia || filterTipoContrato || filterAreaTurno || filterEstadoContrato || filterReemplazo);
 
                   // Orden alfabético tal como lo devuelve el server (sort=name).
                   if (teamTotal === 0 && !teamFetching) {
                     return (
                       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center h-64 text-gray-500">
                         <FontAwesomeIcon icon={faUsers} className="h-12 w-12 mb-4 opacity-10" />
-                        <p className="text-base font-medium">{searchTermTeam || filterUserStatus || filterRolMobile ? 'No se encontraron miembros' : 'Aún no hay miembros en el equipo'}</p>
-                        <p className="text-sm mt-1">{searchTermTeam || filterUserStatus || filterRolMobile ? 'Probá ajustar la búsqueda o el filtro.' : 'Usa el botón "Agregar Miembro" para comenzar.'}</p>
+                        <p className="text-base font-medium">{hayFiltros ? 'No se encontraron miembros' : 'Aún no hay miembros en el equipo'}</p>
+                        <p className="text-sm mt-1">{hayFiltros ? 'Probá ajustar la búsqueda o los filtros.' : 'Usa el botón "Agregar Miembro" para comenzar.'}</p>
                       </div>
                     );
-                  }
-
-                  if (rows.length === 0) {
-                    return <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center h-40 text-gray-500 text-sm">Ningún miembro coincide con los filtros en esta página.</div>;
                   }
 
                   return effectiveViewMode === 'table' ? (
@@ -2788,7 +2778,7 @@ export const ProjectTeamPage: React.FC = () => {
             </div>
           </Modal>
 
-          {/* Detalle de personas de un área + turno (click en el chip de turno coordinado) */}
+          {/* Detalle de personas de un área/turno: click en el chip del área (todos los horarios) o en un turno */}
           <Modal
             isOpen={!!viewingAreaShift}
             onClose={() => {
@@ -2799,7 +2789,7 @@ export const ProjectTeamPage: React.FC = () => {
             subtitle={
               viewingAreaShift ? (
                 <p className="text-sm font-bold text-amber-600 dark:text-amber-400 mt-1">
-                  {viewingAreaShift.shift?.name} ({viewingAreaShift.shift?.startTime} - {viewingAreaShift.shift?.endTime})
+                  {viewingAreaShift.shift ? `${viewingAreaShift.shift.name} (${viewingAreaShift.shift.startTime} - ${viewingAreaShift.shift.endTime})` : 'Todos los horarios del área'}
                 </p>
               ) : (
                 ''
@@ -2817,12 +2807,26 @@ export const ProjectTeamPage: React.FC = () => {
               (() => {
                 const cuentan = areaShiftMembers.members.filter((m) => m.cuenta);
                 const noCuentan = areaShiftMembers.members.filter((m) => !m.cuenta);
+                // Viendo el área completa, cada persona muestra en qué horarios está.
+                const mostrarTurnos = !viewingAreaShift?.shift;
 
                 const renderMember = (m: (typeof areaShiftMembers.members)[number]) => (
                   <div key={m._id} className={`flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl border ${m.cuenta ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700' : 'bg-gray-50 dark:bg-gray-900/40 border-gray-200/70 dark:border-gray-700/60 opacity-80'}`}>
-                    <div className="flex flex-col min-w-0">
+                    <div className="flex flex-col min-w-0 gap-1">
                       <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{m.firstName || m.lastName ? `${m.firstName} ${m.lastName}`.trim() : m.email}</span>
                       <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{m.email}</span>
+                      {mostrarTurnos && (m.shiftIds || []).length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {(m.shiftIds || []).map((sid) => {
+                            const s: any = allShifts.find((x) => String(x._id) === String(sid));
+                            return (
+                              <span key={sid} className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-50/50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100/50 dark:border-amber-900/40 whitespace-nowrap">
+                                {s ? `${s.name} (${s.startTime} - ${s.endTime})` : 'Turno'}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${m.activo ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{m.activo ? 'ACTIVO' : 'INACTIVO'}</span>
@@ -2847,7 +2851,7 @@ export const ProjectTeamPage: React.FC = () => {
                             · <strong>{areaShiftMembers.total}</strong> asignada{areaShiftMembers.total === 1 ? '' : 's'} en total
                           </>
                         ) : null}
-                        . El número de la columna Área/Turno Coordinada es el primero.
+                        {mostrarTurnos ? ' en toda el área, sumando sus horarios.' : '. El número de la columna Área/Turno Coordinada es el primero.'}
                       </p>
                     </div>
 

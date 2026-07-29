@@ -99,6 +99,8 @@ export interface AreaShiftMember {
   vigente: boolean;
   /** Suma al número que muestra la columna Área/Turno Coordinada: activo + contrato vigente. */
   cuenta: boolean;
+  /** Turnos que la persona tiene en el área consultada. */
+  shiftIds: string[];
   nombreContrato: string;
   estadoContrato: string;
   fechaAlta: string;
@@ -311,9 +313,13 @@ class ProjectsAPI {
     return resp.data?.counts || {};
   }
 
-  /** Detalle de las personas asignadas a un área + turno exacto (todas, con su estado y contrato). */
-  async getAreaShiftMembers(projectId: string, areaId: string, shiftId: string): Promise<AreaShiftMembersResponse> {
-    const sp = new URLSearchParams({ areaId, shiftId });
+  /**
+   * Detalle de las personas asignadas a un área + turno (todas, con su estado y contrato).
+   * Sin `shiftId` devuelve el área completa, sumando todos sus horarios.
+   */
+  async getAreaShiftMembers(projectId: string, areaId: string, shiftId?: string): Promise<AreaShiftMembersResponse> {
+    const sp = new URLSearchParams({ areaId });
+    if (shiftId) sp.append("shiftId", shiftId);
     const resp = await axios.get(`/projects/${projectId}/area-shift-members?${sp.toString()}`, {
       headers: this.getHeaders(),
     });

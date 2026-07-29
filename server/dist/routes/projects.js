@@ -747,16 +747,17 @@ router.get("/projects/:projectId/area-shift-counts", requireTenant, authenticate
     }
 });
 // GET /projects/:projectId/area-shift-members?areaId=&shiftId=
-// Detalle de las personas asignadas a esa combinación exacta de área + turno: estado del usuario,
-// estado y fechas del contrato. `cuenta` marca a los que suman en el número de la columna
+// Detalle de las personas asignadas a un área + turno: estado del usuario, estado y fechas del
+// contrato. Sin `shiftId` devuelve TODA el área, sumando sus horarios (cada persona una sola vez,
+// con la lista de turnos que tiene ahí). `cuenta` marca a los que suman en el número de la columna
 // Área/Turno Coordinada (activos con contrato vigente); los demás se devuelven igual para poder
 // mostrarlos aparte y explicar la diferencia.
 router.get("/projects/:projectId/area-shift-members", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
     try {
         const { projectId } = req.params;
         const { areaId, shiftId } = req.query;
-        if (!areaId || !shiftId) {
-            res.status(400).json({ error: "areaId y shiftId son obligatorios" });
+        if (!areaId) {
+            res.status(400).json({ error: "areaId es obligatorio" });
             return;
         }
         const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("teamConfig").lean();
@@ -774,7 +775,8 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
             .lean();
         const hoy = hoyArgentina();
         const configByUser = new Map((project.teamConfig || []).map((c) => [String(c.userId), c]));
-        const target = `${areaId}::${shiftId}`;
+        const prefijoArea = `${areaId}::`;
+        const target = shiftId ? `${areaId}::${shiftId}` : null;
         const rows = [];
         for (const member of members) {
             const up = (member.metadata?.projects || []).find((p) => p && String(p.projectId) === String(projectId));
@@ -783,7 +785,10 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
             let assignments = configByUser.get(String(member._id))?.areaShiftAssignments || [];
             if (assignments.length === 0)
                 assignments = ultimoContrato?.areaShiftAssignments || [];
-            if (!claveAreaTurnoDelMiembro(assignments).has(target))
+            const keys = claveAreaTurnoDelMiembro(assignments);
+            // Turnos que la persona tiene en esta área (uno solo si se pidió un turno puntual).
+            const shiftIds = target ? (keys.has(target) ? [String(shiftId)] : []) : [...keys].filter((k) => k.startsWith(prefijoArea)).map((k) => k.split("::")[1]);
+            if (shiftIds.length === 0)
                 continue;
             const activo = member.metadata?.activo === true;
             const vigente = !!ultimoContrato && esContratoVigente(ultimoContrato.fecha_baja_contrato, hoy);
@@ -795,6 +800,7 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
                 activo,
                 vigente,
                 cuenta: activo && vigente,
+                shiftIds,
                 nombreContrato: ultimoContrato?.nombre_contrato || "",
                 estadoContrato: ultimoContrato?.nombre_estado_empleado || "",
                 fechaAlta: ultimoContrato?.fecha_alta_contrato || "",

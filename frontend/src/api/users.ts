@@ -307,6 +307,13 @@ class UsersAPI {
       isSolicitud?: string;
       /** Nombre del rol (separadores flexibles), ej. "mobile-coordinador". Filtra server-side. */
       roleName?: string;
+      /* Filtros del equipo de un proyecto (requieren `projectId`): se resuelven sobre el último
+         contrato del miembro / su área-turno, para que la paginación sea correlativa. */
+      vigencia?: string; // "vigente" | "novigente"
+      tipoContrato?: string; // nombre_contrato
+      estadoContrato?: string; // etiqueta del estado
+      areaTurno?: string; // "__none__" | "areaId::shiftId"
+      reemplazo?: string; // "con" | "sin"
       lightweight?: boolean;
       slimProjects?: boolean;
       sort?: string;
@@ -324,6 +331,11 @@ class UsersAPI {
     if (params.metadataActivo) searchParams.append("metadataActivo", params.metadataActivo);
     if (params.isSolicitud) searchParams.append("isSolicitud", params.isSolicitud);
     if (params.roleName) searchParams.append("roleName", params.roleName);
+    if (params.vigencia) searchParams.append("vigencia", params.vigencia);
+    if (params.tipoContrato) searchParams.append("tipoContrato", params.tipoContrato);
+    if (params.estadoContrato) searchParams.append("estadoContrato", params.estadoContrato);
+    if (params.areaTurno) searchParams.append("areaTurno", params.areaTurno);
+    if (params.reemplazo) searchParams.append("reemplazo", params.reemplazo);
     if (params.lightweight) searchParams.append("lightweight", "true");
     if (params.slimProjects) searchParams.append("slimProjects", "true");
 
