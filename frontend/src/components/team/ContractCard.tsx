@@ -6,6 +6,7 @@ import { InfoModal } from "../ui/InfoModal";
 import { User, Contract } from "../../api/users";
 import { ContratoFrameItem } from "../../api/contratosFrame";
 import { Release } from "../../api/release";
+import { EstadoBadge } from "../EstadoSelect";
 
 /** Empresa vinculada al proyecto (id + razón social) para elegir con cuál descargar. */
 export interface EmpresaOption {
@@ -240,9 +241,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
           <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold uppercase ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>
             {vigente ? "Vigente" : "No vigente"}
           </span>
-          {contract.nombre_estado_empleado && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border border-green-300 text-green-700 bg-green-50 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800">{contract.nombre_estado_empleado}</span>
-          )}
+          {contract.nombre_estado_empleado && <EstadoBadge name={contract.nombre_estado_empleado} />}
         </div>
 
         <div className="mt-3 flex items-center justify-between gap-2">

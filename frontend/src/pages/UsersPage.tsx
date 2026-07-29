@@ -13,6 +13,7 @@ import { infoAPI, InfoItem } from '../api/info';
 import { shiftsAPI, Shift } from '../api/shifts';
 import { vacationsAPI, VacationRequest } from '../api/vacations';
 import { PageLayout } from '../components/ui/PageLayout';
+import { EstadoBadge } from '../components/EstadoSelect';
 import { InfoModal } from '../components/ui/InfoModal';
 import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -1493,7 +1494,7 @@ export const UsersPage: React.FC = () => {
                                       </div>
                                       <div className="flex gap-2">
                                         {c.nombre_sede && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 border border-gray-200 dark:border-gray-600">{c.nombre_sede}</span>}
-                                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${c.nombre_estado_empleado === 'Activo' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800' : 'bg-gray-50 text-gray-600 dark:bg-gray-900/20 dark:text-gray-400 border border-gray-100 dark:border-gray-800'}`}>{c.nombre_estado_empleado || 'Estado'}</span>
+                                        {c.nombre_estado_empleado ? <EstadoBadge name={c.nombre_estado_empleado} className="text-[10px]" /> : null}
                                       </div>
                                     </div>
 

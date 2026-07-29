@@ -517,7 +517,7 @@ export const ContractsPage: React.FC = () => {
                       <p className="text-[10px] text-gray-500">{record.userEmail}</p>
                     </div>
                   </div>
-                  <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter ${record.nombre_estado_empleado === "DISPONIBLE" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"}`}>{record.nombre_estado_empleado}</span>
+                  {record.nombre_estado_empleado ? <EstadoBadge name={record.nombre_estado_empleado} className="shrink-0 text-[8px] tracking-tighter" /> : null}
                 </div>
               </div>
 
