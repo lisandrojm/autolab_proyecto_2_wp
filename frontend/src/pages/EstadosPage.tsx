@@ -6,11 +6,12 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { Modal } from '../components/ui/Modal';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash, faTags, faFileContract } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faTrash, faTags, faFileContract, faGrip, faTable } from '@fortawesome/free-solid-svg-icons';
 import { infoAPI, InfoItem, EstadoPayload } from '../api/info';
 import { contratoFrameAPI, ContratoFrameItem } from '../api/contratosFrame';
 import { useEstadoCatalogStore } from '../stores/estadoCatalogStore';
-import { estadoColorPorDefecto } from '../components/EstadoSelect';
+import { estadoColorPorDefecto, colorTextoBadge } from '../components/EstadoSelect';
+import { useThemeStore } from '../stores/themeStore';
 
 /** Paleta sugerida: solo se elige el color de la tipografía; el fondo es ese color con transparencia. */
 const COLORES = [
@@ -50,14 +51,17 @@ const normalizar = (s: string): string =>
 const necesitaAlias = (name: string): boolean => ['activo', 'inactivo'].includes(normalizar(name));
 
 /** Vista previa del badge tal cual se va a ver en Agregar/Configurar miembro. */
-const BadgePreview: React.FC<{ texto: string; color: string }> = ({ texto, color }) => (
-  <span
-    className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide"
-    style={{ color, backgroundColor: conAlpha(color, 0.14), border: `1px solid ${conAlpha(color, 0.35)}` }}
-  >
-    {texto || 'Estado'}
-  </span>
-);
+const BadgePreview: React.FC<{ texto: string; color: string }> = ({ texto, color }) => {
+  const theme = useThemeStore((s) => s.theme);
+  return (
+    <span
+      className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide"
+      style={{ color: colorTextoBadge(color, theme === 'dark'), backgroundColor: conAlpha(color, 0.14), border: `1px solid ${conAlpha(color, 0.35)}` }}
+    >
+      {texto || 'Estado'}
+    </span>
+  );
+};
 
 interface FormState {
   name: string;
@@ -79,7 +83,30 @@ export const EstadosPage: React.FC = () => {
   const [editando, setEditando] = useState<InfoItem | null>(null);
   const [form, setForm] = useState<FormState>(FORM_VACIO);
 
+  // Vista tarjetas/tabla, como el resto de los ABM: la tabla solo en pantallas grandes.
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
+  const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const isNowLarge = window.innerWidth >= 1024;
+      setIsLarge(isNowLarge);
+      if (!isNowLarge) setViewMode('cards');
+    };
+    if (window.innerWidth >= 1024) {
+      const saved = localStorage.getItem('estadosViewMode');
+      if (saved === 'table' || saved === 'cards') setViewMode(saved);
+    }
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (isLarge) localStorage.setItem('estadosViewMode', viewMode);
+  }, [viewMode, isLarge]);
+
   const setCatalogo = useEstadoCatalogStore((s) => s.setEstados);
+  const temaOscuro = useThemeStore((s) => s.theme) === 'dark';
 
   const cargar = async () => {
     try {
@@ -183,7 +210,7 @@ export const EstadosPage: React.FC = () => {
 
   return (
     <PageLayout
-      title="Estados"
+      title="Contratos | Estados"
       itemCount={estados.length}
       subtitle="Estados del contrato que se eligen al agregar o configurar un miembro"
       faIcon={{ icon: faTags }}
@@ -219,7 +246,23 @@ export const EstadosPage: React.FC = () => {
           <FontAwesomeIcon icon={faPlus} />
         </button>
       }
-      searchAndFilters={<SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar estado..." />}
+      searchAndFilters={
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
+          <div className="flex-1 w-full">
+            <SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar estado..." />
+          </div>
+          {isLarge && (
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={() => setViewMode('cards')} title="Vista de tarjetas" className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'cards' ? 'bg-blue-500 text-white border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
+                <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+              </button>
+              <button onClick={() => setViewMode('table')} title="Vista de tabla" className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'table' ? 'bg-blue-500 text-white border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
+                <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </div>
+      }
     >
       {loading ? (
         <div className="flex justify-center items-center py-20">
@@ -227,6 +270,60 @@ export const EstadosPage: React.FC = () => {
         </div>
       ) : filtrados.length === 0 ? (
         <EmptyState icon={faTags} title={searchTerm ? 'Sin resultados' : 'Todavía no hay estados'} description={searchTerm ? 'Probá con otra búsqueda.' : 'Creá el primer estado para usarlo en los contratos.'} />
+      ) : viewMode === 'table' ? (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 font-semibold">Badge</th>
+                  <th className="px-4 py-3 font-semibold">Nombre</th>
+                  <th className="px-4 py-3 font-semibold">Nombre en el contrato</th>
+                  <th className="px-4 py-3 font-semibold">Tipos de contrato</th>
+                  <th className="px-4 py-3 font-semibold text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                {filtrados.map((estado) => {
+                  const tipos = estado.data?.contratoFrameIds || [];
+                  return (
+                    <tr key={estado._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+                      <td className="px-4 py-3">
+                        <BadgePreview texto={estado.data?.nombreEnContrato?.trim() || estado.name} color={colorEfectivo(estado)} />
+                      </td>
+                      <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100">{estado.name}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{estado.data?.nombreEnContrato || '—'}</td>
+                      <td className="px-4 py-3">
+                        {tipos.length === 0 ? (
+                          <span className="text-[11px] text-gray-500 dark:text-gray-400">Todos los tipos</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {tipos.map((id) => (
+                              <span key={id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
+                                <FontAwesomeIcon icon={faFileContract} className="h-2.5 w-2.5" />
+                                {nombreTipoContrato(id)}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => abrirEditar(estado)} className="p-2 text-gray-400 hover:text-blue-500 transition-colors" title="Editar estado">
+                            <FontAwesomeIcon icon={faEdit} />
+                          </button>
+                          <button onClick={() => eliminar(estado)} className="p-2 text-gray-400 hover:text-red-500 transition-colors" title="Eliminar estado">
+                            <FontAwesomeIcon icon={faTrash} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtrados.map((estado) => {
@@ -316,7 +413,7 @@ export const EstadosPage: React.FC = () => {
                   onClick={() => setForm((p) => ({ ...p, color: c.hex }))}
                   title={c.label}
                   className={`w-8 h-8 rounded-lg border-2 transition-all ${form.color.toLowerCase() === c.hex.toLowerCase() ? 'border-gray-900 dark:border-white scale-110' : 'border-transparent'}`}
-                  style={{ backgroundColor: conAlpha(c.hex, 0.2), color: c.hex }}
+                  style={{ backgroundColor: conAlpha(c.hex, 0.2), color: colorTextoBadge(c.hex, temaOscuro) }}
                 >
                   <span className="text-sm font-black">A</span>
                 </button>

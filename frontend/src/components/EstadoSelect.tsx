@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { useEstadoCatalogStore } from "../stores/estadoCatalogStore";
+import { useThemeStore } from "../stores/themeStore";
 
 interface EstadoOption {
   value: string;
@@ -65,6 +66,19 @@ const ESTADO_COLOR_HEX: Record<string, string> = {
 
 const COLOR_HEX_GENERICO = "#64748b";
 
+/**
+ * Alias históricos: el mismo estado se guardó con más de un nombre en los contratos.
+ * Sin esto, un contrato con "Falta pedido de AFIP" no encontraría al estado "Pedido de AFIP" del
+ * ABM y seguiría pintándose con el color viejo en vez del configurado.
+ */
+const ESTADO_ALIAS: Record<string, string> = { "falta pedido de afip": "pedido de afip" };
+
+/** Clave con la que se compara un estado contra el catálogo del ABM (normalizada + alias). */
+export const claveEstado = (name: string): string => {
+  const n = normalize(name);
+  return ESTADO_ALIAS[n] || n;
+};
+
 /** Color con el que se muestra un estado que todavía no tiene color propio configurado. */
 export const estadoColorPorDefecto = (name: string): string => ESTADO_COLOR_HEX[normalize(name)] || COLOR_HEX_GENERICO;
 
@@ -79,6 +93,36 @@ const conAlpha = (hex: string, alpha: number): string => {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 };
 
+/** #rrggbb → {h, s, l}. */
+const hexToHsl = (hex: string): { h: number; s: number; l: number } | null => {
+  const m = /^#([0-9a-f]{6})$/i.exec((hex || "").trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  const r = ((n >> 16) & 255) / 255;
+  const g = ((n >> 8) & 255) / 255;
+  const b = (n & 255) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return { h: 0, s: 0, l: l * 100 };
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  const h = max === r ? ((g - b) / d + (g < b ? 6 : 0)) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return { h: h * 60, s: s * 100, l: l * 100 };
+};
+
+/**
+ * Color del texto del badge. Los colores del ABM se eligen sobre fondo claro, así que en modo
+ * oscuro se suben de luminosidad (manteniendo tono y saturación) para que se lean bien sobre el
+ * fondo translúcido; en modo claro se bajan para que no queden lavados.
+ */
+export const colorTextoBadge = (hex: string, isDark: boolean): string => {
+  const hsl = hexToHsl(hex);
+  if (!hsl) return hex;
+  const l = isDark ? Math.max(hsl.l, 68) : Math.min(hsl.l, 40);
+  return `hsl(${Math.round(hsl.h)}deg ${Math.round(hsl.s)}% ${Math.round(l)}%)`;
+};
+
 /**
  * Badge de estado del contrato. Si el estado está configurado en el ABM (Configuración → Estados)
  * usa su color y su nombre dentro del contrato; si no, cae en los estilos por defecto.
@@ -86,21 +130,25 @@ const conAlpha = (hex: string, alpha: number): string => {
 export const EstadoBadge: React.FC<{ name: string; className?: string }> = ({ name, className = "" }) => {
   const estados = useEstadoCatalogStore((s) => s.estados);
   const ensureLoaded = useEstadoCatalogStore((s) => s.ensureLoaded);
+  const theme = useThemeStore((s) => s.theme);
 
   useEffect(() => {
     ensureLoaded();
   }, [ensureLoaded]);
 
-  const configurado = useMemo(() => estados.find((e) => normalize(e.name) === normalize(name)), [estados, name]);
-  const color = configurado?.data?.color;
+  // El match es por clave canónica: los contratos guardan variantes del mismo estado.
+  const configurado = useMemo(() => estados.find((e) => claveEstado(e.name) === claveEstado(name)), [estados, name]);
+  // Si el estado está en el ABM, manda lo que diga el ABM: su color y, si lo tiene, su nombre en el contrato.
+  const color = configurado?.data?.color || (configurado ? estadoColorPorDefecto(configurado.name) : undefined);
   // Dentro del contrato el estado puede llamarse distinto (p. ej. para no chocar con ACTIVO/INACTIVO del usuario).
-  const texto = configurado?.data?.nombreEnContrato?.trim() || labelFor(name);
+  const texto = configurado?.data?.nombreEnContrato?.trim() || configurado?.name || labelFor(name);
 
   const clases = `inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide ${className}`;
 
   if (color) {
+    const textoColor = colorTextoBadge(color, theme === "dark");
     return (
-      <span className={clases} style={{ color, backgroundColor: conAlpha(color, 0.14), border: `1px solid ${conAlpha(color, 0.35)}` }}>
+      <span className={clases} style={{ color: textoColor, backgroundColor: conAlpha(color, 0.14), border: `1px solid ${conAlpha(color, 0.35)}` }}>
         {texto}
       </span>
     );
