@@ -678,6 +678,54 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
         res.status(500).json({ error: "Internal server error" });
     }
 });
+// GET /projects/:projectId/area-shift-counts
+// Cuántas personas del equipo pertenecen a cada combinación exacta de área + turno.
+// Se calcula en el server porque el listado del equipo está paginado: el front solo tiene
+// la página cargada y contaría de menos. Misma precedencia que usa la UI para mostrar el
+// área/turno de cada miembro: `project.teamConfig` y, si ahí no está, su último contrato.
+router.get("/projects/:projectId/area-shift-counts", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("teamConfig").lean();
+        if (!project) {
+            res.status(404).json({ error: "Project not found" });
+            return;
+        }
+        const members = await User.find({ projectIds: projectId })
+            .select("_id metadata.projects")
+            .populate({ path: "metadata.projects", model: UserProject, select: "projectId contracts.areaShiftAssignments" })
+            .lean();
+        const configByUser = new Map((project.teamConfig || []).map((c) => [String(c.userId), c]));
+        const counts = {};
+        for (const member of members) {
+            let assignments = configByUser.get(String(member._id))?.areaShiftAssignments || [];
+            if (assignments.length === 0) {
+                const up = (member.metadata?.projects || []).find((p) => p && String(p.projectId) === String(projectId));
+                const contracts = up?.contracts || [];
+                assignments = contracts.length > 0 ? contracts[contracts.length - 1]?.areaShiftAssignments || [] : [];
+            }
+            // Un miembro cuenta UNA vez por combinación, aunque la tenga repetida en sus asignaciones.
+            const keys = new Set();
+            for (const asa of assignments) {
+                const areaId = asa?.areaId?._id || asa?.areaId;
+                if (!areaId)
+                    continue;
+                for (const sid of asa?.shiftIds || []) {
+                    const shiftId = sid?._id || sid;
+                    if (shiftId)
+                        keys.add(`${areaId}::${shiftId}`);
+                }
+            }
+            for (const key of keys)
+                counts[key] = (counts[key] || 0) + 1;
+        }
+        res.json({ counts });
+    }
+    catch (error) {
+        console.error("Get area/shift counts error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 // PATCH /projects/:projectId
 router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
     try {
