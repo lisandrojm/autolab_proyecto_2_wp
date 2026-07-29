@@ -23,7 +23,9 @@ export interface IContrato extends Document {
 
 const contratoSchema = new Schema<IContrato>(
   {
-    name: { type: String, required: true },
+    // `unique` evita duplicados aunque dos requests concurrentes disparen el backfill al mismo
+    // tiempo (ver `ensureContratosBackfilled` en routes/contratos.ts).
+    name: { type: String, required: true, unique: true },
     data: {
       cantidadJornadas: { type: Number, default: 0 },
       multiplicadorDiario: { type: Number, default: 0 },

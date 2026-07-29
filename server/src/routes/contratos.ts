@@ -12,6 +12,39 @@ const parseNum = (val: any): number => {
 };
 
 /**
+ * Busca el Contrato por nombre o lo crea, de forma atómica (findOneAndUpdate + upsert): dos
+ * requests concurrentes disparando el backfill al mismo tiempo NO deben poder crear dos Contrato
+ * con el mismo nombre. El índice único en `name` es el respaldo final: si por lo que sea las dos
+ * llegan a intentar el insert a la vez, MongoDB solo deja pasar una y la otra recibe E11000, que
+ * se resuelve leyendo la que ganó.
+ */
+async function buscarOCrearContrato(nombre: string, plantilla: { data?: any; isActive?: boolean }) {
+  try {
+    return await Contrato.findOneAndUpdate(
+      { name: nombre },
+      {
+        $setOnInsert: {
+          name: nombre,
+          data: {
+            cantidadJornadas: plantilla.data?.cantidadJornadas || 0,
+            multiplicadorDiario: plantilla.data?.multiplicadorDiario || 0,
+            esTiempoIndeterminado: !!plantilla.data?.esTiempoIndeterminado,
+          },
+          isActive: plantilla.isActive !== false,
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+    );
+  } catch (error: any) {
+    if (error?.code === 11000) {
+      const existente = await Contrato.findOne({ name: nombre });
+      if (existente) return existente;
+    }
+    throw error;
+  }
+}
+
+/**
  * Backfill idempotente: antes de esta feature, el "tipo de contrato" y la "plantilla" (contenido +
  * membrete) vivían juntos en `ContratoFrame`. Para toda Plantilla que todavía no tenga `contratoId`,
  * se busca o crea un Contrato con su mismo nombre/jornadas/multiplicador/tiempo indeterminado y se
@@ -25,18 +58,8 @@ async function ensureContratosBackfilled(): Promise<void> {
     const nombre = String(plantilla.name || plantilla.data?.nombre || "").trim();
     if (!nombre) continue;
 
-    let contrato = await Contrato.findOne({ name: nombre });
-    if (!contrato) {
-      contrato = await Contrato.create({
-        name: nombre,
-        data: {
-          cantidadJornadas: plantilla.data?.cantidadJornadas || 0,
-          multiplicadorDiario: plantilla.data?.multiplicadorDiario || 0,
-          esTiempoIndeterminado: !!plantilla.data?.esTiempoIndeterminado,
-        },
-        isActive: plantilla.isActive !== false,
-      });
-    }
+    const contrato = await buscarOCrearContrato(nombre, plantilla);
+    if (!contrato) continue;
 
     plantilla.contratoId = contrato._id as any;
     await plantilla.save();
@@ -81,7 +104,12 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
       isActive: isActive === undefined ? true : isActive === "true" || isActive === true,
     });
     res.status(201).json(created);
-  } catch (error) {
+  } catch (error: any) {
+    // Respaldo del chequeo de arriba: dos creaciones a la vez con el mismo nombre.
+    if (error?.code === 11000) {
+      res.status(409).json({ error: "Ya existe un contrato con ese nombre" });
+      return;
+    }
     console.error("Create contrato error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
@@ -132,7 +160,11 @@ router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Res
     );
 
     res.json(item);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 11000) {
+      res.status(409).json({ error: "Ya existe un contrato con ese nombre" });
+      return;
+    }
     console.error("Update contrato error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
