@@ -107,6 +107,13 @@ export interface AreaShiftMember {
   fechaBaja: string;
 }
 
+export interface AreaShiftCountsResponse {
+  /** "areaId::shiftId" → cantidad de personas activas con contrato vigente. */
+  counts: Record<string, number>;
+  /** "areaId::shiftId" → ids de esas personas. */
+  userIds: Record<string, string[]>;
+}
+
 export interface AreaShiftMembersResponse {
   members: AreaShiftMember[];
   total: number;
@@ -304,13 +311,15 @@ class ProjectsAPI {
 
   /**
    * Personas del equipo por combinación exacta de área + turno, indexadas por "areaId::shiftId".
-   * Solo cuenta activos con contrato vigente. Se calcula en el server porque el equipo se lista paginado.
+   * Solo cuenta activos con contrato vigente. Se calcula en el server porque el equipo se lista
+   * paginado. `userIds` trae quiénes son, para poder totalizar un área sin repetir a quien está en
+   * más de uno de sus turnos.
    */
-  async getAreaShiftCounts(projectId: string): Promise<Record<string, number>> {
+  async getAreaShiftCounts(projectId: string): Promise<AreaShiftCountsResponse> {
     const resp = await axios.get(`/projects/${projectId}/area-shift-counts`, {
       headers: this.getHeaders(),
     });
-    return resp.data?.counts || {};
+    return { counts: resp.data?.counts || {}, userIds: resp.data?.userIds || {} };
   }
 
   /**

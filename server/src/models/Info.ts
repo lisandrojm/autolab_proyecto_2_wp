@@ -12,6 +12,8 @@ export interface IInfo extends Document {
     contratoFrameIds?: string[];
     /** Estados: cómo se llama el estado dentro del contrato (obligatorio si el estado es Activo/Inactivo). */
     nombreEnContrato?: string;
+    /** Estados: marca los estados de índole impositiva, para poder darles un tratamiento distinto. */
+    esImpositivo?: boolean;
     [key: string]: any;
   };
   name: string;
@@ -30,6 +32,7 @@ const infoSchema = new Schema<IInfo>(
       color: { type: String },
       contratoFrameIds: { type: [String] },
       nombreEnContrato: { type: String },
+      esImpositivo: { type: Boolean },
     },
     name: { type: String, required: true },
   },

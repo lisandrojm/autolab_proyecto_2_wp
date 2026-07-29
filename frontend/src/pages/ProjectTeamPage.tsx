@@ -245,6 +245,8 @@ export const ProjectTeamPage: React.FC = () => {
   // Personas por área+turno exacto ("areaId::shiftId" → cantidad). Viene del server porque el
   // equipo se lista paginado y acá solo tenemos la página actual.
   const [areaShiftCounts, setAreaShiftCounts] = useState<Record<string, number>>({});
+  // Quiénes son, por combinación: permite totalizar un área sin repetir a quien está en varios turnos.
+  const [areaShiftUserIds, setAreaShiftUserIds] = useState<Record<string, string[]>>({});
   // Detalle (modal) de las personas de un área+turno: qué combinación se está viendo y sus filas.
   // `shift` en null = el área, acotada a los turnos de `shifts` (los que coordina esa persona).
   const [viewingAreaShift, setViewingAreaShift] = useState<{ areaId: string; areaName: string; shift: any | null; shifts?: any[] } | null>(null);
@@ -588,8 +590,10 @@ export const ProjectTeamPage: React.FC = () => {
     let cancelled = false;
     projectsAPI
       .getAreaShiftCounts(projectId)
-      .then((counts) => {
-        if (!cancelled) setAreaShiftCounts(counts);
+      .then(({ counts, userIds }) => {
+        if (cancelled) return;
+        setAreaShiftCounts(counts);
+        setAreaShiftUserIds(userIds);
       })
       .catch((e) => console.error('Error fetching area/shift counts:', e));
     return () => {
@@ -998,6 +1002,18 @@ export const ProjectTeamPage: React.FC = () => {
   // Personas ACTIVAS y con contrato VIGENTE asignadas a ese área + turno exacto (incluye al
   // coordinador si él también pertenece a esa combinación). Lo calcula el server sobre el equipo completo.
   const getAreaShiftPeopleCount = (areaId: string, shiftId: string): number => areaShiftCounts[`${areaId}::${shiftId}`] || 0;
+
+  /**
+   * Total del área sumando esos turnos, contando a cada persona UNA sola vez: alguien asignado a
+   * dos turnos de la misma área es una persona, no dos.
+   */
+  const getAreaPeopleCount = (areaId: string, shiftIds: string[]): number => {
+    const unicos = new Set<string>();
+    for (const shiftId of shiftIds) {
+      for (const userId of areaShiftUserIds[`${areaId}::${shiftId}`] || []) unicos.add(userId);
+    }
+    return unicos.size;
+  };
 
   // Detalle de quiénes están en ese área + turno (todo el equipo, no solo la página cargada).
   // Con `shift` en null se listan los turnos de `shiftsDelArea`, que son los que coordina esa
@@ -1798,8 +1814,9 @@ export const ProjectTeamPage: React.FC = () => {
               <div className="flex flex-wrap items-center gap-1.5">
                 {coordAreaData.map((ad, i) => {
                   const shifts = getCoordinatedShifts(user, ad.id);
-                  // Total del área: suma de las personas de cada uno de sus horarios.
-                  const totalArea = shifts.reduce((acc, s) => acc + getAreaShiftPeopleCount(ad.id, String(s._id)), 0);
+                  // Total del área: personas distintas entre todos sus horarios (sin repetir a
+                  // quien esté asignado a más de uno).
+                  const totalArea = getAreaPeopleCount(ad.id, shifts.map((s) => String(s._id)));
                   return (
                     <div key={i} className="flex flex-col gap-1">
                       <div className="group relative flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 pl-2 pr-1 py-1 rounded-lg border border-amber-100 dark:border-amber-800 hover:border-amber-300 dark:hover:border-amber-600 transition-all w-fit">
@@ -1810,7 +1827,7 @@ export const ProjectTeamPage: React.FC = () => {
                             handleOpenAreaShiftDetail(ad.id, ad.name, null, shifts);
                           }}
                           className="text-amber-700 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap hover:text-amber-900 dark:hover:text-amber-200 transition-colors cursor-pointer"
-                          title={`Ver las personas de ${ad.name}, sumando todos sus horarios (${totalArea} activa${totalArea === 1 ? '' : 's'} con contrato vigente)`}
+                          title={`Ver las personas de ${ad.name} en los horarios que coordina: ${totalArea} activa${totalArea === 1 ? '' : 's'} con contrato vigente (cada persona una sola vez)`}
                         >
                           {ad.name} ({totalArea})
                         </button>
@@ -3535,7 +3552,8 @@ export const ProjectTeamPage: React.FC = () => {
               <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
               <span className="text-sm text-gray-700 dark:text-gray-300">
                 Cada turno cuenta el <strong>área y el horario exactos</strong>. El número al lado del <strong>área</strong> es
-                el total de esa área: la suma de todos sus horarios.
+                el total de esos horarios contando a cada <strong>persona una sola vez</strong>: quien está asignado a dos turnos
+                de la misma área suma uno, no dos.
               </span>
             </li>
             <li className="flex items-start gap-3">

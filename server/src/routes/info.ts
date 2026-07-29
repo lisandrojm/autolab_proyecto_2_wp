@@ -61,8 +61,9 @@ function parseEstadoBody(body: any): { error?: string; name?: string; data?: any
   if (color && !/^#[0-9a-f]{6}$/i.test(color)) return { error: "El color debe ser hexadecimal, por ejemplo #16a34a" };
 
   const contratoFrameIds = Array.isArray(body?.contratoFrameIds) ? body.contratoFrameIds.map((id: any) => String(id)).filter(Boolean) : [];
+  const esImpositivo = body?.esImpositivo === true || body?.esImpositivo === "true";
 
-  return { name, data: { nombre: name, color: color || undefined, nombreEnContrato: nombreEnContrato || undefined, contratoFrameIds } };
+  return { name, data: { nombre: name, color: color || undefined, nombreEnContrato: nombreEnContrato || undefined, contratoFrameIds, esImpositivo } };
 }
 
 // POST /info/estados - crear estado

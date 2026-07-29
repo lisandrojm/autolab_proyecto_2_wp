@@ -13,6 +13,8 @@ export interface InfoItem {
     contratoFrameIds?: string[];
     /** Estados: nombre que lleva dentro del contrato (obligatorio para Activo/Inactivo). */
     nombreEnContrato?: string;
+    /** Estados: marca los de índole impositiva, para darles un tratamiento distinto. */
+    esImpositivo?: boolean;
     [key: string]: any;
   };
   name: string;
@@ -25,6 +27,7 @@ export interface EstadoPayload {
   color?: string;
   nombreEnContrato?: string;
   contratoFrameIds?: string[];
+  esImpositivo?: boolean;
 }
 
 class InfoAPI {

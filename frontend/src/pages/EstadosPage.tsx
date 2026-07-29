@@ -6,7 +6,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { Modal } from '../components/ui/Modal';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash, faTags, faFileContract, faGrip, faTable } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faTrash, faTags, faFileContract, faGrip, faTable, faFileInvoiceDollar } from '@fortawesome/free-solid-svg-icons';
 import { infoAPI, InfoItem, EstadoPayload } from '../api/info';
 import { contratoFrameAPI, ContratoFrameItem } from '../api/contratosFrame';
 import { useEstadoCatalogStore } from '../stores/estadoCatalogStore';
@@ -63,14 +63,23 @@ const BadgePreview: React.FC<{ texto: string; color: string }> = ({ texto, color
   );
 };
 
+/** Marca visual de los estados de índole impositiva. */
+const ChipImpositivo: React.FC = () => (
+  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-100 dark:border-purple-800">
+    <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" />
+    Impositivo
+  </span>
+);
+
 interface FormState {
   name: string;
   nombreEnContrato: string;
   color: string;
   contratoFrameIds: string[];
+  esImpositivo: boolean;
 }
 
-const FORM_VACIO: FormState = { name: '', nombreEnContrato: '', color: COLOR_POR_DEFECTO, contratoFrameIds: [] };
+const FORM_VACIO: FormState = { name: '', nombreEnContrato: '', color: COLOR_POR_DEFECTO, contratoFrameIds: [], esImpositivo: false };
 
 export const EstadosPage: React.FC = () => {
   const [estados, setEstados] = useState<InfoItem[]>([]);
@@ -149,6 +158,7 @@ export const EstadosPage: React.FC = () => {
       nombreEnContrato: estado.data?.nombreEnContrato || '',
       color: colorEfectivo(estado),
       contratoFrameIds: estado.data?.contratoFrameIds || [],
+      esImpositivo: !!estado.data?.esImpositivo,
     });
     setShowModal(true);
   };
@@ -176,6 +186,7 @@ export const EstadosPage: React.FC = () => {
       color: form.color,
       nombreEnContrato: form.nombreEnContrato.trim(),
       contratoFrameIds: form.contratoFrameIds,
+      esImpositivo: form.esImpositivo,
     };
 
     try {
@@ -279,6 +290,7 @@ export const EstadosPage: React.FC = () => {
                   <th className="px-4 py-3 font-semibold">Badge</th>
                   <th className="px-4 py-3 font-semibold">Nombre</th>
                   <th className="px-4 py-3 font-semibold">Nombre en el contrato</th>
+                  <th className="px-4 py-3 font-semibold">Impositivo</th>
                   <th className="px-4 py-3 font-semibold">Tipos de contrato</th>
                   <th className="px-4 py-3 font-semibold text-right">Acciones</th>
                 </tr>
@@ -293,6 +305,7 @@ export const EstadosPage: React.FC = () => {
                       </td>
                       <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100">{estado.name}</td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{estado.data?.nombreEnContrato || '—'}</td>
+                      <td className="px-4 py-3">{estado.data?.esImpositivo ? <ChipImpositivo /> : <span className="text-xs text-gray-400">—</span>}</td>
                       <td className="px-4 py-3">
                         {tipos.length === 0 ? (
                           <span className="text-[11px] text-gray-500 dark:text-gray-400">Todos los tipos</span>
@@ -334,7 +347,10 @@ export const EstadosPage: React.FC = () => {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex flex-col gap-1.5 min-w-0">
                     <BadgePreview texto={estado.data?.nombreEnContrato?.trim() || estado.name} color={color} />
-                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{estado.name}</span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{estado.name}</span>
+                      {estado.data?.esImpositivo ? <ChipImpositivo /> : null}
+                    </div>
                     {estado.data?.nombreEnContrato ? <span className="text-[11px] text-gray-500 dark:text-gray-400">En el contrato: {estado.data.nombreEnContrato}</span> : null}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
@@ -428,6 +444,19 @@ export const EstadosPage: React.FC = () => {
               <BadgePreview texto={form.nombreEnContrato.trim() || form.name} color={form.color} />
             </div>
           </div>
+
+          <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+            <input
+              type="checkbox"
+              checked={form.esImpositivo}
+              onChange={(e) => setForm((p) => ({ ...p, esImpositivo: e.target.checked }))}
+              className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+            />
+            <span className="flex flex-col gap-0.5">
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Estado impositivo</span>
+              <span className="text-[11px] text-gray-500 dark:text-gray-400">Marcalo si el estado es de índole impositiva, para poder distinguirlo y darle otro tratamiento.</span>
+            </span>
+          </label>
 
           <div className="space-y-2">
             <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Tipos de contrato</label>

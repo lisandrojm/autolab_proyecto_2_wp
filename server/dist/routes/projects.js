@@ -716,6 +716,9 @@ router.get("/projects/:projectId/area-shift-counts", requireTenant, authenticate
         const hoy = hoyArgentina();
         const configByUser = new Map((project.teamConfig || []).map((c) => [String(c.userId), c]));
         const counts = {};
+        // Ids por combinación: el front los usa para el total del área sin contar dos veces a quien
+        // está en más de un turno de esa misma área.
+        const userIds = {};
         for (const member of members) {
             if (member.metadata?.activo !== true)
                 continue;
@@ -730,10 +733,12 @@ router.get("/projects/:projectId/area-shift-counts", requireTenant, authenticate
             if (assignments.length === 0)
                 assignments = contratoActivo.areaShiftAssignments || [];
             // Un miembro cuenta UNA vez por combinación, aunque la tenga repetida en sus asignaciones.
-            for (const key of claveAreaTurnoDelMiembro(assignments))
+            for (const key of claveAreaTurnoDelMiembro(assignments)) {
                 counts[key] = (counts[key] || 0) + 1;
+                (userIds[key] = userIds[key] || []).push(String(member._id));
+            }
         }
-        res.json({ counts });
+        res.json({ counts, userIds });
     }
     catch (error) {
         console.error("Get area/shift counts error:", error);

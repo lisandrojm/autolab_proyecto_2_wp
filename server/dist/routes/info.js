@@ -51,7 +51,8 @@ function parseEstadoBody(body) {
     if (color && !/^#[0-9a-f]{6}$/i.test(color))
         return { error: "El color debe ser hexadecimal, por ejemplo #16a34a" };
     const contratoFrameIds = Array.isArray(body?.contratoFrameIds) ? body.contratoFrameIds.map((id) => String(id)).filter(Boolean) : [];
-    return { name, data: { nombre: name, color: color || undefined, nombreEnContrato: nombreEnContrato || undefined, contratoFrameIds } };
+    const esImpositivo = body?.esImpositivo === true || body?.esImpositivo === "true";
+    return { name, data: { nombre: name, color: color || undefined, nombreEnContrato: nombreEnContrato || undefined, contratoFrameIds, esImpositivo } };
 }
 // POST /info/estados - crear estado
 router.post("/estados", requireTenant, authenticateToken, async (req, res) => {
