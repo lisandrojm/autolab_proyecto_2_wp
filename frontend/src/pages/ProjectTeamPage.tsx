@@ -71,6 +71,13 @@ function isContractVigente(baja?: string): boolean {
   return bajaDate.getTime() >= today.getTime();
 }
 
+// Roles de sistema con acceso a la app mobile. El valor viaja al server como `roleName=mobile-<value>`,
+// que matchea el nombre completo del rol tolerando el separador ("Mobile-Coordinador", "Mobile Coordinador", ...).
+const MOBILE_ROLE_OPTIONS = [
+  { value: 'colaborador', label: 'Mobile-Colaborador' },
+  { value: 'coordinador', label: 'Mobile-Coordinador' },
+];
+
 function numeroALetras(num: number): string {
   const Unidades = (num: number): string => {
     switch (num) {
@@ -281,6 +288,7 @@ export const ProjectTeamPage: React.FC = () => {
   const [filterTipoContrato, setFilterTipoContrato] = useState<string>(''); // nombre_contrato (client-side sobre la página)
   const [filterAreaTurno, setFilterAreaTurno] = useState<string>(''); // "" | "__none__" | "areaId::shiftId" (client-side sobre la página)
   const [filterEstadoContrato, setFilterEstadoContrato] = useState<string>(''); // nombre_estado_empleado (client-side sobre la página)
+  const [filterRolMobile, setFilterRolMobile] = useState<string>(''); // "" | "colaborador" | "coordinador" (server-side, paginado)
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [selectedUserForWizard, setSelectedUserForWizard] = useState<User | null>(null);
   // Índice (en el array original de contracts del UserProject) del contrato que se está editando desde el
@@ -417,11 +425,12 @@ export const ProjectTeamPage: React.FC = () => {
 
   /* ------------------------------ Fetchers ------------------------------- */
 
-  // Página actual del equipo (datos completos), paginada en el server por proyecto + búsqueda + estado.
-  const fetchTeamPage = async (page: number, opts?: { search?: string; status?: string }) => {
+  // Página actual del equipo (datos completos), paginada en el server por proyecto + búsqueda + estado + rol.
+  const fetchTeamPage = async (page: number, opts?: { search?: string; status?: string; rolMobile?: string }) => {
     if (!projectId) return;
     const search = opts?.search ?? searchTermTeam;
     const status = opts?.status ?? filterUserStatus;
+    const rolMobile = opts?.rolMobile ?? filterRolMobile;
     const reqId = ++teamReqIdRef.current;
     try {
       setTeamFetching(true);
@@ -429,6 +438,9 @@ export const ProjectTeamPage: React.FC = () => {
       if (search) params.email = search; // el backend busca fuzzy en nombre/email
       if (status === 'active') params.metadataActivo = 'true';
       if (status === 'inactive') params.metadataActivo = 'false';
+      // Rol server-side: si no, el filtro se aplicaría solo sobre la página cargada y la paginación
+      // quedaría con resultados salteados entre páginas.
+      if (rolMobile) params.roleName = `mobile-${rolMobile}`;
       const resp = await usersAPI.list(params);
       if (reqId !== teamReqIdRef.current) return; // descartar respuestas viejas
       setTeamRows(resp.users);
@@ -541,7 +553,7 @@ export const ProjectTeamPage: React.FC = () => {
     init();
   }, [projectId, token]);
 
-  // Búsqueda / filtro de estado en el Equipo → server-side, resetea a página 1 (debounced, como Usuarios).
+  // Búsqueda / estado / rol en el Equipo → server-side, resetea a página 1 (debounced, como Usuarios).
   const teamFiltersInitedRef = React.useRef(false);
   useEffect(() => {
     if (!projectId) return;
@@ -551,11 +563,11 @@ export const ProjectTeamPage: React.FC = () => {
     }
     const h = setTimeout(() => {
       setTeamPage(1);
-      fetchTeamPage(1, { search: searchTermTeam, status: filterUserStatus });
+      fetchTeamPage(1, { search: searchTermTeam, status: filterUserStatus, rolMobile: filterRolMobile });
     }, 300);
     return () => clearTimeout(h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTermTeam, filterUserStatus]);
+  }, [searchTermTeam, filterUserStatus, filterRolMobile]);
 
   // Cambio de página → traer esa página del server.
   const teamPageInitedRef = React.useRef(false);
@@ -1992,6 +2004,13 @@ export const ProjectTeamPage: React.FC = () => {
                       ]}
                       selectFilters={[
                         {
+                          label: 'Rol/es',
+                          value: filterRolMobile,
+                          onChange: setFilterRolMobile,
+                          placeholder: 'Todos los roles',
+                          options: MOBILE_ROLE_OPTIONS,
+                        },
+                        {
                           label: 'Tipo de contrato',
                           value: filterTipoContrato,
                           onChange: setFilterTipoContrato,
@@ -2075,6 +2094,8 @@ export const ProjectTeamPage: React.FC = () => {
 
                 {(() => {
                   // Filtros client-side sobre la página cargada (contrato + área/turno).
+                  // El filtro de Rol/es NO va acá: se resuelve server-side para que la paginación
+                  // muestre los resultados correlativos (ver fetchTeamPage → roleName).
                   const rows =
                     filterVigencia || filterTipoContrato || filterAreaTurno || filterEstadoContrato
                       ? teamRows.filter((u) => {
@@ -2106,14 +2127,14 @@ export const ProjectTeamPage: React.FC = () => {
                     return (
                       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center h-64 text-gray-500">
                         <FontAwesomeIcon icon={faUsers} className="h-12 w-12 mb-4 opacity-10" />
-                        <p className="text-base font-medium">{searchTermTeam || filterUserStatus ? 'No se encontraron miembros' : 'Aún no hay miembros en el equipo'}</p>
-                        <p className="text-sm mt-1">{searchTermTeam || filterUserStatus ? 'Probá ajustar la búsqueda o el filtro.' : 'Usa el botón "Agregar Miembro" para comenzar.'}</p>
+                        <p className="text-base font-medium">{searchTermTeam || filterUserStatus || filterRolMobile ? 'No se encontraron miembros' : 'Aún no hay miembros en el equipo'}</p>
+                        <p className="text-sm mt-1">{searchTermTeam || filterUserStatus || filterRolMobile ? 'Probá ajustar la búsqueda o el filtro.' : 'Usa el botón "Agregar Miembro" para comenzar.'}</p>
                       </div>
                     );
                   }
 
                   if (rows.length === 0) {
-                    return <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center h-40 text-gray-500 text-sm">Ningún contrato coincide con los filtros en esta página.</div>;
+                    return <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center h-40 text-gray-500 text-sm">Ningún miembro coincide con los filtros en esta página.</div>;
                   }
 
                   return effectiveViewMode === 'table' ? (

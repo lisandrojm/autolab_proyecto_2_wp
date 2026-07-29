@@ -305,6 +305,8 @@ class UsersAPI {
       projectId?: string;
       metadataActivo?: string;
       isSolicitud?: string;
+      /** Nombre del rol (separadores flexibles), ej. "mobile-coordinador". Filtra server-side. */
+      roleName?: string;
       lightweight?: boolean;
       slimProjects?: boolean;
       sort?: string;
@@ -321,6 +323,7 @@ class UsersAPI {
     if (params.projectId) searchParams.append("projectId", params.projectId);
     if (params.metadataActivo) searchParams.append("metadataActivo", params.metadataActivo);
     if (params.isSolicitud) searchParams.append("isSolicitud", params.isSolicitud);
+    if (params.roleName) searchParams.append("roleName", params.roleName);
     if (params.lightweight) searchParams.append("lightweight", "true");
     if (params.slimProjects) searchParams.append("slimProjects", "true");
 

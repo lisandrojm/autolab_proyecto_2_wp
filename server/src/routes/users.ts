@@ -202,6 +202,22 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
       andConditions.push({ roles: req.query.roleId });
     }
 
+    // Filtro por NOMBRE de rol (ej. "mobile-coordinador"). Se resuelve acá porque el cliente no puede
+    // listar /roles sin el permiso admin_roles:view. El separador es flexible: "Mobile-Coordinador",
+    // "Mobile Coordinador" y "mobile_coordinador" matchean igual (match exacto sobre el nombre completo).
+    if (req.query.roleName) {
+      const parts = String(req.query.roleName)
+        .toLowerCase()
+        .split(/[^a-z0-9]+/i)
+        .filter(Boolean);
+      if (parts.length > 0) {
+        const roleFilter: any = { name: { $regex: `^${parts.join("[^a-z0-9]*")}$`, $options: "i" } };
+        if (!isSuperAdmin) roleFilter.tenantId = req.tenantObjectId;
+        const roleIds = await Role.find(roleFilter).distinct("_id");
+        andConditions.push({ roles: { $in: roleIds } }); // sin roles que matcheen → 0 resultados
+      }
+    }
+
     const filter = andConditions.length > 0 ? { $and: andConditions } : {};
 
 
