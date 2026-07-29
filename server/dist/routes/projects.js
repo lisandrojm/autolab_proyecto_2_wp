@@ -749,11 +749,21 @@ router.get("/projects/:projectId/area-shift-counts", requireTenant, authenticate
 router.get("/projects/:projectId/area-shift-members", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
     try {
         const { projectId } = req.params;
-        const { areaId, shiftId } = req.query;
+        const { areaId, shiftId, shiftIds } = req.query;
         if (!areaId) {
             res.status(400).json({ error: "areaId es obligatorio" });
             return;
         }
+        // Turnos a incluir: uno puntual (`shiftId`), varios (`shiftIds`, los que coordina esa persona)
+        // o, si no viene ninguno, todos los del área.
+        const turnosPedidos = shiftIds
+            ? String(shiftIds)
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : shiftId
+                ? [String(shiftId)]
+                : [];
         const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("teamConfig").lean();
         if (!project) {
             res.status(404).json({ error: "Project not found" });
@@ -770,7 +780,6 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
         const hoy = hoyArgentina();
         const configByUser = new Map((project.teamConfig || []).map((c) => [String(c.userId), c]));
         const prefijoArea = `${areaId}::`;
-        const target = shiftId ? `${areaId}::${shiftId}` : null;
         const rows = [];
         for (const member of members) {
             const up = (member.metadata?.projects || []).find((p) => p && String(p.projectId) === String(projectId));
@@ -780,9 +789,10 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
             if (assignments.length === 0)
                 assignments = contratoActivo?.areaShiftAssignments || [];
             const keys = claveAreaTurnoDelMiembro(assignments);
-            // Turnos que la persona tiene en esta área (uno solo si se pidió un turno puntual).
-            const shiftIds = target ? (keys.has(target) ? [String(shiftId)] : []) : [...keys].filter((k) => k.startsWith(prefijoArea)).map((k) => k.split("::")[1]);
-            if (shiftIds.length === 0)
+            // Turnos que la persona tiene en esta área, acotados a los pedidos (los que coordina quien abre el detalle).
+            const turnosDelMiembro = [...keys].filter((k) => k.startsWith(prefijoArea)).map((k) => k.split("::")[1]);
+            const shiftIdsDelMiembro = turnosPedidos.length > 0 ? turnosDelMiembro.filter((s) => turnosPedidos.includes(String(s))) : turnosDelMiembro;
+            if (shiftIdsDelMiembro.length === 0)
                 continue;
             const activo = member.metadata?.activo === true;
             const vigente = esContratoVigente(contratoActivo, hoy);
@@ -794,7 +804,7 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
                 activo,
                 vigente,
                 cuenta: activo && vigente,
-                shiftIds,
+                shiftIds: shiftIdsDelMiembro,
                 nombreContrato: contratoActivo?.nombre_contrato || "",
                 estadoContrato: contratoActivo?.nombre_estado_empleado || "",
                 fechaAlta: contratoActivo?.fecha_alta_contrato || "",

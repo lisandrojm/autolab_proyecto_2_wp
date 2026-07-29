@@ -315,11 +315,13 @@ class ProjectsAPI {
 
   /**
    * Detalle de las personas asignadas a un área + turno (todas, con su estado y contrato).
-   * Sin `shiftId` devuelve el área completa, sumando todos sus horarios.
+   * Con `shiftIds` se acota a esos horarios (los que coordina esa persona); sin ninguno de los dos,
+   * devuelve el área completa.
    */
-  async getAreaShiftMembers(projectId: string, areaId: string, shiftId?: string): Promise<AreaShiftMembersResponse> {
+  async getAreaShiftMembers(projectId: string, areaId: string, shiftId?: string, shiftIds?: string[]): Promise<AreaShiftMembersResponse> {
     const sp = new URLSearchParams({ areaId });
     if (shiftId) sp.append("shiftId", shiftId);
+    else if (shiftIds?.length) sp.append("shiftIds", shiftIds.join(","));
     const resp = await axios.get(`/projects/${projectId}/area-shift-members?${sp.toString()}`, {
       headers: this.getHeaders(),
     });

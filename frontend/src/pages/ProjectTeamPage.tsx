@@ -246,8 +246,8 @@ export const ProjectTeamPage: React.FC = () => {
   // equipo se lista paginado y acá solo tenemos la página actual.
   const [areaShiftCounts, setAreaShiftCounts] = useState<Record<string, number>>({});
   // Detalle (modal) de las personas de un área+turno: qué combinación se está viendo y sus filas.
-  // `shift` en null = el área completa, sumando todos sus horarios.
-  const [viewingAreaShift, setViewingAreaShift] = useState<{ areaId: string; areaName: string; shift: any | null } | null>(null);
+  // `shift` en null = el área, acotada a los turnos de `shifts` (los que coordina esa persona).
+  const [viewingAreaShift, setViewingAreaShift] = useState<{ areaId: string; areaName: string; shift: any | null; shifts?: any[] } | null>(null);
   const [areaShiftMembers, setAreaShiftMembers] = useState<AreaShiftMembersResponse | null>(null);
   const [loadingAreaShiftMembers, setLoadingAreaShiftMembers] = useState(false);
   const [vacations, setVacations] = useState<VacationRequest[]>([]);
@@ -1000,14 +1000,22 @@ export const ProjectTeamPage: React.FC = () => {
   const getAreaShiftPeopleCount = (areaId: string, shiftId: string): number => areaShiftCounts[`${areaId}::${shiftId}`] || 0;
 
   // Detalle de quiénes están en ese área + turno (todo el equipo, no solo la página cargada).
-  // `shift` en null lista el área completa, sumando todos sus horarios.
-  const handleOpenAreaShiftDetail = async (areaId: string, areaName: string, shift: any | null) => {
+  // Con `shift` en null se listan los turnos de `shiftsDelArea`, que son los que coordina esa
+  // persona: el modal del área no muestra turnos del área que el coordinador no tiene asignados.
+  const handleOpenAreaShiftDetail = async (areaId: string, areaName: string, shift: any | null, shiftsDelArea?: any[]) => {
     if (!projectId) return;
-    setViewingAreaShift({ areaId, areaName, shift });
+    setViewingAreaShift({ areaId, areaName, shift, shifts: shiftsDelArea });
     setAreaShiftMembers(null);
     setLoadingAreaShiftMembers(true);
     try {
-      setAreaShiftMembers(await projectsAPI.getAreaShiftMembers(projectId, areaId, shift ? String(shift._id) : undefined));
+      setAreaShiftMembers(
+        await projectsAPI.getAreaShiftMembers(
+          projectId,
+          areaId,
+          shift ? String(shift._id) : undefined,
+          shift ? undefined : (shiftsDelArea || []).map((s) => String(s._id)),
+        ),
+      );
     } catch (e) {
       console.error('Error fetching area/shift members:', e);
       sweetAlert.error('Error', 'No se pudo cargar el detalle del área/turno.');
@@ -1799,7 +1807,7 @@ export const ProjectTeamPage: React.FC = () => {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleOpenAreaShiftDetail(ad.id, ad.name, null);
+                            handleOpenAreaShiftDetail(ad.id, ad.name, null, shifts);
                           }}
                           className="text-amber-700 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap hover:text-amber-900 dark:hover:text-amber-200 transition-colors cursor-pointer"
                           title={`Ver las personas de ${ad.name}, sumando todos sus horarios (${totalArea} activa${totalArea === 1 ? '' : 's'} con contrato vigente)`}
@@ -2792,7 +2800,9 @@ export const ProjectTeamPage: React.FC = () => {
             subtitle={
               viewingAreaShift ? (
                 <p className="text-sm font-bold text-amber-600 dark:text-amber-400 mt-1">
-                  {viewingAreaShift.shift ? `${viewingAreaShift.shift.name} (${viewingAreaShift.shift.startTime} - ${viewingAreaShift.shift.endTime})` : 'Todos los horarios del área'}
+                  {viewingAreaShift.shift
+                    ? `${viewingAreaShift.shift.name} (${viewingAreaShift.shift.startTime} - ${viewingAreaShift.shift.endTime})`
+                    : (viewingAreaShift.shifts || []).map((s: any) => s.name).join(' · ') || 'Todos los horarios del área'}
                 </p>
               ) : (
                 ''
@@ -2854,7 +2864,7 @@ export const ProjectTeamPage: React.FC = () => {
                             · <strong>{areaShiftMembers.total}</strong> asignada{areaShiftMembers.total === 1 ? '' : 's'} en total
                           </>
                         ) : null}
-                        {mostrarTurnos ? ' en toda el área, sumando sus horarios.' : '. El número de la columna Área/Turno Coordinada es el primero.'}
+                        {mostrarTurnos ? ' en los horarios que coordina de esta área.' : '. El número de la columna Área/Turno Coordinada es el primero.'}
                       </p>
                     </div>
 
