@@ -710,8 +710,7 @@ export const ProjectTeamPage: React.FC = () => {
         const pId = p.projectId;
         return String(typeof pId === 'object' ? (pId as any)?._id : pId) === String(projectId);
       });
-      const contracts = projectMeta?.contracts || [];
-      const estado = contracts.length ? (contracts[contracts.length - 1] as any)?.nombre_estado_empleado : null;
+      const estado = (getContratoActivo(projectMeta?.contracts as any[]) as any)?.nombre_estado_empleado || null;
       if (estado) seen.add(estadoLabel(estado));
     });
     return [...seen].map((name) => ({ value: name, label: name }));
@@ -1125,14 +1124,18 @@ export const ProjectTeamPage: React.FC = () => {
     const currentProjectMeta = metadataProjects.find((p: any) => String(typeof p.projectId === 'string' ? p.projectId : p.projectId?._id) === String(project?._id));
 
     const lastProject = currentProjectMeta || (metadataProjects.length > 0 ? metadataProjects[metadataProjects.length - 1] : null);
-    // Si se editó una tarjeta puntual del modal de contratos, precargar ESE contrato; si no, el último.
+    // Si se editó una tarjeta puntual del modal de contratos, precargar ESE contrato; si no, el que
+    // rige hoy (el vigente más reciente), que no siempre es el último cargado.
+    const contratoQueRige = getContratoActivo(lastProject?.contracts as any[]);
     const lastContract =
-      contractOverride ||
-      (typeof contractIndex === "number" && lastProject?.contracts?.[contractIndex] != null
-        ? lastProject.contracts[contractIndex]
-        : lastProject?.contracts?.length
-          ? lastProject.contracts[lastProject.contracts.length - 1]
-          : null);
+      contractOverride || (typeof contractIndex === "number" && lastProject?.contracts?.[contractIndex] != null ? lastProject.contracts[contractIndex] : contratoQueRige);
+
+    // Sin índice explícito el backend actualiza el ÚLTIMO contrato del array. Como acá se precargó el
+    // que rige, se fija su índice para que se guarde sobre ese mismo y no sobre otro.
+    if (typeof contractIndex !== 'number' && !contractOverride && contratoQueRige && Array.isArray(lastProject?.contracts)) {
+      const idxQueRige = (lastProject!.contracts as any[]).indexOf(contratoQueRige);
+      if (idxQueRige >= 0) setEditingContractIndex(idxQueRige);
+    }
 
     console.log('[Wizard] user:', user._id, 'lastProject:', lastProject?._id, 'lastContract keys:', lastContract ? Object.keys(lastContract) : 'null');
     console.log('[Wizard] lastContract:', lastContract ? JSON.stringify({ categoria_sat_id: (lastContract as any).categoria_sat_id, nombre_categoria_sat: (lastContract as any).nombre_categoria_sat, estado_id: (lastContract as any).estado_id, nombre_estado_empleado: (lastContract as any).nombre_estado_empleado }) : 'null');
@@ -1591,7 +1594,7 @@ export const ProjectTeamPage: React.FC = () => {
       return String(idToCheck) === String(projectId);
     });
     const rolFrame = projectMeta?.nombre_rol_frame || (user.externalInfo?.rolFrames?.length ? user.externalInfo.rolFrames[0] : '-');
-    const activeContract = projectMeta?.contracts?.length ? projectMeta.contracts[projectMeta.contracts.length - 1] : null;
+    const activeContract = getContratoActivo(projectMeta?.contracts as any[]);
 
     return (
       <tr key={user._id} onClick={() => handleOpenMemberDetail(user)} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer">
@@ -2712,7 +2715,7 @@ export const ProjectTeamPage: React.FC = () => {
                       const idToCheck = typeof pId === 'object' ? (pId as any)?._id : pId;
                       return String(idToCheck) === String(project?._id);
                     });
-                    const activeContract = projectMeta?.contracts?.length ? projectMeta.contracts[projectMeta.contracts.length - 1] : null;
+                    const activeContract = getContratoActivo(projectMeta?.contracts as any[]);
 
                     if (activeContract?.areaShiftAssignments && activeContract.areaShiftAssignments.length > 0) {
                       const fallbackAssign = activeContract.areaShiftAssignments.find((a: any) => {

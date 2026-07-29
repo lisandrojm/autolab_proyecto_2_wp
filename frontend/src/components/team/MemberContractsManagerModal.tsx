@@ -11,6 +11,7 @@ import { releasesAPI, Release } from "../../api/release";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { ContractCard, EmpresaOption, findTemplate, templateHasContent, buildDownloadFileName } from "./ContractCard";
 import { ContractFiltersBar, ContractFilterState, emptyContractFilters, matchesContractFilters } from "./ContractFilters";
+import { getContratoActivo } from "../../utils/contratoVigencia";
 
 interface Props {
   isOpen: boolean;
@@ -102,22 +103,31 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
     return [...s];
   }, [rows]);
 
-  // El "último contrato" de cada proyecto es el de mayor índice en su UserProject: es el que se ve en la
-  // fila de la tabla del equipo, y se resalta igual que en el modal de Gestionar equipo.
-  const lastIndexByProject = useMemo(() => {
-    const m = new Map<string, number>();
+  // El contrato resaltado de cada proyecto es el que RIGE hoy (el vigente más reciente, que puede
+  // ser un tiempo indeterminado con contratos vencidos cargados después), igual que la fila de la
+  // tabla del equipo y que el modal de Gestionar equipo.
+  const indiceQueRigePorProyecto = useMemo(() => {
+    const porProyecto = new Map<string, ManagedContract[]>();
     rows.forEach((r) => {
-      const cur = m.get(r.projectId);
-      if (cur == null || r.contractIndex > cur) m.set(r.projectId, r.contractIndex);
+      if (!porProyecto.has(r.projectId)) porProyecto.set(r.projectId, []);
+      porProyecto.get(r.projectId)!.push(r);
+    });
+
+    const m = new Map<string, number>();
+    porProyecto.forEach((filas, projectId) => {
+      const ordenadas = [...filas].sort((a, b) => a.contractIndex - b.contractIndex);
+      const queRige = getContratoActivo(ordenadas.map((f) => f.contract) as any[]);
+      const fila = ordenadas.find((f) => f.contract === queRige);
+      if (fila) m.set(projectId, fila.contractIndex);
     });
     return m;
   }, [rows]);
 
-  const isLatest = (r: ManagedContract) => lastIndexByProject.get(r.projectId) === r.contractIndex;
+  const isLatest = (r: ManagedContract) => indiceQueRigePorProyecto.get(r.projectId) === r.contractIndex;
 
   const filtered = useMemo(
     () => rows.filter((r) => matchesContractFilters(filters, { contract: r.contract, clientId: r.clientId, projectId: r.projectId, isLatest: isLatest(r) })),
-    [rows, filters, lastIndexByProject],
+    [rows, filters, indiceQueRigePorProyecto],
   );
 
   const handleDownloadContract = async (r: ManagedContract, empresaId?: string) => {

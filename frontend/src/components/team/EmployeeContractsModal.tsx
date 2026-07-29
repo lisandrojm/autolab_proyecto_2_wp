@@ -6,6 +6,7 @@ import { User, Contract } from "../../api/users";
 import { contratoFrameAPI, ContratoFrameItem } from "../../api/contratosFrame";
 import { releasesAPI, Release } from "../../api/release";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { getContratoActivo } from "../../utils/contratoVigencia";
 import { ContractCard, EmpresaOption, findTemplate, templateHasContent, buildDownloadFileName } from "./ContractCard";
 import { ContractFiltersBar, ContractFilterState, emptyContractFilters, matchesContractFilters } from "./ContractFilters";
 
@@ -55,6 +56,12 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
     return [...(projectMeta?.contracts || [])].reverse();
   }, [user, projectId]);
 
+  /**
+   * El contrato resaltado es el que RIGE hoy (el vigente más reciente), no el último cargado:
+   * un tiempo indeterminado abierto puede tener detrás un contrato viejo ya vencido.
+   */
+  const contratoQueRige = useMemo(() => getContratoActivo(contracts as any[]), [contracts]);
+
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
 
   // Filtros: los mismos que la gestión cross-proyecto, sin cliente/proyecto (acá son fijos).
@@ -68,8 +75,8 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
   // Se filtra conservando el índice de la tarjeta en la lista completa: de él dependen el índice original
   // en BD (edición/descarga) y el resaltado del último contrato.
   const visible = useMemo(
-    () => contracts.map((contract, idx) => ({ contract, idx })).filter(({ contract, idx }) => matchesContractFilters(filters, { contract, isLatest: idx === 0 })),
-    [contracts, filters],
+    () => contracts.map((contract, idx) => ({ contract, idx })).filter(({ contract }) => matchesContractFilters(filters, { contract, isLatest: contract === contratoQueRige })),
+    [contracts, filters, contratoQueRige],
   );
 
   const handleDownloadContract = async (contract: Contract, displayIndex: number, empresaId?: string) => {
@@ -132,7 +139,7 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                 activeReleases={activeReleases}
                 contratoEmpresas={contratoEmpresas}
                 releaseEmpresas={releaseEmpresas}
-                isLatest={idx === 0}
+                isLatest={contract === contratoQueRige}
                 onEdit={user ? () => onEdit(user, contract, contracts.length - 1 - idx) : undefined}
                 onDelete={user ? () => onDelete(user._id) : undefined}
                 deleteTitle="Eliminar del proyecto"
