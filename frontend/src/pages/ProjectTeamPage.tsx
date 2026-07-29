@@ -1787,10 +1787,14 @@ export const ProjectTeamPage: React.FC = () => {
               <div className="flex flex-wrap items-center gap-1.5">
                 {coordAreaData.map((ad, i) => {
                   const shifts = getCoordinatedShifts(user, ad.id);
+                  // Total del área: suma de las personas de cada uno de sus horarios.
+                  const totalArea = shifts.reduce((acc, s) => acc + getAreaShiftPeopleCount(ad.id, String(s._id)), 0);
                   return (
                     <div key={i} className="flex flex-col gap-1">
                       <div className="group relative flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 pl-2 pr-1 py-1 rounded-lg border border-amber-100 dark:border-amber-800 hover:border-amber-300 dark:hover:border-amber-600 transition-all w-fit">
-                        <span className="text-amber-700 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{ad.name}</span>
+                        <span className="text-amber-700 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap" title={`${totalArea} persona${totalArea === 1 ? '' : 's'} activa${totalArea === 1 ? '' : 's'} con contrato vigente en ${ad.name}, sumando todos sus horarios`}>
+                          {ad.name} ({totalArea})
+                        </span>
                         <button
                           type="button"
                           onClick={(e) => {
@@ -3492,21 +3496,29 @@ export const ProjectTeamPage: React.FC = () => {
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-            El número al lado de cada turno es la <strong>cantidad de personas del equipo asignadas a esa combinación exacta
-            de área y turno</strong>, o sea a quiénes coordina esa persona en ese horario.
+            El número al lado de cada turno es la cantidad de <strong>usuarios activos y con contrato vigente</strong>{' '}
+            asignados a esa combinación exacta de área y turno, o sea a quiénes coordina esa persona en ese horario.
           </p>
           <ul className="space-y-3">
             <li className="flex items-start gap-3">
               <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
               <span className="text-sm text-gray-700 dark:text-gray-300">
-                Solo se cuentan personas con <strong>estado activo</strong> y <strong>contrato vigente</strong>: sin fecha de
-                baja, o con fecha de baja de hoy en adelante.
+                <strong>Estado activo</strong>: el usuario figura como ACTIVO. <strong>Contrato vigente</strong>: su contrato
+                no tiene fecha de baja, o la baja es de hoy en adelante. Quien no cumple las dos cosas no suma.
               </span>
             </li>
             <li className="flex items-start gap-3">
               <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
               <span className="text-sm text-gray-700 dark:text-gray-300">
-                Se cuenta el <strong>área y el turno exactos</strong>: alguien de la misma área en otro horario no suma.
+                Haciendo <strong>click en el turno</strong> se abre el detalle de esas personas con su estado, estado de
+                contrato y alta/baja. Las que no cumplen aparecen al final, en <strong>"No suman al total"</strong>.
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                Cada turno cuenta el <strong>área y el horario exactos</strong>. El número al lado del <strong>área</strong> es
+                el total de esa área: la suma de todos sus horarios.
               </span>
             </li>
             <li className="flex items-start gap-3">
