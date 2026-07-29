@@ -1372,6 +1372,7 @@ export const ProjectTeamPage: React.FC = () => {
     setWizardData({
       rol_frame_id: initialRolFrameId,
       categoria_sat_id: initialCatId,
+      contrato_id: initialContratoId,
       contrato_frame_id: initialContratoFrameId,
       nombre_contrato: initialNombreContrato,
       tipo_contrato_id: initialTipoContratoId,
