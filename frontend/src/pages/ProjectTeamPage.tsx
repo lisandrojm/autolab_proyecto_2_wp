@@ -25,6 +25,7 @@ import { EmployeeContractsModal } from '../components/team/EmployeeContractsModa
 import { EstadoSelect, EstadoBadge, estadoLabel } from '../components/EstadoSelect';
 import { esContratoVigente, getContratoActivo } from '../utils/contratoVigencia';
 import { contratoFrameAPI, ContratoFrameItem } from '../api/contratosFrame';
+import { contratosAPI, ContratoItem } from '../api/contratos';
 import { releasesAPI, Release } from '../api/release';
 import { companiesAPI, Company } from '../api/companies';
 import { Area, areasAPI } from '../api/areas';
@@ -265,6 +266,9 @@ export const ProjectTeamPage: React.FC = () => {
   const [allEstados, setAllEstados] = useState<InfoItem[]>([]);
   const [allTiposContrato, setAllTiposContrato] = useState<InfoItem[]>([]);
   const [allRoleFrames, setAllRoleFrames] = useState<RoleFrameItem[]>([]);
+  // Contratos (tipo real: jornadas/multiplicador/tiempo indeterminado) — lo que elige el wizard como
+  // "Tipo de Contrato". Cada uno resuelve a una Plantilla (`contratoFrames`) para generar el PDF.
+  const [contratos, setContratos] = useState<ContratoItem[]>([]);
   const [allShifts, setAllShifts] = useState<Shift[]>([]);
   const [userLookup, setUserLookup] = useState<Map<number | string, string>>(new Map());
 
@@ -297,8 +301,9 @@ export const ProjectTeamPage: React.FC = () => {
     // Step 1: Contrato
     rol_frame_id: '',
     categoria_sat_id: '',
-    contrato_frame_id: '', // _id de la contratos-frame elegida (valor del select)
-    nombre_contrato: '', // nombre de la contratos-frame elegida (identificador estable / match PDF)
+    contrato_id: '', // _id del Contrato elegido (Tipo de Contrato, valor del select principal)
+    contrato_frame_id: '', // _id de la Plantilla resuelta para ese Contrato (para el PDF/Estados/filtros)
+    nombre_contrato: '', // nombre de la Plantilla resuelta (identificador estable / match PDF)
     tipo_contrato_id: '', // ID Externo numérico, solo si la contratos-frame lo tiene
     estado_id: '',
     // Empresas del proyecto elegidas para el contrato / release de este miembro (ObjectId o "")
@@ -523,13 +528,22 @@ export const ProjectTeamPage: React.FC = () => {
         setAllProjects(allProjectsResponse);
 
         // Fetch Metadata Info (datos de referencia estables → cacheados)
-        const [sedes, cats, estados, tipos, rf, cfs] = await Promise.all([cachedFetch('info:sede', () => infoAPI.listByType('sede')), cachedFetch('categoriaSat:all', () => categoriaSatAPI.list()), cachedFetch('info:estado-empleado', () => infoAPI.listByType('estado-empleado')), cachedFetch('info:contrato', () => infoAPI.listByType('contrato')), cachedFetch('roleFrames:all', () => roleFrameAPI.list()), cachedFetch('contratoFrames:all', () => contratoFrameAPI.list())]);
+        const [sedes, cats, estados, tipos, rf, cfs, contratosData] = await Promise.all([
+          cachedFetch('info:sede', () => infoAPI.listByType('sede')),
+          cachedFetch('categoriaSat:all', () => categoriaSatAPI.list()),
+          cachedFetch('info:estado-empleado', () => infoAPI.listByType('estado-empleado')),
+          cachedFetch('info:contrato', () => infoAPI.listByType('contrato')),
+          cachedFetch('roleFrames:all', () => roleFrameAPI.list()),
+          cachedFetch('contratoFrames:all', () => contratoFrameAPI.list()),
+          cachedFetch('contratos:all', () => contratosAPI.list()),
+        ]);
         setAllSedes(sedes);
         setAllCategoriasSat(cats);
         setAllEstados(estados);
         setAllTiposContrato(tipos);
         setAllRoleFrames(rf);
         setContratoFrames(cfs);
+        setContratos(contratosData);
 
         // Default sede from project if available
         if (projectData.metadata?.sedeId) {
