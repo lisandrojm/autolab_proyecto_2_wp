@@ -33,7 +33,7 @@ export declare function esTiempoIndeterminado(contrato: ContratoVigenciaLike | n
  *
  *  1. TIEMPO INDETERMINADO: si tiene uno (sin fecha de baja) ese es el que rige, aunque después
  *     figuren cargados contratos a plazo. Un contrato sin fecha de fin sigue abierto.
- *  2. Si no hay indeterminado, el vigente de alta más reciente.
- *  3. Si no hay ninguno vigente, el último cargado (para seguir mostrando el histórico).
+ *  2. Si no hay indeterminado, el vigente más reciente.
+ *  3. Si no hay ninguno vigente, el más reciente de todos (para seguir mostrando el histórico).
  */
 export declare function getContratoActivo<T extends ContratoVigenciaLike>(contratos: T[] | null | undefined, hoy?: string): T | null;

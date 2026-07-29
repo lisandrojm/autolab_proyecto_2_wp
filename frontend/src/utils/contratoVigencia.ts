@@ -67,18 +67,24 @@ export const esFechaBajaVigente = (fechaBaja?: string | null): boolean => {
 export const esTiempoIndeterminado = (contrato?: ContratoVigenciaLike | null): boolean => !!contrato && !fechaISO(contrato.fecha_baja_contrato);
 
 /**
+ * Clave de antigüedad de un contrato: fecha de alta y, para desempatar, cuándo se cargó.
+ * Se ordena por fecha y NO por la posición en el array, porque según la pantalla los contratos
+ * llegan en orden natural o invertido (el modal los muestra del más nuevo al más viejo).
+ */
+const claveAntiguedad = (contrato: ContratoVigenciaLike): string => `${fechaISO(contrato.fecha_alta_contrato)}|${String(contrato.fecha_carga || "")}`;
+
+/**
  * Contrato que representa la situación actual de la persona en el proyecto, por orden de prioridad:
  *
  *  1. TIEMPO INDETERMINADO: si tiene uno (sin fecha de baja) ese es el que rige, aunque después
  *     figuren cargados contratos a plazo. Un contrato sin fecha de fin sigue abierto.
- *  2. Si no hay indeterminado, el vigente de alta más reciente.
- *  3. Si no hay ninguno vigente, el último cargado, para mostrar el histórico con su NO VIGENTE.
+ *  2. Si no hay indeterminado, el vigente más reciente.
+ *  3. Si no hay ninguno vigente, el más reciente de todos, para mostrar el histórico con su NO VIGENTE.
  */
 export const getContratoActivo = <T extends ContratoVigenciaLike>(contratos?: T[] | null): T | null => {
   if (!Array.isArray(contratos) || contratos.length === 0) return null;
 
-  // A igual fecha de alta (o sin fecha) gana el último cargado, por eso el >=.
-  const masReciente = (lista: T[]) => lista.reduce((mejor, actual) => (fechaISO(actual.fecha_alta_contrato) >= fechaISO(mejor.fecha_alta_contrato) ? actual : mejor));
+  const masReciente = (lista: T[]) => lista.reduce((mejor, actual) => (claveAntiguedad(actual) >= claveAntiguedad(mejor) ? actual : mejor));
 
   const indeterminados = contratos.filter((c) => esTiempoIndeterminado(c));
   if (indeterminados.length > 0) return masReciente(indeterminados);
@@ -86,5 +92,5 @@ export const getContratoActivo = <T extends ContratoVigenciaLike>(contratos?: T[
   const vigentes = contratos.filter((c) => esContratoVigente(c));
   if (vigentes.length > 0) return masReciente(vigentes);
 
-  return contratos[contratos.length - 1];
+  return masReciente(contratos);
 };

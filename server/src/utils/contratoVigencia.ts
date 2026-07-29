@@ -57,18 +57,26 @@ export function esTiempoIndeterminado(contrato: ContratoVigenciaLike | null | un
 }
 
 /**
+ * Clave de antigüedad de un contrato: fecha de alta y, para desempatar, cuándo se cargó.
+ * Se ordena por fecha y NO por la posición en el array, porque según la pantalla los contratos
+ * llegan en orden natural o invertido (el modal los muestra del más nuevo al más viejo).
+ */
+function claveAntiguedad(contrato: ContratoVigenciaLike): string {
+  return `${fechaISO(contrato.fecha_alta_contrato)}|${String(contrato.fecha_carga || "")}`;
+}
+
+/**
  * Contrato que representa la situación actual, por orden de prioridad:
  *
  *  1. TIEMPO INDETERMINADO: si tiene uno (sin fecha de baja) ese es el que rige, aunque después
  *     figuren cargados contratos a plazo. Un contrato sin fecha de fin sigue abierto.
- *  2. Si no hay indeterminado, el vigente de alta más reciente.
- *  3. Si no hay ninguno vigente, el último cargado (para seguir mostrando el histórico).
+ *  2. Si no hay indeterminado, el vigente más reciente.
+ *  3. Si no hay ninguno vigente, el más reciente de todos (para seguir mostrando el histórico).
  */
 export function getContratoActivo<T extends ContratoVigenciaLike>(contratos: T[] | null | undefined, hoy: string = hoyArgentina()): T | null {
   if (!Array.isArray(contratos) || contratos.length === 0) return null;
 
-  // A igual fecha de alta (o sin fecha) gana el último cargado, por eso el >=.
-  const masReciente = (lista: T[]) => lista.reduce((mejor, actual) => (fechaISO(actual.fecha_alta_contrato) >= fechaISO(mejor.fecha_alta_contrato) ? actual : mejor));
+  const masReciente = (lista: T[]) => lista.reduce((mejor, actual) => (claveAntiguedad(actual) >= claveAntiguedad(mejor) ? actual : mejor));
 
   const indeterminados = contratos.filter((c) => esTiempoIndeterminado(c));
   if (indeterminados.length > 0) return masReciente(indeterminados);
@@ -76,5 +84,5 @@ export function getContratoActivo<T extends ContratoVigenciaLike>(contratos: T[]
   const vigentes = contratos.filter((c) => esContratoVigente(c, hoy));
   if (vigentes.length > 0) return masReciente(vigentes);
 
-  return contratos[contratos.length - 1]!;
+  return masReciente(contratos);
 }
