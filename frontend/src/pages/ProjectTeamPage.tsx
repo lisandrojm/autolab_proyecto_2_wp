@@ -736,6 +736,25 @@ export const ProjectTeamPage: React.FC = () => {
     return [...seen].map((name) => ({ value: name, label: name }));
   }, [allEstados, teamRows, projectId]);
 
+  /**
+   * Estados que se ofrecen en el wizard: los del ABM (Configuración → Estados) vinculados al tipo de
+   * contrato elegido, más los que no están vinculados a ninguno (disponibles siempre). Si el estado
+   * ya guardado en el contrato quedó fuera del filtro, se agrega igual para no perder el valor actual.
+   */
+  const estadosDisponibles = useMemo(() => {
+    const tipoElegido = wizardData.contrato_frame_id ? String(wizardData.contrato_frame_id) : '';
+    const filtrados = allEstados.filter((e) => {
+      const vinculados = (e.data as any)?.contratoFrameIds || [];
+      if (vinculados.length === 0) return true;
+      return tipoElegido ? vinculados.some((id: string) => String(id) === tipoElegido) : false;
+    });
+
+    const actual = allEstados.find((e) => String(e.data?.id) === String(wizardData.estado_id));
+    if (actual && !filtrados.some((e) => e._id === actual._id)) filtrados.push(actual);
+
+    return filtrados;
+  }, [allEstados, wizardData.contrato_frame_id, wizardData.estado_id]);
+
   const sedeName = useMemo(() => {
     if (!project) return null;
     return (project as any).metadataResolutions?.sede?.name || (project as any).metadataResolutions?.sede?.data?.nombre || null;
@@ -3008,7 +3027,7 @@ export const ProjectTeamPage: React.FC = () => {
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Estado *</label>
                       <EstadoSelect
-                        options={allEstados.map((e) => ({ value: String(e.data.id), name: e.name }))}
+                        options={estadosDisponibles.map((e) => ({ value: String(e.data.id), name: e.name }))}
                         value={wizardData.estado_id}
                         onChange={(v) => setWizardData((prev) => ({ ...prev, estado_id: v }))}
                       />

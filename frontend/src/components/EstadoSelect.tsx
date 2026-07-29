@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
+import { useEstadoCatalogStore } from "../stores/estadoCatalogStore";
 
 interface EstadoOption {
   value: string;
@@ -51,10 +52,43 @@ const labelFor = (name: string) => styleFor(name).label || name;
 /** Etiqueta canónica del estado ("Falta pedido de AFIP" y "Pedido de AFIP" son el mismo estado). */
 export const estadoLabel = (name: string): string => labelFor(name);
 
-/** Badge de estado del contrato (mismos colores que el select). Reutilizable desde tablas y tarjetas. */
-export const EstadoBadge: React.FC<{ name: string; className?: string }> = ({ name, className = "" }) => (
-  <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide ${styleFor(name).cls} ${className}`}>{labelFor(name)}</span>
-);
+/** #rrggbb → rgba con la transparencia pedida. El ABM solo elige el color del texto. */
+const conAlpha = (hex: string, alpha: number): string => {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return "transparent";
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+};
+
+/**
+ * Badge de estado del contrato. Si el estado está configurado en el ABM (Configuración → Estados)
+ * usa su color y su nombre dentro del contrato; si no, cae en los estilos por defecto.
+ */
+export const EstadoBadge: React.FC<{ name: string; className?: string }> = ({ name, className = "" }) => {
+  const estados = useEstadoCatalogStore((s) => s.estados);
+  const ensureLoaded = useEstadoCatalogStore((s) => s.ensureLoaded);
+
+  useEffect(() => {
+    ensureLoaded();
+  }, [ensureLoaded]);
+
+  const configurado = useMemo(() => estados.find((e) => normalize(e.name) === normalize(name)), [estados, name]);
+  const color = configurado?.data?.color;
+  // Dentro del contrato el estado puede llamarse distinto (p. ej. para no chocar con ACTIVO/INACTIVO del usuario).
+  const texto = configurado?.data?.nombreEnContrato?.trim() || labelFor(name);
+
+  const clases = `inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide ${className}`;
+
+  if (color) {
+    return (
+      <span className={clases} style={{ color, backgroundColor: conAlpha(color, 0.14), border: `1px solid ${conAlpha(color, 0.35)}` }}>
+        {texto}
+      </span>
+    );
+  }
+
+  return <span className={`${clases} ${styleFor(name).cls}`}>{texto}</span>;
+};
 
 const Badge = EstadoBadge;
 

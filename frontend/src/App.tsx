@@ -49,6 +49,7 @@ import { CategoriasSatPage } from "./pages/CategoriasSatPage";
 import { BancosPage } from "./pages/BancosPage";
 import { ObrasSocialesPage } from "./pages/ObrasSocialesPage";
 import { CentrosCostoPage } from "./pages/CentrosCostoPage";
+import { EstadosPage } from "./pages/EstadosPage";
 import { EmpresasPage } from "./pages/EmpresasPage";
 import { MembretesPage } from "./pages/MembretesPage";
 import { ContratosFramePage } from "./pages/ContratosFramePage";
@@ -498,6 +499,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <CentrosCostoPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/estados"
+                element={
+                  <ProtectedRoute>
+                    <EstadosPage />
                   </ProtectedRoute>
                 }
               />

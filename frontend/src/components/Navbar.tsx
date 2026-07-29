@@ -5,7 +5,7 @@ import { ClientSelector } from './ClientSelector';
 import { ClientContextMenu } from './ClientContextMenu';
 import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faTags } from '@fortawesome/free-solid-svg-icons';
 import { Logo } from '../components/ui/Logo';
 import axios from '../api/axiosConfig';
 import { SettingsModal } from './SettingsModal';
@@ -188,6 +188,8 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission('config_obras_sociales:view')) base.push({ path: '/obras-sociales', icon: faBriefcaseMedical, label: 'Obras Sociales', scope: 'global' });
       if (hasPermission('config_centros_costo:view')) base.push({ path: '/centros-costo', icon: faPiggyBank, label: 'Centros de Costos', scope: 'global' });
       if (hasPermission('config_contratos_frame:view')) base.push({ path: '/contratos-frame', icon: faFilePdf, label: 'Contratos', scope: 'global' });
+      // `config_estados:view` es nuevo: hasta que se tilde en los roles, se muestra a quien administra los tipos de contrato.
+      if (hasPermission('config_estados:view') || hasPermission('config_contratos_frame:view')) base.push({ path: '/estados', icon: faTags, label: 'Estados', scope: 'global' });
       if (hasPermission('config_empresas:view')) base.push({ path: '/empresas', icon: faBuilding, label: 'Empresas', scope: 'global' });
       if (hasPermission('config_membretes:view')) base.push({ path: '/empresas-membretes', icon: faFilePdf, label: 'Empresa/s | Membrete/s y firma', scope: 'global' });
     }
@@ -253,7 +255,7 @@ export const MobileNavbar: React.FC = () => {
     const generalAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ['/tenants'].includes(item.path)) : adminItems.filter((item) => ['/admin/projects', '/admin/sedes', '/admin/contracts', '/orders', '/vacations', '/requests', '/documents'].includes(item.path))).sort(byLabel);
 
     // Ojo: los paths de PLANTILLAS_PATHS NO van acá, se agrupan aparte en el subgrupo "Plantillas".
-    const configPaths = ['/requests/config', '/order-types', '/shifts', '/vacations-rules', '/holidays', '/funciones-frame', '/categorias-sat', '/clients', '/centros-costo', '/bancos', '/obras-sociales', '/empresas'];
+    const configPaths = ['/requests/config', '/order-types', '/shifts', '/vacations-rules', '/holidays', '/funciones-frame', '/categorias-sat', '/clients', '/centros-costo', '/bancos', '/obras-sociales', '/empresas', '/estados'];
     // "Mi Perfil" se incluye como un item más para que entre en el orden alfabético
     const profileItem = { path: '/mi-perfil', icon: faIdCard, label: 'Mi Perfil', scope: 'global' as const };
 

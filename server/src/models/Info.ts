@@ -6,6 +6,12 @@ export interface IInfo extends Document {
   data: {
     id: number;
     nombre: string;
+    /** Estados (type "estado-empleado"): color del texto del badge; el fondo es ese color con transparencia. */
+    color?: string;
+    /** Estados: tipos de contrato (contratos-frame) en los que se ofrece. Vacío = todos. */
+    contratoFrameIds?: string[];
+    /** Estados: cómo se llama el estado dentro del contrato (obligatorio si el estado es Activo/Inactivo). */
+    nombreEnContrato?: string;
     [key: string]: any;
   };
   name: string;
@@ -20,6 +26,10 @@ const infoSchema = new Schema<IInfo>(
     data: {
       id: { type: Number },
       nombre: { type: String },
+      // Campos del ABM de Estados (ver IInfo). El resto de los tipos de info no los usa.
+      color: { type: String },
+      contratoFrameIds: { type: [String] },
+      nombreEnContrato: { type: String },
     },
     name: { type: String, required: true },
   },
