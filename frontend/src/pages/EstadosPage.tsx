@@ -145,6 +145,18 @@ export const EstadosPage: React.FC = () => {
 
   const nombreTipoContrato = (id: string) => contratoFrames.find((cf) => String(cf._id) === String(id))?.name || 'Tipo eliminado';
 
+  /**
+   * Tipos de contrato que ya tomó OTRO estado impositivo: un tipo puede tener un solo estado
+   * impositivo, así que al marcar el check esos tipos quedan bloqueados.
+   */
+  const tiposTomadosPorOtroImpositivo = useMemo(() => {
+    const tomados = new Map<string, string>();
+    estados
+      .filter((e) => e.data?.esImpositivo && e._id !== editando?._id)
+      .forEach((e) => (e.data?.contratoFrameIds || []).forEach((id: string) => tomados.set(String(id), e.name)));
+    return tomados;
+  }, [estados, editando]);
+
   const abrirCrear = () => {
     setEditando(null);
     setForm(FORM_VACIO);
@@ -163,6 +175,15 @@ export const EstadosPage: React.FC = () => {
     setShowModal(true);
   };
 
+  /** Tipos que se pueden elegir ahora: si el estado es impositivo, los tomados por otro quedan afuera. */
+  const tiposSeleccionables = useMemo(
+    () => contratoFrames.filter((cf) => !(form.esImpositivo && tiposTomadosPorOtroImpositivo.has(String(cf._id)))),
+    [contratoFrames, form.esImpositivo, tiposTomadosPorOtroImpositivo],
+  );
+
+  const seleccionarTodosLosTipos = () => setForm((prev) => ({ ...prev, contratoFrameIds: tiposSeleccionables.map((cf) => String(cf._id)) }));
+  const limpiarTiposContrato = () => setForm((prev) => ({ ...prev, contratoFrameIds: [] }));
+
   const toggleTipoContrato = (id: string) => {
     setForm((prev) => ({
       ...prev,
@@ -178,6 +199,10 @@ export const EstadosPage: React.FC = () => {
     }
     if (necesitaAlias(name) && !form.nombreEnContrato.trim()) {
       sweetAlert.error('Falta el nombre en el contrato', `"${name}" se confunde con el estado del usuario: indicá cómo se llama dentro del contrato.`);
+      return;
+    }
+    if (form.esImpositivo && form.contratoFrameIds.length === 0) {
+      sweetAlert.error('Faltan los tipos de contrato', 'Un estado impositivo tiene que indicar a qué tipos de contrato corresponde.');
       return;
     }
 
@@ -303,7 +328,12 @@ export const EstadosPage: React.FC = () => {
                       <td className="px-4 py-3">
                         <BadgePreview texto={estado.data?.nombreEnContrato?.trim() || estado.name} color={colorEfectivo(estado)} />
                       </td>
-                      <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100">{estado.name}</td>
+                      <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                        {estado.name}
+                        <span className="ml-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400" title={tipos.length === 0 ? 'Se ofrece en todos los tipos de contrato' : `${tipos.length} tipo${tipos.length === 1 ? '' : 's'} de contrato`}>
+                          ({tipos.length || 'Todos'})
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{estado.data?.nombreEnContrato || '—'}</td>
                       <td className="px-4 py-3">{estado.data?.esImpositivo ? <ChipImpositivo /> : <span className="text-xs text-gray-400">—</span>}</td>
                       <td className="px-4 py-3">
@@ -349,6 +379,9 @@ export const EstadosPage: React.FC = () => {
                     <BadgePreview texto={estado.data?.nombreEnContrato?.trim() || estado.name} color={color} />
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{estado.name}</span>
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 shrink-0" title={tipos.length === 0 ? 'Se ofrece en todos los tipos de contrato' : `${tipos.length} tipo${tipos.length === 1 ? '' : 's'} de contrato`}>
+                        ({tipos.length || 'Todos'})
+                      </span>
                       {estado.data?.esImpositivo ? <ChipImpositivo /> : null}
                     </div>
                     {estado.data?.nombreEnContrato ? <span className="text-[11px] text-gray-500 dark:text-gray-400">En el contrato: {estado.data.nombreEnContrato}</span> : null}
@@ -449,7 +482,14 @@ export const EstadosPage: React.FC = () => {
             <input
               type="checkbox"
               checked={form.esImpositivo}
-              onChange={(e) => setForm((p) => ({ ...p, esImpositivo: e.target.checked }))}
+              onChange={(e) =>
+                setForm((p) => ({
+                  ...p,
+                  esImpositivo: e.target.checked,
+                  // Los tipos que ya tiene otro impositivo dejan de estar disponibles.
+                  contratoFrameIds: e.target.checked ? p.contratoFrameIds.filter((id) => !tiposTomadosPorOtroImpositivo.has(String(id))) : p.contratoFrameIds,
+                }))
+              }
               className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
             />
             <span className="flex flex-col gap-0.5">
@@ -459,18 +499,60 @@ export const EstadosPage: React.FC = () => {
           </label>
 
           <div className="space-y-2">
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Tipos de contrato</label>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Sin ninguno seleccionado, el estado se ofrece en todos los tipos de contrato.</p>
+            <div className="flex items-center justify-between gap-2 ml-1">
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
+                Tipos de contrato
+                {form.contratoFrameIds.length > 0 ? <span className="ml-1.5 normal-case tracking-normal text-gray-500 dark:text-gray-400">({form.contratoFrameIds.length} de {tiposSeleccionables.length})</span> : null}
+              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={seleccionarTodosLosTipos}
+                  disabled={tiposSeleccionables.length === 0 || form.contratoFrameIds.length === tiposSeleccionables.length}
+                  className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
+                >
+                  Seleccionar todos
+                </button>
+                <span className="text-gray-300 dark:text-gray-600">·</span>
+                <button
+                  type="button"
+                  onClick={limpiarTiposContrato}
+                  disabled={form.contratoFrameIds.length === 0}
+                  className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
+                >
+                  Limpiar
+                </button>
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
+              {form.esImpositivo
+                ? 'Cada tipo de contrato puede tener un solo estado impositivo: los que ya tomó otro aparecen bloqueados.'
+                : 'Sin ninguno seleccionado, el estado se ofrece en todos los tipos de contrato.'}
+            </p>
             <div className="max-h-52 overflow-auto rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60">
               {contratoFrames.length === 0 ? (
                 <p className="px-3 py-3 text-sm text-gray-500">No hay tipos de contrato cargados.</p>
               ) : (
-                contratoFrames.map((cf) => (
-                  <label key={cf._id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
-                    <input type="checkbox" checked={form.contratoFrameIds.includes(String(cf._id))} onChange={() => toggleTipoContrato(String(cf._id))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">{cf.name}</span>
-                  </label>
-                ))
+                contratoFrames.map((cf) => {
+                  const tomadoPor = form.esImpositivo ? tiposTomadosPorOtroImpositivo.get(String(cf._id)) : undefined;
+                  return (
+                    <label
+                      key={cf._id}
+                      className={`flex items-center gap-3 px-3 py-2 transition-colors ${tomadoPor ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40'}`}
+                      title={tomadoPor ? `Ya lo usa el estado impositivo "${tomadoPor}"` : undefined}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={form.contratoFrameIds.includes(String(cf._id))}
+                        disabled={!!tomadoPor}
+                        onChange={() => toggleTipoContrato(String(cf._id))}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{cf.name}</span>
+                      {tomadoPor ? <span className="ml-auto text-[10px] text-gray-500 dark:text-gray-400 whitespace-nowrap">ya lo usa "{tomadoPor}"</span> : null}
+                    </label>
+                  );
+                })
               )}
             </div>
           </div>

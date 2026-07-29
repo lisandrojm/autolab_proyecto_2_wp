@@ -63,7 +63,33 @@ function parseEstadoBody(body: any): { error?: string; name?: string; data?: any
   const contratoFrameIds = Array.isArray(body?.contratoFrameIds) ? body.contratoFrameIds.map((id: any) => String(id)).filter(Boolean) : [];
   const esImpositivo = body?.esImpositivo === true || body?.esImpositivo === "true";
 
+  // Un estado impositivo sin tipos aplicaría a TODOS y chocaría con cualquier otro impositivo,
+  // así que se le exige elegir a cuáles corresponde.
+  if (esImpositivo && contratoFrameIds.length === 0) {
+    return { error: "Un estado impositivo tiene que indicar a qué tipos de contrato corresponde" };
+  }
+
   return { name, data: { nombre: name, color: color || undefined, nombreEnContrato: nombreEnContrato || undefined, contratoFrameIds, esImpositivo } };
+}
+
+/**
+ * Cada tipo de contrato puede tener un solo estado impositivo: si otro ya lo tomó, no se puede
+ * guardar. Devuelve el mensaje de error, o null si no hay conflicto.
+ */
+async function conflictoImpositivo(data: any, excluirId?: string): Promise<string | null> {
+  if (!data?.esImpositivo) return null;
+
+  const otros = await Info.find({ type: ESTADO_TYPE, "data.esImpositivo": true, ...(excluirId ? { _id: { $ne: excluirId } } : {}) }).lean();
+  const tomados = new Map<string, string>();
+  for (const otro of otros as any[]) {
+    for (const id of otro.data?.contratoFrameIds || []) tomados.set(String(id), otro.name);
+  }
+
+  const chocan = (data.contratoFrameIds || []).filter((id: string) => tomados.has(String(id)));
+  if (chocan.length === 0) return null;
+
+  const porEstado = [...new Set(chocan.map((id: string) => tomados.get(String(id))))];
+  return `Esos tipos de contrato ya tienen un estado impositivo: ${porEstado.join(", ")}`;
 }
 
 // POST /info/estados - crear estado
@@ -78,6 +104,12 @@ router.post("/estados", requireTenant, authenticateToken, async (req: Authentica
     const existente = await Info.findOne({ type: ESTADO_TYPE, name: parsed.name }).lean();
     if (existente) {
       res.status(409).json({ error: "Ya existe un estado con ese nombre" });
+      return;
+    }
+
+    const conflicto = await conflictoImpositivo(parsed.data);
+    if (conflicto) {
+      res.status(409).json({ error: conflicto });
       return;
     }
 
@@ -118,6 +150,12 @@ router.patch("/estados/:id", requireTenant, authenticateToken, async (req: Authe
     const duplicado = await Info.findOne({ type: ESTADO_TYPE, name: parsed.name, _id: { $ne: estado._id } }).lean();
     if (duplicado) {
       res.status(409).json({ error: "Ya existe un estado con ese nombre" });
+      return;
+    }
+
+    const conflicto = await conflictoImpositivo(parsed.data, String(estado._id));
+    if (conflicto) {
+      res.status(409).json({ error: conflicto });
       return;
     }
 
