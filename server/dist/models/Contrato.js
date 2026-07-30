@@ -7,6 +7,7 @@ const contratoSchema = new Schema({
         cantidadJornadas: { type: Number, default: 0 },
         multiplicadorDiario: { type: Number, default: 0 },
         esTiempoIndeterminado: { type: Boolean, default: false },
+        requiereFirma: { type: Boolean, default: true },
     },
     isActive: { type: Boolean, default: true },
 }, {

@@ -14,6 +14,8 @@ export interface IContrato extends Document {
         cantidadJornadas: number;
         multiplicadorDiario: number;
         esTiempoIndeterminado: boolean;
+        /** Si al firmar el contrato el documento se envía a firmar (p. ej. por Dropbox Sign). */
+        requiereFirma: boolean;
     };
     isActive: boolean;
     createdAt: Date;
