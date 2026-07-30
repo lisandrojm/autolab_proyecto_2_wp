@@ -735,35 +735,48 @@ export const ProjectTeamPage: React.FC = () => {
   }, [allEstados, teamRows, projectId]);
 
   /**
-   * Estados que se ofrecen en el wizard: los del ABM (Configuración → Estados) vinculados al tipo de
+   * Estados que se ofrecen en "Configurar Miembro" (edición): los del ABM vinculados al tipo de
    * contrato elegido, más los que no están vinculados a ninguno (disponibles siempre). Si el estado
    * ya guardado en el contrato quedó fuera del filtro, se agrega igual para no perder el valor actual.
+   * En "Agregar Miembro" el estado no se elige de acá: se resuelve solo (ver `estadoImpositivoAuto`).
    */
-  // Al ABRIR EL WIZARD PARA AGREGAR (todavía no es miembro de este proyecto) solo se puede arrancar
-  // en un estado impositivo (Pedido de AFIP / Pedido Servicios): es el primer paso del proceso. Los
-  // estados posteriores (Envío de Documentación, Firma Pendiente, Disponible) se eligen después,
-  // editando el contrato ya creado ("Configurar Miembro").
-  // `teamMembers` es un alias de `allUsers` (useMemo declarado más abajo); se usa `allUsers`
-  // directo acá para no depender de una variable declarada después en el archivo.
-  const esAltaNueva = !allUsers.some((m) => m._id === selectedUserForWizard?._id);
-
   const estadosDisponibles = useMemo(() => {
     const tipoElegido = wizardData.contrato_frame_id ? String(wizardData.contrato_frame_id) : '';
-    let filtrados = allEstados.filter((e) => {
+    const filtrados = allEstados.filter((e) => {
       const vinculados = (e.data as any)?.contratoFrameIds || [];
       if (vinculados.length === 0) return true;
       return tipoElegido ? vinculados.some((id: string) => String(id) === tipoElegido) : false;
     });
 
-    if (esAltaNueva) {
-      filtrados = filtrados.filter((e) => !!(e.data as any)?.esImpositivo);
-    }
-
     const actual = allEstados.find((e) => String(e.data?.id) === String(wizardData.estado_id));
     if (actual && !filtrados.some((e) => e._id === actual._id)) filtrados.push(actual);
 
     return filtrados;
-  }, [allEstados, wizardData.contrato_frame_id, wizardData.estado_id, esAltaNueva]);
+  }, [allEstados, wizardData.contrato_frame_id, wizardData.estado_id]);
+
+  // Al ABRIR EL WIZARD PARA AGREGAR (todavía no es miembro de este proyecto) el estado no se elige:
+  // es siempre el primer paso del proceso (Pedido de AFIP / Pedido Servicios). Los estados
+  // posteriores (Envío de Documentación, Firma Pendiente, Disponible) se eligen después, editando
+  // el contrato ya creado ("Configurar Miembro").
+  // `teamMembers` es un alias de `allUsers` (useMemo declarado más abajo); se usa `allUsers`
+  // directo acá para no depender de una variable declarada después en el archivo.
+  const esAltaNueva = !allUsers.some((m) => m._id === selectedUserForWizard?._id);
+
+  // Un estado impositivo solo puede estar vinculado a una Plantilla (lo exige el ABM de Estados),
+  // así que a lo sumo hay uno por Tipo de contrato/Plantilla elegido: no hace falta que el usuario
+  // elija, se muestra directo.
+  const estadoImpositivoAuto = useMemo(() => {
+    if (!wizardData.contrato_frame_id) return undefined;
+    return allEstados.find(
+      (e) => !!(e.data as any)?.esImpositivo && ((e.data as any)?.contratoFrameIds || []).some((id: string) => String(id) === String(wizardData.contrato_frame_id)),
+    );
+  }, [allEstados, wizardData.contrato_frame_id]);
+
+  useEffect(() => {
+    if (!esAltaNueva) return;
+    const nuevoId = estadoImpositivoAuto ? String(estadoImpositivoAuto.data.id) : '';
+    setWizardData((prev) => (prev.estado_id === nuevoId ? prev : { ...prev, estado_id: nuevoId }));
+  }, [esAltaNueva, estadoImpositivoAuto]);
 
   const sedeName = useMemo(() => {
     if (!project) return null;
@@ -3124,11 +3137,23 @@ export const ProjectTeamPage: React.FC = () => {
 
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Estado *</label>
-                      <EstadoSelect
-                        options={estadosDisponibles.map((e) => ({ value: String(e.data.id), name: e.name, orden: (e.data as any)?.orden }))}
-                        value={wizardData.estado_id}
-                        onChange={(v) => setWizardData((prev) => ({ ...prev, estado_id: v }))}
-                      />
+                      {esAltaNueva ? (
+                        <div className="input-field w-full flex items-center">
+                          {estadoImpositivoAuto ? (
+                            <EstadoBadge name={estadoImpositivoAuto.name} />
+                          ) : (
+                            <span className="text-gray-400 dark:text-gray-500 text-sm">
+                              {wizardData.contrato_frame_id ? 'Este tipo de contrato no tiene un estado impositivo configurado' : 'Elegí primero el Tipo de contrato'}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <EstadoSelect
+                          options={estadosDisponibles.map((e) => ({ value: String(e.data.id), name: e.name, orden: (e.data as any)?.orden }))}
+                          value={wizardData.estado_id}
+                          onChange={(v) => setWizardData((prev) => ({ ...prev, estado_id: v }))}
+                        />
+                      )}
                     </div>
 
                     <div className="space-y-1.5">
