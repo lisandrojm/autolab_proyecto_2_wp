@@ -12,7 +12,6 @@ export interface Release {
   releaseTipoId?: string | { _id: string; name: string; isActive?: boolean };
   isActive: boolean;
   usaMembrete?: boolean;
-  requiereFirma?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -25,7 +24,6 @@ export interface ReleaseInput {
   releaseTipoId?: string;
   isActive?: boolean;
   usaMembrete?: boolean;
-  requiereFirma?: boolean;
 }
 
 /**

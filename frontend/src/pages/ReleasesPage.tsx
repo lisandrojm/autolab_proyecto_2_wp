@@ -26,7 +26,6 @@ interface ReleaseFormData {
   releaseTipoId: string;
   isActive: boolean;
   usaMembrete: boolean;
-  requiereFirma: boolean;
 }
 
 const EMPTY_FORM: ReleaseFormData = {
@@ -37,7 +36,6 @@ const EMPTY_FORM: ReleaseFormData = {
   releaseTipoId: '',
   isActive: true,
   usaMembrete: false,
-  requiereFirma: true,
 };
 
 /** El editor devuelve "<p></p>" cuando está vacío: chequeamos que haya texto real. */
@@ -141,7 +139,6 @@ export function ReleasesPage() {
       releaseTipoId: tipoId || '',
       isActive: release.isActive,
       usaMembrete: release.usaMembrete ?? false,
-      requiereFirma: release.requiereFirma ?? true,
     });
     setErrors({});
     setShowModal(true);
@@ -239,7 +236,6 @@ export function ReleasesPage() {
         releaseTipoId: formData.releaseTipoId,
         isActive: formData.isActive,
         usaMembrete: formData.usaMembrete,
-        requiereFirma: formData.requiereFirma,
       };
 
       if (editingRelease) {
@@ -537,11 +533,6 @@ export function ReleasesPage() {
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" />
               Release activo
-            </label>
-
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={formData.requiereFirma} onChange={(e) => setFormData({ ...formData, requiereFirma: e.target.checked })} className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" />
-              Se envía a firmar
             </label>
 
             <MembreteToggle checked={formData.usaMembrete} onChange={(v) => setFormData({ ...formData, usaMembrete: v })} />

@@ -9,7 +9,7 @@ import { Modal } from '../components/ui/Modal';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash, faRocket, faFilePdf } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faTrash, faRocket, faFilePdf, faFileSignature } from '@fortawesome/free-solid-svg-icons';
 import { releaseTiposAPI, ReleaseTipoItem } from '../api/releaseTipos';
 
 const normalizar = (s: string): string =>
@@ -22,9 +22,23 @@ const normalizar = (s: string): string =>
 interface FormState {
   name: string;
   isActive: boolean;
+  requiereFirma: boolean;
 }
 
-const FORM_VACIO: FormState = { name: '', isActive: true };
+const FORM_VACIO: FormState = { name: '', isActive: true, requiereFirma: true };
+
+const BadgeFirma: React.FC<{ activo: boolean }> = ({ activo }) => (
+  <span
+    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
+      activo
+        ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-100 dark:border-green-800'
+        : 'bg-gray-50 text-gray-500 dark:bg-gray-700/30 dark:text-gray-400 border-gray-200 dark:border-gray-700'
+    }`}
+  >
+    <FontAwesomeIcon icon={faFileSignature} className="h-2.5 w-2.5" />
+    {activo ? 'Se envía a firmar' : 'No se envía a firmar'}
+  </span>
+);
 
 export const ReleaseTiposPage: React.FC = () => {
   const navigate = useNavigate();
@@ -91,7 +105,7 @@ export const ReleaseTiposPage: React.FC = () => {
 
   const abrirEditar = (tipo: ReleaseTipoItem) => {
     setEditando(tipo);
-    setForm({ name: tipo.name, isActive: tipo.isActive !== false });
+    setForm({ name: tipo.name, isActive: tipo.isActive !== false, requiereFirma: tipo.requiereFirma !== false });
     setShowModal(true);
   };
 
@@ -105,10 +119,10 @@ export const ReleaseTiposPage: React.FC = () => {
     try {
       setSaving(true);
       if (editando) {
-        await releaseTiposAPI.update(editando._id, { name, isActive: form.isActive });
+        await releaseTiposAPI.update(editando._id, { name, isActive: form.isActive, requiereFirma: form.requiereFirma });
         sweetAlert.success('Tipo actualizado', 'Los cambios se guardaron con éxito.');
       } else {
-        await releaseTiposAPI.create({ name, isActive: form.isActive });
+        await releaseTiposAPI.create({ name, isActive: form.isActive, requiereFirma: form.requiereFirma });
         sweetAlert.success('Tipo creado', 'Ya podés asignarlo en Plantillas | Release.');
       }
       setShowModal(false);
@@ -191,7 +205,10 @@ export const ReleaseTiposPage: React.FC = () => {
               header={{
                 title: tipo.name,
                 icon: faRocket,
-                badges: [{ text: tipo.isActive === false ? 'Inactivo' : 'Activo', variant: tipo.isActive === false ? 'destructive' : 'green' }],
+                badges: [
+                  { text: tipo.isActive === false ? 'Inactivo' : 'Activo', variant: tipo.isActive === false ? 'destructive' : 'green' },
+                  { text: tipo.requiereFirma === false ? 'No se envía a firmar' : 'Se envía a firmar', variant: tipo.requiereFirma === false ? 'default' : 'green', icon: faFileSignature },
+                ],
               }}
               footer={{
                 actions: [
@@ -226,6 +243,7 @@ export const ReleaseTiposPage: React.FC = () => {
                 <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   <th className="px-4 py-3 font-semibold">Nombre</th>
                   <th className="px-4 py-3 font-semibold">Estado</th>
+                  <th className="px-4 py-3 font-semibold">Firma</th>
                   <th className="px-4 py-3 font-semibold text-right">Acciones</th>
                 </tr>
               </thead>
@@ -237,6 +255,9 @@ export const ReleaseTiposPage: React.FC = () => {
                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${tipo.isActive === false ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}>
                         {tipo.isActive === false ? 'Inactivo' : 'Activo'}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <BadgeFirma activo={tipo.requiereFirma !== false} />
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
@@ -282,6 +303,11 @@ export const ReleaseTiposPage: React.FC = () => {
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input type="checkbox" checked={form.isActive} onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
             <span className="text-gray-700 dark:text-gray-300">Tipo activo</span>
+          </label>
+
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" checked={form.requiereFirma} onChange={(e) => setForm((p) => ({ ...p, requiereFirma: e.target.checked }))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+            <span className="text-gray-700 dark:text-gray-300">Se envía a firmar</span>
           </label>
         </div>
       </Modal>

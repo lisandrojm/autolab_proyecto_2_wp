@@ -5,6 +5,7 @@ const releaseTipoSchema = new Schema({
     // el backfill al mismo tiempo (ver `ensureReleaseTiposBackfilled` en routes/releaseTipos.ts).
     name: { type: String, required: true, trim: true },
     isActive: { type: Boolean, default: true },
+    requiereFirma: { type: Boolean, default: true },
 }, {
     timestamps: true,
     collection: "release-tipos",

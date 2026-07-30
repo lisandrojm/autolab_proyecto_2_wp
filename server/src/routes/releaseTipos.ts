@@ -18,7 +18,7 @@ async function buscarOCrearReleaseTipo(tenantId: Types.ObjectId, nombre: string)
   try {
     return await ReleaseTipo.findOneAndUpdate(
       { tenantId, name: nombre },
-      { $setOnInsert: { tenantId, name: nombre, isActive: true } },
+      { $setOnInsert: { tenantId, name: nombre, isActive: true, requiereFirma: true } },
       { upsert: true, new: true, setDefaultsOnInsert: true },
     );
   } catch (error: any) {
@@ -67,7 +67,7 @@ router.get("/", authenticateToken, requireTenant, async (req: AuthenticatedReque
 // POST / - crear
 router.post("/", authenticateToken, requireTenant, async (req: AuthenticatedRequest & TenantRequest, res: Response) => {
   try {
-    const { name, isActive } = req.body;
+    const { name, isActive, requiereFirma } = req.body;
     const nombre = String(name ?? "").trim();
     if (!nombre) {
       res.status(400).json({ error: "El nombre es obligatorio" });
@@ -84,6 +84,7 @@ router.post("/", authenticateToken, requireTenant, async (req: AuthenticatedRequ
       tenantId: req.tenantObjectId,
       name: nombre,
       isActive: isActive === undefined ? true : isActive === "true" || isActive === true,
+      requiereFirma: requiereFirma === undefined ? true : requiereFirma === "true" || requiereFirma === true,
     });
     res.status(201).json(created);
   } catch (error: any) {
@@ -99,7 +100,7 @@ router.post("/", authenticateToken, requireTenant, async (req: AuthenticatedRequ
 // PUT /:id - actualizar
 router.put("/:id", authenticateToken, requireTenant, async (req: AuthenticatedRequest & TenantRequest, res: Response) => {
   try {
-    const { name, isActive } = req.body;
+    const { name, isActive, requiereFirma } = req.body;
     const item = await ReleaseTipo.findOne({ _id: req.params.id, tenantId: req.tenantObjectId });
     if (!item) {
       res.status(404).json({ error: "Tipo de release no encontrado" });
@@ -120,6 +121,7 @@ router.put("/:id", authenticateToken, requireTenant, async (req: AuthenticatedRe
       item.name = nombre;
     }
     if (isActive !== undefined) item.isActive = isActive === "true" || isActive === true;
+    if (requiereFirma !== undefined) item.requiereFirma = requiereFirma === "true" || requiereFirma === true;
 
     await item.save();
     res.json(item);

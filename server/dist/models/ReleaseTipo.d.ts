@@ -11,6 +11,8 @@ export interface IReleaseTipo extends Document {
     tenantId: Types.ObjectId;
     name: string;
     isActive: boolean;
+    /** Si los Release de este tipo se envían a firmar (p. ej. por Dropbox Sign). */
+    requiereFirma: boolean;
     createdAt: Date;
     updatedAt: Date;
 }

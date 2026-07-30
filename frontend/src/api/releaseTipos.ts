@@ -8,6 +8,7 @@ export interface ReleaseTipoItem {
   _id: string;
   name: string;
   isActive?: boolean;
+  requiereFirma?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -15,6 +16,7 @@ export interface ReleaseTipoItem {
 export interface ReleaseTipoInput {
   name: string;
   isActive?: boolean;
+  requiereFirma?: boolean;
 }
 
 class ReleaseTiposAPI {

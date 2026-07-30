@@ -13,7 +13,7 @@ const router = Router();
  */
 async function buscarOCrearReleaseTipo(tenantId, nombre) {
     try {
-        return await ReleaseTipo.findOneAndUpdate({ tenantId, name: nombre }, { $setOnInsert: { tenantId, name: nombre, isActive: true } }, { upsert: true, new: true, setDefaultsOnInsert: true });
+        return await ReleaseTipo.findOneAndUpdate({ tenantId, name: nombre }, { $setOnInsert: { tenantId, name: nombre, isActive: true, requiereFirma: true } }, { upsert: true, new: true, setDefaultsOnInsert: true });
     }
     catch (error) {
         if (error?.code === 11000) {
@@ -60,7 +60,7 @@ router.get("/", authenticateToken, requireTenant, async (req, res) => {
 // POST / - crear
 router.post("/", authenticateToken, requireTenant, async (req, res) => {
     try {
-        const { name, isActive } = req.body;
+        const { name, isActive, requiereFirma } = req.body;
         const nombre = String(name ?? "").trim();
         if (!nombre) {
             res.status(400).json({ error: "El nombre es obligatorio" });
@@ -75,6 +75,7 @@ router.post("/", authenticateToken, requireTenant, async (req, res) => {
             tenantId: req.tenantObjectId,
             name: nombre,
             isActive: isActive === undefined ? true : isActive === "true" || isActive === true,
+            requiereFirma: requiereFirma === undefined ? true : requiereFirma === "true" || requiereFirma === true,
         });
         res.status(201).json(created);
     }
@@ -90,7 +91,7 @@ router.post("/", authenticateToken, requireTenant, async (req, res) => {
 // PUT /:id - actualizar
 router.put("/:id", authenticateToken, requireTenant, async (req, res) => {
     try {
-        const { name, isActive } = req.body;
+        const { name, isActive, requiereFirma } = req.body;
         const item = await ReleaseTipo.findOne({ _id: req.params.id, tenantId: req.tenantObjectId });
         if (!item) {
             res.status(404).json({ error: "Tipo de release no encontrado" });
@@ -111,6 +112,8 @@ router.put("/:id", authenticateToken, requireTenant, async (req, res) => {
         }
         if (isActive !== undefined)
             item.isActive = isActive === "true" || isActive === true;
+        if (requiereFirma !== undefined)
+            item.requiereFirma = requiereFirma === "true" || requiereFirma === true;
         await item.save();
         res.json(item);
     }
