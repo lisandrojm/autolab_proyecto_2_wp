@@ -6,6 +6,7 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Card } from '../components/ui/Card';
 import { Modal } from '../components/ui/Modal';
+import { InfoModal } from '../components/ui/InfoModal';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -48,6 +49,7 @@ export const ReleaseTiposPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showFirmaInfo, setShowFirmaInfo] = useState(false);
   const [editando, setEditando] = useState<ReleaseTipoItem | null>(null);
   const [form, setForm] = useState<FormState>(FORM_VACIO);
 
@@ -305,17 +307,35 @@ export const ReleaseTiposPage: React.FC = () => {
             <span className="text-gray-700 dark:text-gray-300">Tipo activo</span>
           </label>
 
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input type="checkbox" checked={form.requiereFirma} onChange={(e) => setForm((p) => ({ ...p, requiereFirma: e.target.checked }))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
-            <span className="text-gray-700 dark:text-gray-300">Se envía a firmar</span>
-            <FontAwesomeIcon
-              icon={faCircleInfo}
-              className="text-gray-400 h-3.5 w-3.5"
-              title='Si se destilda, en Contratos del proyecto no se va a poder descargar los Release de este tipo para enviarlos a firmar: en su lugar se muestra el aviso "No se envía a firmar".'
-            />
-          </label>
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" checked={form.requiereFirma} onChange={(e) => setForm((p) => ({ ...p, requiereFirma: e.target.checked }))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+              <span className="text-gray-700 dark:text-gray-300">Se envía a firmar</span>
+            </label>
+            <button type="button" onClick={() => setShowFirmaInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Qué significa?" aria-label="Información sobre envío a firmar">
+              <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       </Modal>
+
+      <InfoModal
+        isOpen={showFirmaInfo}
+        onClose={() => setShowFirmaInfo(false)}
+        title="Se envía a firmar"
+        size="sm"
+        zIndex={120}
+        actions={[{ label: 'Entendido', onClick: () => setShowFirmaInfo(false), variant: 'primary' }]}
+      >
+        <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+          <p>
+            Con esta opción <strong>activada</strong>, en Contratos del proyecto se va a poder descargar el release de este tipo para enviarlo a firmar.
+          </p>
+          <p>
+            Si la <strong>desactivás</strong>, ese botón de descarga no aparece: en su lugar se muestra el aviso <strong>"No se envía a firmar"</strong>.
+          </p>
+        </div>
+      </InfoModal>
     </PageLayout>
   );
 };
