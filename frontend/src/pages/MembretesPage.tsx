@@ -202,7 +202,7 @@ export function MembretesPage() {
 
   return (
     <PageLayout
-      title="Empresa/s | Membrete/s y firma"
+      title="Plantillas | Empresa/s | Membrete/s y firma"
       faIcon={{ icon: faFilePdf }}
       subtitle="Creá un membrete (logo + firma) y asignale una empresa del ABM. Se usa en los documentos que llevan membrete."
       infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: helpEntry.title, size: helpEntry.size, content: helpEntry.content }}
