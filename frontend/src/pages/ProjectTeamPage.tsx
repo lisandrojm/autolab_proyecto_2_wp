@@ -739,19 +739,31 @@ export const ProjectTeamPage: React.FC = () => {
    * contrato elegido, más los que no están vinculados a ninguno (disponibles siempre). Si el estado
    * ya guardado en el contrato quedó fuera del filtro, se agrega igual para no perder el valor actual.
    */
+  // Al ABRIR EL WIZARD PARA AGREGAR (todavía no es miembro de este proyecto) solo se puede arrancar
+  // en un estado impositivo (Pedido de AFIP / Pedido Servicios): es el primer paso del proceso. Los
+  // estados posteriores (Envío de Documentación, Firma Pendiente, Disponible) se eligen después,
+  // editando el contrato ya creado ("Configurar Miembro").
+  // `teamMembers` es un alias de `allUsers` (useMemo declarado más abajo); se usa `allUsers`
+  // directo acá para no depender de una variable declarada después en el archivo.
+  const esAltaNueva = !allUsers.some((m) => m._id === selectedUserForWizard?._id);
+
   const estadosDisponibles = useMemo(() => {
     const tipoElegido = wizardData.contrato_frame_id ? String(wizardData.contrato_frame_id) : '';
-    const filtrados = allEstados.filter((e) => {
+    let filtrados = allEstados.filter((e) => {
       const vinculados = (e.data as any)?.contratoFrameIds || [];
       if (vinculados.length === 0) return true;
       return tipoElegido ? vinculados.some((id: string) => String(id) === tipoElegido) : false;
     });
 
+    if (esAltaNueva) {
+      filtrados = filtrados.filter((e) => !!(e.data as any)?.esImpositivo);
+    }
+
     const actual = allEstados.find((e) => String(e.data?.id) === String(wizardData.estado_id));
     if (actual && !filtrados.some((e) => e._id === actual._id)) filtrados.push(actual);
 
     return filtrados;
-  }, [allEstados, wizardData.contrato_frame_id, wizardData.estado_id]);
+  }, [allEstados, wizardData.contrato_frame_id, wizardData.estado_id, esAltaNueva]);
 
   const sedeName = useMemo(() => {
     if (!project) return null;
