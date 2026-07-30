@@ -26,6 +26,7 @@ const releaseSchema = new Schema({
         default: "",
         maxlength: 200000,
     },
+    releaseTipoId: { type: Schema.Types.ObjectId, ref: "ReleaseTipo" },
     isActive: {
         type: Boolean,
         default: true,

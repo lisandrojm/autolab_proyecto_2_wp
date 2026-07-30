@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { Release } from "../models/Release.js";
+import { ReleaseTipo } from "../models/ReleaseTipo.js";
 import { Company } from "../models/Company.js";
 import { Project } from "../models/Project.js";
 import { User } from "../models/User.js";
@@ -17,6 +18,7 @@ const ReleaseSchema = z.object({
     version: z.string().min(1).max(50),
     description: z.string().max(2000).optional(),
     content: z.string().max(200000).optional(),
+    releaseTipoId: z.string().optional(),
     isActive: z
         .union([z.boolean(), z.string()])
         .optional()
@@ -35,7 +37,9 @@ router.get("/", authenticateToken, requireTenant, async (req, res) => {
     try {
         const releases = await Release.find({
             tenantId: req.tenantObjectId,
-        }).sort({ createdAt: -1 });
+        })
+            .sort({ createdAt: -1 })
+            .populate({ path: "releaseTipoId", select: "name isActive", model: ReleaseTipo });
         res.json(releases);
     }
     catch (error) {
@@ -167,6 +171,15 @@ router.get("/:id/download-filled", authenticateToken, requireTenant, async (req,
 router.post("/", authenticateToken, requireTenant, async (req, res) => {
     try {
         const validatedData = ReleaseSchema.parse(req.body);
+        if (!validatedData.releaseTipoId) {
+            res.status(400).json({ error: "El tipo de release es obligatorio" });
+            return;
+        }
+        const tipo = await ReleaseTipo.findOne({ _id: validatedData.releaseTipoId, tenantId: req.tenantObjectId }).lean();
+        if (!tipo) {
+            res.status(400).json({ error: "El tipo de release seleccionado no existe" });
+            return;
+        }
         const release = new Release({
             ...validatedData,
             content: htmlHasText(validatedData.content) ? validatedData.content : "",
@@ -194,6 +207,18 @@ router.put("/:id", authenticateToken, requireTenant, async (req, res) => {
         if (!release) {
             res.status(404).json({ error: "Release no encontrado" });
             return;
+        }
+        if (validatedData.releaseTipoId !== undefined) {
+            if (!validatedData.releaseTipoId) {
+                res.status(400).json({ error: "El tipo de release es obligatorio" });
+                return;
+            }
+            const tipo = await ReleaseTipo.findOne({ _id: validatedData.releaseTipoId, tenantId: req.tenantObjectId }).lean();
+            if (!tipo) {
+                res.status(400).json({ error: "El tipo de release seleccionado no existe" });
+                return;
+            }
+            release.releaseTipoId = tipo._id;
         }
         release.name = validatedData.name;
         release.version = validatedData.version;
