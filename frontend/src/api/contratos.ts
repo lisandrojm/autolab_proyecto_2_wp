@@ -12,6 +12,7 @@ export interface ContratoItem {
     cantidadJornadas: number;
     multiplicadorDiario: number;
     esTiempoIndeterminado: boolean;
+    requiereFirma: boolean;
   };
   isActive?: boolean;
   createdAt?: string;
@@ -23,6 +24,7 @@ export interface ContratoInput {
   cantidadJornadas?: string | number;
   multiplicadorDiario?: string | number;
   esTiempoIndeterminado?: boolean;
+  requiereFirma?: boolean;
   isActive?: boolean;
 }
 

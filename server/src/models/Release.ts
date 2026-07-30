@@ -12,6 +12,8 @@ export interface IRelease extends Document {
   isActive: boolean;
   /** Si el release lleva membrete (logo + encabezado de empresa) y firma al generar el PDF. */
   usaMembrete: boolean;
+  /** Si el documento se envía a firmar (p. ej. por Dropbox Sign). */
+  requiereFirma: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -53,6 +55,10 @@ const releaseSchema = new Schema<IRelease>(
     usaMembrete: {
       type: Boolean,
       default: false,
+    },
+    requiereFirma: {
+      type: Boolean,
+      default: true,
     },
   },
   { timestamps: true, collection: "release" },

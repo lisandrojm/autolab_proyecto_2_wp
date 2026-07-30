@@ -23,12 +23,13 @@ interface FormState {
   cantidadJornadas: string;
   multiplicadorDiario: string;
   esTiempoIndeterminado: boolean;
+  requiereFirma: boolean;
   isActive: boolean;
   /** Estados (no globales) que van a quedar vinculados a TODAS las Plantillas de este Contrato. */
   estadoIds: string[];
 }
 
-const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDiario: '', esTiempoIndeterminado: false, isActive: true, estadoIds: [] };
+const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDiario: '', esTiempoIndeterminado: false, requiereFirma: true, isActive: true, estadoIds: [] };
 
 /** Botón de acción del footer de una tarjeta: mismo color/hover/tooltip que usa Clientes (Card.tsx, variant "default"). */
 const CardFooterAction: React.FC<{ icon: typeof faEdit; title: string; onClick: () => void }> = ({ icon, title, onClick }) => (
@@ -164,6 +165,7 @@ export const ContractTypesTab: React.FC = () => {
       cantidadJornadas: String(contrato.data?.cantidadJornadas ?? ''),
       multiplicadorDiario: String(contrato.data?.multiplicadorDiario ?? ''),
       esTiempoIndeterminado: !!contrato.data?.esTiempoIndeterminado,
+      requiereFirma: contrato.data?.requiereFirma !== false,
       isActive: contrato.isActive !== false,
       estadoIds: seleccionActual,
     });
@@ -234,6 +236,7 @@ export const ContractTypesTab: React.FC = () => {
       cantidadJornadas: form.cantidadJornadas,
       multiplicadorDiario: form.multiplicadorDiario,
       esTiempoIndeterminado: form.esTiempoIndeterminado,
+      requiereFirma: form.requiereFirma,
       isActive: form.isActive,
     };
 
@@ -447,6 +450,11 @@ export const ContractTypesTab: React.FC = () => {
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input type="checkbox" checked={form.esTiempoIndeterminado} onChange={(e) => setForm((p) => ({ ...p, esTiempoIndeterminado: e.target.checked }))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
             <span className="text-gray-700 dark:text-gray-300">Es tiempo indeterminado</span>
+          </label>
+
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" checked={form.requiereFirma} onChange={(e) => setForm((p) => ({ ...p, requiereFirma: e.target.checked }))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+            <span className="text-gray-700 dark:text-gray-300">Se envía a firmar</span>
           </label>
 
           <label className="flex items-center gap-2 text-sm cursor-pointer">

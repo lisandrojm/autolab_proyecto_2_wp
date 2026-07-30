@@ -29,6 +29,10 @@ const ReleaseSchema = z.object({
     .union([z.boolean(), z.string()])
     .optional()
     .transform((v) => (typeof v === "string" ? v === "true" : v)),
+  requiereFirma: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((v) => (typeof v === "string" ? v === "true" : v)),
 });
 
 const sendPdf = (res: any, buffer: Buffer, baseName: string) => {
@@ -245,6 +249,7 @@ router.put("/:id", authenticateToken, requireTenant, async (req: AuthenticatedRe
     if (validatedData.content !== undefined) release.content = htmlHasText(validatedData.content) ? validatedData.content : "";
     if (validatedData.isActive !== undefined) release.isActive = validatedData.isActive;
     if (validatedData.usaMembrete !== undefined) release.usaMembrete = validatedData.usaMembrete;
+    if (validatedData.requiereFirma !== undefined) release.requiereFirma = validatedData.requiereFirma;
 
     await release.save();
     res.json(release);

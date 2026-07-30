@@ -15,6 +15,8 @@ export interface IContrato extends Document {
     cantidadJornadas: number;
     multiplicadorDiario: number;
     esTiempoIndeterminado: boolean;
+    /** Si al firmar el contrato el documento se envía a firmar (p. ej. por Dropbox Sign). */
+    requiereFirma: boolean;
   };
   isActive: boolean;
   createdAt: Date;
@@ -30,6 +32,7 @@ const contratoSchema = new Schema<IContrato>(
       cantidadJornadas: { type: Number, default: 0 },
       multiplicadorDiario: { type: Number, default: 0 },
       esTiempoIndeterminado: { type: Boolean, default: false },
+      requiereFirma: { type: Boolean, default: true },
     },
     isActive: { type: Boolean, default: true },
   },
