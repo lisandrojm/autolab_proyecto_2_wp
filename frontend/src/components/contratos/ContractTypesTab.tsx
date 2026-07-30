@@ -349,12 +349,8 @@ export const ContractTypesTab: React.FC = () => {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => abrirEditar(contrato)} className="p-2 text-gray-400 hover:text-blue-500 transition-colors" title="Editar contrato">
-                            <FontAwesomeIcon icon={faEdit} />
-                          </button>
-                          <button onClick={() => eliminar(contrato)} className="p-2 text-gray-400 hover:text-red-500 transition-colors" title="Eliminar contrato">
-                            <FontAwesomeIcon icon={faTrash} />
-                          </button>
+                          <CardFooterAction icon={faEdit} title="Editar contrato" onClick={() => abrirEditar(contrato)} />
+                          <CardFooterAction icon={faTrash} title="Eliminar contrato" onClick={() => eliminar(contrato)} />
                         </div>
                       </td>
                     </tr>

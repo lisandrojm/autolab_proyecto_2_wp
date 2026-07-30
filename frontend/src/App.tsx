@@ -43,6 +43,7 @@ import { DocumentsPage } from "./pages/DocumentsPage";
 import { VacationsCalendarPage } from "./pages/VacationsCalendarPage";
 import { PdfTemplatesPage } from "./pages/PdfTemplatesPage";
 import { ReleasesPage } from "./pages/ReleasesPage";
+import { ReleaseTiposPage } from "./pages/ReleaseTiposPage";
 import { HolidaysPage } from "./pages/HolidaysPage";
 import { CategoriasSatPage } from "./pages/CategoriasSatPage";
 import { BancosPage } from "./pages/BancosPage";
@@ -445,6 +446,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ReleasesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/releases-tipos"
+                element={
+                  <ProtectedRoute>
+                    <ReleaseTiposPage />
                   </ProtectedRoute>
                 }
               />

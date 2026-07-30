@@ -596,13 +596,9 @@ const SortableEstadoRow: React.FC<SortableEstadoProps & { index: number; onEnabl
         )}
       </td>
       <td className="px-4 py-3">
-        <div className="flex items-center justify-end gap-1">
-          <button onClick={() => abrirEditar(estado)} disabled={isReorderMode} className={`p-2 text-gray-400 hover:text-blue-500 transition-colors ${isReorderMode ? 'opacity-50 cursor-not-allowed' : ''}`} title="Editar estado">
-            <FontAwesomeIcon icon={faEdit} />
-          </button>
-          <button onClick={() => eliminar(estado)} disabled={isReorderMode} className={`p-2 text-gray-400 hover:text-red-500 transition-colors ${isReorderMode ? 'opacity-50 cursor-not-allowed' : ''}`} title="Eliminar estado">
-            <FontAwesomeIcon icon={faTrash} />
-          </button>
+        <div className={`flex items-center justify-end gap-1 ${isReorderMode ? 'opacity-20 pointer-events-none' : ''}`}>
+          <CardFooterAction icon={faEdit} title="Editar estado" onClick={() => abrirEditar(estado)} />
+          <CardFooterAction icon={faTrash} title="Eliminar estado" onClick={() => eliminar(estado)} />
         </div>
       </td>
     </tr>

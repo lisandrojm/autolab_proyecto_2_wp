@@ -437,6 +437,9 @@ export const ClientsPage: React.FC = () => {
                         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                           {canManage && (
                             <>
+                              <button onClick={() => openEdit(client)} className="p-1.5 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Editar cliente">
+                                <FontAwesomeIcon icon={faEdit} />
+                              </button>
                               <button onClick={() => openClone(client)} className="p-1.5 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Clonar cliente">
                                 <FontAwesomeIcon icon={faClone} />
                               </button>

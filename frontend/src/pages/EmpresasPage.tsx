@@ -309,10 +309,10 @@ export const EmpresasPage: React.FC = () => {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => openEdit(c)} className="p-1.5 text-gray-400 hover:text-blue-500 rounded transition-colors" title="Editar">
+                      <button onClick={() => openEdit(c)} className="p-1.5 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Editar">
                         <FontAwesomeIcon icon={faEdit} />
                       </button>
-                      <button onClick={() => handleDelete(c)} className="p-1.5 text-gray-400 hover:text-red-500 rounded transition-colors" title="Eliminar">
+                      <button onClick={() => handleDelete(c)} className="p-1.5 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Eliminar">
                         <FontAwesomeIcon icon={faTrash} />
                       </button>
                     </div>

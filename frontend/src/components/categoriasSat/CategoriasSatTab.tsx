@@ -594,10 +594,10 @@ export const CategoriasSatTab: React.FC = () => {
                     {canManage && (
                       <td className="px-4 py-3 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => openEdit(cat)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Editar">
+                          <button onClick={() => openEdit(cat)} className="p-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Editar">
                             <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
                           </button>
-                          <button onClick={() => handleDelete(cat)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors" title="Eliminar">
+                          <button onClick={() => handleDelete(cat)} className="p-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Eliminar">
                             <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
                           </button>
                         </div>

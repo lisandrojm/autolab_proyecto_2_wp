@@ -10,6 +10,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faEdit, faTrash, faRocket, faDownload, faEye } from '@fortawesome/free-solid-svg-icons';
 
 import { releasesAPI, Release, releaseVariables } from '../api/release';
+import { releaseTiposAPI, ReleaseTipoItem } from '../api/releaseTipos';
 
 import Swal from 'sweetalert2';
 import { Modal } from '../components/ui/Modal';
@@ -22,6 +23,7 @@ interface ReleaseFormData {
   version: string;
   description: string;
   content: string;
+  releaseTipoId: string;
   isActive: boolean;
   usaMembrete: boolean;
 }
@@ -31,6 +33,7 @@ const EMPTY_FORM: ReleaseFormData = {
   version: '',
   description: '',
   content: '',
+  releaseTipoId: '',
   isActive: true,
   usaMembrete: false,
 };
@@ -49,6 +52,7 @@ export function ReleasesPage() {
   const helpEntry = getHelp(HELP_KEY);
   const [showInfo, setShowInfo] = useState(false);
   const [releases, setReleases] = useState<Release[]>([]);
+  const [tipos, setTipos] = useState<ReleaseTipoItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   // filters
@@ -88,6 +92,7 @@ export function ReleasesPage() {
 
   useEffect(() => {
     loadReleases();
+    releaseTiposAPI.list().then(setTipos).catch(() => setTipos([]));
   }, []);
 
   const loadReleases = async () => {
@@ -125,11 +130,13 @@ export function ReleasesPage() {
 
   const openEdit = (release: Release) => {
     setEditingRelease(release);
+    const tipoId = typeof release.releaseTipoId === 'object' ? release.releaseTipoId?._id : release.releaseTipoId;
     setFormData({
       name: release.name,
       version: release.version,
       description: release.description || '',
       content: release.content || '',
+      releaseTipoId: tipoId || '',
       isActive: release.isActive,
       usaMembrete: release.usaMembrete ?? false,
     });
@@ -209,6 +216,7 @@ export function ReleasesPage() {
     const newErrors: Record<string, string> = {};
     if (!formData.name.trim()) newErrors.name = 'El nombre es requerido';
     if (!formData.version.trim()) newErrors.version = 'La versión es requerida';
+    if (!formData.releaseTipoId) newErrors.releaseTipoId = 'El tipo de release es requerido';
     if (!hasContent(formData.content)) newErrors.content = 'El contenido es requerido';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -225,6 +233,7 @@ export function ReleasesPage() {
         version: formData.version,
         description: formData.description,
         content: formData.content,
+        releaseTipoId: formData.releaseTipoId,
         isActive: formData.isActive,
         usaMembrete: formData.usaMembrete,
       };
@@ -407,19 +416,19 @@ export function ReleasesPage() {
                       <td className="px-5 py-3 text-sm text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
                           {release.content && (
-                            <button onClick={() => handlePreviewItem(release)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Previsualizar">
+                            <button onClick={() => handlePreviewItem(release)} className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Previsualizar">
                               <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
                             </button>
                           )}
                           {release.content && (
-                            <button onClick={() => handleDownload(release)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Descargar PDF de ejemplo">
+                            <button onClick={() => handleDownload(release)} className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Descargar PDF de ejemplo">
                               <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
                             </button>
                           )}
-                          <button onClick={() => openEdit(release)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Editar">
+                          <button onClick={() => openEdit(release)} className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Editar">
                             <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
                           </button>
-                          <button onClick={() => handleDelete(release)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors" title="Eliminar">
+                          <button onClick={() => handleDelete(release)} className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Eliminar">
                             <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
                           </button>
                         </div>
@@ -493,6 +502,27 @@ export function ReleasesPage() {
                 <input type="text" value={formData.version} onChange={(e) => setFormData({ ...formData, version: e.target.value })} placeholder="Ej: 1" className="input-field w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" />
                 {errors.version && <p className="text-sm text-red-500 mt-1">{errors.version}</p>}
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo de Release *</label>
+              <select
+                value={formData.releaseTipoId}
+                onChange={(e) => setFormData({ ...formData, releaseTipoId: e.target.value })}
+                className="input-field w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              >
+                <option value="">{tipos.length ? 'Selecciona un tipo...' : 'No hay tipos cargados'}</option>
+                {tipos.map((t) => (
+                  <option key={t._id} value={t._id}>
+                    {t.name}
+                    {t.isActive === false ? ' (inactivo)' : ''}
+                  </option>
+                ))}
+              </select>
+              {errors.releaseTipoId && <p className="text-sm text-red-500 mt-1">{errors.releaseTipoId}</p>}
+              <p className="text-xs text-gray-500 mt-1">
+                Se administra en <strong>Releases</strong>.
+              </p>
             </div>
 
             <div>

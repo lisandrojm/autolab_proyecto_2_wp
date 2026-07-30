@@ -8,6 +8,8 @@ export interface Release {
   description?: string;
   /** Contenido redactado en la plataforma (HTML) con variables `{{variable}}` */
   content?: string;
+  /** Tipo de release (ver `api/releaseTipos.ts`). Puede venir populado como objeto `{_id, name, isActive}`. */
+  releaseTipoId?: string | { _id: string; name: string; isActive?: boolean };
   isActive: boolean;
   usaMembrete?: boolean;
   createdAt: string;
@@ -19,6 +21,7 @@ export interface ReleaseInput {
   version: string;
   description?: string;
   content?: string;
+  releaseTipoId?: string;
   isActive?: boolean;
   usaMembrete?: boolean;
 }

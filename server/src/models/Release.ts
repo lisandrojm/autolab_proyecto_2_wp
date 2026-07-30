@@ -7,6 +7,8 @@ export interface IRelease extends Document {
   description?: string;
   /** Contenido del release redactado en la plataforma (HTML del editor, con variables `{{variable}}`). */
   content: string;
+  /** Tipo de release (colección `ReleaseTipo`) al que pertenece este documento. */
+  releaseTipoId?: Types.ObjectId;
   isActive: boolean;
   /** Si el release lleva membrete (logo + encabezado de empresa) y firma al generar el PDF. */
   usaMembrete: boolean;
@@ -42,6 +44,7 @@ const releaseSchema = new Schema<IRelease>(
       default: "",
       maxlength: 200000,
     },
+    releaseTipoId: { type: Schema.Types.ObjectId, ref: "ReleaseTipo" },
     isActive: {
       type: Boolean,
       default: true,

@@ -52,6 +52,7 @@ import { centroCostoRoutes } from "./routes/centrosCosto.js";
 import { companyRoutes } from "./routes/companies.js";
 import { contratoFrameRoutes } from "./routes/contratosFrame.js";
 import { contratoRoutes } from "./routes/contratos.js";
+import { releaseTipoRoutes } from "./routes/releaseTipos.js";
 
 import { orderRoutes } from "./routes/orders.js";
 import { orderConfigRoutes } from "./routes/orderConfig.js";
@@ -204,6 +205,7 @@ app.use("/api/v1/areas", areaRoutes);
 app.use("/api/v1/levels", levelRoutes);
 app.use("/api/v1/pdfs", PdfRoutes);
 app.use("/api/v1/releases", ReleaseRoutes);
+app.use("/api/v1/release-tipos", releaseTipoRoutes);
 app.use("/api/v1/pdf-preview", pdfTemplatePreviewRoutes);
 
 app.use("/api/v1/vacation-config", vacationConfigRoutes);
