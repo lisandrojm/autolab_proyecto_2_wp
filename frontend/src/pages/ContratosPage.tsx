@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '../components/ui/PageLayout';
-import { faFileContract } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faFileContract, faFilePdf } from '@fortawesome/free-solid-svg-icons';
 import { ContractTypesTab } from '../components/contratos/ContractTypesTab';
 import { ContractStatesTab } from '../components/contratos/ContractStatesTab';
 
@@ -60,6 +62,7 @@ const GUIA_ESTADOS = (
 );
 
 export const ContratosPage: React.FC = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabKey>('types');
   const [showInfoModal, setShowInfoModal] = useState(false);
 
@@ -68,6 +71,14 @@ export const ContratosPage: React.FC = () => {
       title="Contratos"
       subtitle={activeTab === 'types' ? 'Tipos de contrato: jornadas, multiplicador y vigencia' : 'Estados del contrato que se eligen al agregar o configurar un miembro'}
       faIcon={{ icon: faFileContract }}
+      headerActions={
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/contratos-frame')} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+            <FontAwesomeIcon icon={faFilePdf} />
+            <span className="hidden lg:block">Plantillas | Contratos</span>
+          </button>
+        </div>
+      }
       infoModal={{
         isOpen: showInfoModal,
         onOpen: () => setShowInfoModal(true),

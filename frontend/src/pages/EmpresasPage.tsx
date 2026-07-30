@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBuilding, faPlus, faEdit, faTrash, faSearch } from '@fortawesome/free-solid-svg-icons';
+import { faBuilding, faPlus, faEdit, faTrash, faSearch, faFilePdf } from '@fortawesome/free-solid-svg-icons';
 import { PageLayout } from '../components/ui/PageLayout';
 import { Modal } from '../components/ui/Modal';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -31,6 +32,7 @@ const EMPTY_FORM: CompanyInput = {
 };
 
 export const EmpresasPage: React.FC = () => {
+  const navigate = useNavigate();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -184,9 +186,15 @@ export const EmpresasPage: React.FC = () => {
         content: helpEntry.content,
       }}
       headerActions={
-        <button onClick={openCreate} title="Nueva empresa" aria-label="Nueva empresa" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
-          <FontAwesomeIcon icon={faPlus} />
-        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/empresas-membretes')} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+            <FontAwesomeIcon icon={faFilePdf} />
+            <span className="hidden lg:block">Plantillas | Empresa/s | Membrete/s y firma</span>
+          </button>
+          <button onClick={openCreate} title="Nueva empresa" aria-label="Nueva empresa" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+            <FontAwesomeIcon icon={faPlus} />
+          </button>
+        </div>
       }
       searchAndFilters={
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">

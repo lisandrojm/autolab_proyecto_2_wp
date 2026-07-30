@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '../components/ui/PageLayout';
 import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -8,7 +9,7 @@ import { Modal } from '../components/ui/Modal';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash, faRocket } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faTrash, faRocket, faFilePdf } from '@fortawesome/free-solid-svg-icons';
 import { releaseTiposAPI, ReleaseTipoItem } from '../api/releaseTipos';
 
 const normalizar = (s: string): string =>
@@ -26,6 +27,7 @@ interface FormState {
 const FORM_VACIO: FormState = { name: '', isActive: true };
 
 export const ReleaseTiposPage: React.FC = () => {
+  const navigate = useNavigate();
   const [tipos, setTipos] = useState<ReleaseTipoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -154,9 +156,15 @@ export const ReleaseTiposPage: React.FC = () => {
         ),
       }}
       headerActions={
-        <button onClick={abrirCrear} title="Nuevo tipo de release" aria-label="Nuevo tipo de release" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
-          <FontAwesomeIcon icon={faPlus} />
-        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/releases')} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+            <FontAwesomeIcon icon={faFilePdf} />
+            <span className="hidden lg:block">Plantillas | Release</span>
+          </button>
+          <button onClick={abrirCrear} title="Nuevo tipo de release" aria-label="Nuevo tipo de release" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+            <FontAwesomeIcon icon={faPlus} />
+          </button>
+        </div>
       }
       searchAndFilters={
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
