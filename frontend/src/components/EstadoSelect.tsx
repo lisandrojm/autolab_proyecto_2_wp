@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown, faFileInvoiceDollar } from "@fortawesome/free-solid-svg-icons";
 import { useEstadoCatalogStore } from "../stores/estadoCatalogStore";
 import { useThemeStore } from "../stores/themeStore";
 
@@ -133,19 +133,27 @@ export const EstadoBadge: React.FC<{ name: string; className?: string }> = ({ na
   const color = configurado?.data?.color || (configurado ? estadoColorPorDefecto(configurado.name) : undefined);
   // Dentro del contrato el estado puede llamarse distinto (p. ej. para no chocar con ACTIVO/INACTIVO del usuario).
   const texto = configurado?.data?.nombreEnContrato?.trim() || configurado?.name || labelFor(name);
+  const esImpositivo = !!configurado?.data?.esImpositivo;
 
-  const clases = `inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide ${className}`;
+  const clases = `inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide ${className}`;
+  const iconoImpositivo = esImpositivo ? <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" title="Estado impositivo" /> : null;
 
   if (color) {
     const textoColor = colorTextoBadge(color, theme === "dark");
     return (
       <span className={clases} style={{ color: textoColor, backgroundColor: conAlpha(color, 0.14), border: `1px solid ${conAlpha(color, 0.35)}` }}>
+        {iconoImpositivo}
         {texto}
       </span>
     );
   }
 
-  return <span className={`${clases} ${styleFor(name).cls}`}>{texto}</span>;
+  return (
+    <span className={`${clases} ${styleFor(name).cls}`}>
+      {iconoImpositivo}
+      {texto}
+    </span>
+  );
 };
 
 const Badge = EstadoBadge;

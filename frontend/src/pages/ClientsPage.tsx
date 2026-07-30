@@ -7,6 +7,7 @@ import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Card } from '../components/ui/Card';
+import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faClone, faPlus, faTrash, faUsers } from '@fortawesome/free-solid-svg-icons';
@@ -79,6 +80,30 @@ export const ClientsPage: React.FC = () => {
   });
 
   const canManage = hasPermission('admin_clients:view');
+
+  // Vista tarjetas/tabla, como el resto de los ABM: la tabla solo en pantallas grandes.
+  const [viewMode, setViewMode] = useState<ViewMode>('cards');
+  const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const isNowLarge = window.innerWidth >= 1024;
+      setIsLarge(isNowLarge);
+      if (!isNowLarge) setViewMode('cards');
+    };
+    if (window.innerWidth >= 1024) {
+      const saved = localStorage.getItem('clientesViewMode');
+      if (saved === 'table' || saved === 'cards') setViewMode(saved as ViewMode);
+    }
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (isLarge) localStorage.setItem('clientesViewMode', viewMode);
+  }, [viewMode, isLarge]);
+
+  const effectiveViewMode: ViewMode = isLarge ? viewMode : 'cards';
 
   useEffect(() => {
     fetchClients();
@@ -298,6 +323,7 @@ export const ClientsPage: React.FC = () => {
             onStartDateChange: setStartDate,
             onEndDateChange: setEndDate,
           }}
+          extraActions={isLarge ? <ViewToggle value={viewMode} onChange={setViewMode} /> : undefined}
         />
       }
       modal={{
@@ -371,7 +397,54 @@ export const ClientsPage: React.FC = () => {
         </div>
       ) : (
         <>
-          {/* Grid de clientes */}
+          {/* Grid / tabla de clientes */}
+          {effectiveViewMode === 'table' ? (
+            <div className="mt-6 overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800/50 shadow-sm">
+              <table className="w-full text-left text-sm border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 py-3">Cliente</th>
+                    <th className="px-4 py-3">Empresa</th>
+                    <th className="px-4 py-3">Email</th>
+                    <th className="px-4 py-3">Tenant</th>
+                    <th className="px-4 py-3">Alta</th>
+                    <th className="px-4 py-3 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+                  {filteredClients.map((client) => (
+                    <tr key={client._id} onClick={() => navigate(`/clients/${client._id}`)} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer">
+                      <td className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">{client.name}</td>
+                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{client.company || '—'}</td>
+                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{client.email}</td>
+                      <td className="px-4 py-3">
+                        {client.tenant?.name ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{client.tenant.name}</span>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{client.createdAt ? new Date(client.createdAt as any).toLocaleDateString() : '—'}</td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                          {canManage && (
+                            <>
+                              <button onClick={() => openClone(client)} className="p-1.5 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Clonar cliente">
+                                <FontAwesomeIcon icon={faClone} />
+                              </button>
+                              <button onClick={() => handleDeleteClient(client)} className="p-1.5 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Eliminar cliente">
+                                <FontAwesomeIcon icon={faTrash} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
             {filteredClients.map((client) => {
               const logoUrl = client.attachments?.find((a: any) => a.name?.toLowerCase().includes('logo') || a.fileType?.includes('image'))?.url;
@@ -446,6 +519,7 @@ export const ClientsPage: React.FC = () => {
               />
             )}
           </div>
+          )}
 
           {!loading && filteredClients.length === 0 && (
             <EmptyState

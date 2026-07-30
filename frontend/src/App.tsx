@@ -1,6 +1,6 @@
 // apps/web/src/App.tsx
 import { useEffect, lazy, Suspense } from "react";
-import { BrowserRouter as Router, Routes, Route, Outlet, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { cancelPendingGetRequests } from "./api/axiosConfig";
 import { useAuthStore } from "./stores/authStore";
 import { useThemeStore } from "./stores/themeStore";
@@ -49,7 +49,6 @@ import { CategoriasSatPage } from "./pages/CategoriasSatPage";
 import { BancosPage } from "./pages/BancosPage";
 import { ObrasSocialesPage } from "./pages/ObrasSocialesPage";
 import { CentrosCostoPage } from "./pages/CentrosCostoPage";
-import { EstadosPage } from "./pages/EstadosPage";
 import { ContratosPage } from "./pages/ContratosPage";
 import { EmpresasPage } from "./pages/EmpresasPage";
 import { MembretesPage } from "./pages/MembretesPage";
@@ -503,14 +502,8 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/estados"
-                element={
-                  <ProtectedRoute>
-                    <EstadosPage />
-                  </ProtectedRoute>
-                }
-              />
+              {/* Estados ahora es un tab dentro de Contratos, no una página propia. */}
+              <Route path="/estados" element={<Navigate to="/contratos" replace />} />
               <Route
                 path="/contratos"
                 element={

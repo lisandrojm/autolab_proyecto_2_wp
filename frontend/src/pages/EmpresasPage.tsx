@@ -5,6 +5,8 @@ import { PageLayout } from '../components/ui/PageLayout';
 import { Modal } from '../components/ui/Modal';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
+import { Card } from '../components/ui/Card';
+import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { sweetAlert } from '../utils/sweetAlert';
 import { fuzzyMatch } from '../utils/searchHelpers';
 import { companiesAPI, Company, CompanyInput } from '../api/companies';
@@ -39,6 +41,30 @@ export const EmpresasPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const helpEntry = getHelp(HELP_KEY);
+
+  // Vista tabla/tarjetas, como el resto de los ABM: la tabla solo en pantallas grandes.
+  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const isNowLarge = window.innerWidth >= 1024;
+      setIsLarge(isNowLarge);
+      if (!isNowLarge) setViewMode('cards');
+    };
+    if (window.innerWidth >= 1024) {
+      const saved = localStorage.getItem('empresasViewMode');
+      if (saved === 'table' || saved === 'cards') setViewMode(saved as ViewMode);
+    }
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (isLarge) localStorage.setItem('empresasViewMode', viewMode);
+  }, [viewMode, isLarge]);
+
+  const effectiveViewMode: ViewMode = isLarge ? viewMode : 'cards';
 
   const fetchCompanies = async () => {
     try {
@@ -163,11 +189,14 @@ export const EmpresasPage: React.FC = () => {
         </button>
       }
       searchAndFilters={
-        <div className="relative w-full">
-          <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-            <FontAwesomeIcon icon={faSearch} />
-          </span>
-          <input type="text" className={`${inputClass} pl-10 h-10`} placeholder="Buscar por razón social, CUIT o representante..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
+          <div className="relative flex-1 w-full">
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+              <FontAwesomeIcon icon={faSearch} />
+            </span>
+            <input type="text" className={`${inputClass} pl-10 h-10`} placeholder="Buscar por razón social, CUIT o representante..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          {isLarge && <ViewToggle value={viewMode} onChange={setViewMode} />}
         </div>
       }
     >
@@ -177,6 +206,66 @@ export const EmpresasPage: React.FC = () => {
         </div>
       ) : filtered.length === 0 ? (
         <EmptyState title="No hay empresas" description={search ? 'No se encontraron empresas con esa búsqueda.' : 'Creá la primera empresa con el botón "Nueva Empresa".'} icon={faBuilding} />
+      ) : effectiveViewMode === 'cards' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mt-6">
+          {filtered.map((c) => (
+            <Card
+              key={c._id}
+              onClick={() => openEdit(c)}
+              className="cursor-pointer hover:scale-[1.03] hover:shadow-lg transition-all duration-200"
+              header={{
+                title: c.razonSocial,
+                subtitle: c.cuit || undefined,
+                icon: faBuilding,
+              }}
+              footer={{
+                actions: [
+                  {
+                    icon: faEdit,
+                    onClick: (e) => {
+                      e.stopPropagation();
+                      openEdit(c);
+                    },
+                    title: 'Editar',
+                    variant: 'default',
+                  },
+                  {
+                    icon: faTrash,
+                    onClick: (e) => {
+                      e.stopPropagation();
+                      handleDelete(c);
+                    },
+                    title: 'Eliminar',
+                    variant: 'default',
+                  },
+                ],
+              }}
+            >
+              <div className="text-xs text-gray-600 dark:text-gray-400 space-y-2">
+                {domicilioResumen(c) && (
+                  <p className="truncate" title={domicilioResumen(c)}>
+                    {domicilioResumen(c)}
+                  </p>
+                )}
+                {c.firmanteNombre && (
+                  <div>
+                    <span className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Firmante</span>
+                    <span className="text-gray-800 dark:text-gray-200">{c.firmanteNombre}</span>
+                    {c.firmanteCargo && <span className="text-[11px] text-gray-400 ml-1">({c.firmanteCargo})</span>}
+                  </div>
+                )}
+                {c.representanteLegalNombre && (
+                  <div>
+                    <span className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Representante legal</span>
+                    <span className="text-gray-800 dark:text-gray-200">{c.representanteLegalNombre}</span>
+                    {c.representanteLegalEmail && <span className="block text-[11px] text-gray-400">{c.representanteLegalEmail}</span>}
+                  </div>
+                )}
+              </div>
+            </Card>
+          ))}
+          <Card variant="create" onClick={openCreate} header={{ title: 'Nueva Empresa', subtitle: 'Agregar empresa', icon: faBuilding }} />
+        </div>
       ) : (
         <div className="mt-6 overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800/50 shadow-sm">
           <table className="w-full text-left text-sm border-collapse">
