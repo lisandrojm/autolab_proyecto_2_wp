@@ -711,7 +711,10 @@ router.get("/projects/:projectId/area-shift-counts", requireTenant, authenticate
         }
         const members = await User.find({ projectIds: projectId })
             .select("_id metadata.activo metadata.projects")
-            .populate({ path: "metadata.projects", model: UserProject, select: "projectId contracts.areaShiftAssignments contracts.fecha_baja_contrato" })
+            // `fecha_alta_contrato` y `fecha_carga` son obligatorios: `getContratoActivo` los usa para
+            // desempatar cuál es el contrato más reciente (sin ellos todos empatan y termina eligiendo
+            // el último del array en vez del realmente más nuevo).
+            .populate({ path: "metadata.projects", model: UserProject, select: "projectId contracts.areaShiftAssignments contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga" })
             .lean();
         const hoy = hoyArgentina();
         const configByUser = new Map((project.teamConfig || []).map((c) => [String(c.userId), c]));
@@ -779,7 +782,9 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
             .populate({
             path: "metadata.projects",
             model: UserProject,
-            select: "projectId contracts.areaShiftAssignments contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.nombre_estado_empleado contracts.nombre_contrato",
+            // `fecha_carga` también hace falta para desempatar `getContratoActivo` cuando dos
+            // contratos comparten `fecha_alta_contrato`.
+            select: "projectId contracts.areaShiftAssignments contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga contracts.nombre_estado_empleado contracts.nombre_contrato",
         })
             .lean();
         const hoy = hoyArgentina();

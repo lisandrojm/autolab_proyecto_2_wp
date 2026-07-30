@@ -62,7 +62,12 @@ async function resolveProjectTeamFilterIds(projectId, filtros) {
         .populate({
         path: "metadata.projects",
         model: UserProject,
-        select: "projectId contracts.areaShiftAssignments contracts.fecha_baja_contrato contracts.nombre_contrato contracts.nombre_estado_empleado contracts.reemplazo",
+        // `fecha_alta_contrato` y `fecha_carga` son obligatorios: `getContratoActivo` los usa para
+        // desempatar cuál es el contrato más reciente. Sin ellos, todos los contratos quedan con la
+        // misma "antigüedad" y el filtro termina resolviendo el contrato activo de forma distinta a
+        // como lo calcula el front (con los datos completos) — el filtro matchea un estado que
+        // después la tabla no muestra para esa misma persona.
+        select: "projectId contracts.areaShiftAssignments contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga contracts.nombre_contrato contracts.nombre_estado_empleado contracts.reemplazo",
     })
         .lean();
     const configByUser = new Map((project.teamConfig || []).map((c) => [String(c.userId), c]));
