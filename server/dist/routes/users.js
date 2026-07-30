@@ -431,6 +431,122 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
         res.status(500).json({ error: "Internal server error" });
     }
 });
+/*
+ * GET /users/contracts-overview - Listado global de contratos (Contratos, la página que no está
+ * atada a un proyecto). A diferencia de GET /users (que pagina por usuario), acá cada fila es un
+ * (usuario × proyecto) con su contrato ACTIVO (mismo criterio que Gestionar Equipo:
+ * `getContratoActivo`), con Cliente/Proyecto/Sede resueltos. Se arma consultando `UserProject`
+ * directamente (tiene `userId` y `projectId` propios) en vez de pasar por `User.metadata.projects`.
+ */
+router.get("/contracts-overview", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
+    try {
+        const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
+        const projectFilter = isSuperAdmin ? {} : { tenantId: req.tenantObjectId };
+        if (req.query.clientId)
+            projectFilter.clientId = req.query.clientId;
+        if (req.query.projectId)
+            projectFilter._id = req.query.projectId;
+        const projectIds = await Project.find(projectFilter).distinct("_id");
+        if (projectIds.length === 0) {
+            res.json({ rows: [], total: 0, page: 1, totalPages: 1 });
+            return;
+        }
+        const memberships = await UserProject.find({ projectId: { $in: projectIds } })
+            .select("projectId userId nombre_rol_frame contracts")
+            .populate({ path: "userId", select: "firstName lastName email metadata roles", populate: { path: "roles", select: "name", model: Role } })
+            .populate({ path: "projectId", select: "name clientId", populate: { path: "clientId", select: "name", model: Client } })
+            .lean();
+        const search = req.query.search ? String(req.query.search) : "";
+        const fuzzySearch = search ? createFuzzySearchRegex(search) : "";
+        const searchRegex = fuzzySearch ? new RegExp(fuzzySearch, "i") : null;
+        const metadataActivo = req.query.metadataActivo !== undefined ? req.query.metadataActivo === "true" : undefined;
+        const vigencia = req.query.vigencia ? String(req.query.vigencia) : undefined;
+        const tipoContrato = req.query.tipoContrato ? String(req.query.tipoContrato) : undefined;
+        const estadoContrato = req.query.estadoContrato ? String(req.query.estadoContrato) : undefined;
+        const reemplazo = req.query.reemplazo ? String(req.query.reemplazo) : undefined;
+        const roleNameParts = req.query.roleName
+            ? String(req.query.roleName)
+                .toLowerCase()
+                .split(/[^a-z0-9]+/i)
+                .filter(Boolean)
+            : [];
+        const roleFilterRegex = roleNameParts.length > 0 ? new RegExp(`^${roleNameParts.join("[^a-z0-9]*")}$`, "i") : null;
+        const rows = [];
+        for (const m of memberships) {
+            const user = m.userId;
+            const project = m.projectId;
+            if (!user || !project)
+                continue;
+            const contratos = m.contracts || [];
+            const contratoActivo = getContratoActivo(contratos);
+            if (!contratoActivo)
+                continue;
+            if (metadataActivo !== undefined && !!user.metadata?.activo !== metadataActivo)
+                continue;
+            if (vigencia) {
+                const vigente = esContratoVigente(contratoActivo);
+                if (vigencia === "vigente" ? !vigente : vigente)
+                    continue;
+            }
+            if (tipoContrato && String(contratoActivo.nombre_contrato ?? "") !== tipoContrato)
+                continue;
+            if (estadoContrato && estadoCanonico(String(contratoActivo.nombre_estado_empleado ?? "")) !== estadoCanonico(estadoContrato))
+                continue;
+            if (reemplazo) {
+                const esReemplazo = !!contratoActivo.reemplazo;
+                if (reemplazo === "con" ? !esReemplazo : esReemplazo)
+                    continue;
+            }
+            if (roleFilterRegex && !(user.roles || []).some((r) => roleFilterRegex.test(String(r?.name || ""))))
+                continue;
+            if (searchRegex) {
+                const nombreCompleto = `${user.firstName || ""} ${user.lastName || ""}`.trim();
+                const candidatos = [nombreCompleto, user.email, project.name, m.nombre_rol_frame, contratoActivo.nombre_contrato];
+                if (!candidatos.some((c) => c && searchRegex.test(String(c))))
+                    continue;
+            }
+            rows.push({
+                _id: String(m._id),
+                userId: String(user._id),
+                userName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+                userEmail: user.email,
+                userActivo: !!user.metadata?.activo,
+                userExternalId: user.metadata?.id ?? null,
+                userRoles: (user.roles || []).map((r) => ({ _id: String(r._id), name: r.name })),
+                clientId: project.clientId?._id ? String(project.clientId._id) : project.clientId ? String(project.clientId) : "",
+                clientName: project.clientId?.name || "",
+                projectId: String(project._id),
+                projectName: project.name || "",
+                nombreRolFrame: m.nombre_rol_frame || "",
+                contractsInProject: contratos.length,
+                contractIndex: contratos.indexOf(contratoActivo),
+                nombre_contrato: contratoActivo.nombre_contrato || "",
+                nombre_estado_empleado: contratoActivo.nombre_estado_empleado || "",
+                nombre_sede: contratoActivo.nombre_sede || "",
+                areaShiftAssignments: contratoActivo.areaShiftAssignments || [],
+                reemplazo: !!contratoActivo.reemplazo,
+                empleado_id_reemplezado: contratoActivo.empleado_id_reemplezado ?? null,
+                fecha_alta_contrato: contratoActivo.fecha_alta_contrato || "",
+                fecha_baja_contrato: contratoActivo.fecha_baja_contrato || "",
+                sueldo_mano: contratoActivo.sueldo_mano,
+                cantidad_jornadas_laborales: contratoActivo.cantidad_jornadas_laborales,
+                hora_inicio: contratoActivo.hora_inicio,
+                hora_fin: contratoActivo.hora_fin,
+            });
+        }
+        rows.sort((a, b) => a.userName.localeCompare(b.userName, "es", { sensitivity: "base" }));
+        const page = Math.max(1, Number(req.query.page) || 1);
+        const limit = Math.max(1, Number(req.query.limit) || 25);
+        const total = rows.length;
+        const totalPages = Math.max(1, Math.ceil(total / limit));
+        const pageRows = rows.slice((page - 1) * limit, page * limit);
+        res.json({ rows: pageRows, total, page, totalPages });
+    }
+    catch (error) {
+        console.error("Get contracts overview error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 // POST /users - Crear usuario
 router.post("/", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
     try {
