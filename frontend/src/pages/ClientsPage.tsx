@@ -10,7 +10,7 @@ import { Card } from '../components/ui/Card';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faClone, faPlus, faTrash, faUsers } from '@fortawesome/free-solid-svg-icons';
+import { faClone, faEdit, faPlus, faTrash, faUsers } from '@fortawesome/free-solid-svg-icons';
 import { clientsAPI, type Client } from '../api/clients';
 import { customAlphabet } from 'nanoid';
 import { getHelp, hasHelp } from '../data/help/helpContent';
@@ -135,6 +135,22 @@ export const ClientsPage: React.FC = () => {
       sweetAlert.error("Error", "No se pudo actualizar favorito");
     }
   }; */
+
+  const openEdit = (client: Client) => {
+    setEditingClient(client);
+    setCloneSource(null);
+    setModalMode('edit');
+    setFormData({
+      name: client.name,
+      email: client.email,
+      phone: client.phone || '',
+      company: client.company || '',
+      industry: client.industry || '',
+      website: client.website || '',
+      status: client.status || 'active',
+    });
+    setShowModal(true);
+  };
 
   const openClone = (client: Client) => {
     setCloneSource(client);
@@ -406,7 +422,6 @@ export const ClientsPage: React.FC = () => {
                     <th className="px-4 py-3">Cliente</th>
                     <th className="px-4 py-3">Empresa</th>
                     <th className="px-4 py-3">Email</th>
-                    <th className="px-4 py-3">Tenant</th>
                     <th className="px-4 py-3">Alta</th>
                     <th className="px-4 py-3 text-right">Acciones</th>
                   </tr>
@@ -417,13 +432,6 @@ export const ClientsPage: React.FC = () => {
                       <td className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">{client.name}</td>
                       <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{client.company || '—'}</td>
                       <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{client.email}</td>
-                      <td className="px-4 py-3">
-                        {client.tenant?.name ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{client.tenant.name}</span>
-                        ) : (
-                          <span className="text-xs text-gray-400">—</span>
-                        )}
-                      </td>
                       <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{client.createdAt ? new Date(client.createdAt as any).toLocaleDateString() : '—'}</td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
@@ -464,16 +472,6 @@ export const ClientsPage: React.FC = () => {
                         }
                       : undefined,
                     iconClassName: 'text-primary-600 dark:text-primary-400',
-                    badges:
-                      client.tenant && client.tenant.name
-                        ? [
-                            {
-                              text: client.tenant.name,
-                              variant: 'default' as const,
-                              className: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800',
-                            },
-                          ]
-                        : [],
                     /*               badges: [],
               favorite: !!client.favorite,
               onToggleFavorite: () => toggleFavorite(client._id, !!client.favorite), */
@@ -483,6 +481,15 @@ export const ClientsPage: React.FC = () => {
                     leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{client.createdAt ? new Date(client.createdAt as any).toLocaleDateString() : '—'}</span>,
                     actions: canManage
                       ? [
+                          {
+                            icon: faEdit,
+                            onClick: (e) => {
+                              e.stopPropagation();
+                              openEdit(client);
+                            },
+                            title: 'Editar cliente',
+                            variant: 'default' as const,
+                          },
                           {
                             icon: faClone,
                             onClick: (e) => {
