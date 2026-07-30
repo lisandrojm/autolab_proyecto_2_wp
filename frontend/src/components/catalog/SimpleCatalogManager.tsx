@@ -312,10 +312,10 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                     ))}
                   <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono">{item.externalId || '—'}</td>
                   <td className="px-5 py-3 text-sm text-right">
-                    <button onClick={() => openEdit(item)} className="text-blue-600 hover:text-blue-800 dark:text-blue-400 mr-3" title="Editar">
+                    <button onClick={() => openEdit(item)} className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 mr-3" title="Editar">
                       <FontAwesomeIcon icon={faEdit} />
                     </button>
-                    <button onClick={() => handleDelete(item)} className="text-rose-600 hover:text-rose-800 dark:text-rose-400" title="Eliminar">
+                    <button onClick={() => handleDelete(item)} className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300" title="Eliminar">
                       <FontAwesomeIcon icon={faTrash} />
                     </button>
                   </td>

@@ -1,20 +1,23 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { roleFrameAPI, RoleFrameItem } from '../api/roleFrames';
-import { categoriaSatAPI, CategoriaSatItem } from '../api/categoriasSat';
-import { PageLayout } from '../components/ui/PageLayout';
-import { getHelp, hasHelp } from '../data/help/helpContent';
-import { Card } from '../components/ui/Card';
-import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { SearchAndFilters } from '../components/ui/SearchAndFilters';
+import { roleFrameAPI, RoleFrameItem } from '../../api/roleFrames';
+import { categoriaSatAPI, CategoriaSatItem } from '../../api/categoriasSat';
+import { Card } from '../ui/Card';
+import { LoadingSpinner } from '../ui/LoadingSpinner';
+import { SearchAndFilters } from '../ui/SearchAndFilters';
 import { faUserShield, faLayerGroup, faTable, faGrip, faPlus, faEdit, faTrash, faSearch, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Modal } from '../components/ui/Modal';
-import { sweetAlert } from '../utils/sweetAlert';
+import { Modal } from '../ui/Modal';
+import { sweetAlert } from '../../utils/sweetAlert';
 
-export const RolesFramePage: React.FC = () => {
-  const HELP_KEY = 'funcionesFrame' as const;
-  const helpEntry = getHelp(HELP_KEY);
-  const [showInfo, setShowInfo] = useState(false);
+/** Badge azul "Cat. {número} - {nombre}" para mostrar categorías SAT. */
+const CategoriaSatBadge: React.FC<{ label: string }> = ({ label }) => (
+  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
+    <FontAwesomeIcon icon={faLayerGroup} className="h-2.5 w-2.5" />
+    {label}
+  </span>
+);
+
+export const FuncionesFrameTab: React.FC = () => {
   const [roles, setRoles] = useState<RoleFrameItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -90,15 +93,8 @@ export const RolesFramePage: React.FC = () => {
     return roles.filter((r) => r.name.toLowerCase().includes(lowerSearch) || r.externalId.toLowerCase().includes(lowerSearch));
   }, [roles, searchTerm]);
 
-  const getCategoryNumbersStr = (role: RoleFrameItem) => {
-    return (
-      role.data?.categoriasSat
-        ?.map((c: any) => c.numeroCategoria ?? c.id)
-        .filter((num: any) => num !== undefined && num !== null)
-        .sort((a: number, b: number) => a - b)
-        .join(', ') || ''
-    );
-  };
+  /** "Cat. {número} - {nombre}" por cada categoría asociada, mismo formato que el checklist del modal. */
+  const categoriasSatLabels = (role: RoleFrameItem): string[] => (role.data?.categoriasSat || []).map((c: any) => `Cat. ${c.numeroCategoria ?? '?'} - ${c.nombre || c.name || 'Sin nombre'}`);
 
   const openCreate = () => {
     setEditingRole(null);
@@ -112,15 +108,21 @@ export const RolesFramePage: React.FC = () => {
     setEditingRole(role);
     setFormName(role.name);
 
-    // Resolve associated category _ids from the loaded list
-    const associatedNames = role.data?.categoriasSat?.map((c: any) => c.nombre || c.name) || [];
-    const associatedNums = role.data?.categoriasSat?.map((c: any) => c.numeroCategoria) || [];
+    // Resolve associated category _ids from the loaded list. Se matchea por `id` (el id numérico
+    // propio de cada categoría, `data.id`), NO por `numeroCategoria`: varias categorías con
+    // nombres distintos comparten el mismo número (es una escala salarial, no un identificador),
+    // así que matchear por número tildaba TODAS las que tuvieran ese número en vez de solo la
+    // elegida.
+    const categoriasGuardadas = role.data?.categoriasSat || [];
+    const associatedIds = categoriasGuardadas.map((c: any) => c.id).filter((id: any) => id !== undefined && id !== null);
+    const associatedNames = categoriasGuardadas.map((c: any) => c.nombre || c.name).filter(Boolean);
 
     const ids = allCategories
       .filter((cat) => {
+        if (associatedIds.length > 0) return cat.data?.id !== undefined && associatedIds.includes(cat.data.id);
+        // Fallback para roles guardados antes de que `categoriasSat` tuviera `id` (legado).
         const catName = cat.data?.nombre || cat.name;
-        const catNum = cat.data?.numeroCategoria;
-        return associatedNames.includes(catName) || associatedNums.includes(catNum);
+        return associatedNames.includes(catName);
       })
       .map((cat) => cat._id);
 
@@ -181,25 +183,17 @@ export const RolesFramePage: React.FC = () => {
   }, [allCategories, catSearch]);
 
   return (
-    <PageLayout
-      title="Funciones FRAME"
-      subtitle="Todos los roles externos del sistema y su asociación con categorías SAT"
-      shouldShowInfo={hasHelp(HELP_KEY)}
-      infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: helpEntry.title, size: helpEntry.size, content: helpEntry.content }}
-      itemCount={filteredRoles.length}
-      faIcon={{ icon: faUserShield }}
-      headerActions={
-        <button onClick={openCreate} aria-label="Nueva función" title="Nueva función" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
-          <FontAwesomeIcon icon={faPlus} />
-        </button>
-      }
-      searchAndFilters={
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
-          <div className="flex-1 w-full">
-            <SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar por nombre o ID externo..." />
-          </div>
+    <div className="space-y-4">
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
+        <div className="flex-1 w-full">
+          <SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar por nombre o ID externo..." />
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button onClick={openCreate} aria-label="Nueva función" title="Nueva función" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+            <FontAwesomeIcon icon={faPlus} />
+          </button>
           {isLarge && (
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2">
               <button onClick={() => setViewMode('cards')} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'cards' ? 'bg-blue-500 text-white shadow-sm border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`} title="Vista de tarjetas">
                 <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
               </button>
@@ -209,8 +203,8 @@ export const RolesFramePage: React.FC = () => {
             </div>
           )}
         </div>
-      }
-    >
+      </div>
+
       {loading ? (
         <LoadingSpinner message="Cargando funciones..." />
       ) : filteredRoles.length === 0 ? (
@@ -227,22 +221,7 @@ export const RolesFramePage: React.FC = () => {
               className="hover:scale-[1.03] hover:shadow-lg transition-all duration-200 cursor-pointer"
               header={{
                 title: role.name,
-                subtitle: `Categorías: ${getCategoryNumbersStr(role) || 'Ninguna'}`,
                 icon: faUserShield,
-                actions: [
-                  {
-                    icon: faEdit,
-                    title: 'Editar',
-                    variant: 'blue',
-                    onClick: () => openEdit(role),
-                  },
-                  {
-                    icon: faTrash,
-                    title: 'Eliminar',
-                    variant: 'danger',
-                    onClick: () => handleDelete(role),
-                  },
-                ],
               }}
               footer={{
                 leftContent: (
@@ -251,8 +230,32 @@ export const RolesFramePage: React.FC = () => {
                     <span>{role.data?.categoriasSat?.length || 0} Categorías SAT</span>
                   </div>
                 ),
+                actions: [
+                  {
+                    icon: faEdit,
+                    title: 'Editar',
+                    variant: 'default',
+                    onClick: (e) => {
+                      e.stopPropagation();
+                      openEdit(role);
+                    },
+                  },
+                  {
+                    icon: faTrash,
+                    title: 'Eliminar',
+                    variant: 'default',
+                    onClick: (e) => {
+                      e.stopPropagation();
+                      handleDelete(role);
+                    },
+                  },
+                ],
               }}
-            />
+            >
+              <div className="flex flex-wrap gap-1.5">
+                {categoriasSatLabels(role).length === 0 ? <span className="text-xs text-gray-400">Sin categorías</span> : categoriasSatLabels(role).map((label, i) => <CategoriaSatBadge key={i} label={label} />)}
+              </div>
+            </Card>
           ))}
         </div>
       ) : (
@@ -282,9 +285,8 @@ export const RolesFramePage: React.FC = () => {
                       <span className="text-sm text-gray-600 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-900 px-2 py-0.5 rounded">{role.externalId}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <FontAwesomeIcon icon={faLayerGroup} className="text-gray-400" />
-                        <span className="text-sm text-gray-600 dark:text-gray-400">{getCategoryNumbersStr(role) ? `Categorías: ${getCategoryNumbersStr(role)}` : 'Ninguna'}</span>
+                      <div className="flex flex-wrap gap-1.5 max-w-md">
+                        {categoriasSatLabels(role).length === 0 ? <span className="text-sm text-gray-400">Ninguna</span> : categoriasSatLabels(role).map((label, i) => <CategoriaSatBadge key={i} label={label} />)}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
@@ -440,6 +442,8 @@ export const RolesFramePage: React.FC = () => {
           </form>
         </Modal>
       )}
-    </PageLayout>
+    </div>
   );
 };
+
+export default FuncionesFrameTab;

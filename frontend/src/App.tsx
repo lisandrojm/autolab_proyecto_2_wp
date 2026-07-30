@@ -11,7 +11,6 @@ import { RegistroPage } from "./pages/RegistroPage";
 import { ClientsPage } from "./pages/ClientsPage";
 
 import { RolesPage } from "./pages/RolesPage";
-import { RolesFramePage } from "./pages/RolesFramePage";
 import { PositionsPage } from "./pages/PositionsPage";
 import { LevelsPage } from "./pages/LevelsPage";
 import { AreasPage } from "./pages/AreasPage";
@@ -308,22 +307,9 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/funciones-frame"
-                element={
-                  <ProtectedRoute>
-                    <RolesFramePage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/roles-frame"
-                element={
-                  <ProtectedRoute>
-                    <RolesFramePage />
-                  </ProtectedRoute>
-                }
-              />
+              {/* Funciones FRAME ahora es un tab dentro de Categorías SAT, no una página propia. */}
+              <Route path="/funciones-frame" element={<Navigate to="/categorias-sat" replace />} />
+              <Route path="/admin/roles-frame" element={<Navigate to="/categorias-sat" replace />} />
               <Route
                 path="/positions"
                 element={
