@@ -52,6 +52,37 @@ export interface Contract {
   }[];
 }
 
+/** Fila de la página global "Contratos" (`GET /users/contracts-overview`): usuario × proyecto, con su contrato activo. */
+export interface ContractOverviewRow {
+  _id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userActivo: boolean;
+  /** id externo (FRAME) del usuario — para resolver a quién reemplaza otro contrato de la misma página. */
+  userExternalId: number | null;
+  userRoles: { _id: string; name: string }[];
+  clientId: string;
+  clientName: string;
+  projectId: string;
+  projectName: string;
+  nombreRolFrame: string;
+  contractsInProject: number;
+  contractIndex: number;
+  nombre_contrato: string;
+  nombre_estado_empleado: string;
+  nombre_sede: string;
+  areaShiftAssignments: { areaId: string | any; shiftIds: (string | any)[] }[];
+  reemplazo: boolean;
+  empleado_id_reemplezado?: number | null;
+  fecha_alta_contrato: string;
+  fecha_baja_contrato: string;
+  sueldo_mano?: number;
+  cantidad_jornadas_laborales?: number;
+  hora_inicio?: string;
+  hora_fin?: string;
+}
+
 export interface UserProjectMetadata {
   _id: string;
   projectId?: string | { _id: string; name?: string };
@@ -353,6 +384,48 @@ class UsersAPI {
     };
 
     return { users, pagination };
+  }
+
+  /**
+   * Contratos activos de todos los clientes/proyectos (página global "Contratos"): una fila por
+   * (usuario × proyecto), mostrando su contrato vigente/más reciente. A diferencia de `list()`, acá
+   * la paginación es por fila/contrato, no por usuario.
+   */
+  async listContractsOverview(
+    params: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      clientId?: string;
+      projectId?: string;
+      metadataActivo?: string;
+      roleName?: string;
+      vigencia?: string;
+      tipoContrato?: string;
+      estadoContrato?: string;
+      reemplazo?: string;
+    } = {},
+  ): Promise<{ rows: ContractOverviewRow[]; total: number; page: number; totalPages: number }> {
+    const searchParams = new URLSearchParams();
+    if (params.page) searchParams.append("page", params.page.toString());
+    if (params.limit) searchParams.append("limit", params.limit.toString());
+    if (params.search) searchParams.append("search", params.search);
+    if (params.clientId) searchParams.append("clientId", params.clientId);
+    if (params.projectId) searchParams.append("projectId", params.projectId);
+    if (params.metadataActivo) searchParams.append("metadataActivo", params.metadataActivo);
+    if (params.roleName) searchParams.append("roleName", params.roleName);
+    if (params.vigencia) searchParams.append("vigencia", params.vigencia);
+    if (params.tipoContrato) searchParams.append("tipoContrato", params.tipoContrato);
+    if (params.estadoContrato) searchParams.append("estadoContrato", params.estadoContrato);
+    if (params.reemplazo) searchParams.append("reemplazo", params.reemplazo);
+
+    const { data } = await axios.get(`/users/contracts-overview?${searchParams.toString()}`, { headers: this.getHeaders() });
+    return {
+      rows: Array.isArray(data?.rows) ? data.rows : [],
+      total: Number(data?.total ?? 0),
+      page: Number(data?.page ?? 1),
+      totalPages: Number(data?.totalPages ?? 1),
+    };
   }
 
   async get(id: string): Promise<User> {
