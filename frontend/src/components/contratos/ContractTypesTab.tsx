@@ -73,6 +73,7 @@ export const ContractTypesTab: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showFirmaInfo, setShowFirmaInfo] = useState(false);
+  const [showTiempoIndetInfo, setShowTiempoIndetInfo] = useState(false);
   const [editando, setEditando] = useState<ContratoItem | null>(null);
   const [form, setForm] = useState<FormState>(FORM_VACIO);
   // Selección de Estados al abrir el modal: para diffear contra `form.estadoIds` al guardar.
@@ -477,10 +478,15 @@ export const ContractTypesTab: React.FC = () => {
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input type="checkbox" checked={form.esTiempoIndeterminado} onChange={(e) => setForm((p) => ({ ...p, esTiempoIndeterminado: e.target.checked }))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
-            <span className="text-gray-700 dark:text-gray-300">Es tiempo indeterminado</span>
-          </label>
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" checked={form.esTiempoIndeterminado} onChange={(e) => setForm((p) => ({ ...p, esTiempoIndeterminado: e.target.checked }))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+              <span className="text-gray-700 dark:text-gray-300">Es tiempo indeterminado</span>
+            </label>
+            <button type="button" onClick={() => setShowTiempoIndetInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Qué significa?" aria-label="Información sobre tiempo indeterminado">
+              <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+            </button>
+          </div>
 
           <div className="flex items-center gap-2">
             <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -597,6 +603,24 @@ export const ContractTypesTab: React.FC = () => {
           })()}
         </div>
       </Modal>
+
+      <InfoModal
+        isOpen={showTiempoIndetInfo}
+        onClose={() => setShowTiempoIndetInfo(false)}
+        title="Es tiempo indeterminado"
+        size="sm"
+        zIndex={120}
+        actions={[{ label: 'Entendido', onClick: () => setShowTiempoIndetInfo(false), variant: 'primary' }]}
+      >
+        <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+          <p>
+            Indica que este tipo de contrato <strong>no tiene una fecha de fin fija</strong>: es un contrato por tiempo indeterminado, no uno a plazo.
+          </p>
+          <p>
+            Al elegir este Contrato en <strong>Agregar/Configurar miembro</strong>, el campo <strong>Fecha de baja</strong> se deja vacío y el contrato queda <strong>vigente</strong> hasta que se le cargue una baja manualmente.
+          </p>
+        </div>
+      </InfoModal>
 
       <InfoModal
         isOpen={showFirmaInfo}
