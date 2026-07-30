@@ -9,7 +9,7 @@ import { Modal } from '../components/ui/Modal';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash, faRocket, faFilePdf, faFileSignature } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faTrash, faRocket, faFilePdf, faFileSignature, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { releaseTiposAPI, ReleaseTipoItem } from '../api/releaseTipos';
 
 const normalizar = (s: string): string =>
@@ -308,6 +308,11 @@ export const ReleaseTiposPage: React.FC = () => {
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input type="checkbox" checked={form.requiereFirma} onChange={(e) => setForm((p) => ({ ...p, requiereFirma: e.target.checked }))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
             <span className="text-gray-700 dark:text-gray-300">Se envía a firmar</span>
+            <FontAwesomeIcon
+              icon={faCircleInfo}
+              className="text-gray-400 h-3.5 w-3.5"
+              title='Si se destilda, en Contratos del proyecto no se va a poder descargar los Release de este tipo para enviarlos a firmar: en su lugar se muestra el aviso "No se envía a firmar".'
+            />
           </label>
         </div>
       </Modal>

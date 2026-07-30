@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDownload, faEdit, faTrash, faArrowUpRightFromSquare, faCircleInfo, faFilePdf } from "@fortawesome/free-solid-svg-icons";
+import { faDownload, faEdit, faTrash, faArrowUpRightFromSquare, faCircleInfo, faFilePdf, faFileSignature } from "@fortawesome/free-solid-svg-icons";
 import { InfoModal } from "../ui/InfoModal";
 import { User, Contract } from "../../api/users";
 import { ContratoFrameItem } from "../../api/contratosFrame";
@@ -77,6 +77,17 @@ export const DownloadMenu: React.FC<{ empresas: EmpresaOption[]; onDownload: (em
     </div>
   );
 };
+
+/** Badge "No se envía a firmar": reemplaza el botón de descarga cuando el Contrato/ReleaseTipo lo tiene destildado. */
+const NoSeEnviaAFirmar: React.FC = () => (
+  <span
+    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gray-50 text-gray-500 dark:bg-gray-700/30 dark:text-gray-400 border border-gray-200 dark:border-gray-700 shrink-0 whitespace-nowrap"
+    title="Este documento no se envía a firmar"
+  >
+    <FontAwesomeIcon icon={faFileSignature} className="h-2.5 w-2.5" />
+    No se envía a firmar
+  </span>
+);
 
 export const formatMoney = (n?: number): string => (n != null && !isNaN(n) ? `$${Number(n).toLocaleString("es-AR")}` : "-");
 
@@ -201,6 +212,8 @@ export const ContractCard: React.FC<ContractCardProps> = ({
   const existeTemplate = !!template; // la plantilla existe en contratos-frame (aunque esté vacía)
   const canDownloadContract = templateHasContent(template);
   const tipoContrato = contract.nombre_contrato || template?.data?.nombre || template?.name || "Contrato";
+  // Sin Contrato vinculado (aún no populado) se asume que sí se envía, para no ocultar la descarga de golpe.
+  const contratoRequiereFirma = typeof template?.contratoId === "object" ? template.contratoId?.data?.requiereFirma !== false : true;
 
   // Empresa efectiva por-contrato: si el contrato tiene una empresa guardada, se usa SOLO esa
   // (descarga directa con ella); si no, se ofrecen todas las empresas del proyecto para elegir.
@@ -273,7 +286,9 @@ export const ContractCard: React.FC<ContractCardProps> = ({
                 </span>
               ))}
             </span>
-            {canDownloadContract ? (
+            {canDownloadContract && !contratoRequiereFirma ? (
+              <NoSeEnviaAFirmar />
+            ) : canDownloadContract ? (
               <DownloadMenu empresas={effectiveContratoEmpresas} onDownload={onDownloadContract} title="Descargar contrato" />
             ) : existeTemplate ? (
               // La plantilla existe pero está vacía → redactarla en /contratos-frame.
@@ -326,6 +341,8 @@ export const ContractCard: React.FC<ContractCardProps> = ({
             <div className="space-y-1.5">
               {activeReleases.map((r) => {
                 const releaseEmpresa = effectiveReleaseEmpresas.map((e) => e.label).join(" | ");
+                // Sin ReleaseTipo vinculado (aún no populado) se asume que sí se envía, para no ocultar la descarga de golpe.
+                const releaseRequiereFirma = typeof r.releaseTipoId === "object" ? r.releaseTipoId?.requiereFirma !== false : true;
                 return (
                   <div key={r._id} className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
                     <span className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-1.5 flex-wrap min-w-0" title={releaseEmpresa ? `${r.name} | ${releaseEmpresa}` : r.name}>
@@ -337,7 +354,11 @@ export const ContractCard: React.FC<ContractCardProps> = ({
                         </span>
                       ))}
                     </span>
-                    <DownloadMenu empresas={effectiveReleaseEmpresas} onDownload={(empresaId) => onDownloadRelease(r, empresaId)} title="Descargar release" />
+                    {releaseRequiereFirma ? (
+                      <DownloadMenu empresas={effectiveReleaseEmpresas} onDownload={(empresaId) => onDownloadRelease(r, empresaId)} title="Descargar release" />
+                    ) : (
+                      <NoSeEnviaAFirmar />
+                    )}
                   </div>
                 );
               })}

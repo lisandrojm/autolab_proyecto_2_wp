@@ -25,7 +25,7 @@ const sendPdf = (res, buffer, baseName) => {
 router.get("/", authenticateToken, async (_req, res) => {
     try {
         await ensureContratosBackfilled();
-        const items = await ContratoFrame.find().sort({ name: 1 }).populate({ path: "contratoId", select: "name isActive", model: Contrato }).lean();
+        const items = await ContratoFrame.find().sort({ name: 1 }).populate({ path: "contratoId", select: "name isActive data.requiereFirma", model: Contrato }).lean();
         res.json(items);
     }
     catch (error) {

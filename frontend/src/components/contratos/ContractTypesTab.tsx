@@ -5,7 +5,7 @@ import { EmptyState } from '../ui/EmptyState';
 import { Modal } from '../ui/Modal';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash, faFileContract, faGrip, faTable, faFileInvoiceDollar, faInfinity, faFileSignature } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faTrash, faFileContract, faGrip, faTable, faFileInvoiceDollar, faInfinity, faFileSignature, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { contratosAPI, ContratoItem } from '../../api/contratos';
 import { contratoFrameAPI, ContratoFrameItem } from '../../api/contratosFrame';
 import { infoAPI, InfoItem } from '../../api/info';
@@ -483,6 +483,11 @@ export const ContractTypesTab: React.FC = () => {
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input type="checkbox" checked={form.requiereFirma} onChange={(e) => setForm((p) => ({ ...p, requiereFirma: e.target.checked }))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
             <span className="text-gray-700 dark:text-gray-300">Se envía a firmar</span>
+            <FontAwesomeIcon
+              icon={faCircleInfo}
+              className="text-gray-400 h-3.5 w-3.5"
+              title='Si se destilda, en Contratos del proyecto no se va a poder descargar este contrato para enviarlo a firmar: en su lugar se muestra el aviso "No se envía a firmar".'
+            />
           </label>
 
           <label className="flex items-center gap-2 text-sm cursor-pointer">

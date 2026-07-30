@@ -6,8 +6,8 @@ export interface ContratoFrameItem {
   name: string;
   /** Contenido redactado en la plataforma (HTML) con variables `{{variable}}` */
   content?: string;
-  /** Contrato (tipo) al que pertenece esta plantilla. Viaja populado con `{ _id, name, isActive }`. */
-  contratoId?: string | { _id: string; name: string; isActive?: boolean };
+  /** Contrato (tipo) al que pertenece esta plantilla. Viaja populado con `{ _id, name, isActive, data.requiereFirma }`. */
+  contratoId?: string | { _id: string; name: string; isActive?: boolean; data?: { requiereFirma?: boolean } };
   data: {
     id?: number;
     nombre: string;

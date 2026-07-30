@@ -8,8 +8,8 @@ export interface Release {
   description?: string;
   /** Contenido redactado en la plataforma (HTML) con variables `{{variable}}` */
   content?: string;
-  /** Tipo de release (ver `api/releaseTipos.ts`). Puede venir populado como objeto `{_id, name, isActive}`. */
-  releaseTipoId?: string | { _id: string; name: string; isActive?: boolean };
+  /** Tipo de release (ver `api/releaseTipos.ts`). Puede venir populado como objeto `{_id, name, isActive, requiereFirma}`. */
+  releaseTipoId?: string | { _id: string; name: string; isActive?: boolean; requiereFirma?: boolean };
   isActive: boolean;
   usaMembrete?: boolean;
   createdAt: string;

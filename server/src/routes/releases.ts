@@ -43,7 +43,7 @@ router.get("/", authenticateToken, requireTenant, async (req: AuthenticatedReque
       tenantId: req.tenantObjectId,
     })
       .sort({ createdAt: -1 })
-      .populate({ path: "releaseTipoId", select: "name isActive", model: ReleaseTipo });
+      .populate({ path: "releaseTipoId", select: "name isActive requiereFirma", model: ReleaseTipo });
 
     res.json(releases);
   } catch (error) {
