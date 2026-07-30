@@ -358,21 +358,23 @@ export const RolesFramePage: React.FC = () => {
           title={editingRole ? 'Editar Función FRAME' : 'Nueva Función FRAME'}
           subtitle={editingRole ? 'Modifica los datos de la función' : 'Agrega una nueva función y asocia categorías SAT'}
           size="lg"
-          actions={[
-            {
-              label: editingRole ? 'Actualizar' : 'Crear',
-              onClick: () => {
-                const form = document.querySelector<HTMLFormElement>('#role-frame-form');
-                form?.requestSubmit();
-              },
-              variant: 'primary',
-            },
-            {
-              label: 'Cancelar',
-              onClick: () => setShowModal(false),
-              variant: 'ghost',
-            },
-          ]}
+          footer={
+            <div className="flex items-center justify-end gap-3 w-full">
+              <button type="button" onClick={() => setShowModal(false)} className="btn-secondary">
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const form = document.querySelector<HTMLFormElement>('#role-frame-form');
+                  form?.requestSubmit();
+                }}
+                className="btn-primary"
+              >
+                {editingRole ? 'Actualizar' : 'Crear'}
+              </button>
+            </div>
+          }
         >
           <form id="role-frame-form" onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -381,7 +383,19 @@ export const RolesFramePage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Categorías SAT *</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Categorías SAT * {selectedCategoryIds.length > 0 ? <span className="font-normal text-gray-500 dark:text-gray-400">({selectedCategoryIds.length})</span> : null}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategoryIds([])}
+                  disabled={selectedCategoryIds.length === 0}
+                  className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
+                >
+                  Limpiar
+                </button>
+              </div>
               <div className="relative mb-2">
                 <input type="text" value={catSearch} onChange={(e) => setCatSearch(e.target.value)} className="input-field w-full pl-9 pr-8 py-2 border rounded bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100" placeholder="Buscar categorías por nombre o número..." />
                 <div className="absolute inset-y-0 left-0 left-3 pl-3 flex items-center pointer-events-none text-gray-400">
