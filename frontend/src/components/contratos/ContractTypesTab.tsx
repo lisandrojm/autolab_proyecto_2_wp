@@ -5,7 +5,7 @@ import { EmptyState } from '../ui/EmptyState';
 import { Modal } from '../ui/Modal';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash, faFileContract, faGrip, faTable, faFileInvoiceDollar } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faTrash, faFileContract, faGrip, faTable, faFileInvoiceDollar, faInfinity, faFileSignature } from '@fortawesome/free-solid-svg-icons';
 import { contratosAPI, ContratoItem } from '../../api/contratos';
 import { contratoFrameAPI, ContratoFrameItem } from '../../api/contratosFrame';
 import { infoAPI, InfoItem } from '../../api/info';
@@ -30,6 +30,26 @@ interface FormState {
 }
 
 const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDiario: '', esTiempoIndeterminado: false, requiereFirma: true, isActive: true, estadoIds: [] };
+
+const BadgeTiempoIndeterminado: React.FC = () => (
+  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
+    <FontAwesomeIcon icon={faInfinity} className="h-2.5 w-2.5" />
+    Tiempo indeterminado
+  </span>
+);
+
+const BadgeFirma: React.FC<{ activo: boolean }> = ({ activo }) => (
+  <span
+    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
+      activo
+        ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-100 dark:border-green-800'
+        : 'bg-gray-50 text-gray-500 dark:bg-gray-700/30 dark:text-gray-400 border-gray-200 dark:border-gray-700'
+    }`}
+  >
+    <FontAwesomeIcon icon={faFileSignature} className="h-2.5 w-2.5" />
+    {activo ? 'Se envía a firmar' : 'No se envía a firmar'}
+  </span>
+);
 
 /** Botón de acción del footer de una tarjeta: mismo color/hover/tooltip que usa Clientes (Card.tsx, variant "default"). */
 const CardFooterAction: React.FC<{ icon: typeof faEdit; title: string; onClick: () => void }> = ({ icon, title, onClick }) => (
@@ -315,6 +335,7 @@ export const ContractTypesTab: React.FC = () => {
                   <th className="px-4 py-3 font-semibold">Jornadas</th>
                   <th className="px-4 py-3 font-semibold">Mult. Diario</th>
                   <th className="px-4 py-3 font-semibold">Tiempo Indet.</th>
+                  <th className="px-4 py-3 font-semibold">Firma</th>
                   <th className="px-4 py-3 font-semibold">Estado</th>
                   <th className="px-4 py-3 font-semibold">Plantillas</th>
                   <th className="px-4 py-3 font-semibold">Estados</th>
@@ -330,7 +351,10 @@ export const ContractTypesTab: React.FC = () => {
                       <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100">{contrato.name}</td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{contrato.data?.cantidadJornadas ?? '—'}</td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{contrato.data?.multiplicadorDiario ?? '—'}</td>
-                      <td className="px-4 py-3">{contrato.data?.esTiempoIndeterminado ? <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">Sí</span> : <span className="text-xs text-gray-400">—</span>}</td>
+                      <td className="px-4 py-3">{contrato.data?.esTiempoIndeterminado ? <BadgeTiempoIndeterminado /> : <span className="text-xs text-gray-400">—</span>}</td>
+                      <td className="px-4 py-3">
+                        <BadgeFirma activo={contrato.data?.requiereFirma !== false} />
+                      </td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${contrato.isActive === false ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}>
                           {contrato.isActive === false ? 'Inactivo' : 'Activo'}
@@ -377,14 +401,18 @@ export const ContractTypesTab: React.FC = () => {
                   <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{contrato.name}</span>
                 </div>
 
-                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-400 pt-1 border-t border-gray-100 dark:border-gray-700/60">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-400 pt-1 border-t border-gray-100 dark:border-gray-700/60">
                   <span>
                     <strong>{contrato.data?.cantidadJornadas ?? 0}</strong> jornadas
                   </span>
                   <span>
                     Multiplicador <strong>{contrato.data?.multiplicadorDiario ?? 0}</strong>
                   </span>
-                  {contrato.data?.esTiempoIndeterminado && <span className="font-semibold text-blue-600 dark:text-blue-400">Tiempo indeterminado</span>}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {contrato.data?.esTiempoIndeterminado && <BadgeTiempoIndeterminado />}
+                  <BadgeFirma activo={contrato.data?.requiereFirma !== false} />
                 </div>
 
                 {misEstados.length > 0 && (
