@@ -3,6 +3,7 @@ import { SearchAndFilters } from '../ui/SearchAndFilters';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { EmptyState } from '../ui/EmptyState';
 import { Modal } from '../ui/Modal';
+import { InfoModal } from '../ui/InfoModal';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faEdit, faTrash, faFileContract, faGrip, faTable, faFileInvoiceDollar, faInfinity, faFileSignature, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
@@ -71,6 +72,7 @@ export const ContractTypesTab: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showFirmaInfo, setShowFirmaInfo] = useState(false);
   const [editando, setEditando] = useState<ContratoItem | null>(null);
   const [form, setForm] = useState<FormState>(FORM_VACIO);
   // Selección de Estados al abrir el modal: para diffear contra `form.estadoIds` al guardar.
