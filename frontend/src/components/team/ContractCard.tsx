@@ -286,7 +286,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
                 </span>
               ))}
             </span>
-            {canDownloadContract && !contratoRequiereFirma ? (
+            {!contratoRequiereFirma ? (
               <NoSeEnviaAFirmar />
             ) : canDownloadContract ? (
               <DownloadMenu empresas={effectiveContratoEmpresas} onDownload={onDownloadContract} title="Descargar contrato" />
