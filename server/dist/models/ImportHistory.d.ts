@@ -1,7 +1,12 @@
 import mongoose, { Document, Types } from "mongoose";
 export interface IImportHistory extends Document {
     tenantId: Types.ObjectId;
-    status: "success" | "failed";
+    /**
+     * "running" se guarda al ARRANCAR la sincronización, antes de recorrer los empleados (que puede
+     * tardar varios minutos), y el mismo documento se actualiza a "success"/"failed" al terminar. El
+     * frontend hace polling de `GET /import/history/latest` mientras el estado sea "running".
+     */
+    status: "running" | "success" | "failed";
     executedBy: Types.ObjectId | "system";
     stats: {
         createdUsers: number;

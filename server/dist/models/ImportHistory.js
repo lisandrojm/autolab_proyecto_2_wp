@@ -1,7 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 const importHistorySchema = new Schema({
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
-    status: { type: String, enum: ["success", "failed"], required: true },
+    status: { type: String, enum: ["running", "success", "failed"], required: true },
     executedBy: {
         type: Schema.Types.Mixed,
         required: true

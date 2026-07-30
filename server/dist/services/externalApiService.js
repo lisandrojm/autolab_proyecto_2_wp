@@ -244,6 +244,16 @@ export class ExternalApiService {
         let skipped = 0;
         let errors = 0;
         let thresholdDate = null;
+        // Se guarda ANTES de recorrer los empleados (puede tardar varios minutos con ~1900+
+        // empleados, cada uno con llamadas secuenciales a FRAME) para que el frontend pueda hacer
+        // polling de `GET /import/history/latest` y saber que sigue en curso en vez de asumir que
+        // se colgó. Al terminar se actualiza este mismo documento a "success"/"failed".
+        const runningRecord = await ImportHistory.create({
+            tenantId: new mongoose.Types.ObjectId(tenantId),
+            status: "running",
+            executedBy: executedBy === "system" ? "system" : new mongoose.Types.ObjectId(executedBy),
+            stats: { createdUsers: 0, updatedUsers: 0, skippedUsers: 0, errorsUsers: 0 },
+        });
         try {
             const employees = await this.getEmployees();
             const tenantObjectId = new mongoose.Types.ObjectId(tenantId);
@@ -505,11 +515,9 @@ export class ExternalApiService {
                     errors++;
                 }
             }
-            // Save success history record
-            await ImportHistory.create({
-                tenantId: new mongoose.Types.ObjectId(tenantId),
+            // Update the "running" record → success
+            await ImportHistory.findByIdAndUpdate(runningRecord._id, {
                 status: "success",
-                executedBy: executedBy === "system" ? "system" : new mongoose.Types.ObjectId(executedBy),
                 stats: {
                     createdUsers: created,
                     updatedUsers: updated,
@@ -525,11 +533,10 @@ export class ExternalApiService {
         }
         catch (globalError) {
             console.error("[EXTERNAL API] Global import failure:", globalError);
-            // Save failure history record
-            await ImportHistory.create({
-                tenantId: new mongoose.Types.ObjectId(tenantId),
+            // Update the "running" record → failed
+            await ImportHistory.findByIdAndUpdate(runningRecord._id, {
                 status: "failed",
-                executedBy: executedBy === "system" ? "system" : new mongoose.Types.ObjectId(executedBy),
+                errorDetails: globalError?.message ? String(globalError.message) : undefined,
                 stats: {
                     createdUsers: created,
                     updatedUsers: updated,
@@ -540,8 +547,7 @@ export class ExternalApiService {
                 addedProjects: Array.from(addedProjectsMap.entries()).map(([externalId, name]) => ({
                     name,
                     externalId
-                })),
-                errorDetails: globalError.message || String(globalError)
+                }))
             });
             throw globalError;
         }

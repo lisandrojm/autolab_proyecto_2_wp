@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import axios from "../api/axiosConfig";
 import { PageLayout } from "../components/ui/PageLayout";
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -56,7 +56,7 @@ interface AddedUserDetail {
 
 interface HistoryItem {
   _id: string;
-  status: "success" | "failed";
+  status: "running" | "success" | "failed";
   executedBy: { firstName?: string; lastName?: string; email?: string } | string;
   stats: SyncStats;
   addedUsers: AddedUser[];
@@ -91,12 +91,59 @@ export const ImportUsersWpPage: React.FC = () => {
     }, 4000);
   };
 
+  // Polling del estado mientras la sincronización está en curso (ver comentario en el backend:
+  // el sync recorre ~1900+ empleados secuencialmente y puede tardar varios minutos, muy por
+  // encima de cualquier timeout de request HTTP, así que se dispara en segundo plano).
+  const pollingRef = useRef<number | null>(null);
+
+  const stopPolling = () => {
+    if (pollingRef.current) {
+      window.clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  };
+
+  useEffect(() => stopPolling, []);
+
+  const startPolling = () => {
+    stopPolling();
+    pollingRef.current = window.setInterval(async () => {
+      try {
+        const res = await axios.get("/users/import/history/latest");
+        const latest: HistoryItem | null = res.data;
+        setLatestSync(latest);
+        if (latest && latest.status !== "running") {
+          stopPolling();
+          setLoading(false);
+          if (latest.status === "success") {
+            showToast("Sincronización completada con éxito", "success");
+          } else {
+            showToast(latest.errorDetails || "La sincronización terminó con errores", "error");
+          }
+          await fetchData();
+        }
+      } catch (err) {
+        // Error transitorio de red al consultar el estado: no se corta el polling, se reintenta
+        // en el próximo tick.
+        console.error("Error polling import status:", err);
+      }
+    }, 5000);
+  };
+
   const fetchData = async () => {
     setFetchingData(true);
     try {
       // 1. Fetch latest import run info
       const latestRes = await axios.get("/users/import/history/latest");
-      setLatestSync(latestRes.data);
+      const latest: HistoryItem | null = latestRes.data;
+      setLatestSync(latest);
+
+      // Si ya hay una corrida en curso (disparada por otra persona, o esta misma pestaña se
+      // recargó a mitad de camino), se retoma el polling en vez de dejar la pantalla colgada.
+      if (latest?.status === "running") {
+        setLoading(true);
+        startPolling();
+      }
 
       // 1b. Fetch project/contract/rol-frame details for the last added users
       const detailsRes = await axios.get("/users/import/last-added-details");
@@ -115,20 +162,27 @@ export const ImportUsersWpPage: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleManualSync = async () => {
     setLoading(true);
     try {
-      // Sincronización SIEMPRE completa + con proyectos (sin opciones/automatización).
+      // Sincronización SIEMPRE completa + con proyectos (sin opciones/automatización). El request
+      // responde apenas se dispara (no espera a que termine); el resultado se sigue por polling.
       await axios.post("/users/import/trigger", { syncProjects: true });
-      showToast("Sincronización completada con éxito", "success");
-      await fetchData();
+      showToast("Sincronización iniciada: puede tardar varios minutos, esta pantalla se actualiza sola.", "success");
+      startPolling();
     } catch (err: any) {
+      if (err.response?.status === 409) {
+        // Ya había una en curso (otra persona la disparó): igual la seguimos por polling.
+        showToast(err.response?.data?.error || "Ya hay una sincronización en curso.", "error");
+        startPolling();
+        return;
+      }
       console.error("Manual sync error:", err);
       const errMsg = err.response?.data?.error || "Falló la sincronización con la API de FRAME";
       showToast(errMsg, "error");
-    } finally {
       setLoading(false);
     }
   };
@@ -208,39 +262,67 @@ export const ImportUsersWpPage: React.FC = () => {
                     </p>
                   </div>
                   {latestSync && (
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900 dark:text-emerald-400">
-                      <FontAwesomeIcon icon={faCheckCircle} />
-                      Sincronizado
+                    <div
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${
+                        latestSync.status === "running"
+                          ? "bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900 dark:text-blue-400"
+                          : latestSync.status === "failed"
+                            ? "bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/20 dark:border-rose-900 dark:text-rose-400"
+                            : "bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900 dark:text-emerald-400"
+                      }`}
+                    >
+                      {latestSync.status === "running" ? (
+                        <>
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current" />
+                          Sincronizando...
+                        </>
+                      ) : latestSync.status === "failed" ? (
+                        <>
+                          <FontAwesomeIcon icon={faExclamationCircle} />
+                          Falló
+                        </>
+                      ) : (
+                        <>
+                          <FontAwesomeIcon icon={faCheckCircle} />
+                          Sincronizado
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
 
-                {latestSync && (
-                  <div className="grid grid-cols-3 gap-4 mt-5 pt-4 border-t border-gray-200 dark:border-gray-800 text-center">
-                    <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800/40">
-                      <span className="block text-2xl font-bold text-blue-600 dark:text-blue-400">{latestSync.stats.createdUsers}</span>
-                      <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1 mt-1">
-                        <FontAwesomeIcon icon={faUserPlus} className="text-blue-500" />
-                        Creados
-                      </span>
-                    </div>
-                    <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800/40">
-                      <span className="block text-2xl font-bold text-emerald-600 dark:text-emerald-400">{latestSync.stats.skippedUsers ?? 0}</span>
-                      <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1 mt-1">
-                        <FontAwesomeIcon icon={faUserCheck} className="text-emerald-500" />
-                        Omitidos (ya existían)
-                      </span>
-                    </div>
-                    <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800/40">
-                      <span className={`block text-2xl font-bold ${latestSync.stats.errorsUsers > 0 ? "text-rose-600 dark:text-rose-400" : "text-gray-600 dark:text-gray-400"}`}>
-                        {latestSync.stats.errorsUsers}
-                      </span>
-                      <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1 mt-1">
-                        <FontAwesomeIcon icon={faExclamationTriangle} className="text-rose-500" />
-                        Errores
-                      </span>
-                    </div>
+                {latestSync?.status === "running" ? (
+                  <div className="mt-5 pt-4 border-t border-gray-200 dark:border-gray-800 text-center text-xs text-gray-500 dark:text-gray-400">
+                    Trayendo empleados desde FRAME (puede tardar varios minutos)... esta pantalla se actualiza sola cuando termine.
                   </div>
+                ) : (
+                  latestSync && (
+                    <div className="grid grid-cols-3 gap-4 mt-5 pt-4 border-t border-gray-200 dark:border-gray-800 text-center">
+                      <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800/40">
+                        <span className="block text-2xl font-bold text-blue-600 dark:text-blue-400">{latestSync.stats.createdUsers}</span>
+                        <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1 mt-1">
+                          <FontAwesomeIcon icon={faUserPlus} className="text-blue-500" />
+                          Creados
+                        </span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800/40">
+                        <span className="block text-2xl font-bold text-emerald-600 dark:text-emerald-400">{latestSync.stats.skippedUsers ?? 0}</span>
+                        <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1 mt-1">
+                          <FontAwesomeIcon icon={faUserCheck} className="text-emerald-500" />
+                          Omitidos (ya existían)
+                        </span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800/40">
+                        <span className={`block text-2xl font-bold ${latestSync.stats.errorsUsers > 0 ? "text-rose-600 dark:text-rose-400" : "text-gray-600 dark:text-gray-400"}`}>
+                          {latestSync.stats.errorsUsers}
+                        </span>
+                        <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1 mt-1">
+                          <FontAwesomeIcon icon={faExclamationTriangle} className="text-rose-500" />
+                          Errores
+                        </span>
+                      </div>
+                    </div>
+                  )
                 )}
               </div>
 
@@ -464,11 +546,13 @@ export const ImportUsersWpPage: React.FC = () => {
                             <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">{getExecutorName(h)}</td>
                             <td className="px-5 py-4 text-sm whitespace-nowrap">
                               <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
-                                h.status === "success" 
+                                h.status === "success"
                                   ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-400"
-                                  : "bg-rose-50 text-rose-800 dark:bg-rose-950/20 dark:text-rose-400"
+                                  : h.status === "running"
+                                    ? "bg-blue-50 text-blue-800 dark:bg-blue-950/20 dark:text-blue-400"
+                                    : "bg-rose-50 text-rose-800 dark:bg-rose-950/20 dark:text-rose-400"
                               }`}>
-                                {h.status === "success" ? "Exitoso" : "Fallido"}
+                                {h.status === "success" ? "Exitoso" : h.status === "running" ? "En curso" : "Fallido"}
                               </span>
                             </td>
                             <td className="px-5 py-4 text-sm text-center text-blue-600 dark:text-blue-400 font-bold">{h.stats.createdUsers}</td>

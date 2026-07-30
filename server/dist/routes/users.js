@@ -1235,6 +1235,11 @@ router.post("/import/check", requireTenant, authenticateToken, requirePermission
     }
 });
 // POST /users/import/trigger - Disparar importación manual de usuarios
+// Con ~1900+ empleados y llamadas secuenciales por empleado contra FRAME, un ciclo completo puede
+// tardar varios minutos: muy por encima de cualquier timeout razonable de un request HTTP (el
+// frontend corta a los 60s). Por eso NO se espera acá: se dispara en segundo plano y se responde
+// al toque; el frontend hace polling de `GET /import/history/latest` (que arranca en "running")
+// hasta que termine. El propio `importUsers` deja el registro en Mongo con el resultado final.
 router.post("/import/trigger", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
     try {
         const { syncProjects, sinceDays } = req.body;
@@ -1244,18 +1249,18 @@ router.post("/import/trigger", requireTenant, authenticateToken, requirePermissi
             res.status(401).json({ error: "Unauthorized" });
             return;
         }
-        const stats = await externalApi.importUsers(req.tenantObjectId.toString(), new Types.ObjectId(userId), syncProjects === true, limitDays);
-        // Fetch the latest history record created by the sync to return addedUsers and addedProjects
-        const latestRun = await ImportHistory.findOne({
-            tenantId: req.tenantObjectId,
-            status: "success"
-        }).sort({ createdAt: -1 });
-        res.json({
-            message: "Import completed successfully",
-            stats,
-            addedUsers: latestRun?.addedUsers || [],
-            addedProjects: latestRun?.addedProjects || []
-        });
+        const yaHayUnaEnCurso = await ImportHistory.exists({ tenantId: req.tenantObjectId, status: "running" });
+        if (yaHayUnaEnCurso) {
+            res.status(409).json({ error: "Ya hay una sincronización en curso. Esperá a que termine antes de disparar otra." });
+            return;
+        }
+        // Fire-and-forget: `importUsers` guarda su propio registro "running" → "success"/"failed" en
+        // ImportHistory, así que no hace falta esperar el resultado acá ni manejarlo en el .catch (ya
+        // queda reflejado en el historial; esto solo evita un "unhandled rejection" en los logs).
+        externalApi
+            .importUsers(req.tenantObjectId.toString(), new Types.ObjectId(userId), syncProjects === true, limitDays)
+            .catch((err) => console.error("[IMPORT USERS] Background sync failed:", err));
+        res.status(202).json({ message: "Sincronización iniciada en segundo plano." });
     }
     catch (error) {
         console.error("Trigger import error:", error);
