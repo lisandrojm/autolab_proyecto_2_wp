@@ -3113,7 +3113,7 @@ export const ProjectTeamPage: React.FC = () => {
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Estado *</label>
                       <EstadoSelect
-                        options={estadosDisponibles.map((e) => ({ value: String(e.data.id), name: e.name }))}
+                        options={estadosDisponibles.map((e) => ({ value: String(e.data.id), name: e.name, orden: (e.data as any)?.orden }))}
                         value={wizardData.estado_id}
                         onChange={(v) => setWizardData((prev) => ({ ...prev, estado_id: v }))}
                       />

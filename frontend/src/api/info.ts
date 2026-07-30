@@ -15,6 +15,8 @@ export interface InfoItem {
     nombreEnContrato?: string;
     /** Estados: marca los de índole impositiva, para darles un tratamiento distinto. */
     esImpositivo?: boolean;
+    /** Estados: orden visual en el ABM y en el dropdown del wizard (guía, no bloquea transiciones). */
+    orden?: number;
     [key: string]: any;
   };
   name: string;
@@ -54,6 +56,11 @@ class InfoAPI {
 
   async deleteEstado(id: string): Promise<void> {
     await axios.delete(`/info/estados/${id}`);
+  }
+
+  /** Guarda el orden visual tras arrastrar en el ABM (guía, no bloquea transiciones). */
+  async reorderEstados(items: { id: string; orden: number }[]): Promise<void> {
+    await axios.patch(`/info/estados/reorder`, { items });
   }
 }
 

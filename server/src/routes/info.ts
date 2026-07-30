@@ -5,6 +5,49 @@ import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 
 const router = Router();
 
+const ESTADO_TYPE = "estado-empleado";
+
+const normalizarNombre = (s: string): string =>
+  (s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+/**
+ * Semilla de `data.orden` para los Estados que ya existían antes de este campo (portada del mapa
+ * `ESTADO_ORDER` que tenía hardcodeado el frontend en `EstadoSelect.tsx`). Un estado no reconocido
+ * queda en 999 (al final) hasta que alguien lo reordene a mano desde el ABM.
+ */
+const ORDEN_SEMILLA: Record<string, number> = {
+  "pedido de afip": 0,
+  "falta pedido de afip": 0,
+  "pedido servicios": 1,
+  "envio de documentacion": 2,
+  "firma pendiente": 3,
+  disponible: 4,
+};
+const ORDEN_NO_RECONOCIDO = 999;
+
+/**
+ * Backfill idempotente: a todo Estado que todavía no tenga `data.orden` (documentos de antes de
+ * este campo) le asigna un valor inicial, para no pisar en silencio el orden que el usuario ya
+ * conocía por `ESTADO_ORDER`. Se dispara solo (no hace falta correr un script en el VPS), mismo
+ * patrón que `ensureContratosBackfilled()` en `routes/contratos.ts`.
+ */
+async function ensureEstadosOrdenBackfilled(): Promise<void> {
+  const sinOrden = await Info.find({ type: ESTADO_TYPE, "data.orden": { $exists: false } });
+  if (sinOrden.length === 0) return;
+
+  const ops = sinOrden.map((estado) => ({
+    updateOne: {
+      filter: { _id: estado._id },
+      update: { $set: { "data.orden": ORDEN_SEMILLA[normalizarNombre(estado.name)] ?? ORDEN_NO_RECONOCIDO } },
+    },
+  }));
+  await Info.bulkWrite(ops);
+}
+
 /**
  * GET /api/v1/info
  * Query: ?type=sede
@@ -16,6 +59,15 @@ router.get("/", requireTenant, authenticateToken, async (req: AuthenticatedReque
 
     if (type) {
       filter.type = type;
+    }
+
+    if (type === ESTADO_TYPE) {
+      await ensureEstadosOrdenBackfilled();
+      const items = await Info.find(filter)
+        .sort({ "data.orden": 1, name: 1 })
+        .lean();
+      res.json(items);
+      return;
     }
 
     const items = await Info.find(filter).sort({ name: 1 }).lean();
@@ -34,16 +86,8 @@ router.get("/", requireTenant, authenticateToken, async (req: AuthenticatedReque
  * hay que darles un id que no colisione con los de FRAME.
  */
 
-const ESTADO_TYPE = "estado-empleado";
 // Los ids de FRAME son bajos; los locales arrancan bien arriba para no pisarlos nunca.
 const LOCAL_ESTADO_ID_BASE = 100000;
-
-const normalizarNombre = (s: string): string =>
-  (s || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim();
 
 /** "Activo"/"Inactivo" chocan con el estado del usuario: dentro del contrato deben llamarse distinto. */
 const requiereNombreEnContrato = (name: string): boolean => ["activo", "inactivo"].includes(normalizarNombre(name));
@@ -118,16 +162,52 @@ router.post("/estados", requireTenant, authenticateToken, async (req: Authentica
       .lean();
     const nuevoId = Math.max(LOCAL_ESTADO_ID_BASE, Number((ultimoLocal as any)?.data?.id ?? 0) + 1);
 
+    // Nuevo estado al final del orden visual actual (arrastrarlo después es lo que lo reubica).
+    const ultimoOrden = await Info.findOne({ type: ESTADO_TYPE }).sort({ "data.orden": -1 }).lean();
+    const nuevoOrden = Number((ultimoOrden as any)?.data?.orden ?? -1) + 1;
+
     const creado = await Info.create({
       type: ESTADO_TYPE,
       externalId: `local-${nuevoId}`,
       name: parsed.name,
-      data: { ...parsed.data, id: nuevoId },
+      data: { ...parsed.data, id: nuevoId, orden: nuevoOrden },
     });
 
     res.status(201).json(creado.toObject());
   } catch (error) {
     console.error("Create estado error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PATCH /info/estados/reorder - guardar el orden visual tras arrastrar en el ABM.
+// Tiene que registrarse ANTES de "/estados/:id": si no, Express matchea "reorder" como si fuera
+// un :id y este endpoint nunca se alcanza (mismo cuidado que ya toma /shifts/reorder).
+router.patch("/estados/reorder", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const items: Array<{ id: string; orden: number }> = Array.isArray(req.body?.items) ? req.body.items : [];
+    if (items.length === 0) {
+      res.status(400).json({ error: "Se requiere un array de items" });
+      return;
+    }
+
+    // `Info` es una colección compartida por varios `type`: hay que confirmar que todos los ids
+    // sean Estados de verdad antes de aplicar el bulk, para no corromper documentos de otro tipo.
+    const ids = items.map((it) => String(it.id));
+    const existentes = await Info.find({ _id: { $in: ids }, type: ESTADO_TYPE }).select("_id").lean();
+    if (existentes.length !== ids.length) {
+      res.status(400).json({ error: "Alguno de los estados no existe" });
+      return;
+    }
+
+    const ops = items.map((it) => ({
+      updateOne: { filter: { _id: it.id, type: ESTADO_TYPE }, update: { $set: { "data.orden": Number(it.orden) } } },
+    }));
+    await Info.bulkWrite(ops);
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("Reorder estados error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

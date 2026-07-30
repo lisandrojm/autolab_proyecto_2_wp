@@ -7,6 +7,8 @@ import { useThemeStore } from "../stores/themeStore";
 interface EstadoOption {
   value: string;
   name: string;
+  /** Orden visual (viene de `data.orden` del ABM). Sin valor, la opción va al final. */
+  orden?: number;
 }
 
 interface EstadoSelectProps {
@@ -35,17 +37,6 @@ const ESTADO_STYLES: Record<string, { label?: string; cls: string }> = {
   "firma pendiente": { cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
   "pedido servicios": { cls: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300" },
 };
-
-/** Orden fijo de los estados en el dropdown. Los no listados van al final (orden original). */
-const ESTADO_ORDER: Record<string, number> = {
-  "falta pedido de afip": 0,
-  "pedido de afip": 0,
-  "pedido servicios": 1,
-  "envio de documentacion": 2,
-  "firma pendiente": 3,
-  disponible: 4,
-};
-const orderOf = (name: string) => (normalize(name) in ESTADO_ORDER ? ESTADO_ORDER[normalize(name)] : 999);
 
 const styleFor = (name: string) => ESTADO_STYLES[normalize(name)] || { cls: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300" };
 const labelFor = (name: string) => styleFor(name).label || name;
@@ -174,7 +165,9 @@ export const EstadoSelect: React.FC<EstadoSelectProps> = ({ options, value, onCh
   }, [open]);
 
   const selected = useMemo(() => options.find((o) => String(o.value) === String(value)), [options, value]);
-  const sortedOptions = useMemo(() => [...options].sort((a, b) => orderOf(a.name) - orderOf(b.name)), [options]);
+  // Orden persistido en el ABM (Configuración → Contratos | Estados, se arrastra ahí). Es solo
+  // guía visual: no bloquea qué estado se puede elegir. Sin valor, la opción va al final.
+  const sortedOptions = useMemo(() => [...options].sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999) || a.name.localeCompare(b.name)), [options]);
 
   return (
     <div className="relative" ref={ref}>

@@ -6,7 +6,10 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { Modal } from '../components/ui/Modal';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash, faTags, faFileContract, faGrip, faTable, faFileInvoiceDollar } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faTrash, faTags, faFileContract, faGrip, faTable, faFileInvoiceDollar, faGripVertical, faCheck, faMultiply } from '@fortawesome/free-solid-svg-icons';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { infoAPI, InfoItem, EstadoPayload } from '../api/info';
 import { contratoFrameAPI, ContratoFrameItem } from '../api/contratosFrame';
 import { useEstadoCatalogStore } from '../stores/estadoCatalogStore';
@@ -96,6 +99,9 @@ export const EstadosPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
   const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
 
+  const [isReorderMode, setIsReorderMode] = useState(false);
+  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+
   useEffect(() => {
     const handleResize = () => {
       const isNowLarge = window.innerWidth >= 1024;
@@ -142,6 +148,44 @@ export const EstadosPage: React.FC = () => {
     if (!q) return estados;
     return estados.filter((e) => normalizar(e.name).includes(q) || normalizar(e.data?.nombreEnContrato || '').includes(q));
   }, [estados, searchTerm]);
+
+  // En modo reorder siempre se opera sobre el array completo: nunca sobre el resultado filtrado
+  // por la búsqueda, para no pisar mal los índices de los estados que quedaron ocultos.
+  const mostrar = isReorderMode ? estados : filtrados;
+
+  const handleStartReorder = () => {
+    setSearchTerm('');
+    setIsReorderMode(true);
+  };
+
+  const handleCancelReorder = () => {
+    setIsReorderMode(false);
+    cargar();
+  };
+
+  const handleSaveReorder = async () => {
+    const items = estados.map((e, i) => ({ id: e._id, orden: i + 1 }));
+    try {
+      await infoAPI.reorderEstados(items);
+      setIsReorderMode(false);
+      sweetAlert.success('Orden guardado', 'El nuevo orden se guardó con éxito.');
+      await cargar();
+    } catch (e: any) {
+      sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo guardar el orden.');
+      await cargar();
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setEstados((items) => {
+        const oldIndex = items.findIndex((item) => item._id === active.id);
+        const newIndex = items.findIndex((item) => item._id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
 
   const nombreTipoContrato = (id: string) => contratoFrames.find((cf) => String(cf._id) === String(id))?.name || 'Tipo eliminado';
 
@@ -285,18 +329,41 @@ export const EstadosPage: React.FC = () => {
       searchAndFilters={
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
           <div className="flex-1 w-full">
-            <SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar estado..." />
+            {isReorderMode ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400 italic px-1">Arrastrá para reordenar. La búsqueda se deshabilita mientras tanto.</p>
+            ) : (
+              <SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar estado..." />
+            )}
           </div>
-          {isLarge && (
-            <div className="flex items-center gap-2 shrink-0">
-              <button onClick={() => setViewMode('cards')} title="Vista de tarjetas" className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'cards' ? 'bg-blue-500 text-white border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
-                <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+          <div className="flex items-center gap-2 shrink-0">
+            {isReorderMode ? (
+              <div className="flex items-center gap-2">
+                <button onClick={handleCancelReorder} className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all text-sm flex items-center gap-2">
+                  <FontAwesomeIcon icon={faMultiply} />
+                  Cancelar
+                </button>
+                <button onClick={handleSaveReorder} className="px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-all text-sm flex items-center gap-2">
+                  <FontAwesomeIcon icon={faCheck} />
+                  Guardar Orden
+                </button>
+              </div>
+            ) : (
+              <button onClick={handleStartReorder} disabled={estados.length < 2} title="Ordenar estados" className="px-3 py-2 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-sm flex items-center gap-2 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+                <FontAwesomeIcon icon={faGripVertical} />
+                <span>Ordenar</span>
               </button>
-              <button onClick={() => setViewMode('table')} title="Vista de tabla" className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'table' ? 'bg-blue-500 text-white border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
-                <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
-              </button>
-            </div>
-          )}
+            )}
+            {isLarge && !isReorderMode && (
+              <div className="flex items-center gap-2">
+                <button onClick={() => setViewMode('cards')} title="Vista de tarjetas" className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'cards' ? 'bg-blue-500 text-white border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
+                  <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+                </button>
+                <button onClick={() => setViewMode('table')} title="Vista de tabla" className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'table' ? 'bg-blue-500 text-white border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
+                  <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       }
     >
@@ -304,116 +371,55 @@ export const EstadosPage: React.FC = () => {
         <div className="flex justify-center items-center py-20">
           <LoadingSpinner message="Cargando estados..." />
         </div>
-      ) : filtrados.length === 0 ? (
+      ) : mostrar.length === 0 ? (
         <EmptyState icon={faTags} title={searchTerm ? 'Sin resultados' : 'Todavía no hay estados'} description={searchTerm ? 'Probá con otra búsqueda.' : 'Creá el primer estado para usarlo en los contratos.'} />
-      ) : viewMode === 'table' ? (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  <th className="px-4 py-3 font-semibold">Badge</th>
-                  <th className="px-4 py-3 font-semibold">Nombre</th>
-                  <th className="px-4 py-3 font-semibold">Nombre en el contrato</th>
-                  <th className="px-4 py-3 font-semibold">Impositivo</th>
-                  <th className="px-4 py-3 font-semibold">Tipos de contrato</th>
-                  <th className="px-4 py-3 font-semibold text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {filtrados.map((estado) => {
-                  const tipos = estado.data?.contratoFrameIds || [];
-                  return (
-                    <tr key={estado._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
-                      <td className="px-4 py-3">
-                        <BadgePreview texto={estado.data?.nombreEnContrato?.trim() || estado.name} color={colorEfectivo(estado)} />
-                      </td>
-                      <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap">
-                        {estado.name}
-                        <span className="ml-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400" title={tipos.length === 0 ? 'Se ofrece en todos los tipos de contrato' : `${tipos.length} tipo${tipos.length === 1 ? '' : 's'} de contrato`}>
-                          ({tipos.length || 'Todos'})
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{estado.data?.nombreEnContrato || '—'}</td>
-                      <td className="px-4 py-3">{estado.data?.esImpositivo ? <ChipImpositivo /> : <span className="text-xs text-gray-400">—</span>}</td>
-                      <td className="px-4 py-3">
-                        {tipos.length === 0 ? (
-                          <span className="text-[11px] text-gray-500 dark:text-gray-400">Todos los tipos</span>
-                        ) : (
-                          <div className="flex flex-wrap gap-1.5">
-                            {tipos.map((id) => (
-                              <span key={id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
-                                <FontAwesomeIcon icon={faFileContract} className="h-2.5 w-2.5" />
-                                {nombreTipoContrato(id)}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => abrirEditar(estado)} className="p-2 text-gray-400 hover:text-blue-500 transition-colors" title="Editar estado">
-                            <FontAwesomeIcon icon={faEdit} />
-                          </button>
-                          <button onClick={() => eliminar(estado)} className="p-2 text-gray-400 hover:text-red-500 transition-colors" title="Eliminar estado">
-                            <FontAwesomeIcon icon={faTrash} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtrados.map((estado) => {
-            const color = colorEfectivo(estado);
-            const tipos = estado.data?.contratoFrameIds || [];
-            return (
-              <div key={estado._id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex flex-col gap-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex flex-col gap-1.5 min-w-0">
-                    <BadgePreview texto={estado.data?.nombreEnContrato?.trim() || estado.name} color={color} />
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{estado.name}</span>
-                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 shrink-0" title={tipos.length === 0 ? 'Se ofrece en todos los tipos de contrato' : `${tipos.length} tipo${tipos.length === 1 ? '' : 's'} de contrato`}>
-                        ({tipos.length || 'Todos'})
-                      </span>
-                      {estado.data?.esImpositivo ? <ChipImpositivo /> : null}
-                    </div>
-                    {estado.data?.nombreEnContrato ? <span className="text-[11px] text-gray-500 dark:text-gray-400">En el contrato: {estado.data.nombreEnContrato}</span> : null}
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button onClick={() => abrirEditar(estado)} className="p-2 text-gray-400 hover:text-blue-500 transition-colors" title="Editar estado">
-                      <FontAwesomeIcon icon={faEdit} />
-                    </button>
-                    <button onClick={() => eliminar(estado)} className="p-2 text-gray-400 hover:text-red-500 transition-colors" title="Eliminar estado">
-                      <FontAwesomeIcon icon={faTrash} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-1.5 pt-1 border-t border-gray-100 dark:border-gray-700/60">
-                  {tipos.length === 0 ? (
-                    <span className="text-[11px] text-gray-500 dark:text-gray-400 pt-2">Disponible en todos los tipos de contrato</span>
-                  ) : (
-                    <div className="flex flex-wrap gap-1.5 pt-2">
-                      {tipos.map((id) => (
-                        <span key={id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
-                          <FontAwesomeIcon icon={faFileContract} className="h-2.5 w-2.5" />
-                          {nombreTipoContrato(id)}
-                        </span>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          {viewMode === 'table' ? (
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-4 py-3 font-semibold text-center w-14">Ordenar</th>
+                      <th className="px-4 py-3 font-semibold text-center w-14">Orden</th>
+                      <th className="px-4 py-3 font-semibold">Badge</th>
+                      <th className="px-4 py-3 font-semibold">Nombre</th>
+                      <th className="px-4 py-3 font-semibold">Nombre en el contrato</th>
+                      <th className="px-4 py-3 font-semibold">Impositivo</th>
+                      <th className="px-4 py-3 font-semibold">Tipos de contrato</th>
+                      <th className="px-4 py-3 font-semibold text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <SortableContext items={mostrar.map((e) => e._id)} strategy={verticalListSortingStrategy}>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                      {mostrar.map((estado, index) => (
+                        <SortableEstadoRow
+                          key={estado._id}
+                          estado={estado}
+                          index={index}
+                          isReorderMode={isReorderMode}
+                          nombreTipoContrato={nombreTipoContrato}
+                          abrirEditar={abrirEditar}
+                          eliminar={eliminar}
+                          onEnableReorder={handleStartReorder}
+                        />
                       ))}
-                    </div>
-                  )}
-                </div>
+                    </tbody>
+                  </SortableContext>
+                </table>
               </div>
-            );
-          })}
-        </div>
+            </div>
+          ) : (
+            <SortableContext items={mostrar.map((e) => e._id)} strategy={verticalListSortingStrategy}>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {mostrar.map((estado) => (
+                  <SortableEstadoCard key={estado._id} estado={estado} isReorderMode={isReorderMode} nombreTipoContrato={nombreTipoContrato} abrirEditar={abrirEditar} eliminar={eliminar} />
+                ))}
+              </div>
+            </SortableContext>
+          )}
+        </DndContext>
       )}
 
       <Modal
@@ -559,6 +565,136 @@ export const EstadosPage: React.FC = () => {
         </div>
       </Modal>
     </PageLayout>
+  );
+};
+
+interface SortableEstadoProps {
+  estado: InfoItem;
+  isReorderMode: boolean;
+  nombreTipoContrato: (id: string) => string;
+  abrirEditar: (estado: InfoItem) => void;
+  eliminar: (estado: InfoItem) => void;
+}
+
+const SortableEstadoRow: React.FC<SortableEstadoProps & { index: number; onEnableReorder: () => void }> = ({ estado, index, isReorderMode, nombreTipoContrato, abrirEditar, eliminar, onEnableReorder }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: estado._id, disabled: !isReorderMode });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 1 : 0 };
+  const tipos = estado.data?.contratoFrameIds || [];
+
+  return (
+    <tr
+      ref={setNodeRef}
+      style={style}
+      {...(isReorderMode ? { ...attributes, ...listeners } : {})}
+      className={`transition-colors ${isReorderMode ? 'bg-blue-50/50 dark:bg-blue-900/10 cursor-grab active:cursor-grabbing' : 'hover:bg-gray-50 dark:hover:bg-gray-800/40'}`}
+    >
+      <td
+        className={`px-4 py-3 text-center ${!isReorderMode ? 'cursor-pointer' : ''}`}
+        onClick={(e) => {
+          if (!isReorderMode) {
+            e.preventDefault();
+            e.stopPropagation();
+            onEnableReorder();
+          }
+        }}
+        title={!isReorderMode ? 'Clic para activar el modo ordenar' : ''}
+      >
+        <div className={`flex items-center justify-center ${isReorderMode ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-600 hover:text-blue-500'}`}>
+          <FontAwesomeIcon icon={faGripVertical} className="h-4 w-4" />
+        </div>
+      </td>
+      <td className="px-4 py-3 text-center font-medium text-gray-700 dark:text-gray-300">{index + 1}</td>
+      <td className="px-4 py-3">
+        <BadgePreview texto={estado.data?.nombreEnContrato?.trim() || estado.name} color={colorEfectivo(estado)} />
+      </td>
+      <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+        {estado.name}
+        <span className="ml-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400" title={tipos.length === 0 ? 'Se ofrece en todos los tipos de contrato' : `${tipos.length} tipo${tipos.length === 1 ? '' : 's'} de contrato`}>
+          ({tipos.length || 'Todos'})
+        </span>
+      </td>
+      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{estado.data?.nombreEnContrato || '—'}</td>
+      <td className="px-4 py-3">{estado.data?.esImpositivo ? <ChipImpositivo /> : <span className="text-xs text-gray-400">—</span>}</td>
+      <td className="px-4 py-3">
+        {tipos.length === 0 ? (
+          <span className="text-[11px] text-gray-500 dark:text-gray-400">Todos los tipos</span>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {tipos.map((id) => (
+              <span key={id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
+                <FontAwesomeIcon icon={faFileContract} className="h-2.5 w-2.5" />
+                {nombreTipoContrato(id)}
+              </span>
+            ))}
+          </div>
+        )}
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex items-center justify-end gap-1">
+          <button onClick={() => abrirEditar(estado)} disabled={isReorderMode} className={`p-2 text-gray-400 hover:text-blue-500 transition-colors ${isReorderMode ? 'opacity-50 cursor-not-allowed' : ''}`} title="Editar estado">
+            <FontAwesomeIcon icon={faEdit} />
+          </button>
+          <button onClick={() => eliminar(estado)} disabled={isReorderMode} className={`p-2 text-gray-400 hover:text-red-500 transition-colors ${isReorderMode ? 'opacity-50 cursor-not-allowed' : ''}`} title="Eliminar estado">
+            <FontAwesomeIcon icon={faTrash} />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+};
+
+const SortableEstadoCard: React.FC<SortableEstadoProps> = ({ estado, isReorderMode, nombreTipoContrato, abrirEditar, eliminar }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: estado._id, disabled: !isReorderMode });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 1 : 0 };
+  const color = colorEfectivo(estado);
+  const tipos = estado.data?.contratoFrameIds || [];
+
+  return (
+    <div ref={setNodeRef} style={style} className="relative">
+      {isReorderMode && (
+        <div {...attributes} {...listeners} className="absolute -top-2 -left-2 z-10 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center cursor-grab active:cursor-grabbing shadow-lg">
+          <FontAwesomeIcon icon={faGrip} className="h-3.5 w-3.5" />
+        </div>
+      )}
+      <div className={`bg-white dark:bg-gray-800 rounded-xl border p-4 flex flex-col gap-3 ${isReorderMode ? 'border-2 border-blue-500/50 shadow-blue-500/10' : 'border-gray-200 dark:border-gray-700'}`}>
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex flex-col gap-1.5 min-w-0">
+            <BadgePreview texto={estado.data?.nombreEnContrato?.trim() || estado.name} color={color} />
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{estado.name}</span>
+              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 shrink-0" title={tipos.length === 0 ? 'Se ofrece en todos los tipos de contrato' : `${tipos.length} tipo${tipos.length === 1 ? '' : 's'} de contrato`}>
+                ({tipos.length || 'Todos'})
+              </span>
+              {estado.data?.esImpositivo ? <ChipImpositivo /> : null}
+            </div>
+            {estado.data?.nombreEnContrato ? <span className="text-[11px] text-gray-500 dark:text-gray-400">En el contrato: {estado.data.nombreEnContrato}</span> : null}
+          </div>
+          <div className={`flex items-center gap-1 shrink-0 ${isReorderMode ? 'opacity-20 pointer-events-none' : ''}`}>
+            <button onClick={() => abrirEditar(estado)} className="p-2 text-gray-400 hover:text-blue-500 transition-colors" title="Editar estado">
+              <FontAwesomeIcon icon={faEdit} />
+            </button>
+            <button onClick={() => eliminar(estado)} className="p-2 text-gray-400 hover:text-red-500 transition-colors" title="Eliminar estado">
+              <FontAwesomeIcon icon={faTrash} />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-1.5 pt-1 border-t border-gray-100 dark:border-gray-700/60">
+          {tipos.length === 0 ? (
+            <span className="text-[11px] text-gray-500 dark:text-gray-400 pt-2">Disponible en todos los tipos de contrato</span>
+          ) : (
+            <div className="flex flex-wrap gap-1.5 pt-2">
+              {tipos.map((id) => (
+                <span key={id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
+                  <FontAwesomeIcon icon={faFileContract} className="h-2.5 w-2.5" />
+                  {nombreTipoContrato(id)}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 
