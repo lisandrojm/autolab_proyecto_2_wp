@@ -10,6 +10,7 @@ const infoSchema = new Schema({
         contratoFrameIds: { type: [String] },
         nombreEnContrato: { type: String },
         esImpositivo: { type: Boolean },
+        orden: { type: Number },
     },
     name: { type: String, required: true },
 }, {

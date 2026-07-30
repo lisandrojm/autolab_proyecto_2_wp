@@ -13,6 +13,8 @@ export interface IInfo extends Document {
         nombreEnContrato?: string;
         /** Estados: marca los estados de índole impositiva, para poder darles un tratamiento distinto. */
         esImpositivo?: boolean;
+        /** Estados: orden visual en el ABM y en el dropdown del wizard (guía, no bloquea transiciones). */
+        orden?: number;
         [key: string]: any;
     };
     name: string;
