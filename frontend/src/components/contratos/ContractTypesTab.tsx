@@ -10,7 +10,7 @@ import { faPlus, faEdit, faTrash, faFileContract, faGrip, faTable, faFileInvoice
 import { contratosAPI, ContratoItem } from '../../api/contratos';
 import { contratoFrameAPI, ContratoFrameItem } from '../../api/contratosFrame';
 import { infoAPI, InfoItem } from '../../api/info';
-import { EstadoBadge } from '../EstadoSelect';
+import { EstadoBadge, estadoImpositivoDe, EstadoSecundarioBadge } from '../EstadoSelect';
 
 const normalizar = (s: string): string =>
   (s || '')
@@ -237,8 +237,9 @@ export const ContractTypesTab: React.FC = () => {
         await infoAPI.updateEstado(estado._id, {
           name: estado.name,
           color: estado.data?.color,
-          nombreEnContrato: estado.data?.nombreEnContrato,
           esImpositivo: estado.data?.esImpositivo,
+          etiquetaSecundaria: estado.data?.etiquetaSecundaria,
+          colorEtiquetaSecundaria: estado.data?.colorEtiquetaSecundaria,
           contratoFrameIds: Array.from(nuevosIds),
         });
       } catch (e: any) {
@@ -339,6 +340,7 @@ export const ContractTypesTab: React.FC = () => {
                   <th className="px-4 py-3 font-semibold">Mult. Diario</th>
                   <th className="px-4 py-3 font-semibold">Tiempo Indet.</th>
                   <th className="px-4 py-3 font-semibold">Firma</th>
+                  <th className="px-4 py-3 font-semibold">Categoría</th>
                   <th className="px-4 py-3 font-semibold">Estado</th>
                   <th className="px-4 py-3 font-semibold">Plantillas</th>
                   <th className="px-4 py-3 font-semibold">Estados</th>
@@ -349,6 +351,7 @@ export const ContractTypesTab: React.FC = () => {
                 {filtrados.map((contrato) => {
                   const cantPlantillas = plantillasPorContrato.get(contrato._id) || 0;
                   const misEstados = estadosPorContrato.get(contrato._id) || [];
+                  const estadoImpositivo = estadoImpositivoDe(misEstados);
                   return (
                     <tr key={contrato._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
                       <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100">{contrato.name}</td>
@@ -358,6 +361,7 @@ export const ContractTypesTab: React.FC = () => {
                       <td className="px-4 py-3">
                         <BadgeFirma activo={contrato.data?.requiereFirma !== false} />
                       </td>
+                      <td className="px-4 py-3">{estadoImpositivo?.data?.etiquetaSecundaria ? <EstadoSecundarioBadge estado={estadoImpositivo} className="text-[10px]" /> : <span className="text-xs text-gray-400">—</span>}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${contrato.isActive === false ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}>
                           {contrato.isActive === false ? 'Inactivo' : 'Activo'}
@@ -395,6 +399,7 @@ export const ContractTypesTab: React.FC = () => {
           {filtrados.map((contrato) => {
             const cantPlantillas = plantillasPorContrato.get(contrato._id) || 0;
             const misEstados = estadosPorContrato.get(contrato._id) || [];
+            const estadoImpositivo = estadoImpositivoDe(misEstados);
             return (
               <div key={contrato._id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex flex-col gap-3">
                 <div className="flex flex-col gap-1.5 min-w-0">
@@ -416,6 +421,7 @@ export const ContractTypesTab: React.FC = () => {
                 <div className="flex flex-wrap items-center gap-1.5">
                   {contrato.data?.esTiempoIndeterminado && <BadgeTiempoIndeterminado />}
                   <BadgeFirma activo={contrato.data?.requiereFirma !== false} />
+                  <EstadoSecundarioBadge estado={estadoImpositivo} className="text-[10px]" />
                 </div>
 
                 {misEstados.length > 0 && (

@@ -77,16 +77,10 @@ router.get("/", requireTenant, authenticateToken, async (req, res) => {
  */
 // Los ids de FRAME son bajos; los locales arrancan bien arriba para no pisarlos nunca.
 const LOCAL_ESTADO_ID_BASE = 100000;
-/** "Activo"/"Inactivo" chocan con el estado del usuario: dentro del contrato deben llamarse distinto. */
-const requiereNombreEnContrato = (name) => ["activo", "inactivo"].includes(normalizarNombre(name));
 function parseEstadoBody(body) {
     const name = String(body?.name ?? "").trim();
     if (!name)
         return { error: "El nombre es obligatorio" };
-    const nombreEnContrato = String(body?.nombreEnContrato ?? "").trim();
-    if (requiereNombreEnContrato(name) && !nombreEnContrato) {
-        return { error: `El estado "${name}" necesita un nombre distinto dentro del contrato para no confundirse con el estado del usuario` };
-    }
     const color = String(body?.color ?? "").trim();
     if (color && !/^#[0-9a-f]{6}$/i.test(color))
         return { error: "El color debe ser hexadecimal, por ejemplo #16a34a" };
@@ -97,7 +91,23 @@ function parseEstadoBody(body) {
     if (esImpositivo && contratoFrameIds.length === 0) {
         return { error: "Un estado impositivo tiene que indicar a qué tipos de contrato corresponde" };
     }
-    return { name, data: { nombre: name, color: color || undefined, nombreEnContrato: nombreEnContrato || undefined, contratoFrameIds, esImpositivo } };
+    // El badge secundario (texto + color) solo tiene sentido para estados impositivos: si se destilda
+    // "Estado impositivo" se descarta, para no dejar un badge secundario huérfano configurado.
+    const colorEtiquetaSecundaria = String(body?.colorEtiquetaSecundaria ?? "").trim();
+    if (colorEtiquetaSecundaria && !/^#[0-9a-f]{6}$/i.test(colorEtiquetaSecundaria))
+        return { error: "El color del badge secundario debe ser hexadecimal, por ejemplo #16a34a" };
+    const etiquetaSecundaria = esImpositivo ? String(body?.etiquetaSecundaria ?? "").trim() : "";
+    return {
+        name,
+        data: {
+            nombre: name,
+            color: color || undefined,
+            contratoFrameIds,
+            esImpositivo,
+            etiquetaSecundaria: etiquetaSecundaria || undefined,
+            colorEtiquetaSecundaria: esImpositivo ? colorEtiquetaSecundaria || undefined : undefined,
+        },
+    };
 }
 /**
  * Cada tipo de contrato puede tener un solo estado impositivo: si otro ya lo tomó, no se puede

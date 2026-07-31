@@ -129,10 +129,9 @@ export const EstadoBadge: React.FC<{ name: string; className?: string }> = ({ na
 
   // El match es por clave canónica: los contratos guardan variantes del mismo estado.
   const configurado = useMemo(() => estados.find((e) => claveEstado(e.name) === claveEstado(name)), [estados, name]);
-  // Si el estado está en el ABM, manda lo que diga el ABM: su color y, si lo tiene, su nombre en el contrato.
+  // Si el estado está en el ABM, manda lo que diga el ABM: su color.
   const color = configurado?.data?.color || (configurado ? estadoColorPorDefecto(configurado.name) : undefined);
-  // Dentro del contrato el estado puede llamarse distinto (p. ej. para no chocar con ACTIVO/INACTIVO del usuario).
-  const texto = configurado?.data?.nombreEnContrato?.trim() || configurado?.name || labelFor(name);
+  const texto = configurado?.name || labelFor(name);
   const esImpositivo = !!configurado?.data?.esImpositivo;
 
   const clases = `inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide ${className}`;
@@ -151,6 +150,32 @@ export const EstadoBadge: React.FC<{ name: string; className?: string }> = ({ na
   return (
     <span className={`${clases} ${styleFor(name).cls}`}>
       {iconoImpositivo}
+      {texto}
+    </span>
+  );
+};
+
+/**
+ * De la lista de Estados vinculados a una Plantilla/Contrato, devuelve el Estado impositivo
+ * asignado (p. ej. "Pedido de AFIP" o "Pedido Servicios", mutuamente excluyentes por tipo de
+ * contrato: ver `toggleEstadoImpositivo` en ContractTypesTab.tsx) o `null` si no tiene ninguno.
+ */
+export const estadoImpositivoDe = <T extends { name: string; data?: { esImpositivo?: boolean } }>(estados: T[]): T | null => estados.find((e) => e.data?.esImpositivo) || null;
+
+/**
+ * Badge secundario de un Estado impositivo: texto y color se eligen aparte (en el ABM de Estados,
+ * solo cuando "Estado impositivo" está tildado) del nombre/color del badge principal del estado.
+ * Se muestra en las tarjetas de Contrato para identificar si es "Servicios", "Alta de AFIP", etc.
+ * Si el estado impositivo no tiene texto secundario configurado, no se muestra nada.
+ */
+export const EstadoSecundarioBadge: React.FC<{ estado: { name: string; data?: { etiquetaSecundaria?: string; colorEtiquetaSecundaria?: string } } | null; className?: string }> = ({ estado, className = "" }) => {
+  const theme = useThemeStore((s) => s.theme);
+  const texto = estado?.data?.etiquetaSecundaria?.trim();
+  if (!texto) return null;
+  const color = estado?.data?.colorEtiquetaSecundaria || estadoColorPorDefecto(estado!.name);
+  const textoColor = colorTextoBadge(color, theme === "dark");
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide ${className}`} style={{ color: textoColor, backgroundColor: conAlpha(color, 0.14), border: `1px solid ${conAlpha(color, 0.35)}` }}>
       {texto}
     </span>
   );

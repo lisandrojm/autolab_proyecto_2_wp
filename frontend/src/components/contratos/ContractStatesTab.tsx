@@ -3,9 +3,10 @@ import { SearchAndFilters } from '../ui/SearchAndFilters';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { EmptyState } from '../ui/EmptyState';
 import { Modal } from '../ui/Modal';
+import { InfoModal } from '../ui/InfoModal';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash, faTags, faFileContract, faGrip, faTable, faFileInvoiceDollar, faGripVertical, faCheck, faMultiply } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faTrash, faTags, faFileContract, faGrip, faTable, faFileInvoiceDollar, faGripVertical, faCheck, faMultiply, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -49,9 +50,6 @@ const normalizar = (s: string): string =>
     .replace(/[\u0300-\u036f]/g, '')
     .trim();
 
-/** Activo/Inactivo se pisan con el estado del usuario: dentro del contrato tienen que llamarse distinto. */
-const necesitaAlias = (name: string): boolean => ['activo', 'inactivo'].includes(normalizar(name));
-
 /** Vista previa del badge tal cual se va a ver en Agregar/Configurar miembro. */
 const BadgePreview: React.FC<{ texto: string; color: string; esImpositivo?: boolean }> = ({ texto, color, esImpositivo }) => {
   const theme = useThemeStore((s) => s.theme);
@@ -76,13 +74,15 @@ const ChipImpositivo: React.FC = () => (
 
 interface FormState {
   name: string;
-  nombreEnContrato: string;
   color: string;
   contratoFrameIds: string[];
   esImpositivo: boolean;
+  /** Badge secundario (solo con esImpositivo tildado): identifica el tipo de contrato en sus tarjetas. */
+  etiquetaSecundaria: string;
+  colorEtiquetaSecundaria: string;
 }
 
-const FORM_VACIO: FormState = { name: '', nombreEnContrato: '', color: COLOR_POR_DEFECTO, contratoFrameIds: [], esImpositivo: false };
+const FORM_VACIO: FormState = { name: '', color: COLOR_POR_DEFECTO, contratoFrameIds: [], esImpositivo: false, etiquetaSecundaria: '', colorEtiquetaSecundaria: COLOR_POR_DEFECTO };
 
 export const ContractStatesTab: React.FC = () => {
   const [estados, setEstados] = useState<InfoItem[]>([]);
@@ -93,6 +93,7 @@ export const ContractStatesTab: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editando, setEditando] = useState<InfoItem | null>(null);
   const [form, setForm] = useState<FormState>(FORM_VACIO);
+  const [showBadgeSecundarioInfo, setShowBadgeSecundarioInfo] = useState(false);
 
   // Vista tarjetas/tabla, como el resto de los ABM: la tabla solo en pantallas grandes.
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
@@ -145,7 +146,7 @@ export const ContractStatesTab: React.FC = () => {
   const filtrados = useMemo(() => {
     const q = normalizar(searchTerm);
     if (!q) return estados;
-    return estados.filter((e) => normalizar(e.name).includes(q) || normalizar(e.data?.nombreEnContrato || '').includes(q));
+    return estados.filter((e) => normalizar(e.name).includes(q));
   }, [estados, searchTerm]);
 
   // En modo reorder siempre se opera sobre el array completo: nunca sobre el resultado filtrado
@@ -210,10 +211,11 @@ export const ContractStatesTab: React.FC = () => {
     setEditando(estado);
     setForm({
       name: estado.name,
-      nombreEnContrato: estado.data?.nombreEnContrato || '',
       color: colorEfectivo(estado),
       contratoFrameIds: estado.data?.contratoFrameIds || [],
       esImpositivo: !!estado.data?.esImpositivo,
+      etiquetaSecundaria: estado.data?.etiquetaSecundaria || '',
+      colorEtiquetaSecundaria: estado.data?.colorEtiquetaSecundaria || COLOR_POR_DEFECTO,
     });
     setShowModal(true);
   };
@@ -240,10 +242,6 @@ export const ContractStatesTab: React.FC = () => {
       sweetAlert.error('Falta el nombre', 'El estado necesita un nombre.');
       return;
     }
-    if (necesitaAlias(name) && !form.nombreEnContrato.trim()) {
-      sweetAlert.error('Falta el nombre en el contrato', `"${name}" se confunde con el estado del usuario: indicá cómo se llama dentro del contrato.`);
-      return;
-    }
     if (form.esImpositivo && form.contratoFrameIds.length === 0) {
       sweetAlert.error('Faltan los tipos de contrato', 'Un estado impositivo tiene que indicar a qué tipos de contrato corresponde.');
       return;
@@ -252,9 +250,10 @@ export const ContractStatesTab: React.FC = () => {
     const payload: EstadoPayload = {
       name,
       color: form.color,
-      nombreEnContrato: form.nombreEnContrato.trim(),
       contratoFrameIds: form.contratoFrameIds,
       esImpositivo: form.esImpositivo,
+      etiquetaSecundaria: form.esImpositivo ? form.etiquetaSecundaria.trim() : undefined,
+      colorEtiquetaSecundaria: form.esImpositivo ? form.colorEtiquetaSecundaria : undefined,
     };
 
     try {
@@ -351,7 +350,6 @@ export const ContractStatesTab: React.FC = () => {
                       <th className="px-4 py-3 font-semibold text-center w-14">Orden</th>
                       <th className="px-4 py-3 font-semibold">Badge</th>
                       <th className="px-4 py-3 font-semibold">Nombre</th>
-                      <th className="px-4 py-3 font-semibold">Nombre en el contrato</th>
                       <th className="px-4 py-3 font-semibold">Impositivo</th>
                       <th className="px-4 py-3 font-semibold">Tipos de contrato</th>
                       <th className="px-4 py-3 font-semibold text-right">Acciones</th>
@@ -411,19 +409,6 @@ export const ContractStatesTab: React.FC = () => {
             <input className="input-field w-full" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Ej: Firma pendiente" />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Nombre en el contrato {necesitaAlias(form.name) ? '*' : ''}</label>
-            <input
-              className="input-field w-full"
-              value={form.nombreEnContrato}
-              onChange={(e) => setForm((p) => ({ ...p, nombreEnContrato: e.target.value }))}
-              placeholder={necesitaAlias(form.name) ? 'Obligatorio: cómo se llama dentro del contrato' : 'Opcional: si dentro del contrato se llama distinto'}
-            />
-            {necesitaAlias(form.name) && (
-              <p className="text-[11px] text-amber-600 dark:text-amber-400 ml-1">"{form.name.trim()}" ya se usa para el estado del usuario: dentro del contrato tiene que llamarse distinto.</p>
-            )}
-          </div>
-
           <div className="space-y-2">
             <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Color de la tipografía</label>
             <div className="flex flex-wrap gap-2">
@@ -446,7 +431,7 @@ export const ContractStatesTab: React.FC = () => {
             </div>
             <div className="flex items-center gap-2 pt-1 ml-1">
               <span className="text-[11px] text-gray-500 dark:text-gray-400">Así se va a ver:</span>
-              <BadgePreview texto={form.nombreEnContrato.trim() || form.name} color={form.color} esImpositivo={form.esImpositivo} />
+              <BadgePreview texto={form.name} color={form.color} esImpositivo={form.esImpositivo} />
             </div>
           </div>
 
@@ -469,6 +454,48 @@ export const ContractStatesTab: React.FC = () => {
               <span className="text-[11px] text-gray-500 dark:text-gray-400">Marcalo si el estado es de índole impositiva, para poder distinguirlo y darle otro tratamiento.</span>
             </span>
           </label>
+
+          {form.esImpositivo && (
+            <div className="space-y-3 p-3 rounded-lg border border-purple-200 dark:border-purple-800/60 bg-purple-50/40 dark:bg-purple-900/10">
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-semibold text-purple-700 dark:text-purple-300">Badge secundario</p>
+                <button type="button" onClick={() => setShowBadgeSecundarioInfo(true)} className="text-purple-400 hover:text-purple-600 dark:hover:text-purple-300 transition-colors" title="¿Qué es esto?" aria-label="Información sobre el badge secundario">
+                  <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Texto del badge secundario</label>
+                <input className="input-field w-full" value={form.etiquetaSecundaria} onChange={(e) => setForm((p) => ({ ...p, etiquetaSecundaria: e.target.value }))} placeholder="Ej: Servicios, Alta de AFIP" />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Color del badge secundario</label>
+                <div className="flex flex-wrap gap-2">
+                  {COLORES.map((c) => (
+                    <button
+                      key={c.hex}
+                      type="button"
+                      onClick={() => setForm((p) => ({ ...p, colorEtiquetaSecundaria: c.hex }))}
+                      title={c.label}
+                      className={`w-8 h-8 rounded-lg border-2 transition-all ${form.colorEtiquetaSecundaria.toLowerCase() === c.hex.toLowerCase() ? 'border-gray-900 dark:border-white scale-110' : 'border-transparent'}`}
+                      style={{ backgroundColor: conAlpha(c.hex, 0.2), color: colorTextoBadge(c.hex, temaOscuro) }}
+                    >
+                      <span className="text-sm font-black">A</span>
+                    </button>
+                  ))}
+                  <label className="flex items-center gap-2 ml-1">
+                    <input type="color" value={form.colorEtiquetaSecundaria} onChange={(e) => setForm((p) => ({ ...p, colorEtiquetaSecundaria: e.target.value }))} className="w-8 h-8 rounded-lg bg-transparent cursor-pointer" title="Color personalizado" />
+                    <span className="text-[11px] text-gray-500 dark:text-gray-400">{form.colorEtiquetaSecundaria}</span>
+                  </label>
+                </div>
+                <div className="flex items-center gap-2 pt-1 ml-1">
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400">Así se va a ver:</span>
+                  {form.etiquetaSecundaria.trim() ? <BadgePreview texto={form.etiquetaSecundaria.trim()} color={form.colorEtiquetaSecundaria} /> : <span className="text-[11px] text-gray-400 italic">Sin texto todavía no se muestra ningún badge.</span>}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2 ml-1">
@@ -530,6 +557,19 @@ export const ContractStatesTab: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      <InfoModal
+        isOpen={showBadgeSecundarioInfo}
+        onClose={() => setShowBadgeSecundarioInfo(false)}
+        title="Badge secundario"
+        size="sm"
+        zIndex={120}
+        actions={[{ label: 'Entendido', onClick: () => setShowBadgeSecundarioInfo(false), variant: 'primary' }]}
+      >
+        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+          Se muestra en las tarjetas de Contrato (Gestionar Equipo, Contratos) para identificar el tipo de contrato. Con texto y color propios, independientes del badge principal de arriba.
+        </p>
+      </InfoModal>
     </div>
   );
 };
@@ -571,7 +611,7 @@ const SortableEstadoRow: React.FC<SortableEstadoProps & { index: number; onEnabl
       </td>
       <td className="px-4 py-3 text-center font-medium text-gray-700 dark:text-gray-300">{index + 1}</td>
       <td className="px-4 py-3">
-        <BadgePreview texto={estado.data?.nombreEnContrato?.trim() || estado.name} color={colorEfectivo(estado)} esImpositivo={!!estado.data?.esImpositivo} />
+        <BadgePreview texto={estado.name} color={colorEfectivo(estado)} esImpositivo={!!estado.data?.esImpositivo} />
       </td>
       <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap">
         {estado.name}
@@ -579,7 +619,6 @@ const SortableEstadoRow: React.FC<SortableEstadoProps & { index: number; onEnabl
           ({tipos.length || 'Todos'})
         </span>
       </td>
-      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{estado.data?.nombreEnContrato || '—'}</td>
       <td className="px-4 py-3">{estado.data?.esImpositivo ? <ChipImpositivo /> : <span className="text-xs text-gray-400">—</span>}</td>
       <td className="px-4 py-3">
         {tipos.length === 0 ? (
@@ -632,7 +671,7 @@ const SortableEstadoCard: React.FC<SortableEstadoProps> = ({ estado, isReorderMo
       )}
       <div className={`bg-white dark:bg-gray-800 rounded-xl border p-4 flex flex-col gap-3 ${isReorderMode ? 'border-2 border-blue-500/50 shadow-blue-500/10' : 'border-gray-200 dark:border-gray-700'}`}>
         <div className="flex flex-col gap-1.5 min-w-0">
-          <BadgePreview texto={estado.data?.nombreEnContrato?.trim() || estado.name} color={color} esImpositivo={!!estado.data?.esImpositivo} />
+          <BadgePreview texto={estado.name} color={color} esImpositivo={!!estado.data?.esImpositivo} />
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{estado.name}</span>
             <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 shrink-0" title={tipos.length === 0 ? 'Se ofrece en todos los tipos de contrato' : `${tipos.length} tipo${tipos.length === 1 ? '' : 's'} de contrato`}>
@@ -640,7 +679,6 @@ const SortableEstadoCard: React.FC<SortableEstadoProps> = ({ estado, isReorderMo
             </span>
             {estado.data?.esImpositivo ? <ChipImpositivo /> : null}
           </div>
-          {estado.data?.nombreEnContrato ? <span className="text-[11px] text-gray-500 dark:text-gray-400">En el contrato: {estado.data.nombreEnContrato}</span> : null}
         </div>
 
         <div className="flex flex-wrap gap-1.5 pt-1 border-t border-gray-100 dark:border-gray-700/60">

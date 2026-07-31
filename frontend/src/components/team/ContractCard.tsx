@@ -6,7 +6,8 @@ import { InfoModal } from "../ui/InfoModal";
 import { User, Contract } from "../../api/users";
 import { ContratoFrameItem } from "../../api/contratosFrame";
 import { Release } from "../../api/release";
-import { EstadoBadge } from "../EstadoSelect";
+import { EstadoBadge, estadoImpositivoDe, EstadoSecundarioBadge } from "../EstadoSelect";
+import { useEstadoCatalogStore } from "../../stores/estadoCatalogStore";
 
 /** Empresa vinculada al proyecto (id + razón social) para elegir con cuál descargar. */
 export interface EmpresaOption {
@@ -207,10 +208,21 @@ export const ContractCard: React.FC<ContractCardProps> = ({
 }) => {
   const [showInexistenteInfo, setShowInexistenteInfo] = React.useState(false);
 
+  // Catálogo de Estados (Configuración → Estados): ya se carga una sola vez por sesión (lo dispara
+  // también EstadoBadge), acá se usa para saber qué Estado impositivo (AFIP/Servicios) tiene la plantilla.
+  const estadosCatalog = useEstadoCatalogStore((s) => s.estados);
+  const ensureEstadosLoaded = useEstadoCatalogStore((s) => s.ensureLoaded);
+  React.useEffect(() => {
+    ensureEstadosLoaded();
+  }, [ensureEstadosLoaded]);
+
   const cargo = contract.nombre_rol_frame || (contract as any).nombre_cargo || "Contrato";
   const template = findTemplate(contract, contratoFrames);
   const existeTemplate = !!template; // la plantilla existe en contratos-frame (aunque esté vacía)
   const canDownloadContract = templateHasContent(template);
+  // Estados vinculados a ESTA plantilla → de ahí sale el badge secundario ("Servicios"/"Alta de AFIP").
+  const estadosDeLaPlantilla = existeTemplate ? estadosCatalog.filter((e) => (e.data?.contratoFrameIds || []).includes(template!._id)) : [];
+  const estadoImpositivo = estadoImpositivoDe(estadosDeLaPlantilla);
   const tipoContrato = contract.nombre_contrato || template?.data?.nombre || template?.name || "Contrato";
   // Sin Contrato vinculado (aún no populado) se asume que sí se envía, para no ocultar la descarga de golpe.
   const contratoRequiereFirma = typeof template?.contratoId === "object" ? template.contratoId?.data?.requiereFirma !== false : true;
@@ -254,6 +266,13 @@ export const ContractCard: React.FC<ContractCardProps> = ({
           <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold uppercase ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>
             {vigente ? "Vigente" : "No vigente"}
           </span>
+          {!existeTemplate ? (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold uppercase bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800">
+              Contrato inexistente
+            </span>
+          ) : (
+            <EstadoSecundarioBadge estado={estadoImpositivo} />
+          )}
           {contract.nombre_estado_empleado && <EstadoBadge name={contract.nombre_estado_empleado} />}
         </div>
 

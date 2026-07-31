@@ -8,8 +8,9 @@ const infoSchema = new Schema({
         // Campos del ABM de Estados (ver IInfo). El resto de los tipos de info no los usa.
         color: { type: String },
         contratoFrameIds: { type: [String] },
-        nombreEnContrato: { type: String },
         esImpositivo: { type: Boolean },
+        etiquetaSecundaria: { type: String },
+        colorEtiquetaSecundaria: { type: String },
         orden: { type: Number },
     },
     name: { type: String, required: true },

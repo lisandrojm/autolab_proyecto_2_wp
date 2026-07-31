@@ -11,10 +11,12 @@ export interface InfoItem {
     color?: string;
     /** Estados: tipos de contrato (contratos-frame) en los que se ofrece. Vacío = todos. */
     contratoFrameIds?: string[];
-    /** Estados: nombre que lleva dentro del contrato (obligatorio para Activo/Inactivo). */
-    nombreEnContrato?: string;
     /** Estados: marca los de índole impositiva, para darles un tratamiento distinto. */
     esImpositivo?: boolean;
+    /** Estados impositivos: texto del badge secundario que se muestra en las tarjetas de Contrato. */
+    etiquetaSecundaria?: string;
+    /** Estados impositivos: color del badge secundario. */
+    colorEtiquetaSecundaria?: string;
     /** Estados: orden visual en el ABM y en el dropdown del wizard (guía, no bloquea transiciones). */
     orden?: number;
     [key: string]: any;
@@ -27,9 +29,10 @@ export interface InfoItem {
 export interface EstadoPayload {
   name: string;
   color?: string;
-  nombreEnContrato?: string;
   contratoFrameIds?: string[];
   esImpositivo?: boolean;
+  etiquetaSecundaria?: string;
+  colorEtiquetaSecundaria?: string;
 }
 
 class InfoAPI {
