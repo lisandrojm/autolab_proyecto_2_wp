@@ -22,7 +22,7 @@ import { vacationsAPI, VacationRequest } from '../api/vacations';
 import { TeamSolicitudesTab } from '../components/team/TeamSolicitudesTab';
 import { TeamCoordinadoresTab } from '../components/team/TeamCoordinadoresTab';
 import { EmployeeContractsModal } from '../components/team/EmployeeContractsModal';
-import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../components/EstadoSelect';
+import { EstadoSelect, EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../components/EstadoSelect';
 import { estadoImpositivoDelContrato } from '../components/team/ContractCard';
 import { esContratoVigente, getContratoActivo } from '../utils/contratoVigencia';
 import { contratoFrameAPI, ContratoFrameItem } from '../api/contratosFrame';
@@ -3205,21 +3205,34 @@ export const ProjectTeamPage: React.FC = () => {
                     })()}
 
                     <div className="space-y-1.5">
-                      <div className="flex items-center gap-1.5 ml-1">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Estado *</label>
-                        <button type="button" onClick={() => setShowEstadoInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Dónde se configura?" aria-label="Información sobre el Estado">
-                          <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      <div className="input-field w-full flex items-center">
-                        {estadoImpositivoAuto ? (
-                          <EstadoBadge name={estadoImpositivoAuto.name} />
-                        ) : (
-                          <span className="text-gray-400 dark:text-gray-500 text-sm">
-                            {wizardData.contrato_frame_id ? 'Este tipo de contrato no tiene un estado impositivo configurado' : 'Elegí primero el Tipo de contrato'}
-                          </span>
-                        )}
-                      </div>
+                      {esAltaNueva ? (
+                        <>
+                          <div className="flex items-center gap-1.5 ml-1">
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Estado *</label>
+                            <button type="button" onClick={() => setShowEstadoInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Dónde se configura?" aria-label="Información sobre el Estado">
+                              <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          <div className="input-field w-full flex items-center">
+                            {estadoImpositivoAuto ? (
+                              <EstadoBadge name={estadoImpositivoAuto.name} />
+                            ) : (
+                              <span className="text-gray-400 dark:text-gray-500 text-sm">
+                                {wizardData.contrato_frame_id ? 'Este tipo de contrato no tiene un estado impositivo configurado' : 'Elegí primero el Tipo de contrato'}
+                              </span>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Estado *</label>
+                          <EstadoSelect
+                            options={estadosDisponibles.map((e) => ({ value: String(e.data.id), name: e.name, orden: (e.data as any)?.orden }))}
+                            value={wizardData.estado_id}
+                            onChange={(v) => setWizardData((prev) => ({ ...prev, estado_id: v }))}
+                          />
+                        </>
+                      )}
                     </div>
 
                     <div className="space-y-1.5">
