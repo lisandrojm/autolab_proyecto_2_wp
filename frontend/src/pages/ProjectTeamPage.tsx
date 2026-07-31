@@ -772,11 +772,31 @@ export const ProjectTeamPage: React.FC = () => {
     );
   }, [allEstados, wizardData.contrato_frame_id]);
 
+  // Recuerda el último contrato_frame_id "visto" para distinguir, en "Configurar Miembro", entre
+  // abrir el wizard (no debe tocar el estado ya guardado) y que el usuario CAMBIE el Tipo de
+  // Contrato durante la edición (ahí sí hay que re-sincronizar el estado impositivo). Se resetea al
+  // abrir el wizard (ver `handleOpenWizard`) para que la primera corrida de este efecto no cuente
+  // como "cambio".
+  const prevContratoFrameIdRef = useRef<string>('');
+
   useEffect(() => {
-    if (!esAltaNueva) return;
-    const nuevoId = estadoImpositivoAuto ? String(estadoImpositivoAuto.data.id) : '';
+    if (esAltaNueva) {
+      // "Agregar Miembro": el estado siempre es el impositivo automático (no lo elige el usuario).
+      const nuevoId = estadoImpositivoAuto ? String(estadoImpositivoAuto.data.id) : '';
+      setWizardData((prev) => (prev.estado_id === nuevoId ? prev : { ...prev, estado_id: nuevoId }));
+      prevContratoFrameIdRef.current = wizardData.contrato_frame_id || '';
+      return;
+    }
+
+    // "Configurar Miembro": el estado lo elige el usuario, pero si cambia el Tipo de Contrato/
+    // Plantilla durante la edición, se re-sincroniza con el impositivo del tipo nuevo (si no tiene
+    // ninguno vinculado, se deja el estado como está, para no pisarlo con algo sin sentido).
+    const cambioDeTipo = prevContratoFrameIdRef.current !== (wizardData.contrato_frame_id || '');
+    prevContratoFrameIdRef.current = wizardData.contrato_frame_id || '';
+    if (!cambioDeTipo || !estadoImpositivoAuto) return;
+    const nuevoId = String(estadoImpositivoAuto.data.id);
     setWizardData((prev) => (prev.estado_id === nuevoId ? prev : { ...prev, estado_id: nuevoId }));
-  }, [esAltaNueva, estadoImpositivoAuto]);
+  }, [esAltaNueva, estadoImpositivoAuto, wizardData.contrato_frame_id]);
 
   const sedeName = useMemo(() => {
     if (!project) return null;
@@ -1392,6 +1412,10 @@ export const ProjectTeamPage: React.FC = () => {
     // previo (p.ej. al aprobar una solicitud desde el wizard).
     const metaSchedule = String((user.metadata as any)?.schedule || '');
     const [metaHoraInicio, metaHoraFin] = metaSchedule.includes('-') ? metaSchedule.split('-').map((s) => s.trim()) : ['', ''];
+
+    // Se resetea ACÁ (no en el efecto) para que la primera corrida del auto-set de estado, tras este
+    // reset, no confunda "recién abrí el wizard" con "el usuario cambió el Tipo de Contrato".
+    prevContratoFrameIdRef.current = initialContratoFrameId;
 
     // Reset wizard data with pulled data or defaults
     setWizardData({
