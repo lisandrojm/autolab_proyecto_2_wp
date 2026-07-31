@@ -736,10 +736,15 @@ export const ProjectTeamPage: React.FC = () => {
     return [...seen].map((name) => ({ value: name, label: name }));
   }, [allEstados, teamRows, projectId]);
 
+  // `teamMembers` es un alias de `allUsers` (useMemo declarado más abajo); se usa `allUsers`
+  // directo acá para no depender de una variable declarada después en el archivo.
+  const esAltaNueva = !allUsers.some((m) => m._id === selectedUserForWizard?._id);
+
   // Un estado impositivo solo puede estar vinculado a una Plantilla (lo exige el ABM de Estados),
   // así que a lo sumo hay uno por Tipo de contrato/Plantilla elegido: no hace falta que el usuario
-  // elija, se muestra directo. Vale igual en "Agregar Miembro" y en "Configurar Miembro": el Estado
-  // del wizard SIEMPRE sale del Tipo de Contrato elegido, nunca se elige a mano acá.
+  // elija, se muestra directo. En "Agregar Miembro" el Estado SIEMPRE sale del Tipo de Contrato
+  // elegido (no se elige a mano); en "Configurar Miembro" se elige de un select, que además incluye
+  // este estado impositivo como una opción más (ver `estadosDisponibles`).
   const estadoImpositivoAuto = useMemo(() => {
     if (!wizardData.contrato_frame_id) return undefined;
     return allEstados.find(
@@ -747,10 +752,51 @@ export const ProjectTeamPage: React.FC = () => {
     );
   }, [allEstados, wizardData.contrato_frame_id]);
 
+  /**
+   * Estados que se ofrecen en "Configurar Miembro" (edición): los del ABM vinculados al tipo de
+   * contrato elegido (incluye el impositivo si corresponde), más los que no están vinculados a
+   * ninguno (disponibles siempre). Si el estado ya guardado en el contrato quedó fuera del filtro,
+   * se agrega igual para no perder el valor actual.
+   */
+  const estadosDisponibles = useMemo(() => {
+    const tipoElegido = wizardData.contrato_frame_id ? String(wizardData.contrato_frame_id) : '';
+    const filtrados = allEstados.filter((e) => {
+      const vinculados = (e.data as any)?.contratoFrameIds || [];
+      if (vinculados.length === 0) return true;
+      return tipoElegido ? vinculados.some((id: string) => String(id) === tipoElegido) : false;
+    });
+
+    const actual = allEstados.find((e) => String(e.data?.id) === String(wizardData.estado_id));
+    if (actual && !filtrados.some((e) => e._id === actual._id)) filtrados.push(actual);
+
+    return filtrados;
+  }, [allEstados, wizardData.contrato_frame_id, wizardData.estado_id]);
+
+  // Recuerda el último contrato_frame_id "visto" para distinguir, en "Configurar Miembro", entre
+  // abrir el wizard (no debe tocar el estado ya guardado) y que el usuario CAMBIE el Tipo de
+  // Contrato durante la edición (ahí sí hay que re-sincronizar el estado impositivo). Se resetea al
+  // abrir el wizard (ver `handleOpenWizard`) para que la primera corrida de este efecto no cuente
+  // como "cambio".
+  const prevContratoFrameIdRef = useRef<string>('');
+
   useEffect(() => {
-    const nuevoId = estadoImpositivoAuto ? String(estadoImpositivoAuto.data.id) : '';
+    if (esAltaNueva) {
+      // "Agregar Miembro": el estado siempre es el impositivo automático (no lo elige el usuario).
+      const nuevoId = estadoImpositivoAuto ? String(estadoImpositivoAuto.data.id) : '';
+      setWizardData((prev) => (prev.estado_id === nuevoId ? prev : { ...prev, estado_id: nuevoId }));
+      prevContratoFrameIdRef.current = wizardData.contrato_frame_id || '';
+      return;
+    }
+
+    // "Configurar Miembro": el estado lo elige el usuario, pero si cambia el Tipo de Contrato/
+    // Plantilla durante la edición, se re-sincroniza con el impositivo del tipo nuevo (si no tiene
+    // ninguno vinculado, se deja el estado como está, para no pisarlo con algo sin sentido).
+    const cambioDeTipo = prevContratoFrameIdRef.current !== (wizardData.contrato_frame_id || '');
+    prevContratoFrameIdRef.current = wizardData.contrato_frame_id || '';
+    if (!cambioDeTipo || !estadoImpositivoAuto) return;
+    const nuevoId = String(estadoImpositivoAuto.data.id);
     setWizardData((prev) => (prev.estado_id === nuevoId ? prev : { ...prev, estado_id: nuevoId }));
-  }, [estadoImpositivoAuto]);
+  }, [esAltaNueva, estadoImpositivoAuto, wizardData.contrato_frame_id]);
 
   const sedeName = useMemo(() => {
     if (!project) return null;
@@ -1366,6 +1412,10 @@ export const ProjectTeamPage: React.FC = () => {
     // previo (p.ej. al aprobar una solicitud desde el wizard).
     const metaSchedule = String((user.metadata as any)?.schedule || '');
     const [metaHoraInicio, metaHoraFin] = metaSchedule.includes('-') ? metaSchedule.split('-').map((s) => s.trim()) : ['', ''];
+
+    // Se resetea ACÁ (no en el efecto) para que la primera corrida del auto-set de estado, tras este
+    // reset, no confunda "recién abrí el wizard" con "el usuario cambió el Tipo de Contrato".
+    prevContratoFrameIdRef.current = initialContratoFrameId;
 
     // Reset wizard data with pulled data or defaults
     setWizardData({
