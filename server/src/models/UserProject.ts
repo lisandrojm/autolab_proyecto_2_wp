@@ -49,6 +49,9 @@ interface IContract {
   empresaReleaseId?: Types.ObjectId | string | null;
   nombre_empresa_contrato?: string;
   nombre_empresa_release?: string;
+  // Documento de "Alta" (AFIP o Servicios, según el Estado impositivo vinculado a la Plantilla).
+  altaDocumentoUrl?: string;
+  altaDocumentoNombre?: string;
   areaShiftAssignments?: {
     areaId: Types.ObjectId | string;
     shiftIds: (Types.ObjectId | string)[];
@@ -115,6 +118,8 @@ const contractSchema = new Schema<IContract>(
     empresaReleaseId: { type: Schema.Types.ObjectId, ref: "Company" },
     nombre_empresa_contrato: { type: String },
     nombre_empresa_release: { type: String },
+    altaDocumentoUrl: { type: String },
+    altaDocumentoNombre: { type: String },
     areaShiftAssignments: [
       {
         areaId: { type: Schema.Types.ObjectId, ref: "Area" },

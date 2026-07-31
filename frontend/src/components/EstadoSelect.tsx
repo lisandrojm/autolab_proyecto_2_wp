@@ -176,6 +176,7 @@ export const EstadoSecundarioBadge: React.FC<{ estado: { name: string; data?: { 
   const textoColor = colorTextoBadge(color, theme === "dark");
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide ${className}`} style={{ color: textoColor, backgroundColor: conAlpha(color, 0.14), border: `1px solid ${conAlpha(color, 0.35)}` }}>
+      <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" title="Estado impositivo" />
       {texto}
     </span>
   );

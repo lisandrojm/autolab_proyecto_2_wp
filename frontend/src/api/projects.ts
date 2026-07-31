@@ -472,6 +472,16 @@ class ProjectsAPI {
       headers: this.getHeaders(),
     });
   }
+
+  /** Sube (o reemplaza) el PDF de "Alta" (AFIP/Servicios) de un contrato puntual (por índice). */
+  async uploadAltaDocumento(projectId: string, userId: string, contractIndex: number, file: File): Promise<{ altaDocumentoUrl: string; altaDocumentoNombre: string }> {
+    const formData = new FormData();
+    formData.append("document", file);
+    // Sin headers explícitos: el interceptor global de axios pone Authorization/X-Tenant-Id y deja que
+    // el browser setee el Content-Type multipart con el boundary (getHeaders() fuerza JSON y rompe esto).
+    const { data } = await axios.patch(`/projects/${projectId}/members/${userId}/contracts/${contractIndex}/alta-documento`, formData);
+    return data;
+  }
 }
 
 export const projectsAPI = new ProjectsAPI();

@@ -1,5 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import mongoose from "mongoose";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
 import { Project } from "../models/Project.js";
 import { Client } from "../models/Client.js";
 import { User } from "../models/User.js";
@@ -18,6 +24,50 @@ import { Company } from "../models/Company.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
 import { esContratoVigente, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+async function ensureDir(dir: string) {
+  try {
+    await fs.promises.mkdir(dir, { recursive: true });
+  } catch (err) {
+    console.error("Error creating directory:", dir, err);
+    throw err;
+  }
+}
+
+// Documento de "Alta" (AFIP/Servicios) de un contrato puntual: solo PDF, guardado bajo la carpeta
+// del EMPLEADO dueño del contrato (req.params.userId), no del admin que sube el archivo.
+const altaDocumentoStorage = multer.diskStorage({
+  destination: async (req: any, _file, cb) => {
+    try {
+      const tenantId = req.tenantId || "unknown_tenant";
+      const employeeUserId = req.params?.userId || "unknown_user";
+      const dir = path.join(__dirname, "../../storage", tenantId, employeeUserId, "contratos");
+      await ensureDir(dir);
+      cb(null, dir);
+    } catch (err) {
+      console.error("Error in multer destination:", err);
+      cb(err as any, "");
+    }
+  },
+  filename: (_req: any, _file, cb) => {
+    const docId = new mongoose.Types.ObjectId();
+    cb(null, `alta_${docId}.pdf`);
+  },
+});
+
+const uploadAltaDocumento = multer({
+  storage: altaDocumentoStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const isPdfExt = path.extname(file.originalname).toLowerCase() === ".pdf";
+    const isPdfMime = file.mimetype === "application/pdf";
+    if (isPdfExt && isPdfMime) return cb(null, true);
+    cb(new Error("Solo se permiten archivos PDF"));
+  },
+}).single("document");
 
 async function resolveProjectGlobalConfig(project: any, tenantId: any) {
   if (!project) return;
@@ -1296,6 +1346,17 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
       // Índice explícito (editar una tarjeta puntual del modal de contratos) → actualizar ESE contrato.
       const idxNum = Number(contractIndex);
       const hasExplicitIndex = contractIndex !== undefined && contractIndex !== null && Number.isInteger(idxNum) && idxNum >= 0 && idxNum < userProject.contracts.length;
+
+      // El wizard no conoce altaDocumentoUrl/altaDocumentoNombre (no hay campo para eso en el form),
+      // así que `enrichedContract` nunca los trae. Como acá se reemplaza el subdocumento ENTERO, hay
+      // que arrastrar el valor previo o el upload de "Alta AFIP/Servicios" desaparece en cuanto se
+      // edite cualquier otra cosa del contrato.
+      const prevContract = hasExplicitIndex ? userProject.contracts[idxNum] : isUpdate && userProject.contracts.length > 0 ? userProject.contracts[userProject.contracts.length - 1] : null;
+      if (prevContract) {
+        if ((enrichedContract as any).altaDocumentoUrl === undefined) (enrichedContract as any).altaDocumentoUrl = (prevContract as any).altaDocumentoUrl;
+        if ((enrichedContract as any).altaDocumentoNombre === undefined) (enrichedContract as any).altaDocumentoNombre = (prevContract as any).altaDocumentoNombre;
+      }
+
       if (hasExplicitIndex) {
         userProject.contracts[idxNum] = enrichedContract as any;
       } else if (isUpdate && userProject.contracts.length > 0) {
@@ -1434,6 +1495,61 @@ router.delete("/projects/:projectId/members/:userId/contracts/:index", requireTe
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+// PATCH /projects/:projectId/members/:userId/contracts/:index/alta-documento - Sube (o reemplaza) el
+// PDF de "Alta" (AFIP/Servicios) de UN contrato puntual (por índice).
+router.patch(
+  "/projects/:projectId/members/:userId/contracts/:index/alta-documento",
+  requireTenant,
+  authenticateToken,
+  requireAnyRole,
+  uploadAltaDocumento,
+  async (req: AuthenticatedRequest & TenantRequest, res) => {
+    try {
+      const { projectId, userId, index } = req.params;
+      if (!req.file) {
+        res.status(400).json({ error: "No se recibió ningún archivo" });
+        return;
+      }
+
+      const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("_id").lean();
+      if (!project) {
+        res.status(404).json({ error: "Project not found" });
+        return;
+      }
+      const up = await UserProject.findOne({ projectId, userId });
+      if (!up) {
+        res.status(404).json({ error: "No hay contratos para esta persona en el proyecto" });
+        return;
+      }
+      const idx = Number(index);
+      if (!Number.isInteger(idx) || idx < 0 || idx >= up.contracts.length) {
+        res.status(400).json({ error: "Índice de contrato inválido" });
+        return;
+      }
+
+      const tenantId = req.tenantId || "unknown_tenant";
+      const altaDocumentoUrl = `/storage/${tenantId}/${userId}/contratos/${req.file.filename}`;
+      const altaDocumentoNombre = req.file.originalname;
+
+      // Reemplazo: borrar el archivo anterior del disco (best-effort, no bloquea la respuesta).
+      const anterior = (up.contracts[idx] as any)?.altaDocumentoUrl;
+      if (anterior && typeof anterior === "string") {
+        const anteriorPath = path.join(__dirname, "../..", anterior.replace(/^\/storage\//, "storage/"));
+        fs.promises.unlink(anteriorPath).catch(() => {});
+      }
+
+      up.contracts[idx] = { ...(up.contracts[idx] as any).toObject(), altaDocumentoUrl, altaDocumentoNombre } as any;
+      up.markModified("contracts");
+      await up.save();
+
+      res.json({ altaDocumentoUrl, altaDocumentoNombre });
+    } catch (error) {
+      console.error("Upload alta-documento error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
 
 // DELETE /projects/:projectId/members/:userId - Complete removal of a member from a project
 router.delete("/projects/:projectId/members/:userId", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {

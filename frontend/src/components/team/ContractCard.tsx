@@ -1,13 +1,15 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDownload, faEdit, faTrash, faArrowUpRightFromSquare, faCircleInfo, faFilePdf, faFileSignature } from "@fortawesome/free-solid-svg-icons";
+import { faDownload, faEdit, faTrash, faArrowUpRightFromSquare, faCircleInfo, faFilePdf, faFileSignature, faUpload, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { InfoModal } from "../ui/InfoModal";
 import { User, Contract } from "../../api/users";
 import { ContratoFrameItem } from "../../api/contratosFrame";
 import { Release } from "../../api/release";
-import { EstadoBadge, estadoImpositivoDe, EstadoSecundarioBadge } from "../EstadoSelect";
+import { EstadoBadge, estadoImpositivoDe, EstadoSecundarioBadge, claveEstado } from "../EstadoSelect";
 import { useEstadoCatalogStore } from "../../stores/estadoCatalogStore";
+import { getImageUrl } from "../../utils/imageHelpers";
+import { sweetAlert } from "../../utils/sweetAlert";
 
 /** Empresa vinculada al proyecto (id + razón social) para elegir con cuál descargar. */
 export interface EmpresaOption {
@@ -166,6 +168,21 @@ export const buildDownloadFileName = (tipo: "Contrato" | "Release", user: User |
   return `${parts.join("_").replace(/[\\/:*?"<>|]/g, "_")}.${ext}`;
 };
 
+type CategoriaAltaDocumento = "afip" | "servicios" | null;
+
+/**
+ * Categoría fija (AFIP/Servicios) del contrato, para saber si corresponde ofrecer la subida del PDF de
+ * alta. Se ancla a la clave CANÓNICA del Estado impositivo (`claveEstado`), no al texto libre del badge
+ * secundario (`etiquetaSecundaria`), que es editable por el admin y no sirve como identificador estable.
+ */
+const categoriaAltaDocumentoDe = (estadoImpositivo: { name: string } | null): CategoriaAltaDocumento => {
+  if (!estadoImpositivo) return null;
+  const clave = claveEstado(estadoImpositivo.name);
+  if (clave === "pedido de afip") return "afip";
+  if (clave === "pedido servicios") return "servicios";
+  return null;
+};
+
 export interface ContractCardProps {
   contract: Contract;
   contratoFrames: ContratoFrameItem[];
@@ -185,6 +202,8 @@ export interface ContractCardProps {
   deleteTitle?: string;
   onDownloadContract: (empresaId?: string) => void;
   onDownloadRelease: (release: Release, empresaId?: string) => void;
+  /** Sube (o reemplaza) el PDF de "Alta AFIP"/"Alta Servicios" de este contrato. */
+  onUploadAltaDocumento?: (file: File) => Promise<void>;
 }
 
 /**
@@ -205,8 +224,11 @@ export const ContractCard: React.FC<ContractCardProps> = ({
   deleteTitle = "Eliminar",
   onDownloadContract,
   onDownloadRelease,
+  onUploadAltaDocumento,
 }) => {
   const [showInexistenteInfo, setShowInexistenteInfo] = React.useState(false);
+  const [uploadingAltaDocumento, setUploadingAltaDocumento] = React.useState(false);
+  const altaDocumentoInputRef = React.useRef<HTMLInputElement>(null);
 
   // Catálogo de Estados (Configuración → Estados): ya se carga una sola vez por sesión (lo dispara
   // también EstadoBadge), acá se usa para saber qué Estado impositivo (AFIP/Servicios) tiene la plantilla.
@@ -223,6 +245,8 @@ export const ContractCard: React.FC<ContractCardProps> = ({
   // Estados vinculados a ESTA plantilla → de ahí sale el badge secundario ("Servicios"/"Alta de AFIP").
   const estadosDeLaPlantilla = existeTemplate ? estadosCatalog.filter((e) => (e.data?.contratoFrameIds || []).includes(template!._id)) : [];
   const estadoImpositivo = estadoImpositivoDe(estadosDeLaPlantilla);
+  const categoriaAltaDocumento = categoriaAltaDocumentoDe(estadoImpositivo);
+  const tituloAltaDocumento = estadoImpositivo?.data?.etiquetaSecundaria?.trim() || (categoriaAltaDocumento === "afip" ? "Alta AFIP" : "Documento de Servicios");
   const tipoContrato = contract.nombre_contrato || template?.data?.nombre || template?.name || "Contrato";
   // Sin Contrato vinculado (aún no populado) se asume que sí se envía, para no ocultar la descarga de golpe.
   const contratoRequiereFirma = typeof template?.contratoId === "object" ? template.contratoId?.data?.requiereFirma !== false : true;
@@ -244,6 +268,24 @@ export const ContractCard: React.FC<ContractCardProps> = ({
     ? "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20"
     : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40";
   const dividerClass = isLatest ? "border-blue-200/70 dark:border-blue-800/70" : "border-gray-200/70 dark:border-gray-700/70";
+
+  const handleAltaDocumentoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // permite volver a elegir el mismo archivo si hay que reintentar
+    if (!file || !onUploadAltaDocumento) return;
+    if (file.type !== "application/pdf") {
+      sweetAlert.error("Formato no válido", "Solo se permiten archivos PDF.");
+      return;
+    }
+    try {
+      setUploadingAltaDocumento(true);
+      await onUploadAltaDocumento(file);
+    } catch {
+      sweetAlert.error("Error", "No se pudo subir el documento.");
+    } finally {
+      setUploadingAltaDocumento(false);
+    }
+  };
 
   return (
     <>
@@ -384,6 +426,46 @@ export const ContractCard: React.FC<ContractCardProps> = ({
             </div>
           )}
         </div>
+
+        {/* Documento de "Alta" (AFIP/Servicios): solo si el tipo de contrato tiene esa categoría. */}
+        {categoriaAltaDocumento && (
+          <div className={`mt-3 pt-3 border-t ${dividerClass}`}>
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{tituloAltaDocumento}</p>
+            <div className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
+              {contract.altaDocumentoUrl ? (
+                <a
+                  href={getImageUrl(contract.altaDocumentoUrl)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-1.5 min-w-0 hover:underline"
+                  title={contract.altaDocumentoNombre || tituloAltaDocumento}
+                >
+                  <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
+                  <span className="truncate">{contract.altaDocumentoNombre || "Ver documento"}</span>
+                </a>
+              ) : (
+                <span className="text-sm text-gray-400 dark:text-gray-500 flex items-center gap-1.5 min-w-0">
+                  <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 shrink-0" />
+                  <span className="truncate">Sin documento cargado</span>
+                </span>
+              )}
+              {onUploadAltaDocumento && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => altaDocumentoInputRef.current?.click()}
+                    disabled={uploadingAltaDocumento}
+                    title={contract.altaDocumentoUrl ? "Reemplazar documento" : "Subir PDF"}
+                    className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <FontAwesomeIcon icon={uploadingAltaDocumento ? faSpinner : faUpload} spin={uploadingAltaDocumento} className="h-4 w-4" />
+                  </button>
+                  <input ref={altaDocumentoInputRef} type="file" accept="application/pdf" className="hidden" onChange={handleAltaDocumentoSelected} />
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <InfoModal

@@ -13,7 +13,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { infoAPI, InfoItem, EstadoPayload } from '../../api/info';
 import { contratoFrameAPI, ContratoFrameItem } from '../../api/contratosFrame';
 import { useEstadoCatalogStore } from '../../stores/estadoCatalogStore';
-import { estadoColorPorDefecto, colorTextoBadge } from '../EstadoSelect';
+import { estadoColorPorDefecto, colorTextoBadge, EstadoSecundarioBadge } from '../EstadoSelect';
 import { useThemeStore } from '../../stores/themeStore';
 
 /** Paleta sugerida: solo se elige el color de la tipografía; el fondo es ese color con transparencia. */
@@ -246,6 +246,10 @@ export const ContractStatesTab: React.FC = () => {
       sweetAlert.error('Faltan los tipos de contrato', 'Un estado impositivo tiene que indicar a qué tipos de contrato corresponde.');
       return;
     }
+    if (form.esImpositivo && !form.etiquetaSecundaria.trim()) {
+      sweetAlert.error('Falta el badge secundario', 'Un estado impositivo tiene que tener un texto de badge secundario: si no, no se va a mostrar en las tarjetas.');
+      return;
+    }
 
     const payload: EstadoPayload = {
       name,
@@ -349,8 +353,8 @@ export const ContractStatesTab: React.FC = () => {
                       <th className="px-4 py-3 font-semibold text-center w-14">Ordenar</th>
                       <th className="px-4 py-3 font-semibold text-center w-14">Orden</th>
                       <th className="px-4 py-3 font-semibold">Badge</th>
-                      <th className="px-4 py-3 font-semibold">Nombre</th>
                       <th className="px-4 py-3 font-semibold">Impositivo</th>
+                      <th className="px-4 py-3 font-semibold">Badge Secundario</th>
                       <th className="px-4 py-3 font-semibold">Tipos de contrato</th>
                       <th className="px-4 py-3 font-semibold text-right">Acciones</th>
                     </tr>
@@ -465,7 +469,7 @@ export const ContractStatesTab: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Texto del badge secundario</label>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Texto del badge secundario *</label>
                 <input className="input-field w-full" value={form.etiquetaSecundaria} onChange={(e) => setForm((p) => ({ ...p, etiquetaSecundaria: e.target.value }))} placeholder="Ej: Servicios, Alta de AFIP" />
               </div>
 
@@ -491,7 +495,7 @@ export const ContractStatesTab: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2 pt-1 ml-1">
                   <span className="text-[11px] text-gray-500 dark:text-gray-400">Así se va a ver:</span>
-                  {form.etiquetaSecundaria.trim() ? <BadgePreview texto={form.etiquetaSecundaria.trim()} color={form.colorEtiquetaSecundaria} /> : <span className="text-[11px] text-gray-400 italic">Sin texto todavía no se muestra ningún badge.</span>}
+                  {form.etiquetaSecundaria.trim() ? <BadgePreview texto={form.etiquetaSecundaria.trim()} color={form.colorEtiquetaSecundaria} esImpositivo /> : <span className="text-[11px] text-gray-400 italic">Sin texto todavía no se muestra ningún badge.</span>}
                 </div>
               </div>
             </div>
@@ -613,13 +617,8 @@ const SortableEstadoRow: React.FC<SortableEstadoProps & { index: number; onEnabl
       <td className="px-4 py-3">
         <BadgePreview texto={estado.name} color={colorEfectivo(estado)} esImpositivo={!!estado.data?.esImpositivo} />
       </td>
-      <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap">
-        {estado.name}
-        <span className="ml-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400" title={tipos.length === 0 ? 'Se ofrece en todos los tipos de contrato' : `${tipos.length} tipo${tipos.length === 1 ? '' : 's'} de contrato`}>
-          ({tipos.length || 'Todos'})
-        </span>
-      </td>
       <td className="px-4 py-3">{estado.data?.esImpositivo ? <ChipImpositivo /> : <span className="text-xs text-gray-400">—</span>}</td>
+      <td className="px-4 py-3">{estado.data?.etiquetaSecundaria ? <EstadoSecundarioBadge estado={estado} className="text-[10px]" /> : <span className="text-xs text-gray-400">—</span>}</td>
       <td className="px-4 py-3">
         {tipos.length === 0 ? (
           <span className="text-[11px] text-gray-500 dark:text-gray-400">Todos los tipos</span>
@@ -678,6 +677,7 @@ const SortableEstadoCard: React.FC<SortableEstadoProps> = ({ estado, isReorderMo
               ({tipos.length || 'Todos'})
             </span>
             {estado.data?.esImpositivo ? <ChipImpositivo /> : null}
+            <EstadoSecundarioBadge estado={estado} className="text-[10px]" />
           </div>
         </div>
 

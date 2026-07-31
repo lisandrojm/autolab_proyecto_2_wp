@@ -40,9 +40,11 @@ interface EmployeeContractsModalProps {
    */
   onEdit: (user: User, contract?: Contract, contractIndex?: number) => void;
   onDelete: (userId: string) => void;
+  /** Sube (o reemplaza) el PDF de "Alta AFIP"/"Alta Servicios" de un contrato puntual (por índice original). */
+  onUploadAltaDocumento?: (user: User, contractIndex: number, file: File) => Promise<void>;
 }
 
-export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ isOpen, onClose, user, projectId, contratoFrames, releases, contratoEmpresas = [], releaseEmpresas = [], onEdit, onDelete }) => {
+export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ isOpen, onClose, user, projectId, contratoFrames, releases, contratoEmpresas = [], releaseEmpresas = [], onEdit, onDelete, onUploadAltaDocumento }) => {
   const fullName = user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email : "";
 
   const contracts = useMemo(() => {
@@ -148,6 +150,7 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                 deleteTitle="Eliminar del proyecto"
                 onDownloadContract={(empresaId) => handleDownloadContract(contract, idx, empresaId)}
                 onDownloadRelease={(release, empresaId) => handleDownloadRelease(release, idx, empresaId)}
+                onUploadAltaDocumento={user && onUploadAltaDocumento ? (file) => onUploadAltaDocumento(user, contracts.length - 1 - idx, file) : undefined}
               />
             ))}
           </div>

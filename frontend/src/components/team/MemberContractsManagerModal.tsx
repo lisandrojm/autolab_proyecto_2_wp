@@ -155,6 +155,16 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
     }
   };
 
+  const handleUploadAltaDocumento = async (r: ManagedContract, file: File) => {
+    if (!userId) return;
+    try {
+      await projectsAPI.uploadAltaDocumento(r.projectId, userId, r.contractIndex, file);
+      load();
+    } catch {
+      sweetAlert.error("Error", "No se pudo subir el documento.");
+    }
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={userName || "Empleado"} subtitle="Gestión de contratos (todos los proyectos)" size="lg" zIndex={60}>
       <div className="space-y-4">
@@ -199,6 +209,7 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
                 deleteTitle="Eliminar este contrato"
                 onDownloadContract={(empresaId) => handleDownloadContract(r, empresaId)}
                 onDownloadRelease={(release, empresaId) => handleDownloadRelease(r, release, empresaId)}
+                onUploadAltaDocumento={(file) => handleUploadAltaDocumento(r, file)}
               />
             ))}
           </div>

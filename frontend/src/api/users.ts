@@ -46,6 +46,9 @@ export interface Contract {
   empresaReleaseId?: string;
   nombre_empresa_contrato?: string;
   nombre_empresa_release?: string;
+  // Documento de "Alta" (AFIP o Servicios, según el Estado impositivo vinculado a la Plantilla).
+  altaDocumentoUrl?: string;
+  altaDocumentoNombre?: string;
   areaShiftAssignments?: {
     areaId: string | any;
     shiftIds: string[] | any[];

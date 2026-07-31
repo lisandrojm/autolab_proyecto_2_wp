@@ -1569,6 +1569,38 @@ export const ProjectTeamPage: React.FC = () => {
     }
   };
 
+  /**
+   * Sube el PDF de "Alta AFIP"/"Alta Servicios" de un contrato puntual. A diferencia de editar/eliminar,
+   * el modal de contratos queda ABIERTO después de subir, así que en vez de recargar todo el equipo se
+   * actualiza `selectedMemberForDetail` in-place (misma referencia que usa EmployeeContractsModal).
+   */
+  const handleUploadAltaDocumento = async (user: User, contractIndex: number, file: File) => {
+    if (!projectId) return;
+    try {
+      const { altaDocumentoUrl, altaDocumentoNombre } = await projectsAPI.uploadAltaDocumento(projectId, user._id, contractIndex, file);
+      setSelectedMemberForDetail((prev) => {
+        if (!prev || prev._id !== user._id || !prev.metadata?.projects) return prev;
+        return {
+          ...prev,
+          metadata: {
+            ...prev.metadata,
+            projects: prev.metadata.projects.map((p) => {
+              const pId = typeof p.projectId === 'object' ? (p.projectId as any)?._id : p.projectId;
+              if (String(pId) !== String(projectId)) return p;
+              const contracts = [...(p.contracts || [])];
+              if (!contracts[contractIndex]) return p;
+              contracts[contractIndex] = { ...contracts[contractIndex], altaDocumentoUrl, altaDocumentoNombre };
+              return { ...p, contracts };
+            }),
+          },
+        };
+      });
+      sweetAlert.success('Documento subido', 'El documento se guardó correctamente.');
+    } catch (error: any) {
+      sweetAlert.error('Error', error.response?.data?.error || 'No se pudo subir el documento.');
+    }
+  };
+
   /* --------------------------------View ---------------------------------- */
 
   if (!project && !loading) {
@@ -3584,6 +3616,7 @@ export const ProjectTeamPage: React.FC = () => {
           setSelectedMemberForDetail(null);
           handleRemoveUser(id);
         }}
+        onUploadAltaDocumento={handleUploadAltaDocumento}
       />
 
       {/* Info: por qué no se puede guardar el miembro si el proyecto no tiene áreas */}
