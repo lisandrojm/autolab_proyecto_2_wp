@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from '../api/axiosConfig';
 import { projectsAPI, Project, AreaShiftMembersResponse } from '../api/projects';
 import { usersAPI, User, Contract } from '../api/users';
@@ -22,7 +22,8 @@ import { vacationsAPI, VacationRequest } from '../api/vacations';
 import { TeamSolicitudesTab } from '../components/team/TeamSolicitudesTab';
 import { TeamCoordinadoresTab } from '../components/team/TeamCoordinadoresTab';
 import { EmployeeContractsModal } from '../components/team/EmployeeContractsModal';
-import { EstadoSelect, EstadoBadge, estadoLabel } from '../components/EstadoSelect';
+import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../components/EstadoSelect';
+import { estadoImpositivoDelContrato } from '../components/team/ContractCard';
 import { esContratoVigente, getContratoActivo } from '../utils/contratoVigencia';
 import { contratoFrameAPI, ContratoFrameItem } from '../api/contratosFrame';
 import { contratosAPI, ContratoItem } from '../api/contratos';
@@ -288,6 +289,7 @@ export const ProjectTeamPage: React.FC = () => {
   const [filterReemplazo, setFilterReemplazo] = useState<string>(''); // "" | "con" | "sin" (server-side, paginado)
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [selectedUserForWizard, setSelectedUserForWizard] = useState<User | null>(null);
+  const [showEstadoInfo, setShowEstadoInfo] = useState(false);
   // Índice (en el array original de contracts del UserProject) del contrato que se está editando desde el
   // modal de contratos. null = no se edita uno puntual (alta nueva o edición genérica → se toca el último).
   const [editingContractIndex, setEditingContractIndex] = useState<number | null>(null);
@@ -734,37 +736,10 @@ export const ProjectTeamPage: React.FC = () => {
     return [...seen].map((name) => ({ value: name, label: name }));
   }, [allEstados, teamRows, projectId]);
 
-  /**
-   * Estados que se ofrecen en "Configurar Miembro" (edición): los del ABM vinculados al tipo de
-   * contrato elegido, más los que no están vinculados a ninguno (disponibles siempre). Si el estado
-   * ya guardado en el contrato quedó fuera del filtro, se agrega igual para no perder el valor actual.
-   * En "Agregar Miembro" el estado no se elige de acá: se resuelve solo (ver `estadoImpositivoAuto`).
-   */
-  const estadosDisponibles = useMemo(() => {
-    const tipoElegido = wizardData.contrato_frame_id ? String(wizardData.contrato_frame_id) : '';
-    const filtrados = allEstados.filter((e) => {
-      const vinculados = (e.data as any)?.contratoFrameIds || [];
-      if (vinculados.length === 0) return true;
-      return tipoElegido ? vinculados.some((id: string) => String(id) === tipoElegido) : false;
-    });
-
-    const actual = allEstados.find((e) => String(e.data?.id) === String(wizardData.estado_id));
-    if (actual && !filtrados.some((e) => e._id === actual._id)) filtrados.push(actual);
-
-    return filtrados;
-  }, [allEstados, wizardData.contrato_frame_id, wizardData.estado_id]);
-
-  // Al ABRIR EL WIZARD PARA AGREGAR (todavía no es miembro de este proyecto) el estado no se elige:
-  // es siempre el primer paso del proceso (Pedido de AFIP / Pedido Servicios). Los estados
-  // posteriores (Envío de Documentación, Firma Pendiente, Disponible) se eligen después, editando
-  // el contrato ya creado ("Configurar Miembro").
-  // `teamMembers` es un alias de `allUsers` (useMemo declarado más abajo); se usa `allUsers`
-  // directo acá para no depender de una variable declarada después en el archivo.
-  const esAltaNueva = !allUsers.some((m) => m._id === selectedUserForWizard?._id);
-
   // Un estado impositivo solo puede estar vinculado a una Plantilla (lo exige el ABM de Estados),
   // así que a lo sumo hay uno por Tipo de contrato/Plantilla elegido: no hace falta que el usuario
-  // elija, se muestra directo.
+  // elija, se muestra directo. Vale igual en "Agregar Miembro" y en "Configurar Miembro": el Estado
+  // del wizard SIEMPRE sale del Tipo de Contrato elegido, nunca se elige a mano acá.
   const estadoImpositivoAuto = useMemo(() => {
     if (!wizardData.contrato_frame_id) return undefined;
     return allEstados.find(
@@ -772,31 +747,10 @@ export const ProjectTeamPage: React.FC = () => {
     );
   }, [allEstados, wizardData.contrato_frame_id]);
 
-  // Recuerda el último contrato_frame_id "visto" para distinguir, en "Configurar Miembro", entre
-  // abrir el wizard (no debe tocar el estado ya guardado) y que el usuario CAMBIE el Tipo de
-  // Contrato durante la edición (ahí sí hay que re-sincronizar el estado impositivo). Se resetea al
-  // abrir el wizard (ver `handleOpenWizard`) para que la primera corrida de este efecto no cuente
-  // como "cambio".
-  const prevContratoFrameIdRef = useRef<string>('');
-
   useEffect(() => {
-    if (esAltaNueva) {
-      // "Agregar Miembro": el estado siempre es el impositivo automático (no lo elige el usuario).
-      const nuevoId = estadoImpositivoAuto ? String(estadoImpositivoAuto.data.id) : '';
-      setWizardData((prev) => (prev.estado_id === nuevoId ? prev : { ...prev, estado_id: nuevoId }));
-      prevContratoFrameIdRef.current = wizardData.contrato_frame_id || '';
-      return;
-    }
-
-    // "Configurar Miembro": el estado lo elige el usuario, pero si cambia el Tipo de Contrato/
-    // Plantilla durante la edición, se re-sincroniza con el impositivo del tipo nuevo (si no tiene
-    // ninguno vinculado, se deja el estado como está, para no pisarlo con algo sin sentido).
-    const cambioDeTipo = prevContratoFrameIdRef.current !== (wizardData.contrato_frame_id || '');
-    prevContratoFrameIdRef.current = wizardData.contrato_frame_id || '';
-    if (!cambioDeTipo || !estadoImpositivoAuto) return;
-    const nuevoId = String(estadoImpositivoAuto.data.id);
+    const nuevoId = estadoImpositivoAuto ? String(estadoImpositivoAuto.data.id) : '';
     setWizardData((prev) => (prev.estado_id === nuevoId ? prev : { ...prev, estado_id: nuevoId }));
-  }, [esAltaNueva, estadoImpositivoAuto, wizardData.contrato_frame_id]);
+  }, [estadoImpositivoAuto]);
 
   const sedeName = useMemo(() => {
     if (!project) return null;
@@ -1413,10 +1367,6 @@ export const ProjectTeamPage: React.FC = () => {
     const metaSchedule = String((user.metadata as any)?.schedule || '');
     const [metaHoraInicio, metaHoraFin] = metaSchedule.includes('-') ? metaSchedule.split('-').map((s) => s.trim()) : ['', ''];
 
-    // Se resetea ACÁ (no en el efecto) para que la primera corrida del auto-set de estado, tras este
-    // reset, no confunda "recién abrí el wizard" con "el usuario cambió el Tipo de Contrato".
-    prevContratoFrameIdRef.current = initialContratoFrameId;
-
     // Reset wizard data with pulled data or defaults
     setWizardData({
       rol_frame_id: initialRolFrameId,
@@ -1982,6 +1932,18 @@ export const ProjectTeamPage: React.FC = () => {
         <td className="px-4 py-3">
           {activeContract?.nombre_estado_empleado ? <EstadoBadge name={activeContract.nombre_estado_empleado} className="text-[10px] whitespace-nowrap" /> : <span className="text-xs text-gray-400">—</span>}
         </td>
+        {/* Estado impositivo (Alta AFIP / Alta Servicios): según el Tipo de Contrato, no el estado actual. */}
+        <td className="px-4 py-3">
+          {(() => {
+            const estadoImpositivo = activeContract ? estadoImpositivoDelContrato(activeContract, contratoFrames, allEstados) : null;
+            if (!estadoImpositivo) return <span className="text-xs text-gray-400">—</span>;
+            return estadoImpositivo.data?.etiquetaSecundaria?.trim() ? (
+              <EstadoSecundarioBadge estado={estadoImpositivo} className="text-[10px] whitespace-nowrap" />
+            ) : (
+              <EstadoBadge name={estadoImpositivo.name} className="text-[10px] whitespace-nowrap" />
+            );
+          })()}
+        </td>
         {/* Reemplazo: a quién reemplaza esta persona en su contrato vigente. */}
         <td className="px-4 py-3">
           {activeContract?.reemplazo ? (
@@ -2345,6 +2307,7 @@ export const ProjectTeamPage: React.FC = () => {
                               </th>
                               <th className="px-4 py-3 font-semibold">Contrato</th>
                               <th className="px-4 py-3 font-semibold whitespace-nowrap">Estado Contrato</th>
+                              <th className="px-4 py-3 font-semibold whitespace-nowrap">Estado Impositivo</th>
                               <th className="px-4 py-3 font-semibold">Reemplazo</th>
                               <th className="px-4 py-3 font-semibold whitespace-nowrap">Alta / Baja</th>
                               <th className="px-4 py-3 font-semibold text-right whitespace-nowrap">Monto / Jorn.</th>
@@ -3192,24 +3155,21 @@ export const ProjectTeamPage: React.FC = () => {
                     })()}
 
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Estado *</label>
-                      {esAltaNueva ? (
-                        <div className="input-field w-full flex items-center">
-                          {estadoImpositivoAuto ? (
-                            <EstadoBadge name={estadoImpositivoAuto.name} />
-                          ) : (
-                            <span className="text-gray-400 dark:text-gray-500 text-sm">
-                              {wizardData.contrato_frame_id ? 'Este tipo de contrato no tiene un estado impositivo configurado' : 'Elegí primero el Tipo de contrato'}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <EstadoSelect
-                          options={estadosDisponibles.map((e) => ({ value: String(e.data.id), name: e.name, orden: (e.data as any)?.orden }))}
-                          value={wizardData.estado_id}
-                          onChange={(v) => setWizardData((prev) => ({ ...prev, estado_id: v }))}
-                        />
-                      )}
+                      <div className="flex items-center gap-1.5 ml-1">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Estado *</label>
+                        <button type="button" onClick={() => setShowEstadoInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Dónde se configura?" aria-label="Información sobre el Estado">
+                          <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      <div className="input-field w-full flex items-center">
+                        {estadoImpositivoAuto ? (
+                          <EstadoBadge name={estadoImpositivoAuto.name} />
+                        ) : (
+                          <span className="text-gray-400 dark:text-gray-500 text-sm">
+                            {wizardData.contrato_frame_id ? 'Este tipo de contrato no tiene un estado impositivo configurado' : 'Elegí primero el Tipo de contrato'}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="space-y-1.5">
@@ -3681,6 +3641,23 @@ export const ProjectTeamPage: React.FC = () => {
               </span>
             </li>
           </ul>
+        </div>
+      </InfoModal>
+
+      {/* Info: de dónde sale el Estado del contrato (Agregar/Configurar miembro) */}
+      <InfoModal isOpen={showEstadoInfo} onClose={() => setShowEstadoInfo(false)} title="Estado del contrato" subtitle="De dónde sale y dónde se configura" size="sm" zIndex={120} actions={[{ label: 'Entendido', onClick: () => setShowEstadoInfo(false), variant: 'primary' }]}>
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            El Estado se resuelve solo, a partir del <strong>Tipo de Contrato</strong> elegido: si tiene un Estado impositivo vinculado (por ejemplo "Pedido de AFIP" o "Pedido de Servicios"), se muestra acá.
+            Si no tiene ninguno, no hay nada para mostrar.
+          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            Los Estados (nombre, color, y a qué Tipos de Contrato están vinculados) se configuran en{' '}
+            <Link to="/contratos?tab=states" target="_blank" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+              Contratos → Estados de Contratos
+            </Link>
+            .
+          </p>
         </div>
       </InfoModal>
 

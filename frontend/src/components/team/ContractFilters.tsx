@@ -43,7 +43,7 @@ export const matchesContractFilters = (
   if (f.proyecto !== "all" && item.projectId !== f.proyecto) return false;
   if (f.tipo !== "all" && item.contract?.nombre_contrato !== f.tipo) return false;
   if (f.vigencia !== "all") {
-    const vig = isContractVigente(item.contract?.fecha_baja_contrato);
+    const vig = isContractVigente(item.contract?.fecha_alta_contrato, item.contract?.fecha_baja_contrato);
     if (f.vigencia === "vigente" && !vig) return false;
     if (f.vigencia === "no_vigente" && vig) return false;
   }

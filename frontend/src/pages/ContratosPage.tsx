@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PageLayout } from '../components/ui/PageLayout';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFileContract, faFilePdf } from '@fortawesome/free-solid-svg-icons';
@@ -63,7 +63,10 @@ const GUIA_ESTADOS = (
 
 export const ContratosPage: React.FC = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<TabKey>('types');
+  const [searchParams] = useSearchParams();
+  // Permite llegar directo a la pestaña "Estados de Contratos" con /contratos?tab=states (p. ej.
+  // desde el link de ayuda del campo Estado en Agregar/Configurar miembro).
+  const [activeTab, setActiveTab] = useState<TabKey>(searchParams.get('tab') === 'states' ? 'states' : 'types');
   const [showInfoModal, setShowInfoModal] = useState(false);
 
   return (

@@ -6,10 +6,12 @@ import { InfoModal } from "../ui/InfoModal";
 import { User, Contract } from "../../api/users";
 import { ContratoFrameItem } from "../../api/contratosFrame";
 import { Release } from "../../api/release";
+import { InfoItem } from "../../api/info";
 import { EstadoBadge, estadoImpositivoDe, EstadoSecundarioBadge, claveEstado } from "../EstadoSelect";
 import { useEstadoCatalogStore } from "../../stores/estadoCatalogStore";
 import { getImageUrl } from "../../utils/imageHelpers";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { esContratoVigente } from "../../utils/contratoVigencia";
 
 /** Empresa vinculada al proyecto (id + razón social) para elegir con cuál descargar. */
 export interface EmpresaOption {
@@ -106,24 +108,11 @@ export const formatDate = (s?: string): string => {
   return d.toLocaleDateString("es-AR");
 };
 
-/** Un contrato está vigente si no tiene fecha de baja o su baja es hoy o futura (comparación en fecha local). */
-export const isContractVigente = (baja?: string): boolean => {
-  if (!baja) return true; // sin baja → tiempo indeterminado → vigente
-  const iso = String(baja).substring(0, 10);
-  const parts = iso.split("-");
-  let bajaDate: Date | null = null;
-  if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
-    bajaDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-  } else {
-    const d = new Date(baja);
-    if (!isNaN(d.getTime())) bajaDate = d;
-  }
-  if (!bajaDate) return true;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  bajaDate.setHours(0, 0, 0, 0);
-  return bajaDate.getTime() >= today.getTime();
-};
+/**
+ * Un contrato está vigente si ya arrancó (Alta <= hoy) y no terminó (sin Baja, o Baja >= hoy).
+ * Delega en el criterio único de la plataforma (`utils/contratoVigencia.ts`) para no duplicarlo.
+ */
+export const isContractVigente = (alta?: string, baja?: string): boolean => esContratoVigente({ fecha_alta_contrato: alta, fecha_baja_contrato: baja });
 
 /** Busca la plantilla de contrato (ContratoFrame) que corresponde al contrato. */
 export const findTemplate = (contract: Contract, contratoFrames: ContratoFrameItem[]): ContratoFrameItem | null => {
@@ -141,6 +130,18 @@ export const findTemplate = (contract: Contract, contratoFrames: ContratoFrameIt
     if (byId) return byId;
   }
   return null;
+};
+
+/**
+ * Estado impositivo (AFIP/Servicios) vinculado al Tipo de Contrato de este contrato, si tiene uno
+ * (a través de su Plantilla). Se usa tanto para el badge de la tarjeta como para la columna "Estado
+ * impositivo" de las tablas de Gestionar Equipo y Contratos.
+ */
+export const estadoImpositivoDelContrato = (contract: Contract, contratoFrames: ContratoFrameItem[], estados: InfoItem[]): InfoItem | null => {
+  const template = findTemplate(contract, contratoFrames);
+  if (!template) return null;
+  const vinculados = estados.filter((e) => ((e.data as any)?.contratoFrameIds || []).includes(template._id));
+  return estadoImpositivoDe(vinculados);
 };
 
 /**
@@ -242,9 +243,8 @@ export const ContractCard: React.FC<ContractCardProps> = ({
   const template = findTemplate(contract, contratoFrames);
   const existeTemplate = !!template; // la plantilla existe en contratos-frame (aunque esté vacía)
   const canDownloadContract = templateHasContent(template);
-  // Estados vinculados a ESTA plantilla → de ahí sale el badge secundario ("Servicios"/"Alta de AFIP").
-  const estadosDeLaPlantilla = existeTemplate ? estadosCatalog.filter((e) => (e.data?.contratoFrameIds || []).includes(template!._id)) : [];
-  const estadoImpositivo = estadoImpositivoDe(estadosDeLaPlantilla);
+  // Estado impositivo vinculado a ESTA plantilla → de ahí sale el badge secundario ("Servicios"/"Alta de AFIP").
+  const estadoImpositivo = estadoImpositivoDelContrato(contract, contratoFrames, estadosCatalog);
   const categoriaAltaDocumento = categoriaAltaDocumentoDe(estadoImpositivo);
   const tituloAltaDocumento = estadoImpositivo?.data?.etiquetaSecundaria?.trim() || (categoriaAltaDocumento === "afip" ? "Alta AFIP" : "Documento de Servicios");
   const tipoContrato = contract.nombre_contrato || template?.data?.nombre || template?.name || "Contrato";
@@ -263,7 +263,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
 
   const contratoEmpresa = effectiveContratoEmpresas.map((e) => e.label).join(" | ");
   const dateRange = `${formatDate(contract.fecha_alta_contrato)}${contract.fecha_baja_contrato ? ` - ${formatDate(contract.fecha_baja_contrato)}` : ""}`;
-  const vigente = isContractVigente(contract.fecha_baja_contrato);
+  const vigente = esContratoVigente(contract);
   const cardClass = isLatest
     ? "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20"
     : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40";

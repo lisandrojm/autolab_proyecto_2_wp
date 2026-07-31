@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { usersAPI, ContractOverviewRow } from "../api/users";
+import { usersAPI, ContractOverviewRow, Contract } from "../api/users";
 import { projectsAPI } from "../api/projects";
 import { clientsAPI, Client } from "../api/clients";
 import { contratoFrameAPI, ContratoFrameItem } from "../api/contratosFrame";
 import { areasAPI, Area } from "../api/areas";
 import { shiftsAPI, Shift } from "../api/shifts";
 import { infoAPI, InfoItem } from "../api/info";
-import { EstadoBadge, estadoLabel } from "../components/EstadoSelect";
+import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from "../components/EstadoSelect";
 import { MemberContractsManagerModal } from "../components/team/MemberContractsManagerModal";
+import { estadoImpositivoDelContrato } from "../components/team/ContractCard";
 import { releasesAPI, Release } from "../api/release";
 import { isContractVigente, formatDate } from "../components/team/EmployeeContractsModal";
 import { cachedFetch } from "../utils/refCache";
@@ -364,7 +365,7 @@ export const ContractsPage: React.FC = () => {
       ) : effectiveViewMode === "table" ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
           <div className="overflow-x-auto custom-scrollbar max-h-[700px]">
-            <table className="w-full text-left border-collapse min-w-[1800px]">
+            <table className="w-full text-left border-collapse min-w-[1950px]">
               <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
                 <tr className="border-b border-gray-100 dark:border-gray-800">
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
@@ -378,6 +379,7 @@ export const ContractsPage: React.FC = () => {
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Sede</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Contrato</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Estado Contrato</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Estado Impositivo</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Reemplazo</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Alta / Baja</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Monto / Jorn.</th>
@@ -442,6 +444,18 @@ export const ContractsPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-4 py-3">{record.nombre_estado_empleado ? <EstadoBadge name={record.nombre_estado_empleado} className="text-[10px] whitespace-nowrap" /> : <span className="text-xs text-gray-400">—</span>}</td>
+                    {/* Estado impositivo (Alta AFIP / Alta Servicios): según el Tipo de Contrato, no el estado actual. */}
+                    <td className="px-4 py-3">
+                      {(() => {
+                        const estadoImpositivo = estadoImpositivoDelContrato(record as unknown as Contract, contratoFrames, allEstados);
+                        if (!estadoImpositivo) return <span className="text-xs text-gray-400">—</span>;
+                        return estadoImpositivo.data?.etiquetaSecundaria?.trim() ? (
+                          <EstadoSecundarioBadge estado={estadoImpositivo} className="text-[10px] whitespace-nowrap" />
+                        ) : (
+                          <EstadoBadge name={estadoImpositivo.name} className="text-[10px] whitespace-nowrap" />
+                        );
+                      })()}
+                    </td>
                     <td className="px-4 py-3">
                       {record.reemplazo ? (
                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded border border-amber-200/50 dark:border-amber-800/50 w-fit">
@@ -454,7 +468,7 @@ export const ContractsPage: React.FC = () => {
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500">
                       {(() => {
-                        const vigente = isContractVigente(record.fecha_baja_contrato);
+                        const vigente = isContractVigente(record.fecha_alta_contrato, record.fecha_baja_contrato);
                         return (
                           <div className="flex flex-col gap-1">
                             <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>
