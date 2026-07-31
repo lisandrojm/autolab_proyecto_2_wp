@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFileContract, faDownload, faPlus, faEdit, faTrash, faEye, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { PageLayout } from '../components/ui/PageLayout';
@@ -37,6 +37,7 @@ const contentPreview = (html: string, max = 60): string => {
 };
 
 export const ContratosFramePage: React.FC = () => {
+  const navigate = useNavigate();
   const HELP_KEY = 'contratosFrame' as const;
   const helpEntry = getHelp(HELP_KEY);
   const [showInfo, setShowInfo] = useState(false);
@@ -245,6 +246,10 @@ export const ContratosFramePage: React.FC = () => {
     <div className="flex flex-wrap gap-2">
       <button onClick={openCreate} title="Nuevo contrato" aria-label="Nuevo contrato" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
         <FontAwesomeIcon icon={faPlus} />
+      </button>
+      <button onClick={() => navigate('/contratos')} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+        <FontAwesomeIcon icon={faFileContract} />
+        <span className="hidden lg:block">Contratos</span>
       </button>
     </div>
   );
@@ -463,11 +468,7 @@ export const ContratosFramePage: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contrato *</label>
-              <select
-                value={form.contratoId}
-                onChange={(e) => setForm((f) => ({ ...f, contratoId: e.target.value }))}
-                className="input-field w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-              >
+              <select value={form.contratoId} onChange={(e) => setForm((f) => ({ ...f, contratoId: e.target.value }))} className="input-field w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100">
                 <option value="">{contratos.length ? 'Selecciona un contrato...' : 'No hay contratos cargados'}</option>
                 {contratos.map((c) => (
                   <option key={c._id} value={c._id}>
@@ -477,8 +478,7 @@ export const ContratosFramePage: React.FC = () => {
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Define jornadas, multiplicador y vigencia. Se administra en <strong>Configuración → Contratos</strong>.
-                {!contratos.length && ' Todavía no hay contratos cargados: creá uno primero.'}
+                Define jornadas, multiplicador y vigencia. Se administra en <strong>Configuración → Contratos</strong>.{!contratos.length && ' Todavía no hay contratos cargados: creá uno primero.'}
               </p>
               {contratoElegido && (
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-400">

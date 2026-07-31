@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '../components/ui/PageLayout';
 import { Card } from '../components/ui/Card';
 import { MembreteToggle } from '../components/MembreteToggle';
@@ -7,7 +8,8 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash, faFileContract, faEye, faList, faInfoCircle, faDownload } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faTrash, faFileContract, faEye, faList, faInfoCircle, faDownload, faShoppingCart, faUmbrellaBeach } from '@fortawesome/free-solid-svg-icons';
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 
 import { pdfsAPI, Pdf, PdfInput, codeOptions, variablesByCode, systemVariables } from '../api/pdf';
 import { pdfPreviewAPI } from '../api/pdfPreview';
@@ -20,6 +22,51 @@ import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { PdfAssignmentStatus } from './PdfAssignmentStatus';
 
 const HELP_KEY = 'pdfTemplates' as const;
+
+type PdfTemplatesScope = 'pedidos' | 'vacaciones';
+
+/**
+ * Un solo componente para las plantillas de Pedidos y de Vacaciones: comparten el mismo modelo
+ * (Pdf.code) y solo se diferencian por el subconjunto de códigos que administran. El código
+ * "vacaciones" queda exclusivamente en el scope "vacaciones"; el resto ("Pedidos | ...") en "pedidos".
+ */
+const SCOPE_CONFIG: Record<
+  PdfTemplatesScope,
+  {
+    title: string;
+    subtitle: string;
+    storageKey: string;
+    codes: (typeof codeOptions)[number][];
+    section: 'Pedidos' | 'Vacaciones';
+    faIcon: IconDefinition;
+    backLabel: string;
+    backRoute: string;
+    backIcon: IconDefinition;
+  }
+> = {
+  pedidos: {
+    title: 'Plantillas | Pedidos',
+    subtitle: 'Crea y gestiona plantillas PDF para pedidos',
+    storageKey: 'pdfTemplatesViewMode_pedidos_v1',
+    codes: codeOptions.filter((c) => c.value !== 'vacaciones'),
+    section: 'Pedidos',
+    faIcon: faFileContract,
+    backLabel: 'Pedidos',
+    backRoute: '/order-types',
+    backIcon: faShoppingCart,
+  },
+  vacaciones: {
+    title: 'Plantillas | Vacaciones',
+    subtitle: 'Crea y gestiona la plantilla PDF de vacaciones',
+    storageKey: 'pdfTemplatesViewMode_vacaciones_v1',
+    codes: codeOptions.filter((c) => c.value === 'vacaciones'),
+    section: 'Vacaciones',
+    faIcon: faUmbrellaBeach,
+    backLabel: 'Vacaciones',
+    backRoute: '/vacations-rules',
+    backIcon: faUmbrellaBeach,
+  },
+};
 
 /** El editor devuelve "<p></p>" cuando está vacío: chequeamos que haya texto real. */
 const hasContent = (html: string): boolean =>
@@ -45,7 +92,10 @@ const toEditorHtml = (content: string): string => {
     .join('');
 };
 
-export function PdfTemplatesPage() {
+export function PdfTemplatesPage({ scope }: { scope: PdfTemplatesScope }) {
+  const navigate = useNavigate();
+  const config = SCOPE_CONFIG[scope];
+
   // data
   const [templates, setTemplates] = useState<Pdf[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,14 +115,16 @@ export function PdfTemplatesPage() {
       if (!isNowLarge) setViewMode('cards');
     };
     if (window.innerWidth >= 1024) {
-      const saved = localStorage.getItem('pdfTemplatesViewMode_v2');
+      const saved = localStorage.getItem(config.storageKey);
       if (saved === 'table' || saved === 'cards') setViewMode(saved as ViewMode);
     }
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
-    if (isLarge) localStorage.setItem('pdfTemplatesViewMode_v2', viewMode);
+    if (isLarge) localStorage.setItem(config.storageKey, viewMode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewMode, isLarge]);
   const effectiveViewMode: ViewMode = isLarge ? viewMode : 'cards';
 
@@ -84,7 +136,7 @@ export function PdfTemplatesPage() {
 
   // form
   const [formData, setFormData] = useState<PdfInput>({
-    code: 'dinero',
+    code: config.codes[0].value,
     name: '',
     content: '',
     variablesHint: '',
@@ -97,8 +149,6 @@ export function PdfTemplatesPage() {
   const [openInfo, setOpenInfo] = useState(false);
   const showHelp = hasHelp(HELP_KEY);
   const helpEntry = showHelp ? getHelp(HELP_KEY) : { title: 'Ayuda', size: 'md' as const, content: <div /> };
-
-  // tabs
 
   const handlePreview = async () => {
     try {
@@ -152,6 +202,7 @@ export function PdfTemplatesPage() {
 
   useEffect(() => {
     loadTemplates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadTemplates = async () => {
@@ -166,8 +217,11 @@ export function PdfTemplatesPage() {
     }
   };
 
+  // Solo las plantillas cuyo código pertenece a este scope (Pedidos o Vacaciones).
+  const scopedTemplates = templates.filter((t) => config.codes.some((c) => c.value === t.code));
+
   // filtering
-  const filteredTemplates = templates.filter((t) => {
+  const filteredTemplates = scopedTemplates.filter((t) => {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       const match = t.name.toLowerCase().includes(term) || t.content.toLowerCase().includes(term);
@@ -183,10 +237,10 @@ export function PdfTemplatesPage() {
   const openCreate = () => {
     setEditingTemplate(null);
 
-    // Primer código libre. Nunca dejar "" : el <select> mostraría la primera opción sin que el
+    // Primer código libre del scope. Nunca dejar "" : el <select> mostraría la primera opción sin que el
     // estado coincida, y las variables del pedido quedarían vacías hasta cambiar el select.
     const used = new Set(templates.map((t) => t.code));
-    const firstAvailable = codeOptions.find((opt) => !used.has(opt.value))?.value ?? codeOptions[0].value;
+    const firstAvailable = config.codes.find((opt) => !used.has(opt.value))?.value ?? config.codes[0].value;
 
     setFormData({
       code: firstAvailable as any,
@@ -270,7 +324,7 @@ export function PdfTemplatesPage() {
   };
 
   const usedCodes = templates.map((t) => t.code);
-  const availableCodes = codeOptions.filter((c) => !usedCodes.includes(c.value));
+  const availableCodes = config.codes.filter((c) => !usedCodes.includes(c.value));
   const isAddDisabled = availableCodes.length === 0;
 
   // Un código ya usado por OTRA plantilla no se puede elegir (índice único tenant+code):
@@ -279,10 +333,10 @@ export function PdfTemplatesPage() {
 
   return (
     <PageLayout
-      title="Plantillas | Pedidos | Vacaciones"
+      title={config.title}
       itemCount={filteredTemplates.length}
-      subtitle="Crea y gestiona plantillas PDF para pedidos y vacaciones"
-      faIcon={{ icon: faFileContract }}
+      subtitle={config.subtitle}
+      faIcon={{ icon: config.faIcon }}
       infoModal={{
         isOpen: openInfo,
         onOpen: () => setOpenInfo(true),
@@ -293,9 +347,13 @@ export function PdfTemplatesPage() {
       }}
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button onClick={isAddDisabled ? undefined : openCreate} disabled={isAddDisabled} aria-label="Nueva plantilla" className={`inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg transition-colors ${isAddDisabled ? 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500' : 'bg-blue-600 text-white hover:bg-blue-700'}`} title={isAddDisabled ? 'Todos los códigos ya tienen asignada una plantilla' : 'Nueva plantilla'}>
             <FontAwesomeIcon icon={faPlus} />
+          </button>
+          <button onClick={() => navigate(config.backRoute)} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+            <FontAwesomeIcon icon={config.backIcon} />
+            <span className="hidden lg:block">{config.backLabel}</span>
           </button>
           <button onClick={() => setShowStatusModal(true)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors" title="Ver estado de asignación">
             <FontAwesomeIcon icon={faList} className="h-4 w-4" />
@@ -334,12 +392,12 @@ export function PdfTemplatesPage() {
         </div>
       ) : (
         <>
-          {/* Todos los códigos ya tienen su plantilla: no hace falta (ni se puede) crear más. */}
+          {/* Todos los códigos del scope ya tienen su plantilla: no hace falta (ni se puede) crear más. */}
           {isAddDisabled && (
             <div className="mb-6 mx-0.5 lg:mx-0 flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-800 dark:bg-blue-900/20">
               <FontAwesomeIcon icon={faInfoCircle} className="h-5 w-5 mt-0.5 shrink-0 text-blue-600 dark:text-blue-400" />
               <div className="text-sm">
-                <p className="font-semibold text-blue-800 dark:text-blue-300">Ya están creadas las {codeOptions.length} plantillas disponibles</p>
+                <p className="font-semibold text-blue-800 dark:text-blue-300">Ya están creadas las {config.codes.length} plantillas disponibles</p>
                 <p className="text-blue-700 dark:text-blue-300/80 mt-0.5">Cada código admite una sola plantilla, así que no es necesario crear más. Para cambiar un documento, editá la plantilla del código correspondiente.</p>
               </div>
             </div>
@@ -547,7 +605,7 @@ export function PdfTemplatesPage() {
                   }
                   className="input-field w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
                 >
-                  {codeOptions.map((opt) => (
+                  {config.codes.map((opt) => (
                     <option key={opt.value} value={opt.value} disabled={isCodeTaken(opt.value)}>
                       {opt.label}
                       {isCodeTaken(opt.value) ? ' — ya en uso' : ''}
@@ -599,7 +657,7 @@ export function PdfTemplatesPage() {
       </Modal>
       {/* Status Modal */}
       <Modal isOpen={showStatusModal} onClose={() => setShowStatusModal(false)} title="Estado de Asignación de Plantillas" size="xl">
-        <PdfAssignmentStatus templates={templates} />
+        <PdfAssignmentStatus templates={templates} section={config.section} />
       </Modal>
     </PageLayout>
   );

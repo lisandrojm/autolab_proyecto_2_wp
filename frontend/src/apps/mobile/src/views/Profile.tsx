@@ -1,32 +1,30 @@
-import { useState, useEffect, useMemo } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEnvelope, faPhone, faBriefcase, faCalendar, faSignOutAlt, faUserCheck, faBuilding, faIdCard, faClock, faLayerGroup, faFileContract, faMoneyBillWave, faChevronDown, faCheckCircle, faUserShield, faUsers, faUser, faMapMarkerAlt, faUniversity, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
-import { useAuthStore } from "../../../../stores/authStore";
-import { sweetAlert } from "../utils/sweetAlert";
-import { useProfile } from "../hooks/useProfile";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { projectsAPI, Project } from "../../../../api/projects";
-import { areasAPI, Area } from "../../../../api/areas";
-import { shiftsAPI, Shift } from "../../../../api/shifts";
-import { infoAPI, InfoItem } from "../../../../api/info";
+import { useState, useEffect, useMemo } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEnvelope, faPhone, faBriefcase, faCalendar, faSignOutAlt, faUserCheck, faBuilding, faIdCard, faClock, faLayerGroup, faFileContract, faMoneyBillWave, faChevronDown, faCheckCircle, faUserShield, faUsers, faUser, faMapMarkerAlt, faUniversity, faPenToSquare } from '@fortawesome/free-solid-svg-icons';
+import { useAuthStore } from '../../../../stores/authStore';
+import { sweetAlert } from '../utils/sweetAlert';
+import { useProfile } from '../hooks/useProfile';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { projectsAPI, Project } from '../../../../api/projects';
+import { areasAPI, Area } from '../../../../api/areas';
+import { shiftsAPI, Shift } from '../../../../api/shifts';
+import { infoAPI, InfoItem } from '../../../../api/info';
 
-type RegistroInfoTab = "general" | "domicilio" | "bancarios";
+type RegistroInfoTab = 'general' | 'domicilio' | 'bancarios';
 
 /** Fila compacta etiqueta/valor para el detalle de datos del registro. */
 const InfoRow = ({ label, value }: { label: string; value?: React.ReactNode }) => (
   <div className="flex justify-between items-center gap-3 py-1.5 border-b border-slate-50 dark:border-slate-800/50 last:border-b-0">
     <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter shrink-0">{label}</p>
-    <p className="text-xs font-bold text-slate-700 dark:text-slate-300 text-right truncate">
-      {value !== undefined && value !== null && value !== "" ? value : <span className="text-slate-300 dark:text-slate-600">—</span>}
-    </p>
+    <p className="text-xs font-bold text-slate-700 dark:text-slate-300 text-right truncate">{value !== undefined && value !== null && value !== '' ? value : <span className="text-slate-300 dark:text-slate-600">—</span>}</p>
   </div>
 );
 
 export default function Profile({ onChangePersonalData }: { onChangePersonalData?: () => void }) {
   const { profile, stats, loading } = useProfile();
   const { user, logout } = useAuthStore();
-   const [selectedProjectIndex, setSelectedProjectIndex] = useState(0);
+  const [selectedProjectIndex, setSelectedProjectIndex] = useState(0);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allAreas, setAllAreas] = useState<Area[]>([]);
   const [allShifts, setAllShifts] = useState<Shift[]>([]);
@@ -34,7 +32,7 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
   const [currentFullProject, setCurrentFullProject] = useState<Project | null>(null);
 
   // Datos del registro (Historial y Contacto → tabs) + catálogos para resolver IDs → nombres.
-  const [activeInfoTab, setActiveInfoTab] = useState<RegistroInfoTab>("general");
+  const [activeInfoTab, setActiveInfoTab] = useState<RegistroInfoTab>('general');
   const [documentTypes, setDocumentTypes] = useState<InfoItem[]>([]);
   const [genders, setGenders] = useState<InfoItem[]>([]);
   const [educationLevels, setEducationLevels] = useState<InfoItem[]>([]);
@@ -47,15 +45,7 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
     let cancelled = false;
     (async () => {
       try {
-        const [dt, g, el, n, c, b, ic] = await Promise.all([
-          infoAPI.listByType("tipo-documento"),
-          infoAPI.listByType("genero"),
-          infoAPI.listByType("nivel-estudio"),
-          infoAPI.listByType("nacionalidad"),
-          infoAPI.listByType("pais"),
-          infoAPI.listByType("banco"),
-          infoAPI.listByType("obra-social"),
-        ]);
+        const [dt, g, el, n, c, b, ic] = await Promise.all([infoAPI.listByType('tipo-documento'), infoAPI.listByType('genero'), infoAPI.listByType('nivel-estudio'), infoAPI.listByType('nacionalidad'), infoAPI.listByType('pais'), infoAPI.listByType('banco'), infoAPI.listByType('obra-social')]);
         if (cancelled) return;
         setDocumentTypes(dt);
         setGenders(g);
@@ -75,36 +65,31 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
 
   // Resuelve un id numérico contra un catálogo Info (data.id) → nombre.
   const nameFromInfo = (list: InfoItem[], id?: number | string | null) => {
-    if (id === undefined || id === null || id === "") return "";
-    return list.find((it) => String(it.data?.id) === String(id))?.name || "";
+    if (id === undefined || id === null || id === '') return '';
+    return list.find((it) => String(it.data?.id) === String(id))?.name || '';
   };
 
   // Fecha en formato dd/MM/yyyy (tolera "YYYY-MM-DD" e ISO).
   const fmtDate = (v?: string) => {
-    if (!v) return "";
+    if (!v) return '';
     if (/^\d{4}-\d{2}-\d{2}/.test(v)) {
-      const [y, m, d] = v.slice(0, 10).split("-");
+      const [y, m, d] = v.slice(0, 10).split('-');
       return `${d}/${m}/${y}`;
     }
     const dt = new Date(v);
-    return isNaN(dt.getTime()) ? v : format(dt, "dd/MM/yyyy");
+    return isNaN(dt.getTime()) ? v : format(dt, 'dd/MM/yyyy');
   };
 
   const md: any = (profile as any)?.metadata || {};
   const infoTabs: { key: RegistroInfoTab; label: string; icon: any }[] = [
-    { key: "general", label: "General", icon: faUser },
-    { key: "domicilio", label: "Domicilio", icon: faMapMarkerAlt },
-    { key: "bancarios", label: "Bancarios", icon: faUniversity },
+    { key: 'general', label: 'General', icon: faUser },
+    { key: 'domicilio', label: 'Domicilio', icon: faMapMarkerAlt },
+    { key: 'bancarios', label: 'Bancarios', icon: faUniversity },
   ];
 
-  // Explica que los datos personales solo se cambian vía un pedido, y ofrece ir a Pedidos.
+  // Explica que los datos personales solo se cambian vía un pedido, y ofrece Pedidos.
   const handleInfoDatosPersonales = async () => {
-    const res = await sweetAlert.confirm(
-      "Cambiar datos personales",
-      "Para modificar tus datos personales tenés que generar un pedido de tipo 'Datos Personales'. Solo vas a poder cambiar los campos habilitados por el administrador.",
-      "Ir a Pedidos",
-      "Cerrar",
-    );
+    const res = await sweetAlert.confirm('Cambiar datos personales', "Para modificar tus datos personales tenés que generar un pedido de tipo 'Datos Personales'. Solo vas a poder cambiar los campos habilitados por el administrador.", 'Pedidos', 'Cerrar');
     if (res.isConfirmed) onChangePersonalData?.();
   };
 
@@ -117,9 +102,9 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
     // y teamConfig si vinieran poblados).
     const areaMap = new Map<string, any>();
     const shiftMap = new Map<string, any>();
-    const idOf = (x: any) => (x && typeof x === "object" ? String(x._id || x.id) : String(x));
+    const idOf = (x: any) => (x && typeof x === 'object' ? String(x._id || x.id) : String(x));
     const remember = (obj: any, map: Map<string, any>) => {
-      if (obj && typeof obj === "object" && (obj._id || obj.id)) map.set(idOf(obj), obj);
+      if (obj && typeof obj === 'object' && (obj._id || obj.id)) map.set(idOf(obj), obj);
     };
     (proj.areasConfig || []).forEach((ac: any) => {
       remember(ac.areaId, areaMap);
@@ -138,27 +123,28 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
       });
     });
 
-    const findArea = (id: string) => allAreas.find(a => String(a._id) === String(id)) || areaMap.get(String(id));
-    const findShift = (id: string) => allShifts.find(s => String(s._id) === String(id)) || shiftMap.get(String(id));
+    const findArea = (id: string) => allAreas.find((a) => String(a._id) === String(id)) || areaMap.get(String(id));
+    const findShift = (id: string) => allShifts.find((s) => String(s._id) === String(id)) || shiftMap.get(String(id));
 
     // Filter contracts to only those that match this project's ID or name
-    const matchedContracts = proj.contracts?.filter((c: any) => {
-      if (!c) return false;
-      
-      // Cross-reference project external/metadata ID if available
-      const extProjId = proj.externalProjectId || proj.metadata?.id;
-      if (extProjId && c.proyecto_id && Number(c.proyecto_id) !== Number(extProjId)) {
-        return false;
-      }
-      
-      // Cross-reference project name
-      const projName = proj.nombre_proyecto || proj.name;
-      if (projName && c.nombre_proyecto && String(c.nombre_proyecto).toLowerCase() !== String(projName).toLowerCase()) {
-        return false;
-      }
-      
-      return true;
-    }) || [];
+    const matchedContracts =
+      proj.contracts?.filter((c: any) => {
+        if (!c) return false;
+
+        // Cross-reference project external/metadata ID if available
+        const extProjId = proj.externalProjectId || proj.metadata?.id;
+        if (extProjId && c.proyecto_id && Number(c.proyecto_id) !== Number(extProjId)) {
+          return false;
+        }
+
+        // Cross-reference project name
+        const projName = proj.nombre_proyecto || proj.name;
+        if (projName && c.nombre_proyecto && String(c.nombre_proyecto).toLowerCase() !== String(projName).toLowerCase()) {
+          return false;
+        }
+
+        return true;
+      }) || [];
 
     // Find active contract or just the first one from the matched contracts
     const activeContract =
@@ -173,31 +159,32 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
     const shiftNames: string[] = [];
     const detailedShifts: any[] = [];
 
-    const myIds = [profile?.userId, profile?._id, user?._id, profile?.metadata?.id].filter(Boolean).map(id => String(id));
+    const myIds = [profile?.userId, profile?._id, user?._id, profile?.metadata?.id].filter(Boolean).map((id) => String(id));
 
     // Find ALL team configuration entries for this user with robust matching
-    const myTeamConfigs = proj.teamConfig?.filter((c: any) => {
-      const uid = typeof c.userId === "object" ? (c.userId?._id || c.userId?.id || c.userId?.userId || c.userId?.metadata?.id) : c.userId;
-      const myIdsMatch = [profile?.userId, profile?._id, user?._id, profile?.metadata?.id].filter(Boolean).map(id => String(id));
-      
-      let isMatch = uid && myIdsMatch.includes(String(uid));
+    const myTeamConfigs =
+      proj.teamConfig?.filter((c: any) => {
+        const uid = typeof c.userId === 'object' ? c.userId?._id || c.userId?.id || c.userId?.userId || c.userId?.metadata?.id : c.userId;
+        const myIdsMatch = [profile?.userId, profile?._id, user?._id, profile?.metadata?.id].filter(Boolean).map((id) => String(id));
 
-      // Fallback to Email match
-      if (!isMatch) {
-        const uEmail = typeof c.userId === "object" ? (c.userId?.email || c.userId?.correo) : null;
-        const myEmail = user?.email || profile?.email;
-        if (uEmail && myEmail && String(uEmail).toLowerCase() === String(myEmail).toLowerCase()) isMatch = true;
-      }
+        let isMatch = uid && myIdsMatch.includes(String(uid));
 
-      // Fallback to Name match
-      if (!isMatch) {
-        const uName = typeof c.userId === "object" ? (c.userId?.firstName && c.userId?.lastName ? `${c.userId.firstName} ${c.userId.lastName}` : (c.userId?.name || c.userId?.nombre)) : null;
-        const myName = user?.name || user?.nombre || `${profile?.firstName || ""} ${profile?.lastName || ""}`.trim();
-        if (uName && myName && uName.toLowerCase().includes(myName.toLowerCase())) isMatch = true;
-      }
+        // Fallback to Email match
+        if (!isMatch) {
+          const uEmail = typeof c.userId === 'object' ? c.userId?.email || c.userId?.correo : null;
+          const myEmail = user?.email || profile?.email;
+          if (uEmail && myEmail && String(uEmail).toLowerCase() === String(myEmail).toLowerCase()) isMatch = true;
+        }
 
-      return isMatch;
-    }) || [];
+        // Fallback to Name match
+        if (!isMatch) {
+          const uName = typeof c.userId === 'object' ? (c.userId?.firstName && c.userId?.lastName ? `${c.userId.firstName} ${c.userId.lastName}` : c.userId?.name || c.userId?.nombre) : null;
+          const myName = user?.name || user?.nombre || `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim();
+          if (uName && myName && uName.toLowerCase().includes(myName.toLowerCase())) isMatch = true;
+        }
+
+        return isMatch;
+      }) || [];
 
     const coordinatedShiftsGrouped: any[] = [];
     const coordinatedKeys = new Set<string>();
@@ -206,46 +193,46 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
       const grouped = new Map<string, { areaName: string; shifts: { name: string; time: string; order: number }[] }>();
 
       proj.coordinatorAssignments.forEach((asm: any) => {
-        const uid = typeof asm.userId === "object" ? (asm.userId?._id || asm.userId?.id || asm.userId?.userId || asm.userId?.metadata?.id) : asm.userId;
-        const myIdsMatch = [profile?.userId, profile?._id, user?._id, profile?.metadata?.id].filter(Boolean).map(id => String(id));
-        
+        const uid = typeof asm.userId === 'object' ? asm.userId?._id || asm.userId?.id || asm.userId?.userId || asm.userId?.metadata?.id : asm.userId;
+        const myIdsMatch = [profile?.userId, profile?._id, user?._id, profile?.metadata?.id].filter(Boolean).map((id) => String(id));
+
         let isMatch = uid && myIdsMatch.includes(String(uid));
         if (!isMatch) {
-          const asmEmail = typeof asm.userId === "object" ? (asm.userId?.email || asm.userId?.correo) : null;
+          const asmEmail = typeof asm.userId === 'object' ? asm.userId?.email || asm.userId?.correo : null;
           const myEmail = user?.email || profile?.email;
           if (asmEmail && myEmail && String(asmEmail).toLowerCase() === String(myEmail).toLowerCase()) isMatch = true;
         }
         if (!isMatch) {
-          const asmName = typeof asm.userId === "object" ? (asm.userId?.firstName && asm.userId?.lastName ? `${asm.userId.firstName} ${asm.userId.lastName}` : (asm.userId?.name || asm.userId?.nombre)) : null;
-          const myName = user?.name || user?.nombre || `${profile?.firstName || ""} ${profile?.lastName || ""}`.trim();
+          const asmName = typeof asm.userId === 'object' ? (asm.userId?.firstName && asm.userId?.lastName ? `${asm.userId.firstName} ${asm.userId.lastName}` : asm.userId?.name || asm.userId?.nombre) : null;
+          const myName = user?.name || user?.nombre || `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim();
           if (asmName && myName && asmName.toLowerCase().includes(myName.toLowerCase())) isMatch = true;
         }
 
         if (isMatch) {
-          const areaId = typeof asm.areaId === "object" ? (asm.areaId?._id || asm.areaId?.id) : asm.areaId;
-          const shiftId = typeof asm.shiftId === "object" ? (asm.shiftId?._id || asm.shiftId?.id) : asm.shiftId;
-          
+          const areaId = typeof asm.areaId === 'object' ? asm.areaId?._id || asm.areaId?.id : asm.areaId;
+          const shiftId = typeof asm.shiftId === 'object' ? asm.shiftId?._id || asm.shiftId?.id : asm.shiftId;
+
           if (areaId && shiftId) {
             coordinatedKeys.add(`${areaId}-${shiftId}`);
           }
-          
-          const areaObj = findArea(areaId) || ((asm.areaId && typeof asm.areaId === "object" && (asm.areaId.name || asm.areaId.nombre)) ? asm.areaId : null);
-          const shiftObj = findShift(shiftId) || ((asm.shiftId && typeof asm.shiftId === "object" && (asm.shiftId.name || asm.shiftId.nombre)) ? asm.shiftId : null);
+
+          const areaObj = findArea(areaId) || (asm.areaId && typeof asm.areaId === 'object' && (asm.areaId.name || asm.areaId.nombre) ? asm.areaId : null);
+          const shiftObj = findShift(shiftId) || (asm.shiftId && typeof asm.shiftId === 'object' && (asm.shiftId.name || asm.shiftId.nombre) ? asm.shiftId : null);
 
           const aIdStr = String(areaId);
-          const areaName = areaObj?.name || areaObj?.nombre || "Área";
-          const shiftName = shiftObj?.name || shiftObj?.nombre || "Turno";
+          const areaName = areaObj?.name || areaObj?.nombre || 'Área';
+          const shiftName = shiftObj?.name || shiftObj?.nombre || 'Turno';
 
           if (!grouped.has(aIdStr)) {
             grouped.set(aIdStr, { areaName, shifts: [] });
           }
-          
+
           const shifts = grouped.get(aIdStr)!.shifts;
-          if (!shifts.some(s => s.name === shiftName)) {
+          if (!shifts.some((s) => s.name === shiftName)) {
             shifts.push({
               name: shiftName,
-              time: (shiftObj?.startTime && shiftObj?.endTime) ? `${shiftObj.startTime} - ${shiftObj.endTime}` : (shiftObj?.hora_inicio && shiftObj?.hora_fin ? `${shiftObj.hora_inicio} - ${shiftObj.hora_fin}` : "Sin horario"),
-              order: Number(shiftObj?.order) || 0
+              time: shiftObj?.startTime && shiftObj?.endTime ? `${shiftObj.startTime} - ${shiftObj.endTime}` : shiftObj?.hora_inicio && shiftObj?.hora_fin ? `${shiftObj.hora_inicio} - ${shiftObj.hora_fin}` : 'Sin horario',
+              order: Number(shiftObj?.order) || 0,
             });
           }
         }
@@ -271,28 +258,28 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
     // Process and deduplicate standard assignments, excluding coordinated ones
     if (allStandardAssignments.length > 0) {
       const seenAssignments = new Set<string>();
-      
+
       allStandardAssignments.forEach((asa: any) => {
-        const aId = typeof asa.areaId === "object" ? (asa.areaId?._id || asa.areaId?.id) : asa.areaId;
+        const aId = typeof asa.areaId === 'object' ? asa.areaId?._id || asa.areaId?.id : asa.areaId;
         const areaObj = findArea(aId);
-        const areaName = areaObj?.name || areaObj?.nombre || asa.nombre_area || asa.areaName || "Área";
-        
+        const areaName = areaObj?.name || areaObj?.nombre || asa.nombre_area || asa.areaName || 'Área';
+
         const processShift = (s: any) => {
-          const shiftId = typeof s === "object" ? (s._id || s.id) : s;
+          const shiftId = typeof s === 'object' ? s._id || s.id : s;
           const fullShift = findShift(shiftId);
-          const name = fullShift?.name || fullShift?.nombre || s.name || s.nombre || (typeof s === "string" ? s : "Turno");
-          
+          const name = fullShift?.name || fullShift?.nombre || s.name || s.nombre || (typeof s === 'string' ? s : 'Turno');
+
           const uniqueKey = `${areaName}-${name}`.toLowerCase();
-          
+
           if (seenAssignments.has(uniqueKey)) return;
-          
+
           seenAssignments.add(uniqueKey);
 
           detailedShifts.push({
             name,
-            time: fullShift?.startTime && fullShift?.endTime ? `${fullShift.startTime} - ${fullShift.endTime}` : (fullShift?.hora_inicio && fullShift?.hora_fin ? `${fullShift.hora_inicio} - ${fullShift.hora_fin}` : (s.hora_inicio && s.hora_fin ? `${s.hora_inicio} - ${s.hora_fin}` : (s.startTime && s.endTime ? `${s.startTime} - ${s.endTime}` : "Sin horario"))),
+            time: fullShift?.startTime && fullShift?.endTime ? `${fullShift.startTime} - ${fullShift.endTime}` : fullShift?.hora_inicio && fullShift?.hora_fin ? `${fullShift.hora_inicio} - ${fullShift.hora_fin}` : s.hora_inicio && s.hora_fin ? `${s.hora_inicio} - ${s.hora_fin}` : s.startTime && s.endTime ? `${s.startTime} - ${s.endTime}` : 'Sin horario',
             area: areaName,
-            order: Number(fullShift?.order || s.order || 0)
+            order: Number(fullShift?.order || s.order || 0),
           });
           shiftNames.push(name);
         };
@@ -326,24 +313,20 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
       });
     }
 
-    const uniqueShiftNames = Array.from(new Set(shiftNames)).join(", ");
+    const uniqueShiftNames = Array.from(new Set(shiftNames)).join(', ');
 
     return {
-      name: proj.nombre_proyecto || proj.name || "Sin nombre",
-      client: proj.nombre_cliente || "Sin cliente",
-      sede: activeContract?.nombre_sede || "Sin sede",
-      roleFrame: (proj.nombre_rol_frame && proj.nombre_rol_frame !== "Sin rol frame")
-        ? proj.nombre_rol_frame
-        : ((activeContract?.nombre_rol_frame && activeContract.nombre_rol_frame !== "Sin rol frame")
-          ? activeContract.nombre_rol_frame
-          : "Sin rol frame"),
-      area: activeContract?.nombre_area || proj.nombre_area || "Sin área",
-      schedule: activeContract?.hora_inicio && activeContract?.hora_fin ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : "Sin horario",
+      name: proj.nombre_proyecto || proj.name || 'Sin nombre',
+      client: proj.nombre_cliente || 'Sin cliente',
+      sede: activeContract?.nombre_sede || 'Sin sede',
+      roleFrame: proj.nombre_rol_frame && proj.nombre_rol_frame !== 'Sin rol frame' ? proj.nombre_rol_frame : activeContract?.nombre_rol_frame && activeContract.nombre_rol_frame !== 'Sin rol frame' ? activeContract.nombre_rol_frame : 'Sin rol frame',
+      area: activeContract?.nombre_area || proj.nombre_area || 'Sin área',
+      schedule: activeContract?.hora_inicio && activeContract?.hora_fin ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : 'Sin horario',
       isResponsable,
-      contractType: activeContract?.nombre_contrato || "Sin contrato",
+      contractType: activeContract?.nombre_contrato || 'Sin contrato',
       salary: activeContract?.sueldo_mano,
-      dates: activeContract?.fecha_alta_contrato ? `${format(new Date(activeContract.fecha_alta_contrato), "dd/MM/yy")} - ${activeContract.fecha_baja_contrato ? format(new Date(activeContract.fecha_baja_contrato), "dd/MM/yy") : "Actualidad"}` : "Sin fechas",
-      shiftsText: uniqueShiftNames || activeContract?.nombre_turno || "Sin turno",
+      dates: activeContract?.fecha_alta_contrato ? `${format(new Date(activeContract.fecha_alta_contrato), 'dd/MM/yy')} - ${activeContract.fecha_baja_contrato ? format(new Date(activeContract.fecha_baja_contrato), 'dd/MM/yy') : 'Actualidad'}` : 'Sin fechas',
+      shiftsText: uniqueShiftNames || activeContract?.nombre_turno || 'Sin turno',
       detailedShifts,
       coordinatedShifts: coordinatedShiftsGrouped,
     };
@@ -353,16 +336,12 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
     const fetchProjects = async () => {
       try {
         setIsLoadingProjects(true);
-        const [projects, areas, shifts] = await Promise.all([
-          projectsAPI.listAll(),
-          areasAPI.listAll(),
-          shiftsAPI.getAll()
-        ]);
+        const [projects, areas, shifts] = await Promise.all([projectsAPI.listAll(), areasAPI.listAll(), shiftsAPI.getAll()]);
         setAllProjects(projects);
         setAllAreas(areas);
         setAllShifts(shifts);
       } catch (err) {
-        console.error("Error fetching projects for profile:", err);
+        console.error('Error fetching projects for profile:', err);
       } finally {
         setIsLoadingProjects(false);
       }
@@ -376,14 +355,14 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
       // OJO: metadata.projects[] son docs UserProject → su `_id` es el id del UserProject,
       // NO del proyecto. El id real del proyecto está en `projectId` (poblado como objeto).
       const rawPid: any = currentProj?.projectId;
-      const pid = (rawPid && typeof rawPid === "object" ? (rawPid._id || rawPid.id) : rawPid) || currentProj?._id;
+      const pid = (rawPid && typeof rawPid === 'object' ? rawPid._id || rawPid.id : rawPid) || currentProj?._id;
       if (!pid) return;
 
       try {
         const fullProj = await projectsAPI.getProject(pid);
         setCurrentFullProject(fullProj);
       } catch (err) {
-        console.error("Error fetching full project details:", err);
+        console.error('Error fetching full project details:', err);
       }
     };
     if (profile?.metadata?.projects) {
@@ -394,15 +373,12 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
   const currentProjectSummary = profile?.metadata?.projects?.[selectedProjectIndex];
   // Id del proyecto REAL (projectId poblado), no el del UserProject (_id).
   const rawSummaryPid: any = currentProjectSummary?.projectId;
-  const targetProjectId = (rawSummaryPid && typeof rawSummaryPid === "object" ? (rawSummaryPid._id || rawSummaryPid.id) : rawSummaryPid) || currentProjectSummary?._id;
+  const targetProjectId = (rawSummaryPid && typeof rawSummaryPid === 'object' ? rawSummaryPid._id || rawSummaryPid.id : rawSummaryPid) || currentProjectSummary?._id;
   const targetProjectName = currentProjectSummary?.nombre_proyecto || currentProjectSummary?.name;
 
   const fullProjectDataFromCache = useMemo(() => {
     if (!targetProjectId && !targetProjectName) return null;
-    return allProjects.find(p => 
-      (targetProjectId && String(p._id) === String(targetProjectId)) || 
-      (targetProjectName && (p.name === targetProjectName || p.nombre_proyecto === targetProjectName))
-    );
+    return allProjects.find((p) => (targetProjectId && String(p._id) === String(targetProjectId)) || (targetProjectName && (p.name === targetProjectName || p.nombre_proyecto === targetProjectName)));
   }, [allProjects, targetProjectId, targetProjectName]);
 
   const projectToProcess = useMemo(() => {
@@ -422,17 +398,17 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
 
   if (loading || isLoadingProjects) return null;
 
-  const isMobileCoordinator = user?.roles?.some((r) => r.toLowerCase().includes("coordinador"));
-  const isMobileCollaborator = user?.roles?.some((r) => r.toLowerCase().includes("colaborador"));
+  const isMobileCoordinator = user?.roles?.some((r) => r.toLowerCase().includes('coordinador'));
+  const isMobileCollaborator = user?.roles?.some((r) => r.toLowerCase().includes('colaborador'));
 
-  const userRole = isMobileCoordinator ? "Mobile-Coordinador" : isMobileCollaborator ? "Mobile-Colaborador" : "Usuario";
-  const roleColor = isMobileCoordinator ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800" : "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20";
+  const userRole = isMobileCoordinator ? 'Mobile-Coordinador' : isMobileCollaborator ? 'Mobile-Colaborador' : 'Usuario';
+  const roleColor = isMobileCoordinator ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800' : 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20';
 
   const userProjects = profile?.metadata?.projects || [];
 
   // 2. Calculate Seniority
   const calculateTotalSeniority = () => {
-    if (!profile?.metadata?.projects) return { totalDays: 0, text: "0 días" };
+    if (!profile?.metadata?.projects) return { totalDays: 0, text: '0 días' };
 
     const totalDays = (profile.metadata.projects || []).reduce(
       (acc: number, p: any) =>
@@ -445,27 +421,27 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
       0,
     );
 
-    if (totalDays === 0) return { totalDays: 0, text: "0 días" };
+    if (totalDays === 0) return { totalDays: 0, text: '0 días' };
 
     const years = Math.floor(totalDays / 365);
     const months = Math.floor((totalDays % 365) / 30);
     const days = totalDays % 30;
 
     const parts = [];
-    if (years > 0) parts.push(`${years} ${years === 1 ? "año" : "años"}`);
-    if (months > 0) parts.push(`${months} ${months === 1 ? "mes" : "meses"}`);
-    if (days > 0) parts.push(`${days} ${days === 1 ? "día" : "días"}`);
+    if (years > 0) parts.push(`${years} ${years === 1 ? 'año' : 'años'}`);
+    if (months > 0) parts.push(`${months} ${months === 1 ? 'mes' : 'meses'}`);
+    if (days > 0) parts.push(`${days} ${days === 1 ? 'día' : 'días'}`);
 
-    return { totalDays, text: parts.join(", ") };
+    return { totalDays, text: parts.join(', ') };
   };
 
   const seniority = calculateTotalSeniority();
 
   const handleLogout = async () => {
-    const result = await sweetAlert.confirm("¿Cerrar sesión?", "¿Estás seguro de que deseas salir?", "Sí, cerrar sesión", "Cancelar");
+    const result = await sweetAlert.confirm('¿Cerrar sesión?', '¿Estás seguro de que deseas salir?', 'Sí, cerrar sesión', 'Cancelar');
     if (result.isConfirmed) {
       logout();
-      await sweetAlert.success("Sesión cerrada", "Has salido correctamente");
+      await sweetAlert.success('Sesión cerrada', 'Has salido correctamente');
     }
   };
 
@@ -497,7 +473,7 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
             <FontAwesomeIcon icon={faClock} size="sm" />
           </div>
           <div>
-            <p className="text-sm font-black text-slate-900 dark:text-slate-100 leading-tight">{seniority.text || "0 días"}</p>
+            <p className="text-sm font-black text-slate-900 dark:text-slate-100 leading-tight">{seniority.text || '0 días'}</p>
             <p className="text-[9px] text-slate-400 uppercase font-black tracking-tighter">Antigüedad</p>
           </div>
         </div>
@@ -527,7 +503,7 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
             </div>
             <div className="flex justify-between flex-1 items-center">
               <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">Ingreso</p>
-              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{profile?.hireDate ? format(new Date(profile.hireDate), "dd MMM yyyy", { locale: es }) : "N/A"}</p>
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{profile?.hireDate ? format(new Date(profile.hireDate), 'dd MMM yyyy', { locale: es }) : 'N/A'}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -545,7 +521,7 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
             </div>
             <div className="flex justify-between flex-1 items-center">
               <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">Teléfono</p>
-              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{profile?.phone || "Sin teléfono"}</p>
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{profile?.phone || 'Sin teléfono'}</p>
             </div>
           </div>
         </div>
@@ -555,21 +531,12 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
           <div className="flex items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-1.5">
               <h4 className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Datos personales</h4>
-              <button
-                type="button"
-                onClick={handleInfoDatosPersonales}
-                title="¿Cómo cambio mis datos personales?"
-                className="w-4 h-4 flex items-center justify-center text-slate-400 hover:text-primary transition-colors"
-              >
+              <button type="button" onClick={handleInfoDatosPersonales} title="¿Cómo cambio mis datos personales?" className="w-4 h-4 flex items-center justify-center text-slate-400 hover:text-primary transition-colors">
                 <FontAwesomeIcon icon={faPenToSquare} className="text-[11px]" />
               </button>
             </div>
             {onChangePersonalData && (
-              <button
-                type="button"
-                onClick={onChangePersonalData}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 text-primary text-[9px] font-black uppercase tracking-wider hover:bg-primary/20 transition-colors"
-              >
+              <button type="button" onClick={onChangePersonalData} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 text-primary text-[9px] font-black uppercase tracking-wider hover:bg-primary/20 transition-colors">
                 <FontAwesomeIcon icon={faPenToSquare} className="text-[9px]" />
                 Cambiar datos
               </button>
@@ -577,19 +544,14 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
           </div>
           <div className="flex gap-1 bg-slate-100 dark:bg-slate-800/60 rounded-lg p-1 mb-3">
             {infoTabs.map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setActiveInfoTab(t.key)}
-                className={`flex-1 py-1.5 rounded-md text-[9px] font-black uppercase tracking-wider transition-colors flex items-center justify-center gap-1 ${activeInfoTab === t.key ? "bg-white dark:bg-slate-700 text-primary shadow-sm" : "text-slate-400"}`}
-              >
+              <button key={t.key} type="button" onClick={() => setActiveInfoTab(t.key)} className={`flex-1 py-1.5 rounded-md text-[9px] font-black uppercase tracking-wider transition-colors flex items-center justify-center gap-1 ${activeInfoTab === t.key ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400'}`}>
                 <FontAwesomeIcon icon={t.icon} className="text-[9px]" />
                 {t.label}
               </button>
             ))}
           </div>
 
-          {activeInfoTab === "general" && (
+          {activeInfoTab === 'general' && (
             <div className="animate-in fade-in duration-300">
               <InfoRow label="Tipo de documento" value={nameFromInfo(documentTypes, md.tipoDocumentoId)} />
               <InfoRow label="Documento" value={md.documento} />
@@ -603,7 +565,7 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
             </div>
           )}
 
-          {activeInfoTab === "domicilio" && (
+          {activeInfoTab === 'domicilio' && (
             <div className="animate-in fade-in duration-300">
               <InfoRow label="País" value={md.pais || nameFromInfo(countries, md.paisId)} />
               <InfoRow label="Localidad" value={md.localidad} />
@@ -616,9 +578,9 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
             </div>
           )}
 
-          {activeInfoTab === "bancarios" && (
+          {activeInfoTab === 'bancarios' && (
             <div className="animate-in fade-in duration-300">
-              <InfoRow label="Banco" value={nameFromInfo(banks, md.bancoId) || (md.tipoEntidadFinanciera === "sin_banco" ? "No tiene banco" : "")} />
+              <InfoRow label="Banco" value={nameFromInfo(banks, md.bancoId) || (md.tipoEntidadFinanciera === 'sin_banco' ? 'No tiene banco' : '')} />
               <InfoRow label="CBU / CVU" value={md.cbu} />
               <InfoRow label="Tipo de cuenta" value={md.tipoDeCuentaBancaria} />
               <InfoRow label="Nro. de cuenta" value={md.nroDeCuentaBancaria} />
@@ -671,22 +633,24 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
                     Equipo de Proyecto
                   </div>
                 )}
-                
-                {profile?.roleNames?.filter((role: string) => !role.toLowerCase().includes("responsable de proyecto")).map((role: string, idx: number) => {
-                  const lowerRole = role.toLowerCase();
-                  const isCoord = lowerRole.includes("coordinador");
-                  const isColab = lowerRole.includes("colaborador");
-                  
-                  let badgeStyles = "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700";
-                  if (isCoord) badgeStyles = "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800";
-                  if (isColab) badgeStyles = "bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800";
 
-                  return (
-                    <div key={idx} className={`inline-flex items-center px-2 py-1 rounded-md border text-[8px] font-black uppercase tracking-wider ${badgeStyles}`}>
-                      {role}
-                    </div>
-                  );
-                })}
+                {profile?.roleNames
+                  ?.filter((role: string) => !role.toLowerCase().includes('responsable de proyecto'))
+                  .map((role: string, idx: number) => {
+                    const lowerRole = role.toLowerCase();
+                    const isCoord = lowerRole.includes('coordinador');
+                    const isColab = lowerRole.includes('colaborador');
+
+                    let badgeStyles = 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700';
+                    if (isCoord) badgeStyles = 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800';
+                    if (isColab) badgeStyles = 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800';
+
+                    return (
+                      <div key={idx} className={`inline-flex items-center px-2 py-1 rounded-md border text-[8px] font-black uppercase tracking-wider ${badgeStyles}`}>
+                        {role}
+                      </div>
+                    );
+                  })}
               </div>
             </div>
 
@@ -722,7 +686,7 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
               </div>
               <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/10 mt-2">
                 <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Sueldo en mano</p>
-                <p className="text-lg font-black text-slate-900 dark:text-slate-100">$ {selectedProjectInfo.salary ? Number(selectedProjectInfo.salary).toLocaleString("es-ES") : "N/A"}</p>
+                <p className="text-lg font-black text-slate-900 dark:text-slate-100">$ {selectedProjectInfo.salary ? Number(selectedProjectInfo.salary).toLocaleString('es-ES') : 'N/A'}</p>
               </div>
             </div>
 
@@ -750,7 +714,8 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
                               {group.shifts.map((s, sidx) => (
                                 <span key={sidx} className="text-[9px] bg-blue-500/10 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded border border-blue-500/15 flex items-center gap-1 font-bold uppercase">
                                   <FontAwesomeIcon icon={faClock} className="text-[8px] opacity-70" />
-                                  {s.name}{s.time && s.time !== "Sin horario" ? ` (${s.time})` : ""}
+                                  {s.name}
+                                  {s.time && s.time !== 'Sin horario' ? ` (${s.time})` : ''}
                                 </span>
                               ))}
                             </div>
@@ -782,7 +747,8 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
                             {group.shifts.map((s: any, sidx: number) => (
                               <span key={sidx} className="text-[9px] bg-amber-500/10 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded border border-amber-500/15 flex items-center gap-1 font-bold uppercase">
                                 <FontAwesomeIcon icon={faClock} className="text-[8px] opacity-70" />
-                                {s.name}{s.time && s.time !== "Sin horario" ? ` (${s.time})` : ""}
+                                {s.name}
+                                {s.time && s.time !== 'Sin horario' ? ` (${s.time})` : ''}
                               </span>
                             ))}
                           </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '../components/ui/PageLayout';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { Card } from '../components/ui/Card';
@@ -47,6 +48,7 @@ const hasContent = (html: string): boolean =>
     .trim().length > 0;
 
 export function ReleasesPage() {
+  const navigate = useNavigate();
   // data
   const HELP_KEY = 'releases' as const;
   const helpEntry = getHelp(HELP_KEY);
@@ -92,7 +94,10 @@ export function ReleasesPage() {
 
   useEffect(() => {
     loadReleases();
-    releaseTiposAPI.list().then(setTipos).catch(() => setTipos([]));
+    releaseTiposAPI
+      .list()
+      .then(setTipos)
+      .catch(() => setTipos([]));
   }, []);
 
   const loadReleases = async () => {
@@ -271,9 +276,15 @@ export function ReleasesPage() {
       shouldShowInfo={hasHelp(HELP_KEY)}
       infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: helpEntry.title, size: helpEntry.size, content: helpEntry.content }}
       headerActions={
-        <button onClick={openCreate} aria-label="Nuevo release" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg transition-colors bg-blue-600 text-white hover:bg-blue-700" title="Nuevo release">
-          <FontAwesomeIcon icon={faPlus} />
-        </button>
+        <div className="flex gap-2">
+          <button onClick={openCreate} aria-label="Nuevo release" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg transition-colors bg-blue-600 text-white hover:bg-blue-700" title="Nuevo release">
+            <FontAwesomeIcon icon={faPlus} />
+          </button>
+          <button onClick={() => navigate('/releases-tipos')} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+            <FontAwesomeIcon icon={faRocket} />
+            <span className="hidden lg:block">Releases</span>
+          </button>
+        </div>
       }
       searchAndFilters={
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
@@ -506,11 +517,7 @@ export function ReleasesPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo de Release *</label>
-              <select
-                value={formData.releaseTipoId}
-                onChange={(e) => setFormData({ ...formData, releaseTipoId: e.target.value })}
-                className="input-field w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-              >
+              <select value={formData.releaseTipoId} onChange={(e) => setFormData({ ...formData, releaseTipoId: e.target.value })} className="input-field w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100">
                 <option value="">{tipos.length ? 'Selecciona un tipo...' : 'No hay tipos cargados'}</option>
                 {tipos.map((t) => (
                   <option key={t._id} value={t._id}>

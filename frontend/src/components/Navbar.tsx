@@ -28,7 +28,7 @@ interface AdminCounts {
  */
 // El membrete va PRIMERO (es prerrequisito de las plantillas); el resto se ordena alfabéticamente.
 const MEMBRETE_PATH = '/empresas-membretes';
-const PLANTILLAS_PATHS = [MEMBRETE_PATH, '/pdfs', '/contratos-frame', '/releases'];
+const PLANTILLAS_PATHS = [MEMBRETE_PATH, '/pdfs', '/pdfs-vacaciones', '/contratos-frame', '/releases'];
 
 export const MobileNavbar: React.FC = () => {
   const { user, logout, hasPermission } = useAuthStore();
@@ -180,7 +180,8 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission('config_shifts:view')) base.push({ path: '/shifts', icon: faClock, label: 'Turnos', scope: 'global' });
       if (hasPermission('config_vacations:view')) base.push({ path: '/vacations-rules', icon: faUmbrellaBeach, label: 'Vacaciones', scope: 'global' });
       if (hasPermission('config_holidays:view')) base.push({ path: '/holidays', icon: faCalendar, label: 'Feriados', scope: 'global' });
-      if (hasPermission('config_pdf_templates:view')) base.push({ path: '/pdfs', icon: faFilePdf, label: 'Pedidos | Vacaciones', scope: 'global' });
+      if (hasPermission('config_pdf_templates:view')) base.push({ path: '/pdfs', icon: faFilePdf, label: 'Pedidos', scope: 'global' });
+      if (hasPermission('config_pdf_templates:view')) base.push({ path: '/pdfs-vacaciones', icon: faFilePdf, label: 'Vacaciones', scope: 'global' });
       if (hasPermission('config_releases:view')) base.push({ path: '/releases', icon: faFilePdf, label: 'Releases', scope: 'global' });
       if (hasPermission('config_releases:view')) base.push({ path: '/releases-tipos', icon: faRocket, label: 'Releases', scope: 'global' });
       // Categorías SAT y Funciones FRAME viven en un solo ítem con dos tabs: alcanza con cualquiera de los dos permisos.

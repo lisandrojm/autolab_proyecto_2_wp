@@ -4,10 +4,12 @@ import { Pdf } from "../api/pdf";
 
 interface PdfAssignmentStatusProps {
   templates: Pdf[];
+  /** Si se pasa, solo se muestran los códigos de esa sección (Pedidos o Vacaciones). */
+  section?: "Pedidos" | "Vacaciones";
 }
 
-export function PdfAssignmentStatus({ templates }: PdfAssignmentStatusProps) {
-  const codesToCheck = [
+export function PdfAssignmentStatus({ templates, section }: PdfAssignmentStatusProps) {
+  const allCodesToCheck = [
     { section: "Pedidos", code: "dinero", label: "Dinero", description: "Para pedidos monetarios (viáticos, reembolsos)" },
     { section: "Pedidos", code: "fechaRango", label: "Fecha - Rango", description: "Para licencias, permisos (días múltiples)" },
     { section: "Pedidos", code: "fechasMultiples", label: "Fecha - Múltiples", description: "Para una o más fechas puntuales" },
@@ -16,6 +18,7 @@ export function PdfAssignmentStatus({ templates }: PdfAssignmentStatusProps) {
     { section: "Pedidos", code: "datosPersonales", label: "Datos Personales", description: "Para solicitudes de modificación de datos personales" },
     { section: "Vacaciones", code: "vacaciones", label: "Vacaciones", description: "Para solicitudes de vacaciones" },
   ] as const;
+  const codesToCheck = section ? allCodesToCheck.filter((c) => c.section === section) : allCodesToCheck;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-6">

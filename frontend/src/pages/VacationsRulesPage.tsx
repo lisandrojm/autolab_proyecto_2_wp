@@ -78,9 +78,9 @@ export function VacationsRulesPage() {
       //headerActions={}
       headerActions={
         <div>
-          <button onClick={() => navigate('/pdfs')} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate('/pdfs-vacaciones')} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faFilePdf} />
-            <span className="hidden lg:block">Plantillas | Pedidos | Vacaciones</span>
+            <span className="hidden lg:block">Plantillas | Vacaciones</span>
           </button>
         </div>
       }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBuilding, faImage, faSignature, faSpinner, faPlus, faFilePdf, faPenToSquare, faIdCard, faTrash, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
 import Swal from 'sweetalert2';
@@ -29,6 +30,7 @@ const domicilioResumen = (c: Company): string => [[c.domicilioCalle, c.domicilio
 const hasMembrete = (c: Company) => Boolean(c.logoUrl || c.signatureUrl);
 
 export function MembretesPage() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -208,9 +210,15 @@ export function MembretesPage() {
       infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: helpEntry.title, size: helpEntry.size, content: helpEntry.content }}
       itemCount={membretes.length}
       headerActions={
-        <button type="button" onClick={allCovered ? undefined : openCreate} disabled={allCovered} aria-label="Nuevo membrete" title={allCovered ? 'Todas las empresas ya tienen membrete' : 'Nuevo membrete'} className={`inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg transition-colors ${allCovered ? 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
-          <FontAwesomeIcon icon={faPlus} />
-        </button>
+        <div className="flex gap-2">
+          <button type="button" onClick={allCovered ? undefined : openCreate} disabled={allCovered} aria-label="Nuevo membrete" title={allCovered ? 'Todas las empresas ya tienen membrete' : 'Nuevo membrete'} className={`inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg transition-colors ${allCovered ? 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+            <FontAwesomeIcon icon={faPlus} />
+          </button>
+          <button onClick={() => navigate('/empresas')} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+            <FontAwesomeIcon icon={faBuilding} />
+            <span className="hidden lg:block">Ir a Empresas</span>
+          </button>
+        </div>
       }
     >
       {companies.length === 0 ? (

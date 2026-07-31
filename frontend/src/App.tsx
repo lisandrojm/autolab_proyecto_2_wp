@@ -437,7 +437,15 @@ function App() {
                 path="/pdfs"
                 element={
                   <ProtectedRoute>
-                    <PdfTemplatesPage />
+                    <PdfTemplatesPage scope="pedidos" />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/pdfs-vacaciones"
+                element={
+                  <ProtectedRoute>
+                    <PdfTemplatesPage scope="vacaciones" />
                   </ProtectedRoute>
                 }
               />
