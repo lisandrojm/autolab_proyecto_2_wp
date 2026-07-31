@@ -45,6 +45,8 @@ const contractSchema = new Schema({
     empresaReleaseId: { type: Schema.Types.ObjectId, ref: "Company" },
     nombre_empresa_contrato: { type: String },
     nombre_empresa_release: { type: String },
+    altaDocumentoUrl: { type: String },
+    altaDocumentoNombre: { type: String },
     areaShiftAssignments: [
         {
             areaId: { type: Schema.Types.ObjectId, ref: "Area" },

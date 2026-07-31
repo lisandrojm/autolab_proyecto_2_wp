@@ -45,6 +45,8 @@ interface IContract {
     empresaReleaseId?: Types.ObjectId | string | null;
     nombre_empresa_contrato?: string;
     nombre_empresa_release?: string;
+    altaDocumentoUrl?: string;
+    altaDocumentoNombre?: string;
     areaShiftAssignments?: {
         areaId: Types.ObjectId | string;
         shiftIds: (Types.ObjectId | string)[];

@@ -92,11 +92,15 @@ function parseEstadoBody(body) {
         return { error: "Un estado impositivo tiene que indicar a qué tipos de contrato corresponde" };
     }
     // El badge secundario (texto + color) solo tiene sentido para estados impositivos: si se destilda
-    // "Estado impositivo" se descarta, para no dejar un badge secundario huérfano configurado.
+    // "Estado impositivo" se descarta, para no dejar un badge secundario huérfano configurado. Si está
+    // tildado, el texto es obligatorio: sin él no se puede mostrar el badge en las tarjetas.
     const colorEtiquetaSecundaria = String(body?.colorEtiquetaSecundaria ?? "").trim();
     if (colorEtiquetaSecundaria && !/^#[0-9a-f]{6}$/i.test(colorEtiquetaSecundaria))
         return { error: "El color del badge secundario debe ser hexadecimal, por ejemplo #16a34a" };
     const etiquetaSecundaria = esImpositivo ? String(body?.etiquetaSecundaria ?? "").trim() : "";
+    if (esImpositivo && !etiquetaSecundaria) {
+        return { error: "Un estado impositivo tiene que tener un texto de badge secundario" };
+    }
     return {
         name,
         data: {

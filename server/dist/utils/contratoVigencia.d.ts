@@ -2,9 +2,11 @@
  * Vigencia de contratos: mismo criterio que usa el front (`frontend/src/utils/contratoVigencia.ts`).
  *
  * Un contrato de TIEMPO INDETERMINADO se guarda con `fecha_baja_contrato` vacía, así que la
- * ausencia de fecha de baja es lo que lo identifica como vigente. El punto importante es CUÁL
- * contrato se evalúa: tomar siempre el último del array daba NO VIGENTE a quien tenía un
- * indeterminado abierto seguido de un contrato viejo ya vencido.
+ * ausencia de fecha de baja es lo que lo identifica como sin fecha de fin.
+ *
+ * Vigente = ya arrancó (fecha_alta_contrato <= hoy) Y no terminó (sin fecha_baja_contrato, o
+ * fecha_baja_contrato >= hoy). Un contrato con Alta futura (todavía no arrancó) NO es vigente,
+ * aunque no tenga fecha de baja.
  *
  * El flag `esTiempoIndeterminado` del tipo de contrato no se usa acá: si un contrato indeterminado
  * tiene fecha de baja cargada, esa baja es real y se respeta.
@@ -22,7 +24,10 @@ export declare function hoyArgentina(): string;
  * null), así que hay que tratarla explícitamente como vacía: un `if (!baja)` la daría por válida.
  */
 export declare function fechaISO(valor?: string | null): string;
-/** Vigente = sin fecha de baja (tiempo indeterminado) o con baja de hoy en adelante. */
+/**
+ * Vigente = ya arrancó (Alta <= hoy) y no terminó (sin Baja, o Baja >= hoy). Si la Alta es futura,
+ * el contrato todavía no rige, aunque no tenga fecha de baja (tiempo indeterminado).
+ */
 export declare function esContratoVigente(contrato: ContratoVigenciaLike | null | undefined, hoy?: string): boolean;
 /** Igual que `esContratoVigente`, recibiendo solo la fecha de baja. */
 export declare function esFechaBajaVigente(fechaBaja: string | null | undefined, hoy?: string): boolean;
@@ -31,9 +36,10 @@ export declare function esTiempoIndeterminado(contrato: ContratoVigenciaLike | n
 /**
  * Contrato que representa la situación actual, por orden de prioridad:
  *
- *  1. TIEMPO INDETERMINADO: si tiene uno (sin fecha de baja) ese es el que rige, aunque después
- *     figuren cargados contratos a plazo. Un contrato sin fecha de fin sigue abierto.
- *  2. Si no hay indeterminado, el vigente más reciente.
- *  3. Si no hay ninguno vigente, el más reciente de todos (para seguir mostrando el histórico).
+ *  1. Entre los VIGENTES (ya arrancaron y no terminaron), el TIEMPO INDETERMINADO manda, aunque
+ *     después figuren cargados contratos a plazo. Un contrato sin fecha de fin sigue abierto.
+ *  2. Si no hay indeterminado vigente, el vigente más reciente.
+ *  3. Si no hay ninguno vigente (ni siquiera uno que todavía no arrancó), el más reciente de todos
+ *     (para seguir mostrando el histórico).
  */
 export declare function getContratoActivo<T extends ContratoVigenciaLike>(contratos: T[] | null | undefined, hoy?: string): T | null;

@@ -2,9 +2,11 @@
  * Vigencia de contratos: mismo criterio que usa el front (`frontend/src/utils/contratoVigencia.ts`).
  *
  * Un contrato de TIEMPO INDETERMINADO se guarda con `fecha_baja_contrato` vacía, así que la
- * ausencia de fecha de baja es lo que lo identifica como vigente. El punto importante es CUÁL
- * contrato se evalúa: tomar siempre el último del array daba NO VIGENTE a quien tenía un
- * indeterminado abierto seguido de un contrato viejo ya vencido.
+ * ausencia de fecha de baja es lo que lo identifica como sin fecha de fin.
+ *
+ * Vigente = ya arrancó (fecha_alta_contrato <= hoy) Y no terminó (sin fecha_baja_contrato, o
+ * fecha_baja_contrato >= hoy). Un contrato con Alta futura (todavía no arrancó) NO es vigente,
+ * aunque no tenga fecha de baja.
  *
  * El flag `esTiempoIndeterminado` del tipo de contrato no se usa acá: si un contrato indeterminado
  * tiene fecha de baja cargada, esa baja es real y se respeta.
@@ -32,9 +34,15 @@ export function fechaISO(valor) {
     }
     return "";
 }
-/** Vigente = sin fecha de baja (tiempo indeterminado) o con baja de hoy en adelante. */
+/**
+ * Vigente = ya arrancó (Alta <= hoy) y no terminó (sin Baja, o Baja >= hoy). Si la Alta es futura,
+ * el contrato todavía no rige, aunque no tenga fecha de baja (tiempo indeterminado).
+ */
 export function esContratoVigente(contrato, hoy = hoyArgentina()) {
     if (!contrato)
+        return false;
+    const alta = fechaISO(contrato.fecha_alta_contrato);
+    if (alta && alta > hoy)
         return false;
     const baja = fechaISO(contrato.fecha_baja_contrato);
     return !baja || baja >= hoy;
@@ -59,20 +67,22 @@ function claveAntiguedad(contrato) {
 /**
  * Contrato que representa la situación actual, por orden de prioridad:
  *
- *  1. TIEMPO INDETERMINADO: si tiene uno (sin fecha de baja) ese es el que rige, aunque después
- *     figuren cargados contratos a plazo. Un contrato sin fecha de fin sigue abierto.
- *  2. Si no hay indeterminado, el vigente más reciente.
- *  3. Si no hay ninguno vigente, el más reciente de todos (para seguir mostrando el histórico).
+ *  1. Entre los VIGENTES (ya arrancaron y no terminaron), el TIEMPO INDETERMINADO manda, aunque
+ *     después figuren cargados contratos a plazo. Un contrato sin fecha de fin sigue abierto.
+ *  2. Si no hay indeterminado vigente, el vigente más reciente.
+ *  3. Si no hay ninguno vigente (ni siquiera uno que todavía no arrancó), el más reciente de todos
+ *     (para seguir mostrando el histórico).
  */
 export function getContratoActivo(contratos, hoy = hoyArgentina()) {
     if (!Array.isArray(contratos) || contratos.length === 0)
         return null;
     const masReciente = (lista) => lista.reduce((mejor, actual) => (claveAntiguedad(actual) >= claveAntiguedad(mejor) ? actual : mejor));
-    const indeterminados = contratos.filter((c) => esTiempoIndeterminado(c));
-    if (indeterminados.length > 0)
-        return masReciente(indeterminados);
     const vigentes = contratos.filter((c) => esContratoVigente(c, hoy));
-    if (vigentes.length > 0)
+    if (vigentes.length > 0) {
+        const indeterminadosVigentes = vigentes.filter((c) => esTiempoIndeterminado(c));
+        if (indeterminadosVigentes.length > 0)
+            return masReciente(indeterminadosVigentes);
         return masReciente(vigentes);
+    }
     return masReciente(contratos);
 }
