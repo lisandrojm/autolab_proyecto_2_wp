@@ -114,21 +114,58 @@ export const formatDate = (s?: string): string => {
  */
 export const isContractVigente = (alta?: string, baja?: string): boolean => esContratoVigente({ fecha_alta_contrato: alta, fecha_baja_contrato: baja });
 
-/** Busca la plantilla de contrato (ContratoFrame) que corresponde al contrato. */
+const nombrePlantilla = (cf: ContratoFrameItem): string => (cf.data?.nombre || cf.name || "").trim().toLowerCase();
+
+/** `mas_largo` empieza con `mas_corto` y el corte cae en un límite de palabra (no en medio de un token). */
+const esPrefijoConLimite = (masLargo: string, masCorto: string): boolean => {
+  if (!masCorto || !masLargo.startsWith(masCorto)) return false;
+  const siguiente = masLargo.charAt(masCorto.length);
+  return siguiente === "" || !/[a-z0-9]/i.test(siguiente);
+};
+
+/**
+ * Busca la plantilla de contrato (ContratoFrame) que corresponde al contrato.
+ *
+ * 1. Nombre exacto (la clave confiable: el wizard guarda el nombre exacto de la contratos-frame).
+ * 2. ID Externo, solo con ids válidos (> 0). El 0 es un sentinel de "sin id" y matchearía cualquier
+ *    contratos-frame con data.id 0 → descargaría un contrato equivocado.
+ * 3. Fallback difuso por prefijo con límite de palabra, para nombres importados con un sufijo extra
+ *    en cualquiera de los dos lados (p. ej. "Jornada 2030 SRL" → Plantilla "Jornada", o "Eventual
+ *    Crew Reelshort" → Plantilla "Eventual Crew Reelshort - STMP - MSLIHB"). Solo matchea si hay UN
+ *    candidato, o si todos los candidatos están anidados unos en otros (ahí gana el más específico,
+ *    el de nombre más largo). Si hay candidatos genuinamente ambiguos (no anidados entre sí), no
+ *    matchea nada: mejor mostrar "Contrato inexistente" que generar el PDF equivocado.
+ */
 export const findTemplate = (contract: Contract, contratoFrames: ContratoFrameItem[]): ContratoFrameItem | null => {
-  // El nombre es la clave confiable: el wizard guarda el nombre exacto de la contratos-frame.
   const name = (contract.nombre_contrato || "").trim().toLowerCase();
   if (name) {
-    const byName = contratoFrames.find((cf) => (cf.data?.nombre || cf.name || "").trim().toLowerCase() === name);
+    const byName = contratoFrames.find((cf) => nombrePlantilla(cf) === name);
     if (byName) return byName;
   }
-  // Fallback por ID Externo, solo con ids válidos (> 0). El 0 es un sentinel de "sin id" y matchearía
-  // cualquier contratos-frame con data.id 0 → descargaría un contrato equivocado.
+
   const tid = Number(contract.tipo_contrato_id);
   if (Number.isFinite(tid) && tid > 0) {
     const byId = contratoFrames.find((cf) => cf.data?.id != null && Number(cf.data.id) === tid);
     if (byId) return byId;
   }
+
+  if (name) {
+    const candidatas = contratoFrames.filter((cf) => {
+      const cfName = nombrePlantilla(cf);
+      return !!cfName && (esPrefijoConLimite(name, cfName) || esPrefijoConLimite(cfName, name));
+    });
+    if (candidatas.length === 1) return candidatas[0];
+    if (candidatas.length > 1) {
+      const porLargo = [...candidatas].sort((a, b) => nombrePlantilla(b).length - nombrePlantilla(a).length);
+      const masLargo = nombrePlantilla(porLargo[0]);
+      const todasAnidadas = porLargo.every((cf) => {
+        const n = nombrePlantilla(cf);
+        return n === masLargo || esPrefijoConLimite(masLargo, n);
+      });
+      if (todasAnidadas) return porLargo[0];
+    }
+  }
+
   return null;
 };
 
@@ -334,6 +371,46 @@ export const ContractCard: React.FC<ContractCardProps> = ({
           </div>
         </div>
 
+        {/* Documento de "Alta" (AFIP/Servicios): solo si el tipo de contrato tiene esa categoría. */}
+        {categoriaAltaDocumento && (
+          <div className={`mt-3 pt-3 border-t ${dividerClass}`}>
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{tituloAltaDocumento}</p>
+            <div className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
+              {contract.altaDocumentoUrl ? (
+                <a
+                  href={getImageUrl(contract.altaDocumentoUrl)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-1.5 min-w-0 hover:underline"
+                  title={contract.altaDocumentoNombre || tituloAltaDocumento}
+                >
+                  <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
+                  <span className="truncate">{contract.altaDocumentoNombre || "Ver documento"}</span>
+                </a>
+              ) : (
+                <span className="text-sm text-gray-400 dark:text-gray-500 flex items-center gap-1.5 min-w-0">
+                  <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 shrink-0" />
+                  <span className="truncate">Sin documento cargado</span>
+                </span>
+              )}
+              {onUploadAltaDocumento && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => altaDocumentoInputRef.current?.click()}
+                    disabled={uploadingAltaDocumento}
+                    title={contract.altaDocumentoUrl ? "Reemplazar documento" : "Subir PDF"}
+                    className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <FontAwesomeIcon icon={uploadingAltaDocumento ? faSpinner : faUpload} spin={uploadingAltaDocumento} className="h-4 w-4" />
+                  </button>
+                  <input ref={altaDocumentoInputRef} type="file" accept="application/pdf" className="hidden" onChange={handleAltaDocumentoSelected} />
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Contrato: descarga con el nombre del tipo de contrato */}
         <div className={`mt-3 pt-3 border-t ${dividerClass}`}>
           <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Contrato | Empresa</p>
@@ -426,46 +503,6 @@ export const ContractCard: React.FC<ContractCardProps> = ({
             </div>
           )}
         </div>
-
-        {/* Documento de "Alta" (AFIP/Servicios): solo si el tipo de contrato tiene esa categoría. */}
-        {categoriaAltaDocumento && (
-          <div className={`mt-3 pt-3 border-t ${dividerClass}`}>
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{tituloAltaDocumento}</p>
-            <div className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">
-              {contract.altaDocumentoUrl ? (
-                <a
-                  href={getImageUrl(contract.altaDocumentoUrl)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-1.5 min-w-0 hover:underline"
-                  title={contract.altaDocumentoNombre || tituloAltaDocumento}
-                >
-                  <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
-                  <span className="truncate">{contract.altaDocumentoNombre || "Ver documento"}</span>
-                </a>
-              ) : (
-                <span className="text-sm text-gray-400 dark:text-gray-500 flex items-center gap-1.5 min-w-0">
-                  <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 shrink-0" />
-                  <span className="truncate">Sin documento cargado</span>
-                </span>
-              )}
-              {onUploadAltaDocumento && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => altaDocumentoInputRef.current?.click()}
-                    disabled={uploadingAltaDocumento}
-                    title={contract.altaDocumentoUrl ? "Reemplazar documento" : "Subir PDF"}
-                    className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <FontAwesomeIcon icon={uploadingAltaDocumento ? faSpinner : faUpload} spin={uploadingAltaDocumento} className="h-4 w-4" />
-                  </button>
-                  <input ref={altaDocumentoInputRef} type="file" accept="application/pdf" className="hidden" onChange={handleAltaDocumentoSelected} />
-                </>
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
       <InfoModal
