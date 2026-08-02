@@ -235,6 +235,43 @@ router.patch("/estados/reorder", requireTenant, authenticateToken, async (req: A
   }
 });
 
+// PATCH /info/estados/reorder-dependencia - guardar el "orden de dependencias" (flujo de pasos).
+// Independiente del orden visual: cada estado lleva un número de paso; los que comparten número son
+// alternativas del mismo paso. `ordenDependencia: null` saca al estado del flujo (se hace $unset).
+// Igual que /estados/reorder, tiene que registrarse ANTES de "/estados/:id".
+router.patch("/estados/reorder-dependencia", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const items: Array<{ id: string; ordenDependencia: number | null }> = Array.isArray(req.body?.items) ? req.body.items : [];
+    if (items.length === 0) {
+      res.status(400).json({ error: "Se requiere un array de items" });
+      return;
+    }
+
+    // `Info` es compartida por varios `type`: confirmar que todos sean Estados antes del bulk.
+    const ids = items.map((it) => String(it.id));
+    const existentes = await Info.find({ _id: { $in: ids }, type: ESTADO_TYPE }).select("_id").lean();
+    if (existentes.length !== ids.length) {
+      res.status(400).json({ error: "Alguno de los estados no existe" });
+      return;
+    }
+
+    const ops = items.map((it) => {
+      const n = it.ordenDependencia;
+      const update =
+        n === null || n === undefined
+          ? { $unset: { "data.ordenDependencia": "" } } // fuera del flujo → campo ausente (canónico)
+          : { $set: { "data.ordenDependencia": Number(n) } };
+      return { updateOne: { filter: { _id: it.id, type: ESTADO_TYPE }, update } };
+    });
+    await Info.bulkWrite(ops as any);
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("Reorder estados dependencia error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // PATCH /info/estados/:id - editar estado
 router.patch("/estados/:id", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {

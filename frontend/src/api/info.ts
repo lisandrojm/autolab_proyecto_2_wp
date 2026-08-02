@@ -21,6 +21,8 @@ export interface InfoItem {
     tipoImpositivo?: "alta_temprana_afip" | "constancia_cuit";
     /** Estados: orden visual en el ABM y en el dropdown del wizard (guía, no bloquea transiciones). */
     orden?: number;
+    /** Estados: paso del flujo de dependencias (alternativas comparten número). Ausente = fuera del flujo. */
+    ordenDependencia?: number;
     [key: string]: any;
   };
   name: string;
@@ -67,6 +69,11 @@ class InfoAPI {
   /** Guarda el orden visual tras arrastrar en el ABM (guía, no bloquea transiciones). */
   async reorderEstados(items: { id: string; orden: number }[]): Promise<void> {
     await axios.patch(`/info/estados/reorder`, { items });
+  }
+
+  /** Guarda el orden de dependencias (flujo de pasos). `ordenDependencia: null` saca al estado del flujo. */
+  async reorderEstadosDependencia(items: { id: string; ordenDependencia: number | null }[]): Promise<void> {
+    await axios.patch(`/info/estados/reorder-dependencia`, { items });
   }
 }
 

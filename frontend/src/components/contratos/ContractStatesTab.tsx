@@ -6,7 +6,7 @@ import { Modal } from '../ui/Modal';
 import { InfoModal } from '../ui/InfoModal';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash, faTags, faFileContract, faGrip, faTable, faFileInvoiceDollar, faGripVertical, faCheck, faMultiply, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faTrash, faTags, faFileContract, faGrip, faTable, faFileInvoiceDollar, faGripVertical, faCheck, faMultiply, faCircleInfo, faSitemap } from '@fortawesome/free-solid-svg-icons';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -14,6 +14,7 @@ import { infoAPI, InfoItem, EstadoPayload } from '../../api/info';
 import { contratoFrameAPI, ContratoFrameItem } from '../../api/contratosFrame';
 import { useEstadoCatalogStore } from '../../stores/estadoCatalogStore';
 import { estadoColorPorDefecto, colorTextoBadge, EstadoSecundarioBadge } from '../EstadoSelect';
+import { DependencyFlowEditor } from './DependencyFlowEditor';
 import { useThemeStore } from '../../stores/themeStore';
 
 /** Paleta sugerida: solo se elige el color de la tipografía; el fondo es ese color con transparencia. */
@@ -77,6 +78,18 @@ const ChipImpositivo: React.FC = () => (
  * Mismo violeta pero invertido: "Alta temprana de AFIP" en positivo (relleno) y "Constancia de CUIT"
  * en negativo (contorno), para distinguirlos de un vistazo.
  */
+/** Badge del paso del flujo de dependencias ("Paso N"). No muestra nada si el estado no está en el flujo. */
+const ChipPasoDependencia: React.FC<{ estado: InfoItem }> = ({ estado }) => {
+  const n = estado.data?.ordenDependencia;
+  if (typeof n !== 'number') return null;
+  return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-700/40 dark:text-slate-300 border border-slate-200 dark:border-slate-700 whitespace-nowrap">
+      <FontAwesomeIcon icon={faSitemap} className="h-2.5 w-2.5" />
+      Paso {n}
+    </span>
+  );
+};
+
 const ChipTipoImpositivo: React.FC<{ estado: InfoItem }> = ({ estado }) => {
   const tipo = estado.data?.tipoImpositivo;
   if (!tipo) return null;
@@ -139,6 +152,8 @@ export const ContractStatesTab: React.FC = () => {
   const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
 
   const [isReorderMode, setIsReorderMode] = useState(false);
+  // Modo "Orden de dependencias" (flujo de pasos): mutuamente excluyente con el reorder visual.
+  const [isDependencyMode, setIsDependencyMode] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
   useEffect(() => {
@@ -194,7 +209,14 @@ export const ContractStatesTab: React.FC = () => {
 
   const handleStartReorder = () => {
     setSearchTerm('');
+    setIsDependencyMode(false);
     setIsReorderMode(true);
+  };
+
+  const handleStartDependency = () => {
+    setSearchTerm('');
+    setIsReorderMode(false);
+    setIsDependencyMode(true);
   };
 
   const handleCancelReorder = () => {
@@ -350,12 +372,14 @@ export const ContractStatesTab: React.FC = () => {
         <div className="flex-1 w-full">
           {isReorderMode ? (
             <p className="text-sm text-gray-500 dark:text-gray-400 italic px-1">Arrastrá para reordenar. La búsqueda se deshabilita mientras tanto.</p>
+          ) : isDependencyMode ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400 italic px-1">Orden de dependencias: definí los pasos del flujo (los estados en el mismo paso son alternativas, uno u otro).</p>
           ) : (
             <SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar estado..." />
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {!isReorderMode && (
+          {!isReorderMode && !isDependencyMode && (
             <button onClick={abrirCrear} title="Nuevo estado" aria-label="Nuevo estado" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
               <FontAwesomeIcon icon={faPlus} />
             </button>
@@ -371,13 +395,19 @@ export const ContractStatesTab: React.FC = () => {
                 Guardar Orden
               </button>
             </div>
-          ) : (
-            <button onClick={handleStartReorder} disabled={estados.length < 2} title="Ordenar estados" className="px-3 py-2 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-sm flex items-center gap-2 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-              <FontAwesomeIcon icon={faGripVertical} />
-              <span>Ordenar</span>
-            </button>
+          ) : isDependencyMode ? null : (
+            <>
+              <button onClick={handleStartReorder} disabled={estados.length < 2} title="Ordenar (orden visual)" className="px-3 py-2 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-sm flex items-center gap-2 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+                <FontAwesomeIcon icon={faGripVertical} />
+                <span>Ordenar</span>
+              </button>
+              <button onClick={handleStartDependency} disabled={estados.length < 1} title="Orden de dependencias (flujo de pasos)" className="px-3 py-2 rounded-md border border-indigo-600 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all text-sm flex items-center gap-2 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+                <FontAwesomeIcon icon={faSitemap} />
+                <span>Dependencias</span>
+              </button>
+            </>
           )}
-          {isLarge && !isReorderMode && (
+          {isLarge && !isReorderMode && !isDependencyMode && (
             <div className="flex items-center gap-2">
               <button onClick={() => setViewMode('cards')} title="Vista de tarjetas" className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'cards' ? 'bg-blue-500 text-white border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
                 <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
@@ -390,7 +420,16 @@ export const ContractStatesTab: React.FC = () => {
         </div>
       </div>
 
-      {loading ? (
+      {isDependencyMode ? (
+        <DependencyFlowEditor
+          estados={estados}
+          onCancel={() => setIsDependencyMode(false)}
+          onSaved={() => {
+            setIsDependencyMode(false);
+            cargar();
+          }}
+        />
+      ) : loading ? (
         <div className="flex justify-center items-center py-20">
           <LoadingSpinner message="Cargando estados..." />
         </div>
@@ -726,7 +765,10 @@ const SortableEstadoRow: React.FC<SortableEstadoProps & { index: number; onEnabl
       </td>
       <td className="px-4 py-3 text-center font-medium text-gray-700 dark:text-gray-300">{index + 1}</td>
       <td className="px-4 py-3">
-        <BadgePreview texto={estado.name} color={colorEfectivo(estado)} esImpositivo={!!estado.data?.esImpositivo} />
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <BadgePreview texto={estado.name} color={colorEfectivo(estado)} esImpositivo={!!estado.data?.esImpositivo} />
+          <ChipPasoDependencia estado={estado} />
+        </div>
       </td>
       <td className="px-4 py-3">
         {estado.data?.esImpositivo ? (
@@ -798,6 +840,7 @@ const SortableEstadoCard: React.FC<SortableEstadoProps> = ({ estado, isReorderMo
             </span>
             {estado.data?.esImpositivo ? <ChipImpositivo /> : null}
             {estado.data?.esImpositivo ? <ChipTipoImpositivo estado={estado} /> : null}
+            <ChipPasoDependencia estado={estado} />
             <EstadoSecundarioBadge estado={estado} className="text-[10px]" />
           </div>
         </div>

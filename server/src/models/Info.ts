@@ -16,8 +16,12 @@ export interface IInfo extends Document {
     etiquetaSecundaria?: string;
     /** Estados impositivos: color del badge secundario (mismo formato que `color`). */
     colorEtiquetaSecundaria?: string;
+    /** Estados impositivos: trámite excluyente que representa. */
+    tipoImpositivo?: "alta_temprana_afip" | "constancia_cuit";
     /** Estados: orden visual en el ABM y en el dropdown del wizard (guía, no bloquea transiciones). */
     orden?: number;
+    /** Estados: paso dentro del flujo de dependencias (alternativas comparten número). Ausente = fuera del flujo. */
+    ordenDependencia?: number;
     [key: string]: any;
   };
   name: string;
@@ -38,7 +42,9 @@ const infoSchema = new Schema<IInfo>(
       esImpositivo: { type: Boolean },
       etiquetaSecundaria: { type: String },
       colorEtiquetaSecundaria: { type: String },
+      tipoImpositivo: { type: String },
       orden: { type: Number },
+      ordenDependencia: { type: Number },
     },
     name: { type: String, required: true },
   },
