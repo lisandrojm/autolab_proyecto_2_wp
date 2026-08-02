@@ -82,7 +82,7 @@ router.get("/", authenticateToken, async (_req: AuthenticatedRequest, res: Respo
 // POST / - crear
 router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { nombre, cantidadJornadas, multiplicadorDiario, esTiempoIndeterminado, requiereFirma, isActive } = req.body;
+    const { nombre, cantidadJornadas, multiplicadorDiario, esTiempoIndeterminado, requiereFirma, isActive, afipModalidadContrato, afipTipoServicio, afipActividad, afipModalidadLiquidacion } = req.body;
     const name = String(nombre ?? "").trim();
     if (!name) {
       res.status(400).json({ error: "El nombre es obligatorio" });
@@ -102,6 +102,10 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
         multiplicadorDiario: parseNum(multiplicadorDiario),
         esTiempoIndeterminado: esTiempoIndeterminado === "true" || esTiempoIndeterminado === true,
         requiereFirma: requiereFirma === undefined ? true : requiereFirma === "true" || requiereFirma === true,
+        afipModalidadContrato: afipModalidadContrato != null ? String(afipModalidadContrato).trim() : undefined,
+        afipTipoServicio: afipTipoServicio != null ? String(afipTipoServicio).trim() : undefined,
+        afipActividad: afipActividad != null ? String(afipActividad).trim() : undefined,
+        afipModalidadLiquidacion: afipModalidadLiquidacion != null ? String(afipModalidadLiquidacion).trim() : undefined,
       },
       isActive: isActive === undefined ? true : isActive === "true" || isActive === true,
     });
@@ -120,7 +124,7 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
 // PUT /:id - actualizar
 router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { nombre, cantidadJornadas, multiplicadorDiario, esTiempoIndeterminado, requiereFirma, isActive } = req.body;
+    const { nombre, cantidadJornadas, multiplicadorDiario, esTiempoIndeterminado, requiereFirma, isActive, afipModalidadContrato, afipTipoServicio, afipActividad, afipModalidadLiquidacion } = req.body;
     const item = await Contrato.findById(req.params.id);
     if (!item) {
       res.status(404).json({ error: "Contrato no encontrado" });
@@ -144,6 +148,10 @@ router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Res
     if (multiplicadorDiario !== undefined) item.data.multiplicadorDiario = parseNum(multiplicadorDiario);
     if (esTiempoIndeterminado !== undefined) item.data.esTiempoIndeterminado = esTiempoIndeterminado === "true" || esTiempoIndeterminado === true;
     if (requiereFirma !== undefined) item.data.requiereFirma = requiereFirma === "true" || requiereFirma === true;
+    if (afipModalidadContrato !== undefined) item.data.afipModalidadContrato = String(afipModalidadContrato).trim();
+    if (afipTipoServicio !== undefined) item.data.afipTipoServicio = String(afipTipoServicio).trim();
+    if (afipActividad !== undefined) item.data.afipActividad = String(afipActividad).trim();
+    if (afipModalidadLiquidacion !== undefined) item.data.afipModalidadLiquidacion = String(afipModalidadLiquidacion).trim();
     if (isActive !== undefined) item.isActive = isActive === "true" || isActive === true;
 
     item.markModified("data");

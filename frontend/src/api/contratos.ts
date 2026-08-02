@@ -13,6 +13,11 @@ export interface ContratoItem {
     multiplicadorDiario: number;
     esTiempoIndeterminado: boolean;
     requiereFirma: boolean;
+    /** Códigos AFIP para el TXT de Alta masiva (específicos de convenio/modalidad). */
+    afipModalidadContrato?: string;
+    afipTipoServicio?: string;
+    afipActividad?: string;
+    afipModalidadLiquidacion?: string;
   };
   isActive?: boolean;
   createdAt?: string;
@@ -26,6 +31,10 @@ export interface ContratoInput {
   esTiempoIndeterminado?: boolean;
   requiereFirma?: boolean;
   isActive?: boolean;
+  afipModalidadContrato?: string;
+  afipTipoServicio?: string;
+  afipActividad?: string;
+  afipModalidadLiquidacion?: string;
 }
 
 class ContratosAPI {

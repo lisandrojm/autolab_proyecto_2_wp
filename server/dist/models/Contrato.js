@@ -8,6 +8,10 @@ const contratoSchema = new Schema({
         multiplicadorDiario: { type: Number, default: 0 },
         esTiempoIndeterminado: { type: Boolean, default: false },
         requiereFirma: { type: Boolean, default: true },
+        afipModalidadContrato: { type: String },
+        afipTipoServicio: { type: String },
+        afipActividad: { type: String },
+        afipModalidadLiquidacion: { type: String },
     },
     isActive: { type: Boolean, default: true },
 }, {

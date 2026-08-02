@@ -17,6 +17,14 @@ export interface IContrato extends Document {
     esTiempoIndeterminado: boolean;
     /** Si al firmar el contrato el documento se envía a firmar (p. ej. por Dropbox Sign). */
     requiereFirma: boolean;
+    /**
+     * Códigos AFIP para la generación del TXT de Alta masiva. Son específicos del convenio/modalidad,
+     * por eso se cargan por Tipo de Contrato. Se guardan como string para conservar ceros a la izquierda.
+     */
+    afipModalidadContrato?: string; // pos. 17-19 (3 díg.)
+    afipTipoServicio?: string; // pos. 107-109 (3 díg.)
+    afipActividad?: string; // pos. 79-84 (6 díg.) — actividad del domicilio de desempeño
+    afipModalidadLiquidacion?: string; // pos. 73 (1 díg.) — 1 = mensual, etc.
   };
   isActive: boolean;
   createdAt: Date;
@@ -33,6 +41,10 @@ const contratoSchema = new Schema<IContrato>(
       multiplicadorDiario: { type: Number, default: 0 },
       esTiempoIndeterminado: { type: Boolean, default: false },
       requiereFirma: { type: Boolean, default: true },
+      afipModalidadContrato: { type: String },
+      afipTipoServicio: { type: String },
+      afipActividad: { type: String },
+      afipModalidadLiquidacion: { type: String },
     },
     isActive: { type: Boolean, default: true },
   },

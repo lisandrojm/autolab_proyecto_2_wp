@@ -13,6 +13,7 @@ export const ObrasSocialesPage: React.FC = () => (
     entityLabel="obra social"
     api={obrasSocialesApi}
     templateBaseName="obras_sociales"
+    extraFields={[{ key: "codigoRnos", label: "Código RNOS (AFIP)", showColumn: true, columnLabel: "RNOS", placeholder: "6 dígitos, ej: 400905" }]}
     helpKey="obrasSociales"
   />
 );

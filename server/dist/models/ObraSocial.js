@@ -6,6 +6,7 @@ const obraSocialSchema = new Schema({
         id: { type: Number },
         nombre: { type: String },
     },
+    codigoRnos: { type: String },
 }, {
     timestamps: true,
     collection: "obras-sociales",

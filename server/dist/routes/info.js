@@ -278,6 +278,89 @@ router.patch("/estados/:id", requireTenant, authenticateToken, async (req, res) 
         res.status(500).json({ error: "Internal server error" });
     }
 });
+/* --------- ABM de Sedes (Info type "sede") ---------
+ * Las sedes también llegan por la sincronización de FRAME (con su `externalId`/`data.id`), pero se
+ * permite crearlas/editarlas/eliminarlas a mano. Las creadas localmente usan un `externalId` "local:N"
+ * y un `data.id` incremental para distinguirlas y no chocar con las de FRAME. `data.codigoSucursal`
+ * (5 díg.) es el código AFIP para el TXT de Alta masiva. */
+const SEDE_TYPE = "sede";
+/** Próximo `data.id` disponible para una sede nueva (evita colisión con las de FRAME). */
+const nextSedeId = async () => {
+    const last = await Info.findOne({ type: SEDE_TYPE }).sort({ "data.id": -1 }).lean();
+    return (Number(last?.data?.id) || 0) + 1;
+};
+// POST /info/sede — crear sede manual
+router.post("/sede", requireTenant, authenticateToken, async (req, res) => {
+    try {
+        const nombre = String(req.body?.nombre ?? "").trim();
+        if (!nombre) {
+            res.status(400).json({ error: "El nombre es obligatorio" });
+            return;
+        }
+        const codigoSucursal = req.body?.codigoSucursal != null ? String(req.body.codigoSucursal).trim() : "";
+        const externalIdIn = req.body?.externalId != null ? String(req.body.externalId).trim() : "";
+        const id = await nextSedeId();
+        const created = await Info.create({
+            type: SEDE_TYPE,
+            name: nombre,
+            externalId: externalIdIn || `local:${id}`,
+            data: { id, nombre, codigoSucursal },
+        });
+        res.status(201).json(created.toObject());
+    }
+    catch (error) {
+        console.error("Create sede error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// PATCH /info/sede/:id — editar sede (nombre, ID externo, código de sucursal)
+router.patch("/sede/:id", requireTenant, authenticateToken, async (req, res) => {
+    try {
+        const update = {};
+        if (req.body?.nombre !== undefined) {
+            const nombre = String(req.body.nombre).trim();
+            if (!nombre) {
+                res.status(400).json({ error: "El nombre es obligatorio" });
+                return;
+            }
+            update.name = nombre;
+            update["data.nombre"] = nombre;
+        }
+        if (req.body?.externalId !== undefined) {
+            const ext = String(req.body.externalId).trim();
+            if (ext)
+                update.externalId = ext;
+        }
+        if (req.body?.codigoSucursal !== undefined) {
+            update["data.codigoSucursal"] = req.body.codigoSucursal == null ? "" : String(req.body.codigoSucursal).trim();
+        }
+        const sede = await Info.findOneAndUpdate({ _id: req.params.id, type: SEDE_TYPE }, { $set: update }, { new: true }).lean();
+        if (!sede) {
+            res.status(404).json({ error: "Sede no encontrada" });
+            return;
+        }
+        res.json(sede);
+    }
+    catch (error) {
+        console.error("Update sede error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// DELETE /info/sede/:id — eliminar sede
+router.delete("/sede/:id", requireTenant, authenticateToken, async (req, res) => {
+    try {
+        const borrado = await Info.findOneAndDelete({ _id: req.params.id, type: SEDE_TYPE }).lean();
+        if (!borrado) {
+            res.status(404).json({ error: "Sede no encontrada" });
+            return;
+        }
+        res.json({ message: "Sede eliminada correctamente" });
+    }
+    catch (error) {
+        console.error("Delete sede error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 // DELETE /info/estados/:id
 router.delete("/estados/:id", requireTenant, authenticateToken, async (req, res) => {
     try {

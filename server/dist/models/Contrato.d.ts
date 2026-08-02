@@ -16,6 +16,14 @@ export interface IContrato extends Document {
         esTiempoIndeterminado: boolean;
         /** Si al firmar el contrato el documento se envía a firmar (p. ej. por Dropbox Sign). */
         requiereFirma: boolean;
+        /**
+         * Códigos AFIP para la generación del TXT de Alta masiva. Son específicos del convenio/modalidad,
+         * por eso se cargan por Tipo de Contrato. Se guardan como string para conservar ceros a la izquierda.
+         */
+        afipModalidadContrato?: string;
+        afipTipoServicio?: string;
+        afipActividad?: string;
+        afipModalidadLiquidacion?: string;
     };
     isActive: boolean;
     createdAt: Date;

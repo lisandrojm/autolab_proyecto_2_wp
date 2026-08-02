@@ -7,6 +7,8 @@ export interface IObraSocial extends Document {
     id: number;
     nombre: string;
   };
+  /** Código RNOS (6 díg.) para el TXT de Alta masiva de AFIP. Se carga por obra social. */
+  codigoRnos?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -19,6 +21,7 @@ const obraSocialSchema = new Schema<IObraSocial>(
       id: { type: Number },
       nombre: { type: String },
     },
+    codigoRnos: { type: String },
   },
   {
     timestamps: true,

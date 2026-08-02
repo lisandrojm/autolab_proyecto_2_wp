@@ -75,6 +75,26 @@ class InfoAPI {
   async reorderEstadosDependencia(items: { id: string; ordenDependencia: number | null }[]): Promise<void> {
     await axios.patch(`/info/estados/reorder-dependencia`, { items });
   }
+
+  /* --------- ABM de Sedes (type "sede") --------- */
+
+  async listSedes(): Promise<InfoItem[]> {
+    return this.listByType("sede");
+  }
+
+  async createSede(payload: { nombre: string; externalId?: string; codigoSucursal?: string }): Promise<InfoItem> {
+    const { data } = await axios.post(`/info/sede`, payload);
+    return data;
+  }
+
+  async updateSede(id: string, payload: { nombre?: string; externalId?: string; codigoSucursal?: string }): Promise<InfoItem> {
+    const { data } = await axios.patch(`/info/sede/${id}`, payload);
+    return data;
+  }
+
+  async deleteSede(id: string): Promise<void> {
+    await axios.delete(`/info/sede/${id}`);
+  }
 }
 
 export const infoAPI = new InfoAPI();
