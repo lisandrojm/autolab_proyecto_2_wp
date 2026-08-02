@@ -182,6 +182,33 @@ export const EstadoSecundarioBadge: React.FC<{ estado: { name: string; data?: { 
   );
 };
 
+/** Etiqueta del trámite impositivo (excluyente) que representa un estado impositivo. */
+const TIPO_IMPOSITIVO_LABEL: Record<string, string> = {
+  alta_temprana_afip: "Alta temprana de AFIP",
+  constancia_cuit: "Constancia de CUIT",
+};
+
+/**
+ * Badge del trámite impositivo de un estado impositivo (Alta temprana de AFIP / Constancia de CUIT).
+ * Mismo violeta invertido que en el ABM de Estados: "Alta temprana de AFIP" relleno (positivo) y
+ * "Constancia de CUIT" contorno (negativo). No muestra nada si el estado no tiene trámite definido.
+ */
+export const TramiteImpositivoBadge: React.FC<{ estado: { data?: { tipoImpositivo?: string } } | null; className?: string }> = ({ estado, className = "" }) => {
+  const tipo = estado?.data?.tipoImpositivo;
+  if (!tipo) return null;
+  const label = TIPO_IMPOSITIVO_LABEL[tipo] || tipo;
+  const cls =
+    tipo === "alta_temprana_afip"
+      ? "bg-purple-600 text-white border-purple-600 dark:bg-purple-500 dark:border-purple-500"
+      : "bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700";
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap ${cls} ${className}`}>
+      <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" />
+      {label}
+    </span>
+  );
+};
+
 const Badge = EstadoBadge;
 
 /** Select de Estado que muestra cada opción como un badge de color (el <select> nativo no permite colorear opciones). */

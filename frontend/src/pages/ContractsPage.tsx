@@ -7,7 +7,7 @@ import { contratoFrameAPI, ContratoFrameItem } from "../api/contratosFrame";
 import { areasAPI, Area } from "../api/areas";
 import { shiftsAPI, Shift } from "../api/shifts";
 import { infoAPI, InfoItem } from "../api/info";
-import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from "../components/EstadoSelect";
+import { EstadoBadge, EstadoSecundarioBadge, TramiteImpositivoBadge, estadoLabel } from "../components/EstadoSelect";
 import { MemberContractsManagerModal } from "../components/team/MemberContractsManagerModal";
 import { estadoImpositivoDelContrato } from "../components/team/ContractCard";
 import { releasesAPI, Release } from "../api/release";
@@ -490,10 +490,15 @@ export const ContractsPage: React.FC = () => {
                       {(() => {
                         const estadoImpositivo = estadoImpositivoDelContrato(record as unknown as Contract, contratoFrames, allEstados);
                         if (!estadoImpositivo) return <span className="text-xs text-gray-400">—</span>;
-                        return estadoImpositivo.data?.etiquetaSecundaria?.trim() ? (
-                          <EstadoSecundarioBadge estado={estadoImpositivo} className="text-[10px] whitespace-nowrap" />
-                        ) : (
-                          <EstadoBadge name={estadoImpositivo.name} className="text-[10px] whitespace-nowrap" />
+                        return (
+                          <div className="flex flex-col gap-1 w-fit">
+                            {estadoImpositivo.data?.etiquetaSecundaria?.trim() ? (
+                              <EstadoSecundarioBadge estado={estadoImpositivo} className="text-[10px] whitespace-nowrap" />
+                            ) : (
+                              <EstadoBadge name={estadoImpositivo.name} className="text-[10px] whitespace-nowrap" />
+                            )}
+                            <TramiteImpositivoBadge estado={estadoImpositivo} />
+                          </div>
                         );
                       })()}
                     </td>
