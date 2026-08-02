@@ -7,7 +7,7 @@ import { Modal } from '../ui/Modal';
 import { InfoModal } from '../ui/InfoModal';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash, faFileContract, faGrip, faTable, faFileInvoiceDollar, faInfinity, faFileSignature, faCircleInfo, faFilePdf, faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faTrash, faFileContract, faGrip, faTable, faFileInvoiceDollar, faInfinity, faFileSignature, faCircleInfo, faFilePdf, faArrowUpRightFromSquare, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { contratosAPI, ContratoItem } from '../../api/contratos';
 import { contratoFrameAPI, ContratoFrameItem } from '../../api/contratosFrame';
 import { infoAPI, InfoItem } from '../../api/info';
@@ -177,6 +177,9 @@ export const ContractTypesTab: React.FC = () => {
     return mapa;
   }, [contratos, plantillas, estados]);
 
+  // Tipos de contrato que no tienen ningún Estado aplicable (ni propio ni global): hay que avisarlo.
+  const contratosSinEstado = useMemo(() => contratos.filter((c) => (estadosPorContrato.get(c._id) || []).length === 0), [contratos, estadosPorContrato]);
+
   /** Plantillas ("Plantillas | Contratos") que ya tiene asignadas un Contrato (vacío si todavía no tiene ninguna). */
   const plantillasDe = (contratoId: string): ContratoFrameItem[] => plantillas.filter((p) => (typeof p.contratoId === 'object' ? p.contratoId?._id : p.contratoId) === contratoId);
 
@@ -339,6 +342,18 @@ export const ContractTypesTab: React.FC = () => {
         </div>
       </div>
 
+      {!loading && contratos.length > 0 && contratosSinEstado.length > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-900/20 px-4 py-3">
+          <FontAwesomeIcon icon={faTriangleExclamation} className="h-4 w-4 text-amber-500 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+              {contratosSinEstado.length === 1 ? 'Hay 1 tipo de contrato sin ningún estado asignado.' : `Hay ${contratosSinEstado.length} tipos de contrato sin ningún estado asignado.`}
+            </p>
+            <p className="text-[12px] text-amber-700 dark:text-amber-400/90 truncate">{contratosSinEstado.map((c) => c.name).join(', ')}</p>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="flex justify-center items-center py-20">
           <LoadingSpinner message="Cargando contratos..." />
@@ -393,7 +408,10 @@ export const ContractTypesTab: React.FC = () => {
                       </td>
                       <td className="px-4 py-3">
                         {misEstados.length === 0 ? (
-                          <span className="text-xs text-gray-400">—</span>
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800 whitespace-nowrap" title="Este tipo de contrato no tiene ningún estado asignado">
+                            <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5" />
+                            Sin estados
+                          </span>
                         ) : (
                           <div className="flex flex-wrap gap-1 max-w-xs">
                             {misEstados.map((e) => (
@@ -457,7 +475,7 @@ export const ContractTypesTab: React.FC = () => {
                   </div>
                 )}
 
-                {misEstados.length > 0 && (
+                {misEstados.length > 0 ? (
                   <div className="flex flex-col gap-1 pt-1 border-t border-gray-100 dark:border-gray-700/60">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Estados</label>
                     <div className="flex flex-wrap gap-1">
@@ -467,6 +485,13 @@ export const ContractTypesTab: React.FC = () => {
                           {e.data?.esImpositivo && <EstadoSecundarioBadge estado={e} className="text-[10px]" />}
                         </React.Fragment>
                       ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-2 pt-1 border-t border-gray-100 dark:border-gray-700/60">
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/60 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+                      <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 shrink-0" />
+                      Sin estados asignados
                     </div>
                   </div>
                 )}

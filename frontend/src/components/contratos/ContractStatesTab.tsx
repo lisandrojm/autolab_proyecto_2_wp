@@ -6,7 +6,7 @@ import { Modal } from '../ui/Modal';
 import { InfoModal } from '../ui/InfoModal';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash, faTags, faFileContract, faGrip, faTable, faFileInvoiceDollar, faGripVertical, faCheck, faMultiply, faCircleInfo, faSitemap } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faTrash, faTags, faFileContract, faGrip, faTable, faFileInvoiceDollar, faGripVertical, faCheck, faMultiply, faCircleInfo, faSitemap, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -207,6 +207,9 @@ export const ContractStatesTab: React.FC = () => {
   // por la búsqueda, para no pisar mal los índices de los estados que quedaron ocultos.
   const mostrar = isReorderMode ? estados : filtrados;
 
+  // Estados que todavía no están en ningún paso del flujo de dependencias (sin `ordenDependencia`).
+  const estadosSinDependencia = useMemo(() => estados.filter((e) => typeof e.data?.ordenDependencia !== 'number'), [estados]);
+
   const handleStartReorder = () => {
     setSearchTerm('');
     setIsDependencyMode(false);
@@ -372,14 +375,12 @@ export const ContractStatesTab: React.FC = () => {
         <div className="flex-1 w-full">
           {isReorderMode ? (
             <p className="text-sm text-gray-500 dark:text-gray-400 italic px-1">Arrastrá para reordenar. La búsqueda se deshabilita mientras tanto.</p>
-          ) : isDependencyMode ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400 italic px-1">Orden de dependencias: definí los pasos del flujo (los estados en el mismo paso son alternativas, uno u otro).</p>
           ) : (
             <SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar estado..." />
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {!isReorderMode && !isDependencyMode && (
+          {!isReorderMode && (
             <button onClick={abrirCrear} title="Nuevo estado" aria-label="Nuevo estado" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
               <FontAwesomeIcon icon={faPlus} />
             </button>
@@ -395,7 +396,7 @@ export const ContractStatesTab: React.FC = () => {
                 Guardar Orden
               </button>
             </div>
-          ) : isDependencyMode ? null : (
+          ) : (
             <>
               <button onClick={handleStartReorder} disabled={estados.length < 2} title="Ordenar (orden visual)" className="px-3 py-2 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-sm flex items-center gap-2 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
                 <FontAwesomeIcon icon={faGripVertical} />
@@ -407,7 +408,7 @@ export const ContractStatesTab: React.FC = () => {
               </button>
             </>
           )}
-          {isLarge && !isReorderMode && !isDependencyMode && (
+          {isLarge && !isReorderMode && (
             <div className="flex items-center gap-2">
               <button onClick={() => setViewMode('cards')} title="Vista de tarjetas" className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'cards' ? 'bg-blue-500 text-white border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
                 <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
@@ -420,16 +421,23 @@ export const ContractStatesTab: React.FC = () => {
         </div>
       </div>
 
-      {isDependencyMode ? (
-        <DependencyFlowEditor
-          estados={estados}
-          onCancel={() => setIsDependencyMode(false)}
-          onSaved={() => {
-            setIsDependencyMode(false);
-            cargar();
-          }}
-        />
-      ) : loading ? (
+      {!isReorderMode && !loading && estados.length > 0 && estadosSinDependencia.length > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-900/20 px-4 py-3">
+          <FontAwesomeIcon icon={faTriangleExclamation} className="h-4 w-4 text-amber-500 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+              {estadosSinDependencia.length === 1 ? 'Hay 1 estado sin asignar' : `Hay ${estadosSinDependencia.length} estados sin asignar`} al flujo de dependencias.
+            </p>
+            <p className="text-[12px] text-amber-700 dark:text-amber-400/90 truncate">{estadosSinDependencia.map((e) => e.name).join(', ')}</p>
+          </div>
+          <button onClick={handleStartDependency} className="shrink-0 self-start sm:self-auto inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition-colors">
+            <FontAwesomeIcon icon={faSitemap} />
+            Asignar dependencias
+          </button>
+        </div>
+      )}
+
+      {loading ? (
         <div className="flex justify-center items-center py-20">
           <LoadingSpinner message="Cargando estados..." />
         </div>
@@ -689,6 +697,16 @@ export const ContractStatesTab: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      <DependencyFlowEditor
+        isOpen={isDependencyMode}
+        estados={estados}
+        onCancel={() => setIsDependencyMode(false)}
+        onSaved={() => {
+          setIsDependencyMode(false);
+          cargar();
+        }}
+      />
 
       <InfoModal
         isOpen={showBadgeSecundarioInfo}

@@ -209,16 +209,21 @@ export const buildDownloadFileName = (tipo: "Contrato" | "Release", user: User |
 type CategoriaAltaDocumento = "afip" | "servicios" | null;
 
 /**
- * Categoría fija (AFIP/Servicios) del contrato, para saber si corresponde ofrecer la subida del PDF de
- * alta. Se ancla a la clave CANÓNICA del Estado impositivo (`claveEstado`), no al texto libre del badge
- * secundario (`etiquetaSecundaria`), que es editable por el admin y no sirve como identificador estable.
+ * Categoría (AFIP/Servicios) del Estado impositivo, para el título por defecto del bloque de alta.
+ * Se ancla al `tipoImpositivo` (el trámite: Alta temprana de AFIP / Constancia de CUIT), que es el
+ * identificador estable. Para estados viejos sin `tipoImpositivo` cae al nombre canónico como respaldo.
+ * Devuelve null solo si NO hay estado impositivo: cualquier estado impositivo ofrece la subida del PDF.
  */
-const categoriaAltaDocumentoDe = (estadoImpositivo: { name: string } | null): CategoriaAltaDocumento => {
+const categoriaAltaDocumentoDe = (estadoImpositivo: { name: string; data?: { tipoImpositivo?: string } } | null): CategoriaAltaDocumento => {
   if (!estadoImpositivo) return null;
+  const tipo = estadoImpositivo.data?.tipoImpositivo;
+  if (tipo === "alta_temprana_afip") return "afip";
+  if (tipo === "constancia_cuit") return "servicios";
+  // Respaldo para estados impositivos previos a `tipoImpositivo`: por clave canónica del nombre.
   const clave = claveEstado(estadoImpositivo.name);
   if (clave === "pedido de afip") return "afip";
   if (clave === "pedido servicios") return "servicios";
-  return null;
+  return "servicios"; // impositivo sin trámite ni nombre reconocido: igual se ofrece la subida.
 };
 
 export interface ContractCardProps {
@@ -371,8 +376,9 @@ export const ContractCard: React.FC<ContractCardProps> = ({
           </div>
         </div>
 
-        {/* Documento de "Alta" (AFIP/Servicios): solo si el tipo de contrato tiene esa categoría. */}
-        {categoriaAltaDocumento && (
+        {/* Documento de "Alta" (AFIP/Servicios): para CUALQUIER estado impositivo, sin importar el
+            estado actual del contrato. El título sale del badge secundario o de la categoría. */}
+        {estadoImpositivo && (
           <div className={`mt-3 pt-3 border-t ${dividerClass}`}>
             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{tituloAltaDocumento}</p>
             <div className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5">

@@ -1,15 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faTrash, faArrowUp, faArrowDown, faXmark, faCheck, faSpinner, faLayerGroup, faGripVertical } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faTrash, faArrowUp, faArrowDown, faXmark, faCheck, faSpinner, faLayerGroup, faGripVertical, faFileInvoiceDollar } from "@fortawesome/free-solid-svg-icons";
 import {
   DndContext,
   DragOverlay,
-  closestCorners,
+  pointerWithin,
+  rectIntersection,
   PointerSensor,
   KeyboardSensor,
   useSensor,
   useSensors,
   useDroppable,
+  type CollisionDetection,
   type DragStartEvent,
   type DragOverEvent,
   type DragEndEvent,
@@ -17,12 +19,25 @@ import {
 import { SortableContext, useSortable, arrayMove, sortableKeyboardCoordinates, rectSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { infoAPI, InfoItem } from "../../api/info";
-import { EstadoBadge } from "../EstadoSelect";
+import { EstadoBadge, TramiteImpositivoBadge } from "../EstadoSelect";
+import { Modal } from "../ui/Modal";
 import { sweetAlert } from "../../utils/sweetAlert";
 
 const UNASSIGNED = "unassigned";
 
+/**
+ * Detección de colisiones basada en el puntero: detecta el contenedor sobre el que está el cursor
+ * aunque esté VACÍO (los pasos recién creados). `closestCorners` fallaba con contenedores vacíos
+ * porque no tienen chips que "atraigan" el drop. Fallback a rectIntersection si el puntero no cae
+ * dentro de ningún droppable (p. ej. arrastrando fuera).
+ */
+const collisionDetection: CollisionDetection = (args) => {
+  const pointerCollisions = pointerWithin(args);
+  return pointerCollisions.length > 0 ? pointerCollisions : rectIntersection(args);
+};
+
 interface Props {
+  isOpen: boolean;
   estados: InfoItem[];
   onCancel: () => void;
   onSaved: () => void;
@@ -31,10 +46,19 @@ interface Props {
 /** Orden estable dentro de un paso / del pool: por orden visual y luego nombre. */
 const byOrden = (a: InfoItem, b: InfoItem) => (a.data?.orden ?? 999) - (b.data?.orden ?? 999) || a.name.localeCompare(b.name);
 
+/** Marca visual de los estados de índole impositiva (mismo estilo que el ABM de Estados). */
+const ChipImpositivo: React.FC = () => (
+  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-100 dark:border-purple-800 whitespace-nowrap">
+    <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" />
+    Impositivo
+  </span>
+);
+
 /** Chip arrastrable de un estado. Se arrastra desde cualquier parte del chip. */
 const SortableChip: React.FC<{ estado: InfoItem; onRemove?: () => void }> = ({ estado, onRemove }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: estado._id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1, touchAction: "none" as const };
+  const esImpositivo = !!estado.data?.esImpositivo;
   return (
     <span
       ref={setNodeRef}
@@ -45,6 +69,8 @@ const SortableChip: React.FC<{ estado: InfoItem; onRemove?: () => void }> = ({ e
     >
       <FontAwesomeIcon icon={faGripVertical} className="h-3 w-3 text-gray-400 shrink-0" />
       <EstadoBadge name={estado.name} />
+      {esImpositivo && <ChipImpositivo />}
+      {esImpositivo && <TramiteImpositivoBadge estado={estado} />}
       {onRemove && (
         <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={onRemove} title="Sacar del flujo" className="text-gray-400 hover:text-red-500 px-0.5">
           <FontAwesomeIcon icon={faXmark} className="h-3 w-3" />
@@ -69,7 +95,7 @@ const Droppable: React.FC<{ id: string; className?: string; children: React.Reac
  * paso son alternativas (uno u otro). Drag para mover estados entre pasos; flechas para reordenar
  * los pasos. Es independiente del orden visual (`data.orden`).
  */
-export const DependencyFlowEditor: React.FC<Props> = ({ estados, onCancel, onSaved }) => {
+export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCancel, onSaved }) => {
   const estadoById = useMemo(() => new Map(estados.map((e) => [e._id, e])), [estados]);
 
   const [pasos, setPasos] = useState<string[]>([]); // ids de contenedor de paso, en orden
@@ -83,6 +109,7 @@ export const DependencyFlowEditor: React.FC<Props> = ({ estados, onCancel, onSav
   // Regla: los estados impositivos van SIEMPRE al Paso 1 (grupo 1), aunque su valor guardado sea
   // otro o no tengan — "van por defecto al paso uno; en ese paso no importa el orden (uno u otro)".
   useEffect(() => {
+    if (!isOpen) return;
     const groups = new Map<number, InfoItem[]>();
     const unassigned: InfoItem[] = [];
     for (const e of estados) {
@@ -111,7 +138,7 @@ export const DependencyFlowEditor: React.FC<Props> = ({ estados, onCancel, onSav
     setPasos(pasoIds);
     setItems(map);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [estados]);
+  }, [estados, isOpen]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -220,13 +247,15 @@ export const DependencyFlowEditor: React.FC<Props> = ({ estados, onCancel, onSav
   const activeEstado = activeId ? estadoById.get(activeId) : null;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          Armá el <strong>flujo de dependencias</strong>: arrastrá los estados a cada paso. Los estados en el <strong>mismo paso son alternativas</strong> (uno u otro). Usá las flechas para reordenar los pasos.
-          Es independiente del orden visual.
-        </p>
-        <div className="flex items-center gap-2 shrink-0">
+    <Modal
+      isOpen={isOpen}
+      onClose={onCancel}
+      title="Orden de dependencias"
+      subtitle="Los estados en el mismo paso son alternativas (uno u otro). Es independiente del orden visual."
+      size="lg"
+      zIndex={60}
+      footer={
+        <div className="flex items-center justify-end gap-2 w-full">
           <button onClick={onCancel} disabled={saving} className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all text-sm flex items-center gap-2 disabled:opacity-50">
             <FontAwesomeIcon icon={faXmark} />
             Cancelar
@@ -236,9 +265,13 @@ export const DependencyFlowEditor: React.FC<Props> = ({ estados, onCancel, onSav
             Guardar flujo
           </button>
         </div>
-      </div>
+      }
+    >
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+        Armá el <strong>flujo de dependencias</strong>: arrastrá los estados a cada paso. Los estados en el <strong>mismo paso son alternativas</strong> (uno u otro). Usá las flechas para reordenar los pasos.
+      </p>
 
-      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>
+      <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>
         {/* Pool: Sin asignar */}
         <Droppable id={UNASSIGNED} className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 p-3">
           <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Sin asignar (fuera del flujo)</p>
@@ -300,7 +333,7 @@ export const DependencyFlowEditor: React.FC<Props> = ({ estados, onCancel, onSav
 
         <DragOverlay>{activeEstado ? <EstadoBadge name={activeEstado.name} /> : null}</DragOverlay>
       </DndContext>
-    </div>
+    </Modal>
   );
 };
 
