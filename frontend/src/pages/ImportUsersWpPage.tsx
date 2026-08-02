@@ -297,12 +297,19 @@ export const ImportUsersWpPage: React.FC = () => {
                   </div>
                 ) : (
                   latestSync && (
-                    <div className="grid grid-cols-3 gap-4 mt-5 pt-4 border-t border-gray-200 dark:border-gray-800 text-center">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5 pt-4 border-t border-gray-200 dark:border-gray-800 text-center">
                       <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800/40">
                         <span className="block text-2xl font-bold text-blue-600 dark:text-blue-400">{latestSync.stats.createdUsers}</span>
                         <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1 mt-1">
                           <FontAwesomeIcon icon={faUserPlus} className="text-blue-500" />
                           Creados
+                        </span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800/40">
+                        <span className="block text-2xl font-bold text-amber-600 dark:text-amber-400">{latestSync.stats.updatedUsers ?? 0}</span>
+                        <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1 mt-1">
+                          <FontAwesomeIcon icon={faUserCheck} className="text-amber-500" />
+                          Actualizados
                         </span>
                       </div>
                       <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800/40">
@@ -379,7 +386,7 @@ export const ImportUsersWpPage: React.FC = () => {
                     : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 }`}
               >
-                Nuevos Usuarios ({latestSync?.addedUsers?.length || 0})
+                Nuevos Usuarios ({addedUsersDetails.length})
               </button>
               <button
                 onClick={() => setActiveTab("projects")}
@@ -413,7 +420,7 @@ export const ImportUsersWpPage: React.FC = () => {
                     Usuarios creados en la última sincronización
                   </h3>
                 </div>
-                {!latestSync || latestSync.addedUsers.length === 0 ? (
+                {addedUsersDetails.length === 0 ? (
                   <div className="text-center py-10 text-gray-500 dark:text-gray-400 text-sm">
                     No se crearon nuevos usuarios en la última ejecución exitosa.
                   </div>
@@ -430,12 +437,10 @@ export const ImportUsersWpPage: React.FC = () => {
                       </thead>
                       <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
                         {(() => {
-                          const detailsByEmail = new Map(addedUsersDetails.map((d) => [d.email, d]));
-                          return latestSync.addedUsers.map((u, i) => {
-                            const detail = detailsByEmail.get(u.email);
-                            const projects = detail?.projects || [];
+                          return addedUsersDetails.map((u, i) => {
+                            const projects = u.projects || [];
                             return (
-                              <tr key={u._id || i} className="hover:bg-gray-50 dark:hover:bg-gray-900/20 align-top">
+                              <tr key={u.email || i} className="hover:bg-gray-50 dark:hover:bg-gray-900/20 align-top">
                                 <td className="px-5 py-4 text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{u.name}</td>
                                 <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{u.email}</td>
                                 <td className="px-5 py-4 text-sm text-gray-500 dark:text-gray-400 font-mono whitespace-nowrap">{u.dni || "—"}</td>
@@ -534,6 +539,7 @@ export const ImportUsersWpPage: React.FC = () => {
                           <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ejecutor</th>
                           <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
                           <th className="px-5 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Creados</th>
+                          <th className="px-5 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actualizados</th>
                           <th className="px-5 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Omitidos</th>
                           <th className="px-5 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Errores</th>
                           <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Detalles</th>
@@ -556,6 +562,7 @@ export const ImportUsersWpPage: React.FC = () => {
                               </span>
                             </td>
                             <td className="px-5 py-4 text-sm text-center text-blue-600 dark:text-blue-400 font-bold">{h.stats.createdUsers}</td>
+                            <td className="px-5 py-4 text-sm text-center text-amber-600 dark:text-amber-400 font-bold">{h.stats.updatedUsers ?? 0}</td>
                             <td className="px-5 py-4 text-sm text-center text-emerald-600 dark:text-emerald-400 font-bold">{h.stats.skippedUsers ?? 0}</td>
                             <td className="px-5 py-4 text-sm text-center text-rose-600 dark:text-rose-400 font-bold">{h.stats.errorsUsers}</td>
                             <td className="px-5 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate" title={h.errorDetails}>

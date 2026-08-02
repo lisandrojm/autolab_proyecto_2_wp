@@ -17,6 +17,8 @@ export interface InfoItem {
     etiquetaSecundaria?: string;
     /** Estados impositivos: color del badge secundario. */
     colorEtiquetaSecundaria?: string;
+    /** Estados impositivos: trámite que representa (excluyente). */
+    tipoImpositivo?: "alta_temprana_afip" | "constancia_cuit";
     /** Estados: orden visual en el ABM y en el dropdown del wizard (guía, no bloquea transiciones). */
     orden?: number;
     [key: string]: any;
@@ -33,6 +35,7 @@ export interface EstadoPayload {
   esImpositivo?: boolean;
   etiquetaSecundaria?: string;
   colorEtiquetaSecundaria?: string;
+  tipoImpositivo?: "alta_temprana_afip" | "constancia_cuit";
 }
 
 class InfoAPI {

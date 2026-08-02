@@ -77,6 +77,8 @@ router.get("/", requireTenant, authenticateToken, async (req, res) => {
  */
 // Los ids de FRAME son bajos; los locales arrancan bien arriba para no pisarlos nunca.
 const LOCAL_ESTADO_ID_BASE = 100000;
+/** Trámite impositivo que representa un estado impositivo. Excluyentes: siempre uno solo. */
+const TIPOS_IMPOSITIVO = ["alta_temprana_afip", "constancia_cuit"];
 function parseEstadoBody(body) {
     const name = String(body?.name ?? "").trim();
     if (!name)
@@ -101,6 +103,12 @@ function parseEstadoBody(body) {
     if (esImpositivo && !etiquetaSecundaria) {
         return { error: "Un estado impositivo tiene que tener un texto de badge secundario" };
     }
+    // Todo estado impositivo tiene que ser exactamente uno de estos dos trámites (nunca los dos ni
+    // ninguno): "Alta temprana de AFIP" o "Constancia de CUIT".
+    const tipoImpositivo = esImpositivo ? String(body?.tipoImpositivo ?? "").trim() : "";
+    if (esImpositivo && !TIPOS_IMPOSITIVO.includes(tipoImpositivo)) {
+        return { error: "Un estado impositivo tiene que ser 'Alta temprana de AFIP' o 'Constancia de CUIT'" };
+    }
     return {
         name,
         data: {
@@ -110,6 +118,7 @@ function parseEstadoBody(body) {
             esImpositivo,
             etiquetaSecundaria: etiquetaSecundaria || undefined,
             colorEtiquetaSecundaria: esImpositivo ? colorEtiquetaSecundaria || undefined : undefined,
+            tipoImpositivo: esImpositivo ? tipoImpositivo : undefined,
         },
     };
 }

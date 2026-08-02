@@ -329,6 +329,7 @@ export class ExternalApiService {
 
                     if (!emp.email) {
                         console.warn(`[EXTERNAL API] Skipping employee ${emp.id} without email.`);
+                        skipped++;
                         continue;
                     }
 

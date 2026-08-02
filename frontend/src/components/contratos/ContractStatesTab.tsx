@@ -72,6 +72,21 @@ const ChipImpositivo: React.FC = () => (
   </span>
 );
 
+/** Trámite impositivo que representa un estado impositivo. Excluyentes: siempre uno solo. */
+type TipoImpositivo = 'alta_temprana_afip' | 'constancia_cuit';
+const TIPOS_IMPOSITIVO: { value: TipoImpositivo; label: string; descripcion: string }[] = [
+  {
+    value: 'alta_temprana_afip',
+    label: 'Alta temprana de AFIP',
+    descripcion: 'Registro anticipado de la relación laboral en AFIP, que se hace ANTES de que la persona empiece a trabajar. Da de alta al trabajador en tiempo y forma.',
+  },
+  {
+    value: 'constancia_cuit',
+    label: 'Constancia de CUIT',
+    descripcion: 'Comprobante de inscripción que emite AFIP acreditando el CUIT y la situación fiscal de la persona.',
+  },
+];
+
 interface FormState {
   name: string;
   color: string;
@@ -80,9 +95,11 @@ interface FormState {
   /** Badge secundario (solo con esImpositivo tildado): identifica el tipo de contrato en sus tarjetas. */
   etiquetaSecundaria: string;
   colorEtiquetaSecundaria: string;
+  /** Trámite impositivo (solo con esImpositivo tildado): "Alta temprana de AFIP" o "Constancia de CUIT". */
+  tipoImpositivo: TipoImpositivo | '';
 }
 
-const FORM_VACIO: FormState = { name: '', color: COLOR_POR_DEFECTO, contratoFrameIds: [], esImpositivo: false, etiquetaSecundaria: '', colorEtiquetaSecundaria: COLOR_POR_DEFECTO };
+const FORM_VACIO: FormState = { name: '', color: COLOR_POR_DEFECTO, contratoFrameIds: [], esImpositivo: false, etiquetaSecundaria: '', colorEtiquetaSecundaria: COLOR_POR_DEFECTO, tipoImpositivo: '' };
 
 export const ContractStatesTab: React.FC = () => {
   const [estados, setEstados] = useState<InfoItem[]>([]);
@@ -94,6 +111,7 @@ export const ContractStatesTab: React.FC = () => {
   const [editando, setEditando] = useState<InfoItem | null>(null);
   const [form, setForm] = useState<FormState>(FORM_VACIO);
   const [showBadgeSecundarioInfo, setShowBadgeSecundarioInfo] = useState(false);
+  const [showTipoImpositivoInfo, setShowTipoImpositivoInfo] = useState(false);
 
   // Vista tarjetas/tabla, como el resto de los ABM: la tabla solo en pantallas grandes.
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
@@ -216,6 +234,7 @@ export const ContractStatesTab: React.FC = () => {
       esImpositivo: !!estado.data?.esImpositivo,
       etiquetaSecundaria: estado.data?.etiquetaSecundaria || '',
       colorEtiquetaSecundaria: estado.data?.colorEtiquetaSecundaria || COLOR_POR_DEFECTO,
+      tipoImpositivo: (estado.data?.tipoImpositivo as TipoImpositivo) || '',
     });
     setShowModal(true);
   };
@@ -250,6 +269,10 @@ export const ContractStatesTab: React.FC = () => {
       sweetAlert.error('Falta el badge secundario', 'Un estado impositivo tiene que tener un texto de badge secundario: si no, no se va a mostrar en las tarjetas.');
       return;
     }
+    if (form.esImpositivo && !form.tipoImpositivo) {
+      sweetAlert.error('Falta el trámite impositivo', 'Elegí si el estado impositivo es "Alta temprana de AFIP" o "Constancia de CUIT" (uno u otro, nunca los dos).');
+      return;
+    }
 
     const payload: EstadoPayload = {
       name,
@@ -258,6 +281,7 @@ export const ContractStatesTab: React.FC = () => {
       esImpositivo: form.esImpositivo,
       etiquetaSecundaria: form.esImpositivo ? form.etiquetaSecundaria.trim() : undefined,
       colorEtiquetaSecundaria: form.esImpositivo ? form.colorEtiquetaSecundaria : undefined,
+      tipoImpositivo: form.esImpositivo && form.tipoImpositivo ? form.tipoImpositivo : undefined,
     };
 
     try {
@@ -461,7 +485,35 @@ export const ContractStatesTab: React.FC = () => {
 
           {form.esImpositivo && (
             <div className="space-y-3 p-3 rounded-lg border border-purple-200 dark:border-purple-800/60 bg-purple-50/40 dark:bg-purple-900/10">
-              <div className="flex items-center gap-1.5">
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Trámite impositivo *</label>
+                  <button type="button" onClick={() => setShowTipoImpositivoInfo(true)} className="text-purple-400 hover:text-purple-600 dark:hover:text-purple-300 transition-colors" title="¿Qué es cada uno?" aria-label="Información sobre los trámites impositivos">
+                    <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {TIPOS_IMPOSITIVO.map((t) => {
+                    const activo = form.tipoImpositivo === t.value;
+                    return (
+                      <button
+                        key={t.value}
+                        type="button"
+                        onClick={() => setForm((p) => ({ ...p, tipoImpositivo: t.value }))}
+                        className={`flex items-start gap-2 p-2.5 rounded-lg border text-left transition-colors ${activo ? 'border-purple-500 bg-purple-100/60 dark:bg-purple-900/30' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/40'}`}
+                      >
+                        <span className={`mt-0.5 flex items-center justify-center h-4 w-4 rounded-full border-2 shrink-0 ${activo ? 'border-purple-600' : 'border-gray-300 dark:border-gray-600'}`}>
+                          {activo && <span className="h-2 w-2 rounded-full bg-purple-600" />}
+                        </span>
+                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Uno u otro: un estado impositivo es "Alta temprana de AFIP" o "Constancia de CUIT", nunca los dos.</p>
+              </div>
+
+              <div className="flex items-center gap-1.5 pt-1 border-t border-purple-200/60 dark:border-purple-800/40">
                 <p className="text-xs font-semibold text-purple-700 dark:text-purple-300">Badge secundario</p>
                 <button type="button" onClick={() => setShowBadgeSecundarioInfo(true)} className="text-purple-400 hover:text-purple-600 dark:hover:text-purple-300 transition-colors" title="¿Qué es esto?" aria-label="Información sobre el badge secundario">
                   <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
@@ -573,6 +625,28 @@ export const ContractStatesTab: React.FC = () => {
         <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
           Se muestra en las tarjetas de Contrato (Gestionar Equipo, Contratos) para identificar el tipo de contrato. Con texto y color propios, independientes del badge principal de arriba.
         </p>
+      </InfoModal>
+
+      <InfoModal
+        isOpen={showTipoImpositivoInfo}
+        onClose={() => setShowTipoImpositivoInfo(false)}
+        title="Trámite impositivo del estado"
+        subtitle="Qué es cada opción"
+        size="sm"
+        zIndex={120}
+        actions={[{ label: 'Entendido', onClick: () => setShowTipoImpositivoInfo(false), variant: 'primary' }]}
+      >
+        <div className="space-y-4">
+          {TIPOS_IMPOSITIVO.map((t) => (
+            <div key={t.value} className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                <strong>{t.label}:</strong> {t.descripcion}
+              </span>
+            </div>
+          ))}
+          <p className="text-xs text-gray-500 dark:text-gray-400">Un estado impositivo representa uno solo de estos dos trámites, nunca los dos.</p>
+        </div>
       </InfoModal>
     </div>
   );
