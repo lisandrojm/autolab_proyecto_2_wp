@@ -23,6 +23,7 @@ import { faFileContract, faBriefcase, faHourglassHalf, faTable, faGrip, faChevro
 import { sweetAlert } from "../utils/sweetAlert";
 
 import { getHelp, hasHelp } from "../data/help/helpContent";
+import { ContractBulkAfipTab, ContractBulkFirmaTab } from "../components/contratos/ContractBulkTabs";
 
 /** Mismas opciones que usa el filtro "Rol/es" del tab Equipo de Gestionar Equipo. */
 const MOBILE_ROLE_OPTIONS = [
@@ -31,6 +32,14 @@ const MOBILE_ROLE_OPTIONS = [
 ];
 
 const PAGE_SIZE = 25;
+
+/** Clases de un botón de pestaña (mismo estilo que el resto de los tabs de la app). */
+const tabBtnClass = (active: boolean): string =>
+  `px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+    active
+      ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400"
+      : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+  }`;
 
 export const ContractsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -89,6 +98,11 @@ export const ContractsPage: React.FC = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
   const effectiveViewMode = isLg ? viewMode : "cards";
+
+  // Pestañas de la página: "Contratos" (la vista actual) y "Gestión de Contratos" (acciones masivas).
+  const [mainTab, setMainTab] = useState<"contracts" | "management">("contracts");
+  // Sub-pestañas de "Gestión de Contratos".
+  const [mgmtTab, setMgmtTab] = useState<"afip" | "firma">("afip");
 
   const estadoContratoOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -266,8 +280,20 @@ export const ContractsPage: React.FC = () => {
       }}
       shouldShowInfo={hasHelp(HELP_KEY)}
       searchAndFilters={
-        <div className="flex flex-col sm:flex-row gap-4 items-start justify-between">
-          <div className="flex-1 w-full">
+        <div className="space-y-4">
+          {/* Pestañas principales de la página */}
+          <div className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+            <button className={tabBtnClass(mainTab === "contracts")} onClick={() => setMainTab("contracts")}>
+              Contratos
+            </button>
+            <button className={tabBtnClass(mainTab === "management")} onClick={() => setMainTab("management")}>
+              Gestión de Contratos
+            </button>
+          </div>
+
+          {mainTab === "contracts" ? (
+            <div className="flex flex-col sm:flex-row gap-4 items-start justify-between">
+              <div className="flex-1 w-full">
             <SearchAndFilters
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
@@ -353,9 +379,24 @@ export const ContractsPage: React.FC = () => {
               <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
             </button>
           </div>
+            </div>
+          ) : (
+            <div className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+              <button className={tabBtnClass(mgmtTab === "afip")} onClick={() => setMgmtTab("afip")}>
+                Altas de AFIP | Constancia de CUIT
+              </button>
+              <button className={tabBtnClass(mgmtTab === "firma")} onClick={() => setMgmtTab("firma")}>
+                Firma digital
+              </button>
+            </div>
+          )}
         </div>
       }
     >
+      {mainTab === "management" ? (
+        mgmtTab === "afip" ? <ContractBulkAfipTab allEstados={allEstados} /> : <ContractBulkFirmaTab />
+      ) : (
+        <>
       {initialLoading || isFetching || !hasLoaded ? (
         <div className="flex items-center justify-center py-20">
           <LoadingSpinner message={initialLoading ? "Cargando contratos..." : "Cargando contratos..."} />
@@ -613,6 +654,8 @@ export const ContractsPage: React.FC = () => {
             </button>
           </div>
         </div>
+      )}
+        </>
       )}
 
       <MemberContractsManagerModal isOpen={!!managedUser} onClose={() => setManagedUser(null)} userId={managedUser?.id || null} userName={managedUser?.name} contratoFrames={contratoFrames} releases={releases} />
