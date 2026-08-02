@@ -9,10 +9,10 @@ import { shiftsAPI, Shift } from "../api/shifts";
 import { infoAPI, InfoItem } from "../api/info";
 import { EstadoBadge, EstadoSecundarioBadge, TramiteImpositivoBadge, estadoLabel } from "../components/EstadoSelect";
 import { MemberContractsManagerModal } from "../components/team/MemberContractsManagerModal";
-import { estadoImpositivoDelContrato, findTemplate, templateHasContent, buildDownloadFileName, DownloadMenu } from "../components/team/ContractCard";
+import { estadoImpositivoDelContrato } from "../components/team/ContractCard";
+import { ContractDocsColumns, ContractDocsHeaders, downloadContractRow, downloadReleaseRow, uploadAltaRow } from "../components/contratos/ContractRowDocs";
 import { releasesAPI, Release } from "../api/release";
 import { isContractVigente, formatDate } from "../components/team/EmployeeContractsModal";
-import { getImageUrl } from "../utils/imageHelpers";
 import { cachedFetch } from "../utils/refCache";
 import { PageLayout } from "../components/ui/PageLayout";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
@@ -20,7 +20,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Card } from "../components/ui/Card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileContract, faBriefcase, faHourglassHalf, faTable, faGrip, faChevronLeft, faChevronRight, faClock, faEdit, faTrash, faUser, faIdCard, faBuilding, faFilePdf, faUpload, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faFileContract, faBriefcase, faHourglassHalf, faTable, faGrip, faChevronLeft, faChevronRight, faClock, faEdit, faTrash, faUser, faIdCard, faBuilding } from "@fortawesome/free-solid-svg-icons";
 import { sweetAlert } from "../utils/sweetAlert";
 
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -41,137 +41,6 @@ const tabBtnClass = (active: boolean): string =>
       ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400"
       : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
   }`;
-
-/**
- * Las tres celdas de documentos del contrato ACTIVO de la fila (mismo comportamiento que la tarjeta del
- * modal): "Alta AFIP/Servicios" (ver/subir), "Contrato | Empresa" y "Release | Empresa" (descargar,
- * con menú de empresa cuando el proyecto tiene más de una). Devuelve tres <td> para insertar en la fila.
- */
-const ContractDocsColumns: React.FC<{
-  record: ContractOverviewRow;
-  contratoFrames: ContratoFrameItem[];
-  allEstados: InfoItem[];
-  activeReleases: Release[];
-  onDownloadContract: (record: ContractOverviewRow, empresaId?: string) => void;
-  onDownloadRelease: (record: ContractOverviewRow, release: Release, empresaId?: string) => void;
-  onUploadAlta: (record: ContractOverviewRow, file: File) => Promise<void>;
-}> = ({ record, contratoFrames, allEstados, activeReleases, onDownloadContract, onDownloadRelease, onUploadAlta }) => {
-  const [uploading, setUploading] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const stop = (e: React.MouseEvent) => e.stopPropagation();
-
-  const asContract = record as unknown as Contract;
-  const template = findTemplate(asContract, contratoFrames);
-  const canDownloadContract = templateHasContent(template);
-  const tipoContrato = record.nombre_contrato || template?.data?.nombre || template?.name || "Contrato";
-  const estadoImpositivo = estadoImpositivoDelContrato(asContract, contratoFrames, allEstados);
-  const tituloAlta = estadoImpositivo?.data?.etiquetaSecundaria?.trim() || (estadoImpositivo?.data?.tipoImpositivo === "alta_temprana_afip" ? "Alta AFIP" : "Documento de Servicios");
-
-  // Empresa efectiva: si el contrato tiene una fija guardada, esa sola; si no, las del proyecto.
-  const savedContratoEmpresaId = record.empresaContratoId || "";
-  const contratoEmpresas = record.contratoEmpresas || [];
-  const savedContratoEmpresaLabel = record.nombre_empresa_contrato || contratoEmpresas.find((e) => e.id === savedContratoEmpresaId)?.label || savedContratoEmpresaId;
-  const effectiveContratoEmpresas = savedContratoEmpresaId ? [{ id: savedContratoEmpresaId, label: savedContratoEmpresaLabel }] : contratoEmpresas;
-
-  const savedReleaseEmpresaId = record.empresaReleaseId || "";
-  const releaseEmpresas = record.releaseEmpresas || [];
-  const savedReleaseEmpresaLabel = record.nombre_empresa_release || releaseEmpresas.find((e) => e.id === savedReleaseEmpresaId)?.label || savedReleaseEmpresaId;
-  const effectiveReleaseEmpresas = savedReleaseEmpresaId ? [{ id: savedReleaseEmpresaId, label: savedReleaseEmpresaLabel }] : releaseEmpresas;
-
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    if (file.type !== "application/pdf") {
-      sweetAlert.error("Formato no válido", "Solo se permiten archivos PDF.");
-      return;
-    }
-    try {
-      setUploading(true);
-      await onUploadAlta(record, file);
-    } catch {
-      sweetAlert.error("Error", "No se pudo subir el documento.");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  return (
-    <>
-      {/* Alta AFIP / Servicios: ver o subir el PDF (solo si el contrato tiene un estado impositivo). */}
-      <td className="px-4 py-3" onClick={stop}>
-        {estadoImpositivo ? (
-          <div className="flex flex-col gap-1 min-w-[160px]">
-            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{tituloAlta}</span>
-            <div className="flex items-center gap-2">
-              {record.altaDocumentoUrl ? (
-                <a href={getImageUrl(record.altaDocumentoUrl)} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-700 dark:text-gray-200 flex items-center gap-1.5 min-w-0 hover:underline" title={record.altaDocumentoNombre || tituloAlta}>
-                  <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
-                  <span className="truncate max-w-[110px]">{record.altaDocumentoNombre || "Ver documento"}</span>
-                </a>
-              ) : (
-                <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
-                  <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 shrink-0" />
-                  Sin documento
-                </span>
-              )}
-              <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading} title={record.altaDocumentoUrl ? "Reemplazar documento" : "Subir PDF"} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
-                <FontAwesomeIcon icon={uploading ? faSpinner : faUpload} spin={uploading} className="h-4 w-4" />
-              </button>
-              <input ref={inputRef} type="file" accept="application/pdf" className="hidden" onChange={handleFile} />
-            </div>
-          </div>
-        ) : (
-          <span className="text-xs text-gray-400">—</span>
-        )}
-      </td>
-
-      {/* Contrato | Empresa: nombre + empresa(s) + descarga (menú si hay más de una empresa). */}
-      <td className="px-4 py-3" onClick={stop}>
-        <div className="flex items-center justify-between gap-2 min-w-[220px]">
-          <span className="text-xs text-gray-700 dark:text-gray-200 flex items-center gap-1.5 flex-wrap min-w-0" title={tipoContrato}>
-            <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
-            <span className="truncate max-w-[130px]">{tipoContrato}</span>
-            {effectiveContratoEmpresas.map((emp) => (
-              <span key={emp.id} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/50 shrink-0 whitespace-nowrap">
-                {emp.label}
-              </span>
-            ))}
-          </span>
-          {canDownloadContract ? (
-            <DownloadMenu empresas={effectiveContratoEmpresas} onDownload={(empresaId) => onDownloadContract(record, empresaId)} title="Descargar contrato" />
-          ) : (
-            <span className="text-xs text-gray-400 shrink-0" title="La plantilla de este tipo de contrato no tiene contenido redactado">Sin contenido</span>
-          )}
-        </div>
-      </td>
-
-      {/* Release | Empresa: por cada release activo, nombre + empresa(s) + descarga. */}
-      <td className="px-4 py-3" onClick={stop}>
-        {activeReleases.length === 0 ? (
-          <span className="text-xs text-gray-400">—</span>
-        ) : (
-          <div className="flex flex-col gap-1.5 min-w-[220px]">
-            {activeReleases.map((r) => (
-              <div key={r._id} className="flex items-center justify-between gap-2">
-                <span className="text-xs text-gray-700 dark:text-gray-200 flex items-center gap-1.5 flex-wrap min-w-0" title={r.name}>
-                  <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
-                  <span className="truncate max-w-[130px]">{r.name}</span>
-                  {effectiveReleaseEmpresas.map((emp) => (
-                    <span key={emp.id} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 border border-teal-100 dark:border-teal-800/50 shrink-0 whitespace-nowrap">
-                      {emp.label}
-                    </span>
-                  ))}
-                </span>
-                <DownloadMenu empresas={effectiveReleaseEmpresas} onDownload={(empresaId) => onDownloadRelease(record, r, empresaId)} title="Descargar release" />
-              </div>
-            ))}
-          </div>
-        )}
-      </td>
-    </>
-  );
-};
 
 export const ContractsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -346,34 +215,10 @@ export const ContractsPage: React.FC = () => {
 
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
 
-  // Nombre de descarga: la fila no trae proyecto/persona con la forma que espera buildDownloadFileName,
-  // así que se le pasa un contrato-shim con los campos que usa.
-  const downloadContractShim = (record: ContractOverviewRow) => ({ nombre_proyecto: record.projectName, nombre_contrato: record.nombre_contrato }) as unknown as Contract;
-  const userShim = (record: ContractOverviewRow) => ({ firstName: record.userName, lastName: "" }) as any;
-
-  const handleDownloadContractRow = async (record: ContractOverviewRow, empresaId?: string) => {
-    const template = findTemplate(record as unknown as Contract, contratoFrames);
-    if (!templateHasContent(template)) {
-      sweetAlert.error("Sin contenido", "La plantilla de este tipo de contrato todavía no tiene contenido redactado.");
-      return;
-    }
-    try {
-      await contratoFrameAPI.downloadFilled(template as ContratoFrameItem, { userId: record.userId, projectId: record.projectId, contractIndex: record.contractIndex, empresaId }, buildDownloadFileName("Contrato", userShim(record), downloadContractShim(record)));
-    } catch {
-      sweetAlert.error("Error", "No se pudo descargar el contrato.");
-    }
-  };
-
-  const handleDownloadReleaseRow = async (record: ContractOverviewRow, release: Release, empresaId?: string) => {
-    try {
-      await releasesAPI.downloadFilled(release, { userId: record.userId, projectId: record.projectId, contractIndex: record.contractIndex, empresaId }, buildDownloadFileName("Release", userShim(record), downloadContractShim(record), release.name));
-    } catch {
-      sweetAlert.error("Error", "No se pudo descargar el release.");
-    }
-  };
-
+  const handleDownloadContractRow = (record: ContractOverviewRow, empresaId?: string) => downloadContractRow(record, contratoFrames, empresaId);
+  const handleDownloadReleaseRow = (record: ContractOverviewRow, release: Release, empresaId?: string) => downloadReleaseRow(record, release, empresaId);
   const handleUploadAltaRow = async (record: ContractOverviewRow, file: File) => {
-    await projectsAPI.uploadAltaDocumento(record.projectId, record.userId, record.contractIndex, file);
+    await uploadAltaRow(record, file);
     fetchContracts();
   };
 
@@ -559,7 +404,7 @@ export const ContractsPage: React.FC = () => {
       }
     >
       {mainTab === "management" ? (
-        mgmtTab === "afip" ? <ContractBulkAfipTab allEstados={allEstados} /> : <ContractBulkFirmaTab />
+        mgmtTab === "afip" ? <ContractBulkAfipTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} /> : <ContractBulkFirmaTab />
       ) : (
         <>
       {initialLoading || isFetching || !hasLoaded ? (
@@ -586,9 +431,7 @@ export const ContractsPage: React.FC = () => {
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Contrato</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Estado Contrato</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Estado Impositivo</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Alta AFIP / Servicios</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Contrato | Empresa</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Release | Empresa</th>
+                  <ContractDocsHeaders />
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Reemplazo</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Alta / Baja</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Monto / Jorn.</th>
@@ -678,6 +521,7 @@ export const ContractsPage: React.FC = () => {
                       onDownloadContract={handleDownloadContractRow}
                       onDownloadRelease={handleDownloadReleaseRow}
                       onUploadAlta={handleUploadAltaRow}
+                      canUploadAlta={false}
                     />
                     <td className="px-4 py-3">
                       {record.reemplazo ? (

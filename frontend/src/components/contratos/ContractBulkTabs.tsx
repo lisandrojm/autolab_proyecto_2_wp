@@ -1,11 +1,14 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileInvoiceDollar, faFileSignature, faScrewdriverWrench, faDownload, faSearch } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI, ContractOverviewRow } from "../../api/users";
 import { InfoItem } from "../../api/info";
+import { ContratoFrameItem } from "../../api/contratosFrame";
+import { Release } from "../../api/release";
 import { claveEstado, EstadoBadge } from "../EstadoSelect";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { EmptyState } from "../ui/EmptyState";
+import { ContractDocsColumns, ContractDocsHeaders, downloadContractRow, downloadReleaseRow, uploadAltaRow } from "./ContractRowDocs";
 
 type TipoImpositivo = "alta_temprana_afip" | "constancia_cuit";
 const TIPO_LABEL: Record<TipoImpositivo, string> = {
@@ -59,11 +62,13 @@ const exportarCsv = (rows: ImpositivoRow[]) => {
  * actual es un estado impositivo, con su trámite (Alta temprana de AFIP / Constancia de CUIT),
  * filtros y exportación a CSV.
  */
-export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[] }> = ({ allEstados }) => {
+export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFrames: ContratoFrameItem[]; releases: Release[] }> = ({ allEstados, contratoFrames, releases }) => {
   const [rows, setRows] = useState<ContractOverviewRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterTipo, setFilterTipo] = useState<"" | TipoImpositivo>("");
   const [search, setSearch] = useState("");
+
+  const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
 
   // clave-estado (normalizada) → trámite impositivo, para los estados marcados como impositivos.
   const impositivoPorClave = useMemo(() => {
@@ -74,24 +79,27 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[] }> = ({ allE
     return m;
   }, [allEstados]);
 
-  useEffect(() => {
-    let alive = true;
+  const load = useCallback(() => {
     setLoading(true);
-    usersAPI
+    return usersAPI
       .listContractsOverview({ limit: 5000 })
-      .then((res) => {
-        if (alive) setRows(res.rows);
-      })
+      .then((res) => setRows(res.rows))
       .catch(() => {
         /* noop */
       })
-      .finally(() => {
-        if (alive) setLoading(false);
-      });
-    return () => {
-      alive = false;
-    };
+      .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const handleDownloadContract = (record: ContractOverviewRow, empresaId?: string) => downloadContractRow(record, contratoFrames, empresaId);
+  const handleDownloadRelease = (record: ContractOverviewRow, release: Release, empresaId?: string) => downloadReleaseRow(record, release, empresaId);
+  const handleUploadAlta = async (record: ContractOverviewRow, file: File) => {
+    await uploadAltaRow(record, file);
+    load();
+  };
 
   // Solo los contratos cuyo estado actual es impositivo.
   const impositivoRows = useMemo<ImpositivoRow[]>(() => {
@@ -176,7 +184,7 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[] }> = ({ allE
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
           <div className="overflow-x-auto custom-scrollbar max-h-[640px]">
-            <table className="w-full text-left border-collapse min-w-[1100px]">
+            <table className="w-full text-left border-collapse min-w-[1900px]">
               <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
                 <tr className="border-b border-gray-100 dark:border-gray-800">
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
@@ -185,6 +193,7 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[] }> = ({ allE
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Contrato</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Estado</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Trámite impositivo</th>
+                  <ContractDocsHeaders />
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Alta</th>
                 </tr>
               </thead>
@@ -217,6 +226,15 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[] }> = ({ allE
                         <span className="text-[11px] text-gray-400 italic">Sin trámite definido</span>
                       )}
                     </td>
+                    <ContractDocsColumns
+                      record={r}
+                      contratoFrames={contratoFrames}
+                      allEstados={allEstados}
+                      activeReleases={activeReleases}
+                      onDownloadContract={handleDownloadContract}
+                      onDownloadRelease={handleDownloadRelease}
+                      onUploadAlta={handleUploadAlta}
+                    />
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{fmtFecha(r.fecha_alta_contrato) || "—"}</td>
                   </tr>
                 ))}
