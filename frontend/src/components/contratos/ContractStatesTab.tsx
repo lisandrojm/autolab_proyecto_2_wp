@@ -51,11 +51,11 @@ const normalizar = (s: string): string =>
     .trim();
 
 /** Vista previa del badge tal cual se va a ver en Agregar/Configurar miembro. */
-const BadgePreview: React.FC<{ texto: string; color: string; esImpositivo?: boolean }> = ({ texto, color, esImpositivo }) => {
+const BadgePreview: React.FC<{ texto: string; color: string; esImpositivo?: boolean; className?: string }> = ({ texto, color, esImpositivo, className = '' }) => {
   const theme = useThemeStore((s) => s.theme);
   return (
     <span
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide"
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide whitespace-nowrap ${className}`}
       style={{ color: colorTextoBadge(color, theme === 'dark'), backgroundColor: conAlpha(color, 0.14), border: `1px solid ${conAlpha(color, 0.35)}` }}
     >
       {esImpositivo && <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" title="Estado impositivo" />}
@@ -66,11 +66,32 @@ const BadgePreview: React.FC<{ texto: string; color: string; esImpositivo?: bool
 
 /** Marca visual de los estados de índole impositiva. */
 const ChipImpositivo: React.FC = () => (
-  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-100 dark:border-purple-800">
+  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-100 dark:border-purple-800 whitespace-nowrap">
     <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" />
     Impositivo
   </span>
 );
+
+/**
+ * Badge con el trámite impositivo (Alta temprana de AFIP / Constancia de CUIT) que representa el estado.
+ * Mismo violeta pero invertido: "Alta temprana de AFIP" en positivo (relleno) y "Constancia de CUIT"
+ * en negativo (contorno), para distinguirlos de un vistazo.
+ */
+const ChipTipoImpositivo: React.FC<{ estado: InfoItem }> = ({ estado }) => {
+  const tipo = estado.data?.tipoImpositivo;
+  if (!tipo) return null;
+  const label = TIPOS_IMPOSITIVO.find((t) => t.value === tipo)?.label || tipo;
+  const cls =
+    tipo === 'alta_temprana_afip'
+      ? 'bg-purple-600 text-white border-purple-600 dark:bg-purple-500 dark:border-purple-500' // positivo (relleno)
+      : 'bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700'; // negativo (contorno)
+  return (
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap ${cls}`}>
+      <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" />
+      {label}
+    </span>
+  );
+};
 
 /** Trámite impositivo que representa un estado impositivo. Excluyentes: siempre uno solo. */
 type TipoImpositivo = 'alta_temprana_afip' | 'constancia_cuit';
@@ -218,6 +239,15 @@ export const ContractStatesTab: React.FC = () => {
       .forEach((e) => (e.data?.contratoFrameIds || []).forEach((id: string) => tomados.set(String(id), e.name)));
     return tomados;
   }, [estados, editando]);
+
+  // Si TODOS los tipos de contrato ya están tomados por otros estados impositivos, no queda ninguno
+  // libre para asignarle a uno nuevo → no se puede marcar "Estado impositivo".
+  const todosLosTiposTomadosPorOtro = useMemo(
+    () => contratoFrames.length > 0 && contratoFrames.every((cf) => tiposTomadosPorOtroImpositivo.has(String(cf._id))),
+    [contratoFrames, tiposTomadosPorOtroImpositivo],
+  );
+  // Solo bloquea CUANDO todavía no es impositivo (si ya lo es, sus propios tipos quedan disponibles).
+  const bloqueoImpositivo = !form.esImpositivo && todosLosTiposTomadosPorOtro;
 
   const abrirCrear = () => {
     setEditando(null);
@@ -463,10 +493,11 @@ export const ContractStatesTab: React.FC = () => {
             </div>
           </div>
 
-          <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+          <label className={`flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors ${bloqueoImpositivo ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40'}`}>
             <input
               type="checkbox"
               checked={form.esImpositivo}
+              disabled={bloqueoImpositivo}
               onChange={(e) =>
                 setForm((p) => ({
                   ...p,
@@ -475,11 +506,17 @@ export const ContractStatesTab: React.FC = () => {
                   contratoFrameIds: e.target.checked ? p.contratoFrameIds.filter((id) => !tiposTomadosPorOtroImpositivo.has(String(id))) : p.contratoFrameIds,
                 }))
               }
-              className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+              className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed"
             />
             <span className="flex flex-col gap-0.5">
               <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Estado impositivo</span>
               <span className="text-[11px] text-gray-500 dark:text-gray-400">Marcalo si el estado es de índole impositiva, para poder distinguirlo y darle otro tratamiento.</span>
+              {bloqueoImpositivo && (
+                <span className="mt-1 inline-flex items-start gap-1.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                  <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3 mt-0.5 shrink-0" />
+                  Todos los tipos de contrato ya tienen un estado impositivo asociado. Para asignar uno nuevo, primero quitá el impositivo de otro estado o liberá algún tipo.
+                </span>
+              )}
             </span>
           </label>
 
@@ -691,7 +728,16 @@ const SortableEstadoRow: React.FC<SortableEstadoProps & { index: number; onEnabl
       <td className="px-4 py-3">
         <BadgePreview texto={estado.name} color={colorEfectivo(estado)} esImpositivo={!!estado.data?.esImpositivo} />
       </td>
-      <td className="px-4 py-3">{estado.data?.esImpositivo ? <ChipImpositivo /> : <span className="text-xs text-gray-400">—</span>}</td>
+      <td className="px-4 py-3">
+        {estado.data?.esImpositivo ? (
+          <div className="flex flex-wrap items-center gap-1">
+            <ChipImpositivo />
+            <ChipTipoImpositivo estado={estado} />
+          </div>
+        ) : (
+          <span className="text-xs text-gray-400">—</span>
+        )}
+      </td>
       <td className="px-4 py-3">{estado.data?.etiquetaSecundaria ? <EstadoSecundarioBadge estado={estado} className="text-[10px]" /> : <span className="text-xs text-gray-400">—</span>}</td>
       <td className="px-4 py-3">
         {tipos.length === 0 ? (
@@ -699,7 +745,7 @@ const SortableEstadoRow: React.FC<SortableEstadoProps & { index: number; onEnabl
         ) : (
           <div className="flex flex-wrap gap-1.5">
             {tipos.map((id) => (
-              <span key={id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
+              <span key={id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800 whitespace-nowrap">
                 <FontAwesomeIcon icon={faFileContract} className="h-2.5 w-2.5" />
                 {nombreTipoContrato(id)}
               </span>
@@ -744,13 +790,14 @@ const SortableEstadoCard: React.FC<SortableEstadoProps> = ({ estado, isReorderMo
       )}
       <div className={`bg-white dark:bg-gray-800 rounded-xl border p-4 flex flex-col gap-3 ${isReorderMode ? 'border-2 border-blue-500/50 shadow-blue-500/10' : 'border-gray-200 dark:border-gray-700'}`}>
         <div className="flex flex-col gap-1.5 min-w-0">
-          <BadgePreview texto={estado.name} color={color} esImpositivo={!!estado.data?.esImpositivo} />
-          <div className="flex items-center gap-2 min-w-0">
+          <BadgePreview texto={estado.name} color={color} esImpositivo={!!estado.data?.esImpositivo} className="self-start" />
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
             <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{estado.name}</span>
             <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 shrink-0" title={tipos.length === 0 ? 'Se ofrece en todos los tipos de contrato' : `${tipos.length} tipo${tipos.length === 1 ? '' : 's'} de contrato`}>
               ({tipos.length || 'Todos'})
             </span>
             {estado.data?.esImpositivo ? <ChipImpositivo /> : null}
+            {estado.data?.esImpositivo ? <ChipTipoImpositivo estado={estado} /> : null}
             <EstadoSecundarioBadge estado={estado} className="text-[10px]" />
           </div>
         </div>
@@ -761,7 +808,7 @@ const SortableEstadoCard: React.FC<SortableEstadoProps> = ({ estado, isReorderMo
           ) : (
             <div className="flex flex-wrap gap-1.5 pt-2">
               {tipos.map((id) => (
-                <span key={id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
+                <span key={id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800 whitespace-nowrap">
                   <FontAwesomeIcon icon={faFileContract} className="h-2.5 w-2.5" />
                   {nombreTipoContrato(id)}
                 </span>
