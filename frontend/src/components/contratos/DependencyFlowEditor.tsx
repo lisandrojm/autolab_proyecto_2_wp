@@ -80,10 +80,17 @@ export const DependencyFlowEditor: React.FC<Props> = ({ estados, onCancel, onSav
   const newPasoId = () => `paso-${seq.current++}`;
 
   // Construcción inicial: agrupar por ordenDependencia (renumerado contiguo); sin número → pool.
+  // Regla: los estados impositivos van SIEMPRE al Paso 1 (grupo 1), aunque su valor guardado sea
+  // otro o no tengan — "van por defecto al paso uno; en ese paso no importa el orden (uno u otro)".
   useEffect(() => {
     const groups = new Map<number, InfoItem[]>();
     const unassigned: InfoItem[] = [];
     for (const e of estados) {
+      if (e.data?.esImpositivo) {
+        if (!groups.has(1)) groups.set(1, []);
+        groups.get(1)!.push(e);
+        continue;
+      }
       const n = e.data?.ordenDependencia;
       if (typeof n === "number") {
         if (!groups.has(n)) groups.set(n, []);
@@ -273,7 +280,12 @@ export const DependencyFlowEditor: React.FC<Props> = ({ estados, onCancel, onSav
                   {(items[pid] || []).length === 0 ? (
                     <span className="text-[11px] text-gray-400 italic self-center">Arrastrá acá los estados de este paso.</span>
                   ) : (
-                    (items[pid] || []).map((id) => estadoById.get(id) && <SortableChip key={id} estado={estadoById.get(id)!} onRemove={() => sacarDelFlujo(id)} />)
+                    (items[pid] || []).map((id) => {
+                      const est = estadoById.get(id);
+                      if (!est) return null;
+                      // Los impositivos van fijos al Paso 1: no se sacan del flujo (sin botón "x").
+                      return <SortableChip key={id} estado={est} onRemove={est.data?.esImpositivo ? undefined : () => sacarDelFlujo(id)} />;
+                    })
                   )}
                 </div>
               </SortableContext>

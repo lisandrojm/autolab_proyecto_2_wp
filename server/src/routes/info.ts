@@ -125,18 +125,21 @@ function parseEstadoBody(body: any): { error?: string; name?: string; data?: any
     return { error: "Un estado impositivo tiene que ser 'Alta temprana de AFIP' o 'Constancia de CUIT'" };
   }
 
-  return {
-    name,
-    data: {
-      nombre: name,
-      color: color || undefined,
-      contratoFrameIds,
-      esImpositivo,
-      etiquetaSecundaria: etiquetaSecundaria || undefined,
-      colorEtiquetaSecundaria: esImpositivo ? colorEtiquetaSecundaria || undefined : undefined,
-      tipoImpositivo: esImpositivo ? tipoImpositivo : undefined,
-    },
+  const data: any = {
+    nombre: name,
+    color: color || undefined,
+    contratoFrameIds,
+    esImpositivo,
+    etiquetaSecundaria: etiquetaSecundaria || undefined,
+    colorEtiquetaSecundaria: esImpositivo ? colorEtiquetaSecundaria || undefined : undefined,
+    tipoImpositivo: esImpositivo ? tipoImpositivo : undefined,
   };
+  // Los estados impositivos van por defecto al Paso 1 del flujo de dependencias. Solo se toca
+  // `ordenDependencia` cuando es impositivo; en los no impositivos NO se incluye la clave, para que
+  // el update (spread `{ ...estado.data, ...parsed.data }`) preserve el paso que tengan en el flujo.
+  if (esImpositivo) data.ordenDependencia = 1;
+
+  return { name, data };
 }
 
 /**
