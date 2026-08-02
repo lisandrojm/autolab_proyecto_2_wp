@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faTrash, faArrowUp, faArrowDown, faXmark, faCheck, faSpinner, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faTrash, faArrowUp, faArrowDown, faXmark, faCheck, faSpinner, faLayerGroup, faGripVertical } from "@fortawesome/free-solid-svg-icons";
 import {
   DndContext,
   DragOverlay,
@@ -31,18 +31,22 @@ interface Props {
 /** Orden estable dentro de un paso / del pool: por orden visual y luego nombre. */
 const byOrden = (a: InfoItem, b: InfoItem) => (a.data?.orden ?? 999) - (b.data?.orden ?? 999) || a.name.localeCompare(b.name);
 
-/** Chip arrastrable de un estado. */
+/** Chip arrastrable de un estado. Se arrastra desde cualquier parte del chip. */
 const SortableChip: React.FC<{ estado: InfoItem; onRemove?: () => void }> = ({ estado, onRemove }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: estado._id });
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 };
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1, touchAction: "none" as const };
   return (
-    <span ref={setNodeRef} style={style} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-1.5 py-1 shadow-sm">
-      <button type="button" {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 px-0.5" title="Arrastrar">
-        <span className="text-xs leading-none">⋮⋮</span>
-      </button>
+    <span
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-1.5 py-1 shadow-sm cursor-grab active:cursor-grabbing select-none"
+    >
+      <FontAwesomeIcon icon={faGripVertical} className="h-3 w-3 text-gray-400 shrink-0" />
       <EstadoBadge name={estado.name} />
       {onRemove && (
-        <button type="button" onClick={onRemove} title="Sacar del flujo" className="text-gray-400 hover:text-red-500 px-0.5">
+        <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={onRemove} title="Sacar del flujo" className="text-gray-400 hover:text-red-500 px-0.5">
           <FontAwesomeIcon icon={faXmark} className="h-3 w-3" />
         </button>
       )}
@@ -102,7 +106,10 @@ export const DependencyFlowEditor: React.FC<Props> = ({ estados, onCancel, onSav
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [estados]);
 
-  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const findContainer = (id: string): string | undefined => {
     if (id === UNASSIGNED || pasos.includes(id)) return id;
