@@ -84,6 +84,16 @@ export interface ContractOverviewRow {
   cantidad_jornadas_laborales?: number;
   hora_inicio?: string;
   hora_fin?: string;
+  // Documentos del contrato ACTIVO, para las columnas de descarga/carga de la tabla de Contratos.
+  altaDocumentoUrl?: string;
+  altaDocumentoNombre?: string;
+  empresaContratoId?: string;
+  empresaReleaseId?: string;
+  nombre_empresa_contrato?: string;
+  nombre_empresa_release?: string;
+  /** Empresas del proyecto (con fallback a las del ABM) para el menú "Descargar con:". */
+  contratoEmpresas?: { id: string; label: string }[];
+  releaseEmpresas?: { id: string; label: string }[];
 }
 
 export interface UserProjectMetadata {

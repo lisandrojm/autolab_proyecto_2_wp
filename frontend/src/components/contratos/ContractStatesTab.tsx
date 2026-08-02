@@ -454,6 +454,7 @@ export const ContractStatesTab: React.FC = () => {
                       <th className="px-4 py-3 font-semibold text-center w-14">Ordenar</th>
                       <th className="px-4 py-3 font-semibold text-center w-14">Orden</th>
                       <th className="px-4 py-3 font-semibold">Badge</th>
+                      <th className="px-4 py-3 font-semibold">Dependencias</th>
                       <th className="px-4 py-3 font-semibold">Impositivo</th>
                       <th className="px-4 py-3 font-semibold">Badge Secundario</th>
                       <th className="px-4 py-3 font-semibold">Tipos de contrato</th>
@@ -785,8 +786,10 @@ const SortableEstadoRow: React.FC<SortableEstadoProps & { index: number; onEnabl
       <td className="px-4 py-3">
         <div className="flex items-center gap-1.5 flex-wrap">
           <BadgePreview texto={estado.name} color={colorEfectivo(estado)} esImpositivo={!!estado.data?.esImpositivo} />
-          <ChipPasoDependencia estado={estado} />
         </div>
+      </td>
+      <td className="px-4 py-3">
+        {typeof estado.data?.ordenDependencia === 'number' ? <ChipPasoDependencia estado={estado} /> : <span className="text-xs text-gray-400">—</span>}
       </td>
       <td className="px-4 py-3">
         {estado.data?.esImpositivo ? (

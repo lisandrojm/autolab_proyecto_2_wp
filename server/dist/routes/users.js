@@ -446,11 +446,25 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
             projectFilter.clientId = req.query.clientId;
         if (req.query.projectId)
             projectFilter._id = req.query.projectId;
-        const projectIds = await Project.find(projectFilter).distinct("_id");
-        if (projectIds.length === 0) {
+        // Se traen los proyectos con sus empresas (contrato/release) para poder ofrecer la descarga por
+        // empresa en la tabla (igual que /all-contracts), no solo sus ids.
+        const projectsList = await Project.find(projectFilter).select("_id name clientId contratoEmpresas releaseEmpresas").lean();
+        if (projectsList.length === 0) {
             res.json({ rows: [], total: 0, page: 1, totalPages: 1 });
             return;
         }
+        const projectIds = projectsList.map((p) => p._id);
+        // Empresas por proyecto, con fallback a todas las del ABM cuando el proyecto no tiene ninguna
+        // configurada (mismo criterio que GET /:id/all-contracts, si no no habría con qué generar el PDF).
+        const companies = await Company.find({}).select("razonSocial").lean();
+        const companyMap = new Map(companies.map((c) => [String(c._id), c.razonSocial]));
+        const allEmpresas = companies.map((c) => ({ id: String(c._id), label: c.razonSocial || "" })).filter((e) => e.label);
+        const toEmpresas = (ids = []) => {
+            const fromProject = (ids || []).map((id) => ({ id: String(id), label: companyMap.get(String(id)) || "" })).filter((e) => e.label);
+            return fromProject.length > 0 ? fromProject : allEmpresas;
+        };
+        const empresasPorProyecto = new Map();
+        projectsList.forEach((p) => empresasPorProyecto.set(String(p._id), { contratoEmpresas: toEmpresas(p.contratoEmpresas), releaseEmpresas: toEmpresas(p.releaseEmpresas) }));
         const memberships = await UserProject.find({ projectId: { $in: projectIds } })
             .select("projectId userId nombre_rol_frame contracts")
             .populate({ path: "userId", select: "firstName lastName email metadata roles", populate: { path: "roles", select: "name", model: Role } })
@@ -532,6 +546,15 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 cantidad_jornadas_laborales: contratoActivo.cantidad_jornadas_laborales,
                 hora_inicio: contratoActivo.hora_inicio,
                 hora_fin: contratoActivo.hora_fin,
+                // Documentos descargables/subibles del contrato ACTIVO (para las columnas de la tabla).
+                altaDocumentoUrl: contratoActivo.altaDocumentoUrl || "",
+                altaDocumentoNombre: contratoActivo.altaDocumentoNombre || "",
+                empresaContratoId: contratoActivo.empresaContratoId ? String(contratoActivo.empresaContratoId) : "",
+                empresaReleaseId: contratoActivo.empresaReleaseId ? String(contratoActivo.empresaReleaseId) : "",
+                nombre_empresa_contrato: contratoActivo.nombre_empresa_contrato || "",
+                nombre_empresa_release: contratoActivo.nombre_empresa_release || "",
+                contratoEmpresas: empresasPorProyecto.get(String(project._id))?.contratoEmpresas || [],
+                releaseEmpresas: empresasPorProyecto.get(String(project._id))?.releaseEmpresas || [],
             });
         }
         rows.sort((a, b) => a.userName.localeCompare(b.userName, "es", { sensitivity: "base" }));
