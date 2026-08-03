@@ -39,13 +39,15 @@ export const dropboxAPI = {
     return data;
   },
 
-  async tempLink(path: string): Promise<string> {
-    const { data } = await axios.get("/dropbox/temp-link", { params: { path } });
+  /** `full`: permite una ruta fuera del rootPath (ver /dropbox/temp-link). */
+  async tempLink(path: string, full?: boolean): Promise<string> {
+    const { data } = await axios.get("/dropbox/temp-link", { params: { path, full: full ? "1" : undefined } });
     return data.link;
   },
 
-  async downloadZip(paths: string[]): Promise<Blob> {
-    const { data } = await axios.post("/dropbox/download-zip", { paths }, { responseType: "blob" });
+  /** `full`: permite rutas fuera del rootPath (ver /dropbox/download-zip). */
+  async downloadZip(paths: string[], full?: boolean): Promise<Blob> {
+    const { data } = await axios.post("/dropbox/download-zip", { paths, full }, { responseType: "blob" });
     return data;
   },
 

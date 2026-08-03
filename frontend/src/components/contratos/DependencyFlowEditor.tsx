@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faTrash, faArrowUp, faArrowDown, faXmark, faCheck, faSpinner, faLayerGroup, faGripVertical, faFileInvoiceDollar, faBolt, faCircleInfo, faFolder, faTriangleExclamation, faArrowsRotate } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faTrash, faArrowUp, faArrowDown, faXmark, faCheck, faSpinner, faLayerGroup, faGripVertical, faFileInvoiceDollar, faBolt, faCircleInfo, faFolder, faTriangleExclamation, faArrowsRotate, faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
 import {
   DndContext,
   DragOverlay,
@@ -474,6 +474,16 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
             <FontAwesomeIcon icon={faArrowsRotate} className="h-3 w-3" spin={escaneando} />
             {escaneando ? "Escaneando…" : "Forzar escaneo ahora"}
           </button>
+          <a
+            href="/documents"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Ver las carpetas de Dropbox (HelloSign y AFIP) en una pestaña nueva"
+            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            Ver documentos
+            <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
+          </a>
         </span>
       }
       subtitle="Los estados en el mismo paso son alternativas (uno u otro). Es independiente del orden visual."

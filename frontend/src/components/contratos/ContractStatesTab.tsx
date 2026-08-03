@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { SearchAndFilters } from '../ui/SearchAndFilters';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { EmptyState } from '../ui/EmptyState';
@@ -204,6 +205,19 @@ export const ContractStatesTab: React.FC = () => {
     cargar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Permite llegar directo a "Orden de dependencias" con /contratos?tab=states&openFlow=1 (p. ej. desde
+  // el botón "Configurar transición automática" de la página de Documentos/Dropbox).
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get('openFlow') === '1') {
+      setIsDependencyMode(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete('openFlow');
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const filtrados = useMemo(() => {
     const q = normalizar(searchTerm);

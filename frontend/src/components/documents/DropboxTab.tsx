@@ -21,14 +21,24 @@ const formatDate = (s?: string): string => {
 interface DropboxTabProps {
   /** Reporta hacia el contenedor la cantidad de items visibles (según filtro) para mostrarla junto al título. */
   onCountChange?: (count: number | undefined) => void;
+  /**
+   * Si se pasa, este tab navega esa carpeta (fuera del `rootPath` configurado del tenant, p. ej. "/AFIP")
+   * en vez de la carpeta raíz normal — y queda en modo SOLO LECTURA (sin subir/crear/renombrar/eliminar):
+   * las acciones de escritura del backend (`/upload`, `/create-folder`, `/move`, `/delete`) se mantienen
+   * siempre acotadas al `rootPath` del tenant por seguridad, así que no tendría sentido ofrecerlas acá.
+   */
+  fixedRoot?: string;
+  /** Nombre a mostrar para `fixedRoot` en el primer breadcrumb (si no, se deriva del path). */
+  rootLabel?: string;
 }
 
-export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange }) => {
+export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot, rootLabel }) => {
+  const readOnly = !!fixedRoot;
   const [status, setStatus] = useState<DropboxStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [entries, setEntries] = useState<DropboxEntry[]>([]);
   const [currentPath, setCurrentPath] = useState("");
-  const [rootPath, setRootPath] = useState("/HelloSign");
+  const [rootPath, setRootPath] = useState(fixedRoot || "/HelloSign");
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -50,8 +60,8 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange }) => {
     try {
       const s = await dropboxAPI.status();
       setStatus(s);
-      setRootPath(s.rootPath);
-      if (s.connected) await loadFolder(s.rootPath);
+      if (!fixedRoot) setRootPath(s.rootPath);
+      if (s.connected) await loadFolder(fixedRoot || s.rootPath);
     } catch (e: any) {
       sweetAlert.error("Error", e?.response?.data?.error || "No se pudo obtener el estado de Dropbox.");
     } finally {
@@ -63,10 +73,10 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange }) => {
     setBusy(true);
     setSelected(new Set()); // la selección es por carpeta; al navegar/recargar se limpia
     try {
-      const r = await dropboxAPI.list(path);
+      const r = await dropboxAPI.list(path, readOnly);
       setEntries(r.entries);
       setCurrentPath(r.path);
-      setRootPath(r.rootPath);
+      if (!fixedRoot) setRootPath(r.rootPath);
     } catch (e: any) {
       sweetAlert.error("Error", e?.response?.data?.error || "No se pudo listar la carpeta.");
     } finally {
@@ -104,7 +114,7 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange }) => {
 
   const handleDownload = async (entry: DropboxEntry) => {
     try {
-      const link = await dropboxAPI.tempLink(entry.path);
+      const link = await dropboxAPI.tempLink(entry.path, readOnly);
       window.open(link, "_blank");
     } catch (e: any) {
       sweetAlert.error("Error", e?.response?.data?.error || "No se pudo generar el enlace de descarga.");
@@ -129,7 +139,7 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange }) => {
     }
     setBusy(true);
     try {
-      const blob = await dropboxAPI.downloadZip(paths);
+      const blob = await dropboxAPI.downloadZip(paths, readOnly);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -205,18 +215,19 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange }) => {
     }
   };
 
-  // Breadcrumbs relativos al rootPath.
+  // Breadcrumbs relativos al rootPath (o a `fixedRoot`, para las vistas de solo lectura).
   const crumbs = useMemo(() => {
-    const rel = currentPath.startsWith(rootPath) ? currentPath.slice(rootPath.length) : "";
+    const root = fixedRoot || rootPath;
+    const rel = currentPath.startsWith(root) ? currentPath.slice(root.length) : "";
     const segs = rel.split("/").filter(Boolean);
-    const list = [{ name: rootPath.split("/").filter(Boolean).pop() || "HelloSign", path: rootPath }];
-    let acc = rootPath;
+    const list = [{ name: rootLabel || root.split("/").filter(Boolean).pop() || "HelloSign", path: root }];
+    let acc = root;
     for (const s of segs) {
       acc = `${acc}/${s}`;
       list.push({ name: s, path: acc });
     }
     return list;
-  }, [currentPath, rootPath]);
+  }, [currentPath, rootPath, fixedRoot, rootLabel]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -332,12 +343,17 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange }) => {
               </button>
             </span>
           ))}
+          {readOnly && <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 border border-gray-200 dark:border-gray-700 rounded px-1.5 py-0.5">Solo lectura</span>}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button onClick={() => loadFolder(currentPath)} title="Actualizar" className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"><FontAwesomeIcon icon={faRotate} className={busy ? "animate-spin" : ""} /></button>
-          <button onClick={handleCreateFolder} className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-2"><FontAwesomeIcon icon={faFolderPlus} /> Carpeta</button>
-          <button onClick={handleUploadClick} className="btn-primary text-xs py-1.5 px-3 flex items-center gap-2"><FontAwesomeIcon icon={faUpload} /> Subir</button>
-          <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFilesSelected} />
+          {!readOnly && (
+            <>
+              <button onClick={handleCreateFolder} className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-2"><FontAwesomeIcon icon={faFolderPlus} /> Carpeta</button>
+              <button onClick={handleUploadClick} className="btn-primary text-xs py-1.5 px-3 flex items-center gap-2"><FontAwesomeIcon icon={faUpload} /> Subir</button>
+              <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFilesSelected} />
+            </>
+          )}
         </div>
       </div>
 
@@ -429,8 +445,12 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange }) => {
                         {e.tag === "file" && (
                           <button onClick={() => handleDownload(e)} title="Descargar" className="p-2 rounded text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30"><FontAwesomeIcon icon={faDownload} /></button>
                         )}
-                        <button onClick={() => handleRename(e)} title="Renombrar" className="p-2 rounded text-gray-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30"><FontAwesomeIcon icon={faPen} /></button>
-                        <button onClick={() => handleDelete(e)} title="Eliminar" className="p-2 rounded text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30"><FontAwesomeIcon icon={faTrash} /></button>
+                        {!readOnly && (
+                          <>
+                            <button onClick={() => handleRename(e)} title="Renombrar" className="p-2 rounded text-gray-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30"><FontAwesomeIcon icon={faPen} /></button>
+                            <button onClick={() => handleDelete(e)} title="Eliminar" className="p-2 rounded text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30"><FontAwesomeIcon icon={faTrash} /></button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

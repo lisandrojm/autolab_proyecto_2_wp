@@ -16,8 +16,22 @@ import { normalizarCuit, parseConstanciaPdf } from "../utils/constanciaPdf.js";
 
 const ESTADO_TYPE = "estado-empleado";
 const INTERVAL_MS = 20 * 60 * 1000; // 20 min: no es tiempo-crítico, alcanza sobrado.
+const LOCK_STALE_MS = 5 * 60 * 1000; // si el candado lleva más de esto tomado, se considera trabado
 
-let isRunning = false;
+// Candado para no correr dos escaneos en simultáneo (manual o del cron). Se guarda CUÁNDO se tomó (no
+// solo un booleano) para poder auto-liberarlo si algo lo deja trabado — p. ej. una llamada a Dropbox que
+// se cuelga sin timeout: sin esto, un solo hang deja el escaneo bloqueado hasta reiniciar el server.
+let runningSince: number | null = null;
+
+function tomarCandado(): boolean {
+  if (runningSince !== null && Date.now() - runningSince < LOCK_STALE_MS) return false;
+  runningSince = Date.now();
+  return true;
+}
+
+function liberarCandado(): void {
+  runningSince = null;
+}
 
 // De-dupe de warnings: no repetir el mismo log en cada corrida mientras el archivo siga sin poder
 // asignarse (se resetea si el server reinicia — aceptable para un log de diagnóstico).
@@ -88,11 +102,10 @@ function extraerFechasDeNombre(nombreArchivo: string): string[] {
 }
 
 async function scanDropboxTriggers() {
-  if (isRunning) {
+  if (!tomarCandado()) {
     console.log("[ESTADO-DROPBOX-CRON] Ya hay una corrida en curso. Se omite esta.");
     return;
   }
-  isRunning = true;
   try {
     const estadosConTrigger = await cargarEstadosPorEvento("dropbox_carpeta");
     if (estadosConTrigger.length === 0) return;
@@ -106,7 +119,7 @@ async function scanDropboxTriggers() {
       }
     }
   } finally {
-    isRunning = false;
+    liberarCandado();
   }
 }
 
@@ -120,12 +133,11 @@ export interface ResultadoEscaneoManual {
 
 /**
  * Dispara un escaneo inmediato de UN tenant (botón "Forzar escaneo ahora" de la UI), sin esperar al
- * cron. Comparte el candado `isRunning` con `scanDropboxTriggers` para que nunca corran dos escaneos en
- * simultáneo, sea manual o automático.
+ * cron. Comparte el candado con `scanDropboxTriggers` para que nunca corran dos escaneos en simultáneo,
+ * sea manual o automático.
  */
 export async function escanearTenantAhora(tenantId: string): Promise<ResultadoEscaneoManual> {
-  if (isRunning) return { enCurso: true };
-  isRunning = true;
+  if (!tomarCandado()) return { enCurso: true };
   try {
     const tenant = await Tenant.findById(tenantId);
     const cfg = tenant ? getTenantDropboxConfig(tenant) : null;
@@ -137,7 +149,7 @@ export async function escanearTenantAhora(tenantId: string): Promise<ResultadoEs
     const transicionesAplicadas = await scanTenant(tenant, estadosConTrigger);
     return { estadosEscaneados: estadosConTrigger.length, transicionesAplicadas };
   } finally {
-    isRunning = false;
+    liberarCandado();
   }
 }
 

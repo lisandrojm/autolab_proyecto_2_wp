@@ -155,13 +155,16 @@ router.get("/list", async (req: AuthenticatedRequest & TenantRequest, res) => {
   }
 });
 
-// GET /dropbox/temp-link?path= - link temporal para descargar/previsualizar
+// GET /dropbox/temp-link?path=&full= - link temporal para descargar/previsualizar. Con full=1, permite
+// una ruta fuera del rootPath (para vistas de solo lectura como la de la carpeta AFIP) — a diferencia de
+// /upload, /create-folder, /move y /delete, que se mantienen siempre acotados al rootPath.
 router.get("/temp-link", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const cfg = await requireConfig(req, res);
     if (!cfg) return;
     const path = String(req.query.path || "");
-    if (!path || !isWithinRoot(cfg, path)) {
+    const full = req.query.full === "1" || req.query.full === "true";
+    if (!path || (!full && !isWithinRoot(cfg, path))) {
       res.status(403).json({ error: "Ruta inválida." });
       return;
     }
@@ -172,12 +175,14 @@ router.get("/temp-link", async (req: AuthenticatedRequest & TenantRequest, res) 
   }
 });
 
-// POST /dropbox/download-zip { paths: string[] } - baja varios archivos y los devuelve como un único ZIP
+// POST /dropbox/download-zip { paths: string[], full? } - baja varios archivos y los devuelve como un
+// único ZIP. Con full=true, permite rutas fuera del rootPath (vistas de solo lectura, ver /temp-link).
 router.post("/download-zip", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const cfg = await requireConfig(req, res);
     if (!cfg) return;
 
+    const full = !!req.body?.full;
     const raw = Array.isArray(req.body?.paths) ? req.body.paths : [];
     // Normaliza, deduplica y valida que todo esté dentro del rootPath permitido.
     const paths: string[] = Array.from(new Set(raw.map((p: any) => String(p || "")).filter(Boolean) as string[]));
@@ -189,7 +194,7 @@ router.post("/download-zip", async (req: AuthenticatedRequest & TenantRequest, r
       res.status(400).json({ error: `Demasiados archivos: máximo ${ZIP_MAX_FILES} por descarga.` });
       return;
     }
-    if (paths.some((p) => !isWithinRoot(cfg, p))) {
+    if (!full && paths.some((p) => !isWithinRoot(cfg, p))) {
       res.status(403).json({ error: "Alguna ruta está fuera de la carpeta permitida." });
       return;
     }
