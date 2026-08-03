@@ -80,61 +80,80 @@ async function scanTenant(tenant, estadosConTrigger) {
     }
 }
 async function scanEstadoParaTenant(tenant, cfg, estadoDestino) {
-    const carpeta = estadoDestino.data?.transicionAutomatica?.dropboxCarpeta;
+    const carpetas = estadoDestino.data?.transicionAutomatica?.carpetas || [];
     const ordenDestino = estadoDestino.data?.ordenDependencia;
-    if (!carpeta || typeof ordenDestino !== "number")
+    if (carpetas.length === 0 || typeof ordenDestino !== "number")
         return;
-    // Candidatos elegibles: contratos de ESTE tenant cuyo estado actual ocupa el paso INMEDIATO anterior.
-    const estadosPrevios = await Info.find({ type: ESTADO_TYPE, "data.ordenDependencia": ordenDestino - 1 })
+    // Candidatos elegibles: contratos de ESTE tenant cuyo estado actual ocupa CUALQUIER paso anterior a
+    // este (no hace falta que sea el inmediato) — si el contrato se saltó pasos intermedios (p. ej. nunca
+    // se detectó el evento de un paso anterior), este evento igual certifica que ya llegó hasta acá. Los
+    // contratos SIN estado asignado ("paso 0") también cuentan — es lo que permite que un evento apunte
+    // directo a un estado del Paso 1 (p. ej. un impositivo detectado por carpeta de Dropbox).
+    const estadosAnteriores = await Info.find({ type: ESTADO_TYPE, "data.ordenDependencia": { $lt: ordenDestino } })
         .select("data.id")
         .lean();
-    const idsPrevios = estadosPrevios.map((e) => e.data?.id).filter((id) => typeof id === "number");
-    if (idsPrevios.length === 0)
-        return;
+    const idsAnteriores = estadosAnteriores.map((e) => e.data?.id).filter((id) => typeof id === "number");
     const projects = await Project.find({ tenantId: tenant._id }).select("_id").lean();
     const projectIds = projects.map((p) => p._id);
     if (projectIds.length === 0)
         return;
-    const userProjects = await UserProject.find({ projectId: { $in: projectIds }, "contracts.estado_id": { $in: idsPrevios } });
-    const candidatos = [];
+    const userProjects = await UserProject.find({
+        projectId: { $in: projectIds },
+        $or: [{ "contracts.estado_id": { $in: idsAnteriores } }, { "contracts.estado_id": null }],
+    });
+    const candidatosBase = [];
     const userIdsSet = new Set();
     for (const up of userProjects) {
         up.contracts.forEach((c, idx) => {
-            if (idsPrevios.includes(c.estado_id)) {
+            const sinEstado = c.estado_id === null || c.estado_id === undefined;
+            if (sinEstado || idsAnteriores.includes(c.estado_id)) {
                 userIdsSet.add(String(up.userId));
-                candidatos.push({ up, idx, userId: String(up.userId), palabras: [] });
+                candidatosBase.push({ up, idx, userId: String(up.userId), palabras: [] });
             }
         });
     }
-    if (candidatos.length === 0)
+    if (candidatosBase.length === 0)
         return;
     const users = await User.find({ _id: { $in: [...userIdsSet] } })
         .select("firstName lastName")
         .lean();
     const nombrePorUserId = new Map(users.map((u) => [String(u._id), normalizarTexto(`${u.firstName || ""} ${u.lastName || ""}`)]));
-    for (const c of candidatos) {
+    for (const c of candidatosBase) {
         c.palabras = (nombrePorUserId.get(c.userId) || "").split(" ").filter(Boolean);
     }
-    let disponibles = candidatos.filter((c) => c.palabras.length > 0);
+    // Compartido entre TODAS las carpetas de este estado: un candidato ya avanzado en una carpeta no
+    // hace falta seguir buscándolo en las demás.
+    let disponibles = candidatosBase.filter((c) => c.palabras.length > 0);
     if (disponibles.length === 0)
         return;
-    const ruta = carpeta.startsWith("/") ? carpeta : `/${carpeta}`;
-    const { entries } = await listFolder(String(tenant._id), cfg, ruta);
-    const archivos = entries.filter((e) => e.tag === "file");
-    for (const file of archivos) {
-        const nombreArchivoNormalizado = normalizarTexto(file.name.replace(/\.[^.]+$/, ""));
-        const matches = disponibles.filter((c) => c.palabras.every((p) => nombreArchivoNormalizado.includes(p)));
-        const key = `${tenant._id}:${estadoDestino._id}:${file.path}`;
-        if (matches.length !== 1) {
-            logSiCambio(key, matches.length === 0 ? "sin_candidato" : `ambiguo_${matches.length}`, `[ESTADO-DROPBOX-CRON] ${file.path}: ${matches.length === 0 ? "sin candidato" : `ambiguo (${matches.length} candidatos)`} — se omite (destino: ${estadoDestino.name})`);
+    for (const { dropboxCarpeta: carpeta } of carpetas) {
+        if (disponibles.length === 0)
+            break;
+        const ruta = carpeta.startsWith("/") ? carpeta : `/${carpeta}`;
+        let entries;
+        try {
+            ({ entries } = await listFolder(String(tenant._id), cfg, ruta));
+        }
+        catch (err) {
+            console.error(`[ESTADO-DROPBOX-CRON] No se pudo listar "${ruta}" para "${estadoDestino.name}":`, err);
             continue;
         }
-        const candidato = matches[0];
-        disponibles = disponibles.filter((c) => c !== candidato);
-        const resultado = await aplicarTransicion(candidato.up, candidato.idx, estadoDestino);
-        if (resultado.aplicada) {
-            lastWarned.delete(key);
-            console.log(`[ESTADO-DROPBOX-CRON] ${candidato.userId}: ${resultado.estadoAnteriorId} → ${estadoDestino.name} (archivo: ${file.name})`);
+        const archivos = entries.filter((e) => e.tag === "file");
+        for (const file of archivos) {
+            const nombreArchivoNormalizado = normalizarTexto(file.name.replace(/\.[^.]+$/, ""));
+            const matches = disponibles.filter((c) => c.palabras.every((p) => nombreArchivoNormalizado.includes(p)));
+            const key = `${tenant._id}:${estadoDestino._id}:${file.path}`;
+            if (matches.length !== 1) {
+                logSiCambio(key, matches.length === 0 ? "sin_candidato" : `ambiguo_${matches.length}`, `[ESTADO-DROPBOX-CRON] ${file.path}: ${matches.length === 0 ? "sin candidato" : `ambiguo (${matches.length} candidatos)`} — se omite (destino: ${estadoDestino.name})`);
+                continue;
+            }
+            const candidato = matches[0];
+            disponibles = disponibles.filter((c) => c !== candidato);
+            const resultado = await aplicarTransicion(candidato.up, candidato.idx, estadoDestino);
+            if (resultado.aplicada) {
+                lastWarned.delete(key);
+                console.log(`[ESTADO-DROPBOX-CRON] ${candidato.userId}: ${resultado.estadoAnteriorId} → ${estadoDestino.name} (archivo: ${file.name}, carpeta: ${ruta})`);
+            }
         }
     }
 }

@@ -16,8 +16,13 @@ const infoSchema = new Schema({
         ordenDependencia: { type: Number },
         transicionAutomatica: {
             evento: { type: String },
-            dropboxCarpeta: { type: String },
-            detalle: { type: String },
+            carpetas: [
+                {
+                    _id: false,
+                    dropboxCarpeta: { type: String },
+                    detalle: { type: String },
+                },
+            ],
         },
     },
     name: { type: String, required: true },
