@@ -21,6 +21,12 @@ export interface IInfo extends Document {
         orden?: number;
         /** Estados: paso dentro del flujo de dependencias (alternativas comparten número). Ausente = fuera del flujo. */
         ordenDependencia?: number;
+        /** Estados: transición automática hacia ESTE estado al ocurrir un evento. Requiere `ordenDependencia`. */
+        transicionAutomatica?: {
+            evento: "alta_documento_subido" | "dropbox_carpeta";
+            /** Solo con evento "dropbox_carpeta": carpeta a vigilar, relativa al rootPath de Dropbox del tenant. */
+            dropboxCarpeta?: string;
+        };
         [key: string]: any;
     };
     name: string;

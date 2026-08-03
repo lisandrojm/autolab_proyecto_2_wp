@@ -19,6 +19,7 @@ import { ensureAllTenantsHaveDefaultRoles } from "./services/roleInitService.js"
 import { ensureAllTenantsHaveDefaultShifts } from "./services/shiftInitService.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { initCronScheduler } from "./services/cronService.js";
+import { initEstadoDropboxScheduler } from "./services/estadoDropboxCronService.js";
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
 import { authRoutes } from "./routes/auth.js";
 import { secureRoutes } from "./routes/secure.js";
@@ -222,6 +223,13 @@ connectDB()
     }
     catch (error) {
         console.error("❌ Failed to initialize background scheduler:", error);
+    }
+    // Initialize the Estado auto-transition Dropbox folder scanner
+    try {
+        initEstadoDropboxScheduler();
+    }
+    catch (error) {
+        console.error("❌ Failed to initialize estado-dropbox scheduler:", error);
     }
     if (String(env.SEED_ON_START) === "true") {
         try {

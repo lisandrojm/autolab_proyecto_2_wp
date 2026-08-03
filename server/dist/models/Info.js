@@ -14,6 +14,10 @@ const infoSchema = new Schema({
         tipoImpositivo: { type: String },
         orden: { type: Number },
         ordenDependencia: { type: Number },
+        transicionAutomatica: {
+            evento: { type: String },
+            dropboxCarpeta: { type: String },
+        },
     },
     name: { type: String, required: true },
 }, {
