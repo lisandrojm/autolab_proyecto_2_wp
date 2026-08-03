@@ -1,10 +1,13 @@
 /**
  * Nomenclatura de archivos descargados (contratos y releases):
- *   [proyecto]_[Contrato|Release]_[nombreDoc]_[YYYY_MM_DD]_[apellido]_[nombres]
+ *   [proyecto]_[Contrato|Release]_[nombreDoc]_[YYYY_MM_DD]_[apellido]_[nombres]_[cuit]_[fechaAlta]_[fechaBaja]
  *
  * - `proyecto`: número/ID externo del proyecto (ej. 426).
  * - `nombreDoc`: opcional; para releases es el nombre del release.
  * - fecha: día de la descarga (hoy) en formato YYYY_MM_DD.
+ * - cuit/fechaAlta/fechaBaja: tokens compactos (sin separadores) para que
+ *   `estadoDropboxCronService.ts` pueda identificar el contrato sin ambigüedad cuando este archivo
+ *   vuelve a Dropbox (p. ej. tras pasar por Dropbox Sign, que preserva el nombre de archivo).
  * Devuelve el nombre SIN extensión (el caller agrega `.docx`).
  */
 export declare function buildDocFileName(opts: {

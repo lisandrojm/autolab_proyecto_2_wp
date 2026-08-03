@@ -18,6 +18,7 @@ import {
   clearTenantToken,
   isWithinRoot,
 } from "../services/dropboxService.js";
+import { escanearTenantAhora } from "../services/estadoDropboxCronService.js";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
@@ -293,6 +294,33 @@ router.delete("/delete", async (req: AuthenticatedRequest & TenantRequest, res) 
     }
     await deleteEntry(String(req.tenantObjectId), cfg, path);
     res.json({ ok: true });
+  } catch (error) {
+    dropboxError(res, error);
+  }
+});
+
+// POST /dropbox/estado-scan/trigger - fuerza ya mismo el escaneo de transición automática de ESTE
+// tenant (solo admin), en vez de esperar la corrida periódica del cron (cada 20 min).
+router.post("/estado-scan/trigger", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    if (!isAdmin(req)) {
+      res.status(403).json({ error: "Solo un administrador puede forzar el escaneo." });
+      return;
+    }
+    const resultado = await escanearTenantAhora(String(req.tenantObjectId));
+    if (resultado.enCurso) {
+      res.status(409).json({ error: "Ya hay un escaneo en curso. Esperá a que termine e intentá de nuevo." });
+      return;
+    }
+    if (resultado.error === "dropbox_no_conectado") {
+      res.status(400).json({ error: "Dropbox no está conectado para esta organización." });
+      return;
+    }
+    if (resultado.error === "sin_transiciones_configuradas") {
+      res.status(400).json({ error: "No hay ninguna transición automática configurada todavía." });
+      return;
+    }
+    res.json({ estadosEscaneados: resultado.estadosEscaneados, transicionesAplicadas: resultado.transicionesAplicadas });
   } catch (error) {
     dropboxError(res, error);
   }

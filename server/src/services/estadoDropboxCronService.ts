@@ -110,23 +110,56 @@ async function scanDropboxTriggers() {
   }
 }
 
-async function scanTenant(tenant: any, estadosConTrigger: IInfo[]) {
-  const cfg = getTenantDropboxConfig(tenant);
-  if (!cfg) return;
+export interface ResultadoEscaneoManual {
+  /** Ya había un escaneo (manual o del cron) en curso — no se disparó uno nuevo. */
+  enCurso?: boolean;
+  error?: "dropbox_no_conectado" | "sin_transiciones_configuradas";
+  estadosEscaneados?: number;
+  transicionesAplicadas?: number;
+}
 
+/**
+ * Dispara un escaneo inmediato de UN tenant (botón "Forzar escaneo ahora" de la UI), sin esperar al
+ * cron. Comparte el candado `isRunning` con `scanDropboxTriggers` para que nunca corran dos escaneos en
+ * simultáneo, sea manual o automático.
+ */
+export async function escanearTenantAhora(tenantId: string): Promise<ResultadoEscaneoManual> {
+  if (isRunning) return { enCurso: true };
+  isRunning = true;
+  try {
+    const tenant = await Tenant.findById(tenantId);
+    const cfg = tenant ? getTenantDropboxConfig(tenant) : null;
+    if (!cfg) return { error: "dropbox_no_conectado" };
+
+    const estadosConTrigger = await cargarEstadosPorEvento("dropbox_carpeta");
+    if (estadosConTrigger.length === 0) return { error: "sin_transiciones_configuradas" };
+
+    const transicionesAplicadas = await scanTenant(tenant, estadosConTrigger);
+    return { estadosEscaneados: estadosConTrigger.length, transicionesAplicadas };
+  } finally {
+    isRunning = false;
+  }
+}
+
+async function scanTenant(tenant: any, estadosConTrigger: IInfo[]): Promise<number> {
+  const cfg = getTenantDropboxConfig(tenant);
+  if (!cfg) return 0;
+
+  let transicionesAplicadas = 0;
   for (const estadoDestino of estadosConTrigger) {
     try {
-      await scanEstadoParaTenant(tenant, cfg, estadoDestino);
+      transicionesAplicadas += await scanEstadoParaTenant(tenant, cfg, estadoDestino);
     } catch (err) {
       console.error(`[ESTADO-DROPBOX-CRON] Falló el escaneo de "${estadoDestino.name}" para el tenant ${tenant._id}:`, err);
     }
   }
+  return transicionesAplicadas;
 }
 
-async function scanEstadoParaTenant(tenant: any, cfg: NonNullable<ReturnType<typeof getTenantDropboxConfig>>, estadoDestino: IInfo) {
+async function scanEstadoParaTenant(tenant: any, cfg: NonNullable<ReturnType<typeof getTenantDropboxConfig>>, estadoDestino: IInfo): Promise<number> {
   const carpetas = estadoDestino.data?.transicionAutomatica?.carpetas || [];
   const ordenDestino = estadoDestino.data?.ordenDependencia;
-  if (carpetas.length === 0 || typeof ordenDestino !== "number") return;
+  if (carpetas.length === 0 || typeof ordenDestino !== "number") return 0;
 
   // Candidatos elegibles: contratos de ESTE tenant cuyo estado actual ocupa CUALQUIER paso anterior a
   // este (no hace falta que sea el inmediato) — si el contrato se saltó pasos intermedios (p. ej. nunca
@@ -140,7 +173,7 @@ async function scanEstadoParaTenant(tenant: any, cfg: NonNullable<ReturnType<typ
 
   const projects = await Project.find({ tenantId: tenant._id }).select("_id").lean();
   const projectIds = projects.map((p: any) => p._id);
-  if (projectIds.length === 0) return;
+  if (projectIds.length === 0) return 0;
 
   const userProjects = await UserProject.find({
     projectId: { $in: projectIds },
@@ -165,7 +198,7 @@ async function scanEstadoParaTenant(tenant: any, cfg: NonNullable<ReturnType<typ
       }
     });
   }
-  if (candidatosBase.length === 0) return;
+  if (candidatosBase.length === 0) return 0;
 
   const users = await User.find({ _id: { $in: [...userIdsSet] } })
     .select("firstName lastName metadata.cuit")
@@ -179,8 +212,9 @@ async function scanEstadoParaTenant(tenant: any, cfg: NonNullable<ReturnType<typ
   // Compartido entre TODAS las carpetas de este estado: un candidato ya avanzado en una carpeta no
   // hace falta seguir buscándolo en las demás.
   let disponibles = candidatosBase.filter((c) => c.palabras.length > 0 || c.cuit);
-  if (disponibles.length === 0) return;
+  if (disponibles.length === 0) return 0;
 
+  let transicionesAplicadas = 0;
   for (const { dropboxCarpeta: carpeta } of carpetas) {
     if (disponibles.length === 0) break;
     const ruta = carpeta.startsWith("/") ? carpeta : `/${carpeta}`;
@@ -249,8 +283,10 @@ async function scanEstadoParaTenant(tenant: any, cfg: NonNullable<ReturnType<typ
       const resultado = await aplicarTransicion(candidato.up, candidato.idx, estadoDestino);
       if (resultado.aplicada) {
         lastWarned.delete(key);
+        transicionesAplicadas++;
         console.log(`[ESTADO-DROPBOX-CRON] ${candidato.userId}: ${resultado.estadoAnteriorId} → ${estadoDestino.name} (archivo: ${file.name}, carpeta: ${ruta}${cuitEncontrado ? `, CUIT vía ${viaCuit}` : ", por nombre"})`);
       }
     }
   }
+  return transicionesAplicadas;
 }

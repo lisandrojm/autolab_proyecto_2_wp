@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faTrash, faArrowUp, faArrowDown, faXmark, faCheck, faSpinner, faLayerGroup, faGripVertical, faFileInvoiceDollar, faBolt, faCircleInfo, faFolder, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faTrash, faArrowUp, faArrowDown, faXmark, faCheck, faSpinner, faLayerGroup, faGripVertical, faFileInvoiceDollar, faBolt, faCircleInfo, faFolder, faTriangleExclamation, faArrowsRotate } from "@fortawesome/free-solid-svg-icons";
 import {
   DndContext,
   DragOverlay,
@@ -174,6 +174,7 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
   const [eventoOverrides, setEventoOverrides] = useState<Record<string, TransicionAutomatica | null>>({});
   const [configurando, setConfigurando] = useState<InfoItem | null>(null);
   const [showFlowInfo, setShowFlowInfo] = useState(false);
+  const [escaneando, setEscaneando] = useState(false);
   const [eventoForm, setEventoForm] = useState<{ carpetas: { dropboxCarpeta: string; detalle: string }[] }>({ carpetas: [] });
   const [savingEvento, setSavingEvento] = useState(false);
   // Selector de carpeta de Dropbox: navega el árbol real en vez de tipear la ruta a ciegas. Navega TODO
@@ -214,6 +215,18 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
   const agregarCarpetaDirecto = (estado: InfoItem) => {
     abrirConfigurarEvento(estado);
     abrirPicker();
+  };
+
+  const forzarEscaneo = async () => {
+    setEscaneando(true);
+    try {
+      const { transicionesAplicadas } = await dropboxAPI.forzarEscaneoEstados();
+      sweetAlert.success("Escaneo completo", transicionesAplicadas > 0 ? `Se aplicaron ${transicionesAplicadas} transición(es).` : "No se encontraron archivos nuevos para aplicar.");
+    } catch (e: any) {
+      sweetAlert.error("No se pudo escanear", e?.response?.data?.error || "No se pudo forzar el escaneo. Intentá de nuevo.");
+    } finally {
+      setEscaneando(false);
+    }
   };
 
   // Dos estados no pueden vigilar la misma carpeta (si no, sería ambiguo a cuál avanzar). Se excluye
@@ -450,6 +463,16 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
           Orden de dependencias
           <button type="button" onClick={() => setShowFlowInfo(true)} title="¿Cómo funciona el flujo de dependencias?" aria-label="¿Cómo funciona el flujo de dependencias?" className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
             <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={forzarEscaneo}
+            disabled={escaneando}
+            title="Forzar ya mismo el escaneo de las carpetas de Dropbox vigiladas, sin esperar los 20 minutos del escaneo automático"
+            className="inline-flex items-center gap-1.5 ml-1 px-2 py-1 rounded-md text-[11px] font-semibold text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <FontAwesomeIcon icon={faArrowsRotate} className="h-3 w-3" spin={escaneando} />
+            {escaneando ? "Escaneando…" : "Forzar escaneo ahora"}
           </button>
         </span>
       }

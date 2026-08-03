@@ -70,4 +70,10 @@ export const dropboxAPI = {
   async remove(path: string): Promise<void> {
     await axios.delete("/dropbox/delete", { data: { path } });
   },
+
+  /** Fuerza ya mismo el escaneo de transición automática (carpetas de Dropbox) de este tenant. */
+  async forzarEscaneoEstados(): Promise<{ estadosEscaneados: number; transicionesAplicadas: number }> {
+    const { data } = await axios.post("/dropbox/estado-scan/trigger");
+    return data;
+  },
 };
