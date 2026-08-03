@@ -502,7 +502,7 @@ class ProjectsAPI {
   }
 
   /** Sube (o reemplaza) el PDF de "Alta" (AFIP/Servicios) de un contrato puntual (por índice). */
-  async uploadAltaDocumento(projectId: string, userId: string, contractIndex: number, file: File): Promise<{ altaDocumentoUrl: string; altaDocumentoNombre: string }> {
+  async uploadAltaDocumento(projectId: string, userId: string, contractIndex: number, file: File): Promise<{ altaDocumentoUrl: string; altaDocumentoNombre: string; estadoAuto?: { id: number; nombre: string } }> {
     const formData = new FormData();
     formData.append("document", file);
     // Sin headers explícitos: el interceptor global de axios pone Authorization/X-Tenant-Id y deja que

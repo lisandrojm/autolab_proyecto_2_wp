@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileInvoiceDollar, faFileSignature, faScrewdriverWrench, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI, ContractOverviewRow } from "../../api/users";
@@ -9,7 +9,7 @@ import { categoriaSatAPI, CategoriaSatItem } from "../../api/categoriasSat";
 import { createSimpleCatalogApi, SimpleCatalogItem } from "../../api/simpleCatalog";
 import { Release } from "../../api/release";
 import { claveEstado, EstadoBadge, estadoLabel } from "../EstadoSelect";
-import { isContractVigente } from "../team/ContractCard";
+import { isContractVigente, formatDate } from "../team/ContractCard";
 import { SearchAndFilters } from "../ui/SearchAndFilters";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { EmptyState } from "../ui/EmptyState";
@@ -28,12 +28,6 @@ const MOBILE_ROLE_OPTIONS = [
   { value: "coordinador", label: "Mobile-Coordinador" },
 ];
 
-/** Estilo de pestaña (subrayado), igual que el resto de los tabs de la app. */
-const tabBtnClass = (active: boolean): string =>
-  `px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-    active ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-  }`;
-
 /** YYYYMMDD de hoy para el nombre del archivo. */
 const hoyStamp = (): string => {
   const d = new Date();
@@ -49,21 +43,22 @@ const TIPO_LABEL: Record<TipoImpositivo, string> = {
 /** Fila de contrato enriquecida con el trámite impositivo de su estado actual. */
 type ImpositivoRow = ContractOverviewRow & { _tipo?: TipoImpositivo; _estadoName: string };
 
-const fmtFecha = (s?: string): string => {
-  if (!s) return "";
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
-  return m ? `${m[3]}/${m[2]}/${m[1]}` : s;
-};
-
 /**
  * Sub-pestaña "Altas de AFIP | Constancia de CUIT": lista SOLO lectura de los contratos cuyo estado
  * actual es un estado impositivo, con su trámite (Alta temprana de AFIP / Constancia de CUIT),
  * filtros y exportación a CSV.
  */
-export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFrames: ContratoFrameItem[]; releases: Release[]; initialProjectId?: string }> = ({ allEstados, contratoFrames, releases, initialProjectId = "" }) => {
+export const ContractBulkAfipTab: React.FC<{
+  allEstados: InfoItem[];
+  contratoFrames: ContratoFrameItem[];
+  releases: Release[];
+  initialProjectId?: string;
+  tipo: TipoImpositivo;
+  /** Informa al padre la cantidad de contratos de cada trámite, para mostrarla en sus propias pestañas. */
+  onCounts?: (counts: { alta: number; cuit: number }) => void;
+}> = ({ allEstados, contratoFrames, releases, initialProjectId = "", tipo: filterTipo, onCounts }) => {
   const [rows, setRows] = useState<ContractOverviewRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterTipo, setFilterTipo] = useState<"" | TipoImpositivo>("alta_temprana_afip");
   const [search, setSearch] = useState("");
   const [soloIncompletos, setSoloIncompletos] = useState(false);
   /** Sub-pestaña Constancia de CUIT: mostrar solo las que faltan o ya vencieron (el worklist). */
@@ -172,23 +167,12 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
     return out;
   }, [rows, impositivoPorClave, afipCat]);
 
-  const countAlta = impositivoRows.filter((x) => x.row._tipo === "alta_temprana_afip").length;
-  const countCuit = impositivoRows.filter((x) => x.row._tipo === "constancia_cuit").length;
-  const countCompletos = impositivoRows.filter((x) => x.result.completo).length;
-  const countIncompletos = impositivoRows.length - countCompletos;
-
-  // Constancias de CUIT: vigentes vs. pendientes (las que faltan o ya vencieron, que son las que hay
-  // que volver a pedirle a ARCA). Se cuentan sobre todas las de ese trámite, como countAlta/countCuit.
-  const constanciaRows = useMemo(() => impositivoRows.filter((x) => x.row._tipo === "constancia_cuit"), [impositivoRows]);
-  const countConstPendientes = constanciaRows.filter((x) => constanciaPendiente(x.row)).length;
-  const countConstVigentes = constanciaRows.length - countConstPendientes;
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return impositivoRows.filter(({ row: r, result }) => {
-      if (filterTipo && r._tipo !== filterTipo) return false;
-      if (soloIncompletos && result.completo) return false;
-      if (soloPendientes && filterTipo === "constancia_cuit" && !constanciaPendiente(r)) return false;
+  // Filtros de la barra superior (búsqueda + filtro avanzado), sin el trámite ni los toggles propios
+  // de cada pestaña: se usa tanto para la tabla como para los contadores de las pestañas, que deben
+  // reflejar los filtros activos (p. ej. "Contratos: Vigentes") aunque pertenezcan al otro trámite.
+  const matchesCommonFilters = useCallback(
+    (r: ImpositivoRow): boolean => {
+      const q = search.trim().toLowerCase();
       if (filterUserStatus && r.userActivo !== (filterUserStatus === "active")) return false;
       if (filterVigencia) {
         const vig = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
@@ -205,8 +189,38 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
         if (!hay) return false;
       }
       return true;
+    },
+    [search, filterUserStatus, filterVigencia, filterRolMobile, filterTipoContrato, filterEstadoContrato, filterReemplazo, filterClientId, filterProjectId]
+  );
+
+  const rowsPorFiltrosComunes = useMemo(() => impositivoRows.filter((x) => matchesCommonFilters(x.row)), [impositivoRows, matchesCommonFilters]);
+
+  const countAlta = rowsPorFiltrosComunes.filter((x) => x.row._tipo === "alta_temprana_afip").length;
+  const countCuit = rowsPorFiltrosComunes.filter((x) => x.row._tipo === "constancia_cuit").length;
+  const countCompletos = impositivoRows.filter((x) => x.result.completo).length;
+  const countIncompletos = impositivoRows.length - countCompletos;
+
+  // Ref para no re-disparar el aviso al padre por un `onCounts` con identidad nueva en cada render.
+  const onCountsRef = useRef(onCounts);
+  onCountsRef.current = onCounts;
+  useEffect(() => {
+    onCountsRef.current?.({ alta: countAlta, cuit: countCuit });
+  }, [countAlta, countCuit]);
+
+  // Constancias de CUIT: vigentes vs. pendientes (las que faltan o ya vencieron, que son las que hay
+  // que volver a pedirle a ARCA). Se cuentan sobre todas las de ese trámite, como countAlta/countCuit.
+  const constanciaRows = useMemo(() => impositivoRows.filter((x) => x.row._tipo === "constancia_cuit"), [impositivoRows]);
+  const countConstPendientes = constanciaRows.filter((x) => constanciaPendiente(x.row)).length;
+  const countConstVigentes = constanciaRows.length - countConstPendientes;
+
+  const filtered = useMemo(() => {
+    return rowsPorFiltrosComunes.filter(({ row: r, result }) => {
+      if (filterTipo && r._tipo !== filterTipo) return false;
+      if (soloIncompletos && result.completo) return false;
+      if (soloPendientes && filterTipo === "constancia_cuit" && !constanciaPendiente(r)) return false;
+      return true;
     });
-  }, [impositivoRows, filterTipo, search, soloIncompletos, soloPendientes, filterUserStatus, filterVigencia, filterRolMobile, filterTipoContrato, filterEstadoContrato, filterReemplazo, filterClientId, filterProjectId]);
+  }, [rowsPorFiltrosComunes, filterTipo, soloIncompletos, soloPendientes]);
 
   // Opciones de los selects del filtro avanzado, derivadas de lo cargado.
   const clientOptions = useMemo(() => {
@@ -304,16 +318,6 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
             </button>
           </div>
         )}
-      </div>
-
-      {/* Sub-tabs por trámite impositivo (mismo estilo de pestañas que el resto de la app) */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
-        <button className={tabBtnClass(filterTipo === "alta_temprana_afip")} onClick={() => setFilterTipo("alta_temprana_afip")}>
-          Alta temprana de AFIP ({countAlta})
-        </button>
-        <button className={tabBtnClass(filterTipo === "constancia_cuit")} onClick={() => setFilterTipo("constancia_cuit")}>
-          Constancia de CUIT ({countCuit})
-        </button>
       </div>
 
       {/* Barra de completitud + acción, en la misma línea. El TXT solo aplica a Alta temprana de AFIP. */}
@@ -481,18 +485,13 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
           <div className="overflow-x-auto custom-scrollbar max-h-[640px]">
-            <table className="w-full text-left border-collapse min-w-[2260px]">
+            <table className="w-full text-left border-collapse min-w-[1650px]">
               <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
                 <tr className="border-b border-gray-100 dark:border-gray-800">
                   <th className="px-4 py-3 w-10">
                     <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={selectableFiltered.length === 0} title="Seleccionar todos los completos" className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                   </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Cliente</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Contrato</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Estado</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Trámite impositivo</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Alta / Baja</th>
                   {filterTipo === "constancia_cuit" && (
                     <>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Dato para buscar la Constancia de Inscripción / CUIT en ARCA">Datos CUIT/CUIL</th>
@@ -500,8 +499,12 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
                     </>
                   )}
                   {filterTipo === "alta_temprana_afip" && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Datos AFIP</th>}
-                  <ContractDocsHeaders />
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Alta</th>
+                  <ContractDocsHeaders showContrato={false} showRelease={false} altaLabel={filterTipo === "alta_temprana_afip" ? "Alta AFIP" : "Alta Servicios"} />
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Cliente</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Contrato</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Estado</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -517,31 +520,23 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
                         className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                       />
                     </td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{r.userName}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || "—"}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || "—"}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.nombre_contrato || "—"}</td>
-                    <td className="px-4 py-3">
-                      <EstadoBadge name={r._estadoName} />
-                    </td>
-                    <td className="px-4 py-3">
-                      {r._tipo ? (
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap ${
-                            r._tipo === "alta_temprana_afip"
-                              ? "bg-purple-600 text-white border-purple-600 dark:bg-purple-500 dark:border-purple-500"
-                              : "bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700"
-                          }`}
-                        >
-                          <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" />
-                          {TIPO_LABEL[r._tipo]}
-                        </span>
-                      ) : (
-                        <span className="text-[11px] text-gray-400 italic">Sin trámite definido</span>
-                      )}
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 whitespace-nowrap">
+                      {(() => {
+                        const vigente = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
+                        return (
+                          <div className="flex flex-col gap-1">
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>
+                            <div className="flex flex-col gap-0.5 text-xs">
+                              <span>
+                                <span className="text-gray-400">Alta:</span> {formatDate(r.fecha_alta_contrato)}
+                              </span>
+                              <span>
+                                <span className="text-gray-400">Baja:</span> {r.fecha_baja_contrato ? formatDate(r.fecha_baja_contrato) : "—"}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </td>
                     {filterTipo === "constancia_cuit" && (
                       <>
@@ -597,8 +592,36 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
                       onDownloadContract={handleDownloadContract}
                       onDownloadRelease={handleDownloadRelease}
                       onUploadAlta={handleUploadAlta}
+                      showContrato={false}
+                      showRelease={false}
+                      hideAltaLabel
                     />
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{fmtFecha(r.fecha_alta_contrato) || "—"}</td>
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{r.userName}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || "—"}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || "—"}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.nombre_contrato || "—"}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col items-start gap-1">
+                        <EstadoBadge name={r._estadoName} />
+                        {r._tipo ? (
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap ${
+                              r._tipo === "alta_temprana_afip"
+                                ? "bg-purple-600 text-white border-purple-600 dark:bg-purple-500 dark:border-purple-500"
+                                : "bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700"
+                            }`}
+                          >
+                            <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" />
+                            {TIPO_LABEL[r._tipo]}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-gray-400 italic">Sin trámite definido</span>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

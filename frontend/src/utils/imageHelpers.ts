@@ -90,3 +90,26 @@ export function getImageFullUrl(imageUrl: string | undefined | null): string | u
   // Usar la misma lógica que getImageUrl
   return getImageUrl(imageUrl);
 }
+
+/**
+ * Descarga un archivo ya subido (URL estática, p. ej. `/storage/...`) forzando el diálogo de
+ * "Guardar como" en vez de solo abrirlo en una pestaña nueva (que es lo que hace un `<a href>`
+ * normal con un PDF, y lo único que se puede lograr con el atributo `download` del `<a>` cuando el
+ * archivo vive en otro origen/puerto que el frontend, como pasa acá). `/storage` es público (sin
+ * auth), así que un `fetch` directo alcanza, sin pasar por el axios con token de `axiosConfig`.
+ */
+export async function downloadFileFromUrl(fileUrl: string, filename: string): Promise<void> {
+  const resolved = getImageUrl(fileUrl);
+  if (!resolved) throw new Error("URL de archivo inválida");
+  const response = await fetch(resolved);
+  if (!response.ok) throw new Error(`No se pudo descargar el archivo (${response.status})`);
+  const blob = await response.blob();
+  const objectUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(objectUrl);
+}

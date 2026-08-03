@@ -1,0 +1,162 @@
+import { Info, IInfo } from "../models/Info.js";
+import { Tenant } from "../models/Tenant.js";
+import { Project } from "../models/Project.js";
+import { User } from "../models/User.js";
+import UserProject, { IUserProject } from "../models/UserProject.js";
+import { getTenantDropboxConfig, listFolder, DropboxEntry } from "./dropboxService.js";
+import { cargarEstadosPorEvento, aplicarTransicion } from "./estadoTransicionAutomaticaService.js";
+
+/**
+ * Job periódico: revisa, para cada Estado con transición automática "dropbox_carpeta", si aparecieron
+ * archivos nuevos en la carpeta de Dropbox configurada, y si matchean (por nombre) a un contrato que
+ * está esperando ese paso, lo avanza. No hay webhooks de Dropbox en la app, así que esto se resuelve
+ * por polling (mismo patrón que `cronService.ts`).
+ */
+
+const ESTADO_TYPE = "estado-empleado";
+const INTERVAL_MS = 20 * 60 * 1000; // 20 min: no es tiempo-crítico, alcanza sobrado.
+
+let isRunning = false;
+
+// De-dupe de warnings: no repetir el mismo log en cada corrida mientras el archivo siga sin poder
+// asignarse (se resetea si el server reinicia — aceptable para un log de diagnóstico).
+const lastWarned = new Map<string, string>();
+
+export const initEstadoDropboxScheduler = () => {
+  console.log("[ESTADO-DROPBOX-CRON] Initializing scheduler...");
+
+  setTimeout(() => {
+    scanDropboxTriggers().catch((err) => console.error("[ESTADO-DROPBOX-CRON] Initial scan error:", err));
+  }, 10 * 1000);
+
+  setInterval(() => {
+    scanDropboxTriggers().catch((err) => console.error("[ESTADO-DROPBOX-CRON] Interval scan error:", err));
+  }, INTERVAL_MS);
+};
+
+/** minúsculas, sin acentos, solo alfanumérico/espacios — para comparar nombres sin depender del formato exacto. */
+function normalizarTexto(s: string): string {
+  return (s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function logSiCambio(key: string, estadoLog: string, mensaje: string) {
+  if (lastWarned.get(key) === estadoLog) return;
+  lastWarned.set(key, estadoLog);
+  console.warn(mensaje);
+}
+
+interface Candidato {
+  up: IUserProject;
+  idx: number;
+  userId: string;
+  palabras: string[];
+}
+
+async function scanDropboxTriggers() {
+  if (isRunning) {
+    console.log("[ESTADO-DROPBOX-CRON] Ya hay una corrida en curso. Se omite esta.");
+    return;
+  }
+  isRunning = true;
+  try {
+    const estadosConTrigger = await cargarEstadosPorEvento("dropbox_carpeta");
+    if (estadosConTrigger.length === 0) return;
+
+    const tenants = await Tenant.find({ "integrations.dropbox.refreshTokenEnc": { $exists: true } });
+    for (const tenant of tenants) {
+      try {
+        await scanTenant(tenant, estadosConTrigger);
+      } catch (err) {
+        console.error(`[ESTADO-DROPBOX-CRON] Falló el escaneo del tenant ${tenant._id}:`, err);
+      }
+    }
+  } finally {
+    isRunning = false;
+  }
+}
+
+async function scanTenant(tenant: any, estadosConTrigger: IInfo[]) {
+  const cfg = getTenantDropboxConfig(tenant);
+  if (!cfg) return;
+
+  for (const estadoDestino of estadosConTrigger) {
+    try {
+      await scanEstadoParaTenant(tenant, cfg, estadoDestino);
+    } catch (err) {
+      console.error(`[ESTADO-DROPBOX-CRON] Falló el escaneo de "${estadoDestino.name}" para el tenant ${tenant._id}:`, err);
+    }
+  }
+}
+
+async function scanEstadoParaTenant(tenant: any, cfg: NonNullable<ReturnType<typeof getTenantDropboxConfig>>, estadoDestino: IInfo) {
+  const carpeta = estadoDestino.data?.transicionAutomatica?.dropboxCarpeta;
+  const ordenDestino = estadoDestino.data?.ordenDependencia;
+  if (!carpeta || typeof ordenDestino !== "number") return;
+
+  // Candidatos elegibles: contratos de ESTE tenant cuyo estado actual ocupa el paso INMEDIATO anterior.
+  const estadosPrevios = await Info.find({ type: ESTADO_TYPE, "data.ordenDependencia": ordenDestino - 1 })
+    .select("data.id")
+    .lean();
+  const idsPrevios = estadosPrevios.map((e: any) => e.data?.id).filter((id: any) => typeof id === "number");
+  if (idsPrevios.length === 0) return;
+
+  const projects = await Project.find({ tenantId: tenant._id }).select("_id").lean();
+  const projectIds = projects.map((p: any) => p._id);
+  if (projectIds.length === 0) return;
+
+  const userProjects = await UserProject.find({ projectId: { $in: projectIds }, "contracts.estado_id": { $in: idsPrevios } });
+  const candidatos: Candidato[] = [];
+  const userIdsSet = new Set<string>();
+  for (const up of userProjects) {
+    up.contracts.forEach((c: any, idx: number) => {
+      if (idsPrevios.includes(c.estado_id)) {
+        userIdsSet.add(String(up.userId));
+        candidatos.push({ up, idx, userId: String(up.userId), palabras: [] });
+      }
+    });
+  }
+  if (candidatos.length === 0) return;
+
+  const users = await User.find({ _id: { $in: [...userIdsSet] } })
+    .select("firstName lastName")
+    .lean();
+  const nombrePorUserId = new Map(users.map((u: any) => [String(u._id), normalizarTexto(`${u.firstName || ""} ${u.lastName || ""}`)]));
+  for (const c of candidatos) {
+    c.palabras = (nombrePorUserId.get(c.userId) || "").split(" ").filter(Boolean);
+  }
+  let disponibles = candidatos.filter((c) => c.palabras.length > 0);
+  if (disponibles.length === 0) return;
+
+  const ruta = carpeta.startsWith("/") ? carpeta : `/${carpeta}`;
+  const { entries } = await listFolder(String(tenant._id), cfg, ruta);
+  const archivos = entries.filter((e: DropboxEntry) => e.tag === "file");
+
+  for (const file of archivos) {
+    const nombreArchivoNormalizado = normalizarTexto(file.name.replace(/\.[^.]+$/, ""));
+    const matches = disponibles.filter((c) => c.palabras.every((p) => nombreArchivoNormalizado.includes(p)));
+    const key = `${tenant._id}:${estadoDestino._id}:${file.path}`;
+
+    if (matches.length !== 1) {
+      logSiCambio(
+        key,
+        matches.length === 0 ? "sin_candidato" : `ambiguo_${matches.length}`,
+        `[ESTADO-DROPBOX-CRON] ${file.path}: ${matches.length === 0 ? "sin candidato" : `ambiguo (${matches.length} candidatos)`} — se omite (destino: ${estadoDestino.name})`,
+      );
+      continue;
+    }
+
+    const candidato = matches[0];
+    disponibles = disponibles.filter((c) => c !== candidato);
+    const resultado = await aplicarTransicion(candidato.up, candidato.idx, estadoDestino);
+    if (resultado.aplicada) {
+      lastWarned.delete(key);
+      console.log(`[ESTADO-DROPBOX-CRON] ${candidato.userId}: ${resultado.estadoAnteriorId} → ${estadoDestino.name} (archivo: ${file.name})`);
+    }
+  }
+}

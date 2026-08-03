@@ -9,7 +9,7 @@ import { Release } from "../../api/release";
 import { InfoItem } from "../../api/info";
 import { EstadoBadge, estadoImpositivoDe, EstadoSecundarioBadge, claveEstado } from "../EstadoSelect";
 import { useEstadoCatalogStore } from "../../stores/estadoCatalogStore";
-import { getImageUrl } from "../../utils/imageHelpers";
+import { getImageUrl, downloadFileFromUrl } from "../../utils/imageHelpers";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { esContratoVigente } from "../../utils/contratoVigencia";
 
@@ -271,6 +271,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
 }) => {
   const [showInexistenteInfo, setShowInexistenteInfo] = React.useState(false);
   const [uploadingAltaDocumento, setUploadingAltaDocumento] = React.useState(false);
+  const [downloadingAltaDocumento, setDownloadingAltaDocumento] = React.useState(false);
   const altaDocumentoInputRef = React.useRef<HTMLInputElement>(null);
 
   // Catálogo de Estados (Configuración → Estados): ya se carga una sola vez por sesión (lo dispara
@@ -319,6 +320,10 @@ export const ContractCard: React.FC<ContractCardProps> = ({
       sweetAlert.error("Formato no válido", "Solo se permiten archivos PDF.");
       return;
     }
+    if (contract.altaDocumentoUrl) {
+      const confirm = await sweetAlert.confirm("Reemplazar documento", `Ya hay un documento cargado (${contract.altaDocumentoNombre || tituloAltaDocumento}). Si continuás, se reemplazará por el nuevo archivo.`, "Sí, reemplazar", "Cancelar");
+      if (!confirm.isConfirmed) return;
+    }
     try {
       setUploadingAltaDocumento(true);
       await onUploadAltaDocumento(file);
@@ -326,6 +331,18 @@ export const ContractCard: React.FC<ContractCardProps> = ({
       sweetAlert.error("Error", "No se pudo subir el documento.");
     } finally {
       setUploadingAltaDocumento(false);
+    }
+  };
+
+  const handleDownloadAltaDocumento = async () => {
+    if (!contract.altaDocumentoUrl) return;
+    try {
+      setDownloadingAltaDocumento(true);
+      await downloadFileFromUrl(contract.altaDocumentoUrl, contract.altaDocumentoNombre || `${tituloAltaDocumento}.pdf`);
+    } catch {
+      sweetAlert.error("Error", "No se pudo descargar el documento.");
+    } finally {
+      setDownloadingAltaDocumento(false);
     }
   };
 
@@ -398,6 +415,17 @@ export const ContractCard: React.FC<ContractCardProps> = ({
                   <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 shrink-0" />
                   <span className="truncate">Sin documento cargado</span>
                 </span>
+              )}
+              {contract.altaDocumentoUrl && (
+                <button
+                  type="button"
+                  onClick={handleDownloadAltaDocumento}
+                  disabled={downloadingAltaDocumento}
+                  title="Descargar documento"
+                  className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <FontAwesomeIcon icon={downloadingAltaDocumento ? faSpinner : faDownload} spin={downloadingAltaDocumento} className="h-4 w-4" />
+                </button>
               )}
               {onUploadAltaDocumento && (
                 <>

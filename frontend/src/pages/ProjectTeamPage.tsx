@@ -1601,7 +1601,7 @@ export const ProjectTeamPage: React.FC = () => {
   const handleUploadAltaDocumento = async (user: User, contractIndex: number, file: File) => {
     if (!projectId) return;
     try {
-      const { altaDocumentoUrl, altaDocumentoNombre } = await projectsAPI.uploadAltaDocumento(projectId, user._id, contractIndex, file);
+      const { altaDocumentoUrl, altaDocumentoNombre, estadoAuto } = await projectsAPI.uploadAltaDocumento(projectId, user._id, contractIndex, file);
       setSelectedMemberForDetail((prev) => {
         if (!prev || prev._id !== user._id || !prev.metadata?.projects) return prev;
         return {
@@ -1613,7 +1613,13 @@ export const ProjectTeamPage: React.FC = () => {
               if (String(pId) !== String(projectId)) return p;
               const contracts = [...(p.contracts || [])];
               if (!contracts[contractIndex]) return p;
-              contracts[contractIndex] = { ...contracts[contractIndex], altaDocumentoUrl, altaDocumentoNombre };
+              contracts[contractIndex] = {
+                ...contracts[contractIndex],
+                altaDocumentoUrl,
+                altaDocumentoNombre,
+                // Si el upload disparó una transición automática, reflejarla ya (sin esperar un refetch).
+                ...(estadoAuto ? { estado_id: estadoAuto.id, nombre_estado_empleado: estadoAuto.nombre } : {}),
+              };
               return { ...p, contracts };
             }),
           },

@@ -23,6 +23,12 @@ export interface InfoItem {
     orden?: number;
     /** Estados: paso del flujo de dependencias (alternativas comparten número). Ausente = fuera del flujo. */
     ordenDependencia?: number;
+    /** Estados: transición automática hacia ESTE estado al ocurrir un evento. Requiere `ordenDependencia`. */
+    transicionAutomatica?: {
+      evento: "alta_documento_subido" | "dropbox_carpeta";
+      /** Solo con evento "dropbox_carpeta": carpeta a vigilar, relativa al rootPath de Dropbox del tenant. */
+      dropboxCarpeta?: string;
+    };
     [key: string]: any;
   };
   name: string;
@@ -38,6 +44,10 @@ export interface EstadoPayload {
   etiquetaSecundaria?: string;
   colorEtiquetaSecundaria?: string;
   tipoImpositivo?: "alta_temprana_afip" | "constancia_cuit";
+  transicionAutomatica?: {
+    evento: "alta_documento_subido" | "dropbox_carpeta";
+    dropboxCarpeta?: string;
+  };
 }
 
 class InfoAPI {

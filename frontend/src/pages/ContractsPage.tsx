@@ -108,7 +108,9 @@ export const ContractsPage: React.FC = () => {
   // Pestañas de la página: "Contratos" (la vista actual) y "Gestión de Contratos" (acciones masivas).
   const [mainTab, setMainTab] = useState<"contracts" | "management">(initialTab);
   // Sub-pestañas de "Gestión de Contratos".
-  const [mgmtTab, setMgmtTab] = useState<"afip" | "firma">("afip");
+  const [mgmtTab, setMgmtTab] = useState<"alta_afip" | "constancia_cuit" | "firma">("alta_afip");
+  // Cantidad de contratos de cada trámite, informada por ContractBulkAfipTab para mostrarla en las pestañas.
+  const [mgmtCounts, setMgmtCounts] = useState<{ alta: number; cuit: number }>({ alta: 0, cuit: 0 });
 
   const estadoContratoOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -400,8 +402,11 @@ export const ContractsPage: React.FC = () => {
             </div>
           ) : (
             <div className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
-              <button className={tabBtnClass(mgmtTab === "afip")} onClick={() => setMgmtTab("afip")}>
-                Altas de AFIP | Constancia de CUIT
+              <button className={tabBtnClass(mgmtTab === "alta_afip")} onClick={() => setMgmtTab("alta_afip")}>
+                Alta temprana de AFIP ({mgmtCounts.alta})
+              </button>
+              <button className={tabBtnClass(mgmtTab === "constancia_cuit")} onClick={() => setMgmtTab("constancia_cuit")}>
+                Constancia de CUIT ({mgmtCounts.cuit})
               </button>
               <button className={tabBtnClass(mgmtTab === "firma")} onClick={() => setMgmtTab("firma")}>
                 Firma digital
@@ -412,7 +417,11 @@ export const ContractsPage: React.FC = () => {
       }
     >
       {mainTab === "management" ? (
-        mgmtTab === "afip" ? <ContractBulkAfipTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} initialProjectId={initialProjectId} /> : <ContractBulkFirmaTab />
+        mgmtTab === "firma" ? (
+          <ContractBulkFirmaTab />
+        ) : (
+          <ContractBulkAfipTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} initialProjectId={initialProjectId} tipo={mgmtTab === "alta_afip" ? "alta_temprana_afip" : "constancia_cuit"} onCounts={setMgmtCounts} />
+        )
       ) : (
         <>
       {initialLoading || isFetching || !hasLoaded ? (

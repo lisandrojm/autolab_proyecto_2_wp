@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUpRightFromSquare, faCloudArrowUp, faSpinner, faCheck, faTriangleExclamation, faXmark, faCopy } from "@fortawesome/free-solid-svg-icons";
+import { faArrowUpRightFromSquare, faCloudArrowUp, faSpinner, faCheck, faTriangleExclamation, faXmark, faCopy, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
 import { ContractOverviewRow } from "../../api/users";
 import { projectsAPI, ConstanciaTarget, ConstanciaResultado } from "../../api/projects";
 import { sweetAlert } from "../../utils/sweetAlert";
@@ -168,6 +168,8 @@ export const ConstanciaBulkDrop: React.FC<{
   const [subiendo, setSubiendo] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [resultados, setResultados] = useState<ConstanciaResultado[] | null>(null);
+  // Colapsado por defecto: la dropzone ocupa bastante lugar y no siempre se está por cargar constancias.
+  const [expanded, setExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const targets: ConstanciaTarget[] = rows.map((r) => ({ projectId: r.projectId, userId: r.userId, contractIndex: r.contractIndex }));
@@ -204,29 +206,46 @@ export const ConstanciaBulkDrop: React.FC<{
 
   return (
     <div className="space-y-3">
-      <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragOver(true);
-        }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragOver(false);
-          procesar(e.dataTransfer.files);
-        }}
-        onClick={() => !subiendo && inputRef.current?.click()}
-        className={`flex flex-col items-center justify-center gap-2 px-4 py-6 rounded-xl border-2 border-dashed cursor-pointer transition-colors ${
-          dragOver ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800/40"
-        } ${subiendo ? "opacity-60 pointer-events-none" : ""}`}
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/70 transition-colors"
       >
-        <FontAwesomeIcon icon={subiendo ? faSpinner : faCloudArrowUp} spin={subiendo} className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{subiendo ? "Leyendo los PDFs..." : "Soltá acá todas las constancias que bajaste de ARCA"}</p>
-        <p className="text-[11px] text-gray-500 dark:text-gray-400 text-center">
-          Cada PDF se asigna solo por el CUIT que trae adentro. Podés soltar varios juntos (hasta 50) — no hace falta renombrarlos.
-        </p>
-        <input ref={inputRef} type="file" accept="application/pdf" multiple className="hidden" onChange={(e) => { procesar(e.target.files); e.target.value = ""; }} />
-      </div>
+        <span className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+          <FontAwesomeIcon icon={faCloudArrowUp} className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          Cargar constancias de ARCA
+        </span>
+        <span className="flex items-center gap-2 text-[11px] text-gray-400">
+          {!expanded && "Soltá acá los PDFs que bajaste de ARCA"}
+          <FontAwesomeIcon icon={expanded ? faChevronUp : faChevronDown} className="h-3.5 w-3.5" />
+        </span>
+      </button>
+
+      {expanded && (
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            procesar(e.dataTransfer.files);
+          }}
+          onClick={() => !subiendo && inputRef.current?.click()}
+          className={`flex flex-col items-center justify-center gap-2 px-4 py-6 rounded-xl border-2 border-dashed cursor-pointer transition-colors ${
+            dragOver ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800/40"
+          } ${subiendo ? "opacity-60 pointer-events-none" : ""}`}
+        >
+          <FontAwesomeIcon icon={subiendo ? faSpinner : faCloudArrowUp} spin={subiendo} className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{subiendo ? "Leyendo los PDFs..." : "Soltá acá todas las constancias que bajaste de ARCA"}</p>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 text-center">
+            Cada PDF se asigna solo por el CUIT que trae adentro. Podés soltar varios juntos (hasta 50) — no hace falta renombrarlos.
+          </p>
+          <input ref={inputRef} type="file" accept="application/pdf" multiple className="hidden" onChange={(e) => { procesar(e.target.files); e.target.value = ""; }} />
+        </div>
+      )}
 
       {resultados && resultados.length > 0 && (
         <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">

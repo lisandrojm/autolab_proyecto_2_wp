@@ -1,0 +1,79 @@
+import { Info, IInfo } from "../models/Info.js";
+import { IUserProject } from "../models/UserProject.js";
+
+/** Eventos que pueden disparar una transición automática hacia un Estado. */
+export type EventoTransicionAutomatica = "alta_documento_subido" | "dropbox_carpeta";
+
+export interface ResultadoTransicion {
+  aplicada: boolean;
+  /** Solo si NO se aplicó, para logs. */
+  motivo?: string;
+  estadoAnteriorId?: number;
+  estadoNuevo?: { id: number; nombre: string };
+}
+
+const ESTADO_TYPE = "estado-empleado";
+
+/** Estados (catálogo global) configurados con este evento. Ya validado al guardar: todos tienen `ordenDependencia`. */
+export async function cargarEstadosPorEvento(evento: EventoTransicionAutomatica): Promise<IInfo[]> {
+  return Info.find({ type: ESTADO_TYPE, "data.transicionAutomatica.evento": evento });
+}
+
+/** Paso del flujo de dependencias de un Estado por su `estado_id` numérico. Sin estado = "paso 0" (antes del flujo). */
+async function ordenDependenciaDelEstado(estadoId: number | undefined | null): Promise<number> {
+  if (estadoId === undefined || estadoId === null) return 0;
+  const estado = await Info.findOne({ type: ESTADO_TYPE, "data.id": estadoId }).select("data.ordenDependencia").lean();
+  const orden = (estado as any)?.data?.ordenDependencia;
+  return typeof orden === "number" ? orden : 0;
+}
+
+/** Del catálogo de estados con este evento, el que ocupa EXACTAMENTE el paso siguiente (nunca salta pasos). */
+export function estadoDestinoDesdeCatalogo(catalogo: IInfo[], ordenDependenciaActual: number): IInfo | null {
+  return catalogo.find((e) => e.data?.ordenDependencia === ordenDependenciaActual + 1) || null;
+}
+
+/** Estado destino aplicable para este evento, dado el estado actual del contrato (o null si no corresponde). */
+export async function buscarEstadoDestino(evento: EventoTransicionAutomatica, estadoActualId: number | undefined | null): Promise<IInfo | null> {
+  const catalogo = await cargarEstadosPorEvento(evento);
+  if (catalogo.length === 0) return null;
+  const ordenActual = await ordenDependenciaDelEstado(estadoActualId);
+  return estadoDestinoDesdeCatalogo(catalogo, ordenActual);
+}
+
+/**
+ * Muta `up.contracts[contractIndex]` (estado_id + nombre_estado_empleado) y persiste. Re-valida
+ * "hacia adelante" tomando el estado actual DEL DOCUMENTO en este instante (defensivo: `up` pudo
+ * cargarse hace rato), así que es seguro invocarla especulativamente. Idempotente: si el contrato ya
+ * está en ese estado o más adelante, no hace nada.
+ */
+export async function aplicarTransicion(up: IUserProject, contractIndex: number, estadoDestino: IInfo): Promise<ResultadoTransicion> {
+  const contrato = up.contracts[contractIndex] as any;
+  if (!contrato) return { aplicada: false, motivo: "contrato_inexistente" };
+
+  const destinoId = estadoDestino.data?.id;
+  const destinoOrden = estadoDestino.data?.ordenDependencia;
+  if (typeof destinoId !== "number" || typeof destinoOrden !== "number") return { aplicada: false, motivo: "estado_destino_invalido" };
+
+  const estadoAnteriorId = contrato.estado_id as number | undefined;
+  if (estadoAnteriorId === destinoId) return { aplicada: false, motivo: "ya_estaba" };
+
+  const ordenActual = await ordenDependenciaDelEstado(estadoAnteriorId);
+  if (destinoOrden <= ordenActual) return { aplicada: false, motivo: "no_es_hacia_adelante" };
+
+  up.contracts[contractIndex] = { ...contrato.toObject(), estado_id: destinoId, nombre_estado_empleado: estadoDestino.name } as any;
+  up.markModified("contracts");
+  await up.save();
+
+  return { aplicada: true, estadoAnteriorId, estadoNuevo: { id: destinoId, nombre: estadoDestino.name } };
+}
+
+/** Combina `buscarEstadoDestino` + `aplicarTransicion` — punto de entrada único para un evento puntual. */
+export async function intentarTransicionPorEvento(up: IUserProject, contractIndex: number, evento: EventoTransicionAutomatica): Promise<ResultadoTransicion> {
+  const contrato = up.contracts[contractIndex] as any;
+  if (!contrato) return { aplicada: false, motivo: "contrato_inexistente" };
+
+  const estadoDestino = await buscarEstadoDestino(evento, contrato.estado_id);
+  if (!estadoDestino) return { aplicada: false, motivo: "sin_estado_configurado" };
+
+  return aplicarTransicion(up, contractIndex, estadoDestino);
+}
