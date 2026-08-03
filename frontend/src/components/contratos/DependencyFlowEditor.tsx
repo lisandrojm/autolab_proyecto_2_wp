@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faTrash, faArrowUp, faArrowDown, faXmark, faCheck, faSpinner, faLayerGroup, faGripVertical, faFileInvoiceDollar } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faTrash, faArrowUp, faArrowDown, faXmark, faCheck, faSpinner, faLayerGroup, faGripVertical, faFileInvoiceDollar, faBolt, faCircleInfo, faFolder, faFolderOpen, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import {
   DndContext,
   DragOverlay,
@@ -18,12 +18,29 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, useSortable, arrayMove, sortableKeyboardCoordinates, rectSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { infoAPI, InfoItem } from "../../api/info";
+import { infoAPI, InfoItem, EstadoPayload } from "../../api/info";
+import { dropboxAPI, DropboxEntry } from "../../api/dropbox";
 import { EstadoBadge, TramiteImpositivoBadge } from "../EstadoSelect";
 import { Modal } from "../ui/Modal";
+import { InfoModal } from "../ui/InfoModal";
 import { sweetAlert } from "../../utils/sweetAlert";
 
 const UNASSIGNED = "unassigned";
+
+type TransicionAutomatica = InfoItem["data"]["transicionAutomatica"];
+
+const EVENTOS_TRANSICION_AUTOMATICA: { value: "alta_documento_subido" | "dropbox_carpeta"; label: string; descripcion: string }[] = [
+  {
+    value: "alta_documento_subido",
+    label: "Se subió el documento de Alta",
+    descripcion: "Es un solo evento aunque el documento sea distinto: se dispara tanto si se sube el Alta temprana de AFIP como si se sube la Constancia de CUIT — el que corresponda según el tipo impositivo del contrato.",
+  },
+  {
+    value: "dropbox_carpeta",
+    label: "Se detecta en una carpeta de Dropbox",
+    descripcion: "Un proceso revisa la carpeta que elijas cada cierto tiempo: cuando encuentra ahí el archivo de un contrato que está esperando este paso, lo avanza automáticamente.",
+  },
+];
 
 /**
  * Detección de colisiones basada en el puntero: detecta el contenedor sobre el que está el cursor
@@ -54,8 +71,33 @@ const ChipImpositivo: React.FC = () => (
   </span>
 );
 
+/** Último tramo de un path de Dropbox, para mostrar solo el nombre de la carpeta (no la ruta completa). */
+const nombreCarpeta = (path?: string): string => {
+  const partes = (path || "").split("/").filter(Boolean);
+  return partes[partes.length - 1] || path || "";
+};
+
+/** Descripción corta de una transición automática, para el tooltip del chip (incluye la nota propia si tiene). */
+const descripcionTransicion = (t: TransicionAutomatica): string => {
+  if (!t) return "";
+  const base = t.evento === "alta_documento_subido" ? "Automático: se subió el documento de Alta" : `Automático: carpeta de Dropbox (${t.dropboxCarpeta})`;
+  return t.detalle ? `${base} — ${t.detalle}` : base;
+};
+
+/** Etiqueta corta para mostrar en el chip cuando el rayo está encendido. */
+const etiquetaTransicionCorta = (t: TransicionAutomatica): string =>
+  t?.evento === "alta_documento_subido" ? "Doc. de Alta" : t?.evento === "dropbox_carpeta" ? `Dropbox | ${nombreCarpeta(t.dropboxCarpeta)}` : "";
+
 /** Chip arrastrable de un estado. Se arrastra desde cualquier parte del chip. */
-const SortableChip: React.FC<{ estado: InfoItem; onRemove?: () => void }> = ({ estado, onRemove }) => {
+const SortableChip: React.FC<{
+  estado: InfoItem;
+  onRemove?: () => void;
+  /** Si viene definido (aunque sea `undefined` dentro), el chip muestra el botón de transición automática. */
+  mostrarTransicion?: boolean;
+  transicion?: TransicionAutomatica;
+  puedeConfigurarTransicion?: boolean;
+  onConfigurarTransicion?: () => void;
+}> = ({ estado, onRemove, mostrarTransicion, transicion, puedeConfigurarTransicion, onConfigurarTransicion }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: estado._id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1, touchAction: "none" as const };
   const esImpositivo = !!estado.data?.esImpositivo;
@@ -71,6 +113,23 @@ const SortableChip: React.FC<{ estado: InfoItem; onRemove?: () => void }> = ({ e
       <EstadoBadge name={estado.name} />
       {esImpositivo && <ChipImpositivo />}
       {esImpositivo && <TramiteImpositivoBadge estado={estado} />}
+      {mostrarTransicion && (
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={onConfigurarTransicion}
+          disabled={!puedeConfigurarTransicion}
+          title={!puedeConfigurarTransicion ? "Guardá el flujo para poder configurar una transición automática" : transicion ? descripcionTransicion(transicion) : "Configurar transición automática"}
+          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent ${
+            transicion
+              ? "text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+              : "text-gray-400 dark:text-gray-500 border-transparent hover:text-gray-500 dark:hover:text-gray-400"
+          }`}
+        >
+          <FontAwesomeIcon icon={faBolt} className="h-3 w-3 shrink-0" />
+          {transicion && <span className="truncate max-w-[140px]">{etiquetaTransicionCorta(transicion)}</span>}
+        </button>
+      )}
       {onRemove && (
         <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={onRemove} title="Sacar del flujo" className="text-gray-400 hover:text-red-500 px-0.5">
           <FontAwesomeIcon icon={faXmark} className="h-3 w-3" />
@@ -105,11 +164,115 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
   const seq = useRef(0);
   const newPasoId = () => `paso-${seq.current++}`;
 
+  // Transición automática por estado: se edita acá (chip a chip), aparte del guardado del flujo de
+  // pasos. `null` = se borró en esta sesión; ausente = usar el valor que ya trae `estados`.
+  const [eventoOverrides, setEventoOverrides] = useState<Record<string, TransicionAutomatica | null>>({});
+  const [configurando, setConfigurando] = useState<InfoItem | null>(null);
+  const [showFlowInfo, setShowFlowInfo] = useState(false);
+  const [eventoForm, setEventoForm] = useState<{ evento: "" | "alta_documento_subido" | "dropbox_carpeta"; carpeta: string; detalle: string }>({ evento: "", carpeta: "", detalle: "" });
+  const [savingEvento, setSavingEvento] = useState(false);
+  // Info de cada opción de evento, mostrada en un InfoModal aparte (no siempre visible en el chip).
+  const [infoEvento, setInfoEvento] = useState<(typeof EVENTOS_TRANSICION_AUTOMATICA)[number] | null>(null);
+  // Selector de carpeta de Dropbox: navega el árbol real en vez de tipear la ruta a ciegas.
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerPath, setPickerPath] = useState("");
+  const [pickerRoot, setPickerRoot] = useState("/HelloSign");
+  const [pickerEntries, setPickerEntries] = useState<DropboxEntry[]>([]);
+  const [pickerLoading, setPickerLoading] = useState(false);
+
+  const transicionDe = (estado: InfoItem): TransicionAutomatica => (Object.prototype.hasOwnProperty.call(eventoOverrides, estado._id) ? eventoOverrides[estado._id] ?? undefined : estado.data?.transicionAutomatica);
+
+  const abrirConfigurarEvento = (estado: InfoItem) => {
+    const actual = transicionDe(estado);
+    setEventoForm({ evento: actual?.evento || "", carpeta: actual?.dropboxCarpeta || "", detalle: actual?.detalle || "" });
+    setConfigurando(estado);
+  };
+
+  const cargarCarpetaPicker = async (path: string) => {
+    try {
+      setPickerLoading(true);
+      const { entries, path: resolved, rootPath } = await dropboxAPI.list(path);
+      setPickerEntries(entries.filter((e) => e.tag === "folder"));
+      setPickerPath(resolved);
+      setPickerRoot(rootPath);
+    } catch (e: any) {
+      sweetAlert.error("No se pudo abrir Dropbox", e?.response?.data?.error || "Revisá que Dropbox esté conectado.");
+      setPickerOpen(false);
+    } finally {
+      setPickerLoading(false);
+    }
+  };
+
+  const abrirPicker = () => {
+    setPickerOpen(true);
+    cargarCarpetaPicker(eventoForm.carpeta.trim() || "");
+  };
+
+  const elegirCarpetaActual = () => {
+    setEventoForm((p) => ({ ...p, carpeta: pickerPath }));
+    setPickerOpen(false);
+  };
+
+  const segmentosPicker = pickerPath.startsWith(pickerRoot) ? pickerPath.slice(pickerRoot.length).split("/").filter(Boolean) : pickerPath.split("/").filter(Boolean);
+
+  // Cada evento solo puede estar asignado a un estado a la vez (si no, sería ambiguo a cuál avanzar).
+  // Se excluye al estado que se está editando, para no bloquearlo con su propia configuración actual.
+  const estadoConAltaDocumento = configurando ? estados.find((e) => e._id !== configurando._id && transicionDe(e)?.evento === "alta_documento_subido") : undefined;
+  const carpetasUsadas = new Map<string, string>();
+  estados.forEach((e) => {
+    if (configurando?._id === e._id) return;
+    const t = transicionDe(e);
+    if (t?.evento === "dropbox_carpeta" && t.dropboxCarpeta) carpetasUsadas.set(t.dropboxCarpeta, e.name);
+  });
+
+  const guardarEvento = async () => {
+    if (!configurando) return;
+    if (eventoForm.evento === "dropbox_carpeta" && !eventoForm.carpeta.trim()) {
+      sweetAlert.error("Falta la carpeta", "Indicá qué carpeta de Dropbox hay que vigilar para esta transición automática.");
+      return;
+    }
+    if (eventoForm.evento === "dropbox_carpeta") {
+      const dueño = carpetasUsadas.get(eventoForm.carpeta.trim());
+      if (dueño) {
+        sweetAlert.error("Carpeta repetida", `Esa carpeta ya está asignada a "${dueño}". Elegí otra.`);
+        return;
+      }
+    }
+    const nuevaTransicion: TransicionAutomatica = eventoForm.evento
+      ? { evento: eventoForm.evento, dropboxCarpeta: eventoForm.evento === "dropbox_carpeta" ? eventoForm.carpeta.trim() : undefined, detalle: eventoForm.detalle.trim() || undefined }
+      : undefined;
+    // Se manda el estado completo (no solo `transicionAutomatica`): el PATCH reconstruye `data` entero
+    // a partir del body, así que hay que preservar los demás campos tal cual están.
+    const payload: EstadoPayload = {
+      name: configurando.name,
+      color: configurando.data?.color,
+      contratoFrameIds: configurando.data?.contratoFrameIds || [],
+      esImpositivo: configurando.data?.esImpositivo,
+      etiquetaSecundaria: configurando.data?.etiquetaSecundaria,
+      colorEtiquetaSecundaria: configurando.data?.colorEtiquetaSecundaria,
+      tipoImpositivo: configurando.data?.tipoImpositivo,
+      transicionAutomatica: nuevaTransicion || null,
+    };
+    const id = configurando._id;
+    try {
+      setSavingEvento(true);
+      await infoAPI.updateEstado(id, payload);
+      setEventoOverrides((prev) => ({ ...prev, [id]: nuevaTransicion ?? null }));
+      sweetAlert.success("Transición guardada", "Se actualizó la transición automática de este estado.");
+      setConfigurando(null);
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo guardar la transición automática.");
+    } finally {
+      setSavingEvento(false);
+    }
+  };
+
   // Construcción inicial: agrupar por ordenDependencia (renumerado contiguo); sin número → pool.
   // Regla: los estados impositivos van SIEMPRE al Paso 1 (grupo 1), aunque su valor guardado sea
   // otro o no tengan — "van por defecto al paso uno; en ese paso no importa el orden (uno u otro)".
   useEffect(() => {
     if (!isOpen) return;
+    setEventoOverrides({});
     const groups = new Map<number, InfoItem[]>();
     const unassigned: InfoItem[] = [];
     for (const e of estados) {
@@ -247,10 +410,18 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
   const activeEstado = activeId ? estadoById.get(activeId) : null;
 
   return (
+    <>
     <Modal
       isOpen={isOpen}
       onClose={onCancel}
-      title="Orden de dependencias"
+      title={
+        <span className="inline-flex items-center gap-2">
+          Orden de dependencias
+          <button type="button" onClick={() => setShowFlowInfo(true)} title="¿Cómo funciona el flujo de dependencias?" aria-label="¿Cómo funciona el flujo de dependencias?" className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+          </button>
+        </span>
+      }
       subtitle="Los estados en el mismo paso son alternativas (uno u otro). Es independiente del orden visual."
       size="lg"
       zIndex={60}
@@ -267,10 +438,6 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
         </div>
       }
     >
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-        Armá el <strong>flujo de dependencias</strong>: arrastrá los estados a cada paso. Los estados en el <strong>mismo paso son alternativas</strong> (uno u otro). Usá las flechas para reordenar los pasos.
-      </p>
-
       <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>
         {/* Pool: Sin asignar */}
         <Droppable id={UNASSIGNED} className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 p-3">
@@ -316,8 +483,20 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
                     (items[pid] || []).map((id) => {
                       const est = estadoById.get(id);
                       if (!est) return null;
-                      // Los impositivos van fijos al Paso 1: no se sacan del flujo (sin botón "x").
-                      return <SortableChip key={id} estado={est} onRemove={est.data?.esImpositivo ? undefined : () => sacarDelFlujo(id)} />;
+                      // Los impositivos van fijos al Paso 1: no se sacan del flujo (sin botón "x") ni
+                      // se les puede configurar una transición automática (ya se asignan directo al
+                      // crear el contrato, no llegan a ese paso disparados por un evento).
+                      return (
+                        <SortableChip
+                          key={id}
+                          estado={est}
+                          onRemove={est.data?.esImpositivo ? undefined : () => sacarDelFlujo(id)}
+                          mostrarTransicion={!est.data?.esImpositivo}
+                          transicion={transicionDe(est)}
+                          puedeConfigurarTransicion={typeof est.data?.ordenDependencia === "number"}
+                          onConfigurarTransicion={() => abrirConfigurarEvento(est)}
+                        />
+                      );
                     })
                   )}
                 </div>
@@ -334,6 +513,204 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
         <DragOverlay>{activeEstado ? <EstadoBadge name={activeEstado.name} /> : null}</DragOverlay>
       </DndContext>
     </Modal>
+
+    {configurando && (
+      <Modal
+        isOpen={!!configurando}
+        onClose={() => setConfigurando(null)}
+        title="Transición automática"
+        subtitle={configurando.name}
+        size="sm"
+        zIndex={70}
+        footer={
+          <div className="flex items-center justify-end gap-3 w-full">
+            <button onClick={() => setConfigurando(null)} className="btn-secondary" disabled={savingEvento}>
+              Cancelar
+            </button>
+            <button onClick={guardarEvento} className="btn-primary" disabled={savingEvento}>
+              {savingEvento ? "Guardando..." : "Guardar"}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-[11px] text-gray-500 dark:text-gray-400">Cuando ocurra este evento, el contrato pasa solo a este estado (siempre hacia adelante, nunca retrocede).</p>
+          <div className="grid grid-cols-1 gap-2">
+            {EVENTOS_TRANSICION_AUTOMATICA.map((op) => {
+              const activo = eventoForm.evento === op.value;
+              const bloqueadoPor = op.value === "alta_documento_subido" ? estadoConAltaDocumento : undefined;
+              const deshabilitado = !!bloqueadoPor;
+              return (
+                <div
+                  key={op.value}
+                  onClick={() => {
+                    if (deshabilitado) return;
+                    setEventoForm((p) => ({ ...p, evento: activo ? "" : op.value }));
+                  }}
+                  title={deshabilitado ? `Ya lo usa "${bloqueadoPor?.name}"` : undefined}
+                  className={`flex items-center justify-between gap-2 p-2.5 rounded-lg border text-left transition-colors ${
+                    deshabilitado
+                      ? "opacity-50 cursor-not-allowed border-gray-200 dark:border-gray-700"
+                      : `cursor-pointer ${activo ? "border-blue-500 bg-blue-100/60 dark:bg-blue-900/30" : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/40"}`
+                  }`}
+                >
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span className={`flex items-center justify-center h-4 w-4 rounded-full border-2 shrink-0 ${activo ? "border-blue-600" : "border-gray-300 dark:border-gray-600"}`}>
+                      {activo && <span className="h-2 w-2 rounded-full bg-blue-600" />}
+                    </span>
+                    <span className="flex flex-col min-w-0">
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate">{op.label}</span>
+                      {deshabilitado && <span className="text-[10px] text-amber-600 dark:text-amber-400 truncate">Ya lo usa "{bloqueadoPor?.name}"</span>}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setInfoEvento(op);
+                    }}
+                    title={`¿Qué significa "${op.label}"?`}
+                    aria-label={`¿Qué significa "${op.label}"?`}
+                    className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0"
+                  >
+                    <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          {eventoForm.evento === "dropbox_carpeta" && (
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Carpeta de Dropbox a vigilar *</label>
+              <button
+                type="button"
+                onClick={abrirPicker}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-md border border-dashed border-gray-300 dark:border-gray-600 text-left hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+              >
+                <FontAwesomeIcon icon={eventoForm.carpeta ? faFolderOpen : faFolder} className="h-4 w-4 text-amber-500 shrink-0" />
+                {eventoForm.carpeta ? (
+                  <span className="text-xs font-mono text-gray-700 dark:text-gray-200 truncate">{eventoForm.carpeta}</span>
+                ) : (
+                  <span className="text-xs text-gray-400 italic">Elegir carpeta en Dropbox...</span>
+                )}
+              </button>
+            </div>
+          )}
+          {eventoForm.evento && (
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Descripción (opcional)</label>
+              <textarea
+                className="input-field w-full text-xs resize-none"
+                rows={3}
+                value={eventoForm.detalle}
+                onChange={(e) => setEventoForm((p) => ({ ...p, detalle: e.target.value }))}
+                placeholder='Ej: cuando se detecte que se subieron archivos y esos archivos fueron importados desde Dropbox Sign, se toman como "Firma Pendiente".'
+              />
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Una nota tuya para acordarte (o que otro admin entienda) qué significa este evento en tu flujo. Se muestra al pasar el mouse por el rayo.</p>
+            </div>
+          )}
+        </div>
+      </Modal>
+    )}
+
+    {infoEvento && (
+      <InfoModal isOpen={!!infoEvento} onClose={() => setInfoEvento(null)} title={infoEvento.label} size="sm" zIndex={90}>
+        <p className="text-sm text-gray-600 dark:text-gray-300">{infoEvento.descripcion}</p>
+      </InfoModal>
+    )}
+
+    {pickerOpen && (
+      <Modal
+        isOpen={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        title="Elegir carpeta de Dropbox"
+        size="sm"
+        zIndex={90}
+        footer={
+          <div className="flex items-center justify-end gap-3 w-full">
+            <button onClick={() => setPickerOpen(false)} className="btn-secondary">
+              Cancelar
+            </button>
+            <button onClick={elegirCarpetaActual} className="btn-primary" disabled={pickerLoading || !!carpetasUsadas.get(pickerPath)}>
+              Usar esta carpeta
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-1 text-xs">
+            <button type="button" onClick={() => cargarCarpetaPicker(pickerRoot)} className="text-blue-600 dark:text-blue-400 hover:underline font-semibold">
+              Raíz
+            </button>
+            {segmentosPicker.map((seg, i) => (
+              <React.Fragment key={i}>
+                <span className="text-gray-400">/</span>
+                <button type="button" onClick={() => cargarCarpetaPicker(`${pickerRoot}/${segmentosPicker.slice(0, i + 1).join("/")}`)} className="text-blue-600 dark:text-blue-400 hover:underline">
+                  {seg}
+                </button>
+              </React.Fragment>
+            ))}
+          </div>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+            Carpeta seleccionada: <span className="font-mono text-gray-700 dark:text-gray-300">{pickerPath}</span>
+          </p>
+          {carpetasUsadas.get(pickerPath) && (
+            <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400 flex items-start gap-1.5">
+              <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3 mt-0.5 shrink-0" />
+              Esta carpeta ya está asignada a "{carpetasUsadas.get(pickerPath)}". Elegí otra.
+            </p>
+          )}
+          {(pickerLoading || pickerEntries.length > 0) && (
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-100 dark:divide-gray-800 max-h-64 overflow-y-auto">
+            {pickerLoading ? (
+              <div className="p-4 flex justify-center">
+                <FontAwesomeIcon icon={faSpinner} spin className="h-4 w-4 text-gray-400" />
+              </div>
+            ) : (
+              pickerEntries.map((f) => {
+                const usadaPor = carpetasUsadas.get(f.path);
+                return (
+                  <button
+                    key={f.path}
+                    type="button"
+                    onClick={() => !usadaPor && cargarCarpetaPicker(f.path)}
+                    disabled={!!usadaPor}
+                    title={usadaPor ? `Ya está asignada a "${usadaPor}"` : undefined}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/40 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                  >
+                    <FontAwesomeIcon icon={faFolder} className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                    <span className="truncate">{f.name}</span>
+                    {usadaPor && <span className="text-[10px] text-amber-600 dark:text-amber-400 shrink-0 ml-auto">en uso: {usadaPor}</span>}
+                  </button>
+                );
+              })
+            )}
+          </div>
+          )}
+        </div>
+      </Modal>
+    )}
+
+    <InfoModal isOpen={showFlowInfo} onClose={() => setShowFlowInfo(false)} title="¿Cómo funciona el flujo de dependencias?" size="sm" zIndex={80}>
+      <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+        <p>
+          Armá el <strong>flujo de dependencias</strong>: arrastrá los estados a cada paso. Los estados en el <strong>mismo paso son alternativas</strong> (uno u otro). Usá las flechas para reordenar los pasos.
+        </p>
+        <p className="flex items-start gap-1.5">
+          <FontAwesomeIcon icon={faBolt} className="h-3.5 w-3.5 text-blue-500 shrink-0 mt-0.5" />
+          <span>
+            El rayo de cada estado indica si tiene una <strong>transición automática</strong> configurada: un evento que, al ocurrir, avanza el contrato solo a ese estado. Hacé click para configurarla (no disponible para los estados impositivos).
+          </span>
+        </p>
+        <p className="flex items-start gap-1.5 p-2.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300">
+          <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+          <span>
+            <strong>Importante:</strong> para usar la transición "Se detecta en una carpeta de Dropbox" hace falta tener conectada una cuenta de <strong>Dropbox</strong> y usar <strong>Dropbox Sign</strong> como proveedor de firma — es lo que va guardando los documentos en esas carpetas. Sin esa conexión, esta transición no se va a disparar nunca.
+          </span>
+        </p>
+      </div>
+    </InfoModal>
+    </>
   );
 };
 

@@ -28,6 +28,8 @@ export interface InfoItem {
       evento: "alta_documento_subido" | "dropbox_carpeta";
       /** Solo con evento "dropbox_carpeta": carpeta a vigilar, relativa al rootPath de Dropbox del tenant. */
       dropboxCarpeta?: string;
+      /** Nota libre de quien la configuró (ej. qué significa esta carpeta puntual en su flujo). */
+      detalle?: string;
     };
     [key: string]: any;
   };
@@ -44,10 +46,15 @@ export interface EstadoPayload {
   etiquetaSecundaria?: string;
   colorEtiquetaSecundaria?: string;
   tipoImpositivo?: "alta_temprana_afip" | "constancia_cuit";
+  /**
+   * Opcional: si se omite, el backend no la toca (se preserva la que ya tenía el estado — se edita
+   * desde "Orden de dependencias", no desde el formulario de Editar Estado). `null` la borra.
+   */
   transicionAutomatica?: {
     evento: "alta_documento_subido" | "dropbox_carpeta";
     dropboxCarpeta?: string;
-  };
+    detalle?: string;
+  } | null;
 }
 
 class InfoAPI {

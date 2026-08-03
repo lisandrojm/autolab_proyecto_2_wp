@@ -12,7 +12,6 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { CSS } from '@dnd-kit/utilities';
 import { infoAPI, InfoItem, EstadoPayload } from '../../api/info';
 import { contratoFrameAPI, ContratoFrameItem } from '../../api/contratosFrame';
-import { dropboxAPI } from '../../api/dropbox';
 import { useEstadoCatalogStore } from '../../stores/estadoCatalogStore';
 import { estadoColorPorDefecto, colorTextoBadge, EstadoSecundarioBadge } from '../EstadoSelect';
 import { DependencyFlowEditor } from './DependencyFlowEditor';
@@ -132,10 +131,6 @@ interface FormState {
   colorEtiquetaSecundaria: string;
   /** Trámite impositivo (solo con esImpositivo tildado): "Alta temprana de AFIP" o "Constancia de CUIT". */
   tipoImpositivo: TipoImpositivo | '';
-  /** Transición automática hacia este estado (solo disponible si el estado está en el flujo de dependencias). */
-  transicionAutomaticaEvento: '' | 'alta_documento_subido' | 'dropbox_carpeta';
-  /** Solo con evento "dropbox_carpeta": carpeta de Dropbox a vigilar. */
-  transicionAutomaticaCarpeta: string;
 }
 
 const FORM_VACIO: FormState = {
@@ -146,14 +141,7 @@ const FORM_VACIO: FormState = {
   etiquetaSecundaria: '',
   colorEtiquetaSecundaria: COLOR_POR_DEFECTO,
   tipoImpositivo: '',
-  transicionAutomaticaEvento: '',
-  transicionAutomaticaCarpeta: '',
 };
-
-const EVENTOS_TRANSICION_AUTOMATICA: { value: 'alta_documento_subido' | 'dropbox_carpeta'; label: string }[] = [
-  { value: 'alta_documento_subido', label: 'Se subió el documento de Alta' },
-  { value: 'dropbox_carpeta', label: 'Se detecta en una carpeta de Dropbox' },
-];
 
 export const ContractStatesTab: React.FC = () => {
   const [estados, setEstados] = useState<InfoItem[]>([]);
@@ -166,7 +154,6 @@ export const ContractStatesTab: React.FC = () => {
   const [form, setForm] = useState<FormState>(FORM_VACIO);
   const [showBadgeSecundarioInfo, setShowBadgeSecundarioInfo] = useState(false);
   const [showTipoImpositivoInfo, setShowTipoImpositivoInfo] = useState(false);
-  const [probandoCarpeta, setProbandoCarpeta] = useState(false);
 
   // Vista tarjetas/tabla, como el resto de los ABM: la tabla solo en pantallas grandes.
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
@@ -311,31 +298,8 @@ export const ContractStatesTab: React.FC = () => {
       etiquetaSecundaria: estado.data?.etiquetaSecundaria || '',
       colorEtiquetaSecundaria: estado.data?.colorEtiquetaSecundaria || COLOR_POR_DEFECTO,
       tipoImpositivo: (estado.data?.tipoImpositivo as TipoImpositivo) || '',
-      transicionAutomaticaEvento: estado.data?.transicionAutomatica?.evento || '',
-      transicionAutomaticaCarpeta: estado.data?.transicionAutomatica?.dropboxCarpeta || '',
     });
     setShowModal(true);
-  };
-
-  /** El estado necesita estar en el flujo de dependencias para saber cuál es "el paso siguiente". */
-  const puedeConfigurarTransicionAutomatica = form.esImpositivo || typeof editando?.data?.ordenDependencia === 'number';
-
-  const probarCarpetaDropbox = async () => {
-    const carpeta = form.transicionAutomaticaCarpeta.trim();
-    if (!carpeta) {
-      sweetAlert.error('Falta la carpeta', 'Escribí la ruta antes de probarla.');
-      return;
-    }
-    const ruta = carpeta.startsWith('/') ? carpeta : `/${carpeta}`;
-    try {
-      setProbandoCarpeta(true);
-      const { entries } = await dropboxAPI.list(ruta);
-      sweetAlert.success('Carpeta encontrada', `Hay ${entries.length} elemento(s) en esa carpeta.`);
-    } catch (e: any) {
-      sweetAlert.error('No se pudo abrir la carpeta', e?.response?.data?.error || 'Revisá que la ruta exista y esté dentro del Dropbox conectado.');
-    } finally {
-      setProbandoCarpeta(false);
-    }
   };
 
   /** Tipos que se pueden elegir ahora: si el estado es impositivo, los tomados por otro quedan afuera. */
@@ -372,11 +336,6 @@ export const ContractStatesTab: React.FC = () => {
       sweetAlert.error('Falta el trámite impositivo', 'Elegí si el estado impositivo es "Alta temprana de AFIP" o "Constancia de CUIT" (uno u otro, nunca los dos).');
       return;
     }
-    if (form.transicionAutomaticaEvento === 'dropbox_carpeta' && !form.transicionAutomaticaCarpeta.trim()) {
-      sweetAlert.error('Falta la carpeta', 'Indicá qué carpeta de Dropbox hay que vigilar para esta transición automática.');
-      return;
-    }
-
     const payload: EstadoPayload = {
       name,
       color: form.color,
@@ -385,9 +344,7 @@ export const ContractStatesTab: React.FC = () => {
       etiquetaSecundaria: form.esImpositivo ? form.etiquetaSecundaria.trim() : undefined,
       colorEtiquetaSecundaria: form.esImpositivo ? form.colorEtiquetaSecundaria : undefined,
       tipoImpositivo: form.esImpositivo && form.tipoImpositivo ? form.tipoImpositivo : undefined,
-      transicionAutomatica: form.transicionAutomaticaEvento
-        ? { evento: form.transicionAutomaticaEvento, dropboxCarpeta: form.transicionAutomaticaEvento === 'dropbox_carpeta' ? form.transicionAutomaticaCarpeta.trim() : undefined }
-        : undefined,
+      // transicionAutomatica NO se manda desde acá: se edita desde "Orden de dependencias".
     };
 
     try {
@@ -688,57 +645,6 @@ export const ContractStatesTab: React.FC = () => {
               </div>
             </div>
           )}
-
-          <div className="space-y-2 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
-            <div className="space-y-0.5">
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Transición automática</label>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Cuando ocurra este evento, el contrato pasa solo a este estado (siempre hacia adelante, nunca retrocede).</p>
-            </div>
-            {!puedeConfigurarTransicionAutomatica ? (
-              <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400 flex items-start gap-1.5">
-                <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3 mt-0.5 shrink-0" />
-                Asigná este estado al flujo de dependencias para poder configurar una transición automática.
-              </p>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {EVENTOS_TRANSICION_AUTOMATICA.map((op) => {
-                    const activo = form.transicionAutomaticaEvento === op.value;
-                    return (
-                      <button
-                        key={op.value}
-                        type="button"
-                        onClick={() => setForm((p) => ({ ...p, transicionAutomaticaEvento: activo ? '' : op.value }))}
-                        className={`flex items-start gap-2 p-2.5 rounded-lg border text-left transition-colors ${activo ? 'border-blue-500 bg-blue-100/60 dark:bg-blue-900/30' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/40'}`}
-                      >
-                        <span className={`mt-0.5 flex items-center justify-center h-4 w-4 rounded-full border-2 shrink-0 ${activo ? 'border-blue-600' : 'border-gray-300 dark:border-gray-600'}`}>
-                          {activo && <span className="h-2 w-2 rounded-full bg-blue-600" />}
-                        </span>
-                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{op.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                {form.transicionAutomaticaEvento === 'dropbox_carpeta' && (
-                  <div className="space-y-1.5 pt-1">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Carpeta de Dropbox a vigilar *</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        className="input-field w-full"
-                        value={form.transicionAutomaticaCarpeta}
-                        onChange={(e) => setForm((p) => ({ ...p, transicionAutomaticaCarpeta: e.target.value }))}
-                        placeholder="Ej: FZERO S.R.L/HelloSign/Requested signatures"
-                      />
-                      <button type="button" onClick={probarCarpetaDropbox} disabled={probandoCarpeta} className="shrink-0 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/40 disabled:opacity-50">
-                        {probandoCarpeta ? 'Probando...' : 'Probar carpeta'}
-                      </button>
-                    </div>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Un proceso revisa esta carpeta cada cierto tiempo y avanza automáticamente los contratos que encuentre ahí.</p>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2 ml-1">

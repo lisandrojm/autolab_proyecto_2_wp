@@ -27,6 +27,8 @@ export interface IInfo extends Document {
       evento: "alta_documento_subido" | "dropbox_carpeta";
       /** Solo con evento "dropbox_carpeta": carpeta a vigilar, relativa al rootPath de Dropbox del tenant. */
       dropboxCarpeta?: string;
+      /** Nota libre de quien la configuró (ej. qué significa esta carpeta puntual en su flujo). */
+      detalle?: string;
     };
     [key: string]: any;
   };
@@ -54,6 +56,7 @@ const infoSchema = new Schema<IInfo>(
       transicionAutomatica: {
         evento: { type: String },
         dropboxCarpeta: { type: String },
+        detalle: { type: String },
       },
     },
     name: { type: String, required: true },
