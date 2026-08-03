@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faTrash, faArrowUp, faArrowDown, faXmark, faCheck, faSpinner, faLayerGroup, faGripVertical, faFileInvoiceDollar, faBolt, faCircleInfo, faFolder, faFolderOpen, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faTrash, faArrowUp, faArrowDown, faXmark, faCheck, faSpinner, faLayerGroup, faGripVertical, faFileInvoiceDollar, faBolt, faCircleInfo, faFolder, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import {
   DndContext,
   DragOverlay,
@@ -64,15 +64,24 @@ const nombreCarpeta = (path?: string): string => {
   return partes[partes.length - 1] || path || "";
 };
 
-/** Descripción corta de una transición automática, para el tooltip del chip (incluye la nota propia si tiene). */
+/** Descripción corta de una transición automática, para el tooltip del chip (incluye notas propias si tiene). */
 const descripcionTransicion = (t: TransicionAutomatica): string => {
-  if (!t) return "";
-  const base = `Automático: carpeta de Dropbox (${t.dropboxCarpeta})`;
-  return t.detalle ? `${base} — ${t.detalle}` : base;
+  const carpetas = t?.carpetas || [];
+  if (carpetas.length === 0) return "";
+  if (carpetas.length === 1) {
+    const c = carpetas[0];
+    return c.detalle ? `Automático: carpeta de Dropbox (${c.dropboxCarpeta}) — ${c.detalle}` : `Automático: carpeta de Dropbox (${c.dropboxCarpeta})`;
+  }
+  return `Automático: ${carpetas.length} carpetas de Dropbox (${carpetas.map((c) => nombreCarpeta(c.dropboxCarpeta)).join(", ")})`;
 };
 
 /** Etiqueta corta para mostrar en el chip cuando el rayo está encendido. */
-const etiquetaTransicionCorta = (t: TransicionAutomatica): string => (t ? `Dropbox | ${nombreCarpeta(t.dropboxCarpeta)}` : "");
+const etiquetaTransicionCorta = (t: TransicionAutomatica): string => {
+  const carpetas = t?.carpetas || [];
+  if (carpetas.length === 0) return "";
+  if (carpetas.length === 1) return `Dropbox | ${nombreCarpeta(carpetas[0].dropboxCarpeta)}`;
+  return `Dropbox | ${carpetas.length} carpetas`;
+};
 
 /** Chip arrastrable de un estado. Se arrastra desde cualquier parte del chip. */
 const SortableChip: React.FC<{
@@ -83,7 +92,8 @@ const SortableChip: React.FC<{
   transicion?: TransicionAutomatica;
   puedeConfigurarTransicion?: boolean;
   onConfigurarTransicion?: () => void;
-}> = ({ estado, onRemove, mostrarTransicion, transicion, puedeConfigurarTransicion, onConfigurarTransicion }) => {
+  onQuitarTransicion?: () => void;
+}> = ({ estado, onRemove, mostrarTransicion, transicion, puedeConfigurarTransicion, onConfigurarTransicion, onQuitarTransicion }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: estado._id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1, touchAction: "none" as const };
   const esImpositivo = !!estado.data?.esImpositivo;
@@ -100,21 +110,34 @@ const SortableChip: React.FC<{
       {esImpositivo && <ChipImpositivo />}
       {esImpositivo && <TramiteImpositivoBadge estado={estado} />}
       {mostrarTransicion && (
-        <button
-          type="button"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={onConfigurarTransicion}
-          disabled={!puedeConfigurarTransicion}
-          title={!puedeConfigurarTransicion ? "Guardá el flujo para poder configurar una transición automática" : transicion ? descripcionTransicion(transicion) : "Configurar transición automática"}
-          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent ${
-            transicion
-              ? "text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50"
-              : "text-gray-400 dark:text-gray-500 border-transparent hover:text-gray-500 dark:hover:text-gray-400"
+        <span
+          className={`inline-flex items-center rounded overflow-hidden border text-[10px] font-semibold transition-colors ${
+            transicion ? "text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 border-blue-100 dark:border-blue-800" : "text-gray-400 dark:text-gray-500 border-transparent"
           }`}
         >
-          <FontAwesomeIcon icon={faBolt} className="h-3 w-3 shrink-0" />
-          {transicion && <span className="truncate max-w-[140px]">{etiquetaTransicionCorta(transicion)}</span>}
-        </button>
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={onConfigurarTransicion}
+            disabled={!puedeConfigurarTransicion}
+            title={!puedeConfigurarTransicion ? "Guardá el flujo para poder configurar una transición automática" : transicion ? descripcionTransicion(transicion) : "Configurar transición automática"}
+            className="inline-flex items-center gap-1 pl-1.5 pr-1.5 py-0.5 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-blue-100 dark:hover:bg-blue-900/50"
+          >
+            <FontAwesomeIcon icon={faBolt} className="h-3 w-3 shrink-0" />
+            {transicion && <span className="truncate max-w-[140px]">{etiquetaTransicionCorta(transicion)}</span>}
+          </button>
+          {transicion && onQuitarTransicion && (
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={onQuitarTransicion}
+              title="Quitar transición automática"
+              className="px-1 py-0.5 border-l border-blue-100 dark:border-blue-800 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-600 dark:hover:text-red-400"
+            >
+              <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+            </button>
+          )}
+        </span>
       )}
       {onRemove && (
         <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={onRemove} title="Sacar del flujo" className="text-gray-400 hover:text-red-500 px-0.5">
@@ -155,7 +178,7 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
   const [eventoOverrides, setEventoOverrides] = useState<Record<string, TransicionAutomatica | null>>({});
   const [configurando, setConfigurando] = useState<InfoItem | null>(null);
   const [showFlowInfo, setShowFlowInfo] = useState(false);
-  const [eventoForm, setEventoForm] = useState<{ carpeta: string; detalle: string }>({ carpeta: "", detalle: "" });
+  const [eventoForm, setEventoForm] = useState<{ carpetas: { dropboxCarpeta: string; detalle: string }[] }>({ carpetas: [] });
   const [savingEvento, setSavingEvento] = useState(false);
   // Selector de carpeta de Dropbox: navega el árbol real en vez de tipear la ruta a ciegas. Navega TODO
   // el Dropbox conectado (no solo el rootPath de Dropbox Sign) porque puede haber carpetas separadas
@@ -169,7 +192,7 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
 
   const abrirConfigurarEvento = (estado: InfoItem) => {
     const actual = transicionDe(estado);
-    setEventoForm({ carpeta: actual?.dropboxCarpeta || "", detalle: actual?.detalle || "" });
+    setEventoForm({ carpetas: (actual?.carpetas || []).map((c) => ({ dropboxCarpeta: c.dropboxCarpeta, detalle: c.detalle || "" })) });
     setConfigurando(estado);
   };
 
@@ -189,15 +212,8 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
 
   const abrirPicker = () => {
     setPickerOpen(true);
-    cargarCarpetaPicker(eventoForm.carpeta.trim() || "");
+    cargarCarpetaPicker("");
   };
-
-  const elegirCarpetaActual = () => {
-    setEventoForm((p) => ({ ...p, carpeta: pickerPath }));
-    setPickerOpen(false);
-  };
-
-  const segmentosPicker = pickerPath.split("/").filter(Boolean);
 
   // Dos estados no pueden vigilar la misma carpeta (si no, sería ambiguo a cuál avanzar). Se excluye
   // al estado que se está editando, para no bloquearlo con su propia configuración actual.
@@ -205,21 +221,33 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
   estados.forEach((e) => {
     if (configurando?._id === e._id) return;
     const t = transicionDe(e);
-    if (t?.dropboxCarpeta) carpetasUsadas.set(t.dropboxCarpeta, e.name);
+    (t?.carpetas || []).forEach((c) => carpetasUsadas.set(c.dropboxCarpeta, e.name));
   });
+
+  const yaAgregadaEnForm = (path: string) => eventoForm.carpetas.some((c) => c.dropboxCarpeta === path);
+
+  const elegirCarpetaActual = () => {
+    if (carpetasUsadas.get(pickerPath) || yaAgregadaEnForm(pickerPath)) return;
+    setEventoForm((p) => ({ carpetas: [...p.carpetas, { dropboxCarpeta: pickerPath, detalle: "" }] }));
+    setPickerOpen(false);
+  };
+
+  const quitarCarpetaDelForm = (i: number) => setEventoForm((p) => ({ carpetas: p.carpetas.filter((_, idx) => idx !== i) }));
+  const actualizarDetalleCarpeta = (i: number, detalle: string) => setEventoForm((p) => ({ carpetas: p.carpetas.map((c, idx) => (idx === i ? { ...c, detalle } : c)) }));
+
+  const segmentosPicker = pickerPath.split("/").filter(Boolean);
 
   const guardarEvento = async () => {
     if (!configurando) return;
-    const carpeta = eventoForm.carpeta.trim();
-    if (carpeta) {
-      const dueño = carpetasUsadas.get(carpeta);
+    for (const c of eventoForm.carpetas) {
+      const dueño = carpetasUsadas.get(c.dropboxCarpeta);
       if (dueño) {
-        sweetAlert.error("Carpeta repetida", `Esa carpeta ya está asignada a "${dueño}". Elegí otra.`);
+        sweetAlert.error("Carpeta repetida", `La carpeta "${nombreCarpeta(c.dropboxCarpeta)}" ya está asignada a "${dueño}". Elegí otra.`);
         return;
       }
     }
-    // Carpeta vacía = sin transición automática (equivale a "quitarla").
-    const nuevaTransicion: TransicionAutomatica = carpeta ? { evento: "dropbox_carpeta", dropboxCarpeta: carpeta, detalle: eventoForm.detalle.trim() || undefined } : undefined;
+    const carpetas = eventoForm.carpetas.map((c) => ({ dropboxCarpeta: c.dropboxCarpeta, detalle: c.detalle.trim() || undefined }));
+    const nuevaTransicion: TransicionAutomatica = carpetas.length > 0 ? { evento: "dropbox_carpeta", carpetas } : undefined;
     // Se manda el estado completo (no solo `transicionAutomatica`): el PATCH reconstruye `data` entero
     // a partir del body, así que hay que preservar los demás campos tal cual están.
     const payload: EstadoPayload = {
@@ -243,6 +271,29 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
       sweetAlert.error("Error", e?.response?.data?.error || "No se pudo guardar la transición automática.");
     } finally {
       setSavingEvento(false);
+    }
+  };
+
+  /** Quita la transición automática de un estado directo desde el chip, sin pasar por el modal. */
+  const quitarTransicionRapido = async (estado: InfoItem) => {
+    const result = await sweetAlert.confirm("¿Quitar transición automática?", `Se va a dejar de vigilar las carpetas configuradas para "${estado.name}".`, "Sí, quitar", "Cancelar");
+    if (!result.isConfirmed) return;
+    const payload: EstadoPayload = {
+      name: estado.name,
+      color: estado.data?.color,
+      contratoFrameIds: estado.data?.contratoFrameIds || [],
+      esImpositivo: estado.data?.esImpositivo,
+      etiquetaSecundaria: estado.data?.etiquetaSecundaria,
+      colorEtiquetaSecundaria: estado.data?.colorEtiquetaSecundaria,
+      tipoImpositivo: estado.data?.tipoImpositivo,
+      transicionAutomatica: null,
+    };
+    try {
+      await infoAPI.updateEstado(estado._id, payload);
+      setEventoOverrides((prev) => ({ ...prev, [estado._id]: null }));
+      sweetAlert.success("Transición eliminada", `Se quitó la transición automática de "${estado.name}".`);
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo quitar la transición automática.");
     }
   };
 
@@ -356,12 +407,17 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
     });
   };
 
+  /** Sacar un estado del flujo también borra su transición automática: sin `ordenDependencia` no se
+   *  puede calcular "hacia adelante", así que quedaría una carpeta vigilada huérfana y bloqueada para
+   *  otros estados. El backend hace este mismo borrado al guardar (`reorder-dependencia`); acá se
+   *  refleja ya en la UI para no mostrar una config que se va a perder al guardar. */
   const sacarDelFlujo = (id: string) => {
     setItems((prev) => {
       const from = Object.keys(prev).find((k) => k !== UNASSIGNED && prev[k].includes(id));
       if (!from) return prev;
       return { ...prev, [from]: prev[from].filter((x) => x !== id), [UNASSIGNED]: [...prev[UNASSIGNED], id] };
     });
+    setEventoOverrides((prev) => ({ ...prev, [id]: null }));
   };
 
   const handleSave = async () => {
@@ -473,6 +529,7 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
                           transicion={transicionDe(est)}
                           puedeConfigurarTransicion={typeof est.data?.ordenDependencia === "number"}
                           onConfigurarTransicion={() => abrirConfigurarEvento(est)}
+                          onQuitarTransicion={() => quitarTransicionRapido(est)}
                         />
                       );
                     })
@@ -513,40 +570,41 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
       >
         <div className="space-y-3">
           <p className="text-[11px] text-gray-500 dark:text-gray-400">
-            Cuando aparezca un archivo en la carpeta de Dropbox que elijas, el contrato pasa solo a este estado (siempre hacia adelante, nunca retrocede).
+            Cuando aparezca un archivo en <strong>cualquiera</strong> de estas carpetas de Dropbox, el contrato pasa solo a este estado (siempre hacia adelante, nunca retrocede).
           </p>
           <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-2 ml-1">
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Carpeta de Dropbox a vigilar</label>
-              {eventoForm.carpeta && (
-                <button type="button" onClick={() => setEventoForm({ carpeta: "", detalle: "" })} className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 hover:underline">
-                  Quitar transición automática
-                </button>
-              )}
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Carpetas de Dropbox a vigilar</label>
+              <button type="button" onClick={abrirPicker} className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                + Agregar carpeta
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={abrirPicker}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-md border border-dashed border-gray-300 dark:border-gray-600 text-left hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
-            >
-              <FontAwesomeIcon icon={eventoForm.carpeta ? faFolderOpen : faFolder} className="h-4 w-4 text-amber-500 shrink-0" />
-              {eventoForm.carpeta ? (
-                <span className="text-xs font-mono text-gray-700 dark:text-gray-200 truncate">{eventoForm.carpeta}</span>
-              ) : (
-                <span className="text-xs text-gray-400 italic">Elegir carpeta en Dropbox...</span>
-              )}
-            </button>
-          </div>
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Descripción (opcional)</label>
-            <textarea
-              className="input-field w-full text-xs resize-none"
-              rows={3}
-              value={eventoForm.detalle}
-              onChange={(e) => setEventoForm((p) => ({ ...p, detalle: e.target.value }))}
-              placeholder='Ej: cuando se detecte que se subieron archivos y esos archivos fueron importados desde Dropbox Sign, se toman como "Firma Pendiente".'
-            />
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Una nota tuya para acordarte (o que otro admin entienda) qué significa esta carpeta en tu flujo. Se muestra al pasar el mouse por el rayo.</p>
+            {eventoForm.carpetas.length === 0 ? (
+              <p className="text-xs text-gray-400 italic">Todavía no agregaste ninguna carpeta.</p>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {eventoForm.carpetas.map((c, i) => (
+                  <div key={c.dropboxCarpeta} className="p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5 min-w-0 text-xs font-mono text-gray-700 dark:text-gray-200 truncate" title={c.dropboxCarpeta}>
+                        <FontAwesomeIcon icon={faFolder} className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                        {c.dropboxCarpeta}
+                      </span>
+                      <button type="button" onClick={() => quitarCarpetaDelForm(i)} title="Quitar esta carpeta" className="text-gray-400 hover:text-red-500 shrink-0">
+                        <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    <input
+                      className="input-field w-full text-[11px]"
+                      value={c.detalle}
+                      onChange={(e) => actualizarDetalleCarpeta(i, e.target.value)}
+                      placeholder='Descripción (opcional). Ej: cuando aparece acá, es "Firma Pendiente".'
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">La descripción es una nota tuya para acordarte (o que otro admin entienda) qué significa esa carpeta. Se muestra al pasar el mouse por el rayo.</p>
           </div>
         </div>
       </Modal>
@@ -564,7 +622,7 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
             <button onClick={() => setPickerOpen(false)} className="btn-secondary">
               Cancelar
             </button>
-            <button onClick={elegirCarpetaActual} className="btn-primary" disabled={pickerLoading || !!carpetasUsadas.get(pickerPath)}>
+            <button onClick={elegirCarpetaActual} className="btn-primary" disabled={pickerLoading || !!carpetasUsadas.get(pickerPath) || yaAgregadaEnForm(pickerPath)}>
               Usar esta carpeta
             </button>
           </div>
@@ -593,6 +651,12 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
               Esta carpeta ya está asignada a "{carpetasUsadas.get(pickerPath)}". Elegí otra.
             </p>
           )}
+          {yaAgregadaEnForm(pickerPath) && !carpetasUsadas.get(pickerPath) && (
+            <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400 flex items-start gap-1.5">
+              <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3 mt-0.5 shrink-0" />
+              Ya agregaste esta carpeta.
+            </p>
+          )}
           {(pickerLoading || pickerEntries.length > 0) && (
           <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-100 dark:divide-gray-800 max-h-64 overflow-y-auto">
             {pickerLoading ? (
@@ -602,18 +666,21 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
             ) : (
               pickerEntries.map((f) => {
                 const usadaPor = carpetasUsadas.get(f.path);
+                const yaAgregada = yaAgregadaEnForm(f.path);
+                const bloqueada = !!usadaPor || yaAgregada;
                 return (
                   <button
                     key={f.path}
                     type="button"
-                    onClick={() => !usadaPor && cargarCarpetaPicker(f.path)}
-                    disabled={!!usadaPor}
-                    title={usadaPor ? `Ya está asignada a "${usadaPor}"` : undefined}
+                    onClick={() => !bloqueada && cargarCarpetaPicker(f.path)}
+                    disabled={bloqueada}
+                    title={usadaPor ? `Ya está asignada a "${usadaPor}"` : yaAgregada ? "Ya agregaste esta carpeta" : undefined}
                     className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/40 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                   >
                     <FontAwesomeIcon icon={faFolder} className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                     <span className="truncate">{f.name}</span>
                     {usadaPor && <span className="text-[10px] text-amber-600 dark:text-amber-400 shrink-0 ml-auto">en uso: {usadaPor}</span>}
+                    {!usadaPor && yaAgregada && <span className="text-[10px] text-amber-600 dark:text-amber-400 shrink-0 ml-auto">ya agregada</span>}
                   </button>
                 );
               })
@@ -632,7 +699,7 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
         <p className="flex items-start gap-1.5">
           <FontAwesomeIcon icon={faBolt} className="h-3.5 w-3.5 text-blue-500 shrink-0 mt-0.5" />
           <span>
-            El rayo de cada estado indica si tiene una <strong>transición automática</strong> configurada: un evento que, al ocurrir, avanza el contrato solo a ese estado. Hacé click para configurarla — también funciona para los estados impositivos del Paso 1 (por ejemplo, detectados en una carpeta de Dropbox).
+            El rayo de cada estado indica si tiene una <strong>transición automática</strong> configurada: uno o más eventos que, al ocurrir, avanzan el contrato solo a ese estado. Hacé click en el rayo para configurarla, o en la "x" de al lado para quitarla directo — también funciona para los estados impositivos del Paso 1.
           </span>
         </p>
         <p className="flex items-start gap-1.5 p-2.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300">

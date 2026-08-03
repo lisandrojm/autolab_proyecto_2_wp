@@ -156,22 +156,31 @@ function parseEstadoBody(body: any): { error?: string; name?: string; data?: any
   // Transición automática: se maneja aparte (se edita desde "Orden de dependencias", no desde este
   // formulario) y es opcional en el body. Igual que con `ordenDependencia`: si el caller NO manda la
   // clave, no se toca acá — para que el merge del PATCH preserve lo que ya estaba configurado. Si la
-  // manda, `null`/`{}` la borra; un objeto con `evento` válido la setea.
+  // manda, `null`/`{}`/sin carpetas la borra; un objeto con `evento` + al menos una carpeta la setea.
+  // Puede tener VARIAS carpetas: cualquiera de ellas dispara la misma transición.
   if (Object.prototype.hasOwnProperty.call(body || {}, "transicionAutomatica")) {
     const rawTransicion = body.transicionAutomatica;
-    if (rawTransicion && typeof rawTransicion === "object" && rawTransicion.evento) {
+    const rawCarpetas = Array.isArray(rawTransicion?.carpetas) ? rawTransicion.carpetas : [];
+    if (rawTransicion && typeof rawTransicion === "object" && rawTransicion.evento && rawCarpetas.length > 0) {
       const evento = String(rawTransicion.evento).trim();
       if (!EVENTOS_TRANSICION_AUTOMATICA.includes(evento as any)) {
         return { error: "El evento de transición automática no es válido" };
       }
-      const dropboxCarpeta = String(rawTransicion.dropboxCarpeta ?? "").trim();
-      if (!dropboxCarpeta) return { error: "La transición por carpeta de Dropbox necesita indicar la carpeta a vigilar" };
       // Nota libre de quien configura la transición (ej. qué significa esta carpeta en su flujo):
       // el contenido lo define el usuario, así que no hay más validación que un límite de largo.
-      const detalle = String(rawTransicion.detalle ?? "").trim().slice(0, 500) || undefined;
-      data.transicionAutomatica = { evento, dropboxCarpeta, detalle };
+      const vistas = new Set<string>();
+      const carpetas: { dropboxCarpeta: string; detalle?: string }[] = [];
+      for (const c of rawCarpetas) {
+        const dropboxCarpeta = String(c?.dropboxCarpeta ?? "").trim();
+        if (!dropboxCarpeta || vistas.has(dropboxCarpeta)) continue;
+        vistas.add(dropboxCarpeta);
+        const detalle = String(c?.detalle ?? "").trim().slice(0, 500) || undefined;
+        carpetas.push({ dropboxCarpeta, detalle });
+      }
+      if (carpetas.length === 0) return { error: "La transición por carpeta de Dropbox necesita indicar al menos una carpeta a vigilar" };
+      data.transicionAutomatica = { evento, carpetas };
     } else {
-      data.transicionAutomatica = undefined; // null / {} / evento vacío → se borra
+      data.transicionAutomatica = undefined; // null / {} / sin carpetas → se borra
     }
   }
 
@@ -204,11 +213,12 @@ async function conflictoImpositivo(data: any, excluirId?: string): Promise<strin
  */
 async function conflictoTransicionAutomatica(data: any, excluirId?: string): Promise<string | null> {
   const t = data?.transicionAutomatica;
-  if (!t?.evento) return null;
+  const carpetas = (t?.carpetas || []).map((c: any) => c.dropboxCarpeta).filter(Boolean);
+  if (carpetas.length === 0) return null;
 
   const otro = await Info.findOne({
     type: ESTADO_TYPE,
-    "data.transicionAutomatica.dropboxCarpeta": t.dropboxCarpeta,
+    "data.transicionAutomatica.carpetas.dropboxCarpeta": { $in: carpetas },
     ...(excluirId ? { _id: { $ne: excluirId } } : {}),
   }).lean();
   if (!otro) return null;
@@ -325,9 +335,12 @@ router.patch("/estados/reorder-dependencia", requireTenant, authenticateToken, a
 
     const ops = items.map((it) => {
       const n = it.ordenDependencia;
+      // Fuera del flujo → sin ordenDependencia. Una transición automática requiere estar en el flujo
+      // (necesita saber su paso para calcular "hacia adelante"), así que si se saca del flujo se borra
+      // junto con el paso, para no dejar una carpeta de Dropbox vigilada "huérfana" y bloqueada.
       const update =
         n === null || n === undefined
-          ? { $unset: { "data.ordenDependencia": "" } } // fuera del flujo → campo ausente (canónico)
+          ? { $unset: { "data.ordenDependencia": "", "data.transicionAutomatica": "" } }
           : { $set: { "data.ordenDependencia": Number(n) } };
       return { updateOne: { filter: { _id: it.id, type: ESTADO_TYPE }, update } };
     });

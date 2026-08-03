@@ -22,14 +22,16 @@ export interface IInfo extends Document {
     orden?: number;
     /** Estados: paso dentro del flujo de dependencias (alternativas comparten número). Ausente = fuera del flujo. */
     ordenDependencia?: number;
-    /** Estados: transición automática hacia ESTE estado cuando aparece un archivo en una carpeta de
-     *  Dropbox. Requiere `ordenDependencia`. */
+    /** Estados: transición automática hacia ESTE estado cuando aparece un archivo en CUALQUIERA de
+     *  estas carpetas de Dropbox. Requiere `ordenDependencia`. */
     transicionAutomatica?: {
       evento: "dropbox_carpeta";
-      /** Carpeta a vigilar (path de Dropbox). */
-      dropboxCarpeta: string;
-      /** Nota libre de quien la configuró (ej. qué significa esta carpeta puntual en su flujo). */
-      detalle?: string;
+      carpetas: {
+        /** Carpeta a vigilar (path de Dropbox). */
+        dropboxCarpeta: string;
+        /** Nota libre de quien la configuró (ej. qué significa esta carpeta puntual en su flujo). */
+        detalle?: string;
+      }[];
     };
     [key: string]: any;
   };
@@ -56,8 +58,13 @@ const infoSchema = new Schema<IInfo>(
       ordenDependencia: { type: Number },
       transicionAutomatica: {
         evento: { type: String },
-        dropboxCarpeta: { type: String },
-        detalle: { type: String },
+        carpetas: [
+          {
+            _id: false,
+            dropboxCarpeta: { type: String },
+            detalle: { type: String },
+          },
+        ],
       },
     },
     name: { type: String, required: true },

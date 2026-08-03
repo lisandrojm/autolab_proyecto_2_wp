@@ -25,11 +25,15 @@ export interface InfoItem {
     ordenDependencia?: number;
     /** Estados: transición automática hacia ESTE estado cuando aparece un archivo en una carpeta de
      *  Dropbox. Requiere `ordenDependencia`. */
+    /** Transición automática hacia ESTE estado cuando aparece un archivo en CUALQUIERA de estas
+     *  carpetas de Dropbox. Requiere `ordenDependencia`. */
     transicionAutomatica?: {
       evento: "dropbox_carpeta";
-      dropboxCarpeta: string;
-      /** Nota libre de quien la configuró (ej. qué significa esta carpeta puntual en su flujo). */
-      detalle?: string;
+      carpetas: {
+        dropboxCarpeta: string;
+        /** Nota libre de quien la configuró (ej. qué significa esta carpeta puntual en su flujo). */
+        detalle?: string;
+      }[];
     };
     [key: string]: any;
   };
@@ -52,8 +56,7 @@ export interface EstadoPayload {
    */
   transicionAutomatica?: {
     evento: "dropbox_carpeta";
-    dropboxCarpeta: string;
-    detalle?: string;
+    carpetas: { dropboxCarpeta: string; detalle?: string }[];
   } | null;
 }
 
