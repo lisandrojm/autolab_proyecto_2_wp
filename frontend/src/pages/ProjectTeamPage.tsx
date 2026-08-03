@@ -3304,14 +3304,14 @@ export const ProjectTeamPage: React.FC = () => {
 
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Hora inicio - HH:MM</label>
-                      <input type="time" className="input-field w-full opacity-60 cursor-not-allowed" value={wizardData.hora_inicio} readOnly disabled />
-                      <p className="text-[10px] text-gray-400 ml-1">Se toma del contrato del empleado (independiente de los turnos).</p>
+                      <input type="time" className="input-field w-full" value={wizardData.hora_inicio} onChange={(e) => setWizardData((prev) => ({ ...prev, hora_inicio: e.target.value }))} />
+                      <p className="text-[10px] text-gray-400 ml-1">Horario del contrato de este miembro (independiente de los turnos).</p>
                     </div>
 
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Hora fin - HH:MM</label>
-                      <input type="time" className="input-field w-full opacity-60 cursor-not-allowed" value={wizardData.hora_fin} readOnly disabled />
-                      <p className="text-[10px] text-gray-400 ml-1">Se toma del contrato del empleado (independiente de los turnos).</p>
+                      <input type="time" className="input-field w-full" value={wizardData.hora_fin} onChange={(e) => setWizardData((prev) => ({ ...prev, hora_fin: e.target.value }))} />
+                      <p className="text-[10px] text-gray-400 ml-1">Horario del contrato de este miembro (independiente de los turnos).</p>
                     </div>
 
                     <div className="space-y-1.5">
