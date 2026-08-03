@@ -23,11 +23,11 @@ export interface InfoItem {
     orden?: number;
     /** Estados: paso del flujo de dependencias (alternativas comparten número). Ausente = fuera del flujo. */
     ordenDependencia?: number;
-    /** Estados: transición automática hacia ESTE estado al ocurrir un evento. Requiere `ordenDependencia`. */
+    /** Estados: transición automática hacia ESTE estado cuando aparece un archivo en una carpeta de
+     *  Dropbox. Requiere `ordenDependencia`. */
     transicionAutomatica?: {
-      evento: "alta_documento_subido" | "dropbox_carpeta";
-      /** Solo con evento "dropbox_carpeta": carpeta a vigilar, relativa al rootPath de Dropbox del tenant. */
-      dropboxCarpeta?: string;
+      evento: "dropbox_carpeta";
+      dropboxCarpeta: string;
       /** Nota libre de quien la configuró (ej. qué significa esta carpeta puntual en su flujo). */
       detalle?: string;
     };
@@ -51,8 +51,8 @@ export interface EstadoPayload {
    * desde "Orden de dependencias", no desde el formulario de Editar Estado). `null` la borra.
    */
   transicionAutomatica?: {
-    evento: "alta_documento_subido" | "dropbox_carpeta";
-    dropboxCarpeta?: string;
+    evento: "dropbox_carpeta";
+    dropboxCarpeta: string;
     detalle?: string;
   } | null;
 }

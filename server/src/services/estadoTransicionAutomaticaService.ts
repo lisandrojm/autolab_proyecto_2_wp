@@ -1,8 +1,8 @@
 import { Info, IInfo } from "../models/Info.js";
 import { IUserProject } from "../models/UserProject.js";
 
-/** Eventos que pueden disparar una transición automática hacia un Estado. */
-export type EventoTransicionAutomatica = "alta_documento_subido" | "dropbox_carpeta";
+/** Único evento que puede disparar una transición automática hacia un Estado. */
+export type EventoTransicionAutomatica = "dropbox_carpeta";
 
 export interface ResultadoTransicion {
   aplicada: boolean;
@@ -27,24 +27,12 @@ async function ordenDependenciaDelEstado(estadoId: number | undefined | null): P
   return typeof orden === "number" ? orden : 0;
 }
 
-/** Del catálogo de estados con este evento, el que ocupa EXACTAMENTE el paso siguiente (nunca salta pasos). */
-export function estadoDestinoDesdeCatalogo(catalogo: IInfo[], ordenDependenciaActual: number): IInfo | null {
-  return catalogo.find((e) => e.data?.ordenDependencia === ordenDependenciaActual + 1) || null;
-}
-
-/** Estado destino aplicable para este evento, dado el estado actual del contrato (o null si no corresponde). */
-export async function buscarEstadoDestino(evento: EventoTransicionAutomatica, estadoActualId: number | undefined | null): Promise<IInfo | null> {
-  const catalogo = await cargarEstadosPorEvento(evento);
-  if (catalogo.length === 0) return null;
-  const ordenActual = await ordenDependenciaDelEstado(estadoActualId);
-  return estadoDestinoDesdeCatalogo(catalogo, ordenActual);
-}
-
 /**
  * Muta `up.contracts[contractIndex]` (estado_id + nombre_estado_empleado) y persiste. Re-valida
  * "hacia adelante" tomando el estado actual DEL DOCUMENTO en este instante (defensivo: `up` pudo
  * cargarse hace rato), así que es seguro invocarla especulativamente. Idempotente: si el contrato ya
- * está en ese estado o más adelante, no hace nada.
+ * está en ese estado o más adelante, no hace nada. No hace falta que el destino sea el paso inmediato
+ * siguiente: alcanza con que esté más adelante que el actual (el evento certifica que ya llegó ahí).
  */
 export async function aplicarTransicion(up: IUserProject, contractIndex: number, estadoDestino: IInfo): Promise<ResultadoTransicion> {
   const contrato = up.contracts[contractIndex] as any;
@@ -65,15 +53,4 @@ export async function aplicarTransicion(up: IUserProject, contractIndex: number,
   await up.save();
 
   return { aplicada: true, estadoAnteriorId, estadoNuevo: { id: destinoId, nombre: estadoDestino.name } };
-}
-
-/** Combina `buscarEstadoDestino` + `aplicarTransicion` — punto de entrada único para un evento puntual. */
-export async function intentarTransicionPorEvento(up: IUserProject, contractIndex: number, evento: EventoTransicionAutomatica): Promise<ResultadoTransicion> {
-  const contrato = up.contracts[contractIndex] as any;
-  if (!contrato) return { aplicada: false, motivo: "contrato_inexistente" };
-
-  const estadoDestino = await buscarEstadoDestino(evento, contrato.estado_id);
-  if (!estadoDestino) return { aplicada: false, motivo: "sin_estado_configurado" };
-
-  return aplicarTransicion(up, contractIndex, estadoDestino);
 }

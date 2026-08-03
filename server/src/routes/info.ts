@@ -92,8 +92,9 @@ const LOCAL_ESTADO_ID_BASE = 100000;
 /** Trámite impositivo que representa un estado impositivo. Excluyentes: siempre uno solo. */
 const TIPOS_IMPOSITIVO = ["alta_temprana_afip", "constancia_cuit"] as const;
 
-/** Eventos que pueden disparar una transición automática hacia un estado. */
-const EVENTOS_TRANSICION_AUTOMATICA = ["alta_documento_subido", "dropbox_carpeta"] as const;
+/** Único evento que puede disparar una transición automática hacia un estado: aparece un archivo
+ *  en una carpeta de Dropbox. */
+const EVENTOS_TRANSICION_AUTOMATICA = ["dropbox_carpeta"] as const;
 
 /**
  * ¿El estado (con el `data` que va a quedar guardado tras este request) tiene `ordenDependencia`?
@@ -163,19 +164,12 @@ function parseEstadoBody(body: any): { error?: string; name?: string; data?: any
       if (!EVENTOS_TRANSICION_AUTOMATICA.includes(evento as any)) {
         return { error: "El evento de transición automática no es válido" };
       }
-      // Los impositivos van fijos al Paso 1 y se asignan directo al crear el contrato: no llegan a
-      // ese paso disparados por un evento, así que no tiene sentido configurarles una transición.
-      if (esImpositivo) return { error: "Un estado impositivo no puede tener una transición automática" };
+      const dropboxCarpeta = String(rawTransicion.dropboxCarpeta ?? "").trim();
+      if (!dropboxCarpeta) return { error: "La transición por carpeta de Dropbox necesita indicar la carpeta a vigilar" };
       // Nota libre de quien configura la transición (ej. qué significa esta carpeta en su flujo):
       // el contenido lo define el usuario, así que no hay más validación que un límite de largo.
       const detalle = String(rawTransicion.detalle ?? "").trim().slice(0, 500) || undefined;
-      if (evento === "dropbox_carpeta") {
-        const dropboxCarpeta = String(rawTransicion.dropboxCarpeta ?? "").trim();
-        if (!dropboxCarpeta) return { error: "La transición por carpeta de Dropbox necesita indicar la carpeta a vigilar" };
-        data.transicionAutomatica = { evento, dropboxCarpeta, detalle };
-      } else {
-        data.transicionAutomatica = { evento, detalle };
-      }
+      data.transicionAutomatica = { evento, dropboxCarpeta, detalle };
     } else {
       data.transicionAutomatica = undefined; // null / {} / evento vacío → se borra
     }
@@ -205,23 +199,21 @@ async function conflictoImpositivo(data: any, excluirId?: string): Promise<strin
 }
 
 /**
- * Cada evento de transición automática solo puede estar asignado a UN estado a la vez (si no, sería
- * ambiguo a cuál avanzar). Para "dropbox_carpeta" la restricción es por carpeta puntual: dos estados
- * distintos pueden vigilar carpetas distintas, pero no la misma. Devuelve el mensaje de error, o null.
+ * Dos estados no pueden vigilar la misma carpeta de Dropbox (si no, sería ambiguo a cuál avanzar).
+ * Devuelve el mensaje de error, o null si no hay conflicto.
  */
 async function conflictoTransicionAutomatica(data: any, excluirId?: string): Promise<string | null> {
   const t = data?.transicionAutomatica;
   if (!t?.evento) return null;
 
-  const filtro: any = { type: ESTADO_TYPE, "data.transicionAutomatica.evento": t.evento, ...(excluirId ? { _id: { $ne: excluirId } } : {}) };
-  if (t.evento === "dropbox_carpeta") filtro["data.transicionAutomatica.dropboxCarpeta"] = t.dropboxCarpeta;
-
-  const otro = await Info.findOne(filtro).lean();
+  const otro = await Info.findOne({
+    type: ESTADO_TYPE,
+    "data.transicionAutomatica.dropboxCarpeta": t.dropboxCarpeta,
+    ...(excluirId ? { _id: { $ne: excluirId } } : {}),
+  }).lean();
   if (!otro) return null;
 
-  return t.evento === "alta_documento_subido"
-    ? `El evento "Se subió el documento de Alta" ya está asignado a "${(otro as any).name}"`
-    : `Esa carpeta de Dropbox ya está asignada a "${(otro as any).name}"`;
+  return `Esa carpeta de Dropbox ya está asignada a "${(otro as any).name}"`;
 }
 
 // POST /info/estados - crear estado

@@ -29,19 +29,6 @@ const UNASSIGNED = "unassigned";
 
 type TransicionAutomatica = InfoItem["data"]["transicionAutomatica"];
 
-const EVENTOS_TRANSICION_AUTOMATICA: { value: "alta_documento_subido" | "dropbox_carpeta"; label: string; descripcion: string }[] = [
-  {
-    value: "alta_documento_subido",
-    label: "Se subió el documento de Alta",
-    descripcion: "Es un solo evento aunque el documento sea distinto: se dispara tanto si se sube el Alta temprana de AFIP como si se sube la Constancia de CUIT — el que corresponda según el tipo impositivo del contrato.",
-  },
-  {
-    value: "dropbox_carpeta",
-    label: "Se detecta en una carpeta de Dropbox",
-    descripcion: "Un proceso revisa la carpeta que elijas cada cierto tiempo: cuando encuentra ahí el archivo de un contrato que está esperando este paso, lo avanza automáticamente.",
-  },
-];
-
 /**
  * Detección de colisiones basada en el puntero: detecta el contenedor sobre el que está el cursor
  * aunque esté VACÍO (los pasos recién creados). `closestCorners` fallaba con contenedores vacíos
@@ -80,13 +67,12 @@ const nombreCarpeta = (path?: string): string => {
 /** Descripción corta de una transición automática, para el tooltip del chip (incluye la nota propia si tiene). */
 const descripcionTransicion = (t: TransicionAutomatica): string => {
   if (!t) return "";
-  const base = t.evento === "alta_documento_subido" ? "Automático: se subió el documento de Alta" : `Automático: carpeta de Dropbox (${t.dropboxCarpeta})`;
+  const base = `Automático: carpeta de Dropbox (${t.dropboxCarpeta})`;
   return t.detalle ? `${base} — ${t.detalle}` : base;
 };
 
 /** Etiqueta corta para mostrar en el chip cuando el rayo está encendido. */
-const etiquetaTransicionCorta = (t: TransicionAutomatica): string =>
-  t?.evento === "alta_documento_subido" ? "Doc. de Alta" : t?.evento === "dropbox_carpeta" ? `Dropbox | ${nombreCarpeta(t.dropboxCarpeta)}` : "";
+const etiquetaTransicionCorta = (t: TransicionAutomatica): string => (t ? `Dropbox | ${nombreCarpeta(t.dropboxCarpeta)}` : "");
 
 /** Chip arrastrable de un estado. Se arrastra desde cualquier parte del chip. */
 const SortableChip: React.FC<{
@@ -169,14 +155,13 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
   const [eventoOverrides, setEventoOverrides] = useState<Record<string, TransicionAutomatica | null>>({});
   const [configurando, setConfigurando] = useState<InfoItem | null>(null);
   const [showFlowInfo, setShowFlowInfo] = useState(false);
-  const [eventoForm, setEventoForm] = useState<{ evento: "" | "alta_documento_subido" | "dropbox_carpeta"; carpeta: string; detalle: string }>({ evento: "", carpeta: "", detalle: "" });
+  const [eventoForm, setEventoForm] = useState<{ carpeta: string; detalle: string }>({ carpeta: "", detalle: "" });
   const [savingEvento, setSavingEvento] = useState(false);
-  // Info de cada opción de evento, mostrada en un InfoModal aparte (no siempre visible en el chip).
-  const [infoEvento, setInfoEvento] = useState<(typeof EVENTOS_TRANSICION_AUTOMATICA)[number] | null>(null);
-  // Selector de carpeta de Dropbox: navega el árbol real en vez de tipear la ruta a ciegas.
+  // Selector de carpeta de Dropbox: navega el árbol real en vez de tipear la ruta a ciegas. Navega TODO
+  // el Dropbox conectado (no solo el rootPath de Dropbox Sign) porque puede haber carpetas separadas
+  // para otros trámites (p. ej. una carpeta "AFIP" aparte de "HelloSign").
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerPath, setPickerPath] = useState("");
-  const [pickerRoot, setPickerRoot] = useState("/HelloSign");
   const [pickerEntries, setPickerEntries] = useState<DropboxEntry[]>([]);
   const [pickerLoading, setPickerLoading] = useState(false);
 
@@ -184,17 +169,16 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
 
   const abrirConfigurarEvento = (estado: InfoItem) => {
     const actual = transicionDe(estado);
-    setEventoForm({ evento: actual?.evento || "", carpeta: actual?.dropboxCarpeta || "", detalle: actual?.detalle || "" });
+    setEventoForm({ carpeta: actual?.dropboxCarpeta || "", detalle: actual?.detalle || "" });
     setConfigurando(estado);
   };
 
   const cargarCarpetaPicker = async (path: string) => {
     try {
       setPickerLoading(true);
-      const { entries, path: resolved, rootPath } = await dropboxAPI.list(path);
+      const { entries, path: resolved } = await dropboxAPI.list(path, true);
       setPickerEntries(entries.filter((e) => e.tag === "folder"));
       setPickerPath(resolved);
-      setPickerRoot(rootPath);
     } catch (e: any) {
       sweetAlert.error("No se pudo abrir Dropbox", e?.response?.data?.error || "Revisá que Dropbox esté conectado.");
       setPickerOpen(false);
@@ -213,34 +197,29 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
     setPickerOpen(false);
   };
 
-  const segmentosPicker = pickerPath.startsWith(pickerRoot) ? pickerPath.slice(pickerRoot.length).split("/").filter(Boolean) : pickerPath.split("/").filter(Boolean);
+  const segmentosPicker = pickerPath.split("/").filter(Boolean);
 
-  // Cada evento solo puede estar asignado a un estado a la vez (si no, sería ambiguo a cuál avanzar).
-  // Se excluye al estado que se está editando, para no bloquearlo con su propia configuración actual.
-  const estadoConAltaDocumento = configurando ? estados.find((e) => e._id !== configurando._id && transicionDe(e)?.evento === "alta_documento_subido") : undefined;
+  // Dos estados no pueden vigilar la misma carpeta (si no, sería ambiguo a cuál avanzar). Se excluye
+  // al estado que se está editando, para no bloquearlo con su propia configuración actual.
   const carpetasUsadas = new Map<string, string>();
   estados.forEach((e) => {
     if (configurando?._id === e._id) return;
     const t = transicionDe(e);
-    if (t?.evento === "dropbox_carpeta" && t.dropboxCarpeta) carpetasUsadas.set(t.dropboxCarpeta, e.name);
+    if (t?.dropboxCarpeta) carpetasUsadas.set(t.dropboxCarpeta, e.name);
   });
 
   const guardarEvento = async () => {
     if (!configurando) return;
-    if (eventoForm.evento === "dropbox_carpeta" && !eventoForm.carpeta.trim()) {
-      sweetAlert.error("Falta la carpeta", "Indicá qué carpeta de Dropbox hay que vigilar para esta transición automática.");
-      return;
-    }
-    if (eventoForm.evento === "dropbox_carpeta") {
-      const dueño = carpetasUsadas.get(eventoForm.carpeta.trim());
+    const carpeta = eventoForm.carpeta.trim();
+    if (carpeta) {
+      const dueño = carpetasUsadas.get(carpeta);
       if (dueño) {
         sweetAlert.error("Carpeta repetida", `Esa carpeta ya está asignada a "${dueño}". Elegí otra.`);
         return;
       }
     }
-    const nuevaTransicion: TransicionAutomatica = eventoForm.evento
-      ? { evento: eventoForm.evento, dropboxCarpeta: eventoForm.evento === "dropbox_carpeta" ? eventoForm.carpeta.trim() : undefined, detalle: eventoForm.detalle.trim() || undefined }
-      : undefined;
+    // Carpeta vacía = sin transición automática (equivale a "quitarla").
+    const nuevaTransicion: TransicionAutomatica = carpeta ? { evento: "dropbox_carpeta", dropboxCarpeta: carpeta, detalle: eventoForm.detalle.trim() || undefined } : undefined;
     // Se manda el estado completo (no solo `transicionAutomatica`): el PATCH reconstruye `data` entero
     // a partir del body, así que hay que preservar los demás campos tal cual están.
     const payload: EstadoPayload = {
@@ -483,15 +462,14 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
                     (items[pid] || []).map((id) => {
                       const est = estadoById.get(id);
                       if (!est) return null;
-                      // Los impositivos van fijos al Paso 1: no se sacan del flujo (sin botón "x") ni
-                      // se les puede configurar una transición automática (ya se asignan directo al
-                      // crear el contrato, no llegan a ese paso disparados por un evento).
+                      // Los impositivos van fijos al Paso 1: no se sacan del flujo (sin botón "x"), pero
+                      // sí pueden tener transición automática (p. ej. detectados por carpeta de Dropbox).
                       return (
                         <SortableChip
                           key={id}
                           estado={est}
                           onRemove={est.data?.esImpositivo ? undefined : () => sacarDelFlujo(id)}
-                          mostrarTransicion={!est.data?.esImpositivo}
+                          mostrarTransicion
                           transicion={transicionDe(est)}
                           puedeConfigurarTransicion={typeof est.data?.ordenDependencia === "number"}
                           onConfigurarTransicion={() => abrirConfigurarEvento(est)}
@@ -534,89 +512,44 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
         }
       >
         <div className="space-y-3">
-          <p className="text-[11px] text-gray-500 dark:text-gray-400">Cuando ocurra este evento, el contrato pasa solo a este estado (siempre hacia adelante, nunca retrocede).</p>
-          <div className="grid grid-cols-1 gap-2">
-            {EVENTOS_TRANSICION_AUTOMATICA.map((op) => {
-              const activo = eventoForm.evento === op.value;
-              const bloqueadoPor = op.value === "alta_documento_subido" ? estadoConAltaDocumento : undefined;
-              const deshabilitado = !!bloqueadoPor;
-              return (
-                <div
-                  key={op.value}
-                  onClick={() => {
-                    if (deshabilitado) return;
-                    setEventoForm((p) => ({ ...p, evento: activo ? "" : op.value }));
-                  }}
-                  title={deshabilitado ? `Ya lo usa "${bloqueadoPor?.name}"` : undefined}
-                  className={`flex items-center justify-between gap-2 p-2.5 rounded-lg border text-left transition-colors ${
-                    deshabilitado
-                      ? "opacity-50 cursor-not-allowed border-gray-200 dark:border-gray-700"
-                      : `cursor-pointer ${activo ? "border-blue-500 bg-blue-100/60 dark:bg-blue-900/30" : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/40"}`
-                  }`}
-                >
-                  <span className="flex items-center gap-2 min-w-0">
-                    <span className={`flex items-center justify-center h-4 w-4 rounded-full border-2 shrink-0 ${activo ? "border-blue-600" : "border-gray-300 dark:border-gray-600"}`}>
-                      {activo && <span className="h-2 w-2 rounded-full bg-blue-600" />}
-                    </span>
-                    <span className="flex flex-col min-w-0">
-                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate">{op.label}</span>
-                      {deshabilitado && <span className="text-[10px] text-amber-600 dark:text-amber-400 truncate">Ya lo usa "{bloqueadoPor?.name}"</span>}
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setInfoEvento(op);
-                    }}
-                    title={`¿Qué significa "${op.label}"?`}
-                    aria-label={`¿Qué significa "${op.label}"?`}
-                    className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0"
-                  >
-                    <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              );
-            })}
+          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+            Cuando aparezca un archivo en la carpeta de Dropbox que elijas, el contrato pasa solo a este estado (siempre hacia adelante, nunca retrocede).
+          </p>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2 ml-1">
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Carpeta de Dropbox a vigilar</label>
+              {eventoForm.carpeta && (
+                <button type="button" onClick={() => setEventoForm({ carpeta: "", detalle: "" })} className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 hover:underline">
+                  Quitar transición automática
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={abrirPicker}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-md border border-dashed border-gray-300 dark:border-gray-600 text-left hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+            >
+              <FontAwesomeIcon icon={eventoForm.carpeta ? faFolderOpen : faFolder} className="h-4 w-4 text-amber-500 shrink-0" />
+              {eventoForm.carpeta ? (
+                <span className="text-xs font-mono text-gray-700 dark:text-gray-200 truncate">{eventoForm.carpeta}</span>
+              ) : (
+                <span className="text-xs text-gray-400 italic">Elegir carpeta en Dropbox...</span>
+              )}
+            </button>
           </div>
-          {eventoForm.evento === "dropbox_carpeta" && (
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Carpeta de Dropbox a vigilar *</label>
-              <button
-                type="button"
-                onClick={abrirPicker}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-md border border-dashed border-gray-300 dark:border-gray-600 text-left hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
-              >
-                <FontAwesomeIcon icon={eventoForm.carpeta ? faFolderOpen : faFolder} className="h-4 w-4 text-amber-500 shrink-0" />
-                {eventoForm.carpeta ? (
-                  <span className="text-xs font-mono text-gray-700 dark:text-gray-200 truncate">{eventoForm.carpeta}</span>
-                ) : (
-                  <span className="text-xs text-gray-400 italic">Elegir carpeta en Dropbox...</span>
-                )}
-              </button>
-            </div>
-          )}
-          {eventoForm.evento && (
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Descripción (opcional)</label>
-              <textarea
-                className="input-field w-full text-xs resize-none"
-                rows={3}
-                value={eventoForm.detalle}
-                onChange={(e) => setEventoForm((p) => ({ ...p, detalle: e.target.value }))}
-                placeholder='Ej: cuando se detecte que se subieron archivos y esos archivos fueron importados desde Dropbox Sign, se toman como "Firma Pendiente".'
-              />
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Una nota tuya para acordarte (o que otro admin entienda) qué significa este evento en tu flujo. Se muestra al pasar el mouse por el rayo.</p>
-            </div>
-          )}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Descripción (opcional)</label>
+            <textarea
+              className="input-field w-full text-xs resize-none"
+              rows={3}
+              value={eventoForm.detalle}
+              onChange={(e) => setEventoForm((p) => ({ ...p, detalle: e.target.value }))}
+              placeholder='Ej: cuando se detecte que se subieron archivos y esos archivos fueron importados desde Dropbox Sign, se toman como "Firma Pendiente".'
+            />
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Una nota tuya para acordarte (o que otro admin entienda) qué significa esta carpeta en tu flujo. Se muestra al pasar el mouse por el rayo.</p>
+          </div>
         </div>
       </Modal>
-    )}
-
-    {infoEvento && (
-      <InfoModal isOpen={!!infoEvento} onClose={() => setInfoEvento(null)} title={infoEvento.label} size="sm" zIndex={90}>
-        <p className="text-sm text-gray-600 dark:text-gray-300">{infoEvento.descripcion}</p>
-      </InfoModal>
     )}
 
     {pickerOpen && (
@@ -639,13 +572,13 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
       >
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-1 text-xs">
-            <button type="button" onClick={() => cargarCarpetaPicker(pickerRoot)} className="text-blue-600 dark:text-blue-400 hover:underline font-semibold">
+            <button type="button" onClick={() => cargarCarpetaPicker("")} className="text-blue-600 dark:text-blue-400 hover:underline font-semibold">
               Raíz
             </button>
             {segmentosPicker.map((seg, i) => (
               <React.Fragment key={i}>
                 <span className="text-gray-400">/</span>
-                <button type="button" onClick={() => cargarCarpetaPicker(`${pickerRoot}/${segmentosPicker.slice(0, i + 1).join("/")}`)} className="text-blue-600 dark:text-blue-400 hover:underline">
+                <button type="button" onClick={() => cargarCarpetaPicker(`/${segmentosPicker.slice(0, i + 1).join("/")}`)} className="text-blue-600 dark:text-blue-400 hover:underline">
                   {seg}
                 </button>
               </React.Fragment>
@@ -699,13 +632,13 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
         <p className="flex items-start gap-1.5">
           <FontAwesomeIcon icon={faBolt} className="h-3.5 w-3.5 text-blue-500 shrink-0 mt-0.5" />
           <span>
-            El rayo de cada estado indica si tiene una <strong>transición automática</strong> configurada: un evento que, al ocurrir, avanza el contrato solo a ese estado. Hacé click para configurarla (no disponible para los estados impositivos).
+            El rayo de cada estado indica si tiene una <strong>transición automática</strong> configurada: un evento que, al ocurrir, avanza el contrato solo a ese estado. Hacé click para configurarla — también funciona para los estados impositivos del Paso 1 (por ejemplo, detectados en una carpeta de Dropbox).
           </span>
         </p>
         <p className="flex items-start gap-1.5 p-2.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300">
           <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 shrink-0 mt-0.5" />
           <span>
-            <strong>Importante:</strong> para usar la transición "Se detecta en una carpeta de Dropbox" hace falta tener conectada una cuenta de <strong>Dropbox</strong> y usar <strong>Dropbox Sign</strong> como proveedor de firma — es lo que va guardando los documentos en esas carpetas. Sin esa conexión, esta transición no se va a disparar nunca.
+            <strong>Importante:</strong> para usar esta transición hace falta tener conectada una cuenta de <strong>Dropbox</strong> — es lo que va guardando los documentos en esas carpetas (por ejemplo, sincronizados desde Dropbox Sign, o cualquier otra carpeta que subas vos mismo). Sin esa conexión, la transición no se va a disparar nunca.
           </span>
         </p>
       </div>

@@ -33,8 +33,9 @@ export const dropboxAPI = {
     await axios.post("/dropbox/disconnect");
   },
 
-  async list(path?: string): Promise<{ entries: DropboxEntry[]; path: string; rootPath: string }> {
-    const { data } = await axios.get("/dropbox/list", { params: { path: path || "" } });
+  /** `full`: ignora el límite del rootPath y navega desde una raíz más amplia (ver /dropbox/list). */
+  async list(path?: string, full?: boolean): Promise<{ entries: DropboxEntry[]; path: string; rootPath: string }> {
+    const { data } = await axios.get("/dropbox/list", { params: { path: path || "", full: full ? "1" : undefined } });
     return data;
   },
 
