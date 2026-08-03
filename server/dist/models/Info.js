@@ -17,6 +17,7 @@ const infoSchema = new Schema({
         transicionAutomatica: {
             evento: { type: String },
             dropboxCarpeta: { type: String },
+            detalle: { type: String },
         },
     },
     name: { type: String, required: true },

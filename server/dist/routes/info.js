@@ -120,25 +120,6 @@ function parseEstadoBody(body) {
     if (esImpositivo && !TIPOS_IMPOSITIVO.includes(tipoImpositivo)) {
         return { error: "Un estado impositivo tiene que ser 'Alta temprana de AFIP' o 'Constancia de CUIT'" };
     }
-    // Transición automática: opcional. Si viene, el evento tiene que ser uno de los soportados, y si
-    // es "dropbox_carpeta" hace falta indicar qué carpeta vigilar (sin eso el job no sabría dónde mirar).
-    const rawTransicion = body?.transicionAutomatica;
-    let transicionAutomatica;
-    if (rawTransicion && typeof rawTransicion === "object" && rawTransicion.evento) {
-        const evento = String(rawTransicion.evento).trim();
-        if (!EVENTOS_TRANSICION_AUTOMATICA.includes(evento)) {
-            return { error: "El evento de transición automática no es válido" };
-        }
-        if (evento === "dropbox_carpeta") {
-            const dropboxCarpeta = String(rawTransicion.dropboxCarpeta ?? "").trim();
-            if (!dropboxCarpeta)
-                return { error: "La transición por carpeta de Dropbox necesita indicar la carpeta a vigilar" };
-            transicionAutomatica = { evento, dropboxCarpeta };
-        }
-        else {
-            transicionAutomatica = { evento };
-        }
-    }
     const data = {
         nombre: name,
         color: color || undefined,
@@ -147,13 +128,44 @@ function parseEstadoBody(body) {
         etiquetaSecundaria: etiquetaSecundaria || undefined,
         colorEtiquetaSecundaria: esImpositivo ? colorEtiquetaSecundaria || undefined : undefined,
         tipoImpositivo: esImpositivo ? tipoImpositivo : undefined,
-        transicionAutomatica,
     };
     // Los estados impositivos van por defecto al Paso 1 del flujo de dependencias. Solo se toca
     // `ordenDependencia` cuando es impositivo; en los no impositivos NO se incluye la clave, para que
     // el update (spread `{ ...estado.data, ...parsed.data }`) preserve el paso que tengan en el flujo.
     if (esImpositivo)
         data.ordenDependencia = 1;
+    // Transición automática: se maneja aparte (se edita desde "Orden de dependencias", no desde este
+    // formulario) y es opcional en el body. Igual que con `ordenDependencia`: si el caller NO manda la
+    // clave, no se toca acá — para que el merge del PATCH preserve lo que ya estaba configurado. Si la
+    // manda, `null`/`{}` la borra; un objeto con `evento` válido la setea.
+    if (Object.prototype.hasOwnProperty.call(body || {}, "transicionAutomatica")) {
+        const rawTransicion = body.transicionAutomatica;
+        if (rawTransicion && typeof rawTransicion === "object" && rawTransicion.evento) {
+            const evento = String(rawTransicion.evento).trim();
+            if (!EVENTOS_TRANSICION_AUTOMATICA.includes(evento)) {
+                return { error: "El evento de transición automática no es válido" };
+            }
+            // Los impositivos van fijos al Paso 1 y se asignan directo al crear el contrato: no llegan a
+            // ese paso disparados por un evento, así que no tiene sentido configurarles una transición.
+            if (esImpositivo)
+                return { error: "Un estado impositivo no puede tener una transición automática" };
+            // Nota libre de quien configura la transición (ej. qué significa esta carpeta en su flujo):
+            // el contenido lo define el usuario, así que no hay más validación que un límite de largo.
+            const detalle = String(rawTransicion.detalle ?? "").trim().slice(0, 500) || undefined;
+            if (evento === "dropbox_carpeta") {
+                const dropboxCarpeta = String(rawTransicion.dropboxCarpeta ?? "").trim();
+                if (!dropboxCarpeta)
+                    return { error: "La transición por carpeta de Dropbox necesita indicar la carpeta a vigilar" };
+                data.transicionAutomatica = { evento, dropboxCarpeta, detalle };
+            }
+            else {
+                data.transicionAutomatica = { evento, detalle };
+            }
+        }
+        else {
+            data.transicionAutomatica = undefined; // null / {} / evento vacío → se borra
+        }
+    }
     return { name, data };
 }
 /**
@@ -175,6 +187,25 @@ async function conflictoImpositivo(data, excluirId) {
     const porEstado = [...new Set(chocan.map((id) => tomados.get(String(id))))];
     return `Esos tipos de contrato ya tienen un estado impositivo: ${porEstado.join(", ")}`;
 }
+/**
+ * Cada evento de transición automática solo puede estar asignado a UN estado a la vez (si no, sería
+ * ambiguo a cuál avanzar). Para "dropbox_carpeta" la restricción es por carpeta puntual: dos estados
+ * distintos pueden vigilar carpetas distintas, pero no la misma. Devuelve el mensaje de error, o null.
+ */
+async function conflictoTransicionAutomatica(data, excluirId) {
+    const t = data?.transicionAutomatica;
+    if (!t?.evento)
+        return null;
+    const filtro = { type: ESTADO_TYPE, "data.transicionAutomatica.evento": t.evento, ...(excluirId ? { _id: { $ne: excluirId } } : {}) };
+    if (t.evento === "dropbox_carpeta")
+        filtro["data.transicionAutomatica.dropboxCarpeta"] = t.dropboxCarpeta;
+    const otro = await Info.findOne(filtro).lean();
+    if (!otro)
+        return null;
+    return t.evento === "alta_documento_subido"
+        ? `El evento "Se subió el documento de Alta" ya está asignado a "${otro.name}"`
+        : `Esa carpeta de Dropbox ya está asignada a "${otro.name}"`;
+}
 // POST /info/estados - crear estado
 router.post("/estados", requireTenant, authenticateToken, async (req, res) => {
     try {
@@ -185,6 +216,11 @@ router.post("/estados", requireTenant, authenticateToken, async (req, res) => {
         }
         if (parsed.data.transicionAutomatica && !tieneOrdenDependencia(parsed.data)) {
             res.status(400).json({ error: "Antes de configurar una transición automática, el estado tiene que estar asignado a un paso del flujo de dependencias" });
+            return;
+        }
+        const conflictoTransicion = await conflictoTransicionAutomatica(parsed.data);
+        if (conflictoTransicion) {
+            res.status(409).json({ error: conflictoTransicion });
             return;
         }
         const existente = await Info.findOne({ type: ESTADO_TYPE, name: parsed.name }).lean();
@@ -294,6 +330,11 @@ router.patch("/estados/:id", requireTenant, authenticateToken, async (req, res) 
         }
         if (parsed.data.transicionAutomatica && !tieneOrdenDependencia(parsed.data, estado)) {
             res.status(400).json({ error: "Antes de configurar una transición automática, el estado tiene que estar asignado a un paso del flujo de dependencias" });
+            return;
+        }
+        const conflictoTransicion = await conflictoTransicionAutomatica(parsed.data, String(estado._id));
+        if (conflictoTransicion) {
+            res.status(409).json({ error: conflictoTransicion });
             return;
         }
         const duplicado = await Info.findOne({ type: ESTADO_TYPE, name: parsed.name, _id: { $ne: estado._id } }).lean();
