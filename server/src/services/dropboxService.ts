@@ -117,18 +117,17 @@ const mapEntry = (e: any): DropboxEntry => ({
   isDownloadable: e.is_downloadable,
 });
 
-/** Raíz "ampliada" para elegir carpeta en la Transición automática: por encima del rootPath de Dropbox
- *  Sign (que puede ser demasiado angosto, p. ej. "/HelloSign" no incluye una carpeta "AFIP" aparte). */
-const RAIZ_AMPLIADA = "/FZERO S.R.L";
-
 /**
  * Lista el contenido de una carpeta (no recursivo). path vacío → rootPath del tenant, salvo que
- * `full` sea true: ahí path vacío es `RAIZ_AMPLIADA` (para poder elegir carpetas fuera del subárbol
- * de rootPath, como una carpeta "AFIP" separada de "HelloSign").
+ * `full` sea true: ahí path vacío es la raíz REAL del Dropbox conectado (para poder elegir carpetas
+ * fuera del subárbol de rootPath, como una carpeta "AFIP" separada de "HelloSign"). Ojo: "" es la
+ * única forma válida de pedirle a la API la raíz — un path literal como "/FZERO S.R.L" no existe
+ * como tal ahí adentro (ese nombre es cómo lo muestra la interfaz web, no un path real) y tira
+ * `path/not_found`.
  */
 export async function listFolder(tenantId: string, cfg: TenantDropboxConfig, path: string, full = false): Promise<{ entries: DropboxEntry[]; path: string }> {
   // Dropbox usa "" para el raíz del espacio; para una carpeta concreta, su path.
-  const target = path && path !== "/" ? path : full ? RAIZ_AMPLIADA : cfg.rootPath;
+  const target = path && path !== "/" ? path : full ? "" : cfg.rootPath;
   const first = await rpc(tenantId, cfg, "/files/list_folder", { path: target, recursive: false, limit: 2000 });
   let entries: any[] = first.entries || [];
   let cursor = first.cursor;

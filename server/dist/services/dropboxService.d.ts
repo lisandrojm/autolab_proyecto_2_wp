@@ -29,8 +29,11 @@ export declare function verifyAccount(tenantId: string, cfg: TenantDropboxConfig
 }>;
 /**
  * Lista el contenido de una carpeta (no recursivo). path vacío → rootPath del tenant, salvo que
- * `full` sea true: ahí path vacío es `RAIZ_AMPLIADA` (para poder elegir carpetas fuera del subárbol
- * de rootPath, como una carpeta "AFIP" separada de "HelloSign").
+ * `full` sea true: ahí path vacío es la raíz REAL del Dropbox conectado (para poder elegir carpetas
+ * fuera del subárbol de rootPath, como una carpeta "AFIP" separada de "HelloSign"). Ojo: "" es la
+ * única forma válida de pedirle a la API la raíz — un path literal como "/FZERO S.R.L" no existe
+ * como tal ahí adentro (ese nombre es cómo lo muestra la interfaz web, no un path real) y tira
+ * `path/not_found`.
  */
 export declare function listFolder(tenantId: string, cfg: TenantDropboxConfig, path: string, full?: boolean): Promise<{
     entries: DropboxEntry[];
