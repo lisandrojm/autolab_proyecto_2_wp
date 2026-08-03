@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { usersAPI, ContractOverviewRow, Contract } from "../api/users";
 import { projectsAPI } from "../api/projects";
 import { clientsAPI, Client } from "../api/clients";
@@ -44,6 +44,11 @@ const tabBtnClass = (active: boolean): string =>
 
 export const ContractsPage: React.FC = () => {
   const navigate = useNavigate();
+  // Se puede entrar desde otra pantalla (ej. Gestionar Equipo) con ?tab=management&projectId=...
+  // para caer directo en "Gestión de Contratos" filtrado por ese proyecto.
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") === "management" ? "management" : "contracts";
+  const initialProjectId = searchParams.get("projectId") || "";
 
   const [rows, setRows] = useState<ContractOverviewRow[]>([]);
   const [allAreas, setAllAreas] = useState<Area[]>([]);
@@ -82,7 +87,7 @@ export const ContractsPage: React.FC = () => {
   const [filterEstadoContrato, setFilterEstadoContrato] = useState("");
   const [filterReemplazo, setFilterReemplazo] = useState("");
   const [filterClientId, setFilterClientId] = useState("");
-  const [filterProjectId, setFilterProjectId] = useState("");
+  const [filterProjectId, setFilterProjectId] = useState(initialProjectId);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<"table" | "cards">(() => {
@@ -101,7 +106,7 @@ export const ContractsPage: React.FC = () => {
   const effectiveViewMode = isLg ? viewMode : "cards";
 
   // Pestañas de la página: "Contratos" (la vista actual) y "Gestión de Contratos" (acciones masivas).
-  const [mainTab, setMainTab] = useState<"contracts" | "management">("contracts");
+  const [mainTab, setMainTab] = useState<"contracts" | "management">(initialTab);
   // Sub-pestañas de "Gestión de Contratos".
   const [mgmtTab, setMgmtTab] = useState<"afip" | "firma">("afip");
 
@@ -279,6 +284,9 @@ export const ContractsPage: React.FC = () => {
       title="Contratos"
       subtitle="Visualiza y gestiona todos los registros de contratación de los usuarios."
       faIcon={{ icon: faFileContract }}
+      // Solo cuando se entró desde otra pantalla (ej. Gestionar Equipo del proyecto): volver ahí.
+      // Se usa la ruta del proyecto y no history(-1) para que también funcione al recargar la URL.
+      onBack={initialProjectId ? () => navigate(`/projects/${initialProjectId}/team`) : undefined}
       itemCount={totalRows}
       infoModal={{
         isOpen: openInfo,
@@ -404,7 +412,7 @@ export const ContractsPage: React.FC = () => {
       }
     >
       {mainTab === "management" ? (
-        mgmtTab === "afip" ? <ContractBulkAfipTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} /> : <ContractBulkFirmaTab />
+        mgmtTab === "afip" ? <ContractBulkAfipTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} initialProjectId={initialProjectId} /> : <ContractBulkFirmaTab />
       ) : (
         <>
       {initialLoading || isFetching || !hasLoaded ? (

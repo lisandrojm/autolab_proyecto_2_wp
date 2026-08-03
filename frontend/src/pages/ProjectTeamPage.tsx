@@ -2136,9 +2136,20 @@ export const ProjectTeamPage: React.FC = () => {
           : undefined
       }
       headerActions={
-        <button onClick={() => setShowAddModal(true)} title="Agregar miembro" aria-label="Agregar miembro" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
-          <FontAwesomeIcon icon={faPlus} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowAddModal(true)} title="Agregar miembro" aria-label="Agregar miembro" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+            <FontAwesomeIcon icon={faPlus} />
+          </button>
+          {/* Atajo a Contratos → Gestión de Contratos, ya filtrado por este proyecto. */}
+          <button
+            onClick={() => navigate(`/admin/contracts?tab=management&projectId=${projectId}`)}
+            title="Gestión masiva de Contratos de este proyecto"
+            className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm"
+          >
+            <FontAwesomeIcon icon={faFileContract} />
+            <span className="hidden lg:block whitespace-nowrap">Gestión masiva de Contratos</span>
+          </button>
+        </div>
       }
     >
       {/* Loading state */}
