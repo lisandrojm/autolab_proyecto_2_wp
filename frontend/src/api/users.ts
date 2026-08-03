@@ -94,6 +94,12 @@ export interface ContractOverviewRow {
   /** Empresas del proyecto (con fallback a las del ABM) para el menú "Descargar con:". */
   contratoEmpresas?: { id: string; label: string }[];
   releaseEmpresas?: { id: string; label: string }[];
+  // FKs para el chequeo de completitud AFIP (se resuelven contra los catálogos en el front).
+  cuit?: string;
+  osId?: number | null;
+  categoria_sat_id?: number | null;
+  sede_id?: number | null;
+  tipo_contrato_id?: number | null;
 }
 
 export interface UserProjectMetadata {

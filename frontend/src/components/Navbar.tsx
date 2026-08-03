@@ -256,10 +256,10 @@ export const MobileNavbar: React.FC = () => {
     // Partición de items: Admin Usuarios, Admin General, Configuración y GESTIÓN
     const userAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ['/users', '/roles', '/areas', '/positions', '/levels'].includes(item.path)) : adminItems.filter((item) => ['/roles', '/areas', '/positions', '/levels', '/users'].includes(item.path))).sort(byLabel);
 
-    const generalAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ['/tenants'].includes(item.path)) : adminItems.filter((item) => ['/admin/projects', '/admin/sedes', '/admin/contracts', '/orders', '/vacations', '/requests', '/documents'].includes(item.path))).sort(byLabel);
+    const generalAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ['/tenants'].includes(item.path)) : adminItems.filter((item) => ['/admin/projects', '/admin/contracts', '/orders', '/vacations', '/requests', '/documents'].includes(item.path))).sort(byLabel);
 
     // Ojo: los paths de PLANTILLAS_PATHS NO van acá, se agrupan aparte en el subgrupo "Plantillas".
-    const configPaths = ['/requests/config', '/order-types', '/shifts', '/vacations-rules', '/holidays', '/categorias-sat', '/clients', '/centros-costo', '/bancos', '/obras-sociales', '/empresas', '/contratos', '/releases-tipos'];
+    const configPaths = ['/requests/config', '/order-types', '/shifts', '/vacations-rules', '/holidays', '/categorias-sat', '/clients', '/centros-costo', '/bancos', '/obras-sociales', '/empresas', '/contratos', '/releases-tipos', '/admin/sedes'];
     // "Mi Perfil" se incluye como un item más para que entre en el orden alfabético
     const profileItem = { path: '/mi-perfil', icon: faIdCard, label: 'Mi Perfil', scope: 'global' as const };
 

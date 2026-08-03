@@ -1,14 +1,35 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileInvoiceDollar, faFileSignature, faScrewdriverWrench, faDownload, faSearch } from "@fortawesome/free-solid-svg-icons";
+import { faFileInvoiceDollar, faFileSignature, faScrewdriverWrench, faDownload, faSearch, faCheck, faTriangleExclamation, faXmark, faFileLines } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI, ContractOverviewRow } from "../../api/users";
-import { InfoItem } from "../../api/info";
+import { infoAPI, InfoItem } from "../../api/info";
 import { ContratoFrameItem } from "../../api/contratosFrame";
+import { contratosAPI, ContratoItem } from "../../api/contratos";
+import { categoriaSatAPI, CategoriaSatItem } from "../../api/categoriasSat";
+import { createSimpleCatalogApi, SimpleCatalogItem } from "../../api/simpleCatalog";
 import { Release } from "../../api/release";
 import { claveEstado, EstadoBadge } from "../EstadoSelect";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { EmptyState } from "../ui/EmptyState";
+import { Modal } from "../ui/Modal";
 import { ContractDocsColumns, ContractDocsHeaders, downloadContractRow, downloadReleaseRow, uploadAltaRow } from "./ContractRowDocs";
+import { resolveAfip, AfipRowResult } from "./afipCompleteness";
+import { buildAltaRecord, buildAltaTxt, downloadTxt } from "./afipTxt";
+import { sweetAlert } from "../../utils/sweetAlert";
+
+const obrasSocialesApi = createSimpleCatalogApi("/obras-sociales");
+
+/** CUIT/CUIL formateado NN-NNNNNNNN-N (vacío si no tiene 11 dígitos). */
+const fmtCuit = (raw?: string): string => {
+  const d = String(raw || "").replace(/\D/g, "");
+  return d.length === 11 ? `${d.slice(0, 2)}-${d.slice(2, 10)}-${d.slice(10)}` : "";
+};
+
+/** YYYYMMDD de hoy para el nombre del archivo. */
+const hoyStamp = (): string => {
+  const d = new Date();
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+};
 
 type TipoImpositivo = "alta_temprana_afip" | "constancia_cuit";
 const TIPO_LABEL: Record<TipoImpositivo, string> = {
@@ -67,6 +88,26 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
   const [loading, setLoading] = useState(true);
   const [filterTipo, setFilterTipo] = useState<"" | TipoImpositivo>("");
   const [search, setSearch] = useState("");
+  const [soloIncompletos, setSoloIncompletos] = useState(false);
+
+  // Catálogos para resolver los datos AFIP (completitud).
+  const [categorias, setCategorias] = useState<CategoriaSatItem[]>([]);
+  const [tipos, setTipos] = useState<ContratoItem[]>([]);
+  const [obrasSociales, setObrasSociales] = useState<SimpleCatalogItem[]>([]);
+  const [sedes, setSedes] = useState<InfoItem[]>([]);
+  // Detalle de completitud de una fila (modal).
+  const [detalle, setDetalle] = useState<{ row: ImpositivoRow; result: AfipRowResult } | null>(null);
+  // Detalle de los datos para la Constancia de CUIT/CUIL (único requisito: el CUIT/CUIL).
+  const [constancia, setConstancia] = useState<{ row: ImpositivoRow; cuil: string } | null>(null);
+
+  useEffect(() => {
+    categoriaSatAPI.list().then(setCategorias).catch(() => setCategorias([]));
+    contratosAPI.list().then(setTipos).catch(() => setTipos([]));
+    obrasSocialesApi.list().then(setObrasSociales).catch(() => setObrasSociales([]));
+    infoAPI.listSedes().then(setSedes).catch(() => setSedes([]));
+  }, []);
+
+  const afipCat = useMemo(() => ({ categorias, tipos, obrasSociales, sedes }), [categorias, tipos, obrasSociales, sedes]);
 
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
 
@@ -101,30 +142,53 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
     load();
   };
 
-  // Solo los contratos cuyo estado actual es impositivo.
-  const impositivoRows = useMemo<ImpositivoRow[]>(() => {
-    const out: ImpositivoRow[] = [];
+  // Genera el TXT de Alta masiva de AFIP para los contratos con datos completos del conjunto dado;
+  // omite los incompletos (no se puede armar una línea válida) e informa cuántos quedaron afuera.
+  const generarTxt = (items: { row: ImpositivoRow; result: AfipRowResult }[], filenameBase: string) => {
+    const registros = items.map((x) => buildAltaRecord(x.row, afipCat)).filter((r): r is string => r !== null);
+    if (registros.length === 0) {
+      sweetAlert.error("Sin datos completos", "Ningún contrato del conjunto tiene todos los datos AFIP cargados. Completá los faltantes (columna «Datos AFIP») antes de generar el TXT.");
+      return;
+    }
+    const omitidos = items.length - registros.length;
+    downloadTxt(buildAltaTxt(registros), `${filenameBase}_${hoyStamp()}.txt`);
+    if (omitidos > 0) {
+      sweetAlert.info("TXT generado", `Se incluyeron ${registros.length} alta(s). Se omitieron ${omitidos} contrato(s) por datos AFIP incompletos.`);
+    } else {
+      sweetAlert.success("TXT generado", `Se incluyeron ${registros.length} alta(s) en el archivo.`);
+    }
+  };
+
+  // Solo los contratos cuyo estado actual es impositivo, con su chequeo de completitud AFIP.
+  const impositivoRows = useMemo<{ row: ImpositivoRow; result: AfipRowResult }[]>(() => {
+    const out: { row: ImpositivoRow; result: AfipRowResult }[] = [];
     for (const r of rows) {
       const imp = impositivoPorClave.get(claveEstado(r.nombre_estado_empleado || ""));
-      if (imp) out.push({ ...r, _tipo: imp.tipo, _estadoName: imp.name });
+      if (imp) {
+        const row: ImpositivoRow = { ...r, _tipo: imp.tipo, _estadoName: imp.name };
+        out.push({ row, result: resolveAfip(row, afipCat) });
+      }
     }
     return out;
-  }, [rows, impositivoPorClave]);
+  }, [rows, impositivoPorClave, afipCat]);
 
-  const countAlta = impositivoRows.filter((r) => r._tipo === "alta_temprana_afip").length;
-  const countCuit = impositivoRows.filter((r) => r._tipo === "constancia_cuit").length;
+  const countAlta = impositivoRows.filter((x) => x.row._tipo === "alta_temprana_afip").length;
+  const countCuit = impositivoRows.filter((x) => x.row._tipo === "constancia_cuit").length;
+  const countCompletos = impositivoRows.filter((x) => x.result.completo).length;
+  const countIncompletos = impositivoRows.length - countCompletos;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return impositivoRows.filter((r) => {
+    return impositivoRows.filter(({ row: r, result }) => {
       if (filterTipo && r._tipo !== filterTipo) return false;
+      if (soloIncompletos && result.completo) return false;
       if (q) {
         const hay = [r.userName, r.userEmail, r.clientName, r.projectName, r.nombre_contrato].some((v) => (v || "").toLowerCase().includes(q));
         if (!hay) return false;
       }
       return true;
     });
-  }, [impositivoRows, filterTipo, search]);
+  }, [impositivoRows, filterTipo, search, soloIncompletos]);
 
   const chip = (active: boolean) =>
     `px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
@@ -139,11 +203,28 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
           <button className={chip(filterTipo === "")} onClick={() => setFilterTipo("")}>
             Todos ({impositivoRows.length})
           </button>
+          <button className={chip(filterTipo === "constancia_cuit")} onClick={() => setFilterTipo("constancia_cuit")}>
+            Constancia de CUIT ({countCuit})
+          </button>
           <button className={chip(filterTipo === "alta_temprana_afip")} onClick={() => setFilterTipo("alta_temprana_afip")}>
             Alta temprana de AFIP ({countAlta})
           </button>
-          <button className={chip(filterTipo === "constancia_cuit")} onClick={() => setFilterTipo("constancia_cuit")}>
-            Constancia de CUIT ({countCuit})
+          <span className="mx-1 h-5 w-px bg-gray-200 dark:bg-gray-700" />
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200/60 dark:border-green-800/60" title="Contratos con todos los datos AFIP cargados">
+            <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />
+            {countCompletos} completos
+          </span>
+          <button
+            onClick={() => setSoloIncompletos((v) => !v)}
+            className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold border transition-colors ${
+              soloIncompletos
+                ? "bg-amber-500 text-white border-amber-500"
+                : "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/60 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+            }`}
+            title="Mostrar solo los contratos con datos AFIP faltantes"
+          >
+            <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
+            {countIncompletos} incompletos
           </button>
         </div>
         <div className="flex items-center gap-2">
@@ -157,7 +238,16 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
             />
           </div>
           <button
-            onClick={() => exportarCsv(filtered)}
+            onClick={() => generarTxt(filtered, "altas_afip")}
+            disabled={countCompletos === 0}
+            title={countCompletos === 0 ? "No hay contratos con datos AFIP completos" : "Generar el TXT de Alta masiva de AFIP con los contratos completos"}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+          >
+            <FontAwesomeIcon icon={faFileLines} className="h-4 w-4" />
+            Generar TXT (AFIP)
+          </button>
+          <button
+            onClick={() => exportarCsv(filtered.map((x) => x.row))}
             disabled={filtered.length === 0}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
           >
@@ -184,7 +274,7 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
           <div className="overflow-x-auto custom-scrollbar max-h-[640px]">
-            <table className="w-full text-left border-collapse min-w-[1900px]">
+            <table className="w-full text-left border-collapse min-w-[2200px]">
               <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
                 <tr className="border-b border-gray-100 dark:border-gray-800">
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
@@ -193,12 +283,14 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Contrato</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Estado</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Trámite impositivo</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Dato para buscar la Constancia de Inscripción / CUIT en ARCA">Datos CUIT/CUIL</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Datos AFIP</th>
                   <ContractDocsHeaders />
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Alta</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {filtered.map((r) => (
+                {filtered.map(({ row: r, result }) => (
                   <tr key={`${r._id}-${r.contractIndex}`} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
                     <td className="px-4 py-3">
                       <p className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{r.userName}</p>
@@ -226,6 +318,39 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
                         <span className="text-[11px] text-gray-400 italic">Sin trámite definido</span>
                       )}
                     </td>
+                    <td className="px-4 py-3">
+                      {(() => {
+                        const cuil = fmtCuit(r.cuit);
+                        return (
+                          <button
+                            onClick={() => setConstancia({ row: r, cuil })}
+                            title="Ver los datos necesarios para buscar la Constancia de CUIT/CUIL en ARCA"
+                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap transition-colors ${
+                              cuil
+                                ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100"
+                                : "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100"
+                            }`}
+                          >
+                            <FontAwesomeIcon icon={cuil ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
+                            {cuil ? "Completo" : "Falta 1"}
+                          </button>
+                        );
+                      })()}
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => setDetalle({ row: r, result })}
+                        title="Ver detalle de los datos AFIP"
+                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap transition-colors ${
+                          result.completo
+                            ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100"
+                            : "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100"
+                        }`}
+                      >
+                        <FontAwesomeIcon icon={result.completo ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
+                        {result.completo ? "Completo" : `Faltan ${result.faltantes}`}
+                      </button>
+                    </td>
                     <ContractDocsColumns
                       record={r}
                       contratoFrames={contratoFrames}
@@ -242,6 +367,101 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
             </table>
           </div>
         </div>
+      )}
+
+      {detalle && (
+        <Modal
+          isOpen={!!detalle}
+          onClose={() => setDetalle(null)}
+          title={`Datos AFIP — ${detalle.row.userName}`}
+          subtitle={`${detalle.row.projectName} · ${detalle.row.nombre_contrato}`}
+          size="md"
+          zIndex={70}
+          footer={
+            <div className="flex items-center justify-between gap-3 w-full">
+              <span className="text-[11px] text-gray-500 dark:text-gray-400">{detalle.result.completo ? "Podés generar el alta de esta persona." : "Completá los faltantes para poder generar el TXT."}</span>
+              <button
+                onClick={() => generarTxt([detalle], `alta_afip_${detalle.row.userName.replace(/\s+/g, "_")}`)}
+                disabled={!detalle.result.completo}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+              >
+                <FontAwesomeIcon icon={faFileLines} />
+                Descargar TXT de esta persona
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-3">
+            <div
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold ${
+                detalle.result.completo
+                  ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400"
+                  : "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400"
+              }`}
+            >
+              <FontAwesomeIcon icon={detalle.result.completo ? faCheck : faTriangleExclamation} />
+              {detalle.result.completo ? "Listo para la carga masiva: todos los datos están cargados." : `Faltan ${detalle.result.faltantes} dato(s) para poder generar el TXT.`}
+            </div>
+            <ul className="divide-y divide-gray-100 dark:divide-gray-700/60 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              {detalle.result.checks.map((c) => (
+                <li key={c.key} className="flex items-center justify-between gap-3 px-3 py-2">
+                  <span className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 min-w-0">
+                    <FontAwesomeIcon icon={c.ok ? faCheck : faXmark} className={`h-3.5 w-3.5 shrink-0 ${c.ok ? "text-green-500" : "text-red-500"}`} />
+                    <span className="truncate">{c.label}</span>
+                  </span>
+                  {c.ok ? (
+                    <span className="text-sm font-mono text-gray-600 dark:text-gray-300 shrink-0">{c.value}</span>
+                  ) : (
+                    <span className="text-[11px] font-semibold text-red-600 dark:text-red-400 shrink-0">Falta</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              Los códigos salen de: Tipo de Contrato (modalidad, tipo de servicio, actividad, liquidación), Categoría SAT (categoría profesional y sueldo bruto), Obra Social (RNOS), Sede (sucursal) y los datos personales (CUIL).
+            </p>
+          </div>
+        </Modal>
+      )}
+
+      {constancia && (
+        <Modal
+          isOpen={!!constancia}
+          onClose={() => setConstancia(null)}
+          title={`Constancia de CUIT/CUIL — ${constancia.row.userName}`}
+          subtitle={`${constancia.row.projectName} · ${constancia.row.nombre_contrato}`}
+          size="sm"
+          zIndex={70}
+        >
+          <div className="space-y-3">
+            <div
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold ${
+                constancia.cuil
+                  ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400"
+                  : "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400"
+              }`}
+            >
+              <FontAwesomeIcon icon={constancia.cuil ? faCheck : faTriangleExclamation} />
+              {constancia.cuil ? "Listo para buscar la constancia en ARCA." : "Falta 1 dato para buscar la constancia."}
+            </div>
+            <ul className="divide-y divide-gray-100 dark:divide-gray-700/60 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <li className="flex items-center justify-between gap-3 px-3 py-2">
+                <span className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 min-w-0">
+                  <FontAwesomeIcon icon={constancia.cuil ? faCheck : faXmark} className={`h-3.5 w-3.5 shrink-0 ${constancia.cuil ? "text-green-500" : "text-red-500"}`} />
+                  <span className="truncate">CUIT / CUIL</span>
+                </span>
+                {constancia.cuil ? (
+                  <span className="text-sm font-mono text-gray-600 dark:text-gray-300 shrink-0">{constancia.cuil}</span>
+                ) : (
+                  <span className="text-[11px] font-semibold text-red-600 dark:text-red-400 shrink-0">Falta</span>
+                )}
+              </li>
+            </ul>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              Para obtener la <strong>Constancia de Inscripción / CUIT</strong> en ARCA se ingresa el <strong>CUIT/CUIL</strong> de la persona (es el único dato requerido). Si falta, cargalo en los datos personales del usuario.
+            </p>
+          </div>
+        </Modal>
       )}
     </div>
   );

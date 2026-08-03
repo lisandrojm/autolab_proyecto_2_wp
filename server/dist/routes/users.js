@@ -555,6 +555,12 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 nombre_empresa_release: contratoActivo.nombre_empresa_release || "",
                 contratoEmpresas: empresasPorProyecto.get(String(project._id))?.contratoEmpresas || [],
                 releaseEmpresas: empresasPorProyecto.get(String(project._id))?.releaseEmpresas || [],
+                // Datos para el chequeo de completitud AFIP (se resuelven contra los catálogos en el front).
+                cuit: user.metadata?.cuit || "",
+                osId: user.metadata?.osId ?? null,
+                categoria_sat_id: contratoActivo.categoria_sat_id ?? null,
+                sede_id: contratoActivo.sede_id ?? null,
+                tipo_contrato_id: contratoActivo.tipo_contrato_id ?? null,
             });
         }
         rows.sort((a, b) => a.userName.localeCompare(b.userName, "es", { sensitivity: "base" }));
