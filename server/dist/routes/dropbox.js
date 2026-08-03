@@ -113,18 +113,21 @@ async function requireConfig(req, res) {
     }
     return cfg;
 }
-// GET /dropbox/list?path= - lista una carpeta (por defecto, el rootPath)
+// GET /dropbox/list?path=&full= - lista una carpeta (por defecto, el rootPath). Con full=1, ignora el
+// límite del rootPath y navega desde una raíz más amplia (p. ej. para elegir una carpeta de "Transición
+// automática" que viva fuera del subárbol de rootPath, como una carpeta "AFIP" separada de "HelloSign").
 router.get("/list", async (req, res) => {
     try {
         const cfg = await requireConfig(req, res);
         if (!cfg)
             return;
         const path = String(req.query.path || "");
-        if (path && !isWithinRoot(cfg, path)) {
+        const full = req.query.full === "1" || req.query.full === "true";
+        if (path && !full && !isWithinRoot(cfg, path)) {
             res.status(403).json({ error: "Ruta fuera de la carpeta permitida." });
             return;
         }
-        const result = await listFolder(String(req.tenantObjectId), cfg, path);
+        const result = await listFolder(String(req.tenantObjectId), cfg, path, full);
         res.json({ ...result, rootPath: cfg.rootPath });
     }
     catch (error) {

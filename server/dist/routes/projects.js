@@ -24,7 +24,6 @@ import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
 import { esContratoVigente, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
 import { parseConstanciaPdf, normalizarCuit } from "../utils/constanciaPdf.js";
-import { intentarTransicionPorEvento } from "../services/estadoTransicionAutomaticaService.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 async function ensureDir(dir) {
@@ -1396,11 +1395,7 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/alta-documen
         up.contracts[idx] = { ...up.contracts[idx].toObject(), altaDocumentoUrl, altaDocumentoNombre };
         up.markModified("contracts");
         await up.save();
-        const resultadoTransicion = await intentarTransicionPorEvento(up, idx, "alta_documento_subido");
-        if (resultadoTransicion.aplicada) {
-            console.log(`[ESTADO-AUTO] ${userId}/${idx}: ${resultadoTransicion.estadoAnteriorId} → ${resultadoTransicion.estadoNuevo?.nombre} (evento alta_documento_subido)`);
-        }
-        res.json({ altaDocumentoUrl, altaDocumentoNombre, estadoAuto: resultadoTransicion.aplicada ? resultadoTransicion.estadoNuevo : undefined });
+        res.json({ altaDocumentoUrl, altaDocumentoNombre });
     }
     catch (error) {
         console.error("Upload alta-documento error:", error);

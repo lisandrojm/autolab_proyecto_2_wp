@@ -12,23 +12,12 @@ async function ordenDependenciaDelEstado(estadoId) {
     const orden = estado?.data?.ordenDependencia;
     return typeof orden === "number" ? orden : 0;
 }
-/** Del catálogo de estados con este evento, el que ocupa EXACTAMENTE el paso siguiente (nunca salta pasos). */
-export function estadoDestinoDesdeCatalogo(catalogo, ordenDependenciaActual) {
-    return catalogo.find((e) => e.data?.ordenDependencia === ordenDependenciaActual + 1) || null;
-}
-/** Estado destino aplicable para este evento, dado el estado actual del contrato (o null si no corresponde). */
-export async function buscarEstadoDestino(evento, estadoActualId) {
-    const catalogo = await cargarEstadosPorEvento(evento);
-    if (catalogo.length === 0)
-        return null;
-    const ordenActual = await ordenDependenciaDelEstado(estadoActualId);
-    return estadoDestinoDesdeCatalogo(catalogo, ordenActual);
-}
 /**
  * Muta `up.contracts[contractIndex]` (estado_id + nombre_estado_empleado) y persiste. Re-valida
  * "hacia adelante" tomando el estado actual DEL DOCUMENTO en este instante (defensivo: `up` pudo
  * cargarse hace rato), así que es seguro invocarla especulativamente. Idempotente: si el contrato ya
- * está en ese estado o más adelante, no hace nada.
+ * está en ese estado o más adelante, no hace nada. No hace falta que el destino sea el paso inmediato
+ * siguiente: alcanza con que esté más adelante que el actual (el evento certifica que ya llegó ahí).
  */
 export async function aplicarTransicion(up, contractIndex, estadoDestino) {
     const contrato = up.contracts[contractIndex];
@@ -48,14 +37,4 @@ export async function aplicarTransicion(up, contractIndex, estadoDestino) {
     up.markModified("contracts");
     await up.save();
     return { aplicada: true, estadoAnteriorId, estadoNuevo: { id: destinoId, nombre: estadoDestino.name } };
-}
-/** Combina `buscarEstadoDestino` + `aplicarTransicion` — punto de entrada único para un evento puntual. */
-export async function intentarTransicionPorEvento(up, contractIndex, evento) {
-    const contrato = up.contracts[contractIndex];
-    if (!contrato)
-        return { aplicada: false, motivo: "contrato_inexistente" };
-    const estadoDestino = await buscarEstadoDestino(evento, contrato.estado_id);
-    if (!estadoDestino)
-        return { aplicada: false, motivo: "sin_estado_configurado" };
-    return aplicarTransicion(up, contractIndex, estadoDestino);
 }

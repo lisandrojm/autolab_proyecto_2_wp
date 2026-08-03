@@ -27,8 +27,12 @@ export declare function verifyAccount(tenantId: string, cfg: TenantDropboxConfig
     email?: string;
     name?: string;
 }>;
-/** Lista el contenido de una carpeta (no recursivo). path vacío → rootPath del tenant. */
-export declare function listFolder(tenantId: string, cfg: TenantDropboxConfig, path: string): Promise<{
+/**
+ * Lista el contenido de una carpeta (no recursivo). path vacío → rootPath del tenant, salvo que
+ * `full` sea true: ahí path vacío es `RAIZ_AMPLIADA` (para poder elegir carpetas fuera del subárbol
+ * de rootPath, como una carpeta "AFIP" separada de "HelloSign").
+ */
+export declare function listFolder(tenantId: string, cfg: TenantDropboxConfig, path: string, full?: boolean): Promise<{
     entries: DropboxEntry[];
     path: string;
 }>;
