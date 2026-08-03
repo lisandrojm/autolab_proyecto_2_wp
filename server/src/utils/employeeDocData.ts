@@ -1,16 +1,26 @@
 import { CategoriaSat } from "../models/CategoriaSat.js";
 import { numeroALetras } from "./numeroALetras.js";
 import { formatDateAr } from "./releaseFiller.js";
+import { normalizarCuit } from "./constanciaPdf.js";
 
 const num = (n: any): string => (n != null && n !== "" && !isNaN(Number(n)) ? Number(n).toLocaleString("es-AR") : "");
 
+/** "YYYY-MM-DD" → "YYYYMMDD" (token compacto, sin separadores). "" si no matchea ese formato. */
+const fechaCompacta = (s?: string): string => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || "").trim());
+  return m ? `${m[1]}${m[2]}${m[3]}` : "";
+};
+
 /**
  * Nomenclatura de archivos descargados (contratos y releases):
- *   [proyecto]_[Contrato|Release]_[nombreDoc]_[YYYY_MM_DD]_[apellido]_[nombres]
+ *   [proyecto]_[Contrato|Release]_[nombreDoc]_[YYYY_MM_DD]_[apellido]_[nombres]_[cuit]_[fechaAlta]_[fechaBaja]
  *
  * - `proyecto`: número/ID externo del proyecto (ej. 426).
  * - `nombreDoc`: opcional; para releases es el nombre del release.
  * - fecha: día de la descarga (hoy) en formato YYYY_MM_DD.
+ * - cuit/fechaAlta/fechaBaja: tokens compactos (sin separadores) para que
+ *   `estadoDropboxCronService.ts` pueda identificar el contrato sin ambigüedad cuando este archivo
+ *   vuelve a Dropbox (p. ej. tras pasar por Dropbox Sign, que preserva el nombre de archivo).
  * Devuelve el nombre SIN extensión (el caller agrega `.docx`).
  */
 export function buildDocFileName(opts: { tipo: "Contrato" | "Release"; user: any; up: any; contract: any; docName?: string }): string {
@@ -19,11 +29,14 @@ export function buildDocFileName(opts: { tipo: "Contrato" | "Release"; user: any
   const nombre = (user?.firstName || "").trim();
   const apellido = (user?.lastName || "").trim();
   const persona = [apellido, nombre].filter(Boolean).join("_");
+  const cuit = normalizarCuit(user?.metadata?.cuit);
+  const fechaAlta = fechaCompacta(contract?.fecha_alta_contrato);
+  const fechaBaja = fechaCompacta(contract?.fecha_baja_contrato);
 
   const now = new Date();
   const fecha = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, "0")}_${String(now.getDate()).padStart(2, "0")}`;
 
-  const parts = [String(proyecto).trim(), tipo, (docName || "").trim(), fecha, persona].filter((p) => p && String(p).trim() !== "");
+  const parts = [String(proyecto).trim(), tipo, (docName || "").trim(), fecha, persona, cuit, fechaAlta, fechaBaja].filter((p) => p && String(p).trim() !== "");
   // Eliminar caracteres inválidos para nombres de archivo (se conservan espacios y acentos).
   return parts.join("_").replace(/[\\/:*?"<>|]/g, "_");
 }

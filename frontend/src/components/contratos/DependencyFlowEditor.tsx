@@ -705,6 +705,12 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
             <strong>Importante:</strong> para usar esta transición hace falta tener conectada una cuenta de <strong>Dropbox</strong> — es lo que va guardando los documentos en esas carpetas (por ejemplo, sincronizados desde Dropbox Sign, o cualquier otra carpeta que subas vos mismo). Sin esa conexión, la transición no se va a disparar nunca.
           </span>
         </p>
+        <p className="flex items-start gap-1.5 p-2.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300">
+          <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+          <span>
+            <strong>Cómo identifica a quién corresponde cada archivo:</strong> los contratos que descargás desde la plataforma ya incluyen el CUIT y las fechas del contrato en el nombre del archivo, así que el sistema los reconoce sin ambigüedad al volver firmados desde Dropbox Sign. Si subís un documento vos manualmente (por ejemplo, un trámite de AFIP), el sistema primero intenta leer el CUIT del propio PDF; si no puede, incluí el CUIT de la persona (los 11 dígitos) en el nombre del archivo para que se identifique con seguridad.
+          </span>
+        </p>
       </div>
     </InfoModal>
     </>
