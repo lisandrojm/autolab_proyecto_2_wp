@@ -17,6 +17,34 @@ export interface Client {
   name: string;
 }
 
+/* --------- Carga masiva de constancias de CUIT (PDF de ARCA) --------- */
+
+/** Contrato que espera su constancia: el server lo usa para saber a quién puede asignarle un PDF. */
+export interface ConstanciaTarget {
+  projectId: string;
+  userId: string;
+  contractIndex: number;
+}
+
+/** Qué pasó con cada PDF del lote. */
+export interface ConstanciaResultado {
+  filename: string;
+  /** CUIT leído del PDF (11 dígitos), "" si no se pudo leer. */
+  cuit: string;
+  status: "ok" | "vencida" | "duplicado" | "sin_cuit" | "sin_coincidencia" | "ilegible";
+  vigenciaDesde?: string;
+  vigenciaHasta?: string;
+  verificador?: string;
+  matched: { userId: string; userName: string; projectName: string; contractIndex: number }[];
+}
+
+export interface ConstanciaBulkResponse {
+  resultados: ConstanciaResultado[];
+  /** Cantidad de contratos a los que se les asignó una constancia. */
+  asignados: number;
+  archivos: number;
+}
+
 // Removed WorkSchedule types
 
 export interface Project {
@@ -480,6 +508,18 @@ class ProjectsAPI {
     // Sin headers explícitos: el interceptor global de axios pone Authorization/X-Tenant-Id y deja que
     // el browser setee el Content-Type multipart con el boundary (getHeaders() fuerza JSON y rompe esto).
     const { data } = await axios.patch(`/projects/${projectId}/members/${userId}/contracts/${contractIndex}/alta-documento`, formData);
+    return data;
+  }
+
+  /**
+   * Carga masiva de constancias de CUIT: manda N PDFs de ARCA junto con los contratos que esperan
+   * constancia. El server lee el CUIT de cada PDF y lo asigna a quien corresponda.
+   */
+  async bulkUploadConstancias(files: File[], targets: ConstanciaTarget[]): Promise<ConstanciaBulkResponse> {
+    const formData = new FormData();
+    files.forEach((f) => formData.append("documents", f));
+    formData.append("targets", JSON.stringify(targets));
+    const { data } = await axios.post(`/projects/constancias/bulk-upload`, formData);
     return data;
   }
 }

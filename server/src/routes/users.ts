@@ -600,6 +600,10 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         // Documentos descargables/subibles del contrato ACTIVO (para las columnas de la tabla).
         altaDocumentoUrl: contratoActivo.altaDocumentoUrl || "",
         altaDocumentoNombre: contratoActivo.altaDocumentoNombre || "",
+        // Datos leídos del PDF de la Constancia de CUIT (vigencia = cuándo hay que volver a pedirla).
+        constanciaVigenciaDesde: contratoActivo.constanciaVigenciaDesde || "",
+        constanciaVigenciaHasta: contratoActivo.constanciaVigenciaHasta || "",
+        constanciaVerificador: contratoActivo.constanciaVerificador || "",
         empresaContratoId: contratoActivo.empresaContratoId ? String(contratoActivo.empresaContratoId) : "",
         empresaReleaseId: contratoActivo.empresaReleaseId ? String(contratoActivo.empresaReleaseId) : "",
         nombre_empresa_contrato: contratoActivo.nombre_empresa_contrato || "",

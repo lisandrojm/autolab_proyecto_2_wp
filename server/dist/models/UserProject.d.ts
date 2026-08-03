@@ -47,6 +47,10 @@ interface IContract {
     nombre_empresa_release?: string;
     altaDocumentoUrl?: string;
     altaDocumentoNombre?: string;
+    constanciaVigenciaDesde?: string;
+    constanciaVigenciaHasta?: string;
+    constanciaVerificador?: string;
+    constanciaCargadaAt?: Date;
     areaShiftAssignments?: {
         areaId: Types.ObjectId | string;
         shiftIds: (Types.ObjectId | string)[];

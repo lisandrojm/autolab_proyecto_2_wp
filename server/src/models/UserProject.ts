@@ -52,6 +52,13 @@ interface IContract {
   // Documento de "Alta" (AFIP o Servicios, según el Estado impositivo vinculado a la Plantilla).
   altaDocumentoUrl?: string;
   altaDocumentoNombre?: string;
+  // Datos leídos del PDF de la Constancia de CUIT de ARCA al subirlo (el PDF en sí va en
+  // altaDocumentoUrl). La constancia vale un mes, así que la vigencia es la que marca cuándo
+  // hay que volver a pedirla.
+  constanciaVigenciaDesde?: string; // "YYYY-MM-DD"
+  constanciaVigenciaHasta?: string; // "YYYY-MM-DD"
+  constanciaVerificador?: string;
+  constanciaCargadaAt?: Date;
   areaShiftAssignments?: {
     areaId: Types.ObjectId | string;
     shiftIds: (Types.ObjectId | string)[];
@@ -120,6 +127,10 @@ const contractSchema = new Schema<IContract>(
     nombre_empresa_release: { type: String },
     altaDocumentoUrl: { type: String },
     altaDocumentoNombre: { type: String },
+    constanciaVigenciaDesde: { type: String },
+    constanciaVigenciaHasta: { type: String },
+    constanciaVerificador: { type: String },
+    constanciaCargadaAt: { type: Date },
     areaShiftAssignments: [
       {
         areaId: { type: Schema.Types.ObjectId, ref: "Area" },

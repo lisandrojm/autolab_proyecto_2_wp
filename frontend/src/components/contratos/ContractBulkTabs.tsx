@@ -17,6 +17,7 @@ import { Modal } from "../ui/Modal";
 import { ContractDocsColumns, ContractDocsHeaders, downloadContractRow, downloadReleaseRow, uploadAltaRow } from "./ContractRowDocs";
 import { resolveAfip, AfipRowResult } from "./afipCompleteness";
 import { buildAltaRecord, buildAltaTxt, downloadTxt } from "./afipTxt";
+import { ConstanciaBulkDrop, ConstanciaBadge, BotonArca, BotonCopiarPendientes, constanciaPendiente, fmtCuit } from "./ConstanciaBulk";
 import { sweetAlert } from "../../utils/sweetAlert";
 
 const obrasSocialesApi = createSimpleCatalogApi("/obras-sociales");
@@ -32,12 +33,6 @@ const tabBtnClass = (active: boolean): string =>
   `px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
     active ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
   }`;
-
-/** CUIT/CUIL formateado NN-NNNNNNNN-N (vacío si no tiene 11 dígitos). */
-const fmtCuit = (raw?: string): string => {
-  const d = String(raw || "").replace(/\D/g, "");
-  return d.length === 11 ? `${d.slice(0, 2)}-${d.slice(2, 10)}-${d.slice(10)}` : "";
-};
 
 /** YYYYMMDD de hoy para el nombre del archivo. */
 const hoyStamp = (): string => {
@@ -71,6 +66,8 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
   const [filterTipo, setFilterTipo] = useState<"" | TipoImpositivo>("alta_temprana_afip");
   const [search, setSearch] = useState("");
   const [soloIncompletos, setSoloIncompletos] = useState(false);
+  /** Sub-pestaña Constancia de CUIT: mostrar solo las que faltan o ya vencieron (el worklist). */
+  const [soloPendientes, setSoloPendientes] = useState(false);
 
   // Mismo set de filtros que la pestaña Contratos (se aplican del lado del cliente sobre lo ya cargado).
   const [filterUserStatus, setFilterUserStatus] = useState("");
@@ -180,11 +177,18 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
   const countCompletos = impositivoRows.filter((x) => x.result.completo).length;
   const countIncompletos = impositivoRows.length - countCompletos;
 
+  // Constancias de CUIT: vigentes vs. pendientes (las que faltan o ya vencieron, que son las que hay
+  // que volver a pedirle a ARCA). Se cuentan sobre todas las de ese trámite, como countAlta/countCuit.
+  const constanciaRows = useMemo(() => impositivoRows.filter((x) => x.row._tipo === "constancia_cuit"), [impositivoRows]);
+  const countConstPendientes = constanciaRows.filter((x) => constanciaPendiente(x.row)).length;
+  const countConstVigentes = constanciaRows.length - countConstPendientes;
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return impositivoRows.filter(({ row: r, result }) => {
       if (filterTipo && r._tipo !== filterTipo) return false;
       if (soloIncompletos && result.completo) return false;
+      if (soloPendientes && filterTipo === "constancia_cuit" && !constanciaPendiente(r)) return false;
       if (filterUserStatus && r.userActivo !== (filterUserStatus === "active")) return false;
       if (filterVigencia) {
         const vig = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
@@ -202,7 +206,7 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
       }
       return true;
     });
-  }, [impositivoRows, filterTipo, search, soloIncompletos, filterUserStatus, filterVigencia, filterRolMobile, filterTipoContrato, filterEstadoContrato, filterReemplazo, filterClientId, filterProjectId]);
+  }, [impositivoRows, filterTipo, search, soloIncompletos, soloPendientes, filterUserStatus, filterVigencia, filterRolMobile, filterTipoContrato, filterEstadoContrato, filterReemplazo, filterClientId, filterProjectId]);
 
   // Opciones de los selects del filtro avanzado, derivadas de lo cargado.
   const clientOptions = useMemo(() => {
@@ -348,6 +352,37 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
         </div>
       )}
 
+      {/* Constancia de CUIT: worklist (qué falta pedirle a ARCA) + carga masiva de los PDFs bajados. */}
+      {filterTipo === "constancia_cuit" && !loading && (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200/60 dark:border-green-800/60" title="Constancias cargadas y todavía vigentes">
+                <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />
+                {countConstVigentes} vigentes
+              </span>
+              <button
+                onClick={() => setSoloPendientes((v) => !v)}
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold border transition-colors ${
+                  soloPendientes
+                    ? "bg-amber-500 text-white border-amber-500"
+                    : "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/60 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+                }`}
+                title="Mostrar solo las constancias que faltan o ya vencieron"
+              >
+                <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
+                {countConstPendientes} pendientes
+              </button>
+            </div>
+            <BotonCopiarPendientes rows={filtered.map((x) => x.row)} />
+          </div>
+          {/* Los targets son TODOS los contratos que esperan constancia, no solo los visibles: la
+              misma constancia sirve para todos los contratos de esa persona, y así soltar un PDF
+              nunca falla por tener un filtro puesto. */}
+          <ConstanciaBulkDrop rows={constanciaRows.map((x) => x.row)} onUploaded={load} />
+        </div>
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <LoadingSpinner message="Cargando contratos..." />
@@ -417,13 +452,17 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
 
                 <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700/60">
                   {filterTipo === "constancia_cuit" && (
-                    <button
-                      onClick={() => setConstancia({ row: r, cuil })}
-                      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border transition-colors ${cuil ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100" : "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100"}`}
-                    >
-                      <FontAwesomeIcon icon={cuil ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
-                      CUIT/CUIL: {cuil ? "OK" : "Falta 1"}
-                    </button>
+                    <>
+                      <button
+                        onClick={() => setConstancia({ row: r, cuil })}
+                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border transition-colors ${cuil ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100" : "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100"}`}
+                      >
+                        <FontAwesomeIcon icon={cuil ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
+                        CUIT/CUIL: {cuil ? "OK" : "Falta 1"}
+                      </button>
+                      <ConstanciaBadge row={r} />
+                      {constanciaPendiente(r) && <BotonArca cuit={r.cuit} compacto />}
+                    </>
                   )}
                   {filterTipo === "alta_temprana_afip" && (
                     <button
@@ -455,7 +494,10 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Estado</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Trámite impositivo</th>
                   {filterTipo === "constancia_cuit" && (
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Dato para buscar la Constancia de Inscripción / CUIT en ARCA">Datos CUIT/CUIL</th>
+                    <>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Dato para buscar la Constancia de Inscripción / CUIT en ARCA">Datos CUIT/CUIL</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Constancia</th>
+                    </>
                   )}
                   {filterTipo === "alta_temprana_afip" && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Datos AFIP</th>}
                   <ContractDocsHeaders />
@@ -502,25 +544,34 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
                       )}
                     </td>
                     {filterTipo === "constancia_cuit" && (
-                      <td className="px-4 py-3">
-                        {(() => {
-                          const cuil = fmtCuit(r.cuit);
-                          return (
-                            <button
-                              onClick={() => setConstancia({ row: r, cuil })}
-                              title="Ver los datos necesarios para buscar la Constancia de CUIT/CUIL en ARCA"
-                              className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap transition-colors ${
-                                cuil
-                                  ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100"
-                                  : "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100"
-                              }`}
-                            >
-                              <FontAwesomeIcon icon={cuil ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
-                              {cuil ? "Completo" : "Falta 1"}
-                            </button>
-                          );
-                        })()}
-                      </td>
+                      <>
+                        <td className="px-4 py-3">
+                          {(() => {
+                            const cuil = fmtCuit(r.cuit);
+                            return (
+                              <button
+                                onClick={() => setConstancia({ row: r, cuil })}
+                                title="Ver los datos necesarios para buscar la Constancia de CUIT/CUIL en ARCA"
+                                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap transition-colors ${
+                                  cuil
+                                    ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100"
+                                    : "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100"
+                                }`}
+                              >
+                                <FontAwesomeIcon icon={cuil ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
+                                {cuil ? "Completo" : "Falta 1"}
+                              </button>
+                            );
+                          })()}
+                        </td>
+                        {/* Vigencia de la constancia cargada + atajo para ir a buscarla a ARCA. */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2 whitespace-nowrap">
+                            <ConstanciaBadge row={r} />
+                            {constanciaPendiente(r) && <BotonArca cuit={r.cuit} compacto />}
+                          </div>
+                        </td>
+                      </>
                     )}
                     {filterTipo === "alta_temprana_afip" && (
                       <td className="px-4 py-3">
@@ -619,6 +670,12 @@ export const ContractBulkAfipTab: React.FC<{ allEstados: InfoItem[]; contratoFra
           subtitle={`${constancia.row.projectName} · ${constancia.row.nombre_contrato}`}
           size="sm"
           zIndex={70}
+          footer={
+            <div className="flex items-center justify-between gap-3 w-full">
+              <ConstanciaBadge row={constancia.row} />
+              <BotonArca cuit={constancia.row.cuit} />
+            </div>
+          }
         >
           <div className="space-y-3">
             <div

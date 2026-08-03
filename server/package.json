@@ -24,7 +24,8 @@
     "backfill:roles-frame": "dotenv -e .env.production -- tsx src/scripts/backfillUserRolesFrame.ts",
     "fix:reemplazo-areas:dry": "dotenv -e .env.production -v DRY=true -- tsx src/scripts/backfillReplacementAreaShifts.ts",
     "fix:reemplazo-areas": "dotenv -e .env.production -- tsx src/scripts/backfillReplacementAreaShifts.ts",
-    "test:additive": "tsx --test src/utils/additiveSync.test.ts"
+    "test:additive": "tsx --test src/utils/additiveSync.test.ts",
+    "test:constancia": "tsx --test src/utils/constanciaPdf.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",
@@ -33,6 +34,7 @@
     "@supabase/supabase-js": "^2.58.0",
     "@types/multer": "^2.0.0",
     "@types/pdfkit": "^0.17.4",
+    "axios": "^1.19.0",
     "bcryptjs": "^2.4.3",
     "bull": "^4.16.5",
     "bullmq": "^5.60.0",
@@ -51,6 +53,7 @@
     "mongoose": "^8.18.0",
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
+    "pdf-parse": "^2.4.5",
     "pdfkit": "^0.17.2",
     "pizzip": "^3.2.0",
     "xlsx": "^0.18.5",

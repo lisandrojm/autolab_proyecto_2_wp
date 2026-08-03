@@ -23,6 +23,7 @@ import { Company } from "../models/Company.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
 import { esContratoVigente, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
+import { parseConstanciaPdf, normalizarCuit } from "../utils/constanciaPdf.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 async function ensureDir(dir) {
@@ -66,6 +67,19 @@ const uploadAltaDocumento = multer({
         cb(new Error("Solo se permiten archivos PDF"));
     },
 }).single("document");
+// Carga masiva de constancias de CUIT: los PDFs van a memoria (no a disco) porque recién después de
+// leer el CUIT del PDF se sabe a qué empleado pertenece cada archivo, que es lo que define la carpeta.
+const uploadConstancias = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024, files: 50 },
+    fileFilter: (_req, file, cb) => {
+        const isPdfExt = path.extname(file.originalname).toLowerCase() === ".pdf";
+        const isPdfMime = file.mimetype === "application/pdf";
+        if (isPdfExt && isPdfMime)
+            return cb(null, true);
+        cb(new Error("Solo se permiten archivos PDF"));
+    },
+}).array("documents", 50);
 async function resolveProjectGlobalConfig(project, tenantId) {
     if (!project)
         return;
@@ -1385,6 +1399,138 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/alta-documen
     }
     catch (error) {
         console.error("Upload alta-documento error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// POST /projects/constancias/bulk-upload - Carga masiva de constancias de CUIT (PDF de ARCA).
+//
+// El front manda los contratos visibles como `targets` (la regla de "este contrato requiere
+// constancia" se deriva del catálogo Info + la plantilla, y vive en el front), pero el matcheo lo
+// resuelve el server contra la base: de cada PDF se lee el CUIT y se busca a quién pertenece según
+// `user.metadata.cuit`. Así no se confía en el CUIT que manda el navegador.
+const constanciaTargetSchema = z.object({
+    projectId: z.string().min(1),
+    userId: z.string().min(1),
+    contractIndex: z.number().int().min(0),
+});
+router.post("/projects/constancias/bulk-upload", requireTenant, authenticateToken, requireAnyRole, uploadConstancias, async (req, res) => {
+    try {
+        const files = req.files || [];
+        if (files.length === 0) {
+            res.status(400).json({ error: "No se recibió ningún archivo" });
+            return;
+        }
+        let targets = [];
+        try {
+            const parsed = JSON.parse(String(req.body?.targets || "[]"));
+            targets = z.array(constanciaTargetSchema).max(5000).parse(parsed);
+        }
+        catch {
+            res.status(400).json({ error: "El listado de contratos (targets) es inválido" });
+            return;
+        }
+        if (targets.length === 0) {
+            res.status(400).json({ error: "No hay contratos pendientes a los que asignar las constancias" });
+            return;
+        }
+        // Solo proyectos y personas del tenant: lo que venga de afuera se descarta en silencio.
+        const projectIds = [...new Set(targets.map((t) => t.projectId))].filter((id) => Types.ObjectId.isValid(id));
+        const userIds = [...new Set(targets.map((t) => t.userId))].filter((id) => Types.ObjectId.isValid(id));
+        const [projects, users] = await Promise.all([
+            Project.find({ _id: { $in: projectIds }, tenantId: req.tenantObjectId }).select("_id name").lean(),
+            User.find({ _id: { $in: userIds }, tenantId: req.tenantObjectId }).select("_id firstName lastName metadata.nombre metadata.apellido metadata.cuit").lean(),
+        ]);
+        const projectNameById = new Map(projects.map((p) => [String(p._id), p.name]));
+        const userById = new Map(users.map((u) => [String(u._id), u]));
+        const nombreDe = (u) => [u?.metadata?.nombre || u?.firstName, u?.metadata?.apellido || u?.lastName].filter(Boolean).join(" ").trim() || "Sin nombre";
+        const targetsPorCuit = new Map();
+        for (const t of targets) {
+            const user = userById.get(t.userId);
+            if (!user || !projectNameById.has(t.projectId))
+                continue;
+            const cuit = normalizarCuit(user?.metadata?.cuit);
+            if (!cuit)
+                continue;
+            const lista = targetsPorCuit.get(cuit) || [];
+            lista.push({ ...t, userName: nombreDe(user), projectName: projectNameById.get(t.projectId) || "" });
+            targetsPorCuit.set(cuit, lista);
+        }
+        const hoy = hoyArgentina();
+        const tenantId = req.tenantId || "unknown_tenant";
+        const docsCache = new Map(); // `${projectId}|${userId}` → documento UserProject
+        const cuitsProcesados = new Set();
+        const resultados = [];
+        for (const file of files) {
+            const filename = file.originalname;
+            let datos;
+            try {
+                datos = await parseConstanciaPdf(file.buffer);
+            }
+            catch {
+                resultados.push({ filename, cuit: "", status: "ilegible", matched: [] });
+                continue;
+            }
+            if (!datos.cuit) {
+                resultados.push({ filename, cuit: "", status: "sin_cuit", matched: [] });
+                continue;
+            }
+            if (cuitsProcesados.has(datos.cuit)) {
+                resultados.push({ filename, cuit: datos.cuit, status: "duplicado", matched: [] });
+                continue;
+            }
+            const matches = targetsPorCuit.get(datos.cuit);
+            if (!matches || matches.length === 0) {
+                resultados.push({ filename, cuit: datos.cuit, status: "sin_coincidencia", matched: [] });
+                continue;
+            }
+            cuitsProcesados.add(datos.cuit);
+            // Una copia física por contrato: así reemplazar la constancia de uno no rompe el link del otro.
+            const asignados = [];
+            for (const t of matches) {
+                const key = `${t.projectId}|${t.userId}`;
+                let up = docsCache.get(key);
+                if (!up) {
+                    up = await UserProject.findOne({ projectId: t.projectId, userId: t.userId });
+                    if (!up)
+                        continue;
+                    docsCache.set(key, up);
+                }
+                if (t.contractIndex < 0 || t.contractIndex >= up.contracts.length)
+                    continue;
+                const dir = path.join(__dirname, "../../storage", tenantId, t.userId, "contratos");
+                await ensureDir(dir);
+                const nombreArchivo = `constancia_${new mongoose.Types.ObjectId()}.pdf`;
+                await fs.promises.writeFile(path.join(dir, nombreArchivo), file.buffer);
+                const anterior = up.contracts[t.contractIndex]?.altaDocumentoUrl;
+                if (anterior && typeof anterior === "string") {
+                    fs.promises.unlink(path.join(__dirname, "../..", anterior.replace(/^\/storage\//, "storage/"))).catch(() => { });
+                }
+                up.contracts[t.contractIndex] = {
+                    ...up.contracts[t.contractIndex].toObject(),
+                    altaDocumentoUrl: `/storage/${tenantId}/${t.userId}/contratos/${nombreArchivo}`,
+                    altaDocumentoNombre: filename,
+                    constanciaVigenciaDesde: datos.vigenciaDesde,
+                    constanciaVigenciaHasta: datos.vigenciaHasta,
+                    constanciaVerificador: datos.verificador,
+                    constanciaCargadaAt: new Date(),
+                };
+                up.markModified("contracts");
+                asignados.push({ userId: t.userId, userName: t.userName, projectName: t.projectName, contractIndex: t.contractIndex });
+            }
+            if (asignados.length === 0) {
+                resultados.push({ filename, cuit: datos.cuit, status: "sin_coincidencia", matched: [] });
+                continue;
+            }
+            // La constancia dura un mes: si la que subieron ya venció, se asigna igual pero se avisa.
+            const vencida = !!datos.vigenciaHasta && datos.vigenciaHasta < hoy;
+            resultados.push({ filename, cuit: datos.cuit, status: vencida ? "vencida" : "ok", vigenciaDesde: datos.vigenciaDesde, vigenciaHasta: datos.vigenciaHasta, verificador: datos.verificador, matched: asignados });
+        }
+        await Promise.all([...docsCache.values()].map((up) => up.save()));
+        const asignados = resultados.reduce((acc, r) => acc + (r.matched?.length || 0), 0);
+        res.json({ resultados, asignados, archivos: files.length });
+    }
+    catch (error) {
+        console.error("Bulk upload constancias error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });

@@ -87,6 +87,10 @@ export interface ContractOverviewRow {
   // Documentos del contrato ACTIVO, para las columnas de descarga/carga de la tabla de Contratos.
   altaDocumentoUrl?: string;
   altaDocumentoNombre?: string;
+  /** Datos leídos del PDF de la Constancia de CUIT de ARCA ("YYYY-MM-DD"). Vale un mes: la vigencia marca cuándo hay que volver a pedirla. */
+  constanciaVigenciaDesde?: string;
+  constanciaVigenciaHasta?: string;
+  constanciaVerificador?: string;
   empresaContratoId?: string;
   empresaReleaseId?: string;
   nombre_empresa_contrato?: string;

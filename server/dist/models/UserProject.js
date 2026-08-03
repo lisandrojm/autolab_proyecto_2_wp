@@ -47,6 +47,10 @@ const contractSchema = new Schema({
     nombre_empresa_release: { type: String },
     altaDocumentoUrl: { type: String },
     altaDocumentoNombre: { type: String },
+    constanciaVigenciaDesde: { type: String },
+    constanciaVigenciaHasta: { type: String },
+    constanciaVerificador: { type: String },
+    constanciaCargadaAt: { type: Date },
     areaShiftAssignments: [
         {
             areaId: { type: Schema.Types.ObjectId, ref: "Area" },
