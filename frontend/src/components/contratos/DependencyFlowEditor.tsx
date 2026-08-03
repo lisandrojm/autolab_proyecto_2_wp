@@ -64,25 +64,6 @@ const nombreCarpeta = (path?: string): string => {
   return partes[partes.length - 1] || path || "";
 };
 
-/** Descripción corta de una transición automática, para el tooltip del chip (incluye notas propias si tiene). */
-const descripcionTransicion = (t: TransicionAutomatica): string => {
-  const carpetas = t?.carpetas || [];
-  if (carpetas.length === 0) return "";
-  if (carpetas.length === 1) {
-    const c = carpetas[0];
-    return c.detalle ? `Automático: carpeta de Dropbox (${c.dropboxCarpeta}) — ${c.detalle}` : `Automático: carpeta de Dropbox (${c.dropboxCarpeta})`;
-  }
-  return `Automático: ${carpetas.length} carpetas de Dropbox (${carpetas.map((c) => nombreCarpeta(c.dropboxCarpeta)).join(", ")})`;
-};
-
-/** Etiqueta corta para mostrar en el chip cuando el rayo está encendido. */
-const etiquetaTransicionCorta = (t: TransicionAutomatica): string => {
-  const carpetas = t?.carpetas || [];
-  if (carpetas.length === 0) return "";
-  if (carpetas.length === 1) return `Dropbox | ${nombreCarpeta(carpetas[0].dropboxCarpeta)}`;
-  return `Dropbox | ${carpetas.length} carpetas`;
-};
-
 /** Chip arrastrable de un estado. Se arrastra desde cualquier parte del chip. */
 const SortableChip: React.FC<{
   estado: InfoItem;
@@ -92,11 +73,13 @@ const SortableChip: React.FC<{
   transicion?: TransicionAutomatica;
   puedeConfigurarTransicion?: boolean;
   onConfigurarTransicion?: () => void;
-  onQuitarTransicion?: () => void;
-}> = ({ estado, onRemove, mostrarTransicion, transicion, puedeConfigurarTransicion, onConfigurarTransicion, onQuitarTransicion }) => {
+  onQuitarCarpeta?: (dropboxCarpeta: string) => void;
+  onAgregarCarpeta?: () => void;
+}> = ({ estado, onRemove, mostrarTransicion, transicion, puedeConfigurarTransicion, onConfigurarTransicion, onQuitarCarpeta, onAgregarCarpeta }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: estado._id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1, touchAction: "none" as const };
   const esImpositivo = !!estado.data?.esImpositivo;
+  const carpetas = transicion?.carpetas || [];
   return (
     <span
       ref={setNodeRef}
@@ -109,35 +92,48 @@ const SortableChip: React.FC<{
       <EstadoBadge name={estado.name} />
       {esImpositivo && <ChipImpositivo />}
       {esImpositivo && <TramiteImpositivoBadge estado={estado} />}
-      {mostrarTransicion && (
-        <span
-          className={`inline-flex items-center rounded overflow-hidden border text-[10px] font-semibold transition-colors ${
-            transicion ? "text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 border-blue-100 dark:border-blue-800" : "text-gray-400 dark:text-gray-500 border-transparent"
-          }`}
-        >
-          <button
-            type="button"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={onConfigurarTransicion}
-            disabled={!puedeConfigurarTransicion}
-            title={!puedeConfigurarTransicion ? "Guardá el flujo para poder configurar una transición automática" : transicion ? descripcionTransicion(transicion) : "Configurar transición automática"}
-            className="inline-flex items-center gap-1 pl-1.5 pr-1.5 py-0.5 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-blue-100 dark:hover:bg-blue-900/50"
+      {mostrarTransicion &&
+        // Un badge POR CARPETA (no uno solo combinado): se entiende de un vistazo cuántas hay y se
+        // puede sacar cada una por separado, sin tocar las demás.
+        carpetas.map((c) => (
+          <span
+            key={c.dropboxCarpeta}
+            className="inline-flex items-center rounded overflow-hidden border text-[10px] font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 border-blue-100 dark:border-blue-800"
           >
-            <FontAwesomeIcon icon={faBolt} className="h-3 w-3 shrink-0" />
-            {transicion && <span className="truncate max-w-[140px]">{etiquetaTransicionCorta(transicion)}</span>}
-          </button>
-          {transicion && onQuitarTransicion && (
             <button
               type="button"
               onPointerDown={(e) => e.stopPropagation()}
-              onClick={onQuitarTransicion}
-              title="Quitar transición automática"
-              className="px-1 py-0.5 border-l border-blue-100 dark:border-blue-800 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-600 dark:hover:text-red-400"
+              onClick={onConfigurarTransicion}
+              title={c.detalle ? `${c.dropboxCarpeta} — ${c.detalle}` : c.dropboxCarpeta}
+              className="inline-flex items-center gap-1 pl-1.5 pr-1.5 py-0.5 hover:bg-blue-100 dark:hover:bg-blue-900/50"
             >
-              <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+              <FontAwesomeIcon icon={faBolt} className="h-3 w-3 shrink-0" />
+              <span className="truncate max-w-[110px]">{nombreCarpeta(c.dropboxCarpeta)}</span>
             </button>
-          )}
-        </span>
+            {onQuitarCarpeta && (
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => onQuitarCarpeta(c.dropboxCarpeta)}
+                title="Quitar esta carpeta"
+                className="px-1 py-0.5 border-l border-blue-100 dark:border-blue-800 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-600 dark:hover:text-red-400"
+              >
+                <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+              </button>
+            )}
+          </span>
+        ))}
+      {mostrarTransicion && (
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={carpetas.length > 0 ? onAgregarCarpeta : onConfigurarTransicion}
+          disabled={!puedeConfigurarTransicion}
+          title={!puedeConfigurarTransicion ? "Guardá el flujo para poder configurar una transición automática" : carpetas.length > 0 ? "Agregar otra carpeta" : "Configurar transición automática"}
+          className="p-1 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+        >
+          <FontAwesomeIcon icon={carpetas.length > 0 ? faPlus : faBolt} className="h-3 w-3" />
+        </button>
       )}
       {onRemove && (
         <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={onRemove} title="Sacar del flujo" className="text-gray-400 hover:text-red-500 px-0.5">
@@ -215,6 +211,11 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
     cargarCarpetaPicker("");
   };
 
+  const agregarCarpetaDirecto = (estado: InfoItem) => {
+    abrirConfigurarEvento(estado);
+    abrirPicker();
+  };
+
   // Dos estados no pueden vigilar la misma carpeta (si no, sería ambiguo a cuál avanzar). Se excluye
   // al estado que se está editando, para no bloquearlo con su propia configuración actual.
   const carpetasUsadas = new Map<string, string>();
@@ -237,6 +238,18 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
 
   const segmentosPicker = pickerPath.split("/").filter(Boolean);
 
+  // Campos del estado que hay que preservar tal cual al guardar `transicionAutomatica`: el PATCH
+  // reconstruye `data` entero a partir del body, así que no alcanza con mandar solo lo que cambia.
+  const payloadBaseDe = (estado: InfoItem): Omit<EstadoPayload, "transicionAutomatica"> => ({
+    name: estado.name,
+    color: estado.data?.color,
+    contratoFrameIds: estado.data?.contratoFrameIds || [],
+    esImpositivo: estado.data?.esImpositivo,
+    etiquetaSecundaria: estado.data?.etiquetaSecundaria,
+    colorEtiquetaSecundaria: estado.data?.colorEtiquetaSecundaria,
+    tipoImpositivo: estado.data?.tipoImpositivo,
+  });
+
   const guardarEvento = async () => {
     if (!configurando) return;
     for (const c of eventoForm.carpetas) {
@@ -248,18 +261,7 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
     }
     const carpetas = eventoForm.carpetas.map((c) => ({ dropboxCarpeta: c.dropboxCarpeta, detalle: c.detalle.trim() || undefined }));
     const nuevaTransicion: TransicionAutomatica = carpetas.length > 0 ? { evento: "dropbox_carpeta", carpetas } : undefined;
-    // Se manda el estado completo (no solo `transicionAutomatica`): el PATCH reconstruye `data` entero
-    // a partir del body, así que hay que preservar los demás campos tal cual están.
-    const payload: EstadoPayload = {
-      name: configurando.name,
-      color: configurando.data?.color,
-      contratoFrameIds: configurando.data?.contratoFrameIds || [],
-      esImpositivo: configurando.data?.esImpositivo,
-      etiquetaSecundaria: configurando.data?.etiquetaSecundaria,
-      colorEtiquetaSecundaria: configurando.data?.colorEtiquetaSecundaria,
-      tipoImpositivo: configurando.data?.tipoImpositivo,
-      transicionAutomatica: nuevaTransicion || null,
-    };
+    const payload: EstadoPayload = { ...payloadBaseDe(configurando), transicionAutomatica: nuevaTransicion || null };
     const id = configurando._id;
     try {
       setSavingEvento(true);
@@ -274,26 +276,20 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
     }
   };
 
-  /** Quita la transición automática de un estado directo desde el chip, sin pasar por el modal. */
-  const quitarTransicionRapido = async (estado: InfoItem) => {
-    const result = await sweetAlert.confirm("¿Quitar transición automática?", `Se va a dejar de vigilar las carpetas configuradas para "${estado.name}".`, "Sí, quitar", "Cancelar");
+  /** Quita UNA carpeta puntual de un estado directo desde su chip, sin pasar por el modal (las demás
+   *  carpetas configuradas, si hay, quedan como estaban). */
+  const quitarCarpetaRapido = async (estado: InfoItem, dropboxCarpeta: string) => {
+    const result = await sweetAlert.confirm("¿Quitar esta carpeta?", `Se va a dejar de vigilar "${nombreCarpeta(dropboxCarpeta)}" para "${estado.name}".`, "Sí, quitar", "Cancelar");
     if (!result.isConfirmed) return;
-    const payload: EstadoPayload = {
-      name: estado.name,
-      color: estado.data?.color,
-      contratoFrameIds: estado.data?.contratoFrameIds || [],
-      esImpositivo: estado.data?.esImpositivo,
-      etiquetaSecundaria: estado.data?.etiquetaSecundaria,
-      colorEtiquetaSecundaria: estado.data?.colorEtiquetaSecundaria,
-      tipoImpositivo: estado.data?.tipoImpositivo,
-      transicionAutomatica: null,
-    };
+    const restantes = (transicionDe(estado)?.carpetas || []).filter((c) => c.dropboxCarpeta !== dropboxCarpeta);
+    const nuevaTransicion: TransicionAutomatica = restantes.length > 0 ? { evento: "dropbox_carpeta", carpetas: restantes } : undefined;
+    const payload: EstadoPayload = { ...payloadBaseDe(estado), transicionAutomatica: nuevaTransicion || null };
     try {
       await infoAPI.updateEstado(estado._id, payload);
-      setEventoOverrides((prev) => ({ ...prev, [estado._id]: null }));
-      sweetAlert.success("Transición eliminada", `Se quitó la transición automática de "${estado.name}".`);
+      setEventoOverrides((prev) => ({ ...prev, [estado._id]: nuevaTransicion ?? null }));
+      sweetAlert.success("Carpeta quitada", `Se dejó de vigilar "${nombreCarpeta(dropboxCarpeta)}".`);
     } catch (e: any) {
-      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo quitar la transición automática.");
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo quitar la carpeta.");
     }
   };
 
@@ -529,7 +525,8 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
                           transicion={transicionDe(est)}
                           puedeConfigurarTransicion={typeof est.data?.ordenDependencia === "number"}
                           onConfigurarTransicion={() => abrirConfigurarEvento(est)}
-                          onQuitarTransicion={() => quitarTransicionRapido(est)}
+                          onQuitarCarpeta={(carpeta) => quitarCarpetaRapido(est, carpeta)}
+                          onAgregarCarpeta={() => agregarCarpetaDirecto(est)}
                         />
                       );
                     })
