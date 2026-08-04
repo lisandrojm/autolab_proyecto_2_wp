@@ -40,6 +40,7 @@ import { OrderTypesPage } from "./pages/OrderTypesPage";
 import { VacationsPage } from "./pages/VacationsPage";
 import { VacationsRulesPage } from "./pages/VacationsRulesPage";
 import { DocumentsPage } from "./pages/DocumentsPage";
+import { EscaneoDropboxConfigPage } from "./pages/EscaneoDropboxConfigPage";
 import { VacationsCalendarPage } from "./pages/VacationsCalendarPage";
 import { PdfTemplatesPage } from "./pages/PdfTemplatesPage";
 import { ReleasesPage } from "./pages/ReleasesPage";
@@ -430,6 +431,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <DocumentsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/escaneo-dropbox"
+                element={
+                  <ProtectedRoute>
+                    <EscaneoDropboxConfigPage />
                   </ProtectedRoute>
                 }
               />

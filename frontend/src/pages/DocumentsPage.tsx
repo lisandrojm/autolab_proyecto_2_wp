@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileText, faLandmark, faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
+import { faFileText, faLandmark } from "@fortawesome/free-solid-svg-icons";
 import { faDropbox } from "@fortawesome/free-brands-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { DropboxTab } from "../components/documents/DropboxTab";
@@ -34,14 +34,11 @@ export function DocumentsPage() {
               </button>
             </div>
             <a
-              href="/contratos?tab=states&openFlow=1"
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Abrir la configuración de transición automática por Dropbox en una pestaña nueva"
+              href="/escaneo-dropbox"
+              title="Configuración del escaneo automático (intervalo, carpetas vigiladas)"
               className="mb-2 shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
             >
               Configurar transición automática
-              <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
             </a>
           </div>
 

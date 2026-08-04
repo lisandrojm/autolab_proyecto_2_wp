@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faTrash, faArrowUp, faArrowDown, faXmark, faCheck, faSpinner, faLayerGroup, faGripVertical, faFileInvoiceDollar, faBolt, faCircleInfo, faFolder, faTriangleExclamation, faArrowsRotate, faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faTrash, faArrowUp, faArrowDown, faXmark, faCheck, faSpinner, faLayerGroup, faGripVertical, faFileInvoiceDollar, faBolt, faCircleInfo, faFolder, faTriangleExclamation, faArrowsRotate } from "@fortawesome/free-solid-svg-icons";
 import {
   DndContext,
   DragOverlay,
@@ -39,13 +39,6 @@ const collisionDetection: CollisionDetection = (args) => {
   const pointerCollisions = pointerWithin(args);
   return pointerCollisions.length > 0 ? pointerCollisions : rectIntersection(args);
 };
-
-interface Props {
-  isOpen: boolean;
-  estados: InfoItem[];
-  onCancel: () => void;
-  onSaved: () => void;
-}
 
 /** Orden estable dentro de un paso / del pool: por orden visual y luego nombre. */
 const byOrden = (a: InfoItem, b: InfoItem) => (a.data?.orden ?? 999) - (b.data?.orden ?? 999) || a.name.localeCompare(b.name);
@@ -159,8 +152,25 @@ const Droppable: React.FC<{ id: string; className?: string; children: React.Reac
  * paso son alternativas (uno u otro). Drag para mover estados entre pasos; flechas para reordenar
  * los pasos. Es independiente del orden visual (`data.orden`).
  */
-export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCancel, onSaved }) => {
+export const DependencyFlowEditor: React.FC = () => {
+  const [estados, setEstados] = useState<InfoItem[]>([]);
+  const [loadingEstados, setLoadingEstados] = useState(true);
   const estadoById = useMemo(() => new Map(estados.map((e) => [e._id, e])), [estados]);
+
+  const cargarEstados = async () => {
+    try {
+      setLoadingEstados(true);
+      setEstados(await infoAPI.listEstados());
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudieron cargar los estados.");
+    } finally {
+      setLoadingEstados(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarEstados();
+  }, []);
 
   const [pasos, setPasos] = useState<string[]>([]); // ids de contenedor de paso, en orden
   const [items, setItems] = useState<Record<string, string[]>>({ [UNASSIGNED]: [] }); // ids de estado por contenedor
@@ -174,6 +184,7 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
   const [eventoOverrides, setEventoOverrides] = useState<Record<string, TransicionAutomatica | null>>({});
   const [configurando, setConfigurando] = useState<InfoItem | null>(null);
   const [showFlowInfo, setShowFlowInfo] = useState(false);
+  const [showEscaneoInfo, setShowEscaneoInfo] = useState(false);
   const [escaneando, setEscaneando] = useState(false);
   const [eventoForm, setEventoForm] = useState<{ carpetas: { dropboxCarpeta: string; detalle: string }[] }>({ carpetas: [] });
   const [savingEvento, setSavingEvento] = useState(false);
@@ -310,7 +321,7 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
   // Regla: los estados impositivos van SIEMPRE al Paso 1 (grupo 1), aunque su valor guardado sea
   // otro o no tengan — "van por defecto al paso uno; en ese paso no importa el orden (uno u otro)".
   useEffect(() => {
-    if (!isOpen) return;
+    if (loadingEstados) return;
     setEventoOverrides({});
     const groups = new Map<number, InfoItem[]>();
     const unassigned: InfoItem[] = [];
@@ -340,7 +351,7 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
     setPasos(pasoIds);
     setItems(map);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [estados, isOpen]);
+  }, [estados, loadingEstados]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -434,16 +445,13 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
     const payload: { id: string; ordenDependencia: number | null }[] = [];
     nonEmpty.forEach((pid, idx) => (items[pid] || []).forEach((eid) => payload.push({ id: eid, ordenDependencia: idx + 1 })));
     (items[UNASSIGNED] || []).forEach((eid) => payload.push({ id: eid, ordenDependencia: null }));
-    if (payload.length === 0) {
-      onCancel();
-      return;
-    }
+    if (payload.length === 0) return;
     setSaving(true);
     try {
       await infoAPI.reorderEstadosDependencia(payload);
       const descartados = pasos.length - nonEmpty.length;
       sweetAlert.success("Flujo guardado", descartados > 0 ? `El orden de dependencias se guardó. Se descartaron ${descartados} paso(s) vacío(s).` : "El orden de dependencias se guardó.");
-      onSaved();
+      await cargarEstados();
     } catch (e: any) {
       sweetAlert.error("Error", e?.response?.data?.error || "No se pudo guardar el flujo.");
     } finally {
@@ -451,57 +459,78 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
     }
   };
 
+  const descartarCambios = async () => {
+    await cargarEstados();
+  };
+
   const activeEstado = activeId ? estadoById.get(activeId) : null;
 
   return (
     <>
-    <Modal
-      isOpen={isOpen}
-      onClose={onCancel}
-      title={
-        <span className="inline-flex items-center gap-2">
-          Orden de dependencias
-          <button type="button" onClick={() => setShowFlowInfo(true)} title="¿Cómo funciona el flujo de dependencias?" aria-label="¿Cómo funciona el flujo de dependencias?" className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-            <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={forzarEscaneo}
-            disabled={escaneando}
-            title="Forzar ya mismo el escaneo de las carpetas de Dropbox vigiladas, sin esperar los 20 minutos del escaneo automático"
-            className="inline-flex items-center gap-1.5 ml-1 px-2 py-1 rounded-md text-[11px] font-semibold text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <FontAwesomeIcon icon={faArrowsRotate} className="h-3 w-3" spin={escaneando} />
-            {escaneando ? "Escaneando…" : "Forzar escaneo ahora"}
-          </button>
-          <a
-            href="/documents"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Ver las carpetas de Dropbox (HelloSign y AFIP) en una pestaña nueva"
-            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-          >
-            Ver documentos
-            <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
-          </a>
-        </span>
-      }
-      subtitle="Los estados en el mismo paso son alternativas (uno u otro). Es independiente del orden visual."
-      size="lg"
-      zIndex={60}
-      footer={
-        <div className="flex items-center justify-end gap-2 w-full">
-          <button onClick={onCancel} disabled={saving} className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all text-sm flex items-center gap-2 disabled:opacity-50">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="inline-flex items-center gap-2 text-base font-bold text-gray-900 dark:text-gray-100">
+            Orden de dependencias
+            <button type="button" onClick={() => setShowFlowInfo(true)} title="¿Cómo funciona el flujo de dependencias?" aria-label="¿Cómo funciona el flujo de dependencias?" className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+            </button>
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Los estados en el mismo paso son alternativas (uno u otro). Es independiente del orden visual.</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button onClick={descartarCambios} disabled={saving} className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all text-sm flex items-center gap-2 disabled:opacity-50">
             <FontAwesomeIcon icon={faXmark} />
-            Cancelar
+            Descartar cambios
           </button>
           <button onClick={handleSave} disabled={saving} className="px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-all text-sm flex items-center gap-2 disabled:opacity-50">
             <FontAwesomeIcon icon={saving ? faSpinner : faCheck} spin={saving} />
             Guardar flujo
           </button>
         </div>
-      }
-    >
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={forzarEscaneo}
+          disabled={escaneando}
+          title="Forzar ya mismo el escaneo de las carpetas de Dropbox vigiladas, sin esperar el intervalo configurado"
+          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <FontAwesomeIcon icon={faArrowsRotate} className="h-3 w-3" spin={escaneando} />
+          {escaneando ? "Escaneando…" : "Forzar escaneo ahora"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowEscaneoInfo(true)}
+          title="¿Qué hace este botón?"
+          aria-label="¿Qué hace este botón?"
+          className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors -ml-1"
+        >
+          <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+        </button>
+        <a
+          href="/documents"
+          title="Ver las carpetas de Dropbox (HelloSign y AFIP)"
+          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+        >
+          Ver documentos
+        </a>
+        <a
+          href="/escaneo-dropbox"
+          title="Configuración del escaneo automático (intervalo, carpetas vigiladas)"
+          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+        >
+          Configurar escaneo
+        </a>
+      </div>
+
+      {loadingEstados ? (
+        <div className="flex justify-center py-16 text-gray-400">
+          <FontAwesomeIcon icon={faSpinner} spin className="mr-2" /> Cargando estados...
+        </div>
+      ) : (
       <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>
         {/* Pool: Sin asignar */}
         <Droppable id={UNASSIGNED} className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 p-3">
@@ -577,7 +606,8 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
 
         <DragOverlay>{activeEstado ? <EstadoBadge name={activeEstado.name} /> : null}</DragOverlay>
       </DndContext>
-    </Modal>
+      )}
+    </div>
 
     {configurando && (
       <Modal
@@ -743,6 +773,20 @@ export const DependencyFlowEditor: React.FC<Props> = ({ isOpen, estados, onCance
           <span>
             <strong>Cómo identifica a quién corresponde cada archivo:</strong> los contratos que descargás desde la plataforma ya incluyen el CUIT y las fechas del contrato en el nombre del archivo, así que el sistema los reconoce sin ambigüedad al volver firmados desde Dropbox Sign. Si subís un documento vos manualmente (por ejemplo, un trámite de AFIP), el sistema primero intenta leer el CUIT del propio PDF; si no puede, incluí el CUIT de la persona (los 11 dígitos) en el nombre del archivo para que se identifique con seguridad.
           </span>
+        </p>
+      </div>
+    </InfoModal>
+
+    <InfoModal isOpen={showEscaneoInfo} onClose={() => setShowEscaneoInfo(false)} title='¿Qué hace "Forzar escaneo ahora"?' size="sm" zIndex={80}>
+      <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+        <p>
+          El sistema ya revisa <strong>solo, automáticamente, cada 20 minutos</strong>, todas las carpetas de Dropbox configuradas en cualquier transición automática — no hace falta hacer nada para que funcione.
+        </p>
+        <p>
+          Este botón simplemente dispara esa misma revisión <strong>ya mismo</strong>, en vez de esperar a que le toque el turno al escaneo automático. Es útil cuando estás probando una transición nueva y no querés esperar.
+        </p>
+        <p>
+          Puede tardar unos segundos: además de listar las carpetas, si encuentra un PDF sin CUIT en el nombre intenta leerlo del contenido del archivo antes de descartarlo.
         </p>
       </div>
     </InfoModal>

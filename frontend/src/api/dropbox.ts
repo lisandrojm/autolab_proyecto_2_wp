@@ -78,9 +78,31 @@ export const dropboxAPI = {
     await axios.delete("/dropbox/delete", { data: { path, full } });
   },
 
-  /** Fuerza ya mismo el escaneo de transición automática (carpetas de Dropbox) de este tenant. */
+  /**
+   * Fuerza ya mismo el escaneo de transición automática (carpetas de Dropbox) de este tenant. Puede
+   * tardar bastante más que el resto de las llamadas (lista varias carpetas y, si hace falta, descarga y
+   * lee el contenido de PDFs sin CUIT en el nombre) — timeout propio más largo que el default (60s).
+   */
   async forzarEscaneoEstados(): Promise<{ estadosEscaneados: number; transicionesAplicadas: number }> {
-    const { data } = await axios.post("/dropbox/estado-scan/trigger");
+    const { data } = await axios.post("/dropbox/estado-scan/trigger", undefined, { timeout: 180000 });
+    return data;
+  },
+
+  /** Intervalo configurado + cuándo fue el último escaneo / cuándo es el próximo (para la cuenta regresiva). */
+  async getEscaneoConfig(): Promise<EscaneoConfig> {
+    const { data } = await axios.get("/dropbox/estado-scan/config");
+    return data;
+  },
+
+  /** Cambia cada cuántos minutos se revisan las carpetas vigiladas (solo admin). */
+  async setEscaneoIntervalo(intervalMinutos: number): Promise<EscaneoConfig> {
+    const { data } = await axios.patch("/dropbox/estado-scan/config", { intervalMinutos });
     return data;
   },
 };
+
+export interface EscaneoConfig {
+  intervalMinutos: number;
+  ultimoEscaneoAt: number | null;
+  proximoEscaneoAt: number | null;
+}

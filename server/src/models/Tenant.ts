@@ -39,6 +39,8 @@ export interface ITenant extends Document {
       rootPath?: string; // ej: "/HelloSign"
       accountEmail?: string; // solo para mostrar quién está conectado
       connectedAt?: Date;
+      /** Cada cuántos minutos se revisan las carpetas vigiladas por transición automática. Default 20. */
+      scanIntervalMinutes?: number;
     };
   };
   subscription: { plan: "free" | "basic" | "pro" | "enterprise"; status: "active" | "suspended" | "cancelled"; expiresAt?: Date };
@@ -125,6 +127,7 @@ const tenantSchema = new Schema<ITenant>(
         rootPath: { type: String, default: "/HelloSign" },
         accountEmail: { type: String },
         connectedAt: { type: Date },
+        scanIntervalMinutes: { type: Number, default: 20 },
       },
     },
 

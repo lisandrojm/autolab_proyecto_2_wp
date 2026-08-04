@@ -9,28 +9,52 @@ import { normalizarCuit, parseConstanciaPdf } from "../utils/constanciaPdf.js";
 
 /**
  * Job periódico: revisa, para cada Estado con transición automática "dropbox_carpeta", si aparecieron
- * archivos nuevos en la carpeta de Dropbox configurada, y si matchean (por nombre) a un contrato que
- * está esperando ese paso, lo avanza. No hay webhooks de Dropbox en la app, así que esto se resuelve
- * por polling (mismo patrón que `cronService.ts`).
+ * archivos nuevos en la carpeta de Dropbox configurada, y si matchean a un contrato que está esperando
+ * ese paso, lo avanza. No hay webhooks de Dropbox en la app, así que esto se resuelve por polling.
+ *
+ * El intervalo de escaneo es configurable POR TENANT (`tenant.integrations.dropbox.scanIntervalMinutes`,
+ * default 20 min) — por eso el scheduler despierta cada TICK_MS (mucho más seguido que el intervalo
+ * mínimo posible) y, en cada tick, decide para CADA tenant si ya le toca escanear de nuevo, en vez de un
+ * único `setInterval` fijo para todos.
  */
 
 const ESTADO_TYPE = "estado-empleado";
-const INTERVAL_MS = 20 * 60 * 1000; // 20 min: no es tiempo-crítico, alcanza sobrado.
-const LOCK_STALE_MS = 5 * 60 * 1000; // si el candado lleva más de esto tomado, se considera trabado
+const TICK_MS = 60 * 1000; // cada cuánto se FIJA si a algún tenant ya le toca (no es el intervalo real de escaneo)
+const LOCK_STALE_MS = 5 * 60 * 1000; // si el candado de un tenant lleva más de esto tomado, se considera trabado
+export const DEFAULT_INTERVAL_MINUTES = 20;
+export const MIN_INTERVAL_MINUTES = 5;
+export const MAX_INTERVAL_MINUTES = 24 * 60; // 1 día
 
-// Candado para no correr dos escaneos en simultáneo (manual o del cron). Se guarda CUÁNDO se tomó (no
-// solo un booleano) para poder auto-liberarlo si algo lo deja trabado — p. ej. una llamada a Dropbox que
-// se cuelga sin timeout: sin esto, un solo hang deja el escaneo bloqueado hasta reiniciar el server.
-let runningSince: number | null = null;
+// Candado POR TENANT (no global): un tenant lento no debe bloquear el escaneo/botón manual de otro.
+// Guarda CUÁNDO se tomó (no solo un booleano) para poder auto-liberarlo si algo lo deja trabado — p. ej.
+// una llamada a Dropbox que se cuelga sin timeout.
+const runningSince = new Map<string, number>();
 
-function tomarCandado(): boolean {
-  if (runningSince !== null && Date.now() - runningSince < LOCK_STALE_MS) return false;
-  runningSince = Date.now();
+function tomarCandado(tenantId: string): boolean {
+  const since = runningSince.get(tenantId);
+  if (since !== undefined && Date.now() - since < LOCK_STALE_MS) return false;
+  runningSince.set(tenantId, Date.now());
   return true;
 }
 
-function liberarCandado(): void {
-  runningSince = null;
+function liberarCandado(tenantId: string): void {
+  runningSince.delete(tenantId);
+}
+
+// Último escaneo (manual o automático) INICIADO por tenant — en memoria, se resetea si el server
+// reinicia (aceptable: en el peor caso, el tenant escanea de nuevo apenas arranca el server).
+const lastScanAt = new Map<string, number>();
+
+function intervalMinutesDe(tenant: any): number {
+  const raw = Number(tenant?.integrations?.dropbox?.scanIntervalMinutes);
+  if (!Number.isFinite(raw) || raw <= 0) return DEFAULT_INTERVAL_MINUTES;
+  return Math.min(MAX_INTERVAL_MINUTES, Math.max(MIN_INTERVAL_MINUTES, Math.round(raw)));
+}
+
+function leTocaEscanear(tenant: any): boolean {
+  const ultimo = lastScanAt.get(String(tenant._id));
+  if (ultimo === undefined) return true;
+  return Date.now() - ultimo >= intervalMinutesDe(tenant) * 60_000;
 }
 
 // De-dupe de warnings: no repetir el mismo log en cada corrida mientras el archivo siga sin poder
@@ -41,12 +65,12 @@ export const initEstadoDropboxScheduler = () => {
   console.log("[ESTADO-DROPBOX-CRON] Initializing scheduler...");
 
   setTimeout(() => {
-    scanDropboxTriggers().catch((err) => console.error("[ESTADO-DROPBOX-CRON] Initial scan error:", err));
+    tick().catch((err) => console.error("[ESTADO-DROPBOX-CRON] Initial tick error:", err));
   }, 10 * 1000);
 
   setInterval(() => {
-    scanDropboxTriggers().catch((err) => console.error("[ESTADO-DROPBOX-CRON] Interval scan error:", err));
-  }, INTERVAL_MS);
+    tick().catch((err) => console.error("[ESTADO-DROPBOX-CRON] Interval tick error:", err));
+  }, TICK_MS);
 };
 
 /** minúsculas, sin acentos, solo alfanumérico/espacios — para comparar nombres sin depender del formato exacto. */
@@ -101,30 +125,30 @@ function extraerFechasDeNombre(nombreArchivo: string): string[] {
   return out;
 }
 
-async function scanDropboxTriggers() {
-  if (!tomarCandado()) {
-    console.log("[ESTADO-DROPBOX-CRON] Ya hay una corrida en curso. Se omite esta.");
-    return;
-  }
-  try {
-    const estadosConTrigger = await cargarEstadosPorEvento("dropbox_carpeta");
-    if (estadosConTrigger.length === 0) return;
+/** El tick del scheduler: por cada tenant conectado a Dropbox, escanea SOLO si ya le toca según su
+ *  propio intervalo configurado. */
+async function tick() {
+  const estadosConTrigger = await cargarEstadosPorEvento("dropbox_carpeta");
+  if (estadosConTrigger.length === 0) return;
 
-    const tenants = await Tenant.find({ "integrations.dropbox.refreshTokenEnc": { $exists: true } });
-    for (const tenant of tenants) {
-      try {
-        await scanTenant(tenant, estadosConTrigger);
-      } catch (err) {
-        console.error(`[ESTADO-DROPBOX-CRON] Falló el escaneo del tenant ${tenant._id}:`, err);
-      }
+  const tenants = await Tenant.find({ "integrations.dropbox.refreshTokenEnc": { $exists: true } });
+  for (const tenant of tenants) {
+    const tenantId = String(tenant._id);
+    if (!leTocaEscanear(tenant)) continue;
+    if (!tomarCandado(tenantId)) continue; // ya hay un escaneo (manual o de este mismo tick) en curso
+    lastScanAt.set(tenantId, Date.now());
+    try {
+      await scanTenant(tenant, estadosConTrigger);
+    } catch (err) {
+      console.error(`[ESTADO-DROPBOX-CRON] Falló el escaneo del tenant ${tenantId}:`, err);
+    } finally {
+      liberarCandado(tenantId);
     }
-  } finally {
-    liberarCandado();
   }
 }
 
 export interface ResultadoEscaneoManual {
-  /** Ya había un escaneo (manual o del cron) en curso — no se disparó uno nuevo. */
+  /** Ya había un escaneo en curso para ESTE tenant — no se disparó uno nuevo. */
   enCurso?: boolean;
   error?: "dropbox_no_conectado" | "sin_transiciones_configuradas";
   estadosEscaneados?: number;
@@ -132,12 +156,12 @@ export interface ResultadoEscaneoManual {
 }
 
 /**
- * Dispara un escaneo inmediato de UN tenant (botón "Forzar escaneo ahora" de la UI), sin esperar al
- * cron. Comparte el candado con `scanDropboxTriggers` para que nunca corran dos escaneos en simultáneo,
- * sea manual o automático.
+ * Dispara un escaneo inmediato de UN tenant (botón "Forzar escaneo ahora" de la UI), sin esperar a que
+ * le toque el turno según su intervalo configurado. Actualiza `lastScanAt` igual que un escaneo
+ * automático, así el conteo regresivo del próximo escaneo se reinicia desde acá.
  */
 export async function escanearTenantAhora(tenantId: string): Promise<ResultadoEscaneoManual> {
-  if (!tomarCandado()) return { enCurso: true };
+  if (!tomarCandado(tenantId)) return { enCurso: true };
   try {
     const tenant = await Tenant.findById(tenantId);
     const cfg = tenant ? getTenantDropboxConfig(tenant) : null;
@@ -146,11 +170,35 @@ export async function escanearTenantAhora(tenantId: string): Promise<ResultadoEs
     const estadosConTrigger = await cargarEstadosPorEvento("dropbox_carpeta");
     if (estadosConTrigger.length === 0) return { error: "sin_transiciones_configuradas" };
 
+    lastScanAt.set(tenantId, Date.now());
     const transicionesAplicadas = await scanTenant(tenant, estadosConTrigger);
     return { estadosEscaneados: estadosConTrigger.length, transicionesAplicadas };
   } finally {
-    liberarCandado();
+    liberarCandado(tenantId);
   }
+}
+
+export interface EscaneoConfig {
+  intervalMinutos: number;
+  ultimoEscaneoAt: number | null;
+  proximoEscaneoAt: number | null;
+}
+
+/** Config + estado actual del escaneo automático de un tenant, para mostrar en la UI (intervalo, cuenta
+ *  regresiva al próximo escaneo). */
+export async function getEscaneoConfig(tenantId: string): Promise<EscaneoConfig> {
+  const tenant = await Tenant.findById(tenantId).select("integrations.dropbox.scanIntervalMinutes").lean();
+  const intervalMinutos = intervalMinutesDe(tenant);
+  const ultimoEscaneoAt = lastScanAt.get(tenantId) ?? null;
+  const proximoEscaneoAt = ultimoEscaneoAt !== null ? ultimoEscaneoAt + intervalMinutos * 60_000 : null;
+  return { intervalMinutos, ultimoEscaneoAt, proximoEscaneoAt };
+}
+
+/** Cambia el intervalo de escaneo de un tenant (minutos, acotado a [MIN_INTERVAL_MINUTES, MAX_INTERVAL_MINUTES]). */
+export async function setEscaneoIntervalo(tenantId: string, minutos: number): Promise<EscaneoConfig> {
+  const clamped = Math.min(MAX_INTERVAL_MINUTES, Math.max(MIN_INTERVAL_MINUTES, Math.round(minutos)));
+  await Tenant.updateOne({ _id: tenantId }, { $set: { "integrations.dropbox.scanIntervalMinutes": clamped } });
+  return getEscaneoConfig(tenantId);
 }
 
 async function scanTenant(tenant: any, estadosConTrigger: IInfo[]): Promise<number> {
@@ -239,29 +287,40 @@ async function scanEstadoParaTenant(tenant: any, cfg: NonNullable<ReturnType<typ
     }
     const archivos = entries.filter((e) => e.tag === "file");
 
+    // Resolución del CUIT de cada archivo (nombre, y si hace falta contenido del PDF) EN PARALELO: es la
+    // parte lenta (baja y parsea PDFs enteros), y no toca `disponibles` — sacarla del loop secuencial de
+    // abajo evita que un escaneo con varios archivos sin CUIT en el nombre tarde la suma de todos ellos
+    // (riesgo real de superar el timeout del botón "Forzar escaneo ahora").
+    const cuitPorArchivo = new Map<string, { cuit: string; via: "nombre" | "contenido" | null }>();
+    await Promise.all(
+      archivos.map(async (file) => {
+        // 1) CUIT en el nombre del archivo — la vía más barata y la que van a traer los documentos que
+        //    genera el propio sistema (`buildDocFileName`) apenas Dropbox Sign los devuelva firmados.
+        let cuitEncontrado = extraerCuitDeNombre(file.name);
+        let viaCuit: "nombre" | "contenido" | null = cuitEncontrado ? "nombre" : null;
+
+        // 2) Si el nombre no trae CUIT, intentar leerlo del contenido del PDF (documentos de AFIP que
+        //    el usuario sube a mano y que no siguen la convención de nombre, pero sí traen el CUIT como
+        //    texto — mismo parser que ya usa la carga masiva de constancias).
+        if (!cuitEncontrado && /\.pdf$/i.test(file.name)) {
+          try {
+            const buffer = await downloadFileContent(String(tenant._id), cfg, file.path);
+            const datos = await parseConstanciaPdf(buffer);
+            if (datos.cuit) {
+              cuitEncontrado = datos.cuit;
+              viaCuit = "contenido";
+            }
+          } catch (err) {
+            console.warn(`[ESTADO-DROPBOX-CRON] No se pudo leer el CUIT del contenido de "${file.path}":`, (err as any)?.message || err);
+          }
+        }
+        cuitPorArchivo.set(file.path, { cuit: cuitEncontrado, via: viaCuit });
+      }),
+    );
+
     for (const file of archivos) {
       const key = `${tenant._id}:${estadoDestino._id}:${file.path}`;
-
-      // 1) CUIT en el nombre del archivo — la vía más barata y la que van a traer los documentos que
-      //    genera el propio sistema (`buildDocFileName`) apenas Dropbox Sign los devuelva firmados.
-      let cuitEncontrado = extraerCuitDeNombre(file.name);
-      let viaCuit: "nombre" | "contenido" | null = cuitEncontrado ? "nombre" : null;
-
-      // 2) Si el nombre no trae CUIT, intentar leerlo del contenido del PDF (documentos de AFIP que
-      //    el usuario sube a mano y que no siguen la convención de nombre, pero sí traen el CUIT como
-      //    texto — mismo parser que ya usa la carga masiva de constancias).
-      if (!cuitEncontrado && /\.pdf$/i.test(file.name)) {
-        try {
-          const buffer = await downloadFileContent(String(tenant._id), cfg, file.path);
-          const datos = await parseConstanciaPdf(buffer);
-          if (datos.cuit) {
-            cuitEncontrado = datos.cuit;
-            viaCuit = "contenido";
-          }
-        } catch (err) {
-          console.warn(`[ESTADO-DROPBOX-CRON] No se pudo leer el CUIT del contenido de "${file.path}":`, (err as any)?.message || err);
-        }
-      }
+      const { cuit: cuitEncontrado, via: viaCuit } = cuitPorArchivo.get(file.path) || { cuit: "", via: null };
 
       let matches: Candidato[];
       if (cuitEncontrado) {

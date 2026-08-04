@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PageLayout } from '../components/ui/PageLayout';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFileContract, faFilePdf } from '@fortawesome/free-solid-svg-icons';
 import { ContractTypesTab } from '../components/contratos/ContractTypesTab';
 import { ContractStatesTab } from '../components/contratos/ContractStatesTab';
+import { DependencyFlowEditor } from '../components/contratos/DependencyFlowEditor';
 
-type TabKey = 'types' | 'states';
+type TabKey = 'types' | 'states' | 'dependencies';
+
+const TAB_DE_PARAM: Record<string, TabKey> = { types: 'types', states: 'states', dependencies: 'dependencies' };
 
 const GUIA_CONTRATOS = (
   <div className="space-y-4 text-gray-400">
@@ -24,8 +27,8 @@ const GUIA_CONTRATOS = (
     <div className="space-y-2">
       <h4 className="text-white font-medium">Estados</h4>
       <p className="text-sm">
-        La columna <strong>Estados</strong> muestra qué estados (tab Estados de Contratos) se pueden elegir para este Contrato: los vinculados a alguna de sus Plantillas, más los que no restringen ningún
-        tipo de contrato (esos aplican a todos).
+        La columna <strong>Estados</strong> muestra qué estados (tab Estados) se pueden elegir para este Contrato: los vinculados a alguna de sus Plantillas, más los que no restringen ningún tipo de
+        contrato (esos aplican a todos).
       </p>
     </div>
     <div className="space-y-2">
@@ -61,18 +64,43 @@ const GUIA_ESTADOS = (
   </div>
 );
 
+const GUIA_DEPENDENCIAS = (
+  <div className="space-y-4 text-gray-400">
+    <p>
+      Armá el <strong>flujo de dependencias</strong>: agrupá los estados en pasos ordenados. Los estados en el mismo paso son alternativas (uno u otro).
+    </p>
+    <div className="space-y-2">
+      <h4 className="text-white font-medium">Transición automática</h4>
+      <p className="text-sm">Cada estado del flujo puede avanzar solo cuando aparece un archivo en una carpeta de Dropbox vigilada — configurable desde el rayo de cada estado.</p>
+    </div>
+  </div>
+);
+
 export const ContratosPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  // Permite llegar directo a la pestaña "Estados de Contratos" con /contratos?tab=states (p. ej.
-  // desde el link de ayuda del campo Estado en Agregar/Configurar miembro).
-  const [activeTab, setActiveTab] = useState<TabKey>(searchParams.get('tab') === 'states' ? 'states' : 'types');
+  // Permite llegar directo a una pestaña con /contratos?tab=states|dependencies (p. ej. desde el link de
+  // ayuda del campo Estado en Agregar/Configurar miembro, o desde "Configurar transición automática" en
+  // Documentos/Dropbox). Reactivo: si el query param cambia estando ya en /contratos, cambia la pestaña.
+  const [activeTab, setActiveTab] = useState<TabKey>(TAB_DE_PARAM[searchParams.get('tab') || ''] || 'types');
+  useEffect(() => {
+    const next = TAB_DE_PARAM[searchParams.get('tab') || ''];
+    if (next) setActiveTab(next);
+  }, [searchParams]);
   const [showInfoModal, setShowInfoModal] = useState(false);
+
+  const cambiarTab = (tab: TabKey) => {
+    setActiveTab(tab);
+    navigate(`/contratos?tab=${tab}`, { replace: true });
+  };
+
+  const subtitle = activeTab === 'types' ? 'Tipos de contrato: jornadas, multiplicador y vigencia' : activeTab === 'states' ? 'Estados del contrato que se eligen al agregar o configurar un miembro' : 'Flujo de pasos y transición automática por Dropbox';
+  const guia = activeTab === 'types' ? GUIA_CONTRATOS : activeTab === 'states' ? GUIA_ESTADOS : GUIA_DEPENDENCIAS;
 
   return (
     <PageLayout
       title="Contratos"
-      subtitle={activeTab === 'types' ? 'Tipos de contrato: jornadas, multiplicador y vigencia' : 'Estados del contrato que se eligen al agregar o configurar un miembro'}
+      subtitle={subtitle}
       faIcon={{ icon: faFileContract }}
       headerActions={
         <div className="flex items-center gap-3">
@@ -86,18 +114,21 @@ export const ContratosPage: React.FC = () => {
         isOpen: showInfoModal,
         onOpen: () => setShowInfoModal(true),
         onClose: () => setShowInfoModal(false),
-        title: activeTab === 'types' ? 'Guía de Contratos' : 'Guía de Estados',
-        content: activeTab === 'types' ? GUIA_CONTRATOS : GUIA_ESTADOS,
+        title: activeTab === 'types' ? 'Guía de Contratos' : activeTab === 'states' ? 'Guía de Estados' : 'Guía de Dependencias',
+        content: guia,
       }}
       searchAndFilters={
         <div className="mx-auto w-full">
           {/* Tabs Header */}
           <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6 sticky top-[140px] z-20 bg-gray-100 dark:bg-gray-900 overflow-x-auto">
-            <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'types' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => setActiveTab('types')}>
-              Tipos de Contratos
+            <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'types' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => cambiarTab('types')}>
+              Tipos
             </button>
-            <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'states' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => setActiveTab('states')}>
-              Estados de Contratos
+            <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'states' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => cambiarTab('states')}>
+              Estados
+            </button>
+            <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'dependencies' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => cambiarTab('dependencies')}>
+              Dependencias
             </button>
           </div>
 
@@ -105,6 +136,7 @@ export const ContratosPage: React.FC = () => {
           <div className="animate-in fade-in duration-300">
             {activeTab === 'types' && <ContractTypesTab />}
             {activeTab === 'states' && <ContractStatesTab />}
+            {activeTab === 'dependencies' && <DependencyFlowEditor />}
           </div>
         </div>
       }

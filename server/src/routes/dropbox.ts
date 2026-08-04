@@ -18,7 +18,7 @@ import {
   clearTenantToken,
   isWithinRoot,
 } from "../services/dropboxService.js";
-import { escanearTenantAhora } from "../services/estadoDropboxCronService.js";
+import { escanearTenantAhora, getEscaneoConfig, setEscaneoIntervalo, MIN_INTERVAL_MINUTES, MAX_INTERVAL_MINUTES } from "../services/estadoDropboxCronService.js";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
@@ -308,7 +308,7 @@ router.delete("/delete", async (req: AuthenticatedRequest & TenantRequest, res) 
 });
 
 // POST /dropbox/estado-scan/trigger - fuerza ya mismo el escaneo de transición automática de ESTE
-// tenant (solo admin), en vez de esperar la corrida periódica del cron (cada 20 min).
+// tenant (solo admin), en vez de esperar la corrida periódica del cron (según su intervalo configurado).
 router.post("/estado-scan/trigger", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     if (!isAdmin(req)) {
@@ -329,6 +329,41 @@ router.post("/estado-scan/trigger", async (req: AuthenticatedRequest & TenantReq
       return;
     }
     res.json({ estadosEscaneados: resultado.estadosEscaneados, transicionesAplicadas: resultado.transicionesAplicadas });
+  } catch (error) {
+    dropboxError(res, error);
+  }
+});
+
+// GET /dropbox/estado-scan/config - intervalo configurado + cuándo fue el último escaneo / cuándo es
+// el próximo, para mostrar la cuenta regresiva en la UI.
+router.get("/estado-scan/config", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const config = await getEscaneoConfig(String(req.tenantObjectId));
+    res.json(config);
+  } catch (error) {
+    dropboxError(res, error);
+  }
+});
+
+// PATCH /dropbox/estado-scan/config { intervalMinutos } - cambia cada cuánto se revisan las carpetas
+// vigiladas (solo admin).
+router.patch("/estado-scan/config", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    if (!isAdmin(req)) {
+      res.status(403).json({ error: "Solo un administrador puede cambiar el intervalo de escaneo." });
+      return;
+    }
+    const intervalMinutos = Number(req.body?.intervalMinutos);
+    if (!Number.isFinite(intervalMinutos)) {
+      res.status(400).json({ error: "intervalMinutos inválido." });
+      return;
+    }
+    if (intervalMinutos < MIN_INTERVAL_MINUTES || intervalMinutos > MAX_INTERVAL_MINUTES) {
+      res.status(400).json({ error: `El intervalo tiene que estar entre ${MIN_INTERVAL_MINUTES} y ${MAX_INTERVAL_MINUTES} minutos.` });
+      return;
+    }
+    const config = await setEscaneoIntervalo(String(req.tenantObjectId), intervalMinutos);
+    res.json(config);
   } catch (error) {
     dropboxError(res, error);
   }

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { SearchAndFilters } from '../ui/SearchAndFilters';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { EmptyState } from '../ui/EmptyState';
@@ -15,7 +15,6 @@ import { infoAPI, InfoItem, EstadoPayload } from '../../api/info';
 import { contratoFrameAPI, ContratoFrameItem } from '../../api/contratosFrame';
 import { useEstadoCatalogStore } from '../../stores/estadoCatalogStore';
 import { estadoColorPorDefecto, colorTextoBadge, EstadoSecundarioBadge } from '../EstadoSelect';
-import { DependencyFlowEditor } from './DependencyFlowEditor';
 import { useThemeStore } from '../../stores/themeStore';
 
 /** Paleta sugerida: solo se elige el color de la tipografía; el fondo es ese color con transparencia. */
@@ -161,8 +160,7 @@ export const ContractStatesTab: React.FC = () => {
   const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
 
   const [isReorderMode, setIsReorderMode] = useState(false);
-  // Modo "Orden de dependencias" (flujo de pasos): mutuamente excluyente con el reorder visual.
-  const [isDependencyMode, setIsDependencyMode] = useState(false);
+  const navigate = useNavigate();
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
   useEffect(() => {
@@ -206,19 +204,6 @@ export const ContractStatesTab: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Permite llegar directo a "Orden de dependencias" con /contratos?tab=states&openFlow=1 (p. ej. desde
-  // el botón "Configurar transición automática" de la página de Documentos/Dropbox).
-  const [searchParams, setSearchParams] = useSearchParams();
-  useEffect(() => {
-    if (searchParams.get('openFlow') === '1') {
-      setIsDependencyMode(true);
-      const next = new URLSearchParams(searchParams);
-      next.delete('openFlow');
-      setSearchParams(next, { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
-
   const filtrados = useMemo(() => {
     const q = normalizar(searchTerm);
     if (!q) return estados;
@@ -234,15 +219,10 @@ export const ContractStatesTab: React.FC = () => {
 
   const handleStartReorder = () => {
     setSearchTerm('');
-    setIsDependencyMode(false);
     setIsReorderMode(true);
   };
 
-  const handleStartDependency = () => {
-    setSearchTerm('');
-    setIsReorderMode(false);
-    setIsDependencyMode(true);
-  };
+  const irADependencias = () => navigate('/contratos?tab=dependencies');
 
   const handleCancelReorder = () => {
     setIsReorderMode(false);
@@ -419,16 +399,10 @@ export const ContractStatesTab: React.FC = () => {
               </button>
             </div>
           ) : (
-            <>
-              <button onClick={handleStartReorder} disabled={estados.length < 2} title="Ordenar (orden visual)" className="px-3 py-2 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-sm flex items-center gap-2 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-                <FontAwesomeIcon icon={faGripVertical} />
-                <span>Ordenar</span>
-              </button>
-              <button onClick={handleStartDependency} disabled={estados.length < 1} title="Orden de dependencias (flujo de pasos)" className="px-3 py-2 rounded-md border border-indigo-600 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all text-sm flex items-center gap-2 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-                <FontAwesomeIcon icon={faSitemap} />
-                <span>Dependencias</span>
-              </button>
-            </>
+            <button onClick={handleStartReorder} disabled={estados.length < 2} title="Ordenar (orden visual)" className="px-3 py-2 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-sm flex items-center gap-2 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+              <FontAwesomeIcon icon={faGripVertical} />
+              <span>Ordenar</span>
+            </button>
           )}
           {isLarge && !isReorderMode && (
             <div className="flex items-center gap-2">
@@ -452,7 +426,7 @@ export const ContractStatesTab: React.FC = () => {
             </p>
             <p className="text-[12px] text-amber-700 dark:text-amber-400/90 truncate">{estadosSinDependencia.map((e) => e.name).join(', ')}</p>
           </div>
-          <button onClick={handleStartDependency} className="shrink-0 self-start sm:self-auto inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition-colors">
+          <button onClick={irADependencias} className="shrink-0 self-start sm:self-auto inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition-colors">
             <FontAwesomeIcon icon={faSitemap} />
             Asignar dependencias
           </button>
@@ -720,16 +694,6 @@ export const ContractStatesTab: React.FC = () => {
           </div>
         </div>
       </Modal>
-
-      <DependencyFlowEditor
-        isOpen={isDependencyMode}
-        estados={estados}
-        onCancel={() => setIsDependencyMode(false)}
-        onSaved={() => {
-          setIsDependencyMode(false);
-          cargar();
-        }}
-      />
 
       <InfoModal
         isOpen={showBadgeSecundarioInfo}
