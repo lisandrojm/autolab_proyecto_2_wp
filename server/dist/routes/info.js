@@ -189,24 +189,6 @@ async function conflictoImpositivo(data, excluirId) {
     const porEstado = [...new Set(chocan.map((id) => tomados.get(String(id))))];
     return `Esos tipos de contrato ya tienen un estado impositivo: ${porEstado.join(", ")}`;
 }
-/**
- * Dos estados no pueden vigilar la misma carpeta de Dropbox (si no, sería ambiguo a cuál avanzar).
- * Devuelve el mensaje de error, o null si no hay conflicto.
- */
-async function conflictoTransicionAutomatica(data, excluirId) {
-    const t = data?.transicionAutomatica;
-    const carpetas = (t?.carpetas || []).map((c) => c.dropboxCarpeta).filter(Boolean);
-    if (carpetas.length === 0)
-        return null;
-    const otro = await Info.findOne({
-        type: ESTADO_TYPE,
-        "data.transicionAutomatica.carpetas.dropboxCarpeta": { $in: carpetas },
-        ...(excluirId ? { _id: { $ne: excluirId } } : {}),
-    }).lean();
-    if (!otro)
-        return null;
-    return `Esa carpeta de Dropbox ya está asignada a "${otro.name}"`;
-}
 // POST /info/estados - crear estado
 router.post("/estados", requireTenant, authenticateToken, async (req, res) => {
     try {
@@ -217,11 +199,6 @@ router.post("/estados", requireTenant, authenticateToken, async (req, res) => {
         }
         if (parsed.data.transicionAutomatica && !tieneOrdenDependencia(parsed.data)) {
             res.status(400).json({ error: "Antes de configurar una transición automática, el estado tiene que estar asignado a un paso del flujo de dependencias" });
-            return;
-        }
-        const conflictoTransicion = await conflictoTransicionAutomatica(parsed.data);
-        if (conflictoTransicion) {
-            res.status(409).json({ error: conflictoTransicion });
             return;
         }
         const existente = await Info.findOne({ type: ESTADO_TYPE, name: parsed.name }).lean();
@@ -334,11 +311,6 @@ router.patch("/estados/:id", requireTenant, authenticateToken, async (req, res) 
         }
         if (parsed.data.transicionAutomatica && !tieneOrdenDependencia(parsed.data, estado)) {
             res.status(400).json({ error: "Antes de configurar una transición automática, el estado tiene que estar asignado a un paso del flujo de dependencias" });
-            return;
-        }
-        const conflictoTransicion = await conflictoTransicionAutomatica(parsed.data, String(estado._id));
-        if (conflictoTransicion) {
-            res.status(409).json({ error: conflictoTransicion });
             return;
         }
         const duplicado = await Info.findOne({ type: ESTADO_TYPE, name: parsed.name, _id: { $ne: estado._id } }).lean();

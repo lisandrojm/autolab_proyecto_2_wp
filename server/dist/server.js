@@ -68,6 +68,7 @@ import { shiftRoutes } from "./routes/shifts.js";
 import { holidayRoutes } from "./routes/holidays.js";
 import { userProjectRoutes } from "./routes/userProjects.js";
 import { dropboxRoutes } from "./routes/dropbox.js";
+import { afipRoutes } from "./routes/afip.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 // ───────────────── Red de seguridad a nivel proceso ─────────────────
@@ -186,6 +187,7 @@ app.use("/api/v1/shifts", shiftRoutes);
 app.use("/api/v1/holidays", holidayRoutes);
 app.use("/api/v1/user-projects", userProjectRoutes);
 app.use("/api/v1/dropbox", dropboxRoutes);
+app.use("/api/v1/afip", afipRoutes);
 // ───────────────── 404 + errores (al final) ─────────────────
 app.use(notFoundHandler);
 app.use(errorHandler);

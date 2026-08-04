@@ -45,6 +45,13 @@ const tenantSchema = new Schema({
             connectedAt: { type: Date },
             scanIntervalMinutes: { type: Number, default: 20 },
         },
+        afip: {
+            cuitRepresentada: { type: String },
+            certificadoPem: { type: String },
+            clavePrivadaEnc: { type: String },
+            ambiente: { type: String, enum: ["homologacion", "produccion"], default: "homologacion" },
+            connectedAt: { type: Date },
+        },
     },
     subscription: {
         plan: { type: String, enum: ["free", "basic", "pro", "enterprise"], default: "free" },

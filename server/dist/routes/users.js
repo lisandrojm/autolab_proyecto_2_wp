@@ -553,6 +553,9 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 constanciaVigenciaDesde: contratoActivo.constanciaVigenciaDesde || "",
                 constanciaVigenciaHasta: contratoActivo.constanciaVigenciaHasta || "",
                 constanciaVerificador: contratoActivo.constanciaVerificador || "",
+                // Resultado de la última consulta al Padrón de AFIP (reemplaza al PDF como fuente de verdad).
+                constanciaAfipEstado: contratoActivo.constanciaAfipEstado || "",
+                constanciaAfipConsultadaAt: contratoActivo.constanciaAfipConsultadaAt || "",
                 empresaContratoId: contratoActivo.empresaContratoId ? String(contratoActivo.empresaContratoId) : "",
                 empresaReleaseId: contratoActivo.empresaReleaseId ? String(contratoActivo.empresaReleaseId) : "",
                 nombre_empresa_contrato: contratoActivo.nombre_empresa_contrato || "",

@@ -1,0 +1,215 @@
+import forge from "node-forge";
+import axios from "axios";
+import { XMLParser } from "fast-xml-parser";
+import { Tenant } from "../models/Tenant.js";
+import { decryptSecret } from "../utils/secretCrypto.js";
+import { normalizarCuit } from "../utils/constanciaPdf.js";
+/**
+ * Integración con los Web Services de AFIP/ARCA: autenticación WSAA (firma CMS del Login Ticket
+ * Request con el certificado del tenant) + Consulta Padrón A13 (estado del CUIT/CUIL).
+ *
+ * Implementado a mano (sin SDK de terceros): las librerías de Node disponibles para esto reportan
+ * uso a analytics de un tercero (o exigen un token de un proxy externo) — inaceptable para datos
+ * fiscales. Solo dependencias genéricas y auditables: `node-forge` (firma CMS) y `fast-xml-parser`
+ * (parseo de las respuestas SOAP).
+ *
+ * OJO: los nombres exactos de los campos de la respuesta de Consulta Padrón A13 están tomados de la
+ * documentación pública de AFIP, pero no se pudieron validar contra una respuesta real todavía (hace
+ * falta un certificado con el servicio de Padrón autorizado) — `consultarPadron` devuelve siempre el
+ * `raw` parseado completo además de los campos extraídos, así que si algún nombre de campo no
+ * coincide en la práctica, el dato no se pierde y se puede ajustar el mapeo sin volver a consultar.
+ */
+const WSAA_URL = {
+    homologacion: "https://wsaahomo.afip.gov.ar/ws/services/LoginCms",
+    produccion: "https://wsaa.afip.gov.ar/ws/services/LoginCms",
+};
+const PADRON_A13_URL = {
+    homologacion: "https://awshomo.afip.gov.ar/sr-padron/webservices/personaServiceA13",
+    produccion: "https://aws.afip.gov.ar/sr-padron/webservices/personaServiceA13",
+};
+const PADRON_A13_SERVICE = "ws_sr_padron_a13";
+const SOAP_TIMEOUT_MS = 20_000;
+/** Lee y descifra la config de AFIP del tenant. Devuelve null si no está conectado. */
+export function getTenantAfipConfig(tenant) {
+    const a = tenant?.integrations?.afip;
+    if (!a?.cuitRepresentada || !a?.certificadoPem || !a?.clavePrivadaEnc)
+        return null;
+    const clavePrivadaPem = decryptSecret(a.clavePrivadaEnc);
+    if (!clavePrivadaPem)
+        return null;
+    return {
+        cuitRepresentada: String(a.cuitRepresentada),
+        certificadoPem: String(a.certificadoPem),
+        clavePrivadaPem,
+        ambiente: a.ambiente === "produccion" ? "produccion" : "homologacion",
+    };
+}
+export function isTenantAfipConnected(tenant) {
+    return !!getTenantAfipConfig(tenant);
+}
+const ticketCache = new Map();
+/** minúsculas del último tramo de una key con o sin prefijo de namespace ("soapenv:Envelope" → "envelope"). */
+function bareKey(key) {
+    const parts = key.split(":");
+    return (parts.length > 1 ? parts[1] : parts[0]).toLowerCase();
+}
+/** Busca dentro de un objeto ya parseado la primera key cuyo nombre local (sin prefijo ns) matchee,
+ *  sin importar qué prefijo de namespace haya usado la respuesta real de AFIP. */
+function buscar(obj, localName) {
+    if (!obj || typeof obj !== "object")
+        return undefined;
+    const target = localName.toLowerCase();
+    for (const key of Object.keys(obj)) {
+        if (bareKey(key) === target)
+            return obj[key];
+    }
+    return undefined;
+}
+/** "2026-08-04T10:00:00.000Z" tal cual — WSAA acepta ISO 8601 con offset Z sin problema. */
+function buildLoginTicketRequestXml(service) {
+    const now = new Date();
+    const generationTime = new Date(now.getTime() - 60_000).toISOString();
+    const expirationTime = new Date(now.getTime() + 10 * 60_000).toISOString();
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<loginTicketRequest version="1.0">
+  <header>
+    <uniqueId>${Math.floor(now.getTime() / 1000)}</uniqueId>
+    <generationTime>${generationTime}</generationTime>
+    <expirationTime>${expirationTime}</expirationTime>
+  </header>
+  <service>${service}</service>
+</loginTicketRequest>`;
+}
+/** Firma el XML como CMS/PKCS#7 (SignedData, no detached) en DER, codificado en base64 — el formato
+ *  que espera `loginCms` de WSAA. */
+function signCms(xml, certificadoPem, clavePrivadaPem) {
+    const cert = forge.pki.certificateFromPem(certificadoPem);
+    const privateKey = forge.pki.privateKeyFromPem(clavePrivadaPem);
+    const p7 = forge.pkcs7.createSignedData();
+    p7.content = forge.util.createBuffer(xml, "utf8");
+    p7.addCertificate(cert);
+    p7.addSigner({
+        key: privateKey,
+        certificate: cert,
+        digestAlgorithm: forge.pki.oids.sha256,
+        authenticatedAttributes: [
+            { type: forge.pki.oids.contentType, value: forge.pki.oids.data },
+            { type: forge.pki.oids.messageDigest },
+            { type: forge.pki.oids.signingTime, value: new Date() },
+        ],
+    });
+    p7.sign({ detached: false });
+    const der = forge.asn1.toDer(p7.toAsn1()).getBytes();
+    return forge.util.encode64(der);
+}
+async function soapPost(url, soapAction, envelope) {
+    const { data } = await axios.post(url, envelope, {
+        headers: { "Content-Type": "text/xml; charset=utf-8", SOAPAction: soapAction },
+        timeout: SOAP_TIMEOUT_MS,
+    });
+    const parser = new XMLParser({ ignoreAttributes: false, removeNSPrefix: false });
+    return parser.parse(String(data));
+}
+/** Pide (o reutiliza del cache) un ticket de acceso WSAA para el tenant+servicio dados. */
+async function obtenerTicket(tenantId, cfg, service) {
+    const cacheKey = `${tenantId}:${cfg.ambiente}:${service}`;
+    const cached = ticketCache.get(cacheKey);
+    if (cached && cached.expiraEn > Date.now() + 60_000)
+        return cached;
+    const ltrXml = buildLoginTicketRequestXml(service);
+    const cms = signCms(ltrXml, cfg.certificadoPem, cfg.clavePrivadaPem);
+    const envelope = `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:wsaa="http://wsaa.view.sua.dvadac.desein.afip.gov">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <wsaa:loginCms>
+      <wsaa:in0>${cms}</wsaa:in0>
+    </wsaa:loginCms>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+    const parsed = await soapPost(WSAA_URL[cfg.ambiente], "", envelope);
+    const body = buscar(buscar(parsed, "Envelope"), "Body");
+    const loginCmsResponse = buscar(body, "loginCmsResponse");
+    const loginCmsReturn = buscar(loginCmsResponse, "loginCmsReturn") ?? (typeof loginCmsResponse === "string" ? loginCmsResponse : undefined);
+    if (!loginCmsReturn) {
+        const fault = buscar(body, "Fault");
+        throw new Error(fault ? `WSAA rechazó el login: ${JSON.stringify(fault)}` : "WSAA no devolvió loginCmsReturn (respuesta inesperada, revisar formato)");
+    }
+    const inner = new XMLParser({ ignoreAttributes: false }).parse(String(loginCmsReturn));
+    const ticketResponse = buscar(inner, "loginTicketResponse");
+    const credentials = buscar(ticketResponse, "credentials");
+    const header = buscar(ticketResponse, "header");
+    const token = credentials?.token;
+    const sign = credentials?.sign;
+    if (!token || !sign)
+        throw new Error("WSAA no devolvió token/sign en la respuesta");
+    const expirationTime = header?.expirationTime;
+    const expiraEn = expirationTime ? new Date(String(expirationTime)).getTime() : Date.now() + 10 * 60_000;
+    const ticket = { token: String(token), sign: String(sign), expiraEn };
+    ticketCache.set(cacheKey, ticket);
+    return ticket;
+}
+/** Consulta el estado de un CUIT/CUIL en el Padrón de AFIP (servicio A13). */
+export async function consultarPadron(tenantId, cfg, cuitConsultado) {
+    const cuit = normalizarCuit(cuitConsultado);
+    if (!cuit)
+        throw new Error(`CUIT inválido: "${cuitConsultado}"`);
+    const ticket = await obtenerTicket(tenantId, cfg, PADRON_A13_SERVICE);
+    const envelope = `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:a13="http://a13.soap.ws.server.puc.sr/">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <a13:getPersona>
+      <token>${ticket.token}</token>
+      <sign>${ticket.sign}</sign>
+      <cuitRepresentada>${normalizarCuit(cfg.cuitRepresentada)}</cuitRepresentada>
+      <idPersona>${cuit}</idPersona>
+    </a13:getPersona>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+    const parsed = await soapPost(PADRON_A13_URL[cfg.ambiente], "", envelope);
+    const body = buscar(buscar(parsed, "Envelope"), "Body");
+    const fault = buscar(body, "Fault");
+    if (fault) {
+        // "No existe persona con el Id solicitado" es la respuesta normal para un CUIT no encontrado, no
+        // un error de comunicación — se informa como "no encontrado" en vez de tirar excepción.
+        const mensaje = JSON.stringify(fault);
+        if (/no existe persona/i.test(mensaje)) {
+            return { cuit, encontrado: false, estado: "desconocido", raw: fault };
+        }
+        throw new Error(`Consulta Padrón rechazó la consulta: ${mensaje}`);
+    }
+    const getPersonaResponse = buscar(body, "getPersonaResponse");
+    const getPersonaReturn = buscar(getPersonaResponse, "getPersonaReturn");
+    const persona = buscar(getPersonaReturn, "persona") ?? getPersonaReturn;
+    if (!persona)
+        return { cuit, encontrado: false, estado: "desconocido", raw: getPersonaReturn };
+    const estadoClaveRaw = String(buscar(persona, "estadoClave") ?? "").toUpperCase();
+    const estado = estadoClaveRaw === "ACTIVO" ? "activo" : estadoClaveRaw === "INACTIVO" ? "inactivo" : "desconocido";
+    const tipoPersona = buscar(persona, "tipoPersona");
+    const datosGenerales = buscar(persona, "datosGenerales");
+    const denominacion = buscar(datosGenerales, "razonSocial") ?? [buscar(datosGenerales, "nombre"), buscar(datosGenerales, "apellido")].filter(Boolean).join(" ");
+    return {
+        cuit,
+        encontrado: true,
+        estado,
+        tipoPersona: tipoPersona ? String(tipoPersona) : undefined,
+        denominacion: denominacion ? String(denominacion) : undefined,
+        raw: getPersonaReturn,
+    };
+}
+/** Valida credenciales pidiendo un ticket real — se usa al conectar, antes de guardar nada. */
+export async function verificarCredenciales(tenantId, cfg) {
+    await obtenerTicket(tenantId, cfg, PADRON_A13_SERVICE);
+}
+/** Invalida el ticket cacheado del tenant (al desconectar o cambiar credenciales). */
+export function clearTenantTicket(tenantId) {
+    for (const key of [...ticketCache.keys()]) {
+        if (key.startsWith(`${tenantId}:`))
+            ticketCache.delete(key);
+    }
+}
+export async function findTenantAfipConfig(tenantId) {
+    const tenant = await Tenant.findById(tenantId).lean();
+    return getTenantAfipConfig(tenant);
+}
