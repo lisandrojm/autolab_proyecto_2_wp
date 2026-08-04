@@ -47,6 +47,22 @@ export function getTenantAfipConfig(tenant) {
 export function isTenantAfipConnected(tenant) {
     return !!getTenantAfipConfig(tenant);
 }
+/** Lee del certificado (sin necesidad de la clave privada) el alias/CN y la fecha de vencimiento —
+ *  para mostrar en el status, no para autenticar. Nunca tira: si el PEM guardado está corrupto,
+ *  devuelve todo null en vez de romper el endpoint de status. */
+export function getCertificadoInfo(certificadoPemRaw) {
+    try {
+        const cert = forge.pki.certificateFromPem(normalizarPem(certificadoPemRaw, "CERTIFICATE"));
+        const cn = cert.subject.getField("CN");
+        return {
+            alias: cn?.value ? String(cn.value) : null,
+            vencimiento: cert.validity.notAfter.toISOString(),
+        };
+    }
+    catch {
+        return { alias: null, vencimiento: null };
+    }
+}
 const ticketCache = new Map();
 /** minúsculas del último tramo de una key con o sin prefijo de namespace ("soapenv:Envelope" → "envelope"). */
 function bareKey(key) {

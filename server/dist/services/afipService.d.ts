@@ -8,6 +8,14 @@ export interface TenantAfipConfig {
 /** Lee y descifra la config de AFIP del tenant. Devuelve null si no está conectado. */
 export declare function getTenantAfipConfig(tenant: any): TenantAfipConfig | null;
 export declare function isTenantAfipConnected(tenant: any): boolean;
+export interface CertificadoInfo {
+    alias: string | null;
+    vencimiento: string | null;
+}
+/** Lee del certificado (sin necesidad de la clave privada) el alias/CN y la fecha de vencimiento —
+ *  para mostrar en el status, no para autenticar. Nunca tira: si el PEM guardado está corrupto,
+ *  devuelve todo null en vez de romper el endpoint de status. */
+export declare function getCertificadoInfo(certificadoPemRaw: string): CertificadoInfo;
 export interface ResultadoPadron {
     cuit: string;
     encontrado: boolean;

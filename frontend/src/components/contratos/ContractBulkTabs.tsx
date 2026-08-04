@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileInvoiceDollar, faFileSignature, faScrewdriverWrench, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI, ContractOverviewRow } from "../../api/users";
+import { companiesAPI, Company } from "../../api/companies";
 import { infoAPI, InfoItem } from "../../api/info";
 import { ContratoFrameItem } from "../../api/contratosFrame";
 import { contratosAPI, ContratoItem } from "../../api/contratos";
@@ -74,6 +75,8 @@ export const ContractBulkAfipTab: React.FC<{
   const [filterClientId, setFilterClientId] = useState("");
   // Preseleccionado cuando se entra desde el proyecto (Gestionar Equipo → Gestión masiva de Contratos).
   const [filterProjectId, setFilterProjectId] = useState(initialProjectId);
+  // Empresa (ABM "Empresas"): agrupa/filtra las altas por la empleadora que las va a presentar en AFIP.
+  const [filterEmpresaId, setFilterEmpresaId] = useState("");
 
   // Vista tabla / tarjetas (como Contratos): la tabla solo en pantallas grandes.
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
@@ -90,6 +93,7 @@ export const ContractBulkAfipTab: React.FC<{
   const [tipos, setTipos] = useState<ContratoItem[]>([]);
   const [obrasSociales, setObrasSociales] = useState<SimpleCatalogItem[]>([]);
   const [sedes, setSedes] = useState<InfoItem[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   // Detalle de completitud de una fila (modal).
   const [detalle, setDetalle] = useState<{ row: ImpositivoRow; result: AfipRowResult } | null>(null);
   // Detalle de los datos para la Constancia de CUIT/CUIL (único requisito: el CUIT/CUIL).
@@ -100,6 +104,7 @@ export const ContractBulkAfipTab: React.FC<{
     contratosAPI.list().then(setTipos).catch(() => setTipos([]));
     obrasSocialesApi.list().then(setObrasSociales).catch(() => setObrasSociales([]));
     infoAPI.listSedes().then(setSedes).catch(() => setSedes([]));
+    companiesAPI.list().then(setCompanies).catch(() => setCompanies([]));
   }, []);
 
   const afipCat = useMemo(() => ({ categorias, tipos, obrasSociales, sedes }), [categorias, tipos, obrasSociales, sedes]);
@@ -167,6 +172,11 @@ export const ContractBulkAfipTab: React.FC<{
     return out;
   }, [rows, impositivoPorClave, afipCat]);
 
+  // Empresa(s) a las que se le puede atribuir el contrato: la fija guardada si ya se descargó/eligió
+  // una, o si no, todas las candidatas del proyecto (mismo criterio que el menú "Descargar con:" de
+  // ContractRowDocs) — así el filtro no deja afuera contratos que todavía no fijaron una empresa.
+  const empresasDelContrato = (r: ImpositivoRow): string[] => (r.empresaContratoId ? [r.empresaContratoId] : (r.contratoEmpresas || []).map((e) => e.id));
+
   // Filtros de la barra superior (búsqueda + filtro avanzado), sin el trámite ni los toggles propios
   // de cada pestaña: se usa tanto para la tabla como para los contadores de las pestañas, que deben
   // reflejar los filtros activos (p. ej. "Contratos: Vigentes") aunque pertenezcan al otro trámite.
@@ -184,13 +194,14 @@ export const ContractBulkAfipTab: React.FC<{
       if (filterReemplazo && (filterReemplazo === "con" ? !r.reemplazo : r.reemplazo)) return false;
       if (filterClientId && r.clientId !== filterClientId) return false;
       if (filterProjectId && r.projectId !== filterProjectId) return false;
+      if (filterEmpresaId && !empresasDelContrato(r).includes(filterEmpresaId)) return false;
       if (q) {
         const hay = [r.userName, r.userEmail, r.clientName, r.projectName, r.nombre_contrato].some((v) => (v || "").toLowerCase().includes(q));
         if (!hay) return false;
       }
       return true;
     },
-    [search, filterUserStatus, filterVigencia, filterRolMobile, filterTipoContrato, filterEstadoContrato, filterReemplazo, filterClientId, filterProjectId]
+    [search, filterUserStatus, filterVigencia, filterRolMobile, filterTipoContrato, filterEstadoContrato, filterReemplazo, filterClientId, filterProjectId, filterEmpresaId]
   );
 
   const rowsPorFiltrosComunes = useMemo(() => impositivoRows.filter((x) => matchesCommonFilters(x.row)), [impositivoRows, matchesCommonFilters]);
@@ -243,6 +254,9 @@ export const ContractBulkAfipTab: React.FC<{
     impositivoRows.forEach((x) => x.row.nombre_estado_empleado && s.add(estadoLabel(x.row.nombre_estado_empleado)));
     return [...s].map((v) => ({ value: v, label: v }));
   }, [impositivoRows]);
+  // Las empresas del filtro son las creadas en el ABM (no solo las ya usadas en algún contrato), para
+  // poder elegir de antemano por cuál empresa se va a presentar el alta.
+  const empresaOptions = useMemo(() => companies.map((c) => ({ value: c._id, label: c.razonSocial })).sort((a, b) => a.label.localeCompare(b.label)), [companies]);
 
   // Selección de filas para armar el TXT. Solo se pueden marcar los contratos con datos AFIP completos.
   const rowKey = (r: ContractOverviewRow) => `${r._id}-${r.contractIndex}`;
@@ -266,6 +280,9 @@ export const ContractBulkAfipTab: React.FC<{
   const seleccionados = useMemo(() => filtered.filter((x) => selected.has(rowKey(x.row))), [filtered, selected]);
   // El TXT se arma con lo seleccionado; si no hay selección, con todo lo filtrado (comodidad).
   const fuenteTxt = seleccionados.length > 0 ? seleccionados : filtered;
+  // Con el filtro de Empresa puesto, el nombre del archivo lo deja claro (cada empresa presenta su TXT por separado).
+  const empresaSeleccionada = companies.find((c) => c._id === filterEmpresaId);
+  const nombreArchivoTxt = `altas_afip${empresaSeleccionada ? `_${empresaSeleccionada.razonSocial.replace(/[^a-zA-Z0-9]+/g, "_")}` : ""}`;
 
   return (
     <div className="space-y-4">
@@ -301,6 +318,7 @@ export const ContractBulkAfipTab: React.FC<{
             selectFilters={[
               { label: "Cliente", value: filterClientId, onChange: setFilterClientId, placeholder: "Todos los clientes", options: clientOptions },
               { label: "Proyecto", value: filterProjectId, onChange: setFilterProjectId, placeholder: "Todos los proyectos", options: projectOptions },
+              { label: "Empresa", value: filterEmpresaId, onChange: setFilterEmpresaId, placeholder: "Todas las empresas", options: empresaOptions },
               { label: "Rol/es", value: filterRolMobile, onChange: setFilterRolMobile, placeholder: "Todos los roles", options: MOBILE_ROLE_OPTIONS },
               { label: "Tipo de contrato", value: filterTipoContrato, onChange: setFilterTipoContrato, placeholder: "Todos los tipos", options: tipoContratoOptions },
               { label: "Estado de contrato", value: filterEstadoContrato, onChange: setFilterEstadoContrato, placeholder: "Todos los estados", options: estadoContratoOptions, renderOption: (opt: { label: string }) => <EstadoBadge name={opt.label} /> },
@@ -344,7 +362,7 @@ export const ContractBulkAfipTab: React.FC<{
           <div className="flex items-center gap-3">
             {seleccionados.length > 0 && <span className="text-xs text-gray-500 dark:text-gray-400">{seleccionados.length} seleccionado(s)</span>}
             <button
-              onClick={() => generarTxt(fuenteTxt, "altas_afip")}
+              onClick={() => generarTxt(fuenteTxt, nombreArchivoTxt)}
               disabled={fuenteTxt.every((x) => !x.result.completo)}
               title={seleccionados.length > 0 ? "Generar el TXT con los contratos seleccionados (solo los completos)" : "Generar el TXT con los contratos completos del listado (o marcá algunos con el check)"}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"

@@ -9,7 +9,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { encryptSecret } from "../utils/secretCrypto.js";
 import { normalizarCuit } from "../utils/constanciaPdf.js";
-import { getTenantAfipConfig, verificarCredenciales, consultarPadron, clearTenantTicket } from "../services/afipService.js";
+import { getTenantAfipConfig, verificarCredenciales, consultarPadron, clearTenantTicket, getCertificadoInfo } from "../services/afipService.js";
 const router = Router();
 router.use(requireTenant, authenticateToken);
 const isAdmin = (req) => (req.user?.roles || []).some((r) => ["admin", "superadmin"].includes(r.toLowerCase()));
@@ -19,11 +19,14 @@ router.get("/status", async (req, res) => {
         const tenant = await Tenant.findById(req.tenantObjectId).lean();
         const a = tenant?.integrations?.afip;
         const connected = !!getTenantAfipConfig(tenant);
+        const certInfo = connected && a?.certificadoPem ? getCertificadoInfo(String(a.certificadoPem)) : null;
         res.json({
             connected,
             cuitRepresentada: a?.cuitRepresentada || null,
             ambiente: a?.ambiente || "homologacion",
             connectedAt: a?.connectedAt || null,
+            certificadoAlias: certInfo?.alias || null,
+            certificadoVencimiento: certInfo?.vencimiento || null,
             canManageConnection: isAdmin(req),
         });
     }
