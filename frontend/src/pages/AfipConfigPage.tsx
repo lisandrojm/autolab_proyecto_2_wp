@@ -5,10 +5,78 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { afipAPI, AfipStatus } from "../api/afip";
 import { sweetAlert } from "../utils/sweetAlert";
 
+const GUIA_AFIP = (
+  <div className="space-y-5 text-gray-400">
+    <p>
+      La app usa el certificado para autenticarse contra AFIP (WSAA) y consultar el <strong>Padrón</strong> (estado de CUIT/CUIL, servicio <code>ws_sr_padron_a13</code>). Hacen falta dos cosas de AFIP:
+      un <strong>certificado digital</strong> (par clave privada + certificado firmado por AFIP) y que ese certificado esté <strong>autorizado</strong> específicamente para el servicio de Padrón.
+    </p>
+
+    <div className="space-y-2">
+      <h4 className="text-white font-medium">1) Generar el par clave privada + pedido de certificado (CSR)</h4>
+      <p className="text-sm">En una terminal, con OpenSSL (ya instalado en Mac/Linux):</p>
+      <pre className="text-[11px] bg-gray-900 text-gray-300 rounded-lg p-3 overflow-x-auto">
+{`openssl genrsa -out MiClavePrivada.key 2048
+openssl req -new -key MiClavePrivada.key \\
+  -subj "/CN=unAliasCorto/serialNumber=CUIT 20XXXXXXXXX" \\
+  -out MiPedido.csr`}
+      </pre>
+      <p className="text-sm">
+        <code>MiClavePrivada.key</code> nunca se comparte ni se sube a ningún lado (ni a git, ni por chat) — es lo único que demuestra que sos vos. <code>MiPedido.csr</code> sí se puede compartir, es el "pedido" que se lleva a AFIP.
+      </p>
+    </div>
+
+    <div className="space-y-2">
+      <h4 className="text-white font-medium">2) Cargar el CSR en AFIP y generar el certificado</h4>
+      <ol className="text-sm list-decimal list-inside space-y-1">
+        <li>
+          Entrar a WSASS con Clave Fiscal — homologación: <code>wsass-homo.afip.gob.ar</code>. Producción: <code>auth.afip.gob.ar</code> → "Administrador de Certificados Digitales".
+        </li>
+        <li>Cargar el archivo <code>MiPedido.csr</code> y ponerle un alias corto (sin guiones ni espacios).</li>
+        <li>AFIP devuelve el certificado firmado (.crt) — guardarlo junto a la clave privada.</li>
+      </ol>
+    </div>
+
+    <div className="space-y-2">
+      <h4 className="text-white font-medium">3) Autorizar el alias para "Consulta Padrón"</h4>
+      <p className="text-sm">
+        Tener el certificado NO alcanza: además hay que autorizar ese alias para el servicio puntual. En el mismo portal de WSASS, sobre el alias creado, usar
+        "Crear autorización a servicio" y elegir el que corresponda a Consulta Padrón (<code>ws_sr_padron_a13</code>). Si el alias ya estaba autorizado para otro servicio (por ejemplo Facturación
+        Electrónica, <code>wsfe</code>), esa autorización es independiente — hay que agregar esta aparte.
+      </p>
+    </div>
+
+    <div className="space-y-2">
+      <h4 className="text-white font-medium">4) Conectar acá</h4>
+      <p className="text-sm">
+        Con el certificado y la clave privada ya autorizados, pegarlos en el formulario de esta página (contenido completo, incluyendo las líneas <code>-----BEGIN...-----</code>/<code>-----END...-----</code>),
+        elegir el ambiente correspondiente, y "Conectar" — valida en el momento pidiendo un ticket real a AFIP antes de guardar nada.
+      </p>
+    </div>
+
+    <div className="space-y-2 pt-2 border-t border-gray-700">
+      <h4 className="text-white font-medium">Para pasar a Producción</h4>
+      <p className="text-sm">Es el mismo procedimiento (pasos 1 a 4), pero:</p>
+      <ul className="text-sm list-disc list-inside space-y-1">
+        <li>
+          Se hace en el portal de <strong>producción</strong> de AFIP (<code>auth.afip.gob.ar</code>), no en el de homologación — y con la Clave Fiscal real de la organización, no una de prueba.
+        </li>
+        <li>Hay que generar un certificado <strong>nuevo</strong> (no reutilizar el de homologación) — son ambientes separados con sus propias autorizaciones.</li>
+        <li>Autorizar ese alias nuevo para <code>ws_sr_padron_a13</code> en el WSASS de producción (la autorización de homologación no se traslada).</li>
+        <li>
+          Conectar acá con ese certificado/clave, eligiendo <strong>"Producción"</strong> como ambiente — ahí la app apunta a los servidores reales de AFIP en vez de a los de testing, y los datos que
+          devuelva van a ser de contribuyentes reales.
+        </li>
+      </ul>
+    </div>
+  </div>
+);
+
 export function AfipConfigPage() {
   const [status, setStatus] = useState<AfipStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
   const [form, setForm] = useState({ cuitRepresentada: "", certificadoPem: "", clavePrivadaPem: "", ambiente: "homologacion" as "homologacion" | "produccion" });
 
   const cargar = async () => {
@@ -56,7 +124,18 @@ export function AfipConfigPage() {
   };
 
   return (
-    <PageLayout title="AFIP" subtitle="Conexión con AFIP/ARCA para consultar el Padrón (estado de CUIT/CUIL)" faIcon={{ icon: faLandmark }} shouldShowInfo={false}>
+    <PageLayout
+      title="AFIP"
+      subtitle="Conexión con AFIP/ARCA para consultar el Padrón (estado de CUIT/CUIL)"
+      faIcon={{ icon: faLandmark }}
+      infoModal={{
+        isOpen: showInfoModal,
+        onOpen: () => setShowInfoModal(true),
+        onClose: () => setShowInfoModal(false),
+        title: "Cómo conectar AFIP",
+        content: GUIA_AFIP,
+      }}
+    >
       {loading ? (
         <div className="flex justify-center py-16 text-gray-400">
           <FontAwesomeIcon icon={faSpinner} spin className="mr-2" /> Cargando...
