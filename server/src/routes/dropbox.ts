@@ -156,8 +156,7 @@ router.get("/list", async (req: AuthenticatedRequest & TenantRequest, res) => {
 });
 
 // GET /dropbox/temp-link?path=&full= - link temporal para descargar/previsualizar. Con full=1, permite
-// una ruta fuera del rootPath (para vistas de solo lectura como la de la carpeta AFIP) — a diferencia de
-// /upload, /create-folder, /move y /delete, que se mantienen siempre acotados al rootPath.
+// una ruta fuera del rootPath (p. ej. la carpeta AFIP) — igual que /list, /upload, /create-folder, etc.
 router.get("/temp-link", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const cfg = await requireConfig(req, res);
@@ -176,7 +175,7 @@ router.get("/temp-link", async (req: AuthenticatedRequest & TenantRequest, res) 
 });
 
 // POST /dropbox/download-zip { paths: string[], full? } - baja varios archivos y los devuelve como un
-// único ZIP. Con full=true, permite rutas fuera del rootPath (vistas de solo lectura, ver /temp-link).
+// único ZIP. Con full=true, permite rutas fuera del rootPath (ver /temp-link).
 router.post("/download-zip", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const cfg = await requireConfig(req, res);
@@ -230,7 +229,7 @@ router.post("/download-zip", async (req: AuthenticatedRequest & TenantRequest, r
   }
 });
 
-// POST /dropbox/upload (multipart: file + path=carpeta destino)
+// POST /dropbox/upload (multipart: file + path=carpeta destino + full=)
 router.post("/upload", upload.single("file"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const cfg = await requireConfig(req, res);
@@ -239,8 +238,9 @@ router.post("/upload", upload.single("file"), async (req: AuthenticatedRequest &
       res.status(400).json({ error: "No se recibió ningún archivo." });
       return;
     }
+    const full = req.body?.full === "1" || req.body?.full === "true";
     const folder = String((req.body?.path as string) || cfg.rootPath);
-    if (!isWithinRoot(cfg, folder)) {
+    if (!full && !isWithinRoot(cfg, folder)) {
       res.status(403).json({ error: "Ruta fuera de la carpeta permitida." });
       return;
     }
@@ -252,13 +252,14 @@ router.post("/upload", upload.single("file"), async (req: AuthenticatedRequest &
   }
 });
 
-// POST /dropbox/create-folder { path }
+// POST /dropbox/create-folder { path, full? }
 router.post("/create-folder", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const cfg = await requireConfig(req, res);
     if (!cfg) return;
+    const full = !!req.body?.full;
     const path = String(req.body?.path || "");
-    if (!path || !isWithinRoot(cfg, path)) {
+    if (!path || (!full && !isWithinRoot(cfg, path))) {
       res.status(403).json({ error: "Ruta inválida." });
       return;
     }
@@ -269,14 +270,15 @@ router.post("/create-folder", async (req: AuthenticatedRequest & TenantRequest, 
   }
 });
 
-// POST /dropbox/move { fromPath, toPath } (renombrar o mover)
+// POST /dropbox/move { fromPath, toPath, full? } (renombrar o mover)
 router.post("/move", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const cfg = await requireConfig(req, res);
     if (!cfg) return;
+    const full = !!req.body?.full;
     const fromPath = String(req.body?.fromPath || "");
     const toPath = String(req.body?.toPath || "");
-    if (!fromPath || !toPath || !isWithinRoot(cfg, fromPath) || !isWithinRoot(cfg, toPath)) {
+    if (!fromPath || !toPath || (!full && (!isWithinRoot(cfg, fromPath) || !isWithinRoot(cfg, toPath)))) {
       res.status(403).json({ error: "Ruta inválida." });
       return;
     }
@@ -287,13 +289,14 @@ router.post("/move", async (req: AuthenticatedRequest & TenantRequest, res) => {
   }
 });
 
-// DELETE /dropbox/delete { path }
+// DELETE /dropbox/delete { path, full? }
 router.delete("/delete", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const cfg = await requireConfig(req, res);
     if (!cfg) return;
+    const full = !!req.body?.full;
     const path = String(req.body?.path || req.query?.path || "");
-    if (!path || !isWithinRoot(cfg, path)) {
+    if (!path || (!full && !isWithinRoot(cfg, path))) {
       res.status(403).json({ error: "Ruta inválida." });
       return;
     }

@@ -51,26 +51,31 @@ export const dropboxAPI = {
     return data;
   },
 
-  async upload(path: string, file: File): Promise<DropboxEntry> {
+  /** `full`: permite subir fuera del rootPath (ver /dropbox/upload). */
+  async upload(path: string, file: File, full?: boolean): Promise<DropboxEntry> {
     const form = new FormData();
     form.append("path", path);
     form.append("file", file);
+    if (full) form.append("full", "1");
     const { data } = await axios.post("/dropbox/upload", form, { headers: { "Content-Type": "multipart/form-data" } });
     return data;
   },
 
-  async createFolder(path: string): Promise<DropboxEntry> {
-    const { data } = await axios.post("/dropbox/create-folder", { path });
+  /** `full`: permite crear fuera del rootPath (ver /dropbox/create-folder). */
+  async createFolder(path: string, full?: boolean): Promise<DropboxEntry> {
+    const { data } = await axios.post("/dropbox/create-folder", { path, full });
     return data;
   },
 
-  async move(fromPath: string, toPath: string): Promise<DropboxEntry> {
-    const { data } = await axios.post("/dropbox/move", { fromPath, toPath });
+  /** `full`: permite mover/renombrar fuera del rootPath (ver /dropbox/move). */
+  async move(fromPath: string, toPath: string, full?: boolean): Promise<DropboxEntry> {
+    const { data } = await axios.post("/dropbox/move", { fromPath, toPath, full });
     return data;
   },
 
-  async remove(path: string): Promise<void> {
-    await axios.delete("/dropbox/delete", { data: { path } });
+  /** `full`: permite eliminar fuera del rootPath (ver /dropbox/delete). */
+  async remove(path: string, full?: boolean): Promise<void> {
+    await axios.delete("/dropbox/delete", { data: { path, full } });
   },
 
   /** Fuerza ya mismo el escaneo de transición automática (carpetas de Dropbox) de este tenant. */
