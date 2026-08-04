@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowsRotate, faBolt, faFolder, faTriangleExclamation, faSpinner, faCheck, faStopwatch } from "@fortawesome/free-solid-svg-icons";
+import { faArrowsRotate, faBolt, faFolder, faTriangleExclamation, faSpinner, faCheck, faStopwatch, faSitemap } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { infoAPI, InfoItem } from "../api/info";
 import { dropboxAPI, DropboxStatus, EscaneoConfig } from "../api/dropbox";
@@ -102,9 +102,16 @@ export function EscaneoDropboxConfigPage() {
         <div className="space-y-4 max-w-3xl">
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-3 text-sm text-gray-600 dark:text-gray-300">
             <p>
-              Cuando un <strong>Estado</strong> tiene una <strong>transición automática</strong> configurada (ver "Orden de dependencias", en Contratos), el sistema revisa solo la carpeta de Dropbox
-              indicada: si aparece un archivo nuevo y se puede identificar sin ambigüedad a qué contrato pertenece, lo avanza a ese Estado.
+              Cuando un <strong>Estado</strong> tiene una <strong>transición automática</strong> configurada, el sistema revisa solo la carpeta de Dropbox indicada: si aparece un archivo nuevo y se puede
+              identificar sin ambigüedad a qué contrato pertenece, lo avanza a ese Estado.
             </p>
+            <a
+              href="/contratos?tab=dependencies"
+              className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm w-fit"
+            >
+              <FontAwesomeIcon icon={faSitemap} />
+              <span>Dependencias</span>
+            </a>
             <p>
               Para identificar el contrato, el sistema prueba en este orden: <strong>1)</strong> el CUIT en el nombre del archivo, <strong>2)</strong> si no lo encuentra ahí, el CUIT dentro del contenido
               del PDF, y <strong>3)</strong> si tampoco hay CUIT disponible, el nombre y apellido de la persona en el nombre del archivo. Si no logra identificar exactamente un contrato, no hace nada —
@@ -161,10 +168,10 @@ export function EscaneoDropboxConfigPage() {
                 onClick={forzarEscaneo}
                 disabled={escaneando}
                 title="Forzar ya mismo el escaneo, sin esperar el intervalo configurado"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed w-fit"
               >
-                <FontAwesomeIcon icon={faArrowsRotate} className="h-3 w-3" spin={escaneando} />
-                {escaneando ? "Escaneando…" : "Forzar escaneo ahora"}
+                <FontAwesomeIcon icon={faArrowsRotate} spin={escaneando} />
+                <span>{escaneando ? "Escaneando…" : "Forzar escaneo"}</span>
               </button>
             </div>
           </div>

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faTrash, faArrowUp, faArrowDown, faXmark, faCheck, faSpinner, faLayerGroup, faGripVertical, faFileInvoiceDollar, faBolt, faCircleInfo, faFolder, faTriangleExclamation, faArrowsRotate } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faTrash, faArrowUp, faArrowDown, faXmark, faCheck, faSpinner, faLayerGroup, faGripVertical, faFileInvoiceDollar, faCircleInfo, faFolder, faTriangleExclamation, faSitemap, faFileText, faCog } from "@fortawesome/free-solid-svg-icons";
 import {
   DndContext,
   DragOverlay,
@@ -100,7 +100,7 @@ const SortableChip: React.FC<{
               title={c.detalle ? `${c.dropboxCarpeta} — ${c.detalle}` : c.dropboxCarpeta}
               className="inline-flex items-center gap-1 pl-1.5 pr-1.5 py-0.5 hover:bg-blue-100 dark:hover:bg-blue-900/50"
             >
-              <FontAwesomeIcon icon={faBolt} className="h-3 w-3 shrink-0" />
+              <FontAwesomeIcon icon={faSitemap} className="h-3 w-3 shrink-0" />
               <span className="truncate max-w-[110px]">{nombreCarpeta(c.dropboxCarpeta)}</span>
             </button>
             {onQuitarCarpeta && (
@@ -123,9 +123,10 @@ const SortableChip: React.FC<{
           onClick={carpetas.length > 0 ? onAgregarCarpeta : onConfigurarTransicion}
           disabled={!puedeConfigurarTransicion}
           title={!puedeConfigurarTransicion ? "Guardá el flujo para poder configurar una transición automática" : carpetas.length > 0 ? "Agregar otra carpeta" : "Configurar transición automática"}
-          className="p-1 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+          className="p-1 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 inline-flex items-center gap-0.5"
         >
-          <FontAwesomeIcon icon={carpetas.length > 0 ? faPlus : faBolt} className="h-3 w-3" />
+          <FontAwesomeIcon icon={faSitemap} className="h-3 w-3" />
+          <FontAwesomeIcon icon={faPlus} className="h-2 w-2" />
         </button>
       )}
       {onRemove && (
@@ -184,8 +185,6 @@ export const DependencyFlowEditor: React.FC = () => {
   const [eventoOverrides, setEventoOverrides] = useState<Record<string, TransicionAutomatica | null>>({});
   const [configurando, setConfigurando] = useState<InfoItem | null>(null);
   const [showFlowInfo, setShowFlowInfo] = useState(false);
-  const [showEscaneoInfo, setShowEscaneoInfo] = useState(false);
-  const [escaneando, setEscaneando] = useState(false);
   const [eventoForm, setEventoForm] = useState<{ carpetas: { dropboxCarpeta: string; detalle: string }[] }>({ carpetas: [] });
   const [savingEvento, setSavingEvento] = useState(false);
   // Selector de carpeta de Dropbox: navega el árbol real en vez de tipear la ruta a ciegas. Navega TODO
@@ -228,31 +227,10 @@ export const DependencyFlowEditor: React.FC = () => {
     abrirPicker();
   };
 
-  const forzarEscaneo = async () => {
-    setEscaneando(true);
-    try {
-      const { transicionesAplicadas } = await dropboxAPI.forzarEscaneoEstados();
-      sweetAlert.success("Escaneo completo", transicionesAplicadas > 0 ? `Se aplicaron ${transicionesAplicadas} transición(es).` : "No se encontraron archivos nuevos para aplicar.");
-    } catch (e: any) {
-      sweetAlert.error("No se pudo escanear", e?.response?.data?.error || "No se pudo forzar el escaneo. Intentá de nuevo.");
-    } finally {
-      setEscaneando(false);
-    }
-  };
-
-  // Dos estados no pueden vigilar la misma carpeta (si no, sería ambiguo a cuál avanzar). Se excluye
-  // al estado que se está editando, para no bloquearlo con su propia configuración actual.
-  const carpetasUsadas = new Map<string, string>();
-  estados.forEach((e) => {
-    if (configurando?._id === e._id) return;
-    const t = transicionDe(e);
-    (t?.carpetas || []).forEach((c) => carpetasUsadas.set(c.dropboxCarpeta, e.name));
-  });
-
   const yaAgregadaEnForm = (path: string) => eventoForm.carpetas.some((c) => c.dropboxCarpeta === path);
 
   const elegirCarpetaActual = () => {
-    if (carpetasUsadas.get(pickerPath) || yaAgregadaEnForm(pickerPath)) return;
+    if (yaAgregadaEnForm(pickerPath)) return;
     setEventoForm((p) => ({ carpetas: [...p.carpetas, { dropboxCarpeta: pickerPath, detalle: "" }] }));
     setPickerOpen(false);
   };
@@ -276,13 +254,6 @@ export const DependencyFlowEditor: React.FC = () => {
 
   const guardarEvento = async () => {
     if (!configurando) return;
-    for (const c of eventoForm.carpetas) {
-      const dueño = carpetasUsadas.get(c.dropboxCarpeta);
-      if (dueño) {
-        sweetAlert.error("Carpeta repetida", `La carpeta "${nombreCarpeta(c.dropboxCarpeta)}" ya está asignada a "${dueño}". Elegí otra.`);
-        return;
-      }
-    }
     const carpetas = eventoForm.carpetas.map((c) => ({ dropboxCarpeta: c.dropboxCarpeta, detalle: c.detalle.trim() || undefined }));
     const nuevaTransicion: TransicionAutomatica = carpetas.length > 0 ? { evento: "dropbox_carpeta", carpetas } : undefined;
     const payload: EstadoPayload = { ...payloadBaseDe(configurando), transicionAutomatica: nuevaTransicion || null };
@@ -491,38 +462,21 @@ export const DependencyFlowEditor: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={forzarEscaneo}
-          disabled={escaneando}
-          title="Forzar ya mismo el escaneo de las carpetas de Dropbox vigiladas, sin esperar el intervalo configurado"
-          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          <FontAwesomeIcon icon={faArrowsRotate} className="h-3 w-3" spin={escaneando} />
-          {escaneando ? "Escaneando…" : "Forzar escaneo ahora"}
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowEscaneoInfo(true)}
-          title="¿Qué hace este botón?"
-          aria-label="¿Qué hace este botón?"
-          className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors -ml-1"
-        >
-          <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
-        </button>
         <a
           href="/documents"
           title="Ver las carpetas de Dropbox (HelloSign y AFIP)"
-          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm"
         >
-          Ver documentos
+          <FontAwesomeIcon icon={faFileText} />
+          <span>Documentos (Dropbox)</span>
         </a>
         <a
           href="/escaneo-dropbox"
           title="Configuración del escaneo automático (intervalo, carpetas vigiladas)"
-          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm"
         >
-          Configurar escaneo
+          <FontAwesomeIcon icon={faCog} />
+          <span>Configuración | Documentos (Dropbox)</span>
         </a>
       </div>
 
@@ -682,7 +636,7 @@ export const DependencyFlowEditor: React.FC = () => {
             <button onClick={() => setPickerOpen(false)} className="btn-secondary">
               Cancelar
             </button>
-            <button onClick={elegirCarpetaActual} className="btn-primary" disabled={pickerLoading || !!carpetasUsadas.get(pickerPath) || yaAgregadaEnForm(pickerPath)}>
+            <button onClick={elegirCarpetaActual} className="btn-primary" disabled={pickerLoading || yaAgregadaEnForm(pickerPath)}>
               Usar esta carpeta
             </button>
           </div>
@@ -705,13 +659,7 @@ export const DependencyFlowEditor: React.FC = () => {
           <p className="text-[11px] text-gray-500 dark:text-gray-400">
             Carpeta seleccionada: <span className="font-mono text-gray-700 dark:text-gray-300">{pickerPath}</span>
           </p>
-          {carpetasUsadas.get(pickerPath) && (
-            <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400 flex items-start gap-1.5">
-              <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3 mt-0.5 shrink-0" />
-              Esta carpeta ya está asignada a "{carpetasUsadas.get(pickerPath)}". Elegí otra.
-            </p>
-          )}
-          {yaAgregadaEnForm(pickerPath) && !carpetasUsadas.get(pickerPath) && (
+          {yaAgregadaEnForm(pickerPath) && (
             <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400 flex items-start gap-1.5">
               <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3 mt-0.5 shrink-0" />
               Ya agregaste esta carpeta.
@@ -725,22 +673,19 @@ export const DependencyFlowEditor: React.FC = () => {
               </div>
             ) : (
               pickerEntries.map((f) => {
-                const usadaPor = carpetasUsadas.get(f.path);
                 const yaAgregada = yaAgregadaEnForm(f.path);
-                const bloqueada = !!usadaPor || yaAgregada;
                 return (
                   <button
                     key={f.path}
                     type="button"
-                    onClick={() => !bloqueada && cargarCarpetaPicker(f.path)}
-                    disabled={bloqueada}
-                    title={usadaPor ? `Ya está asignada a "${usadaPor}"` : yaAgregada ? "Ya agregaste esta carpeta" : undefined}
+                    onClick={() => !yaAgregada && cargarCarpetaPicker(f.path)}
+                    disabled={yaAgregada}
+                    title={yaAgregada ? "Ya agregaste esta carpeta" : undefined}
                     className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/40 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                   >
                     <FontAwesomeIcon icon={faFolder} className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                     <span className="truncate">{f.name}</span>
-                    {usadaPor && <span className="text-[10px] text-amber-600 dark:text-amber-400 shrink-0 ml-auto">en uso: {usadaPor}</span>}
-                    {!usadaPor && yaAgregada && <span className="text-[10px] text-amber-600 dark:text-amber-400 shrink-0 ml-auto">ya agregada</span>}
+                    {yaAgregada && <span className="text-[10px] text-amber-600 dark:text-amber-400 shrink-0 ml-auto">ya agregada</span>}
                   </button>
                 );
               })
@@ -757,9 +702,9 @@ export const DependencyFlowEditor: React.FC = () => {
           Armá el <strong>flujo de dependencias</strong>: arrastrá los estados a cada paso. Los estados en el <strong>mismo paso son alternativas</strong> (uno u otro). Usá las flechas para reordenar los pasos.
         </p>
         <p className="flex items-start gap-1.5">
-          <FontAwesomeIcon icon={faBolt} className="h-3.5 w-3.5 text-blue-500 shrink-0 mt-0.5" />
+          <FontAwesomeIcon icon={faFolder} className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
           <span>
-            El rayo de cada estado indica si tiene una <strong>transición automática</strong> configurada: uno o más eventos que, al ocurrir, avanzan el contrato solo a ese estado. Hacé click en el rayo para configurarla, o en la "x" de al lado para quitarla directo — también funciona para los estados impositivos del Paso 1.
+            La carpeta junto a cada estado indica que tiene una <strong>transición automática</strong> configurada: uno o más eventos que, al ocurrir, avanzan el contrato solo a ese estado. Hacé click en el ícono de dependencias (el que no tiene carpeta todavía) para configurarla, o en la "x" de al lado de una carpeta para quitarla directo — también funciona para los estados impositivos del Paso 1.
           </span>
         </p>
         <p className="flex items-start gap-1.5 p-2.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300">
@@ -773,20 +718,6 @@ export const DependencyFlowEditor: React.FC = () => {
           <span>
             <strong>Cómo identifica a quién corresponde cada archivo:</strong> los contratos que descargás desde la plataforma ya incluyen el CUIT y las fechas del contrato en el nombre del archivo, así que el sistema los reconoce sin ambigüedad al volver firmados desde Dropbox Sign. Si subís un documento vos manualmente (por ejemplo, un trámite de AFIP), el sistema primero intenta leer el CUIT del propio PDF; si no puede, incluí el CUIT de la persona (los 11 dígitos) en el nombre del archivo para que se identifique con seguridad.
           </span>
-        </p>
-      </div>
-    </InfoModal>
-
-    <InfoModal isOpen={showEscaneoInfo} onClose={() => setShowEscaneoInfo(false)} title='¿Qué hace "Forzar escaneo ahora"?' size="sm" zIndex={80}>
-      <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
-        <p>
-          El sistema ya revisa <strong>solo, automáticamente, cada 20 minutos</strong>, todas las carpetas de Dropbox configuradas en cualquier transición automática — no hace falta hacer nada para que funcione.
-        </p>
-        <p>
-          Este botón simplemente dispara esa misma revisión <strong>ya mismo</strong>, en vez de esperar a que le toque el turno al escaneo automático. Es útil cuando estás probando una transición nueva y no querés esperar.
-        </p>
-        <p>
-          Puede tardar unos segundos: además de listar las carpetas, si encuentra un PDF sin CUIT en el nombre intenta leerlo del contenido del archivo antes de descartarlo.
         </p>
       </div>
     </InfoModal>
