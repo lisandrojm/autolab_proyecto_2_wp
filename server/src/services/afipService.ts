@@ -103,11 +103,46 @@ function buildLoginTicketRequestXml(service: string): string {
 </loginTicketRequest>`;
 }
 
+/**
+ * Reconstruye un PEM "canónico" a partir de lo que sea que haya llegado (con o sin BEGIN/END, con
+ * saltos de línea CRLF/LF, espacios de más, un BOM al principio, etc.). Copiar un certificado/clave a
+ * mano desde un textarea del navegador es una fuente muy común de corrupción invisible — en vez de
+ * confiar en que el pegado haya sido perfecto, se extrae SOLO el contenido base64 válido y se re-arma
+ * el PEM desde cero antes de parsearlo.
+ */
+function normalizarPem(input: string, tipoEsperado: "CERTIFICATE" | "PRIVATE KEY"): string {
+  const texto = String(input || "").replace(/^\uFEFF/, "").trim();
+  const m = /-----BEGIN ([A-Z0-9 ]+)-----([\s\S]*?)-----END \1-----/.exec(texto);
+  const tipo = m ? m[1].trim() : tipoEsperado;
+  const cuerpo = (m ? m[2] : texto).replace(/[^A-Za-z0-9+/=]/g, "");
+
+  if (!cuerpo) {
+    const nombre = tipoEsperado === "CERTIFICATE" ? "certificado" : "clave privada";
+    throw new Error(`El ${nombre} está vacío o no tiene contenido base64 reconocible.`);
+  }
+  const lineas = cuerpo.match(/.{1,64}/g) || [cuerpo];
+  return `-----BEGIN ${tipo}-----\n${lineas.join("\n")}\n-----END ${tipo}-----`;
+}
+
 /** Firma el XML como CMS/PKCS#7 (SignedData, no detached) en DER, codificado en base64 — el formato
  *  que espera `loginCms` de WSAA. */
-function signCms(xml: string, certificadoPem: string, clavePrivadaPem: string): string {
-  const cert = forge.pki.certificateFromPem(certificadoPem);
-  const privateKey = forge.pki.privateKeyFromPem(clavePrivadaPem);
+function signCms(xml: string, certificadoPemRaw: string, clavePrivadaPemRaw: string): string {
+  const certificadoPem = normalizarPem(certificadoPemRaw, "CERTIFICATE");
+  const clavePrivadaPem = normalizarPem(clavePrivadaPemRaw, "PRIVATE KEY");
+
+  let cert: forge.pki.Certificate;
+  try {
+    cert = forge.pki.certificateFromPem(certificadoPem);
+  } catch (e: any) {
+    throw new Error(`No se pudo leer el certificado (${certificadoPem.length} caracteres tras limpiarlo): ${e?.message || e}`);
+  }
+
+  let privateKey: forge.pki.PrivateKey;
+  try {
+    privateKey = forge.pki.privateKeyFromPem(clavePrivadaPem);
+  } catch (e: any) {
+    throw new Error(`No se pudo leer la clave privada (${clavePrivadaPem.length} caracteres tras limpiarla): ${e?.message || e}`);
+  }
 
   const p7 = forge.pkcs7.createSignedData();
   p7.content = forge.util.createBuffer(xml, "utf8");
