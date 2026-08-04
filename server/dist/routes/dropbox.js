@@ -6,7 +6,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { encryptSecret } from "../utils/secretCrypto.js";
 import { getTenantDropboxConfig, verifyAccount, listFolder, getTemporaryLink, downloadFileContent, uploadFile, deleteEntry, moveEntry, createFolder, clearTenantToken, isWithinRoot, } from "../services/dropboxService.js";
-import { escanearTenantAhora } from "../services/estadoDropboxCronService.js";
+import { escanearTenantAhora, getEscaneoConfig, setEscaneoIntervalo, MIN_INTERVAL_MINUTES, MAX_INTERVAL_MINUTES } from "../services/estadoDropboxCronService.js";
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 // Límites de la descarga masiva (ZIP): evitan saturar la memoria del server.
@@ -135,14 +135,16 @@ router.get("/list", async (req, res) => {
         dropboxError(res, error);
     }
 });
-// GET /dropbox/temp-link?path= - link temporal para descargar/previsualizar
+// GET /dropbox/temp-link?path=&full= - link temporal para descargar/previsualizar. Con full=1, permite
+// una ruta fuera del rootPath (p. ej. la carpeta AFIP) — igual que /list, /upload, /create-folder, etc.
 router.get("/temp-link", async (req, res) => {
     try {
         const cfg = await requireConfig(req, res);
         if (!cfg)
             return;
         const path = String(req.query.path || "");
-        if (!path || !isWithinRoot(cfg, path)) {
+        const full = req.query.full === "1" || req.query.full === "true";
+        if (!path || (!full && !isWithinRoot(cfg, path))) {
             res.status(403).json({ error: "Ruta inválida." });
             return;
         }
@@ -153,12 +155,14 @@ router.get("/temp-link", async (req, res) => {
         dropboxError(res, error);
     }
 });
-// POST /dropbox/download-zip { paths: string[] } - baja varios archivos y los devuelve como un único ZIP
+// POST /dropbox/download-zip { paths: string[], full? } - baja varios archivos y los devuelve como un
+// único ZIP. Con full=true, permite rutas fuera del rootPath (ver /temp-link).
 router.post("/download-zip", async (req, res) => {
     try {
         const cfg = await requireConfig(req, res);
         if (!cfg)
             return;
+        const full = !!req.body?.full;
         const raw = Array.isArray(req.body?.paths) ? req.body.paths : [];
         // Normaliza, deduplica y valida que todo esté dentro del rootPath permitido.
         const paths = Array.from(new Set(raw.map((p) => String(p || "")).filter(Boolean)));
@@ -170,7 +174,7 @@ router.post("/download-zip", async (req, res) => {
             res.status(400).json({ error: `Demasiados archivos: máximo ${ZIP_MAX_FILES} por descarga.` });
             return;
         }
-        if (paths.some((p) => !isWithinRoot(cfg, p))) {
+        if (!full && paths.some((p) => !isWithinRoot(cfg, p))) {
             res.status(403).json({ error: "Alguna ruta está fuera de la carpeta permitida." });
             return;
         }
@@ -204,7 +208,7 @@ router.post("/download-zip", async (req, res) => {
         dropboxError(res, error);
     }
 });
-// POST /dropbox/upload (multipart: file + path=carpeta destino)
+// POST /dropbox/upload (multipart: file + path=carpeta destino + full=)
 router.post("/upload", upload.single("file"), async (req, res) => {
     try {
         const cfg = await requireConfig(req, res);
@@ -214,8 +218,9 @@ router.post("/upload", upload.single("file"), async (req, res) => {
             res.status(400).json({ error: "No se recibió ningún archivo." });
             return;
         }
+        const full = req.body?.full === "1" || req.body?.full === "true";
         const folder = String(req.body?.path || cfg.rootPath);
-        if (!isWithinRoot(cfg, folder)) {
+        if (!full && !isWithinRoot(cfg, folder)) {
             res.status(403).json({ error: "Ruta fuera de la carpeta permitida." });
             return;
         }
@@ -227,14 +232,15 @@ router.post("/upload", upload.single("file"), async (req, res) => {
         dropboxError(res, error);
     }
 });
-// POST /dropbox/create-folder { path }
+// POST /dropbox/create-folder { path, full? }
 router.post("/create-folder", async (req, res) => {
     try {
         const cfg = await requireConfig(req, res);
         if (!cfg)
             return;
+        const full = !!req.body?.full;
         const path = String(req.body?.path || "");
-        if (!path || !isWithinRoot(cfg, path)) {
+        if (!path || (!full && !isWithinRoot(cfg, path))) {
             res.status(403).json({ error: "Ruta inválida." });
             return;
         }
@@ -245,15 +251,16 @@ router.post("/create-folder", async (req, res) => {
         dropboxError(res, error);
     }
 });
-// POST /dropbox/move { fromPath, toPath } (renombrar o mover)
+// POST /dropbox/move { fromPath, toPath, full? } (renombrar o mover)
 router.post("/move", async (req, res) => {
     try {
         const cfg = await requireConfig(req, res);
         if (!cfg)
             return;
+        const full = !!req.body?.full;
         const fromPath = String(req.body?.fromPath || "");
         const toPath = String(req.body?.toPath || "");
-        if (!fromPath || !toPath || !isWithinRoot(cfg, fromPath) || !isWithinRoot(cfg, toPath)) {
+        if (!fromPath || !toPath || (!full && (!isWithinRoot(cfg, fromPath) || !isWithinRoot(cfg, toPath)))) {
             res.status(403).json({ error: "Ruta inválida." });
             return;
         }
@@ -264,14 +271,15 @@ router.post("/move", async (req, res) => {
         dropboxError(res, error);
     }
 });
-// DELETE /dropbox/delete { path }
+// DELETE /dropbox/delete { path, full? }
 router.delete("/delete", async (req, res) => {
     try {
         const cfg = await requireConfig(req, res);
         if (!cfg)
             return;
+        const full = !!req.body?.full;
         const path = String(req.body?.path || req.query?.path || "");
-        if (!path || !isWithinRoot(cfg, path)) {
+        if (!path || (!full && !isWithinRoot(cfg, path))) {
             res.status(403).json({ error: "Ruta inválida." });
             return;
         }
@@ -283,7 +291,7 @@ router.delete("/delete", async (req, res) => {
     }
 });
 // POST /dropbox/estado-scan/trigger - fuerza ya mismo el escaneo de transición automática de ESTE
-// tenant (solo admin), en vez de esperar la corrida periódica del cron (cada 20 min).
+// tenant (solo admin), en vez de esperar la corrida periódica del cron (según su intervalo configurado).
 router.post("/estado-scan/trigger", async (req, res) => {
     try {
         if (!isAdmin(req)) {
@@ -304,6 +312,41 @@ router.post("/estado-scan/trigger", async (req, res) => {
             return;
         }
         res.json({ estadosEscaneados: resultado.estadosEscaneados, transicionesAplicadas: resultado.transicionesAplicadas });
+    }
+    catch (error) {
+        dropboxError(res, error);
+    }
+});
+// GET /dropbox/estado-scan/config - intervalo configurado + cuándo fue el último escaneo / cuándo es
+// el próximo, para mostrar la cuenta regresiva en la UI.
+router.get("/estado-scan/config", async (req, res) => {
+    try {
+        const config = await getEscaneoConfig(String(req.tenantObjectId));
+        res.json(config);
+    }
+    catch (error) {
+        dropboxError(res, error);
+    }
+});
+// PATCH /dropbox/estado-scan/config { intervalMinutos } - cambia cada cuánto se revisan las carpetas
+// vigiladas (solo admin).
+router.patch("/estado-scan/config", async (req, res) => {
+    try {
+        if (!isAdmin(req)) {
+            res.status(403).json({ error: "Solo un administrador puede cambiar el intervalo de escaneo." });
+            return;
+        }
+        const intervalMinutos = Number(req.body?.intervalMinutos);
+        if (!Number.isFinite(intervalMinutos)) {
+            res.status(400).json({ error: "intervalMinutos inválido." });
+            return;
+        }
+        if (intervalMinutos < MIN_INTERVAL_MINUTES || intervalMinutos > MAX_INTERVAL_MINUTES) {
+            res.status(400).json({ error: `El intervalo tiene que estar entre ${MIN_INTERVAL_MINUTES} y ${MAX_INTERVAL_MINUTES} minutos.` });
+            return;
+        }
+        const config = await setEscaneoIntervalo(String(req.tenantObjectId), intervalMinutos);
+        res.json(config);
     }
     catch (error) {
         dropboxError(res, error);

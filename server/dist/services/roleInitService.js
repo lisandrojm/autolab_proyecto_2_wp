@@ -62,6 +62,7 @@ const ADMIN_PERMISSIONS = [
     'config_empresas:view', // Empresas
     'config_membretes:view', // Empresa/s | Membrete/s y firma
     'config_profile:view', // Mi Perfil
+    'config_escaneo_dropbox:view', // Documentos (Dropbox) — configuración del escaneo automático
     // ──────────── Proyectos ────────────
 ];
 const MOBILE_COLLABORATOR_PERMISSIONS = [

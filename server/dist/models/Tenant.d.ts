@@ -43,6 +43,8 @@ export interface ITenant extends Document {
             rootPath?: string;
             accountEmail?: string;
             connectedAt?: Date;
+            /** Cada cuántos minutos se revisan las carpetas vigiladas por transición automática. Default 20. */
+            scanIntervalMinutes?: number;
         };
     };
     subscription: {

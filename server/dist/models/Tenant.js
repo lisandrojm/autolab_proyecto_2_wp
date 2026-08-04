@@ -43,6 +43,7 @@ const tenantSchema = new Schema({
             rootPath: { type: String, default: "/HelloSign" },
             accountEmail: { type: String },
             connectedAt: { type: Date },
+            scanIntervalMinutes: { type: Number, default: 20 },
         },
     },
     subscription: {

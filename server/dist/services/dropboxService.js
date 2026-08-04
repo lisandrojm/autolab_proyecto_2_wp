@@ -7,6 +7,13 @@ import { decryptSecret } from "../utils/secretCrypto.js";
 const OAUTH_URL = "https://api.dropbox.com/oauth2/token";
 const RPC = "https://api.dropboxapi.com/2";
 const CONTENT = "https://content.dropboxapi.com/2";
+// axios no tiene timeout por defecto (queda en Infinity): si Dropbox no responde, un `await` puede
+// colgarse para siempre. Eso es especialmente grave en `estadoDropboxCronService.ts`, que usa un
+// candado (`isRunning`) para no correr dos escaneos en simultáneo — sin timeout, una sola llamada
+// colgada deja ese candado trabado hasta reiniciar el server. Los de contenido (descarga/subida) llevan
+// más margen porque los archivos pueden ser más pesados.
+const RPC_TIMEOUT_MS = 20_000;
+const CONTENT_TIMEOUT_MS = 60_000;
 // Cache de access tokens por tenant.
 const tokenCache = new Map();
 /** Lee y descifra la config de Dropbox del tenant. Devuelve null si no está conectado. */
@@ -45,6 +52,7 @@ async function getAccessToken(tenantId, cfg) {
     params.append("client_secret", cfg.appSecret);
     const { data } = await axios.post(OAUTH_URL, params.toString(), {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        timeout: RPC_TIMEOUT_MS,
     });
     const token = data.access_token;
     const expiresIn = Number(data.expires_in) || 14400;
@@ -59,6 +67,7 @@ async function rpc(tenantId, cfg, endpoint, body) {
     const token = await getAccessToken(tenantId, cfg);
     const { data } = await axios.post(`${RPC}${endpoint}`, body === undefined ? null : body, {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        timeout: RPC_TIMEOUT_MS,
     });
     return data;
 }
@@ -73,6 +82,7 @@ export async function verifyAccount(tenantId, cfg) {
         // get_current_account no lleva argumentos: body JSON `null` (string "null") + application/json.
         const { data } = await axios.post(`${RPC}/users/get_current_account`, "null", {
             headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            timeout: RPC_TIMEOUT_MS,
         });
         return { email: data?.email, name: data?.name?.display_name };
     }
@@ -129,6 +139,7 @@ export async function downloadFileContent(tenantId, cfg, path) {
         responseType: "arraybuffer",
         maxBodyLength: Infinity,
         maxContentLength: Infinity,
+        timeout: CONTENT_TIMEOUT_MS,
     });
     return Buffer.from(data);
 }
@@ -143,6 +154,7 @@ export async function uploadFile(tenantId, cfg, path, buffer) {
         },
         maxBodyLength: Infinity,
         maxContentLength: Infinity,
+        timeout: CONTENT_TIMEOUT_MS,
     });
     return mapEntry(data);
 }
