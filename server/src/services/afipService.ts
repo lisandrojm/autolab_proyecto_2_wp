@@ -61,6 +61,27 @@ export function isTenantAfipConnected(tenant: any): boolean {
   return !!getTenantAfipConfig(tenant);
 }
 
+export interface CertificadoInfo {
+  alias: string | null;
+  vencimiento: string | null; // ISO 8601
+}
+
+/** Lee del certificado (sin necesidad de la clave privada) el alias/CN y la fecha de vencimiento —
+ *  para mostrar en el status, no para autenticar. Nunca tira: si el PEM guardado está corrupto,
+ *  devuelve todo null en vez de romper el endpoint de status. */
+export function getCertificadoInfo(certificadoPemRaw: string): CertificadoInfo {
+  try {
+    const cert = forge.pki.certificateFromPem(normalizarPem(certificadoPemRaw, "CERTIFICATE"));
+    const cn = cert.subject.getField("CN");
+    return {
+      alias: cn?.value ? String(cn.value) : null,
+      vencimiento: cert.validity.notAfter.toISOString(),
+    };
+  } catch {
+    return { alias: null, vencimiento: null };
+  }
+}
+
 // Cache de tickets WSAA (token+sign) por tenant+servicio — válidos ~12hs, se piden cortos (10 min)
 // para no tener que manejar la expiración larga con precisión, y se cachean para no pedir uno por CUIT.
 interface TicketAcceso {

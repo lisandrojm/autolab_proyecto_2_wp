@@ -5,6 +5,8 @@ export interface AfipStatus {
   cuitRepresentada: string | null;
   ambiente: "homologacion" | "produccion";
   connectedAt: string | null;
+  certificadoAlias: string | null;
+  certificadoVencimiento: string | null;
   canManageConnection: boolean;
 }
 

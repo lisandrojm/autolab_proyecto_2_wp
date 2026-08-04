@@ -9,7 +9,7 @@ import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { encryptSecret } from "../utils/secretCrypto.js";
 import { normalizarCuit } from "../utils/constanciaPdf.js";
-import { getTenantAfipConfig, verificarCredenciales, consultarPadron, clearTenantTicket, Ambiente } from "../services/afipService.js";
+import { getTenantAfipConfig, verificarCredenciales, consultarPadron, clearTenantTicket, getCertificadoInfo, Ambiente } from "../services/afipService.js";
 
 const router = Router();
 
@@ -23,11 +23,14 @@ router.get("/status", async (req: AuthenticatedRequest & TenantRequest, res) => 
     const tenant = await Tenant.findById(req.tenantObjectId).lean();
     const a = (tenant as any)?.integrations?.afip;
     const connected = !!getTenantAfipConfig(tenant);
+    const certInfo = connected && a?.certificadoPem ? getCertificadoInfo(String(a.certificadoPem)) : null;
     res.json({
       connected,
       cuitRepresentada: a?.cuitRepresentada || null,
       ambiente: a?.ambiente || "homologacion",
       connectedAt: a?.connectedAt || null,
+      certificadoAlias: certInfo?.alias || null,
+      certificadoVencimiento: certInfo?.vencimiento || null,
       canManageConnection: isAdmin(req),
     });
   } catch (error) {

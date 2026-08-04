@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLandmark, faPlug, faSpinner, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { faLandmark, faPlug, faSpinner, faTriangleExclamation, faCalendarDays, faFingerprint, faHourglassHalf } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { afipAPI, AfipStatus } from "../api/afip";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -24,6 +24,9 @@ openssl req -new -key MiClavePrivada.key \\
       <p className="text-sm">
         <code>MiClavePrivada.key</code> nunca se comparte ni se sube a ningún lado (ni a git, ni por chat) — es lo único que demuestra que sos vos. <code>MiPedido.csr</code> sí se puede compartir, es el "pedido" que se lleva a AFIP.
       </p>
+      <p className="text-sm">
+        Importante: el CSR (encabezado <code>-----BEGIN CERTIFICATE REQUEST-----</code>) no es lo mismo que el certificado firmado que te va a devolver AFIP más adelante (encabezado <code>-----BEGIN CERTIFICATE-----</code>). Son dos archivos distintos y solo el segundo sirve para conectar la app.
+      </p>
     </div>
 
     <div className="space-y-2">
@@ -32,17 +35,32 @@ openssl req -new -key MiClavePrivada.key \\
         <li>
           Entrar a WSASS con Clave Fiscal — homologación: <code>wsass-homo.afip.gob.ar</code>. Producción: <code>auth.afip.gob.ar</code> → "Administrador de Certificados Digitales".
         </li>
-        <li>Cargar el archivo <code>MiPedido.csr</code> y ponerle un alias corto (sin guiones ni espacios).</li>
+        <li>Cargar el archivo <code>MiPedido.csr</code> y ponerle un alias corto (sin guiones ni espacios problemáticos).</li>
         <li>AFIP devuelve el certificado firmado (.crt) — guardarlo junto a la clave privada.</li>
       </ol>
+      <p className="text-sm">
+        Tené en cuenta: los alias son únicos por CUIT en todo AFIP, no por ambiente. Si ya usaste un alias en homologación (por ejemplo "miAlias"), no vas a poder reutilizarlo en producción — da error
+        "El ALIAS ya existe. Debe utilizar otro nombre". Usá algo distinto y descriptivo, como "miAlias-prod".
+      </p>
+      <p className="text-sm">
+        También puede pasar que AFIP muestre una pantalla de error genérico ("Internal Server Error") justo al subir el CSR, aunque el certificado se haya generado igual del lado del servidor. Antes de
+        asumir que falló, volvé a la lista de certificados y fijate si el alias ya aparece con estado "VALIDO".
+      </p>
     </div>
 
     <div className="space-y-2">
       <h4 className="text-white font-medium">3) Autorizar el alias para "Consulta Padrón"</h4>
       <p className="text-sm">
-        Tener el certificado NO alcanza: además hay que autorizar ese alias para el servicio puntual. En el mismo portal de WSASS, sobre el alias creado, usar
-        "Crear autorización a servicio" y elegir el que corresponda a Consulta Padrón (<code>ws_sr_padron_a13</code>). Si el alias ya estaba autorizado para otro servicio (por ejemplo Facturación
-        Electrónica, <code>wsfe</code>), esa autorización es independiente — hay que agregar esta aparte.
+        Tener el certificado NO alcanza: además hay que autorizar ese alias para el servicio puntual. Esto se hace en una sección aparte de AFIP, distinta de donde generaste el certificado:
+        "Administrador de Relaciones" (accesible desde el portal principal de AFIP/ARCA, ícono "Administrador de relaciones").
+      </p>
+      <p className="text-sm">
+        Ahí el camino es: "Nueva Relación" → Representado: tu propio CUIT → "Buscar" servicio → categoría "ARCA" → "WebServices" → buscar y elegir "Servicio Consulta Padrón A13". El sistema te va a pedir
+        el "Representante", que es el Computador Fiscal identificado por el alias de tu certificado — se completa automáticamente si ya lo cargaste. Por último, "Confirmar".
+      </p>
+      <p className="text-sm">
+        Si el alias ya estaba autorizado para otro servicio (por ejemplo Facturación Electrónica, <code>wsfe</code>), esa autorización es independiente — hay que agregar esta aparte. Sin completar este
+        paso, aunque el certificado esté válido, la conexión falla con errores como "Request failed with status code 500".
       </p>
     </div>
 
@@ -56,13 +74,13 @@ openssl req -new -key MiClavePrivada.key \\
 
     <div className="space-y-2 pt-2 border-t border-gray-700">
       <h4 className="text-white font-medium">Para pasar a Producción</h4>
-      <p className="text-sm">Es el mismo procedimiento (pasos 1 a 4), pero:</p>
+      <p className="text-sm">Es el mismo procedimiento (pasos 1 a 3), pero:</p>
       <ul className="text-sm list-disc list-inside space-y-1">
         <li>
           Se hace en el portal de <strong>producción</strong> de AFIP (<code>auth.afip.gob.ar</code>), no en el de homologación — y con la Clave Fiscal real de la organización, no una de prueba.
         </li>
-        <li>Hay que generar un certificado <strong>nuevo</strong> (no reutilizar el de homologación) — son ambientes separados con sus propias autorizaciones.</li>
-        <li>Autorizar ese alias nuevo para <code>ws_sr_padron_a13</code> en el WSASS de producción (la autorización de homologación no se traslada).</li>
+        <li>Hay que generar un certificado nuevo con un alias distinto al de homologación (no se puede reutilizar el mismo alias) — son ambientes separados con sus propias autorizaciones.</li>
+        <li>Autorizar ese alias nuevo para <code>ws_sr_padron_a13</code> en el "Administrador de Relaciones" de producción (la autorización de homologación no se traslada).</li>
         <li>
           Conectar acá con ese certificado/clave, eligiendo <strong>"Producción"</strong> como ambiente — ahí la app apunta a los servidores reales de AFIP en vez de a los de testing, y los datos que
           devuelva van a ser de contribuyentes reales.
@@ -71,6 +89,15 @@ openssl req -new -key MiClavePrivada.key \\
     </div>
   </div>
 );
+
+/** Días hasta el vencimiento del certificado → clase de color (rojo si ya venció, ámbar si está por vencer). */
+function claseVencimiento(vencimiento: string | null): string {
+  if (!vencimiento) return "text-gray-500";
+  const dias = (new Date(vencimiento).getTime() - Date.now()) / (24 * 60 * 60 * 1000);
+  if (dias < 0) return "text-red-500 font-semibold";
+  if (dias < 30) return "text-amber-500 font-semibold";
+  return "text-gray-500";
+}
 
 export function AfipConfigPage() {
   const [status, setStatus] = useState<AfipStatus | null>(null);
@@ -153,6 +180,27 @@ export function AfipConfigPage() {
             Ambiente: <strong>{status.ambiente === "produccion" ? "Producción" : "Homologación (testing)"}</strong>
             {status.ambiente === "homologacion" && <span className="block text-[11px] text-amber-600 dark:text-amber-400 mt-1">Los datos que devuelve AFIP en homologación son ficticios, no reales — sirve para probar el flujo, no para uso productivo.</span>}
           </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm border-t border-gray-100 dark:border-gray-700 pt-3">
+            {status.certificadoAlias && (
+              <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+                <FontAwesomeIcon icon={faFingerprint} className="text-gray-400 w-3.5" />
+                Alias: <span className="font-mono text-xs">{status.certificadoAlias}</span>
+              </div>
+            )}
+            {status.connectedAt && (
+              <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+                <FontAwesomeIcon icon={faCalendarDays} className="text-gray-400 w-3.5" />
+                Conectado el {new Date(status.connectedAt).toLocaleDateString("es-AR")}
+              </div>
+            )}
+            {status.certificadoVencimiento && (
+              <div className={`flex items-center gap-2 ${claseVencimiento(status.certificadoVencimiento)}`}>
+                <FontAwesomeIcon icon={faHourglassHalf} className="w-3.5" />
+                {new Date(status.certificadoVencimiento).getTime() < Date.now() ? "Certificado vencido el " : "Certificado vence el "}
+                {new Date(status.certificadoVencimiento).toLocaleDateString("es-AR")}
+              </div>
+            )}
+          </div>
           {status.canManageConnection && (
             <button onClick={handleDisconnect} className="text-sm text-red-500 hover:text-red-600 font-semibold">
               Desconectar
