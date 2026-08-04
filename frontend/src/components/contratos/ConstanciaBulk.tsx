@@ -1,8 +1,9 @@
 import React, { useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUpRightFromSquare, faCloudArrowUp, faSpinner, faCheck, faTriangleExclamation, faXmark, faCopy, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
+import { faArrowUpRightFromSquare, faCloudArrowUp, faSpinner, faCheck, faTriangleExclamation, faXmark, faCopy, faChevronDown, faChevronUp, faLandmark } from "@fortawesome/free-solid-svg-icons";
 import { ContractOverviewRow } from "../../api/users";
 import { projectsAPI, ConstanciaTarget, ConstanciaResultado } from "../../api/projects";
+import { afipAPI } from "../../api/afip";
 import { sweetAlert } from "../../utils/sweetAlert";
 
 /**
@@ -25,28 +26,48 @@ const fmtIso = (s?: string): string => {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : "";
 };
 
+/** Fecha/hora ISO completa (`constanciaAfipConsultadaAt`) → "DD/MM/YYYY HH:mm". */
+const fmtFechaHora = (iso?: string): string => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? "" : d.toLocaleString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+};
+
 /** Hoy en Argentina como "YYYY-MM-DD" (el navegador puede estar en otro huso). */
 const hoyIso = (): string => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date());
 
-export type EstadoConstancia = "vigente" | "vencida" | "sin_fecha" | "faltante";
+export type EstadoConstancia = "activo_afip" | "inactivo_afip" | "vigente" | "vencida" | "sin_fecha" | "faltante";
 
 /**
- * Estado de la constancia de una fila. `sin_fecha` es el caso de un PDF cargado a mano por el
- * flujo viejo (o uno del que no se pudo leer la vigencia): hay documento pero no se sabe hasta cuándo.
+ * Estado de la constancia de una fila. La consulta al Padrón de AFIP es la fuente de verdad cuando
+ * existe (`activo_afip`/`inactivo_afip`); si todavía no se consultó, cae al criterio viejo basado en
+ * el PDF cargado a mano (`vigente`/`vencida`/`sin_fecha`/`faltante`), para no perder el historial.
  */
 export const estadoConstancia = (row: ContractOverviewRow, hoy: string = hoyIso()): EstadoConstancia => {
+  if (row.constanciaAfipEstado === "activo") return "activo_afip";
+  if (row.constanciaAfipEstado === "inactivo") return "inactivo_afip";
   if (!row.altaDocumentoUrl) return "faltante";
   if (!row.constanciaVigenciaHasta) return "sin_fecha";
   return row.constanciaVigenciaHasta >= hoy ? "vigente" : "vencida";
 };
 
-/** Una constancia hay que (re)pedirla cuando falta o ya venció. */
+/** Una constancia hay que (re)pedirla cuando falta, ya venció, o AFIP la dio como inactiva. */
 export const constanciaPendiente = (row: ContractOverviewRow, hoy: string = hoyIso()): boolean => {
   const e = estadoConstancia(row, hoy);
-  return e === "faltante" || e === "vencida";
+  return e === "faltante" || e === "vencida" || e === "inactivo_afip";
 };
 
 const BADGE: Record<EstadoConstancia, { texto: (row: ContractOverviewRow) => string; clase: string; icono: typeof faCheck }> = {
+  activo_afip: {
+    texto: (r) => `Activo en AFIP${r.constanciaAfipConsultadaAt ? ` (${fmtFechaHora(r.constanciaAfipConsultadaAt)})` : ""}`,
+    clase: "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800",
+    icono: faCheck,
+  },
+  inactivo_afip: {
+    texto: () => "Inactivo en AFIP",
+    clase: "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 border-red-200 dark:border-red-800",
+    icono: faTriangleExclamation,
+  },
   vigente: {
     texto: (r) => `Vigente hasta ${fmtIso(r.constanciaVigenciaHasta)}`,
     clase: "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800",
@@ -139,6 +160,53 @@ export const BotonCopiarPendientes: React.FC<{ rows: ContractOverviewRow[] }> = 
     <button type="button" onClick={handleClick} disabled={cuits.length === 0} title="Copiar los CUITs que faltan o vencieron" className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold border transition-colors bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
       <FontAwesomeIcon icon={faCopy} className="h-3 w-3" />
       Copiar CUITs pendientes ({cuits.length})
+    </button>
+  );
+};
+
+/**
+ * Consulta masiva al Padrón de AFIP: reemplaza al flujo de "entrar a ARCA persona por persona". Un
+ * solo click consulta el CUIT de cada contrato pendiente (deduplicado por persona) y actualiza el
+ * estado de la constancia directo, sin descargar ni subir ningún PDF.
+ */
+export const BotonConsultarAfipBulk: React.FC<{
+  /** Contratos a considerar: se filtran acá mismo a los pendientes (con CUIT cargado). */
+  rows: ContractOverviewRow[];
+  onConsultado: () => void;
+}> = ({ rows, onConsultado }) => {
+  const [consultando, setConsultando] = useState(false);
+  const pendientes = rows.filter((r) => constanciaPendiente(r) && fmtCuit(r.cuit));
+
+  const handleClick = async () => {
+    if (pendientes.length === 0) {
+      sweetAlert.info("Nada pendiente", "No hay contratos pendientes con CUIT cargado para consultar.");
+      return;
+    }
+    setConsultando(true);
+    try {
+      const targets = pendientes.map((r) => ({ projectId: r.projectId, userId: r.userId, contractIndex: r.contractIndex }));
+      const resp = await afipAPI.consultarPadronBulk(targets);
+      const activos = resp.resultados.filter((r) => r.estado === "activo").length;
+      const conError = resp.resultados.filter((r) => r.error).length;
+      sweetAlert.success("Consulta completa", `${resp.consultados} CUIT(s) consultado(s) — ${activos} activo(s) en AFIP.${conError > 0 ? ` ${conError} con error.` : ""}`);
+      onConsultado();
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo consultar AFIP.");
+    } finally {
+      setConsultando(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={consultando || pendientes.length === 0}
+      title="Consultar el estado de cada CUIT pendiente directo en el Padrón de AFIP, sin ir uno por uno"
+      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold border transition-colors bg-blue-600 text-white border-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <FontAwesomeIcon icon={consultando ? faSpinner : faLandmark} spin={consultando} className="h-3 w-3" />
+      {consultando ? "Consultando AFIP..." : `Consultar en AFIP (${pendientes.length})`}
     </button>
   );
 };

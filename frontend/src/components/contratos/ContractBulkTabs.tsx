@@ -17,7 +17,7 @@ import { Modal } from "../ui/Modal";
 import { ContractDocsColumns, ContractDocsHeaders, downloadContractRow, downloadReleaseRow, uploadAltaRow } from "./ContractRowDocs";
 import { resolveAfip, AfipRowResult } from "./afipCompleteness";
 import { buildAltaRecord, buildAltaTxt, downloadTxt } from "./afipTxt";
-import { ConstanciaBulkDrop, ConstanciaBadge, BotonArca, BotonCopiarPendientes, constanciaPendiente, fmtCuit } from "./ConstanciaBulk";
+import { ConstanciaBulkDrop, ConstanciaBadge, BotonArca, BotonCopiarPendientes, BotonConsultarAfipBulk, constanciaPendiente, fmtCuit } from "./ConstanciaBulk";
 import { sweetAlert } from "../../utils/sweetAlert";
 
 const obrasSocialesApi = createSimpleCatalogApi("/obras-sociales");
@@ -378,7 +378,10 @@ export const ContractBulkAfipTab: React.FC<{
                 {countConstPendientes} pendientes
               </button>
             </div>
-            <BotonCopiarPendientes rows={filtered.map((x) => x.row)} />
+            <div className="flex items-center gap-2">
+              <BotonConsultarAfipBulk rows={constanciaRows.map((x) => x.row)} onConsultado={load} />
+              <BotonCopiarPendientes rows={filtered.map((x) => x.row)} />
+            </div>
           </div>
           {/* Los targets son TODOS los contratos que esperan constancia, no solo los visibles: la
               misma constancia sirve para todos los contratos de esa persona, y así soltar un PDF

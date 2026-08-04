@@ -42,6 +42,16 @@ export interface ITenant extends Document {
       /** Cada cuántos minutos se revisan las carpetas vigiladas por transición automática. Default 20. */
       scanIntervalMinutes?: number;
     };
+    afip?: {
+      /** CUIT representada (el CUIT propio del tenant, dado de alta en AFIP como titular del certificado). */
+      cuitRepresentada?: string;
+      /** Certificado X.509 en formato PEM — no es secreto, se guarda tal cual. */
+      certificadoPem?: string;
+      /** Clave privada del certificado — cifrada en reposo. */
+      clavePrivadaEnc?: string;
+      ambiente?: "homologacion" | "produccion";
+      connectedAt?: Date;
+    };
   };
   subscription: { plan: "free" | "basic" | "pro" | "enterprise"; status: "active" | "suspended" | "cancelled"; expiresAt?: Date };
   usage: {
@@ -128,6 +138,13 @@ const tenantSchema = new Schema<ITenant>(
         accountEmail: { type: String },
         connectedAt: { type: Date },
         scanIntervalMinutes: { type: Number, default: 20 },
+      },
+      afip: {
+        cuitRepresentada: { type: String },
+        certificadoPem: { type: String },
+        clavePrivadaEnc: { type: String },
+        ambiente: { type: String, enum: ["homologacion", "produccion"], default: "homologacion" },
+        connectedAt: { type: Date },
       },
     },
 

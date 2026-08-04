@@ -59,6 +59,11 @@ interface IContract {
   constanciaVigenciaHasta?: string; // "YYYY-MM-DD"
   constanciaVerificador?: string;
   constanciaCargadaAt?: Date;
+  // Resultado de consultar el CUIT directo contra el Padrón de AFIP (Consulta Padrón A13) — reemplaza
+  // a la constancia en PDF como fuente de verdad de "Constancia de CUIT": si figura activo, alcanza.
+  constanciaAfipEstado?: "activo" | "inactivo" | "desconocido";
+  constanciaAfipConsultadaAt?: Date;
+  constanciaAfipRaw?: any;
   areaShiftAssignments?: {
     areaId: Types.ObjectId | string;
     shiftIds: (Types.ObjectId | string)[];
@@ -131,6 +136,9 @@ const contractSchema = new Schema<IContract>(
     constanciaVigenciaHasta: { type: String },
     constanciaVerificador: { type: String },
     constanciaCargadaAt: { type: Date },
+    constanciaAfipEstado: { type: String, enum: ["activo", "inactivo", "desconocido"] },
+    constanciaAfipConsultadaAt: { type: Date },
+    constanciaAfipRaw: { type: Schema.Types.Mixed },
     areaShiftAssignments: [
       {
         areaId: { type: Schema.Types.ObjectId, ref: "Area" },

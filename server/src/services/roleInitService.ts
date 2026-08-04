@@ -69,6 +69,7 @@ const ADMIN_PERMISSIONS = [
   'config_membretes:view', // Empresa/s | Membrete/s y firma
   'config_profile:view', // Mi Perfil
   'config_escaneo_dropbox:view', // Documentos (Dropbox) — configuración del escaneo automático
+  'config_afip:view', // AFIP — conexión con el Padrón de AFIP
 
   // ──────────── Proyectos ────────────
 ];

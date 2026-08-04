@@ -91,6 +91,9 @@ export interface ContractOverviewRow {
   constanciaVigenciaDesde?: string;
   constanciaVigenciaHasta?: string;
   constanciaVerificador?: string;
+  /** Resultado de la última consulta al Padrón de AFIP — reemplaza al PDF como fuente de verdad. */
+  constanciaAfipEstado?: "activo" | "inactivo" | "desconocido" | "";
+  constanciaAfipConsultadaAt?: string;
   empresaContratoId?: string;
   empresaReleaseId?: string;
   nombre_empresa_contrato?: string;

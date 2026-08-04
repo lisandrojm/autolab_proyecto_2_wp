@@ -41,6 +41,7 @@ import { VacationsPage } from "./pages/VacationsPage";
 import { VacationsRulesPage } from "./pages/VacationsRulesPage";
 import { DocumentsPage } from "./pages/DocumentsPage";
 import { EscaneoDropboxConfigPage } from "./pages/EscaneoDropboxConfigPage";
+import { AfipConfigPage } from "./pages/AfipConfigPage";
 import { VacationsCalendarPage } from "./pages/VacationsCalendarPage";
 import { PdfTemplatesPage } from "./pages/PdfTemplatesPage";
 import { ReleasesPage } from "./pages/ReleasesPage";
@@ -439,6 +440,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <EscaneoDropboxConfigPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/afip"
+                element={
+                  <ProtectedRoute>
+                    <AfipConfigPage />
                   </ProtectedRoute>
                 }
               />

@@ -5,7 +5,7 @@ import { ClientSelector } from './ClientSelector';
 import { ClientContextMenu } from './ClientContextMenu';
 import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faArrowsRotate, faLandmark } from '@fortawesome/free-solid-svg-icons';
 import { Logo } from '../components/ui/Logo';
 import axios from '../api/axiosConfig';
 import { SettingsModal } from './SettingsModal';
@@ -197,6 +197,7 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission('config_empresas:view')) base.push({ path: '/empresas', icon: faBuilding, label: 'Empresas', scope: 'global' });
       if (hasPermission('config_membretes:view')) base.push({ path: '/empresas-membretes', icon: faFilePdf, label: 'Empresa/s | Membrete/s y firma', scope: 'global' });
       if (hasPermission('config_escaneo_dropbox:view')) base.push({ path: '/escaneo-dropbox', icon: faArrowsRotate, label: 'Documentos (Dropbox)', scope: 'global' });
+      if (hasPermission('config_afip:view')) base.push({ path: '/afip', icon: faLandmark, label: 'AFIP', scope: 'global' });
     }
 
     return base;
@@ -260,7 +261,7 @@ export const MobileNavbar: React.FC = () => {
     const generalAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ['/tenants'].includes(item.path)) : adminItems.filter((item) => ['/admin/projects', '/admin/contracts', '/orders', '/vacations', '/requests', '/documents'].includes(item.path))).sort(byLabel);
 
     // Ojo: los paths de PLANTILLAS_PATHS NO van acá, se agrupan aparte en el subgrupo "Plantillas".
-    const configPaths = ['/requests/config', '/order-types', '/shifts', '/vacations-rules', '/holidays', '/categorias-sat', '/clients', '/centros-costo', '/bancos', '/obras-sociales', '/empresas', '/contratos', '/releases-tipos', '/admin/sedes', '/escaneo-dropbox'];
+    const configPaths = ['/requests/config', '/order-types', '/shifts', '/vacations-rules', '/holidays', '/categorias-sat', '/clients', '/centros-costo', '/bancos', '/obras-sociales', '/empresas', '/contratos', '/releases-tipos', '/admin/sedes', '/escaneo-dropbox', '/afip'];
     // "Mi Perfil" se incluye como un item más para que entre en el orden alfabético
     const profileItem = { path: '/mi-perfil', icon: faIdCard, label: 'Mi Perfil', scope: 'global' as const };
 
