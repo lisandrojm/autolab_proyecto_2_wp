@@ -10,3 +10,7 @@ coverage
 *.tar.gz
 .cache
 .parcel-cache
+*.key
+*.csr
+*.pem
+*.p12
