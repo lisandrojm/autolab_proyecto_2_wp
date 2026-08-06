@@ -26,7 +26,7 @@ export interface ResultadoPadron {
     /** Presentes solo si AFIP devolvió un SOAP Fault (encontrado=false por fault, no por respuesta vacía). */
     faultCode?: string;
     faultString?: string;
-    /** Estructura completa parseada de `getPersonaReturn` (o del Fault), tal cual la devolvió AFIP —
+    /** Estructura completa parseada de `personaReturn` (o del Fault), tal cual la devolvió AFIP —
      *  por si hace falta algún dato que el mapeo de arriba no extrajo. */
     raw: any;
 }

@@ -14,11 +14,14 @@ import { normalizarCuit } from "../utils/constanciaPdf.js";
  * fiscales. Solo dependencias genéricas y auditables: `node-forge` (firma CMS) y `fast-xml-parser`
  * (parseo de las respuestas SOAP).
  *
- * OJO: los nombres exactos de los campos de la respuesta de Consulta Padrón A13 están tomados de la
- * documentación pública de AFIP, pero no se pudieron validar contra una respuesta real todavía (hace
- * falta un certificado con el servicio de Padrón autorizado) — `consultarPadron` devuelve siempre el
- * `raw` parseado completo además de los campos extraídos, así que si algún nombre de campo no
- * coincide en la práctica, el dato no se pierde y se puede ajustar el mapeo sin volver a consultar.
+ * El mapeo de campos de la respuesta de Consulta Padrón A13 ya se validó contra una respuesta real
+ * de producción (2026-08-06): el nodo que envuelve a `persona` se llama `personaReturn`, NO
+ * `getPersonaReturn` como decía la doc pública de AFIP — con ese nombre viejo toda consulta exitosa
+ * caía en "desconocido" sin datos, aunque AFIP contestara perfecto. `nombre`/`apellido`/`razonSocial`
+ * están directo en `persona`, no bajo un `datosGenerales` (ese nodo no existe en la respuesta real).
+ * `consultarPadron` igual sigue devolviendo el `raw` parseado completo además de los campos
+ * extraídos, por si aparece algún otro campo que la respuesta probada no tenía (persona jurídica,
+ * por ejemplo, todavía no se probó).
  */
 const WSAA_URL = {
     homologacion: "https://wsaahomo.afip.gov.ar/ws/services/LoginCms",
@@ -258,28 +261,37 @@ export async function consultarPadron(tenantId, cfg, cuitConsultado, opts) {
         }
         else {
             const getPersonaResponse = buscar(body, "getPersonaResponse");
-            const getPersonaReturn = buscar(getPersonaResponse, "getPersonaReturn");
-            const persona = buscar(getPersonaReturn, "persona") ?? getPersonaReturn;
+            // OJO: el campo real que devuelve AFIP se llama "personaReturn", NO "getPersonaReturn" (nombre
+            // tomado de la documentación pública, nunca validado contra una respuesta real hasta ahora —
+            // ver comentario al principio del archivo). Con el nombre viejo esto SIEMPRE daba `undefined`,
+            // así que toda consulta exitosa terminaba cayendo en "desconocido" sin ningún dato real, por
+            // más que AFIP haya contestado perfecto (con estadoClave, nombre, etc.).
+            const personaReturn = buscar(getPersonaResponse, "personaReturn");
+            const persona = buscar(personaReturn, "persona") ?? personaReturn;
             if (!persona) {
-                // Ni Fault ni getPersonaReturn: la respuesta no tiene ninguna de las formas esperadas (p. ej.
+                // Ni Fault ni personaReturn: la respuesta no tiene ninguna de las formas esperadas (p. ej.
                 // AFIP contestó 200 con una página de error HTML en vez de un SOAP normal — el XML parser no
                 // tira excepción con eso, solo no encuentra las keys). Se guarda el texto crudo (recortado)
                 // para poder ver qué mandó AFIP realmente en vez de un "desconocido" sin explicación.
-                resultado = { cuit, encontrado: false, estado: "desconocido", raw: getPersonaReturn ?? { respuestaNoReconocida: rawTexto.slice(0, 3000) } };
+                resultado = { cuit, encontrado: false, estado: "desconocido", raw: personaReturn ?? { respuestaNoReconocida: rawTexto.slice(0, 3000) } };
             }
             else {
                 const estadoClaveRaw = String(buscar(persona, "estadoClave") ?? "").toUpperCase();
                 const estado = estadoClaveRaw === "ACTIVO" ? "activo" : estadoClaveRaw === "INACTIVO" ? "inactivo" : "desconocido";
                 const tipoPersona = buscar(persona, "tipoPersona");
-                const datosGenerales = buscar(persona, "datosGenerales");
-                const denominacion = buscar(datosGenerales, "razonSocial") ?? [buscar(datosGenerales, "nombre"), buscar(datosGenerales, "apellido")].filter(Boolean).join(" ");
+                // "datosGenerales" tampoco existe en la respuesta real: nombre/apellido/razonSocial están
+                // directo en `persona` (confirmado con la respuesta real de AFIP, no solo con la doc).
+                const razonSocial = buscar(persona, "razonSocial");
+                const nombre = buscar(persona, "nombre");
+                const apellido = buscar(persona, "apellido");
+                const denominacion = razonSocial ?? [nombre, apellido].filter(Boolean).join(" ");
                 resultado = {
                     cuit,
                     encontrado: true,
                     estado,
                     tipoPersona: tipoPersona ? String(tipoPersona) : undefined,
                     denominacion: denominacion ? String(denominacion) : undefined,
-                    raw: getPersonaReturn,
+                    raw: personaReturn,
                 };
             }
         }
