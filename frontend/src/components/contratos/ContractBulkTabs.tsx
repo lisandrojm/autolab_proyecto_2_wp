@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileInvoiceDollar, faFileSignature, faScrewdriverWrench, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser } from "@fortawesome/free-solid-svg-icons";
-import { usersAPI, ContractOverviewRow } from "../../api/users";
+import { faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faEye, faPaperPlane, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { usersAPI, ContractOverviewRow, Contract } from "../../api/users";
 import { companiesAPI, Company } from "../../api/companies";
 import { infoAPI, InfoItem } from "../../api/info";
 import { ContratoFrameItem } from "../../api/contratosFrame";
@@ -9,8 +9,10 @@ import { contratosAPI, ContratoItem } from "../../api/contratos";
 import { categoriaSatAPI, CategoriaSatItem } from "../../api/categoriasSat";
 import { createSimpleCatalogApi, SimpleCatalogItem } from "../../api/simpleCatalog";
 import { Release } from "../../api/release";
+import { firmaDigitalAPI, FirmaDigitalConfig } from "../../api/firmaDigital";
 import { claveEstado, EstadoBadge, estadoLabel } from "../EstadoSelect";
-import { isContractVigente, formatDate } from "../team/ContractCard";
+import { isContractVigente, formatDate, estadoImpositivoDelContrato, findTemplate, templateHasContent, EmpresaOption } from "../team/ContractCard";
+import { getImageUrl } from "../../utils/imageHelpers";
 import { SearchAndFilters } from "../ui/SearchAndFilters";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { EmptyState } from "../ui/EmptyState";
@@ -760,37 +762,423 @@ export const ContractBulkAfipTab: React.FC<{
   );
 };
 
-/**
- * Sub-pestaña "Firma digital": pendiente de definición. La gestión masiva de firma con proveedor
- * externo requiere (1) elegir el proveedor y sus credenciales/API y (2) un modelo de firma en los
- * contratos (hoy los contratos del miembro no tienen estado de firma). Queda como placeholder.
- */
-export const ContractBulkFirmaTab: React.FC = () => (
-  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-8">
-    <div className="max-w-2xl mx-auto text-center flex flex-col items-center gap-4">
-      <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-        <FontAwesomeIcon icon={faFileSignature} className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-      </div>
-      <h3 className="text-lg font-bold text-gray-900 dark:text-white">Firma digital</h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-        Gestión masiva de firma de contratos: enviar a firmar en lote, marcar como firmados, seguimiento del estado y descarga de los firmados.
-      </p>
-      <ul className="text-sm text-gray-600 dark:text-gray-300 text-left space-y-2 mt-2">
-        <li className="flex items-start gap-2.5">
-          <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-          <span>Requiere definir el proveedor de firma externo (DocuSign, firma AFIP, etc.) y sus credenciales/API.</span>
-        </li>
-        <li className="flex items-start gap-2.5">
-          <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-          <span>Requiere agregar un estado de firma a los contratos del miembro (hoy no existe en el modelo).</span>
-        </li>
-      </ul>
-      <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-100 dark:border-amber-800">
-        <FontAwesomeIcon icon={faScrewdriverWrench} className="h-3.5 w-3.5" />
-        Pendiente: definir proveedor externo + modelo de firma
-      </div>
+/** Mismo dropdown que `DownloadMenu` (ContractCard.tsx) pero para la acción "Generar" (paso 1): no
+ *  descarga nada, solo dispara `onGenerar(empresaId)` — el PDF queda guardado en el server. */
+const GenerarMenu: React.FC<{ empresas: EmpresaOption[]; onGenerar: (empresaId?: string) => void; generando: boolean }> = ({ empresas, onGenerar, generando }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  const btnClass = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-wait transition-colors shrink-0 whitespace-nowrap";
+
+  if (empresas.length <= 1) {
+    return (
+      <button type="button" onClick={() => onGenerar(empresas[0]?.id)} disabled={generando} title="Generar Contrato + Release(s)" className={btnClass}>
+        <FontAwesomeIcon icon={generando ? faSpinner : faFileSignature} spin={generando} className="h-3 w-3" />
+        Generar
+      </button>
+    );
+  }
+
+  return (
+    <div className="relative shrink-0" ref={ref}>
+      <button type="button" onClick={() => setOpen((o) => !o)} disabled={generando} title="Elegir empresa para generar" className={btnClass}>
+        <FontAwesomeIcon icon={generando ? faSpinner : faFileSignature} spin={generando} className="h-3 w-3" />
+        Generar
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 w-56 max-h-60 overflow-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1">
+          <p className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Generar con:</p>
+          {empresas.map((e) => (
+            <button
+              key={e.id}
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onGenerar(e.id);
+              }}
+              className="w-full text-left px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              {e.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
+
+/**
+ * Celda "Documentos" de la pestaña Firma digital: paso 1 (botón "Generar", con menú de empresa si el
+ * proyecto tiene más de una) → paso 2, una vez generado, íconos de ojito para revisar el Contrato y
+ * cada Release antes de mandarlos a firmar (el envío en sí es la acción bulk "Enviar a firmar").
+ */
+const FirmaDocumentosCell: React.FC<{
+  record: ContractOverviewRow;
+  contratoFrames: ContratoFrameItem[];
+  activeReleases: Release[];
+  onGenerado: () => void;
+}> = ({ record, contratoFrames, activeReleases, onGenerado }) => {
+  const [generando, setGenerando] = useState(false);
+  const template = findTemplate(record as unknown as Contract, contratoFrames);
+  const puedeGenerar = templateHasContent(template);
+
+  const savedContratoEmpresaId = record.empresaContratoId || "";
+  const contratoEmpresas = record.contratoEmpresas || [];
+  const empresasParaGenerar: EmpresaOption[] = savedContratoEmpresaId
+    ? [{ id: savedContratoEmpresaId, label: record.nombre_empresa_contrato || contratoEmpresas.find((e) => e.id === savedContratoEmpresaId)?.label || savedContratoEmpresaId }]
+    : contratoEmpresas;
+
+  const generar = async (empresaId?: string) => {
+    if (!template) return;
+    setGenerando(true);
+    try {
+      await firmaDigitalAPI.generar({
+        projectId: record.projectId,
+        userId: record.userId,
+        contractIndex: record.contractIndex,
+        contratoTemplateId: template._id,
+        releaseIds: activeReleases.map((r) => r._id),
+        empresaContratoId: empresaId,
+        empresaReleaseId: empresaId,
+      });
+      onGenerado();
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudieron generar los documentos.");
+    } finally {
+      setGenerando(false);
+    }
+  };
+
+  if (!record.firmaGeneradoAt) {
+    return (
+      <div className="flex items-center min-w-[130px]" onClick={(e) => e.stopPropagation()}>
+        {puedeGenerar ? (
+          <GenerarMenu empresas={empresasParaGenerar} onGenerar={generar} generando={generando} />
+        ) : (
+          <span className="text-xs text-gray-400" title="La plantilla de este tipo de contrato no tiene contenido redactado">
+            Sin plantilla
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap min-w-[130px]" onClick={(e) => e.stopPropagation()}>
+      <a href={getImageUrl(record.firmaContratoUrl)} target="_blank" rel="noopener noreferrer" title={record.firmaContratoNombre || "Ver Contrato"} className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+        <FontAwesomeIcon icon={faEye} className="h-3.5 w-3.5" />
+      </a>
+      {(record.firmaReleases || []).map((r) => (
+        <a key={r.releaseId} href={getImageUrl(r.url)} target="_blank" rel="noopener noreferrer" title={r.nombre} className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+          <FontAwesomeIcon icon={faEye} className="h-3.5 w-3.5" />
+        </a>
+      ))}
+      {record.firmaEnviadaAt && (
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 whitespace-nowrap">
+          <FontAwesomeIcon icon={faCheck} className="h-2.5 w-2.5" />
+          Enviado
+        </span>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Sub-pestaña "Firma digital": lista los contratos que ya terminaron su trámite impositivo (Alta
+ * temprana de AFIP archivada, o Constancia de CUIT archivada — el cron de Dropbox ya los movió solo
+ * al estado "Envío de documentación", ver `estadoDropboxCronService.ts`). Flujo en dos pasos:
+ * 1) "Generar" arma el Contrato + Release(s) y los deja para revisar (ojito) — no envía nada.
+ * 2) "Enviar a firmar" (bulk) sube los ya generados a la carpeta Dropbox "Outbox" que vigila Dropbox
+ *    Sign (+ el Alta temprana de AFIP ya cargada, si ese fue el trámite de origen). La Constancia de
+ *    CUIT nunca se sube: ya cumplió su función al mover al contrato a este estado.
+ */
+export const ContractBulkFirmaTab: React.FC<{
+  allEstados: InfoItem[];
+  contratoFrames: ContratoFrameItem[];
+  releases: Release[];
+}> = ({ allEstados, contratoFrames, releases }) => {
+  const [rows, setRows] = useState<ContractOverviewRow[]>([]);
+  const [config, setConfig] = useState<FirmaDigitalConfig | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [filterClientId, setFilterClientId] = useState("");
+  const [filterProjectId, setFilterProjectId] = useState("");
+  const [filterEmpresaId, setFilterEmpresaId] = useState("");
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [enviando, setEnviando] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    companiesAPI.list().then(setCompanies).catch(() => setCompanies([]));
+  }, []);
+
+  const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    return Promise.all([usersAPI.listContractsOverview({ limit: 5000 }), firmaDigitalAPI.config()])
+      .then(([res, cfg]) => {
+        setRows(res.rows);
+        setConfig(cfg);
+      })
+      .catch(() => {
+        /* noop */
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Trámite impositivo de ORIGEN del contrato (por su tipo/plantilla, no por el estado actual —
+  // sigue siendo válido aunque el contrato ya haya avanzado a "Envío de documentación").
+  const tipoDelRow = useCallback(
+    (r: ContractOverviewRow): TipoImpositivo | undefined => {
+      const estado = estadoImpositivoDelContrato(r as unknown as Contract, contratoFrames, allEstados);
+      return estado?.data?.tipoImpositivo as TipoImpositivo | undefined;
+    },
+    [contratoFrames, allEstados]
+  );
+
+  const claveEnvio = config?.estadoEnvioDocNombre ? claveEstado(config.estadoEnvioDocNombre) : null;
+  const rowsEnEnvio = useMemo(() => (claveEnvio ? rows.filter((r) => claveEstado(r.nombre_estado_empleado || "") === claveEnvio) : []), [rows, claveEnvio]);
+
+  const empresasDelContrato = (r: ContractOverviewRow): string[] => (r.empresaContratoId ? [r.empresaContratoId] : (r.contratoEmpresas || []).map((e) => e.id));
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rowsEnEnvio.filter((r) => {
+      if (filterClientId && r.clientId !== filterClientId) return false;
+      if (filterProjectId && r.projectId !== filterProjectId) return false;
+      if (filterEmpresaId && !empresasDelContrato(r).includes(filterEmpresaId)) return false;
+      if (q) {
+        const hay = [r.userName, r.userEmail, r.clientName, r.projectName, r.nombre_contrato].some((v) => (v || "").toLowerCase().includes(q));
+        if (!hay) return false;
+      }
+      return true;
+    });
+  }, [rowsEnEnvio, search, filterClientId, filterProjectId, filterEmpresaId]);
+
+  const clientOptions = useMemo(() => {
+    const m = new Map<string, string>();
+    rowsEnEnvio.forEach((r) => r.clientId && m.set(r.clientId, r.clientName || r.clientId));
+    return [...m].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [rowsEnEnvio]);
+  const projectOptions = useMemo(() => {
+    const m = new Map<string, string>();
+    rowsEnEnvio.filter((r) => !filterClientId || r.clientId === filterClientId).forEach((r) => r.projectId && m.set(r.projectId, r.projectName || r.projectId));
+    return [...m].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [rowsEnEnvio, filterClientId]);
+  const empresaOptions = useMemo(() => companies.map((c) => ({ value: c._id, label: c.razonSocial })).sort((a, b) => a.label.localeCompare(b.label)), [companies]);
+
+  const rowKey = (r: ContractOverviewRow) => `${r._id}-${r.contractIndex}`;
+  const toggleSel = (k: string) =>
+    setSelected((prev) => {
+      const n = new Set(prev);
+      if (n.has(k)) n.delete(k);
+      else n.add(k);
+      return n;
+    });
+  // Solo se pueden marcar (y enviar) los contratos ya generados y todavía no enviados.
+  const enviables = useMemo(() => filtered.filter((r) => !!r.firmaGeneradoAt && !r.firmaEnviadaAt), [filtered]);
+  const allSel = enviables.length > 0 && enviables.every((r) => selected.has(rowKey(r)));
+  const toggleAll = () =>
+    setSelected((prev) => {
+      const n = new Set(prev);
+      if (allSel) enviables.forEach((r) => n.delete(rowKey(r)));
+      else enviables.forEach((r) => n.add(rowKey(r)));
+      return n;
+    });
+  const seleccionados = useMemo(() => enviables.filter((r) => selected.has(rowKey(r))), [enviables, selected]);
+  // Igual criterio que "Generar TXT (AFIP)": sin selección, se manda todo lo filtrado (comodidad).
+  const fuenteEnvio = seleccionados.length > 0 ? seleccionados : enviables;
+
+  const handleEnviar = async () => {
+    if (fuenteEnvio.length === 0) return;
+    const confirm = await sweetAlert.confirm(
+      "Enviar a firmar",
+      `Se van a subir los documentos de ${fuenteEnvio.length} contrato(s) a la carpeta "Outbox" de Dropbox para que Dropbox Sign los importe. ¿Continuar?`,
+      "Sí, enviar",
+      "Cancelar"
+    );
+    if (!confirm.isConfirmed) return;
+    setEnviando(true);
+    try {
+      const targets = fuenteEnvio.map((r) => ({ projectId: r.projectId, userId: r.userId, contractIndex: r.contractIndex, tipoImpositivo: tipoDelRow(r) }));
+      const res = await firmaDigitalAPI.enviar(targets);
+      const fallidos = res.resultados.filter((x) => !x.ok);
+      if (fallidos.length > 0) {
+        sweetAlert.error("Algunos envíos fallaron", `${res.enviados} enviado(s) correctamente. ${fallidos.length} fallaron: ${fallidos.map((f) => f.error).slice(0, 3).join(" · ")}`);
+      } else {
+        sweetAlert.success("Enviado", `${res.enviados} contrato(s) enviado(s) a firmar.`);
+      }
+      setSelected(new Set());
+      load();
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo enviar a firmar.");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col lg:flex-row gap-3 lg:items-start justify-between">
+        <div className="flex-1 w-full">
+          <SearchAndFilters
+            searchTerm={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Buscar por usuario, proyecto o contrato..."
+            selectFilters={[
+              { label: "Cliente", value: filterClientId, onChange: setFilterClientId, placeholder: "Todos los clientes", options: clientOptions },
+              { label: "Proyecto", value: filterProjectId, onChange: setFilterProjectId, placeholder: "Todos los proyectos", options: projectOptions },
+              { label: "Empresa", value: filterEmpresaId, onChange: setFilterEmpresaId, placeholder: "Todas las empresas", options: empresaOptions },
+            ]}
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          {!loading && config && !config.outboxCarpeta && (
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/60">
+              <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
+              No se encontró la carpeta "Outbox" configurada (Documentos → Configurar transición automática)
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          {seleccionados.length > 0 && <span className="text-xs text-gray-500 dark:text-gray-400">{seleccionados.length} seleccionado(s)</span>}
+          <button
+            onClick={handleEnviar}
+            disabled={enviando || fuenteEnvio.length === 0 || !config?.outboxCarpeta}
+            title={seleccionados.length > 0 ? "Enviar a firmar los contratos seleccionados" : 'Enviar a firmar todos los contratos generados del listado (o marcá algunos con el check)'}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+          >
+            <FontAwesomeIcon icon={enviando ? faSpinner : faPaperPlane} spin={enviando} className="h-4 w-4" />
+            Enviar a firmar{fuenteEnvio.length > 0 ? ` (${fuenteEnvio.length})` : ""}
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <LoadingSpinner message="Cargando contratos..." />
+        </div>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={faFileSignature}
+          title="Sin contratos para firmar"
+          description={
+            rowsEnEnvio.length === 0
+              ? 'Ningún contrato está hoy en el estado de "Envío de documentación" (se llega ahí automáticamente al archivar el Alta temprana de AFIP o la Constancia de CUIT).'
+              : "No hay resultados con los filtros aplicados."
+          }
+        />
+      ) : (
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto custom-scrollbar max-h-[640px]">
+            <table className="w-full text-left border-collapse min-w-[1500px]">
+              <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
+                <tr className="border-b border-gray-100 dark:border-gray-800">
+                  <th className="px-4 py-3 w-10">
+                    <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={enviables.length === 0} title="Seleccionar todos los generados" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
+                  </th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Alta / Baja</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Trámite</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Documentos</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">CUIT</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Cliente</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Contrato</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Estado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {filtered.map((r) => {
+                  const tipo = tipoDelRow(r);
+                  const enviable = !!r.firmaGeneradoAt && !r.firmaEnviadaAt;
+                  return (
+                    <tr key={rowKey(r)} className={`hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? "bg-blue-50/50 dark:bg-blue-900/10" : ""}`}>
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(rowKey(r))}
+                          disabled={!enviable}
+                          onChange={() => toggleSel(rowKey(r))}
+                          title={enviable ? "Incluir en el envío a firmar" : r.firmaEnviadaAt ? "Ya se envió a firmar" : 'Generá primero los documentos ("Generar")'}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 whitespace-nowrap">
+                        {(() => {
+                          const vigente = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
+                          return (
+                            <div className="flex flex-col gap-1">
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>
+                              <div className="flex flex-col gap-0.5 text-xs">
+                                <span>
+                                  <span className="text-gray-400">Alta:</span> {formatDate(r.fecha_alta_contrato)}
+                                </span>
+                                <span>
+                                  <span className="text-gray-400">Baja:</span> {r.fecha_baja_contrato ? formatDate(r.fecha_baja_contrato) : "—"}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </td>
+                      <td className="px-4 py-3">
+                        {tipo ? (
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap ${
+                              tipo === "alta_temprana_afip"
+                                ? "bg-purple-600 text-white border-purple-600 dark:bg-purple-500 dark:border-purple-500"
+                                : "bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700"
+                            }`}
+                          >
+                            <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" />
+                            {TIPO_LABEL[tipo]}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-gray-400 italic">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <FirmaDocumentosCell record={r} contratoFrames={contratoFrames} activeReleases={activeReleases} onGenerado={load} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{r.userName}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{fmtCuit(r.cuit) || "—"}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || "—"}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || "—"}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.nombre_contrato || "—"}</td>
+                      <td className="px-4 py-3">
+                        <EstadoBadge name={r.nombre_estado_empleado || ""} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default ContractBulkAfipTab;

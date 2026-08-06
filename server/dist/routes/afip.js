@@ -13,7 +13,7 @@ import { encryptSecret } from "../utils/secretCrypto.js";
 import { normalizarCuit } from "../utils/constanciaPdf.js";
 import { buildDocFileName } from "../utils/employeeDocData.js";
 import { getTenantAfipConfig, verificarCredenciales, verificarServicioPadron, consultarPadron, clearTenantTicket, getCertificadoInfo } from "../services/afipService.js";
-import { getTenantDropboxConfig, uploadFile } from "../services/dropboxService.js";
+import { getTenantDropboxConfig, uploadFile, getTemporaryLink } from "../services/dropboxService.js";
 const router = Router();
 router.use(requireTenant, authenticateToken);
 const isAdmin = (req) => (req.user?.roles || []).some((r) => ["admin", "superadmin"].includes(r.toLowerCase()));
@@ -171,6 +171,46 @@ router.post("/verificar-servicio", async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
+// GET /afip/constancia-link?projectId&userId&contractIndex - link temporal (Dropbox lo vence a las
+// pocas horas, por eso se pide al vuelo en vez de guardar una URL fija) para ver el JSON archivado.
+router.get("/constancia-link", async (req, res) => {
+    try {
+        const { projectId, userId, contractIndex } = req.query;
+        const idx = Number(contractIndex);
+        if (!projectId || !userId || !Number.isInteger(idx)) {
+            res.status(400).json({ error: "Faltan projectId/userId/contractIndex." });
+            return;
+        }
+        const tenant = await Tenant.findById(req.tenantObjectId).lean();
+        const dropboxCfg = getTenantDropboxConfig(tenant);
+        if (!dropboxCfg) {
+            res.status(400).json({ error: "Dropbox no está conectado para esta organización." });
+            return;
+        }
+        // UserProject no tiene tenantId propio — se valida que el proyecto y el usuario pertenezcan a
+        // este tenant antes de confiar en projectId/userId (mismo criterio que /consulta-padron/bulk).
+        const [projectOk, userOk] = await Promise.all([
+            Project.exists({ _id: projectId, tenantId: req.tenantObjectId }),
+            User.exists({ _id: userId, tenantId: req.tenantObjectId }),
+        ]);
+        if (!projectOk || !userOk) {
+            res.status(404).json({ error: "Contrato no encontrado." });
+            return;
+        }
+        const up = await UserProject.findOne({ projectId, userId }).lean();
+        const path = up?.contracts?.[idx]?.constanciaAfipDropboxPath;
+        if (!path) {
+            res.status(404).json({ error: "Este contrato todavía no tiene una constancia archivada en Dropbox." });
+            return;
+        }
+        const url = await getTemporaryLink(String(req.tenantObjectId), dropboxCfg, path);
+        res.json({ url });
+    }
+    catch (error) {
+        console.error("AFIP constancia-link error:", error);
+        res.status(500).json({ error: error?.response?.data ? JSON.stringify(error.response.data) : "No se pudo generar el link." });
+    }
+});
 const padronTargetSchema = z.object({
     projectId: z.string().min(1),
     userId: z.string().min(1),
@@ -287,6 +327,7 @@ router.post("/consulta-padron/bulk", async (req, res) => {
                         // avance automático de estado (estadoDropboxCronService.ts vigila esa misma carpeta), y
                         // no tiene sentido destrabar ese paso si la persona figura inactiva.
                         let subidaAt;
+                        let dropboxPath;
                         if (resultado.estado === "activo") {
                             if (!dropboxCfg) {
                                 dropboxSubido = false;
@@ -312,7 +353,11 @@ router.post("/consulta-padron/bulk", async (req, res) => {
                                         contrato: { index: t.contractIndex, fechaAlta: contract?.fecha_alta_contrato, fechaBaja: contract?.fecha_baja_contrato },
                                         raw: resultado.raw,
                                     }, null, 2));
-                                    await uploadFile(tenantId, dropboxCfg, `${carpetaConstancia.replace(/\/$/, "")}/${nombreArchivo}.json`, contenido);
+                                    const subida = await uploadFile(tenantId, dropboxCfg, `${carpetaConstancia.replace(/\/$/, "")}/${nombreArchivo}.json`, contenido);
+                                    // `uploadFile` sube con autorename: true — si ya existía un archivo con ese
+                                    // nombre, Dropbox le cambia el nombre solo, así que el path final puede diferir
+                                    // del pedido. Se guarda el que realmente devolvió Dropbox.
+                                    dropboxPath = subida.path;
                                     subidaAt = new Date();
                                     dropboxSubido = true;
                                 }
@@ -329,7 +374,7 @@ router.post("/consulta-padron/bulk", async (req, res) => {
                             constanciaAfipEstado: resultado.estado,
                             constanciaAfipConsultadaAt: new Date(),
                             constanciaAfipRaw: resultado.raw,
-                            ...(subidaAt ? { constanciaAfipDropboxSubidaAt: subidaAt } : {}),
+                            ...(subidaAt ? { constanciaAfipDropboxSubidaAt: subidaAt, constanciaAfipDropboxPath: dropboxPath } : {}),
                         };
                         up.markModified("contracts");
                         contratosActualizados++;

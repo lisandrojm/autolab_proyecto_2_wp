@@ -68,6 +68,20 @@ interface IContract {
   // cuit") se considera terminado el trámite: es lo que dispara la transición automática de estado
   // (estadoDropboxCronService.ts). constanciaAfipEstado "activo" sin esto todavía no alcanza.
   constanciaAfipDropboxSubidaAt?: Date;
+  // Path exacto donde quedó el JSON en Dropbox — para poder armar un link temporal de vista bajo
+  // demanda (GET /afip/constancia-link) sin tener que guardar una URL que puede vencer.
+  constanciaAfipDropboxPath?: string;
+  // Firma Digital: Contrato/Release generados (paso 1, "Generar") — se guardan en disco local hasta
+  // que "Enviar a firmar" (paso 2) los sube a la carpeta Outbox de Dropbox. Separado a propósito de
+  // "generar" vs "enviar": la empresa se elige al generar, y el usuario quiere poder revisar el PDF
+  // (ícono de ojito) antes de mandarlo a firmar.
+  firmaContratoUrl?: string;
+  firmaContratoNombre?: string;
+  firmaReleases?: { releaseId: string; nombre: string; url: string }[];
+  firmaEmpresaContratoId?: Types.ObjectId | string | null;
+  firmaEmpresaReleaseId?: Types.ObjectId | string | null;
+  firmaGeneradoAt?: Date;
+  firmaEnviadaAt?: Date;
   areaShiftAssignments?: {
     areaId: Types.ObjectId | string;
     shiftIds: (Types.ObjectId | string)[];
@@ -144,6 +158,21 @@ const contractSchema = new Schema<IContract>(
     constanciaAfipConsultadaAt: { type: Date },
     constanciaAfipRaw: { type: Schema.Types.Mixed },
     constanciaAfipDropboxSubidaAt: { type: Date },
+    constanciaAfipDropboxPath: { type: String },
+    firmaContratoUrl: { type: String },
+    firmaContratoNombre: { type: String },
+    firmaReleases: [
+      {
+        _id: false,
+        releaseId: { type: String },
+        nombre: { type: String },
+        url: { type: String },
+      },
+    ],
+    firmaEmpresaContratoId: { type: Schema.Types.ObjectId, ref: "Company" },
+    firmaEmpresaReleaseId: { type: Schema.Types.ObjectId, ref: "Company" },
+    firmaGeneradoAt: { type: Date },
+    firmaEnviadaAt: { type: Date },
     areaShiftAssignments: [
       {
         areaId: { type: Schema.Types.ObjectId, ref: "Area" },

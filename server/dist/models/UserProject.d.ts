@@ -55,6 +55,18 @@ interface IContract {
     constanciaAfipConsultadaAt?: Date;
     constanciaAfipRaw?: any;
     constanciaAfipDropboxSubidaAt?: Date;
+    constanciaAfipDropboxPath?: string;
+    firmaContratoUrl?: string;
+    firmaContratoNombre?: string;
+    firmaReleases?: {
+        releaseId: string;
+        nombre: string;
+        url: string;
+    }[];
+    firmaEmpresaContratoId?: Types.ObjectId | string | null;
+    firmaEmpresaReleaseId?: Types.ObjectId | string | null;
+    firmaGeneradoAt?: Date;
+    firmaEnviadaAt?: Date;
     areaShiftAssignments?: {
         areaId: Types.ObjectId | string;
         shiftIds: (Types.ObjectId | string)[];

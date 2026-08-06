@@ -609,6 +609,12 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         constanciaAfipConsultadaAt: contratoActivo.constanciaAfipConsultadaAt || "",
         // Recién con esto el trámite se considera terminado (ver ConstanciaBulk.tsx estadoConstancia).
         constanciaAfipDropboxSubidaAt: contratoActivo.constanciaAfipDropboxSubidaAt || "",
+        // "Firma Digital": paso 1 (Generar) deja estos campos, paso 2 (Enviar a firmar) marca firmaEnviadaAt.
+        firmaContratoUrl: contratoActivo.firmaContratoUrl || "",
+        firmaContratoNombre: contratoActivo.firmaContratoNombre || "",
+        firmaReleases: contratoActivo.firmaReleases || [],
+        firmaGeneradoAt: contratoActivo.firmaGeneradoAt || "",
+        firmaEnviadaAt: contratoActivo.firmaEnviadaAt || "",
         empresaContratoId: contratoActivo.empresaContratoId ? String(contratoActivo.empresaContratoId) : "",
         empresaReleaseId: contratoActivo.empresaReleaseId ? String(contratoActivo.empresaReleaseId) : "",
         nombre_empresa_contrato: contratoActivo.nombre_empresa_contrato || "",

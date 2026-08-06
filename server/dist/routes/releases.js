@@ -115,57 +115,66 @@ router.get("/:id/download", authenticateToken, requireTenant, async (req, res) =
         res.status(500).json({ error: "Error al generar el archivo" });
     }
 });
+/**
+ * Arma el PDF del Release con las variables reemplazadas por los datos de la persona/contrato y de
+ * la empresa elegida (releaseEmpresas del proyecto) — misma lógica que usaba `/download-filled`
+ * directo en el handler, reutilizable desde otros routers (p. ej. "Generar" de Firma Digital) sin
+ * pasar por un round-trip HTTP.
+ */
+export async function generarReleasePdf(opts) {
+    const { tenantId, releaseId, userId, projectId, contractIndex, empresaId } = opts;
+    const release = await Release.findOne({ _id: releaseId, tenantId });
+    if (!release)
+        throw new Error("Release no encontrado");
+    if (!htmlHasText(release.content))
+        throw new Error("El release no tiene contenido redactado");
+    const user = await User.findOne({ _id: userId, tenantId }).populate({ path: "metadata.projects", model: UserProject }).lean();
+    if (!user)
+        throw new Error("Empleado no encontrado");
+    const projects = user.metadata?.projects || [];
+    const up = projects.find((p) => {
+        const pId = p?.projectId;
+        const idToCheck = typeof pId === "object" && pId ? pId._id : pId;
+        return String(idToCheck) === String(projectId);
+    });
+    const contracts = up?.contracts || [];
+    let idx = contractIndex;
+    if (!Number.isInteger(idx) || idx < 0 || idx >= contracts.length)
+        idx = contracts.length - 1;
+    const contract = contracts[idx] || {};
+    const project = await Project.findOne({ _id: projectId, tenantId }).lean();
+    const empresas = project?.releaseEmpresas || [];
+    const empresasIds = empresas.map((e) => String(e));
+    const empresaIdValida = !!empresaId && (empresasIds.length === 0 || empresasIds.includes(String(empresaId)));
+    const chosenId = empresaIdValida ? String(empresaId) : empresasIds[0];
+    const empresa = chosenId ? await Company.findById(chosenId).lean() : null;
+    const data = await buildEmployeeDocData(user, up, contract, empresa);
+    const membrete = release.usaMembrete && empresa ? empresaToMembrete(empresa) : undefined;
+    const buffer = await buildDocPdf(release.content, data, membrete);
+    const filename = buildDocFileName({ tipo: "Release", user, up, contract, docName: release.name });
+    return { buffer, filename, empresaIdUsado: chosenId || "" };
+}
 // GET /releases/:id/download-filled?userId=&projectId=&contractIndex=
 // Genera el PDF del release con las variables reemplazadas por los datos de la persona/contrato
 // y de la empresa seteada en el proyecto (releaseEmpresas).
 router.get("/:id/download-filled", authenticateToken, requireTenant, async (req, res) => {
     try {
-        const release = await Release.findOne({ _id: req.params.id, tenantId: req.tenantObjectId });
-        if (!release) {
-            res.status(404).json({ error: "Release no encontrado" });
-            return;
-        }
-        if (!htmlHasText(release.content)) {
-            res.status(400).json({ error: "El release no tiene contenido redactado" });
-            return;
-        }
         const { userId, projectId, contractIndex, empresaId } = req.query;
-        const user = await User.findOne({ _id: userId, tenantId: req.tenantObjectId }).populate({ path: "metadata.projects", model: UserProject }).lean();
-        if (!user) {
-            res.status(404).json({ error: "Empleado no encontrado" });
-            return;
-        }
-        // Buscar el UserProject del proyecto y el contrato correspondiente
-        const projects = user.metadata?.projects || [];
-        const up = projects.find((p) => {
-            const pId = p?.projectId;
-            const idToCheck = typeof pId === "object" && pId ? pId._id : pId;
-            return String(idToCheck) === String(projectId);
+        const { buffer, filename } = await generarReleasePdf({
+            tenantId: String(req.tenantObjectId),
+            releaseId: req.params.id,
+            userId: String(userId),
+            projectId: String(projectId),
+            contractIndex: Number(contractIndex),
+            empresaId,
         });
-        const contracts = up?.contracts || [];
-        let idx = Number(contractIndex);
-        if (!Number.isInteger(idx) || idx < 0 || idx >= contracts.length)
-            idx = contracts.length - 1;
-        const contract = contracts[idx] || {};
-        // Empresa/Productora del PROYECTO (releaseEmpresas) → variables empresa* en la plantilla.
-        // El cliente elige con cuál descargar (empresaId); si no llega o no pertenece al proyecto, se usa la primera.
-        const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).lean();
-        const empresas = project?.releaseEmpresas || [];
-        const empresasIds = empresas.map((e) => String(e));
-        // Si el proyecto no tiene empresas configuradas, el modal ofrece todas las del ABM → se acepta cualquiera.
-        const empresaIdValida = !!empresaId && (empresasIds.length === 0 || empresasIds.includes(String(empresaId)));
-        const chosenId = empresaIdValida ? String(empresaId) : empresasIds[0];
-        const empresa = chosenId ? await Company.findById(chosenId).lean() : null;
-        const data = await buildEmployeeDocData(user, up, contract, empresa);
-        // Si la plantilla lleva membrete, se encabeza/firma con la empresa elegida al descargar.
-        const membrete = release.usaMembrete && empresa ? empresaToMembrete(empresa) : undefined;
-        const buffer = await buildDocPdf(release.content, data, membrete);
-        const baseName = buildDocFileName({ tipo: "Release", user, up, contract, docName: release.name });
-        sendPdf(res, buffer, baseName);
+        sendPdf(res, buffer, filename);
     }
     catch (error) {
         console.error("Download filled release error:", error);
-        res.status(500).json({ error: "No se pudo generar el release con los datos." });
+        const msg = String(error?.message || "");
+        const status = /no encontrado/i.test(msg) ? 404 : /no tiene contenido redactado/i.test(msg) ? 400 : 500;
+        res.status(status).json({ error: msg || "No se pudo generar el release con los datos." });
     }
 });
 router.post("/", authenticateToken, requireTenant, async (req, res) => {

@@ -6,6 +6,7 @@ import { ContratoFrameItem, contratoFrameAPI } from "../../api/contratosFrame";
 import { InfoItem } from "../../api/info";
 import { Release, releasesAPI } from "../../api/release";
 import { projectsAPI } from "../../api/projects";
+import { afipAPI } from "../../api/afip";
 import { estadoImpositivoDelContrato, findTemplate, templateHasContent, buildDownloadFileName, DownloadMenu } from "../team/ContractCard";
 import { getImageUrl, downloadFileFromUrl } from "../../utils/imageHelpers";
 import { sweetAlert } from "../../utils/sweetAlert";
@@ -83,6 +84,7 @@ export const ContractDocsColumns: React.FC<{
 }> = ({ record, contratoFrames, allEstados, activeReleases, onDownloadContract, onDownloadRelease, onUploadAlta, canUploadAlta = true, showContrato = true, showRelease = true, hideAltaLabel = false }) => {
   const [uploading, setUploading] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [abriendoConstancia, setAbriendoConstancia] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
@@ -136,6 +138,20 @@ export const ContractDocsColumns: React.FC<{
     }
   };
 
+  /** Pide un link temporal (Dropbox lo vence a las pocas horas, por eso se pide al vuelo) y lo abre
+   *  en una pestaña nueva — la "vista del archivo" real en Dropbox, no una copia nuestra. */
+  const handleVerConstancia = async () => {
+    setAbriendoConstancia(true);
+    try {
+      const url = await afipAPI.constanciaLink({ projectId: record.projectId, userId: record.userId, contractIndex: record.contractIndex });
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo abrir la constancia en Dropbox.");
+    } finally {
+      setAbriendoConstancia(false);
+    }
+  };
+
   const handleDownloadAlta = async () => {
     if (!record.altaDocumentoUrl) return;
     try {
@@ -158,10 +174,16 @@ export const ContractDocsColumns: React.FC<{
             <div className="flex items-center gap-2">
               {esConstanciaCuit ? (
                 altaCargada ? (
-                  <span className="text-xs text-gray-700 dark:text-gray-200 flex items-center gap-1.5" title="Archivado en Dropbox al validar el CUIT contra AFIP">
-                    <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
+                  <button
+                    type="button"
+                    onClick={handleVerConstancia}
+                    disabled={abriendoConstancia}
+                    title="Ver el archivo en Dropbox"
+                    className="text-xs text-gray-700 dark:text-gray-200 flex items-center gap-1.5 min-w-0 hover:underline disabled:opacity-50 disabled:cursor-wait"
+                  >
+                    <FontAwesomeIcon icon={abriendoConstancia ? faSpinner : faFilePdf} spin={abriendoConstancia} className="h-4 w-4 text-violet-600 shrink-0" />
                     Archivado en Dropbox
-                  </span>
+                  </button>
                 ) : (
                   <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
                     <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 shrink-0" />
@@ -184,11 +206,7 @@ export const ContractDocsColumns: React.FC<{
                   <FontAwesomeIcon icon={downloading ? faSpinner : faDownload} spin={downloading} className="h-4 w-4" />
                 </button>
               )}
-              {esConstanciaCuit ? (
-                <span className="p-1.5 text-gray-300 dark:text-gray-600 cursor-not-allowed shrink-0" title="Se archiva solo: usá 'Validar CUIT' en la pestaña Constancia de CUIT">
-                  <FontAwesomeIcon icon={faLock} className="h-3.5 w-3.5" />
-                </span>
-              ) : canUploadAlta ? (
+              {esConstanciaCuit ? null : canUploadAlta ? (
                 <>
                   <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading} title={record.altaDocumentoUrl ? "Reemplazar documento" : "Subir PDF"} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
                     <FontAwesomeIcon icon={uploading ? faSpinner : faUpload} spin={uploading} className="h-4 w-4" />

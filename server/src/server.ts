@@ -79,6 +79,7 @@ import { holidayRoutes } from "./routes/holidays.js";
 import { userProjectRoutes } from "./routes/userProjects.js";
 import { dropboxRoutes } from "./routes/dropbox.js";
 import { afipRoutes } from "./routes/afip.js";
+import { firmaDigitalRoutes } from "./routes/firmaDigital.js";
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -221,6 +222,7 @@ app.use("/api/v1/holidays", holidayRoutes);
 app.use("/api/v1/user-projects", userProjectRoutes);
 app.use("/api/v1/dropbox", dropboxRoutes);
 app.use("/api/v1/afip", afipRoutes);
+app.use("/api/v1/firma-digital", firmaDigitalRoutes);
 
 
 // ───────────────── 404 + errores (al final) ─────────────────

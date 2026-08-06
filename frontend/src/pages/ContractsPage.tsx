@@ -419,7 +419,7 @@ export const ContractsPage: React.FC = () => {
     >
       {mainTab === "management" ? (
         mgmtTab === "firma" ? (
-          <ContractBulkFirmaTab />
+          <ContractBulkFirmaTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} />
         ) : (
           <ContractBulkAfipTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} initialProjectId={initialProjectId} tipo={mgmtTab === "alta_afip" ? "alta_temprana_afip" : "constancia_cuit"} onCounts={setMgmtCounts} />
         )

@@ -125,4 +125,10 @@ export const afipAPI = {
     const { data } = await axios.get("/afip/logs");
     return data?.logs || [];
   },
+
+  /** Link temporal (Dropbox lo vence a las pocas horas) para ver el JSON de la constancia archivada. */
+  async constanciaLink(target: ConsultaPadronTarget): Promise<string> {
+    const { data } = await axios.get("/afip/constancia-link", { params: target });
+    return data.url;
+  },
 };

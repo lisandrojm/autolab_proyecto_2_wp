@@ -23,7 +23,7 @@ const fechaCompacta = (s?: string): string => {
  *   vuelve a Dropbox (p. ej. tras pasar por Dropbox Sign, que preserva el nombre de archivo).
  * Devuelve el nombre SIN extensión (el caller agrega `.docx`).
  */
-export function buildDocFileName(opts: { tipo: "Contrato" | "Release" | "ConstanciaCUIT"; user: any; up: any; contract: any; docName?: string }): string {
+export function buildDocFileName(opts: { tipo: "Contrato" | "Release" | "ConstanciaCUIT" | "AltaAFIP"; user: any; up: any; contract: any; docName?: string }): string {
   const { tipo, user, up, contract, docName } = opts;
   const proyecto = up?.externalProjectId ?? contract?.proyecto_id ?? up?.nombre_proyecto ?? contract?.nombre_proyecto ?? "";
   const nombre = (user?.firstName || "").trim();

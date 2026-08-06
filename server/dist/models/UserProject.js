@@ -55,6 +55,21 @@ const contractSchema = new Schema({
     constanciaAfipConsultadaAt: { type: Date },
     constanciaAfipRaw: { type: Schema.Types.Mixed },
     constanciaAfipDropboxSubidaAt: { type: Date },
+    constanciaAfipDropboxPath: { type: String },
+    firmaContratoUrl: { type: String },
+    firmaContratoNombre: { type: String },
+    firmaReleases: [
+        {
+            _id: false,
+            releaseId: { type: String },
+            nombre: { type: String },
+            url: { type: String },
+        },
+    ],
+    firmaEmpresaContratoId: { type: Schema.Types.ObjectId, ref: "Company" },
+    firmaEmpresaReleaseId: { type: Schema.Types.ObjectId, ref: "Company" },
+    firmaGeneradoAt: { type: Date },
+    firmaEnviadaAt: { type: Date },
     areaShiftAssignments: [
         {
             areaId: { type: Schema.Types.ObjectId, ref: "Area" },

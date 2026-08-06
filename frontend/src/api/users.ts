@@ -96,6 +96,12 @@ export interface ContractOverviewRow {
   constanciaAfipConsultadaAt?: string;
   /** Recién con esto el trámite se considera terminado (ver ConstanciaBulk.tsx estadoConstancia). */
   constanciaAfipDropboxSubidaAt?: string;
+  /** "Firma Digital": documentos generados (paso 1, Generar) y enviados a firmar (paso 2, Enviar a firmar). */
+  firmaContratoUrl?: string;
+  firmaContratoNombre?: string;
+  firmaReleases?: { releaseId: string; nombre: string; url: string }[];
+  firmaGeneradoAt?: string;
+  firmaEnviadaAt?: string;
   empresaContratoId?: string;
   empresaReleaseId?: string;
   nombre_empresa_contrato?: string;

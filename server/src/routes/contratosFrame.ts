@@ -85,59 +85,72 @@ router.get("/:id/download", authenticateToken, async (req: AuthenticatedRequest,
   }
 });
 
+export interface DocPdfResult {
+  buffer: Buffer;
+  filename: string;
+  empresaIdUsado: string;
+}
+
+/**
+ * Arma el PDF del Contrato con las variables reemplazadas por los datos de la persona/contrato y de
+ * la empresa elegida (contratoEmpresas del proyecto) — la misma lógica que usaba `/download-filled`
+ * directo en el handler, ahora reutilizable desde otros routers (p. ej. "Generar" de Firma Digital)
+ * sin pasar por un round-trip HTTP.
+ */
+export async function generarContratoPdf(opts: { tenantId: string; templateId: string; userId: string; projectId: string; contractIndex: number; empresaId?: string }): Promise<DocPdfResult> {
+  const { tenantId, templateId, userId, projectId, contractIndex, empresaId } = opts;
+  const item = await ContratoFrame.findById(templateId);
+  if (!item) throw new Error("Contrato no encontrado");
+  if (!htmlHasText(item.content)) throw new Error("El contrato no tiene contenido redactado");
+
+  const user = await User.findOne({ _id: userId, tenantId }).populate({ path: "metadata.projects", model: UserProject }).lean();
+  if (!user) throw new Error("Empleado no encontrado");
+
+  const projects: any[] = (user as any).metadata?.projects || [];
+  const up = projects.find((p) => {
+    const pId = p?.projectId;
+    const idToCheck = typeof pId === "object" && pId ? pId._id : pId;
+    return String(idToCheck) === String(projectId);
+  });
+  const contracts: any[] = up?.contracts || [];
+  let idx = contractIndex;
+  if (!Number.isInteger(idx) || idx < 0 || idx >= contracts.length) idx = contracts.length - 1;
+  const contract: any = contracts[idx] || {};
+
+  const project = await Project.findOne({ _id: projectId, tenantId }).lean();
+  const empresas: any[] = (project as any)?.contratoEmpresas || [];
+  const empresasIds = empresas.map((e) => String(e));
+  const empresaIdValida = !!empresaId && (empresasIds.length === 0 || empresasIds.includes(String(empresaId)));
+  const chosenId = empresaIdValida ? String(empresaId) : empresasIds[0];
+  const empresa = chosenId ? await Company.findById(chosenId).lean() : null;
+  const data = await buildEmployeeDocData(user, up, contract, empresa);
+
+  const membrete = item.usaMembrete && empresa ? empresaToMembrete(empresa) : undefined;
+  const buffer = await buildDocPdf(item.content, data, membrete);
+  const filename = buildDocFileName({ tipo: "Contrato", user, up, contract });
+  return { buffer, filename, empresaIdUsado: chosenId || "" };
+}
+
 // GET /:id/download-filled?userId=&projectId=&contractIndex=
 // Genera el PDF del contrato con las variables reemplazadas por los datos de la persona/contrato
 // y de la empresa seteada en el proyecto (contratoEmpresas).
 router.get("/:id/download-filled", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const item = await ContratoFrame.findById(req.params.id);
-    if (!item) {
-      res.status(404).json({ error: "Contrato no encontrado" });
-      return;
-    }
-    if (!htmlHasText(item.content)) {
-      res.status(400).json({ error: "El contrato no tiene contenido redactado" });
-      return;
-    }
-
     const { userId, projectId, contractIndex, empresaId } = req.query as { userId?: string; projectId?: string; contractIndex?: string; empresaId?: string };
-
-    const user = await User.findOne({ _id: userId, tenantId: req.tenantObjectId }).populate({ path: "metadata.projects", model: UserProject }).lean();
-    if (!user) {
-      res.status(404).json({ error: "Empleado no encontrado" });
-      return;
-    }
-
-    const projects: any[] = (user as any).metadata?.projects || [];
-    const up = projects.find((p) => {
-      const pId = p?.projectId;
-      const idToCheck = typeof pId === "object" && pId ? pId._id : pId;
-      return String(idToCheck) === String(projectId);
+    const { buffer, filename } = await generarContratoPdf({
+      tenantId: String(req.tenantObjectId),
+      templateId: req.params.id,
+      userId: String(userId),
+      projectId: String(projectId),
+      contractIndex: Number(contractIndex),
+      empresaId,
     });
-    const contracts: any[] = up?.contracts || [];
-    let idx = Number(contractIndex);
-    if (!Number.isInteger(idx) || idx < 0 || idx >= contracts.length) idx = contracts.length - 1;
-    const contract: any = contracts[idx] || {};
-
-    // Empresa/Productora del PROYECTO (contratoEmpresas) → variables empresa* en la plantilla.
-    // El cliente elige con cuál descargar (empresaId); si no llega o no pertenece al proyecto, se usa la primera.
-    const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).lean();
-    const empresas: any[] = (project as any)?.contratoEmpresas || [];
-    const empresasIds = empresas.map((e) => String(e));
-    // Si el proyecto no tiene empresas configuradas, el modal ofrece todas las del ABM → se acepta cualquiera.
-    const empresaIdValida = !!empresaId && (empresasIds.length === 0 || empresasIds.includes(String(empresaId)));
-    const chosenId = empresaIdValida ? String(empresaId) : empresasIds[0];
-    const empresa = chosenId ? await Company.findById(chosenId).lean() : null;
-    const data = await buildEmployeeDocData(user, up, contract, empresa);
-
-    // Si la plantilla lleva membrete, se encabeza/firma con la empresa elegida al descargar.
-    const membrete = item.usaMembrete && empresa ? empresaToMembrete(empresa) : undefined;
-    const buffer = await buildDocPdf(item.content, data, membrete);
-    const baseName = buildDocFileName({ tipo: "Contrato", user, up, contract });
-    sendPdf(res, buffer, baseName);
-  } catch (error) {
+    sendPdf(res, buffer, filename);
+  } catch (error: any) {
     console.error("Download filled ContratoFrame error:", error);
-    res.status(500).json({ error: "No se pudo generar el contrato con los datos." });
+    const msg = String(error?.message || "");
+    const status = /no encontrado/i.test(msg) ? 404 : /no tiene contenido redactado/i.test(msg) ? 400 : 500;
+    res.status(status).json({ error: msg || "No se pudo generar el contrato con los datos." });
   }
 });
 
