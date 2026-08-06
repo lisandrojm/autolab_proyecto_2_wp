@@ -66,6 +66,7 @@ interface IContract {
     firmaEmpresaContratoId?: Types.ObjectId | string | null;
     firmaEmpresaReleaseId?: Types.ObjectId | string | null;
     firmaGeneradoAt?: Date;
+    firmaReleasesGeneradoAt?: Date;
     firmaEnviadaAt?: Date;
     areaShiftAssignments?: {
         areaId: Types.ObjectId | string;

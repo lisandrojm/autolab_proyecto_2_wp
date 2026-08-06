@@ -8,23 +8,34 @@ export interface FirmaDigitalConfig {
   outboxCarpeta: string | null;
 }
 
-export interface GenerarFirmaPayload {
+export interface GenerarContratoPayload {
   projectId: string;
   userId: string;
   contractIndex: number;
   contratoTemplateId: string;
-  releaseIds: string[];
   empresaContratoId?: string;
-  empresaReleaseId?: string;
   /** Trámite de origen del contrato — si es "constancia_cuit" se etiqueta el nombre del archivo. */
   tramite?: "alta_temprana_afip" | "constancia_cuit";
 }
 
-export interface GenerarFirmaResult {
+export interface GenerarContratoResult {
   firmaContratoUrl: string;
   firmaContratoNombre: string;
-  firmaReleases: { releaseId: string; nombre: string; url: string }[];
   firmaGeneradoAt: string;
+}
+
+export interface GenerarReleasePayload {
+  projectId: string;
+  userId: string;
+  contractIndex: number;
+  releaseIds: string[];
+  empresaReleaseId?: string;
+  tramite?: "alta_temprana_afip" | "constancia_cuit";
+}
+
+export interface GenerarReleaseResult {
+  firmaReleases: { releaseId: string; nombre: string; url: string }[];
+  firmaReleasesGeneradoAt: string;
 }
 
 export interface EnviarFirmaTarget {
@@ -51,8 +62,15 @@ export const firmaDigitalAPI = {
     return data;
   },
 
-  async generar(payload: GenerarFirmaPayload): Promise<GenerarFirmaResult> {
-    const { data } = await axios.post("/firma-digital/generar", payload);
+  /** Botón "Generar" de la columna Contrato — independiente del de Release. */
+  async generarContrato(payload: GenerarContratoPayload): Promise<GenerarContratoResult> {
+    const { data } = await axios.post("/firma-digital/generar-contrato", payload);
+    return data;
+  },
+
+  /** Botón "Generar" de la columna Release — independiente del de Contrato. */
+  async generarRelease(payload: GenerarReleasePayload): Promise<GenerarReleaseResult> {
+    const { data } = await axios.post("/firma-digital/generar-release", payload);
     return data;
   },
 

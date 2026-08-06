@@ -816,19 +816,24 @@ const GenerarMenu: React.FC<{ empresas: EmpresaOption[]; onGenerar: (empresaId?:
   );
 };
 
+/** Si el contrato ya tiene todo lo que se puede generar de este tipo — usado para decidir si la fila
+ *  se puede seleccionar para "Enviar a firmar" (hacen falta AMBOS: contrato y release(s)). */
+const contratoGenerado = (r: ContractOverviewRow): boolean => !!r.firmaGeneradoAt;
+const releasesGenerados = (r: ContractOverviewRow, activeReleases: Release[]): boolean => activeReleases.length === 0 || !!r.firmaReleasesGeneradoAt;
+
 /**
- * Celda "Contrato" de la pestaña Firma digital: paso 1 (botón "Generar", con menú de empresa si el
- * proyecto tiene más de una — dispara la generación del Contrato Y de los Release(s) juntos) → paso
- * 2, una vez generado, ícono de PDF (ver) + descargar para revisar el PDF antes de mandarlo a firmar
- * (el envío en sí es la acción bulk "Enviar a firmar"). El estado "Enviado" se muestra acá.
+ * Celda "Contrato" de la pestaña Firma digital: botón "Generar" independiente (con menú de empresa si
+ * el proyecto tiene más de una) → una vez generado, ícono de PDF (ver) + descargar para revisar el PDF
+ * antes de mandarlo a firmar (el envío en sí es la acción bulk "Enviar a firmar", habilitada recién
+ * cuando también se generó el/los release(s) — ver `FirmaReleaseCell`). El estado "Enviado" se
+ * muestra acá.
  */
 const FirmaContratoCell: React.FC<{
   record: ContractOverviewRow;
   contratoFrames: ContratoFrameItem[];
   allEstados: InfoItem[];
-  activeReleases: Release[];
   onGenerado: () => void;
-}> = ({ record, contratoFrames, allEstados, activeReleases, onGenerado }) => {
+}> = ({ record, contratoFrames, allEstados, onGenerado }) => {
   const [generando, setGenerando] = useState(false);
   const [descargando, setDescargando] = useState(false);
   const template = findTemplate(record as unknown as Contract, contratoFrames);
@@ -845,19 +850,17 @@ const FirmaContratoCell: React.FC<{
     if (!template) return;
     setGenerando(true);
     try {
-      await firmaDigitalAPI.generar({
+      await firmaDigitalAPI.generarContrato({
         projectId: record.projectId,
         userId: record.userId,
         contractIndex: record.contractIndex,
         contratoTemplateId: template._id,
-        releaseIds: activeReleases.map((r) => r._id),
         empresaContratoId: empresaId,
-        empresaReleaseId: empresaId,
         tramite,
       });
       onGenerado();
     } catch (e: any) {
-      sweetAlert.error("Error", e?.response?.data?.error || "No se pudieron generar los documentos.");
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo generar el contrato.");
     } finally {
       setGenerando(false);
     }
@@ -875,7 +878,7 @@ const FirmaContratoCell: React.FC<{
     }
   };
 
-  if (!record.firmaGeneradoAt) {
+  if (!contratoGenerado(record)) {
     return (
       <div className="flex items-center min-w-[120px]" onClick={(e) => e.stopPropagation()}>
         {puedeGenerar ? (
@@ -916,12 +919,46 @@ const FirmaContratoCell: React.FC<{
 };
 
 /**
- * Celda "Release" de la pestaña Firma digital: read-only (se genera junto con el Contrato desde la
- * celda de al lado) — ícono de PDF (ver) + descargar por cada release activo ya generado.
+ * Celda "Release" de la pestaña Firma digital: botón "Generar" independiente (mismo patrón que
+ * Contrato, con menú de empresa si aplica) → una vez generados, ícono de PDF (ver) + descargar por
+ * cada release activo.
  */
-const FirmaReleaseCell: React.FC<{ record: ContractOverviewRow; activeReleases: Release[] }> = ({ record, activeReleases }) => {
+const FirmaReleaseCell: React.FC<{
+  record: ContractOverviewRow;
+  contratoFrames: ContratoFrameItem[];
+  allEstados: InfoItem[];
+  activeReleases: Release[];
+  onGenerado: () => void;
+}> = ({ record, contratoFrames, allEstados, activeReleases, onGenerado }) => {
+  const [generando, setGenerando] = useState(false);
   const [descargando, setDescargando] = useState<string | null>(null);
   const firmaReleases = record.firmaReleases || [];
+  const tramite = estadoImpositivoDelContrato(record as unknown as Contract, contratoFrames, allEstados)?.data?.tipoImpositivo as TipoImpositivo | undefined;
+
+  const savedReleaseEmpresaId = record.empresaReleaseId || "";
+  const releaseEmpresas = record.releaseEmpresas || [];
+  const empresasParaGenerar: EmpresaOption[] = savedReleaseEmpresaId
+    ? [{ id: savedReleaseEmpresaId, label: record.nombre_empresa_release || releaseEmpresas.find((e) => e.id === savedReleaseEmpresaId)?.label || savedReleaseEmpresaId }]
+    : releaseEmpresas;
+
+  const generar = async (empresaId?: string) => {
+    setGenerando(true);
+    try {
+      await firmaDigitalAPI.generarRelease({
+        projectId: record.projectId,
+        userId: record.userId,
+        contractIndex: record.contractIndex,
+        releaseIds: activeReleases.map((r) => r._id),
+        empresaReleaseId: empresaId,
+        tramite,
+      });
+      onGenerado();
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudieron generar los release(s).");
+    } finally {
+      setGenerando(false);
+    }
+  };
 
   const descargar = async (url: string, nombre: string) => {
     setDescargando(url);
@@ -934,15 +971,16 @@ const FirmaReleaseCell: React.FC<{ record: ContractOverviewRow; activeReleases: 
     }
   };
 
-  if (!record.firmaGeneradoAt) {
-    return (
-      <span className="text-xs text-gray-400" title="Se genera junto con el contrato">
-        —
-      </span>
-    );
-  }
-  if (firmaReleases.length === 0) {
+  if (activeReleases.length === 0) {
     return <span className="text-xs text-gray-400">—</span>;
+  }
+
+  if (!releasesGenerados(record, activeReleases)) {
+    return (
+      <div className="flex items-center min-w-[120px]" onClick={(e) => e.stopPropagation()}>
+        <GenerarMenu empresas={empresasParaGenerar} onGenerar={generar} generando={generando} />
+      </div>
+    );
   }
 
   return (
@@ -1067,8 +1105,9 @@ export const ContractBulkFirmaTab: React.FC<{
       else n.add(k);
       return n;
     });
-  // Solo se pueden marcar (y enviar) los contratos ya generados y todavía no enviados.
-  const enviables = useMemo(() => filtered.filter((r) => !!r.firmaGeneradoAt && !r.firmaEnviadaAt), [filtered]);
+  // Solo se pueden marcar (y enviar) los contratos con Contrato Y Release(s) ya generados (botones
+  // independientes) y todavía no enviados.
+  const enviables = useMemo(() => filtered.filter((r) => contratoGenerado(r) && releasesGenerados(r, activeReleases) && !r.firmaEnviadaAt), [filtered, activeReleases]);
   const allSel = enviables.length > 0 && enviables.every((r) => selected.has(rowKey(r)));
   const toggleAll = () =>
     setSelected((prev) => {
@@ -1187,7 +1226,7 @@ export const ContractBulkFirmaTab: React.FC<{
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {filtered.map((r) => {
                   const tipo = tipoDelRow(r);
-                  const enviable = !!r.firmaGeneradoAt && !r.firmaEnviadaAt;
+                  const enviable = contratoGenerado(r) && releasesGenerados(r, activeReleases) && !r.firmaEnviadaAt;
                   return (
                     <tr key={rowKey(r)} className={`hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? "bg-blue-50/50 dark:bg-blue-900/10" : ""}`}>
                       <td className="px-4 py-3">
@@ -1196,7 +1235,7 @@ export const ContractBulkFirmaTab: React.FC<{
                           checked={selected.has(rowKey(r))}
                           disabled={!enviable}
                           onChange={() => toggleSel(rowKey(r))}
-                          title={enviable ? "Incluir en el envío a firmar" : r.firmaEnviadaAt ? "Ya se envió a firmar" : 'Generá primero los documentos ("Generar")'}
+                          title={enviable ? "Incluir en el envío a firmar" : r.firmaEnviadaAt ? "Ya se envió a firmar" : 'Generá primero el Contrato y el/los Release(s) ("Generar")'}
                           className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                         />
                       </td>
@@ -1235,10 +1274,10 @@ export const ContractBulkFirmaTab: React.FC<{
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <FirmaContratoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onGenerado={load} />
+                        <FirmaContratoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} onGenerado={load} />
                       </td>
                       <td className="px-4 py-3">
-                        <FirmaReleaseCell record={r} activeReleases={activeReleases} />
+                        <FirmaReleaseCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onGenerado={load} />
                       </td>
                       <td className="px-4 py-3">
                         <p className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{r.userName}</p>

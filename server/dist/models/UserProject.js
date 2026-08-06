@@ -69,6 +69,7 @@ const contractSchema = new Schema({
     firmaEmpresaContratoId: { type: Schema.Types.ObjectId, ref: "Company" },
     firmaEmpresaReleaseId: { type: Schema.Types.ObjectId, ref: "Company" },
     firmaGeneradoAt: { type: Date },
+    firmaReleasesGeneradoAt: { type: Date },
     firmaEnviadaAt: { type: Date },
     areaShiftAssignments: [
         {

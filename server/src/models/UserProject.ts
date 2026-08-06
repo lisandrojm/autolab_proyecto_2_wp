@@ -74,13 +74,16 @@ interface IContract {
   // Firma Digital: Contrato/Release generados (paso 1, "Generar") — se guardan en disco local hasta
   // que "Enviar a firmar" (paso 2) los sube a la carpeta Outbox de Dropbox. Separado a propósito de
   // "generar" vs "enviar": la empresa se elige al generar, y el usuario quiere poder revisar el PDF
-  // (ícono de ojito) antes de mandarlo a firmar.
+  // (ícono de ojito) antes de mandarlo a firmar. Contrato y Release(s) se generan con botones
+  // INDEPENDIENTES (`firmaGeneradoAt` / `firmaReleasesGeneradoAt` por separado) — recién cuando ambos
+  // están listos se puede seleccionar la fila para "Enviar a firmar".
   firmaContratoUrl?: string;
   firmaContratoNombre?: string;
   firmaReleases?: { releaseId: string; nombre: string; url: string }[];
   firmaEmpresaContratoId?: Types.ObjectId | string | null;
   firmaEmpresaReleaseId?: Types.ObjectId | string | null;
   firmaGeneradoAt?: Date;
+  firmaReleasesGeneradoAt?: Date;
   firmaEnviadaAt?: Date;
   areaShiftAssignments?: {
     areaId: Types.ObjectId | string;
@@ -172,6 +175,7 @@ const contractSchema = new Schema<IContract>(
     firmaEmpresaContratoId: { type: Schema.Types.ObjectId, ref: "Company" },
     firmaEmpresaReleaseId: { type: Schema.Types.ObjectId, ref: "Company" },
     firmaGeneradoAt: { type: Date },
+    firmaReleasesGeneradoAt: { type: Date },
     firmaEnviadaAt: { type: Date },
     areaShiftAssignments: [
       {

@@ -42,30 +42,29 @@ router.get("/config", async (_req: AuthenticatedRequest & TenantRequest, res) =>
   }
 });
 
-const generarSchema = z.object({
+const generarContratoSchema = z.object({
   projectId: z.string().min(1),
   userId: z.string().min(1),
   contractIndex: z.number().int().min(0),
   contratoTemplateId: z.string().min(1),
-  releaseIds: z.array(z.string().min(1)).default([]),
   empresaContratoId: z.string().optional(),
-  empresaReleaseId: z.string().optional(),
   // Trámite de origen del contrato (ya lo calcula el frontend con estadoImpositivoDelContrato) — si es
   // "constancia_cuit" se etiqueta el nombre del archivo para identificar el trámite en Dropbox.
   tramite: z.enum(["alta_temprana_afip", "constancia_cuit"]).optional(),
 });
 
-// POST /firma-digital/generar - paso 1: arma el PDF del Contrato + los Release(s) elegidos y los
-// guarda en disco local (mismo patrón que altaDocumentoUrl) para poder revisarlos (ícono de ojito)
-// ANTES de mandarlos a firmar — separado a propósito de "enviar" (paso 2).
-router.post("/generar", async (req: AuthenticatedRequest & TenantRequest, res) => {
+// POST /firma-digital/generar-contrato - botón "Generar" de la columna Contrato: arma el PDF del
+// Contrato y lo guarda en disco local (mismo patrón que altaDocumentoUrl) para poder revisarlo (ícono
+// de PDF) ANTES de mandarlo a firmar. Independiente de "generar-release" — cada documento se genera
+// por separado, y recién cuando ambos están listos la fila se puede seleccionar para "Enviar a firmar".
+router.post("/generar-contrato", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const parsed = generarSchema.safeParse(req.body);
+    const parsed = generarContratoSchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ error: "Datos inválidos para generar los documentos." });
+      res.status(400).json({ error: "Datos inválidos para generar el contrato." });
       return;
     }
-    const { projectId, userId, contractIndex, contratoTemplateId, releaseIds, empresaContratoId, empresaReleaseId, tramite } = parsed.data;
+    const { projectId, userId, contractIndex, contratoTemplateId, empresaContratoId, tramite } = parsed.data;
     const tenantId = String(req.tenantObjectId);
     const sufijoTramite = tramite === "constancia_cuit" ? "_Constancia_de_Cuit" : "";
 
@@ -82,6 +81,57 @@ router.post("/generar", async (req: AuthenticatedRequest & TenantRequest, res) =
     const contratoFilename = `${contratoPdf.filename}${sufijoTramite}.pdf`;
     fs.writeFileSync(path.join(dir, contratoFilename), contratoPdf.buffer);
 
+    const firmaContratoUrl = `/storage/${tenantId}/${userId}/firma/${contratoFilename}`;
+    const firmaGeneradoAt = new Date();
+    up.contracts[contractIndex] = {
+      ...(up.contracts[contractIndex] as any).toObject(),
+      firmaContratoUrl,
+      firmaContratoNombre: contratoFilename,
+      firmaEmpresaContratoId: empresaContratoId || null,
+      firmaGeneradoAt,
+      firmaEnviadaAt: null,
+    } as any;
+    up.markModified("contracts");
+    await up.save();
+
+    res.json({ firmaContratoUrl, firmaContratoNombre: contratoFilename, firmaGeneradoAt });
+  } catch (error: any) {
+    console.error("Firma digital generar-contrato error:", error);
+    res.status(500).json({ error: error?.message || "No se pudo generar el contrato." });
+  }
+});
+
+const generarReleaseSchema = z.object({
+  projectId: z.string().min(1),
+  userId: z.string().min(1),
+  contractIndex: z.number().int().min(0),
+  releaseIds: z.array(z.string().min(1)).min(1),
+  empresaReleaseId: z.string().optional(),
+  tramite: z.enum(["alta_temprana_afip", "constancia_cuit"]).optional(),
+});
+
+// POST /firma-digital/generar-release - botón "Generar" de la columna Release: arma el PDF de cada
+// release activo y lo guarda en disco local. Independiente de "generar-contrato" (ver arriba).
+router.post("/generar-release", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const parsed = generarReleaseSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Datos inválidos para generar el/los release(s)." });
+      return;
+    }
+    const { projectId, userId, contractIndex, releaseIds, empresaReleaseId, tramite } = parsed.data;
+    const tenantId = String(req.tenantObjectId);
+    const sufijoTramite = tramite === "constancia_cuit" ? "_Constancia_de_Cuit" : "";
+
+    const up = await UserProject.findOne({ projectId, userId });
+    if (!up || contractIndex < 0 || contractIndex >= up.contracts.length) {
+      res.status(404).json({ error: "Contrato no encontrado." });
+      return;
+    }
+
+    const dir = path.join(__dirname, "../../storage", tenantId, userId, "firma");
+    fs.mkdirSync(dir, { recursive: true });
+
     const firmaReleases: { releaseId: string; nombre: string; url: string }[] = [];
     for (const releaseId of releaseIds) {
       const releasePdf = await generarReleasePdf({ tenantId, releaseId, userId, projectId, contractIndex, empresaId: empresaReleaseId });
@@ -90,24 +140,21 @@ router.post("/generar", async (req: AuthenticatedRequest & TenantRequest, res) =
       firmaReleases.push({ releaseId, nombre: releaseFilename, url: `/storage/${tenantId}/${userId}/firma/${releaseFilename}` });
     }
 
-    const generadoAt = new Date();
+    const firmaReleasesGeneradoAt = new Date();
     up.contracts[contractIndex] = {
       ...(up.contracts[contractIndex] as any).toObject(),
-      firmaContratoUrl: `/storage/${tenantId}/${userId}/firma/${contratoFilename}`,
-      firmaContratoNombre: contratoFilename,
       firmaReleases,
-      firmaEmpresaContratoId: empresaContratoId || null,
       firmaEmpresaReleaseId: empresaReleaseId || null,
-      firmaGeneradoAt: generadoAt,
+      firmaReleasesGeneradoAt,
       firmaEnviadaAt: null,
     } as any;
     up.markModified("contracts");
     await up.save();
 
-    res.json({ firmaContratoUrl: `/storage/${tenantId}/${userId}/firma/${contratoFilename}`, firmaContratoNombre: contratoFilename, firmaReleases, firmaGeneradoAt: generadoAt });
+    res.json({ firmaReleases, firmaReleasesGeneradoAt });
   } catch (error: any) {
-    console.error("Firma digital generar error:", error);
-    res.status(500).json({ error: error?.message || "No se pudieron generar los documentos." });
+    console.error("Firma digital generar-release error:", error);
+    res.status(500).json({ error: error?.message || "No se pudieron generar los release(s)." });
   }
 });
 
