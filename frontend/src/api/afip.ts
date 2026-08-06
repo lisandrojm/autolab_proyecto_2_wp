@@ -23,6 +23,8 @@ export interface ResultadoConsultaPadron {
   denominacion?: string;
   error?: string;
   contratosActualizados: number;
+  /** true si quedó archivada en Dropbox (carpeta "Constancia de cuit"); si es "activo" pero esto es false/undefined, falta ese paso — ver dropboxCfg/carpetaConstancia en el server. */
+  dropboxSubido?: boolean;
 }
 
 export interface ResultadoConsultaPadronBulk {

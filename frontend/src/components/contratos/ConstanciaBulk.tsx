@@ -36,25 +36,31 @@ const fmtFechaHora = (iso?: string): string => {
 /** Hoy en Argentina como "YYYY-MM-DD" (el navegador puede estar en otro huso). */
 const hoyIso = (): string => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date());
 
-export type EstadoConstancia = "activo_afip" | "inactivo_afip" | "vigente" | "vencida" | "sin_fecha" | "faltante";
+export type EstadoConstancia = "activo_afip" | "activo_sin_archivar" | "inactivo_afip" | "vigente" | "vencida" | "sin_fecha" | "faltante";
 
 /**
  * Estado de la constancia de una fila. La consulta al Padrón de AFIP es la fuente de verdad cuando
- * existe (`activo_afip`/`inactivo_afip`); si todavía no se consultó, cae al criterio viejo basado en
- * el PDF cargado a mano (`vigente`/`vencida`/`sin_fecha`/`faltante`), para no perder el historial.
+ * existe (`activo_afip`/`activo_sin_archivar`/`inactivo_afip`); si todavía no se consultó, cae al
+ * criterio viejo basado en el PDF cargado a mano (`vigente`/`vencida`/`sin_fecha`/`faltante`), para no
+ * perder el historial.
+ *
+ * "Activo en AFIP" solo no alcanza: el trámite se da por terminado recién cuando ese resultado quedó
+ * archivado en Dropbox (constanciaAfipDropboxSubidaAt) — es lo que dispara, del otro lado, el avance
+ * automático de estado a "Envío de documentación" (estadoDropboxCronService.ts vigila esa carpeta).
  */
 export const estadoConstancia = (row: ContractOverviewRow, hoy: string = hoyIso()): EstadoConstancia => {
-  if (row.constanciaAfipEstado === "activo") return "activo_afip";
+  if (row.constanciaAfipEstado === "activo") return row.constanciaAfipDropboxSubidaAt ? "activo_afip" : "activo_sin_archivar";
   if (row.constanciaAfipEstado === "inactivo") return "inactivo_afip";
   if (!row.altaDocumentoUrl) return "faltante";
   if (!row.constanciaVigenciaHasta) return "sin_fecha";
   return row.constanciaVigenciaHasta >= hoy ? "vigente" : "vencida";
 };
 
-/** Una constancia hay que (re)pedirla cuando falta, ya venció, o AFIP la dio como inactiva. */
+/** Una constancia hay que (re)pedirla cuando falta, ya venció, AFIP la dio como inactiva, o quedó
+ *  activa pero sin poder archivarse en Dropbox (hay que reintentar el "Validar CUIT"). */
 export const constanciaPendiente = (row: ContractOverviewRow, hoy: string = hoyIso()): boolean => {
   const e = estadoConstancia(row, hoy);
-  return e === "faltante" || e === "vencida" || e === "inactivo_afip";
+  return e === "faltante" || e === "vencida" || e === "inactivo_afip" || e === "activo_sin_archivar";
 };
 
 const BADGE: Record<EstadoConstancia, { texto: (row: ContractOverviewRow) => string; clase: string; icono: typeof faCheck }> = {
@@ -62,6 +68,11 @@ const BADGE: Record<EstadoConstancia, { texto: (row: ContractOverviewRow) => str
     texto: (r) => `Activo en AFIP${r.constanciaAfipConsultadaAt ? ` (${fmtFechaHora(r.constanciaAfipConsultadaAt)})` : ""}`,
     clase: "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800",
     icono: faCheck,
+  },
+  activo_sin_archivar: {
+    texto: () => "Activo en AFIP — falta archivar en Dropbox",
+    clase: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800",
+    icono: faTriangleExclamation,
   },
   inactivo_afip: {
     texto: () => "Inactivo en AFIP",
@@ -186,9 +197,13 @@ export const BotonConsultarAfipBulk: React.FC<{
     try {
       const targets = pendientes.map((r) => ({ projectId: r.projectId, userId: r.userId, contractIndex: r.contractIndex }));
       const resp = await afipAPI.consultarPadronBulk(targets);
-      const activos = resp.resultados.filter((r) => r.estado === "activo").length;
+      const activos = resp.resultados.filter((r) => r.estado === "activo");
       const conError = resp.resultados.filter((r) => r.error).length;
-      sweetAlert.success("Consulta completa", `${resp.consultados} CUIT(s) consultado(s) — ${activos} activo(s) en AFIP.${conError > 0 ? ` ${conError} con error.` : ""}`);
+      const sinArchivar = activos.filter((r) => !r.dropboxSubido).length;
+      sweetAlert.success(
+        "Consulta completa",
+        `${resp.consultados} CUIT(s) consultado(s) — ${activos.length} activo(s) en AFIP.${conError > 0 ? ` ${conError} con error.` : ""}${sinArchivar > 0 ? ` ${sinArchivar} activo(s) no se pudieron archivar en Dropbox — revisá la conexión y la carpeta "Constancia de cuit".` : ""}`,
+      );
       onConsultado();
     } catch (e: any) {
       sweetAlert.error("Error", e?.response?.data?.error || "No se pudo consultar AFIP.");
@@ -231,8 +246,10 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
       const resultado = resp.resultados[0];
       if (resultado?.error) {
         sweetAlert.error("No se pudo validar", resultado.error);
+      } else if (resultado?.estado === "activo" && resultado.dropboxSubido) {
+        sweetAlert.success("CUIT activo y archivado", `${cuit} figura activo en el Padrón de AFIP y quedó archivado en Dropbox — el trámite queda completo.`);
       } else if (resultado?.estado === "activo") {
-        sweetAlert.success("CUIT activo", `${cuit} figura activo en el Padrón de AFIP.`);
+        sweetAlert.warning("Activo, pero falta archivar", `${cuit} figura activo en el Padrón de AFIP, pero no se pudo archivar el resultado en Dropbox (revisá la conexión y la carpeta "Constancia de cuit"). El trámite sigue pendiente.`);
       } else {
         sweetAlert.warning("CUIT inactivo", `${cuit} figura inactivo en el Padrón de AFIP.`);
       }

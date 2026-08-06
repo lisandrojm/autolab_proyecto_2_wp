@@ -94,6 +94,8 @@ export interface ContractOverviewRow {
   /** Resultado de la última consulta al Padrón de AFIP — reemplaza al PDF como fuente de verdad. */
   constanciaAfipEstado?: "activo" | "inactivo" | "desconocido" | "";
   constanciaAfipConsultadaAt?: string;
+  /** Recién con esto el trámite se considera terminado (ver ConstanciaBulk.tsx estadoConstancia). */
+  constanciaAfipDropboxSubidaAt?: string;
   empresaContratoId?: string;
   empresaReleaseId?: string;
   nombre_empresa_contrato?: string;

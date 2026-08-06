@@ -64,6 +64,10 @@ interface IContract {
   constanciaAfipEstado?: "activo" | "inactivo" | "desconocido";
   constanciaAfipConsultadaAt?: Date;
   constanciaAfipRaw?: any;
+  // Recién cuando el resultado de la consulta queda archivado en Dropbox (carpeta "Constancia de
+  // cuit") se considera terminado el trámite: es lo que dispara la transición automática de estado
+  // (estadoDropboxCronService.ts). constanciaAfipEstado "activo" sin esto todavía no alcanza.
+  constanciaAfipDropboxSubidaAt?: Date;
   areaShiftAssignments?: {
     areaId: Types.ObjectId | string;
     shiftIds: (Types.ObjectId | string)[];
@@ -139,6 +143,7 @@ const contractSchema = new Schema<IContract>(
     constanciaAfipEstado: { type: String, enum: ["activo", "inactivo", "desconocido"] },
     constanciaAfipConsultadaAt: { type: Date },
     constanciaAfipRaw: { type: Schema.Types.Mixed },
+    constanciaAfipDropboxSubidaAt: { type: Date },
     areaShiftAssignments: [
       {
         areaId: { type: Schema.Types.ObjectId, ref: "Area" },
