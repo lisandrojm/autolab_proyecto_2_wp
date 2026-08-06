@@ -262,6 +262,7 @@ router.post("/consulta-padron/bulk", async (req, res) => {
                     }
                     let contratosActualizados = 0;
                     let dropboxSubido;
+                    let dropboxError;
                     for (const t of matches) {
                         const key = `${t.projectId}|${t.userId}`;
                         let up = docsCache.get(key);
@@ -277,29 +278,41 @@ router.post("/consulta-padron/bulk", async (req, res) => {
                         // avance automático de estado (estadoDropboxCronService.ts vigila esa misma carpeta), y
                         // no tiene sentido destrabar ese paso si la persona figura inactiva.
                         let subidaAt;
-                        if (resultado.estado === "activo" && dropboxCfg && carpetaConstancia) {
-                            try {
-                                const user = userById.get(t.userId);
-                                const contract = up.contracts[t.contractIndex];
-                                const nombreArchivo = buildDocFileName({ tipo: "ConstanciaCUIT", user, up, contract, docName: "ValidacionAFIP" });
-                                const contenido = Buffer.from(JSON.stringify({
-                                    cuit,
-                                    estado: resultado.estado,
-                                    encontrado: resultado.encontrado,
-                                    denominacion: resultado.denominacion,
-                                    consultadoEn: new Date().toISOString(),
-                                    persona: { userId: t.userId, nombre: user?.firstName, apellido: user?.lastName },
-                                    proyecto: { id: t.projectId, nombre: up.nombre_proyecto },
-                                    contrato: { index: t.contractIndex, fechaAlta: contract?.fecha_alta_contrato, fechaBaja: contract?.fecha_baja_contrato },
-                                    raw: resultado.raw,
-                                }, null, 2));
-                                await uploadFile(tenantId, dropboxCfg, `${carpetaConstancia.replace(/\/$/, "")}/${nombreArchivo}.json`, contenido);
-                                subidaAt = new Date();
-                                dropboxSubido = true;
+                        if (resultado.estado === "activo") {
+                            if (!dropboxCfg) {
+                                dropboxSubido = false;
+                                dropboxError = "Dropbox no está conectado para esta organización.";
                             }
-                            catch (e) {
-                                console.error(`AFIP: no se pudo archivar la constancia en Dropbox (CUIT ${cuit}):`, e);
-                                dropboxSubido = dropboxSubido ?? false;
+                            else if (!carpetaConstancia) {
+                                dropboxSubido = false;
+                                dropboxError = 'No se encontró ninguna carpeta de Dropbox configurada como "Constancia de cuit" en Documentos → Configurar transición automática.';
+                            }
+                            else {
+                                try {
+                                    const user = userById.get(t.userId);
+                                    const contract = up.contracts[t.contractIndex];
+                                    const nombreArchivo = buildDocFileName({ tipo: "ConstanciaCUIT", user, up, contract, docName: "ValidacionAFIP" });
+                                    const contenido = Buffer.from(JSON.stringify({
+                                        cuit,
+                                        estado: resultado.estado,
+                                        encontrado: resultado.encontrado,
+                                        denominacion: resultado.denominacion,
+                                        consultadoEn: new Date().toISOString(),
+                                        persona: { userId: t.userId, nombre: user?.firstName, apellido: user?.lastName },
+                                        proyecto: { id: t.projectId, nombre: up.nombre_proyecto },
+                                        contrato: { index: t.contractIndex, fechaAlta: contract?.fecha_alta_contrato, fechaBaja: contract?.fecha_baja_contrato },
+                                        raw: resultado.raw,
+                                    }, null, 2));
+                                    await uploadFile(tenantId, dropboxCfg, `${carpetaConstancia.replace(/\/$/, "")}/${nombreArchivo}.json`, contenido);
+                                    subidaAt = new Date();
+                                    dropboxSubido = true;
+                                }
+                                catch (e) {
+                                    const detalle = e?.response?.data ? JSON.stringify(e.response.data) : e?.message || String(e);
+                                    console.error(`AFIP: no se pudo archivar la constancia en Dropbox (CUIT ${cuit}, carpeta "${carpetaConstancia}"):`, detalle);
+                                    dropboxSubido = dropboxSubido ?? false;
+                                    dropboxError = `No se pudo subir a Dropbox (carpeta "${carpetaConstancia}"): ${detalle}`;
+                                }
                             }
                         }
                         up.contracts[t.contractIndex] = {
@@ -315,7 +328,7 @@ router.post("/consulta-padron/bulk", async (req, res) => {
                     // Se devuelve el raw completo + con qué CUIT representada/ambiente se consultó — para poder
                     // ver en el momento, desde la UI, exactamente qué se mandó y qué contestó AFIP, sin
                     // necesitar acceso a los logs del server ni a la base.
-                    resultados.push({ cuit, estado: resultado.estado, encontrado: resultado.encontrado, denominacion: resultado.denominacion, contratosActualizados, dropboxSubido, cuitRepresentada: cfg.cuitRepresentada, ambiente: cfg.ambiente, raw: resultado.raw, faultCode: resultado.faultCode, faultString: resultado.faultString });
+                    resultados.push({ cuit, estado: resultado.estado, encontrado: resultado.encontrado, denominacion: resultado.denominacion, contratosActualizados, dropboxSubido, dropboxError, cuitRepresentada: cfg.cuitRepresentada, ambiente: cfg.ambiente, raw: resultado.raw, faultCode: resultado.faultCode, faultString: resultado.faultString });
                 }
                 catch (e) {
                     resultados.push({ cuit, error: e?.message || "Error al consultar AFIP", contratosActualizados: 0 });

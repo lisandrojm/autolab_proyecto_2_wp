@@ -212,7 +212,7 @@ export const BotonConsultarAfipBulk: React.FC<{
       const sinArchivar = activos.filter((r) => !r.dropboxSubido).length;
       sweetAlert.success(
         "Consulta completa",
-        `${resp.consultados} CUIT(s) consultado(s) — ${activos.length} activo(s) en AFIP.${conError > 0 ? ` ${conError} con error.` : ""}${sinArchivar > 0 ? ` ${sinArchivar} activo(s) no se pudieron archivar en Dropbox — revisá la conexión y la carpeta "Constancia de cuit".` : ""}`,
+        `${resp.consultados} CUIT(s) consultado(s) — ${activos.length} activo(s) en AFIP.${conError > 0 ? ` ${conError} con error.` : ""}${sinArchivar > 0 ? ` ${sinArchivar} activo(s) no se pudieron archivar en Dropbox — tocá "Validar" en cada fila para ver el motivo puntual.` : ""}`,
       );
       onConsultado();
     } catch (e: any) {
@@ -264,7 +264,7 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
       } else if (resultado?.estado === "activo" && resultado.dropboxSubido) {
         sweetAlert.success("CUIT activo y archivado", `${cuit} figura activo en el Padrón de AFIP y quedó archivado en Dropbox — el trámite queda completo.`);
       } else if (resultado?.estado === "activo") {
-        sweetAlert.warning("Activo, pero falta archivar", `${cuit} figura activo en el Padrón de AFIP, pero no se pudo archivar el resultado en Dropbox (revisá la conexión y la carpeta "Constancia de cuit"). El trámite sigue pendiente.`);
+        sweetAlert.warningAlert("Activo, pero falta archivar", `${cuit} figura activo en el Padrón de AFIP, pero no se pudo archivar el resultado en Dropbox. El trámite sigue pendiente.\n\nMotivo: ${resultado.dropboxError || "no se informó (revisá los Logs de AFIP)."}`);
       } else if (resultado?.estado === "inactivo") {
         sweetAlert.warning("CUIT inactivo", `${cuit} figura inactivo en el Padrón de AFIP.`);
       } else {

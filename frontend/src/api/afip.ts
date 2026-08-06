@@ -56,6 +56,8 @@ export interface ResultadoConsultaPadron {
   contratosActualizados: number;
   /** true si quedó archivada en Dropbox (carpeta "Constancia de cuit"); si es "activo" pero esto es false/undefined, falta ese paso — ver dropboxCfg/carpetaConstancia en el server. */
   dropboxSubido?: boolean;
+  /** Por qué no se pudo archivar en Dropbox (Dropbox no conectado, carpeta no configurada, o el error real de la subida). */
+  dropboxError?: string;
   /** Con qué CUIT/ambiente del tenant se hizo la consulta — para diagnosticar sin acceso al server. */
   cuitRepresentada?: string;
   ambiente?: string;
