@@ -51,6 +51,12 @@ const tenantSchema = new Schema({
             clavePrivadaEnc: { type: String },
             ambiente: { type: String, enum: ["homologacion", "produccion"], default: "homologacion" },
             connectedAt: { type: Date },
+            servicioPadronOk: { type: Boolean },
+            servicioPadronEstado: { type: String, enum: ["ok", "no_autorizado", "error"] },
+            servicioPadronDetalle: { type: String },
+            servicioPadronFaultCode: { type: String },
+            servicioPadronFaultString: { type: String },
+            servicioPadronVerificadoAt: { type: Date },
         },
     },
     subscription: {

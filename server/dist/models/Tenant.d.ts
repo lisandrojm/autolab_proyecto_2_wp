@@ -55,6 +55,15 @@ export interface ITenant extends Document {
             clavePrivadaEnc?: string;
             ambiente?: "homologacion" | "produccion";
             connectedAt?: Date;
+            /** Resultado de la última autoconsulta de prueba contra Consulta Padrón A13 (no solo el login
+             *  WSAA) — ver `verificarServicioPadron` en afipService.ts. "connected" (arriba) no garantiza
+             *  que el servicio esté autorizado en AFIP; esto sí lo prueba. */
+            servicioPadronOk?: boolean;
+            servicioPadronEstado?: "ok" | "no_autorizado" | "error";
+            servicioPadronDetalle?: string;
+            servicioPadronFaultCode?: string;
+            servicioPadronFaultString?: string;
+            servicioPadronVerificadoAt?: Date;
         };
     };
     subscription: {

@@ -2,6 +2,7 @@ import forge from "node-forge";
 import axios from "axios";
 import { XMLParser } from "fast-xml-parser";
 import { Tenant } from "../models/Tenant.js";
+import { AfipLog } from "../models/AfipLog.js";
 import { decryptSecret } from "../utils/secretCrypto.js";
 import { normalizarCuit } from "../utils/constanciaPdf.js";
 /**
@@ -198,13 +199,35 @@ async function obtenerTicket(tenantId, cfg, service) {
     ticketCache.set(cacheKey, ticket);
     return ticket;
 }
-/** Consulta el estado de un CUIT/CUIL en el Padrón de AFIP (servicio A13). */
-export async function consultarPadron(tenantId, cfg, cuitConsultado) {
+/** Lee faultcode/faultstring reales de un SOAP Fault ya parseado (buscar() ya ignora prefijos ns). */
+function extraerFault(fault) {
+    const faultCode = buscar(fault, "faultcode");
+    const faultString = buscar(fault, "faultstring");
+    return { faultCode: faultCode != null ? String(faultCode) : undefined, faultString: faultString != null ? String(faultString) : undefined };
+}
+/** Guarda un registro persistente de cada llamado real a AFIP (nunca cert/clave) — así queda
+ *  disponible para revisar en "Logs" sin depender de haber visto el toast en el momento. Nunca
+ *  rompe el flujo real de la consulta si falla el guardado. */
+async function registrarLogAfip(entry) {
+    try {
+        await AfipLog.create(entry);
+    }
+    catch (e) {
+        console.error("AfipLog: no se pudo guardar el registro:", e);
+    }
+}
+/** Consulta el estado de un CUIT/CUIL en el Padrón de AFIP (servicio A13). `tipo` es solo para el
+ *  log persistente: "servicio_test" cuando la llama `verificarServicioPadron` (autoconsulta),
+ *  "padron" para el resto (consultas reales a terceros o a uno mismo desde "Validar CUIT"). */
+export async function consultarPadron(tenantId, cfg, cuitConsultado, opts) {
     const cuit = normalizarCuit(cuitConsultado);
     if (!cuit)
         throw new Error(`CUIT inválido: "${cuitConsultado}"`);
-    const ticket = await obtenerTicket(tenantId, cfg, PADRON_A13_SERVICE);
-    const envelope = `<?xml version="1.0" encoding="UTF-8"?>
+    const tipo = opts?.tipo || "padron";
+    let resultado;
+    try {
+        const ticket = await obtenerTicket(tenantId, cfg, PADRON_A13_SERVICE);
+        const envelope = `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:a13="http://a13.soap.ws.server.puc.sr/">
   <soapenv:Header/>
   <soapenv:Body>
@@ -216,40 +239,86 @@ export async function consultarPadron(tenantId, cfg, cuitConsultado) {
     </a13:getPersona>
   </soapenv:Body>
 </soapenv:Envelope>`;
-    const parsed = await soapPost(PADRON_A13_URL[cfg.ambiente], "", envelope);
-    const body = buscar(buscar(parsed, "Envelope"), "Body");
-    const fault = buscar(body, "Fault");
-    if (fault) {
-        // "No existe persona con el Id solicitado" es la respuesta normal para un CUIT no encontrado, no
-        // un error de comunicación — se informa como "no encontrado" en vez de tirar excepción.
-        const mensaje = JSON.stringify(fault);
-        if (/no existe persona/i.test(mensaje)) {
-            return { cuit, encontrado: false, estado: "desconocido", raw: fault };
+        const parsed = await soapPost(PADRON_A13_URL[cfg.ambiente], "", envelope);
+        const body = buscar(buscar(parsed, "Envelope"), "Body");
+        const fault = buscar(body, "Fault");
+        if (fault) {
+            // AFIP puede rechazar la consulta por varios motivos (CUIT no encontrado, servicio no
+            // autorizado para este certificado, error de formato, etc.) — todos se devuelven estructurados
+            // (nunca se tira una excepción genérica acá) para que el caller pueda inspeccionar
+            // faultCode/faultString sin parsear un mensaje de Error. Errores de transporte/parseo reales
+            // siguen tirando excepción (catch de abajo) sin cambios.
+            const { faultCode, faultString } = extraerFault(fault);
+            resultado = { cuit, encontrado: false, estado: "desconocido", faultCode, faultString, raw: fault };
         }
-        throw new Error(`Consulta Padrón rechazó la consulta: ${mensaje}`);
+        else {
+            const getPersonaResponse = buscar(body, "getPersonaResponse");
+            const getPersonaReturn = buscar(getPersonaResponse, "getPersonaReturn");
+            const persona = buscar(getPersonaReturn, "persona") ?? getPersonaReturn;
+            if (!persona) {
+                resultado = { cuit, encontrado: false, estado: "desconocido", raw: getPersonaReturn };
+            }
+            else {
+                const estadoClaveRaw = String(buscar(persona, "estadoClave") ?? "").toUpperCase();
+                const estado = estadoClaveRaw === "ACTIVO" ? "activo" : estadoClaveRaw === "INACTIVO" ? "inactivo" : "desconocido";
+                const tipoPersona = buscar(persona, "tipoPersona");
+                const datosGenerales = buscar(persona, "datosGenerales");
+                const denominacion = buscar(datosGenerales, "razonSocial") ?? [buscar(datosGenerales, "nombre"), buscar(datosGenerales, "apellido")].filter(Boolean).join(" ");
+                resultado = {
+                    cuit,
+                    encontrado: true,
+                    estado,
+                    tipoPersona: tipoPersona ? String(tipoPersona) : undefined,
+                    denominacion: denominacion ? String(denominacion) : undefined,
+                    raw: getPersonaReturn,
+                };
+            }
+        }
     }
-    const getPersonaResponse = buscar(body, "getPersonaResponse");
-    const getPersonaReturn = buscar(getPersonaResponse, "getPersonaReturn");
-    const persona = buscar(getPersonaReturn, "persona") ?? getPersonaReturn;
-    if (!persona)
-        return { cuit, encontrado: false, estado: "desconocido", raw: getPersonaReturn };
-    const estadoClaveRaw = String(buscar(persona, "estadoClave") ?? "").toUpperCase();
-    const estado = estadoClaveRaw === "ACTIVO" ? "activo" : estadoClaveRaw === "INACTIVO" ? "inactivo" : "desconocido";
-    const tipoPersona = buscar(persona, "tipoPersona");
-    const datosGenerales = buscar(persona, "datosGenerales");
-    const denominacion = buscar(datosGenerales, "razonSocial") ?? [buscar(datosGenerales, "nombre"), buscar(datosGenerales, "apellido")].filter(Boolean).join(" ");
-    return {
-        cuit,
-        encontrado: true,
-        estado,
-        tipoPersona: tipoPersona ? String(tipoPersona) : undefined,
-        denominacion: denominacion ? String(denominacion) : undefined,
-        raw: getPersonaReturn,
-    };
+    catch (e) {
+        await registrarLogAfip({ tenantId, tipo, cuitConsultado: cuit, cuitRepresentada: cfg.cuitRepresentada, ambiente: cfg.ambiente, error: e?.message || String(e) });
+        throw e;
+    }
+    await registrarLogAfip({ tenantId, tipo, cuitConsultado: cuit, cuitRepresentada: cfg.cuitRepresentada, ambiente: cfg.ambiente, encontrado: resultado.encontrado, estado: resultado.estado, faultCode: resultado.faultCode, faultString: resultado.faultString, raw: resultado.raw });
+    return resultado;
 }
-/** Valida credenciales pidiendo un ticket real — se usa al conectar, antes de guardar nada. */
+/** Valida credenciales pidiendo un ticket real — se usa al conectar, antes de guardar nada. Ojo: esto
+ *  SOLO prueba el login WSAA (que el certificado/clave son válidos); no prueba que el servicio
+ *  Consulta Padrón A13 esté autorizado para este certificado en AFIP — para eso ver
+ *  `verificarServicioPadron`. */
 export async function verificarCredenciales(tenantId, cfg) {
     await obtenerTicket(tenantId, cfg, PADRON_A13_SERVICE);
+}
+/**
+ * Prueba real del servicio Consulta Padrón A13 (no solo el login WSAA): hace una AUTOCONSULTA del
+ * propio `cuitRepresentada` del tenant contra sí mismo. Una autoconsulta nunca puede fallar
+ * legítimamente por "la persona no existe" — el tenant es esa persona — así que si AFIP no
+ * devuelve datos, la única explicación posible es que el servicio (o el alias del certificado) no
+ * esté autorizado en el Administrador de Relaciones de AFIP, no que el CUIT "no exista". Por eso el
+ * resultado de una autoconsulta fallida se interpreta como "no_autorizado" y no como "desconocido"
+ * (a diferencia de una consulta a un tercero, donde esa ambigüedad sí existe y no se puede resolver
+ * con una sola consulta).
+ */
+export async function verificarServicioPadron(tenantId, cfg) {
+    const verificadoAt = new Date();
+    try {
+        const resultado = await consultarPadron(tenantId, cfg, cfg.cuitRepresentada, { tipo: "servicio_test" });
+        if (resultado.encontrado) {
+            return { ok: true, estado: "ok", detalle: "El servicio Consulta Padrón A13 respondió correctamente a la autoconsulta.", verificadoAt };
+        }
+        return {
+            ok: false,
+            estado: "no_autorizado",
+            detalle: `AFIP no devolvió datos para la autoconsulta del propio CUIT representada (${cfg.cuitRepresentada}). Como es una autoconsulta, esto indica que el servicio "Consulta Padrón A13" no está autorizado para este certificado en el Administrador de Relaciones de AFIP — no que el CUIT no exista.`,
+            faultCode: resultado.faultCode,
+            faultString: resultado.faultString,
+            verificadoAt,
+        };
+    }
+    catch (e) {
+        // Error de transporte/WSAA/parseo — no llegó a haber una respuesta de negocio de AFIP.
+        return { ok: false, estado: "error", detalle: e?.message || "Error al verificar el servicio Consulta Padrón A13.", verificadoAt };
+    }
 }
 /** Invalida el ticket cacheado del tenant (al desconectar o cambiar credenciales). */
 export function clearTenantTicket(tenantId) {

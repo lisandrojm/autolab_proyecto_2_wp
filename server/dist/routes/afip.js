@@ -6,12 +6,13 @@ import { Project } from "../models/Project.js";
 import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
 import { Info } from "../models/Info.js";
+import { AfipLog } from "../models/AfipLog.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { encryptSecret } from "../utils/secretCrypto.js";
 import { normalizarCuit } from "../utils/constanciaPdf.js";
 import { buildDocFileName } from "../utils/employeeDocData.js";
-import { getTenantAfipConfig, verificarCredenciales, consultarPadron, clearTenantTicket, getCertificadoInfo } from "../services/afipService.js";
+import { getTenantAfipConfig, verificarCredenciales, verificarServicioPadron, consultarPadron, clearTenantTicket, getCertificadoInfo } from "../services/afipService.js";
 import { getTenantDropboxConfig, uploadFile } from "../services/dropboxService.js";
 const router = Router();
 router.use(requireTenant, authenticateToken);
@@ -31,10 +32,35 @@ router.get("/status", async (req, res) => {
             certificadoAlias: certInfo?.alias || null,
             certificadoVencimiento: certInfo?.vencimiento || null,
             canManageConnection: isAdmin(req),
+            // Resultado de la última autoconsulta contra Consulta Padrón A13 (no re-chequea en vivo acá:
+            // sería un round-trip a AFIP con timeout de 20s en cada carga de página — se refresca al
+            // conectar o con POST /afip/verificar-servicio).
+            servicioPadronOk: a?.servicioPadronOk ?? null,
+            servicioPadronEstado: a?.servicioPadronEstado ?? null,
+            servicioPadronDetalle: a?.servicioPadronDetalle ?? null,
+            servicioPadronFaultCode: a?.servicioPadronFaultCode ?? null,
+            servicioPadronFaultString: a?.servicioPadronFaultString ?? null,
+            servicioPadronVerificadoAt: a?.servicioPadronVerificadoAt ?? null,
         });
     }
     catch (error) {
         console.error("AFIP status error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// GET /afip/logs - últimos llamados reales a AFIP (Consulta Padrón / autoconsulta de servicio),
+// para diagnosticar sin depender de haber visto el toast en el momento (solo admin).
+router.get("/logs", async (req, res) => {
+    try {
+        if (!isAdmin(req)) {
+            res.status(403).json({ error: "Solo un administrador puede ver los logs de AFIP." });
+            return;
+        }
+        const logs = await AfipLog.find({ tenantId: req.tenantObjectId }).sort({ createdAt: -1 }).limit(50).lean();
+        res.json({ logs });
+    }
+    catch (error) {
+        console.error("AFIP logs error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -52,13 +78,20 @@ router.post("/connect", async (req, res) => {
             return;
         }
         const amb = ambiente === "produccion" ? "produccion" : "homologacion";
+        const cfgInput = { cuitRepresentada: cuit, certificadoPem: String(certificadoPem), clavePrivadaPem: String(clavePrivadaPem), ambiente: amb };
         try {
-            await verificarCredenciales(String(req.tenantObjectId), { cuitRepresentada: cuit, certificadoPem: String(certificadoPem), clavePrivadaPem: String(clavePrivadaPem), ambiente: amb });
+            await verificarCredenciales(String(req.tenantObjectId), cfgInput);
         }
         catch (e) {
             res.status(400).json({ error: `No se pudo validar contra AFIP: ${e?.message || "credenciales inválidas"}` });
             return;
         }
+        // El login WSAA (arriba) prueba que el certificado/clave son válidos, pero NO que el servicio
+        // Consulta Padrón A13 esté autorizado para este certificado en AFIP — eso requiere una consulta
+        // real, que se hace acá vía autoconsulta (ver verificarServicioPadron). No bloquea el guardado si
+        // falla: el certificado es igual de válido, y el admin puede necesitar arreglar la autorización
+        // del lado de AFIP sin tener que volver a pegar el certificado/clave.
+        const verificacionServicio = await verificarServicioPadron(String(req.tenantObjectId), cfgInput);
         await Tenant.updateOne({ _id: req.tenantObjectId }, {
             $set: {
                 "integrations.afip.cuitRepresentada": cuit,
@@ -66,9 +99,23 @@ router.post("/connect", async (req, res) => {
                 "integrations.afip.clavePrivadaEnc": encryptSecret(String(clavePrivadaPem)),
                 "integrations.afip.ambiente": amb,
                 "integrations.afip.connectedAt": new Date(),
+                "integrations.afip.servicioPadronOk": verificacionServicio.ok,
+                "integrations.afip.servicioPadronEstado": verificacionServicio.estado,
+                "integrations.afip.servicioPadronDetalle": verificacionServicio.detalle,
+                "integrations.afip.servicioPadronFaultCode": verificacionServicio.faultCode || null,
+                "integrations.afip.servicioPadronFaultString": verificacionServicio.faultString || null,
+                "integrations.afip.servicioPadronVerificadoAt": verificacionServicio.verificadoAt,
             },
         });
-        res.json({ connected: true, cuitRepresentada: cuit, ambiente: amb, connectedAt: new Date() });
+        res.json({
+            connected: true,
+            cuitRepresentada: cuit,
+            ambiente: amb,
+            connectedAt: new Date(),
+            servicioPadronOk: verificacionServicio.ok,
+            servicioPadronEstado: verificacionServicio.estado,
+            servicioPadronDetalle: verificacionServicio.detalle,
+        });
     }
     catch (error) {
         console.error("AFIP connect error:", error);
@@ -88,6 +135,39 @@ router.post("/disconnect", async (req, res) => {
     }
     catch (error) {
         console.error("AFIP disconnect error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// POST /afip/verificar-servicio - re-corre la autoconsulta de prueba contra Padrón A13 con las
+// credenciales YA guardadas (no hace falta re-pegar certificado/clave) — para revalidar después de
+// arreglar la autorización del servicio en el Administrador de Relaciones de AFIP.
+router.post("/verificar-servicio", async (req, res) => {
+    try {
+        if (!isAdmin(req)) {
+            res.status(403).json({ error: "Solo un administrador puede revalidar el servicio de AFIP." });
+            return;
+        }
+        const tenant = await Tenant.findById(req.tenantObjectId).lean();
+        const cfg = getTenantAfipConfig(tenant);
+        if (!cfg) {
+            res.status(400).json({ error: "AFIP no está conectado para esta organización." });
+            return;
+        }
+        const verificacion = await verificarServicioPadron(String(req.tenantObjectId), cfg);
+        await Tenant.updateOne({ _id: req.tenantObjectId }, {
+            $set: {
+                "integrations.afip.servicioPadronOk": verificacion.ok,
+                "integrations.afip.servicioPadronEstado": verificacion.estado,
+                "integrations.afip.servicioPadronDetalle": verificacion.detalle,
+                "integrations.afip.servicioPadronFaultCode": verificacion.faultCode || null,
+                "integrations.afip.servicioPadronFaultString": verificacion.faultString || null,
+                "integrations.afip.servicioPadronVerificadoAt": verificacion.verificadoAt,
+            },
+        });
+        res.json(verificacion);
+    }
+    catch (error) {
+        console.error("AFIP verificar-servicio error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -178,7 +258,7 @@ router.post("/consulta-padron/bulk", async (req, res) => {
                     // respuesta real de AFIP en producción — ver comentario en afipService.ts): se deja el raw
                     // completo en el log para poder ajustar el mapeo sin tener que volver a consultar.
                     if (resultado.estado === "desconocido") {
-                        console.warn(`AFIP: estado desconocido para CUIT ${cuit} (encontrado=${resultado.encontrado}). Raw:`, JSON.stringify(resultado.raw));
+                        console.warn(`AFIP: estado desconocido para CUIT ${cuit} (encontrado=${resultado.encontrado}, faultCode=${resultado.faultCode || "-"}, faultString=${resultado.faultString || "-"}). Raw:`, JSON.stringify(resultado.raw));
                     }
                     let contratosActualizados = 0;
                     let dropboxSubido;
@@ -235,7 +315,7 @@ router.post("/consulta-padron/bulk", async (req, res) => {
                     // Se devuelve el raw completo + con qué CUIT representada/ambiente se consultó — para poder
                     // ver en el momento, desde la UI, exactamente qué se mandó y qué contestó AFIP, sin
                     // necesitar acceso a los logs del server ni a la base.
-                    resultados.push({ cuit, estado: resultado.estado, encontrado: resultado.encontrado, denominacion: resultado.denominacion, contratosActualizados, dropboxSubido, cuitRepresentada: cfg.cuitRepresentada, ambiente: cfg.ambiente, raw: resultado.raw });
+                    resultados.push({ cuit, estado: resultado.estado, encontrado: resultado.encontrado, denominacion: resultado.denominacion, contratosActualizados, dropboxSubido, cuitRepresentada: cfg.cuitRepresentada, ambiente: cfg.ambiente, raw: resultado.raw, faultCode: resultado.faultCode, faultString: resultado.faultString });
                 }
                 catch (e) {
                     resultados.push({ cuit, error: e?.message || "Error al consultar AFIP", contratosActualizados: 0 });
