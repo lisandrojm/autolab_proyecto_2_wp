@@ -54,6 +54,7 @@ interface IContract {
     constanciaAfipEstado?: "activo" | "inactivo" | "desconocido";
     constanciaAfipConsultadaAt?: Date;
     constanciaAfipRaw?: any;
+    constanciaAfipDropboxSubidaAt?: Date;
     areaShiftAssignments?: {
         areaId: Types.ObjectId | string;
         shiftIds: (Types.ObjectId | string)[];

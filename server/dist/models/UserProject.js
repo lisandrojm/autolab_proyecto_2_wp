@@ -54,6 +54,7 @@ const contractSchema = new Schema({
     constanciaAfipEstado: { type: String, enum: ["activo", "inactivo", "desconocido"] },
     constanciaAfipConsultadaAt: { type: Date },
     constanciaAfipRaw: { type: Schema.Types.Mixed },
+    constanciaAfipDropboxSubidaAt: { type: Date },
     areaShiftAssignments: [
         {
             areaId: { type: Schema.Types.ObjectId, ref: "Area" },

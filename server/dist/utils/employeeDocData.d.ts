@@ -11,7 +11,7 @@
  * Devuelve el nombre SIN extensión (el caller agrega `.docx`).
  */
 export declare function buildDocFileName(opts: {
-    tipo: "Contrato" | "Release";
+    tipo: "Contrato" | "Release" | "ConstanciaCUIT";
     user: any;
     up: any;
     contract: any;
