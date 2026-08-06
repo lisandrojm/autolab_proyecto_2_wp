@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLandmark, faPlug, faSpinner, faTriangleExclamation, faCalendarDays, faFingerprint, faHourglassHalf } from "@fortawesome/free-solid-svg-icons";
+import { faLandmark, faPlug, faSpinner, faTriangleExclamation, faCalendarDays, faFingerprint, faHourglassHalf, faCheck, faRotate, faListUl, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
-import { afipAPI, AfipStatus } from "../api/afip";
+import { Modal } from "../components/ui/Modal";
+import { afipAPI, AfipStatus, AfipLogEntry } from "../api/afip";
 import { sweetAlert } from "../utils/sweetAlert";
 
 const GUIA_AFIP = (
@@ -103,8 +104,13 @@ export function AfipConfigPage() {
   const [status, setStatus] = useState<AfipStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
+  const [verificando, setVerificando] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [form, setForm] = useState({ cuitRepresentada: "", certificadoPem: "", clavePrivadaPem: "", ambiente: "homologacion" as "homologacion" | "produccion" });
+  const [showLogs, setShowLogs] = useState(false);
+  const [logs, setLogs] = useState<AfipLogEntry[] | null>(null);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [logExpandido, setLogExpandido] = useState<string | null>(null);
 
   const cargar = async () => {
     setLoading(true);
@@ -128,14 +134,35 @@ export function AfipConfigPage() {
     }
     setConnecting(true);
     try {
-      await afipAPI.connect(form);
-      sweetAlert.success("AFIP conectado", "Las credenciales se validaron y guardaron correctamente.");
+      const resultado = await afipAPI.connect(form);
+      if (resultado.servicioPadronOk) {
+        sweetAlert.success("AFIP conectado", "Las credenciales se validaron y el servicio Consulta Padrón A13 quedó verificado.");
+      } else {
+        sweetAlert.warning("Conectado a WSAA, pero el servicio no está autorizado", resultado.servicioPadronDetalle || "El certificado es válido, pero AFIP no autoriza el servicio Consulta Padrón A13 para él todavía.");
+      }
       setForm({ cuitRepresentada: "", certificadoPem: "", clavePrivadaPem: "", ambiente: "homologacion" });
       await cargar();
     } catch (e: any) {
       sweetAlert.error("No se pudo conectar", e?.response?.data?.error || "Revisá las credenciales.");
     } finally {
       setConnecting(false);
+    }
+  };
+
+  const handleVerificarServicio = async () => {
+    setVerificando(true);
+    try {
+      const resultado = await afipAPI.verificarServicio();
+      if (resultado.ok) {
+        sweetAlert.success("Servicio verificado", "La autoconsulta contra Consulta Padrón A13 respondió correctamente.");
+      } else {
+        sweetAlert.warning("Servicio no autorizado", resultado.detalle);
+      }
+      await cargar();
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo revalidar el servicio.");
+    } finally {
+      setVerificando(false);
     }
   };
 
@@ -147,6 +174,19 @@ export function AfipConfigPage() {
       await cargar();
     } catch (e: any) {
       sweetAlert.error("Error", e?.response?.data?.error || "No se pudo desconectar.");
+    }
+  };
+
+  const handleVerLogs = async () => {
+    setShowLogs(true);
+    setLoadingLogs(true);
+    try {
+      setLogs(await afipAPI.logs());
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudieron cargar los logs de AFIP.");
+      setLogs([]);
+    } finally {
+      setLoadingLogs(false);
     }
   };
 
@@ -201,10 +241,54 @@ export function AfipConfigPage() {
               </div>
             )}
           </div>
+
+          {/* "Conectado" (arriba) solo prueba que el certificado/clave son válidos (login WSAA). Esto
+              prueba, con una autoconsulta real, que el servicio Consulta Padrón A13 esté además
+              autorizado en AFIP para ese certificado — son cosas distintas. */}
+          {status.servicioPadronEstado === "ok" ? (
+            <div className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200 dark:border-green-800">
+              <FontAwesomeIcon icon={faCheck} className="w-3.5 shrink-0" />
+              Servicio Consulta Padrón A13 verificado{status.servicioPadronVerificadoAt && ` — ${new Date(status.servicioPadronVerificadoAt).toLocaleDateString("es-AR")}`}
+            </div>
+          ) : status.servicioPadronEstado === "no_autorizado" ? (
+            <div className="space-y-1.5 text-xs px-3 py-2 rounded-lg bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+              <div className="flex items-center gap-2 font-semibold">
+                <FontAwesomeIcon icon={faTriangleExclamation} className="w-3.5 shrink-0" />
+                Conectado a WSAA, pero el servicio Consulta Padrón A13 no está autorizado
+              </div>
+              <p>{status.servicioPadronDetalle}</p>
+              {(status.servicioPadronFaultCode || status.servicioPadronFaultString) && (
+                <p className="font-mono text-[10px] opacity-80 break-words">
+                  {status.servicioPadronFaultCode} {status.servicioPadronFaultString}
+                </p>
+              )}
+            </div>
+          ) : status.servicioPadronEstado === "error" ? (
+            <div className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-gray-50 text-gray-600 dark:bg-gray-900/40 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+              <FontAwesomeIcon icon={faTriangleExclamation} className="w-3.5 shrink-0" />
+              No se pudo verificar el servicio ({status.servicioPadronDetalle || "error de comunicación"}) — probá "Revalidar servicio".
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-gray-50 text-gray-500 dark:bg-gray-900/40 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+              <FontAwesomeIcon icon={faTriangleExclamation} className="w-3.5 shrink-0" />
+              Servicio Consulta Padrón A13 sin verificar todavía.
+            </div>
+          )}
+
           {status.canManageConnection && (
-            <button onClick={handleDisconnect} className="text-sm text-red-500 hover:text-red-600 font-semibold">
-              Desconectar
-            </button>
+            <div className="flex items-center gap-4">
+              <button onClick={handleDisconnect} className="text-sm text-red-500 hover:text-red-600 font-semibold">
+                Desconectar
+              </button>
+              <button onClick={handleVerificarServicio} disabled={verificando} className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 font-semibold disabled:opacity-50">
+                <FontAwesomeIcon icon={verificando ? faSpinner : faRotate} spin={verificando} className="h-3.5 w-3.5" />
+                {verificando ? "Revalidando..." : "Revalidar servicio"}
+              </button>
+              <button onClick={handleVerLogs} className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 font-semibold">
+                <FontAwesomeIcon icon={faListUl} className="h-3.5 w-3.5" />
+                Logs
+              </button>
+            </div>
           )}
         </div>
       ) : !status?.canManageConnection ? (
@@ -260,6 +344,50 @@ export function AfipConfigPage() {
             </p>
           </div>
         </div>
+      )}
+
+      {showLogs && (
+        <Modal isOpen={showLogs} onClose={() => setShowLogs(false)} title="Logs de AFIP" subtitle="Últimos 50 llamados reales al webservice (Consulta Padrón / Revalidar servicio)" size="xl" zIndex={80}>
+          {loadingLogs ? (
+            <div className="flex justify-center py-10 text-gray-400">
+              <FontAwesomeIcon icon={faSpinner} spin className="mr-2" /> Cargando...
+            </div>
+          ) : !logs || logs.length === 0 ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">Todavía no hay ningún llamado registrado.</p>
+          ) : (
+            <ul className="divide-y divide-gray-100 dark:divide-gray-700/60 max-h-[65vh] overflow-y-auto custom-scrollbar">
+              {logs.map((log) => {
+                const ok = !log.error && (log.tipo === "servicio_test" ? log.encontrado : log.estado === "activo" || log.estado === "inactivo");
+                const expandido = logExpandido === log._id;
+                return (
+                  <li key={log._id} className="py-2.5">
+                    <button type="button" onClick={() => setLogExpandido(expandido ? null : log._id)} className="w-full flex items-start justify-between gap-3 text-left">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${log.tipo === "servicio_test" ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400" : "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"}`}>
+                            {log.tipo === "servicio_test" ? "Revalidar servicio" : "Consulta Padrón"}
+                          </span>
+                          <FontAwesomeIcon icon={ok ? faCheck : faXmark} className={`h-3 w-3 ${ok ? "text-green-500" : "text-red-500"}`} />
+                          <span className="text-sm font-mono text-gray-700 dark:text-gray-200">{log.cuitConsultado}</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">{log.error ? "error" : `encontrado=${String(log.encontrado)} · estado=${log.estado || "—"}`}</span>
+                        </div>
+                        {(log.faultCode || log.faultString || log.error) && (
+                          <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5 truncate">{log.error || `${log.faultCode || ""} ${log.faultString || ""}`.trim()}</p>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-gray-400 whitespace-nowrap shrink-0">{new Date(log.createdAt).toLocaleString("es-AR")}</span>
+                    </button>
+                    {expandido && (
+                      <pre className="mt-2 text-[11px] bg-gray-900 text-gray-300 rounded-lg p-3 overflow-auto max-h-[40vh] whitespace-pre-wrap break-words">
+                        {JSON.stringify({ cuitRepresentada: log.cuitRepresentada, ambiente: log.ambiente, faultCode: log.faultCode, faultString: log.faultString, error: log.error, raw: log.raw }, null, 2)}
+                      </pre>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Modal>
       )}
     </PageLayout>
   );

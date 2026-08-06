@@ -269,15 +269,18 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
         sweetAlert.warning("CUIT inactivo", `${cuit} figura inactivo en el Padrón de AFIP.`);
       } else {
         // "desconocido": AFIP no devolvió (o no se pudo leer) el estadoClave — no es lo mismo que
-        // "inactivo", puede ser un problema de mapeo de campos y no del CUIT en sí. `encontrado`
-        // distingue "AFIP dice que esa persona no existe" (revisar el CUIT cargado) de "la encontró
-        // pero no pudimos leer estadoClave" (más probable: bug de mapeo — hay más detalle en los logs del server).
-        sweetAlert.warning(
-          "Estado no reconocido",
+        // "inactivo". `encontrado: false` con un fault de "no existe persona" puede ser: el CUIT
+        // realmente no existe, o el servicio Consulta Padrón A13 no está autorizado para este
+        // certificado en AFIP (una sola consulta a un tercero no permite distinguirlas — para eso
+        // existe la autoconsulta de "Revalidar servicio" en la página de AFIP, que si este CUIT es el
+        // de la propia organización, contesta esa pregunta con certeza).
+        const explicacion =
           resultado?.encontrado === false
-            ? `AFIP dice que no existe una persona con el CUIT ${cuit}. Revisá que esté bien cargado — no asumas que está inactivo.`
-            : `AFIP encontró a la persona pero no devolvió un estado de CUIT reconocible (ni activo ni inactivo explícito) para ${cuit}. Es probable que sea un problema de mapeo de la respuesta, no del CUIT — no asumas que está inactivo.`,
-        );
+            ? `AFIP dice que no existe una persona con el CUIT ${cuit} (o el servicio no está autorizado para consultarla — con una sola consulta no se puede distinguir). Si este CUIT es el de la propia organización, andá a la página de AFIP y usá "Revalidar servicio" para confirmarlo. Si es de un tercero, revisá que el CUIT esté bien cargado.`
+            : `AFIP encontró a la persona pero no devolvió un estado de CUIT reconocible (ni activo ni inactivo explícito) para ${cuit}. Es probable que sea un problema de mapeo de la respuesta, no del CUIT.`;
+        const faultTxt = resultado?.faultCode || resultado?.faultString ? `\n\nfaultCode: ${resultado?.faultCode || "—"}\nfaultString: ${resultado?.faultString || "—"}` : "";
+        const rawTxt = resultado?.raw ? `\n\n--- Respuesta cruda de AFIP ---\ncuitRepresentada: ${resultado.cuitRepresentada || "?"} · ambiente: ${resultado.ambiente || "?"}\n${JSON.stringify(resultado.raw, null, 2)}` : "";
+        sweetAlert.warningAlert("Estado no reconocido", explicacion + faultTxt + rawTxt);
       }
       onConsultado();
     } catch (e: any) {
@@ -332,6 +335,12 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
                 <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest">encontrado / estado</span>
                 <span className="font-mono text-gray-700 dark:text-gray-200">{String(ultimoResultado.encontrado)} / {ultimoResultado.estado || "—"}</span>
               </li>
+              {(ultimoResultado.faultCode || ultimoResultado.faultString) && (
+                <li className="bg-gray-50 dark:bg-gray-900/40 rounded-lg px-3 py-2 col-span-2">
+                  <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest">faultCode / faultString (SOAP Fault de AFIP)</span>
+                  <span className="font-mono text-gray-700 dark:text-gray-200 break-words">{ultimoResultado.faultCode || "—"} — {ultimoResultado.faultString || "—"}</span>
+                </li>
+              )}
             </ul>
             <div>
               <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Respuesta cruda de AFIP (raw / Fault)</span>
