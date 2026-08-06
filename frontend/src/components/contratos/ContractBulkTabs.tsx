@@ -18,7 +18,7 @@ import { Modal } from "../ui/Modal";
 import { ContractDocsColumns, ContractDocsHeaders, downloadContractRow, downloadReleaseRow, uploadAltaRow } from "./ContractRowDocs";
 import { resolveAfip, AfipRowResult } from "./afipCompleteness";
 import { buildAltaRecord, buildAltaTxt, downloadTxt } from "./afipTxt";
-import { ConstanciaBulkDrop, ConstanciaBadge, BotonArca, BotonCopiarPendientes, BotonConsultarAfipBulk, constanciaPendiente, fmtCuit } from "./ConstanciaBulk";
+import { ConstanciaBulkDrop, ConstanciaBadge, BotonArca, BotonCopiarPendientes, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, fmtCuit } from "./ConstanciaBulk";
 import { sweetAlert } from "../../utils/sweetAlert";
 
 const obrasSocialesApi = createSimpleCatalogApi("/obras-sociales");
@@ -486,6 +486,7 @@ export const ContractBulkAfipTab: React.FC<{
                         CUIT/CUIL: {cuil ? "OK" : "Falta 1"}
                       </button>
                       <ConstanciaBadge row={r} />
+                      <BotonValidarCuit row={r} onConsultado={load} compacto />
                       {constanciaPendiente(r) && <BotonArca cuit={r.cuit} compacto />}
                     </>
                   )}
@@ -584,6 +585,7 @@ export const ContractBulkAfipTab: React.FC<{
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2 whitespace-nowrap">
                             <ConstanciaBadge row={r} />
+                            <BotonValidarCuit row={r} onConsultado={load} compacto />
                             {constanciaPendiente(r) && <BotonArca cuit={r.cuit} compacto />}
                           </div>
                         </td>

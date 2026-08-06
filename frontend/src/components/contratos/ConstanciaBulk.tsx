@@ -211,6 +211,53 @@ export const BotonConsultarAfipBulk: React.FC<{
   );
 };
 
+/**
+ * Consulta el Padrón de AFIP para el CUIT de esta persona puntual — misma consulta que
+ * BotonConsultarAfipBulk pero de a una, para validar un CUIT en el momento sin esperar al lote.
+ */
+export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado: () => void; compacto?: boolean }> = ({ row, onConsultado, compacto }) => {
+  const [consultando, setConsultando] = useState(false);
+  const cuit = fmtCuit(row.cuit);
+
+  const handleClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!cuit) {
+      sweetAlert.error("Sin CUIT", "Esta persona no tiene un CUIT/CUIL cargado.");
+      return;
+    }
+    setConsultando(true);
+    try {
+      const resp = await afipAPI.consultarPadronBulk([{ projectId: row.projectId, userId: row.userId, contractIndex: row.contractIndex }]);
+      const resultado = resp.resultados[0];
+      if (resultado?.error) {
+        sweetAlert.error("No se pudo validar", resultado.error);
+      } else if (resultado?.estado === "activo") {
+        sweetAlert.success("CUIT activo", `${cuit} figura activo en el Padrón de AFIP.`);
+      } else {
+        sweetAlert.warning("CUIT inactivo", `${cuit} figura inactivo en el Padrón de AFIP.`);
+      }
+      onConsultado();
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo consultar AFIP.");
+    } finally {
+      setConsultando(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={consultando || !cuit}
+      title={cuit ? `Validar ${cuit} en el Padrón de AFIP` : "Falta el CUIT/CUIL de esta persona"}
+      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap transition-colors bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <FontAwesomeIcon icon={consultando ? faSpinner : faLandmark} spin={consultando} className="h-2.5 w-2.5" />
+      {consultando ? "Validando..." : compacto ? "Validar" : "Validar CUIT"}
+    </button>
+  );
+};
+
 /* ------------------------------ Carga masiva ------------------------------ */
 
 const ESTILO_RESULTADO: Record<ConstanciaResultado["status"], { clase: string; icono: typeof faCheck; leyenda: string }> = {
