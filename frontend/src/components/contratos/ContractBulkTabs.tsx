@@ -442,6 +442,7 @@ export const ContractBulkAfipTab: React.FC<{
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{r.userName}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{r.userEmail}</p>
+                      {fmtCuit(r.cuit) && <p className="text-[10px] text-gray-400 font-mono truncate">CUIT {fmtCuit(r.cuit)}</p>}
                     </div>
                   </div>
                   {r.nombre_estado_empleado && <EstadoBadge name={r.nombre_estado_empleado} className="shrink-0 text-[10px]" />}
@@ -507,7 +508,7 @@ export const ContractBulkAfipTab: React.FC<{
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
           <div className="overflow-x-auto custom-scrollbar max-h-[640px]">
-            <table className="w-full text-left border-collapse min-w-[1650px]">
+            <table className="w-full text-left border-collapse min-w-[1950px]">
               <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
                 <tr className="border-b border-gray-100 dark:border-gray-800">
                   <th className="px-4 py-3 w-10">
@@ -523,6 +524,7 @@ export const ContractBulkAfipTab: React.FC<{
                   {filterTipo === "alta_temprana_afip" && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Datos AFIP</th>}
                   <ContractDocsHeaders showContrato={false} showRelease={false} altaLabel={filterTipo === "alta_temprana_afip" ? "Alta AFIP" : "Alta Servicios"} />
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">CUIT</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Cliente</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Contrato</th>
@@ -623,6 +625,7 @@ export const ContractBulkAfipTab: React.FC<{
                       <p className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{r.userName}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
                     </td>
+                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{fmtCuit(r.cuit) || "—"}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || "—"}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || "—"}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.nombre_contrato || "—"}</td>

@@ -250,8 +250,12 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
         sweetAlert.success("CUIT activo y archivado", `${cuit} figura activo en el Padrón de AFIP y quedó archivado en Dropbox — el trámite queda completo.`);
       } else if (resultado?.estado === "activo") {
         sweetAlert.warning("Activo, pero falta archivar", `${cuit} figura activo en el Padrón de AFIP, pero no se pudo archivar el resultado en Dropbox (revisá la conexión y la carpeta "Constancia de cuit"). El trámite sigue pendiente.`);
-      } else {
+      } else if (resultado?.estado === "inactivo") {
         sweetAlert.warning("CUIT inactivo", `${cuit} figura inactivo en el Padrón de AFIP.`);
+      } else {
+        // "desconocido": AFIP no devolvió (o no se pudo leer) el estadoClave — no es lo mismo que
+        // "inactivo", puede ser un problema de mapeo de campos y no del CUIT en sí.
+        sweetAlert.warning("Estado no reconocido", `AFIP no devolvió un estado de CUIT reconocible para ${cuit} (ni activo ni inactivo explícito). Puede ser un problema temporal del webservice o del mapeo de la respuesta — no asumas que está inactivo.`);
       }
       onConsultado();
     } catch (e: any) {

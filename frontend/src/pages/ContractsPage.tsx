@@ -11,6 +11,7 @@ import { EstadoBadge, EstadoSecundarioBadge, TramiteImpositivoBadge, estadoLabel
 import { MemberContractsManagerModal } from "../components/team/MemberContractsManagerModal";
 import { estadoImpositivoDelContrato } from "../components/team/ContractCard";
 import { ContractDocsColumns, ContractDocsHeaders, downloadContractRow, downloadReleaseRow, uploadAltaRow } from "../components/contratos/ContractRowDocs";
+import { fmtCuit } from "../components/contratos/ConstanciaBulk";
 import { releasesAPI, Release } from "../api/release";
 import { isContractVigente, formatDate } from "../components/team/EmployeeContractsModal";
 import { cachedFetch } from "../utils/refCache";
@@ -433,10 +434,11 @@ export const ContractsPage: React.FC = () => {
       ) : effectiveViewMode === "table" ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
           <div className="overflow-x-auto custom-scrollbar max-h-[700px]">
-            <table className="w-full text-left border-collapse min-w-[2650px]">
+            <table className="w-full text-left border-collapse min-w-[2750px]">
               <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
                 <tr className="border-b border-gray-100 dark:border-gray-800">
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">CUIT</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Contratos</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Cliente</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto</th>
@@ -470,6 +472,7 @@ export const ContractsPage: React.FC = () => {
                         </div>
                       </div>
                     </td>
+                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{fmtCuit(record.cuit) || "—"}</td>
                     <td className="px-4 py-3 text-center">
                       <span className="text-sm font-bold px-2.5 py-1 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" title="Contratos de esta persona en el proyecto">
                         {record.contractsInProject}
@@ -607,6 +610,7 @@ export const ContractsPage: React.FC = () => {
                         </span>
                       </div>
                       <p className="text-[10px] text-gray-500">{record.userEmail}</p>
+                      {fmtCuit(record.cuit) && <p className="text-[10px] text-gray-400 font-mono">CUIT {fmtCuit(record.cuit)}</p>}
                     </div>
                   </div>
                   {record.nombre_estado_empleado ? <EstadoBadge name={record.nombre_estado_empleado} className="shrink-0 text-[8px] tracking-tighter" /> : null}
