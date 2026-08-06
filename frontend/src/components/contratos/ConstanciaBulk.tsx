@@ -1,10 +1,11 @@
 import React, { useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUpRightFromSquare, faCloudArrowUp, faSpinner, faCheck, faTriangleExclamation, faXmark, faCopy, faChevronDown, faChevronUp, faLandmark } from "@fortawesome/free-solid-svg-icons";
+import { faArrowUpRightFromSquare, faCloudArrowUp, faSpinner, faCheck, faTriangleExclamation, faXmark, faCopy, faChevronDown, faChevronUp, faLandmark, faBug } from "@fortawesome/free-solid-svg-icons";
 import { ContractOverviewRow } from "../../api/users";
 import { projectsAPI, ConstanciaTarget, ConstanciaResultado } from "../../api/projects";
-import { afipAPI } from "../../api/afip";
+import { afipAPI, ResultadoConsultaPadron } from "../../api/afip";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { Modal } from "../ui/Modal";
 
 /**
  * Constancia de CUIT (ARCA). El PDF se baja del portal público de ARCA, que pide un código de
@@ -36,13 +37,16 @@ const fmtFechaHora = (iso?: string): string => {
 /** Hoy en Argentina como "YYYY-MM-DD" (el navegador puede estar en otro huso). */
 const hoyIso = (): string => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date());
 
-export type EstadoConstancia = "activo_afip" | "activo_sin_archivar" | "inactivo_afip" | "vigente" | "vencida" | "sin_fecha" | "faltante";
+export type EstadoConstancia = "activo_afip" | "activo_sin_archivar" | "inactivo_afip" | "desconocido_afip" | "vigente" | "vencida" | "sin_fecha" | "faltante";
 
 /**
- * Estado de la constancia de una fila. La consulta al Padrón de AFIP es la fuente de verdad cuando
- * existe (`activo_afip`/`activo_sin_archivar`/`inactivo_afip`); si todavía no se consultó, cae al
- * criterio viejo basado en el PDF cargado a mano (`vigente`/`vencida`/`sin_fecha`/`faltante`), para no
- * perder el historial.
+ * Estado de la constancia de una fila. La consulta al Padrón de AFIP es la fuente de verdad UNA VEZ
+ * que se hizo al menos una (activo/activo_sin_archivar/inactivo/desconocido) — recién si nunca se
+ * consultó (`constanciaAfipEstado` vacío) cae al criterio viejo basado en el PDF cargado a mano
+ * (`vigente`/`vencida`/`sin_fecha`/`faltante`), para no perder el historial de antes de tener esta
+ * consulta. Importante: "desconocido" NO debe caer a ese criterio viejo (antes lo hacía, y mostraba
+ * "Vigente hasta ..." con una fecha de un PDF viejo aunque la consulta a AFIP no haya podido leer el
+ * estado — parecía validado sin estarlo).
  *
  * "Activo en AFIP" solo no alcanza: el trámite se da por terminado recién cuando ese resultado quedó
  * archivado en Dropbox (constanciaAfipDropboxSubidaAt) — es lo que dispara, del otro lado, el avance
@@ -51,16 +55,17 @@ export type EstadoConstancia = "activo_afip" | "activo_sin_archivar" | "inactivo
 export const estadoConstancia = (row: ContractOverviewRow, hoy: string = hoyIso()): EstadoConstancia => {
   if (row.constanciaAfipEstado === "activo") return row.constanciaAfipDropboxSubidaAt ? "activo_afip" : "activo_sin_archivar";
   if (row.constanciaAfipEstado === "inactivo") return "inactivo_afip";
+  if (row.constanciaAfipEstado === "desconocido") return "desconocido_afip";
   if (!row.altaDocumentoUrl) return "faltante";
   if (!row.constanciaVigenciaHasta) return "sin_fecha";
   return row.constanciaVigenciaHasta >= hoy ? "vigente" : "vencida";
 };
 
-/** Una constancia hay que (re)pedirla cuando falta, ya venció, AFIP la dio como inactiva, o quedó
- *  activa pero sin poder archivarse en Dropbox (hay que reintentar el "Validar CUIT"). */
+/** Una constancia hay que (re)pedirla cuando falta, ya venció, AFIP la dio como inactiva o como
+ *  desconocida, o quedó activa pero sin poder archivarse en Dropbox (hay que reintentar "Validar CUIT"). */
 export const constanciaPendiente = (row: ContractOverviewRow, hoy: string = hoyIso()): boolean => {
   const e = estadoConstancia(row, hoy);
-  return e === "faltante" || e === "vencida" || e === "inactivo_afip" || e === "activo_sin_archivar";
+  return e === "faltante" || e === "vencida" || e === "inactivo_afip" || e === "activo_sin_archivar" || e === "desconocido_afip";
 };
 
 const BADGE: Record<EstadoConstancia, { texto: (row: ContractOverviewRow) => string; clase: string; icono: typeof faCheck }> = {
@@ -77,6 +82,11 @@ const BADGE: Record<EstadoConstancia, { texto: (row: ContractOverviewRow) => str
   inactivo_afip: {
     texto: () => "Inactivo en AFIP",
     clase: "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 border-red-200 dark:border-red-800",
+    icono: faTriangleExclamation,
+  },
+  desconocido_afip: {
+    texto: () => "AFIP no devolvió un estado reconocible",
+    clase: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800",
     icono: faTriangleExclamation,
   },
   vigente: {
@@ -232,6 +242,10 @@ export const BotonConsultarAfipBulk: React.FC<{
  */
 export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado: () => void; compacto?: boolean }> = ({ row, onConsultado, compacto }) => {
   const [consultando, setConsultando] = useState(false);
+  // Último resultado crudo de esta fila (se guarda pase lo que pase, incluso si dio error o
+  // "desconocido") para poder abrir el detalle técnico sin tener que ir a los logs del server.
+  const [ultimoResultado, setUltimoResultado] = useState<ResultadoConsultaPadron | null>(null);
+  const [verDetalle, setVerDetalle] = useState(false);
   const cuit = fmtCuit(row.cuit);
 
   const handleClick = async (e: React.MouseEvent) => {
@@ -244,6 +258,7 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
     try {
       const resp = await afipAPI.consultarPadronBulk([{ projectId: row.projectId, userId: row.userId, contractIndex: row.contractIndex }]);
       const resultado = resp.resultados[0];
+      setUltimoResultado(resultado || null);
       if (resultado?.error) {
         sweetAlert.error("No se pudo validar", resultado.error);
       } else if (resultado?.estado === "activo" && resultado.dropboxSubido) {
@@ -254,8 +269,15 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
         sweetAlert.warning("CUIT inactivo", `${cuit} figura inactivo en el Padrón de AFIP.`);
       } else {
         // "desconocido": AFIP no devolvió (o no se pudo leer) el estadoClave — no es lo mismo que
-        // "inactivo", puede ser un problema de mapeo de campos y no del CUIT en sí.
-        sweetAlert.warning("Estado no reconocido", `AFIP no devolvió un estado de CUIT reconocible para ${cuit} (ni activo ni inactivo explícito). Puede ser un problema temporal del webservice o del mapeo de la respuesta — no asumas que está inactivo.`);
+        // "inactivo", puede ser un problema de mapeo de campos y no del CUIT en sí. `encontrado`
+        // distingue "AFIP dice que esa persona no existe" (revisar el CUIT cargado) de "la encontró
+        // pero no pudimos leer estadoClave" (más probable: bug de mapeo — hay más detalle en los logs del server).
+        sweetAlert.warning(
+          "Estado no reconocido",
+          resultado?.encontrado === false
+            ? `AFIP dice que no existe una persona con el CUIT ${cuit}. Revisá que esté bien cargado — no asumas que está inactivo.`
+            : `AFIP encontró a la persona pero no devolvió un estado de CUIT reconocible (ni activo ni inactivo explícito) para ${cuit}. Es probable que sea un problema de mapeo de la respuesta, no del CUIT — no asumas que está inactivo.`,
+        );
       }
       onConsultado();
     } catch (e: any) {
@@ -266,16 +288,61 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
   };
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      disabled={consultando || !cuit}
-      title={cuit ? `Validar ${cuit} en el Padrón de AFIP` : "Falta el CUIT/CUIL de esta persona"}
-      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap transition-colors bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-      <FontAwesomeIcon icon={consultando ? faSpinner : faLandmark} spin={consultando} className="h-2.5 w-2.5" />
-      {consultando ? "Validando..." : compacto ? "Validar" : "Validar CUIT"}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={consultando || !cuit}
+        title={cuit ? `Validar ${cuit} en el Padrón de AFIP` : "Falta el CUIT/CUIL de esta persona"}
+        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap transition-colors bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <FontAwesomeIcon icon={consultando ? faSpinner : faLandmark} spin={consultando} className="h-2.5 w-2.5" />
+        {consultando ? "Validando..." : compacto ? "Validar" : "Validar CUIT"}
+      </button>
+      {ultimoResultado && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setVerDetalle(true);
+          }}
+          title="Ver el CUIT enviado y la respuesta cruda de AFIP de la última consulta"
+          className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shrink-0"
+        >
+          <FontAwesomeIcon icon={faBug} className="h-3 w-3" />
+        </button>
+      )}
+      {verDetalle && ultimoResultado && (
+        <Modal isOpen={verDetalle} onClose={() => setVerDetalle(false)} title="Detalle técnico — Consulta Padrón AFIP" subtitle={`CUIT consultado: ${ultimoResultado.cuit}`} size="lg" zIndex={80}>
+          <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
+            <ul className="grid grid-cols-2 gap-2 text-xs">
+              <li className="bg-gray-50 dark:bg-gray-900/40 rounded-lg px-3 py-2">
+                <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest">CUIT enviado (idPersona)</span>
+                <span className="font-mono text-gray-700 dark:text-gray-200">{ultimoResultado.cuit}</span>
+              </li>
+              <li className="bg-gray-50 dark:bg-gray-900/40 rounded-lg px-3 py-2">
+                <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest">CUIT representada</span>
+                <span className="font-mono text-gray-700 dark:text-gray-200">{ultimoResultado.cuitRepresentada || "—"}</span>
+              </li>
+              <li className="bg-gray-50 dark:bg-gray-900/40 rounded-lg px-3 py-2">
+                <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest">Ambiente</span>
+                <span className="font-mono text-gray-700 dark:text-gray-200">{ultimoResultado.ambiente || "—"}</span>
+              </li>
+              <li className="bg-gray-50 dark:bg-gray-900/40 rounded-lg px-3 py-2">
+                <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest">encontrado / estado</span>
+                <span className="font-mono text-gray-700 dark:text-gray-200">{String(ultimoResultado.encontrado)} / {ultimoResultado.estado || "—"}</span>
+              </li>
+            </ul>
+            <div>
+              <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Respuesta cruda de AFIP (raw / Fault)</span>
+              <pre className="text-[11px] bg-gray-900 text-gray-300 rounded-lg p-3 overflow-auto max-h-[50vh] whitespace-pre-wrap break-words">
+                {ultimoResultado.error ? ultimoResultado.error : JSON.stringify(ultimoResultado.raw, null, 2) || "(vacío)"}
+              </pre>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </>
   );
 };
 

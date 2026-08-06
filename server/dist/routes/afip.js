@@ -174,6 +174,12 @@ router.post("/consulta-padron/bulk", async (req, res) => {
                 const matches = targetsPorCuit.get(cuit) || [];
                 try {
                     const resultado = await consultarPadron(tenantId, cfg, cuit);
+                    // "desconocido" es sospechoso (el mapeo de estadoClave todavía no se validó contra una
+                    // respuesta real de AFIP en producción — ver comentario en afipService.ts): se deja el raw
+                    // completo en el log para poder ajustar el mapeo sin tener que volver a consultar.
+                    if (resultado.estado === "desconocido") {
+                        console.warn(`AFIP: estado desconocido para CUIT ${cuit} (encontrado=${resultado.encontrado}). Raw:`, JSON.stringify(resultado.raw));
+                    }
                     let contratosActualizados = 0;
                     let dropboxSubido;
                     for (const t of matches) {
@@ -226,7 +232,10 @@ router.post("/consulta-padron/bulk", async (req, res) => {
                         up.markModified("contracts");
                         contratosActualizados++;
                     }
-                    resultados.push({ cuit, estado: resultado.estado, encontrado: resultado.encontrado, denominacion: resultado.denominacion, contratosActualizados, dropboxSubido });
+                    // Se devuelve el raw completo + con qué CUIT representada/ambiente se consultó — para poder
+                    // ver en el momento, desde la UI, exactamente qué se mandó y qué contestó AFIP, sin
+                    // necesitar acceso a los logs del server ni a la base.
+                    resultados.push({ cuit, estado: resultado.estado, encontrado: resultado.encontrado, denominacion: resultado.denominacion, contratosActualizados, dropboxSubido, cuitRepresentada: cfg.cuitRepresentada, ambiente: cfg.ambiente, raw: resultado.raw });
                 }
                 catch (e) {
                     resultados.push({ cuit, error: e?.message || "Error al consultar AFIP", contratosActualizados: 0 });

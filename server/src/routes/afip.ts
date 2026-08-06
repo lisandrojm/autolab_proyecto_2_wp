@@ -177,7 +177,7 @@ router.post("/consulta-padron/bulk", async (req: AuthenticatedRequest & TenantRe
 
     const tenantId = String(req.tenantObjectId);
     const docsCache = new Map<string, any>(); // `${projectId}|${userId}` → documento UserProject
-    const resultados: { cuit: string; estado?: string; encontrado?: boolean; denominacion?: string; error?: string; contratosActualizados: number; dropboxSubido?: boolean }[] = [];
+    const resultados: { cuit: string; estado?: string; encontrado?: boolean; denominacion?: string; error?: string; contratosActualizados: number; dropboxSubido?: boolean; cuitRepresentada?: string; ambiente?: string; raw?: any }[] = [];
 
     // Concurrencia acotada: no golpear el webservice de AFIP con todo el lote en simultáneo.
     const CONCURRENCIA = 3;
@@ -189,6 +189,12 @@ router.post("/consulta-padron/bulk", async (req: AuthenticatedRequest & TenantRe
           const matches = targetsPorCuit.get(cuit) || [];
           try {
             const resultado = await consultarPadron(tenantId, cfg, cuit);
+            // "desconocido" es sospechoso (el mapeo de estadoClave todavía no se validó contra una
+            // respuesta real de AFIP en producción — ver comentario en afipService.ts): se deja el raw
+            // completo en el log para poder ajustar el mapeo sin tener que volver a consultar.
+            if (resultado.estado === "desconocido") {
+              console.warn(`AFIP: estado desconocido para CUIT ${cuit} (encontrado=${resultado.encontrado}). Raw:`, JSON.stringify(resultado.raw));
+            }
             let contratosActualizados = 0;
             let dropboxSubido: boolean | undefined;
             for (const t of matches) {
@@ -246,7 +252,10 @@ router.post("/consulta-padron/bulk", async (req: AuthenticatedRequest & TenantRe
               up.markModified("contracts");
               contratosActualizados++;
             }
-            resultados.push({ cuit, estado: resultado.estado, encontrado: resultado.encontrado, denominacion: resultado.denominacion, contratosActualizados, dropboxSubido });
+            // Se devuelve el raw completo + con qué CUIT representada/ambiente se consultó — para poder
+            // ver en el momento, desde la UI, exactamente qué se mandó y qué contestó AFIP, sin
+            // necesitar acceso a los logs del server ni a la base.
+            resultados.push({ cuit, estado: resultado.estado, encontrado: resultado.encontrado, denominacion: resultado.denominacion, contratosActualizados, dropboxSubido, cuitRepresentada: cfg.cuitRepresentada, ambiente: cfg.ambiente, raw: resultado.raw });
           } catch (e: any) {
             resultados.push({ cuit, error: e?.message || "Error al consultar AFIP", contratosActualizados: 0 });
           }
