@@ -152,13 +152,18 @@ function signCms(xml, certificadoPemRaw, clavePrivadaPemRaw) {
     const der = forge.asn1.toDer(p7.toAsn1()).getBytes();
     return forge.util.encode64(der);
 }
+/** Devuelve el body parseado Y el texto crudo sin parsear — el crudo importa para diagnosticar
+ *  cuando AFIP no contesta un SOAP normal (por ejemplo una página de error HTML con 200 OK): el
+ *  parser XML no tira excepción con eso, simplemente no encuentra ninguna de las keys esperadas y
+ *  todo aguas abajo queda vacío sin explicar por qué. */
 async function soapPost(url, soapAction, envelope) {
     const { data } = await axios.post(url, envelope, {
         headers: { "Content-Type": "text/xml; charset=utf-8", SOAPAction: soapAction },
         timeout: SOAP_TIMEOUT_MS,
     });
+    const raw = String(data);
     const parser = new XMLParser({ ignoreAttributes: false, removeNSPrefix: false });
-    return parser.parse(String(data));
+    return { parsed: parser.parse(raw), raw };
 }
 /** Pide (o reutiliza del cache) un ticket de acceso WSAA para el tenant+servicio dados. */
 async function obtenerTicket(tenantId, cfg, service) {
@@ -177,13 +182,13 @@ async function obtenerTicket(tenantId, cfg, service) {
     </wsaa:loginCms>
   </soapenv:Body>
 </soapenv:Envelope>`;
-    const parsed = await soapPost(WSAA_URL[cfg.ambiente], "", envelope);
+    const { parsed, raw } = await soapPost(WSAA_URL[cfg.ambiente], "", envelope);
     const body = buscar(buscar(parsed, "Envelope"), "Body");
     const loginCmsResponse = buscar(body, "loginCmsResponse");
     const loginCmsReturn = buscar(loginCmsResponse, "loginCmsReturn") ?? (typeof loginCmsResponse === "string" ? loginCmsResponse : undefined);
     if (!loginCmsReturn) {
         const fault = buscar(body, "Fault");
-        throw new Error(fault ? `WSAA rechazó el login: ${JSON.stringify(fault)}` : "WSAA no devolvió loginCmsReturn (respuesta inesperada, revisar formato)");
+        throw new Error(fault ? `WSAA rechazó el login: ${JSON.stringify(fault)}` : `WSAA no devolvió loginCmsReturn (respuesta inesperada). Cuerpo crudo: ${raw.slice(0, 1000)}`);
     }
     const inner = new XMLParser({ ignoreAttributes: false }).parse(String(loginCmsReturn));
     const ticketResponse = buscar(inner, "loginTicketResponse");
@@ -239,7 +244,7 @@ export async function consultarPadron(tenantId, cfg, cuitConsultado, opts) {
     </a13:getPersona>
   </soapenv:Body>
 </soapenv:Envelope>`;
-        const parsed = await soapPost(PADRON_A13_URL[cfg.ambiente], "", envelope);
+        const { parsed, raw: rawTexto } = await soapPost(PADRON_A13_URL[cfg.ambiente], "", envelope);
         const body = buscar(buscar(parsed, "Envelope"), "Body");
         const fault = buscar(body, "Fault");
         if (fault) {
@@ -256,7 +261,11 @@ export async function consultarPadron(tenantId, cfg, cuitConsultado, opts) {
             const getPersonaReturn = buscar(getPersonaResponse, "getPersonaReturn");
             const persona = buscar(getPersonaReturn, "persona") ?? getPersonaReturn;
             if (!persona) {
-                resultado = { cuit, encontrado: false, estado: "desconocido", raw: getPersonaReturn };
+                // Ni Fault ni getPersonaReturn: la respuesta no tiene ninguna de las formas esperadas (p. ej.
+                // AFIP contestó 200 con una página de error HTML en vez de un SOAP normal — el XML parser no
+                // tira excepción con eso, solo no encuentra las keys). Se guarda el texto crudo (recortado)
+                // para poder ver qué mandó AFIP realmente en vez de un "desconocido" sin explicación.
+                resultado = { cuit, encontrado: false, estado: "desconocido", raw: getPersonaReturn ?? { respuestaNoReconocida: rawTexto.slice(0, 3000) } };
             }
             else {
                 const estadoClaveRaw = String(buscar(persona, "estadoClave") ?? "").toUpperCase();
