@@ -16,6 +16,8 @@ export interface GenerarFirmaPayload {
   releaseIds: string[];
   empresaContratoId?: string;
   empresaReleaseId?: string;
+  /** Trámite de origen del contrato — si es "constancia_cuit" se etiqueta el nombre del archivo. */
+  tramite?: "alta_temprana_afip" | "constancia_cuit";
 }
 
 export interface GenerarFirmaResult {

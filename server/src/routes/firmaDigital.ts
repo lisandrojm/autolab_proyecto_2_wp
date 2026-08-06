@@ -50,6 +50,9 @@ const generarSchema = z.object({
   releaseIds: z.array(z.string().min(1)).default([]),
   empresaContratoId: z.string().optional(),
   empresaReleaseId: z.string().optional(),
+  // Trámite de origen del contrato (ya lo calcula el frontend con estadoImpositivoDelContrato) — si es
+  // "constancia_cuit" se etiqueta el nombre del archivo para identificar el trámite en Dropbox.
+  tramite: z.enum(["alta_temprana_afip", "constancia_cuit"]).optional(),
 });
 
 // POST /firma-digital/generar - paso 1: arma el PDF del Contrato + los Release(s) elegidos y los
@@ -62,8 +65,9 @@ router.post("/generar", async (req: AuthenticatedRequest & TenantRequest, res) =
       res.status(400).json({ error: "Datos inválidos para generar los documentos." });
       return;
     }
-    const { projectId, userId, contractIndex, contratoTemplateId, releaseIds, empresaContratoId, empresaReleaseId } = parsed.data;
+    const { projectId, userId, contractIndex, contratoTemplateId, releaseIds, empresaContratoId, empresaReleaseId, tramite } = parsed.data;
     const tenantId = String(req.tenantObjectId);
+    const sufijoTramite = tramite === "constancia_cuit" ? "_Constancia_de_Cuit" : "";
 
     const up = await UserProject.findOne({ projectId, userId });
     if (!up || contractIndex < 0 || contractIndex >= up.contracts.length) {
@@ -75,13 +79,13 @@ router.post("/generar", async (req: AuthenticatedRequest & TenantRequest, res) =
     fs.mkdirSync(dir, { recursive: true });
 
     const contratoPdf = await generarContratoPdf({ tenantId, templateId: contratoTemplateId, userId, projectId, contractIndex, empresaId: empresaContratoId });
-    const contratoFilename = `${contratoPdf.filename}.pdf`;
+    const contratoFilename = `${contratoPdf.filename}${sufijoTramite}.pdf`;
     fs.writeFileSync(path.join(dir, contratoFilename), contratoPdf.buffer);
 
     const firmaReleases: { releaseId: string; nombre: string; url: string }[] = [];
     for (const releaseId of releaseIds) {
       const releasePdf = await generarReleasePdf({ tenantId, releaseId, userId, projectId, contractIndex, empresaId: empresaReleaseId });
-      const releaseFilename = `${releasePdf.filename}.pdf`;
+      const releaseFilename = `${releasePdf.filename}${sufijoTramite}.pdf`;
       fs.writeFileSync(path.join(dir, releaseFilename), releasePdf.buffer);
       firmaReleases.push({ releaseId, nombre: releaseFilename, url: `/storage/${tenantId}/${userId}/firma/${releaseFilename}` });
     }

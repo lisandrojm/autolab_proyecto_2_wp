@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faEye, faPaperPlane, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI, ContractOverviewRow, Contract } from "../../api/users";
 import { companiesAPI, Company } from "../../api/companies";
 import { infoAPI, InfoItem } from "../../api/info";
@@ -12,7 +12,7 @@ import { Release } from "../../api/release";
 import { firmaDigitalAPI, FirmaDigitalConfig } from "../../api/firmaDigital";
 import { claveEstado, EstadoBadge, estadoLabel } from "../EstadoSelect";
 import { isContractVigente, formatDate, estadoImpositivoDelContrato, findTemplate, templateHasContent, EmpresaOption } from "../team/ContractCard";
-import { getImageUrl } from "../../utils/imageHelpers";
+import { getImageUrl, downloadFileFromUrl } from "../../utils/imageHelpers";
 import { SearchAndFilters } from "../ui/SearchAndFilters";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { EmptyState } from "../ui/EmptyState";
@@ -817,19 +817,23 @@ const GenerarMenu: React.FC<{ empresas: EmpresaOption[]; onGenerar: (empresaId?:
 };
 
 /**
- * Celda "Documentos" de la pestaña Firma digital: paso 1 (botón "Generar", con menú de empresa si el
- * proyecto tiene más de una) → paso 2, una vez generado, íconos de ojito para revisar el Contrato y
- * cada Release antes de mandarlos a firmar (el envío en sí es la acción bulk "Enviar a firmar").
+ * Celda "Contrato" de la pestaña Firma digital: paso 1 (botón "Generar", con menú de empresa si el
+ * proyecto tiene más de una — dispara la generación del Contrato Y de los Release(s) juntos) → paso
+ * 2, una vez generado, ícono de PDF (ver) + descargar para revisar el PDF antes de mandarlo a firmar
+ * (el envío en sí es la acción bulk "Enviar a firmar"). El estado "Enviado" se muestra acá.
  */
-const FirmaDocumentosCell: React.FC<{
+const FirmaContratoCell: React.FC<{
   record: ContractOverviewRow;
   contratoFrames: ContratoFrameItem[];
+  allEstados: InfoItem[];
   activeReleases: Release[];
   onGenerado: () => void;
-}> = ({ record, contratoFrames, activeReleases, onGenerado }) => {
+}> = ({ record, contratoFrames, allEstados, activeReleases, onGenerado }) => {
   const [generando, setGenerando] = useState(false);
+  const [descargando, setDescargando] = useState(false);
   const template = findTemplate(record as unknown as Contract, contratoFrames);
   const puedeGenerar = templateHasContent(template);
+  const tramite = estadoImpositivoDelContrato(record as unknown as Contract, contratoFrames, allEstados)?.data?.tipoImpositivo as TipoImpositivo | undefined;
 
   const savedContratoEmpresaId = record.empresaContratoId || "";
   const contratoEmpresas = record.contratoEmpresas || [];
@@ -849,6 +853,7 @@ const FirmaDocumentosCell: React.FC<{
         releaseIds: activeReleases.map((r) => r._id),
         empresaContratoId: empresaId,
         empresaReleaseId: empresaId,
+        tramite,
       });
       onGenerado();
     } catch (e: any) {
@@ -858,9 +863,21 @@ const FirmaDocumentosCell: React.FC<{
     }
   };
 
+  const descargar = async () => {
+    if (!record.firmaContratoUrl) return;
+    setDescargando(true);
+    try {
+      await downloadFileFromUrl(record.firmaContratoUrl, record.firmaContratoNombre || "Contrato.pdf");
+    } catch {
+      sweetAlert.error("Error", "No se pudo descargar el contrato.");
+    } finally {
+      setDescargando(false);
+    }
+  };
+
   if (!record.firmaGeneradoAt) {
     return (
-      <div className="flex items-center min-w-[130px]" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center min-w-[120px]" onClick={(e) => e.stopPropagation()}>
         {puedeGenerar ? (
           <GenerarMenu empresas={empresasParaGenerar} onGenerar={generar} generando={generando} />
         ) : (
@@ -873,21 +890,82 @@ const FirmaDocumentosCell: React.FC<{
   }
 
   return (
-    <div className="flex items-center gap-1.5 flex-wrap min-w-[130px]" onClick={(e) => e.stopPropagation()}>
-      <a href={getImageUrl(record.firmaContratoUrl)} target="_blank" rel="noopener noreferrer" title={record.firmaContratoNombre || "Ver Contrato"} className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
-        <FontAwesomeIcon icon={faEye} className="h-3.5 w-3.5" />
-      </a>
-      {(record.firmaReleases || []).map((r) => (
-        <a key={r.releaseId} href={getImageUrl(r.url)} target="_blank" rel="noopener noreferrer" title={r.nombre} className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
-          <FontAwesomeIcon icon={faEye} className="h-3.5 w-3.5" />
+    <div className="flex flex-col gap-1 min-w-[120px]" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center gap-2">
+        <a href={getImageUrl(record.firmaContratoUrl)} target="_blank" rel="noopener noreferrer" title={record.firmaContratoNombre || "Ver Contrato"} className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+          <FontAwesomeIcon icon={faFilePdf} className="h-3.5 w-3.5 text-violet-600" />
         </a>
-      ))}
+        <button
+          type="button"
+          onClick={descargar}
+          disabled={descargando}
+          title="Descargar contrato"
+          className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <FontAwesomeIcon icon={descargando ? faSpinner : faDownload} spin={descargando} className="h-3.5 w-3.5" />
+        </button>
+      </div>
       {record.firmaEnviadaAt && (
-        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 whitespace-nowrap">
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 whitespace-nowrap w-fit">
           <FontAwesomeIcon icon={faCheck} className="h-2.5 w-2.5" />
           Enviado
         </span>
       )}
+    </div>
+  );
+};
+
+/**
+ * Celda "Release" de la pestaña Firma digital: read-only (se genera junto con el Contrato desde la
+ * celda de al lado) — ícono de PDF (ver) + descargar por cada release activo ya generado.
+ */
+const FirmaReleaseCell: React.FC<{ record: ContractOverviewRow; activeReleases: Release[] }> = ({ record, activeReleases }) => {
+  const [descargando, setDescargando] = useState<string | null>(null);
+  const firmaReleases = record.firmaReleases || [];
+
+  const descargar = async (url: string, nombre: string) => {
+    setDescargando(url);
+    try {
+      await downloadFileFromUrl(url, nombre);
+    } catch {
+      sweetAlert.error("Error", "No se pudo descargar el release.");
+    } finally {
+      setDescargando(null);
+    }
+  };
+
+  if (!record.firmaGeneradoAt) {
+    return (
+      <span className="text-xs text-gray-400" title="Se genera junto con el contrato">
+        —
+      </span>
+    );
+  }
+  if (firmaReleases.length === 0) {
+    return <span className="text-xs text-gray-400">—</span>;
+  }
+
+  return (
+    <div className="flex flex-col gap-1 min-w-[150px]" onClick={(e) => e.stopPropagation()}>
+      {firmaReleases.map((r) => {
+        const label = activeReleases.find((ar) => ar._id === r.releaseId)?.name || "Release";
+        return (
+          <div key={r.releaseId} className="flex items-center gap-2">
+            <a href={getImageUrl(r.url)} target="_blank" rel="noopener noreferrer" title={r.nombre} className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+              <FontAwesomeIcon icon={faFilePdf} className="h-3.5 w-3.5 text-violet-600" />
+            </a>
+            <button
+              type="button"
+              onClick={() => descargar(r.url, r.nombre)}
+              disabled={descargando === r.url}
+              title={`Descargar ${label}`}
+              className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <FontAwesomeIcon icon={descargando === r.url ? faSpinner : faDownload} spin={descargando === r.url} className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 };
@@ -1096,12 +1174,13 @@ export const ContractBulkFirmaTab: React.FC<{
                   </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Alta / Baja</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Trámite</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Documentos</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Contrato</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Release</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">CUIT</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Cliente</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Contrato</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Tipo de Contrato</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Estado</th>
                 </tr>
               </thead>
@@ -1156,7 +1235,10 @@ export const ContractBulkFirmaTab: React.FC<{
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <FirmaDocumentosCell record={r} contratoFrames={contratoFrames} activeReleases={activeReleases} onGenerado={load} />
+                        <FirmaContratoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onGenerado={load} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <FirmaReleaseCell record={r} activeReleases={activeReleases} />
                       </td>
                       <td className="px-4 py-3">
                         <p className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{r.userName}</p>

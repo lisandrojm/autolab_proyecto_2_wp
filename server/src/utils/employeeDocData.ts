@@ -13,18 +13,23 @@ const fechaCompacta = (s?: string): string => {
 
 /**
  * Nomenclatura de archivos descargados (contratos y releases):
- *   [proyecto]_[Contrato|Release]_[nombreDoc]_[YYYY_MM_DD]_[apellido]_[nombres]_[cuit]_[fechaAlta]_[fechaBaja]
+ *   [proyecto]_[Contrato|Release]_[nombreDoc]_[apellido]_[nombres]_[cuit]_Desde_[fechaAlta][_Hasta_[fechaBaja]]_[extra]
  *
  * - `proyecto`: número/ID externo del proyecto (ej. 426).
  * - `nombreDoc`: opcional; para releases es el nombre del release.
- * - fecha: día de la descarga (hoy) en formato YYYY_MM_DD.
- * - cuit/fechaAlta/fechaBaja: tokens compactos (sin separadores) para que
- *   `estadoDropboxCronService.ts` pueda identificar el contrato sin ambigüedad cuando este archivo
- *   vuelve a Dropbox (p. ej. tras pasar por Dropbox Sign, que preserva el nombre de archivo).
- * Devuelve el nombre SIN extensión (el caller agrega `.docx`).
+ * - `extra`: opcional; texto libre adicional (p. ej. "Constancia de Cuit" para identificar el trámite
+ *   de origen en Firma Digital).
+ * - `Desde`/`Hasta`: fecha de alta/baja del contrato, para que se entienda de un vistazo el período —
+ *   se omite "Hasta" si el contrato no tiene fecha de baja. Los valores en sí son tokens compactos
+ *   `YYYYMMDD` (sin separadores): `estadoDropboxCronService.ts` los usa como desempate cuando el CUIT
+ *   solo no alcanza para identificar el contrato al ver volver este archivo desde Dropbox Sign (que
+ *   preserva el nombre) — cambiar ese formato rompería ese matching, por eso NO se usan separadores
+ *   dentro de la fecha aunque sí alrededor (mantiene el token de 8 dígitos aislado y detectable).
+ * - `cuit`: token compacto (sin separadores), mismo motivo.
+ * Devuelve el nombre SIN extensión (el caller agrega la extensión correspondiente).
  */
-export function buildDocFileName(opts: { tipo: "Contrato" | "Release" | "ConstanciaCUIT" | "AltaAFIP"; user: any; up: any; contract: any; docName?: string }): string {
-  const { tipo, user, up, contract, docName } = opts;
+export function buildDocFileName(opts: { tipo: "Contrato" | "Release" | "ConstanciaCUIT" | "AltaAFIP"; user: any; up: any; contract: any; docName?: string; extra?: string }): string {
+  const { tipo, user, up, contract, docName, extra } = opts;
   const proyecto = up?.externalProjectId ?? contract?.proyecto_id ?? up?.nombre_proyecto ?? contract?.nombre_proyecto ?? "";
   const nombre = (user?.firstName || "").trim();
   const apellido = (user?.lastName || "").trim();
@@ -32,11 +37,9 @@ export function buildDocFileName(opts: { tipo: "Contrato" | "Release" | "Constan
   const cuit = normalizarCuit(user?.metadata?.cuit);
   const fechaAlta = fechaCompacta(contract?.fecha_alta_contrato);
   const fechaBaja = fechaCompacta(contract?.fecha_baja_contrato);
+  const rango = fechaAlta ? `Desde_${fechaAlta}${fechaBaja ? `_Hasta_${fechaBaja}` : ""}` : "";
 
-  const now = new Date();
-  const fecha = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, "0")}_${String(now.getDate()).padStart(2, "0")}`;
-
-  const parts = [String(proyecto).trim(), tipo, (docName || "").trim(), fecha, persona, cuit, fechaAlta, fechaBaja].filter((p) => p && String(p).trim() !== "");
+  const parts = [String(proyecto).trim(), tipo, (docName || "").trim(), persona, cuit, rango, (extra || "").trim()].filter((p) => p && String(p).trim() !== "");
   // Eliminar caracteres inválidos para nombres de archivo (se conservan espacios y acentos).
   return parts.join("_").replace(/[\\/:*?"<>|]/g, "_");
 }
