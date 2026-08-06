@@ -92,12 +92,16 @@ export const ContractDocsColumns: React.FC<{
   const tipoContrato = record.nombre_contrato || template?.data?.nombre || template?.name || "Contrato";
   const estadoImpositivo = estadoImpositivoDelContrato(asContract, contratoFrames, allEstados);
   const tituloAlta = estadoImpositivo?.data?.etiquetaSecundaria?.trim() || (estadoImpositivo?.data?.tipoImpositivo === "alta_temprana_afip" ? "Alta AFIP" : "Documento de Servicios");
-  // Si el contrato requiere Alta (tiene estado impositivo) y todavía no se subió el documento, se
-  // bloquea la descarga del Contrato y del Release hasta que se cargue.
+  // Constancia de CUIT ya no se satisface subiendo un PDF a mano: el "documento" es el JSON que
+  // "Validar CUIT" archiva solo en Dropbox al confirmar el CUIT activo en AFIP (constanciaAfipDropboxSubidaAt).
+  // altaDocumentoUrl queda como reliquia del flujo viejo — no cuenta más para este trámite.
+  const esConstanciaCuit = estadoImpositivo?.data?.tipoImpositivo === "constancia_cuit";
+  // Si el contrato requiere Alta (tiene estado impositivo) y todavía no se subió/archivó el documento,
+  // se bloquea la descarga del Contrato y del Release hasta que se cargue.
   const requiereAlta = !!estadoImpositivo;
-  const altaCargada = !!record.altaDocumentoUrl;
+  const altaCargada = esConstanciaCuit ? !!record.constanciaAfipDropboxSubidaAt : !!record.altaDocumentoUrl;
   const descargaBloqueada = requiereAlta && !altaCargada;
-  const tituloBloqueo = `Subí primero el documento de ${tituloAlta} para poder descargar`;
+  const tituloBloqueo = esConstanciaCuit ? "Validá el CUIT en AFIP (pestaña Constancia de CUIT) para poder descargar" : `Subí primero el documento de ${tituloAlta} para poder descargar`;
 
   // Empresa efectiva: si el contrato tiene una fija guardada, esa sola; si no, las del proyecto.
   const savedContratoEmpresaId = record.empresaContratoId || "";
@@ -152,7 +156,19 @@ export const ContractDocsColumns: React.FC<{
           <div className="flex flex-col gap-1 min-w-[160px]">
             {!hideAltaLabel && <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{tituloAlta}</span>}
             <div className="flex items-center gap-2">
-              {record.altaDocumentoUrl ? (
+              {esConstanciaCuit ? (
+                altaCargada ? (
+                  <span className="text-xs text-gray-700 dark:text-gray-200 flex items-center gap-1.5" title="Archivado en Dropbox al validar el CUIT contra AFIP">
+                    <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
+                    Archivado en Dropbox
+                  </span>
+                ) : (
+                  <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
+                    <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 shrink-0" />
+                    Sin documento
+                  </span>
+                )
+              ) : record.altaDocumentoUrl ? (
                 <a href={getImageUrl(record.altaDocumentoUrl)} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-700 dark:text-gray-200 flex items-center gap-1.5 min-w-0 hover:underline" title={record.altaDocumentoNombre || tituloAlta}>
                   <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
                   <span className="truncate max-w-[110px]">{record.altaDocumentoNombre || "Ver documento"}</span>
@@ -163,12 +179,16 @@ export const ContractDocsColumns: React.FC<{
                   Sin documento
                 </span>
               )}
-              {record.altaDocumentoUrl && (
+              {!esConstanciaCuit && record.altaDocumentoUrl && (
                 <button type="button" onClick={handleDownloadAlta} disabled={downloading} title="Descargar documento" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
                   <FontAwesomeIcon icon={downloading ? faSpinner : faDownload} spin={downloading} className="h-4 w-4" />
                 </button>
               )}
-              {canUploadAlta ? (
+              {esConstanciaCuit ? (
+                <span className="p-1.5 text-gray-300 dark:text-gray-600 cursor-not-allowed shrink-0" title="Se archiva solo: usá 'Validar CUIT' en la pestaña Constancia de CUIT">
+                  <FontAwesomeIcon icon={faLock} className="h-3.5 w-3.5" />
+                </span>
+              ) : canUploadAlta ? (
                 <>
                   <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading} title={record.altaDocumentoUrl ? "Reemplazar documento" : "Subir PDF"} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
                     <FontAwesomeIcon icon={uploading ? faSpinner : faUpload} spin={uploading} className="h-4 w-4" />
