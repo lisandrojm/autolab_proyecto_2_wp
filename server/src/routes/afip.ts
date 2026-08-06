@@ -199,7 +199,16 @@ async function resolverCarpetaConstanciaCuit(): Promise<string | null> {
     .lean();
   for (const e of estados) {
     const carpetas = ((e as any)?.data?.transicionAutomatica?.carpetas || []) as { dropboxCarpeta?: string; detalle?: string }[];
-    const match = carpetas.find((c) => /constancia/i.test(c.detalle || "") && /cuit/i.test(c.detalle || ""));
+    const match = carpetas.find((c) => {
+      // `detalle` es una nota libre opcional que en la práctica casi nunca se completa — el nombre
+      // que realmente se ve en "Carpetas vigiladas" (EscaneoDropboxConfigPage.tsx, nombreCarpeta())
+      // es el ÚLTIMO tramo del path de `dropboxCarpeta`, así que hay que matchear ahí también, no
+      // solo contra `detalle` (que era el único lugar donde se buscaba antes, y por eso nunca
+      // encontraba la carpeta aunque estuviera perfectamente configurada y visible en esa pantalla).
+      const nombreCarpeta = (c.dropboxCarpeta || "").split("/").filter(Boolean).pop() || "";
+      const texto = `${c.detalle || ""} ${nombreCarpeta}`;
+      return /constancia/i.test(texto) && /cuit/i.test(texto);
+    });
     if (match?.dropboxCarpeta) return match.dropboxCarpeta;
   }
   return null;
