@@ -57,7 +57,7 @@ const normalizarEstado = (s: string): string =>
     .trim();
 
 // "Falta pedido de AFIP" y "Pedido de AFIP" son el mismo estado (igual que `estadoLabel` en el front).
-const ESTADO_ALIAS: Record<string, string> = { "falta pedido de afip": "pedido de afip" };
+const ESTADO_ALIAS: Record<string, string> = { "falta pedido de afip": "pedido de afip", "pedido servicios": "pedido de servicios" };
 const estadoCanonico = (s: string): string => {
   const n = normalizarEstado(s);
   return ESTADO_ALIAS[n] || n;

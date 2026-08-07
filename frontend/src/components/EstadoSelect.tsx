@@ -62,7 +62,7 @@ const COLOR_HEX_GENERICO = "#64748b";
  * Sin esto, un contrato con "Falta pedido de AFIP" no encontraría al estado "Pedido de AFIP" del
  * ABM y seguiría pintándose con el color viejo en vez del configurado.
  */
-const ESTADO_ALIAS: Record<string, string> = { "falta pedido de afip": "pedido de afip" };
+const ESTADO_ALIAS: Record<string, string> = { "falta pedido de afip": "pedido de afip", "pedido servicios": "pedido de servicios" };
 
 /** Clave con la que se compara un estado contra el catálogo del ABM (normalizada + alias). */
 export const claveEstado = (name: string): string => {
