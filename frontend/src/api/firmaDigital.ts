@@ -49,6 +49,9 @@ export interface EnviarFirmaTarget {
   userId: string;
   contractIndex: number;
   tipoImpositivo?: "alta_temprana_afip" | "constancia_cuit";
+  /** Si el Contrato de este trámite tiene tildado "Se envía a firmar" — default true. Cuando es
+   *  false, el server no exige que el Contrato esté generado y no lo incluye en la subida. */
+  incluirContrato?: boolean;
 }
 
 export interface EnviarFirmaResultado extends EnviarFirmaTarget {

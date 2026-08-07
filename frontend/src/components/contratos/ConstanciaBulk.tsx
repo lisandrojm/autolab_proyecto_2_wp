@@ -196,7 +196,7 @@ export const BotonArca: React.FC<{ cuit?: string; compacto?: boolean; label?: st
       className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap transition-colors bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
     >
       <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
-      {label || (compacto ? "ARCA" : "Abrir en ARCA")}
+      {label || (compacto ? "Verificar ARCA" : "Abrir en ARCA")}
     </button>
   );
 };
@@ -243,11 +243,11 @@ export const BotonConsultarAfipBulk: React.FC<{
       type="button"
       onClick={handleClick}
       disabled={consultando || pendientes.length === 0}
-      title="Consultar el estado de cada CUIT pendiente directo en el Padrón de AFIP, sin ir uno por uno"
+      title="Valida el estado de cada CUIT seleccionado (o todos los pendientes, si no hay selección) directo en el Padrón de AFIP, sin ir uno por uno"
       className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold border transition-colors bg-blue-600 text-white border-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <FontAwesomeIcon icon={consultando ? faSpinner : faLandmark} spin={consultando} className="h-3 w-3" />
-      {consultando ? "Consultando AFIP..." : `Consultar en AFIP (${pendientes.length})`}
+      {consultando ? "Validando..." : `Validar ARCA Masivo (${pendientes.length})`}
     </button>
   );
 };
@@ -316,7 +316,7 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
         className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
       >
         <FontAwesomeIcon icon={consultando ? faSpinner : faLandmark} spin={consultando} className="h-3 w-3" />
-        {consultando ? "Validando..." : compacto ? "Validar" : "Validar CUIT"}
+        {consultando ? "Validando..." : compacto ? "Validar ARCA" : "Validar CUIT"}
       </button>
       {ultimoResultado && (
         <button

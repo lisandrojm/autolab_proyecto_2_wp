@@ -10,7 +10,7 @@ import { categoriaSatAPI, CategoriaSatItem } from "../../api/categoriasSat";
 import { createSimpleCatalogApi, SimpleCatalogItem } from "../../api/simpleCatalog";
 import { Release } from "../../api/release";
 import { firmaDigitalAPI, FirmaDigitalConfig } from "../../api/firmaDigital";
-import { claveEstado, EstadoBadge, estadoLabel } from "../EstadoSelect";
+import { claveEstado, EstadoBadge, EstadoSecundarioBadge, estadoLabel } from "../EstadoSelect";
 import { isContractVigente, formatDate, estadoImpositivoDelContrato, findTemplate, templateHasContent, EmpresaOption } from "../team/ContractCard";
 import { getImageUrl, downloadFileFromUrl } from "../../utils/imageHelpers";
 import { SearchAndFilters } from "../ui/SearchAndFilters";
@@ -45,6 +45,22 @@ const TIPO_LABEL: Record<TipoImpositivo, string> = {
 
 /** Fila de contrato enriquecida con el trámite impositivo de su estado actual. */
 type ImpositivoRow = ContractOverviewRow & { _tipo?: TipoImpositivo; _estadoName: string };
+
+/**
+ * Columna "Estado Impositivo": el Estado impositivo (Alta AFIP / Alta Servicios) vinculado al TIPO de
+ * contrato — no al estado actual, por eso sigue mostrándose igual en las tres pestañas aunque el
+ * contrato ya haya avanzado (p. ej. a "Envío de documentación" o "Firma pendiente"). Mismo criterio
+ * que la columna "Estado impositivo" de Gestionar Equipo (ProjectTeamPage.tsx).
+ */
+const EstadoImpositivoCell: React.FC<{ record: ContractOverviewRow; contratoFrames: ContratoFrameItem[]; allEstados: InfoItem[] }> = ({ record, contratoFrames, allEstados }) => {
+  const estadoImpositivo = estadoImpositivoDelContrato(record as unknown as Contract, contratoFrames, allEstados);
+  if (!estadoImpositivo) return <span className="text-xs text-gray-400">—</span>;
+  return estadoImpositivo.data?.etiquetaSecundaria?.trim() ? (
+    <EstadoSecundarioBadge estado={estadoImpositivo} className="text-[10px] whitespace-nowrap" />
+  ) : (
+    <EstadoBadge name={estadoImpositivo.name} className="text-[10px] whitespace-nowrap" />
+  );
+};
 
 /**
  * Sub-pestaña "Altas de AFIP | Constancia de CUIT": lista SOLO lectura de los contratos cuyo estado
@@ -108,6 +124,8 @@ export const ContractBulkAfipTab: React.FC<{
   const [flujoTxtInfoOpen, setFlujoTxtInfoOpen] = useState(false);
   // Explicación de qué son y de dónde salen los datos que exige la columna "Datos AFIP".
   const [datosAfipInfoOpen, setDatosAfipInfoOpen] = useState(false);
+  // Explicación de qué es la columna "Datos CUIT/CUIL" y por qué gatea Validar / Validar ARCA Masivo.
+  const [datosCuitInfoOpen, setDatosCuitInfoOpen] = useState(false);
 
   useEffect(() => {
     categoriaSatAPI.list().then(setCategorias).catch(() => setCategorias([]));
@@ -278,7 +296,11 @@ export const ContractBulkAfipTab: React.FC<{
       else n.add(k);
       return n;
     });
-  const selectableFiltered = useMemo(() => filtered.filter((x) => x.result.completo), [filtered]);
+  // Qué hace falta para poder tildar una fila depende del trámite: en Alta temprana de AFIP son los
+  // datos completos para el TXT; en Constancia de CUIT alcanza con tener el CUIT/CUIL cargado (es lo
+  // único que necesita "Validar ARCA Masivo").
+  const esSeleccionable = useCallback((row: ImpositivoRow, result: AfipRowResult): boolean => (filterTipo === "constancia_cuit" ? !!fmtCuit(row.cuit) : result.completo), [filterTipo]);
+  const selectableFiltered = useMemo(() => filtered.filter((x) => esSeleccionable(x.row, x.result)), [filtered, esSeleccionable]);
   const allSel = selectableFiltered.length > 0 && selectableFiltered.every((x) => selected.has(rowKey(x.row)));
   const toggleAll = () =>
     setSelected((prev) => {
@@ -419,7 +441,7 @@ export const ContractBulkAfipTab: React.FC<{
               {countConstPendientes} pendientes
             </button>
           </div>
-          <BotonConsultarAfipBulk rows={constanciaRows.map((x) => x.row)} onConsultado={load} />
+          <BotonConsultarAfipBulk rows={seleccionados.length > 0 ? seleccionados.map((x) => x.row) : constanciaRows.map((x) => x.row)} onConsultado={load} />
         </div>
       )}
 
@@ -448,9 +470,9 @@ export const ContractBulkAfipTab: React.FC<{
                     <input
                       type="checkbox"
                       checked={selected.has(rowKey(r))}
-                      disabled={!result.completo}
+                      disabled={!esSeleccionable(r, result)}
                       onChange={() => toggleSel(rowKey(r))}
-                      title={result.completo ? "Incluir esta persona en el TXT" : "Faltan datos AFIP: no se puede incluir en el TXT"}
+                      title={esSeleccionable(r, result) ? (filterTipo === "constancia_cuit" ? "Incluir en Validar ARCA Masivo" : "Incluir esta persona en el TXT") : filterTipo === "constancia_cuit" ? "Falta el CUIT/CUIL de esta persona" : "Faltan datos AFIP: no se puede incluir en el TXT"}
                       className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                     />
                     <FontAwesomeIcon icon={faUser} className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0" />
@@ -527,7 +549,14 @@ export const ContractBulkAfipTab: React.FC<{
               <thead className="sticky top-0 z-40 bg-gray-50 dark:bg-gray-900 shadow-sm">
                 <tr className="border-b border-gray-100 dark:border-gray-800">
                   <th className="sticky top-0 left-0 z-50 px-4 py-3 w-12 bg-gray-50 dark:bg-gray-900">
-                    <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={selectableFiltered.length === 0} title="Seleccionar todos los completos" className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
+                    <input
+                      type="checkbox"
+                      checked={allSel}
+                      onChange={toggleAll}
+                      disabled={selectableFiltered.length === 0}
+                      title={filterTipo === "constancia_cuit" ? "Seleccionar todos los que tienen CUIT/CUIL cargado" : "Seleccionar todos los completos"}
+                      className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    />
                   </th>
                   <th className="sticky top-0 left-12 z-50 px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">
                     Acciones
@@ -545,7 +574,14 @@ export const ContractBulkAfipTab: React.FC<{
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Alta / Baja</th>
                   {filterTipo === "constancia_cuit" && (
                     <>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Dato para buscar la Constancia de Inscripción / CUIT en ARCA">Datos CUIT/CUIL</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1.5">
+                          Datos CUIT/CUIL
+                          <button type="button" onClick={() => setDatosCuitInfoOpen(true)} title="Por qué a veces no se puede validar" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
+                            <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                          </button>
+                        </span>
+                      </th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Estado en el Padrón de AFIP/ARCA">ARCA</th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Si la constancia quedó archivada en Dropbox">DROPBOX</th>
                     </>
@@ -567,6 +603,7 @@ export const ContractBulkAfipTab: React.FC<{
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Contrato</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Estado</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Estado Impositivo</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -576,9 +613,9 @@ export const ContractBulkAfipTab: React.FC<{
                       <input
                         type="checkbox"
                         checked={selected.has(rowKey(r))}
-                        disabled={!result.completo}
+                        disabled={!esSeleccionable(r, result)}
                         onChange={() => toggleSel(rowKey(r))}
-                        title={result.completo ? "Incluir esta persona en el TXT" : "Faltan datos AFIP: no se puede incluir en el TXT"}
+                        title={esSeleccionable(r, result) ? (filterTipo === "constancia_cuit" ? "Incluir en Validar ARCA Masivo" : "Incluir esta persona en el TXT") : filterTipo === "constancia_cuit" ? "Falta el CUIT/CUIL de esta persona" : "Faltan datos AFIP: no se puede incluir en el TXT"}
                         className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                       />
                     </td>
@@ -707,6 +744,9 @@ export const ContractBulkAfipTab: React.FC<{
                           <span className="text-[11px] text-gray-400 italic">Sin trámite definido</span>
                         )}
                       </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <EstadoImpositivoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} />
                     </td>
                   </tr>
                 ))}
@@ -898,13 +938,27 @@ export const ContractBulkAfipTab: React.FC<{
           </div>
         </Modal>
       )}
+
+      {datosCuitInfoOpen && (
+        <Modal isOpen={datosCuitInfoOpen} onClose={() => setDatosCuitInfoOpen(false)} title="Datos CUIT/CUIL" size="sm" zIndex={80}>
+          <div className="space-y-3">
+            <p className="text-sm text-gray-700 dark:text-gray-200">
+              Es el CUIT/CUIL de la persona, cargado en sus datos personales — el único dato que hace falta para buscar la Constancia de Inscripción en ARCA.
+            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Si dice <strong>"Falta 1"</strong> es porque ese usuario todavía no tiene el CUIT/CUIL cargado. Hasta que se cargue, esa fila no se puede tildar y los botones <strong>"Validar"</strong> y <strong>"Validar ARCA Masivo"</strong> quedan deshabilitados para esa persona (no hay CUIT que consultar en el Padrón de AFIP).
+            </p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">Cargá el CUIT/CUIL en los datos personales del usuario para poder validarlo.</p>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
 
 /** Mismo dropdown que `DownloadMenu` (ContractCard.tsx) pero para la acción "Generar" (paso 1): no
  *  descarga nada, solo dispara `onGenerar(empresaId)` — el PDF queda guardado en el server. */
-const GenerarMenu: React.FC<{ empresas: EmpresaOption[]; onGenerar: (empresaId?: string) => void; generando: boolean }> = ({ empresas, onGenerar, generando }) => {
+const GenerarMenu: React.FC<{ empresas: EmpresaOption[]; onGenerar: (empresaId?: string) => void; generando: boolean; label?: string }> = ({ empresas, onGenerar, generando, label = "Generar" }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -921,9 +975,9 @@ const GenerarMenu: React.FC<{ empresas: EmpresaOption[]; onGenerar: (empresaId?:
 
   if (empresas.length <= 1) {
     return (
-      <button type="button" onClick={() => onGenerar(empresas[0]?.id)} disabled={generando} title="Generar Contrato + Release(s)" className={btnClass}>
+      <button type="button" onClick={() => onGenerar(empresas[0]?.id)} disabled={generando} title={label} className={btnClass}>
         <FontAwesomeIcon icon={generando ? faSpinner : faFileSignature} spin={generando} className="h-3 w-3" />
-        Generar
+        {label}
       </button>
     );
   }
@@ -932,7 +986,7 @@ const GenerarMenu: React.FC<{ empresas: EmpresaOption[]; onGenerar: (empresaId?:
     <div className="relative shrink-0" ref={ref}>
       <button type="button" onClick={() => setOpen((o) => !o)} disabled={generando} title="Elegir empresa para generar" className={btnClass}>
         <FontAwesomeIcon icon={generando ? faSpinner : faFileSignature} spin={generando} className="h-3 w-3" />
-        Generar
+        {label}
       </button>
       {open && (
         <div className="absolute left-0 top-full z-50 mt-1 w-56 max-h-60 overflow-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1">
@@ -957,9 +1011,39 @@ const GenerarMenu: React.FC<{ empresas: EmpresaOption[]; onGenerar: (empresaId?:
 };
 
 /** Si el contrato ya tiene todo lo que se puede generar de este tipo — usado para decidir si la fila
- *  se puede seleccionar para "Enviar a firmar" (hacen falta AMBOS: contrato y release(s)). */
+ *  se puede seleccionar para "Enviar a firmar" (hacen falta AMBOS: contrato y release(s), de los que
+ *  efectivamente apliquen — ver `contratoRequiereFirma`/`releaseRequiereFirma` más abajo). */
 const contratoGenerado = (r: ContractOverviewRow): boolean => !!r.firmaGeneradoAt;
-const releasesGenerados = (r: ContractOverviewRow, activeReleases: Release[]): boolean => activeReleases.length === 0 || !!r.firmaReleasesGeneradoAt;
+const releasesGenerados = (r: ContractOverviewRow, releasesAplicables: Release[]): boolean => releasesAplicables.length === 0 || !!r.firmaReleasesGeneradoAt;
+
+/** Si el Tipo de Contrato de la plantilla (populado en `template.contratoId`) tiene tildado "Se envía
+ *  a firmar" — sin el dato poblado, se asume que sí (comportamiento previo a que existiera el campo). */
+const contratoRequiereFirma = (template: ContratoFrameItem | null): boolean => {
+  const contratoId = template?.contratoId;
+  return typeof contratoId === "object" && contratoId ? contratoId.data?.requiereFirma !== false : true;
+};
+
+/** Mismo criterio que `contratoRequiereFirma`, para el Tipo de Release (`release.releaseTipoId`). */
+const releaseRequiereFirma = (release: Release): boolean => {
+  const tipo = release.releaseTipoId;
+  return typeof tipo === "object" && tipo ? tipo.requiereFirma !== false : true;
+};
+
+/**
+ * Si la fila tiene ALGO para enviar a firmar (el Contrato y/o el/los Release(s) que efectivamente
+ * apliquen, según "Se envía a firmar") y ya está listo — es decir, generado lo que aplica y todavía
+ * no enviado. Si NI el Contrato NI ningún Release de este contrato requieren firma, no hay nada que
+ * mandar y la fila nunca se habilita.
+ */
+const calcularEnviable = (record: ContractOverviewRow, contratoFrames: ContratoFrameItem[], releasesAplicables: Release[]): boolean => {
+  if (record.firmaEnviadaAt) return false;
+  const template = findTemplate(record as unknown as Contract, contratoFrames);
+  const contratoAplica = contratoRequiereFirma(template);
+  const contratoOk = !contratoAplica || contratoGenerado(record);
+  const releaseOk = releasesAplicables.length === 0 || releasesGenerados(record, releasesAplicables);
+  const algoAplica = contratoAplica || releasesAplicables.length > 0;
+  return algoAplica && contratoOk && releaseOk;
+};
 
 /**
  * Celda "Contrato" de la pestaña Firma digital: botón "Generar" independiente (con menú de empresa si
@@ -979,6 +1063,7 @@ const FirmaContratoCell: React.FC<{
   const [eliminando, setEliminando] = useState(false);
   const template = findTemplate(record as unknown as Contract, contratoFrames);
   const puedeGenerar = templateHasContent(template);
+  const requiereFirma = contratoRequiereFirma(template);
   const tramite = estadoImpositivoDelContrato(record as unknown as Contract, contratoFrames, allEstados)?.data?.tipoImpositivo as TipoImpositivo | undefined;
 
   const savedContratoEmpresaId = record.empresaContratoId || "";
@@ -1036,8 +1121,12 @@ const FirmaContratoCell: React.FC<{
   if (!contratoGenerado(record)) {
     return (
       <div className="flex items-center justify-center min-w-[120px]" onClick={(e) => e.stopPropagation()}>
-        {puedeGenerar ? (
-          <GenerarMenu empresas={empresasParaGenerar} onGenerar={generar} generando={generando} />
+        {!requiereFirma ? (
+          <span className="text-xs text-gray-400" title="Este Tipo de Contrato no tiene tildado &quot;Se envía a firmar&quot;">
+            No se envía a Firma
+          </span>
+        ) : puedeGenerar ? (
+          <GenerarMenu empresas={empresasParaGenerar} onGenerar={generar} generando={generando} label="Generar Contrato" />
         ) : (
           <span className="text-xs text-gray-400" title="La plantilla de este tipo de contrato no tiene contenido redactado">
             Sin plantilla
@@ -1091,9 +1180,12 @@ const FirmaReleaseCell: React.FC<{
   record: ContractOverviewRow;
   contratoFrames: ContratoFrameItem[];
   allEstados: InfoItem[];
+  /** Todos los releases activos del proyecto (para saber si hay alguno, más allá de si aplican). */
   activeReleases: Release[];
+  /** Solo los releases activos cuyo Tipo tiene tildado "Se envía a firmar". */
+  releasesAplicables: Release[];
   onGenerado: () => void;
-}> = ({ record, contratoFrames, allEstados, activeReleases, onGenerado }) => {
+}> = ({ record, contratoFrames, allEstados, activeReleases, releasesAplicables, onGenerado }) => {
   const [generando, setGenerando] = useState(false);
   const [descargando, setDescargando] = useState<string | null>(null);
   const [eliminando, setEliminando] = useState(false);
@@ -1113,7 +1205,7 @@ const FirmaReleaseCell: React.FC<{
         projectId: record.projectId,
         userId: record.userId,
         contractIndex: record.contractIndex,
-        releaseIds: activeReleases.map((r) => r._id),
+        releaseIds: releasesAplicables.map((r) => r._id),
         empresaReleaseId: empresaId,
         tramite,
       });
@@ -1154,10 +1246,18 @@ const FirmaReleaseCell: React.FC<{
     return <span className="text-xs text-gray-400">—</span>;
   }
 
-  if (!releasesGenerados(record, activeReleases)) {
+  if (releasesAplicables.length === 0) {
+    return (
+      <span className="text-xs text-gray-400" title="Ningún Tipo de Release de este proyecto tiene tildado &quot;Se envía a firmar&quot;">
+        No se envía a Firma
+      </span>
+    );
+  }
+
+  if (!releasesGenerados(record, releasesAplicables)) {
     return (
       <div className="flex items-center justify-center min-w-[120px]" onClick={(e) => e.stopPropagation()}>
-        <GenerarMenu empresas={empresasParaGenerar} onGenerar={generar} generando={generando} />
+        <GenerarMenu empresas={empresasParaGenerar} onGenerar={generar} generando={generando} label="Generar Release" />
       </div>
     );
   }
@@ -1197,13 +1297,80 @@ const FirmaReleaseCell: React.FC<{
 };
 
 /**
+ * Celda "Acciones" de la pestaña Firma digital: "Enviar a firmar" individual, por fila — mismo
+ * criterio de habilitación que la selección para el envío masivo (lo que efectivamente aplique según
+ * "Se envía a firmar" — Contrato y/o Release(s) — generado, todavía no enviado). Una vez enviado,
+ * muestra el mismo badge "Enviado" que ya se ve en la celda de Contrato.
+ */
+const FirmaEnviarCell: React.FC<{
+  record: ContractOverviewRow;
+  contratoAplica: boolean;
+  releasesAplicables: Release[];
+  tipoImpositivo?: TipoImpositivo;
+  onEnviado: () => void;
+}> = ({ record, contratoAplica, releasesAplicables, tipoImpositivo, onEnviado }) => {
+  const [enviando, setEnviando] = useState(false);
+  const contratoOk = !contratoAplica || contratoGenerado(record);
+  const releaseOk = releasesAplicables.length === 0 || releasesGenerados(record, releasesAplicables);
+  const puedeEnviar = (contratoAplica || releasesAplicables.length > 0) && contratoOk && releaseOk && !record.firmaEnviadaAt;
+
+  const enviar = async () => {
+    const confirm = await sweetAlert.confirm(
+      "Enviar a firmar",
+      'Se van a subir el Contrato y el/los Release(s) de esta persona a la carpeta "Outbox" de Dropbox para que Dropbox Sign los importe. ¿Continuar?',
+      "Sí, enviar",
+      "Cancelar"
+    );
+    if (!confirm.isConfirmed) return;
+    setEnviando(true);
+    try {
+      const res = await firmaDigitalAPI.enviar([{ projectId: record.projectId, userId: record.userId, contractIndex: record.contractIndex, tipoImpositivo, incluirContrato: contratoAplica }]);
+      const resultado = res.resultados[0];
+      if (resultado && !resultado.ok) {
+        sweetAlert.error("No se pudo enviar", resultado.error || "Error desconocido.");
+      } else {
+        sweetAlert.success("Enviado", "Se envió a firmar correctamente.");
+      }
+      onEnviado();
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo enviar a firmar.");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  if (record.firmaEnviadaAt) {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 whitespace-nowrap">
+        <FontAwesomeIcon icon={faCheck} className="h-2.5 w-2.5" />
+        Enviado
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={enviar}
+      disabled={!puedeEnviar || enviando}
+      title={puedeEnviar ? "Enviar a firmar esta persona" : "Generá primero el Contrato y el/los Release(s)"}
+      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+    >
+      <FontAwesomeIcon icon={enviando ? faSpinner : faPaperPlane} spin={enviando} className="h-3 w-3" />
+      Enviar a firmar
+    </button>
+  );
+};
+
+/**
  * Sub-pestaña "Firma digital": lista los contratos que ya terminaron su trámite impositivo (Alta
  * temprana de AFIP archivada, o Constancia de CUIT archivada — el cron de Dropbox ya los movió solo
  * al estado "Envío de documentación", ver `estadoDropboxCronService.ts`). Flujo en dos pasos:
  * 1) "Generar" arma el Contrato + Release(s) y los deja para revisar (ojito) — no envía nada.
- * 2) "Enviar a firmar" (bulk) sube los ya generados a la carpeta Dropbox "Outbox" que vigila Dropbox
- *    Sign (+ el Alta temprana de AFIP ya cargada, si ese fue el trámite de origen). La Constancia de
- *    CUIT nunca se sube: ya cumplió su función al mover al contrato a este estado.
+ * 2) "Enviar a firmar" (bulk, o individual desde la columna "Acciones") sube los ya generados a la
+ *    carpeta Dropbox "Outbox" que vigila Dropbox Sign (+ el Alta temprana de AFIP ya cargada, si ese
+ *    fue el trámite de origen). La Constancia de CUIT nunca se sube: ya cumplió su función al mover
+ *    al contrato a este estado.
  */
 export const ContractBulkFirmaTab: React.FC<{
   allEstados: InfoItem[];
@@ -1226,6 +1393,9 @@ export const ContractBulkFirmaTab: React.FC<{
   }, []);
 
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
+  // Solo los releases activos cuyo Tipo tiene tildado "Se envía a firmar" — los demás no se generan
+  // ni se mandan a firmar acá, aunque sigan existiendo como release del proyecto.
+  const releasesQueFirman = useMemo(() => activeReleases.filter(releaseRequiereFirma), [activeReleases]);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -1295,7 +1465,7 @@ export const ContractBulkFirmaTab: React.FC<{
     });
   // Solo se pueden marcar (y enviar) los contratos con Contrato Y Release(s) ya generados (botones
   // independientes) y todavía no enviados.
-  const enviables = useMemo(() => filtered.filter((r) => contratoGenerado(r) && releasesGenerados(r, activeReleases) && !r.firmaEnviadaAt), [filtered, activeReleases]);
+  const enviables = useMemo(() => filtered.filter((r) => calcularEnviable(r, contratoFrames, releasesQueFirman)), [filtered, contratoFrames, releasesQueFirman]);
   const allSel = enviables.length > 0 && enviables.every((r) => selected.has(rowKey(r)));
   const toggleAll = () =>
     setSelected((prev) => {
@@ -1319,7 +1489,13 @@ export const ContractBulkFirmaTab: React.FC<{
     if (!confirm.isConfirmed) return;
     setEnviando(true);
     try {
-      const targets = fuenteEnvio.map((r) => ({ projectId: r.projectId, userId: r.userId, contractIndex: r.contractIndex, tipoImpositivo: tipoDelRow(r) }));
+      const targets = fuenteEnvio.map((r) => ({
+        projectId: r.projectId,
+        userId: r.userId,
+        contractIndex: r.contractIndex,
+        tipoImpositivo: tipoDelRow(r),
+        incluirContrato: contratoRequiereFirma(findTemplate(r as unknown as Contract, contratoFrames)),
+      }));
       const res = await firmaDigitalAPI.enviar(targets);
       const fallidos = res.resultados.filter((x) => !x.ok);
       if (fallidos.length > 0) {
@@ -1393,11 +1569,14 @@ export const ContractBulkFirmaTab: React.FC<{
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
           <div className="overflow-x-auto custom-scrollbar max-h-[640px]">
-            <table className="w-full text-left border-collapse min-w-[1500px]">
-              <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
+            <table className="w-full text-left border-separate border-spacing-0 min-w-[1600px]">
+              <thead className="sticky top-0 z-40 bg-gray-50 dark:bg-gray-900 shadow-sm">
                 <tr className="border-b border-gray-100 dark:border-gray-800">
-                  <th className="px-4 py-3 w-10">
+                  <th className="sticky top-0 left-0 z-50 px-4 py-3 w-12 bg-gray-50 dark:bg-gray-900">
                     <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={enviables.length === 0} title="Seleccionar todos los generados" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
+                  </th>
+                  <th className="sticky top-0 left-12 z-50 px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">
+                    Acciones
                   </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Alta / Baja</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Trámite</th>
@@ -1409,15 +1588,18 @@ export const ContractBulkFirmaTab: React.FC<{
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Tipo de Contrato</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Estado</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Estado Impositivo</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {filtered.map((r) => {
                   const tipo = tipoDelRow(r);
-                  const enviable = contratoGenerado(r) && releasesGenerados(r, activeReleases) && !r.firmaEnviadaAt;
+                  const template = findTemplate(r as unknown as Contract, contratoFrames);
+                  const contratoAplica = contratoRequiereFirma(template);
+                  const enviable = calcularEnviable(r, contratoFrames, releasesQueFirman);
                   return (
-                    <tr key={rowKey(r)} className={`hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? "bg-blue-50/50 dark:bg-blue-900/10" : ""}`}>
-                      <td className="px-4 py-3">
+                    <tr key={rowKey(r)} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? "bg-blue-50/50 dark:bg-blue-900/10" : ""}`}>
+                      <td className={`sticky left-0 z-20 px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${selected.has(rowKey(r)) ? "!bg-[#f7faff] dark:!bg-[#1f2b3f]" : ""}`}>
                         <input
                           type="checkbox"
                           checked={selected.has(rowKey(r))}
@@ -1426,6 +1608,9 @@ export const ContractBulkFirmaTab: React.FC<{
                           title={enviable ? "Incluir en el envío a firmar" : r.firmaEnviadaAt ? "Ya se envió a firmar" : 'Generá primero el Contrato y el/los Release(s) ("Generar")'}
                           className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                         />
+                      </td>
+                      <td className={`sticky left-12 z-20 px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)] ${selected.has(rowKey(r)) ? "!bg-[#f7faff] dark:!bg-[#1f2b3f]" : ""}`}>
+                        <FirmaEnviarCell record={r} contratoAplica={contratoAplica} releasesAplicables={releasesQueFirman} tipoImpositivo={tipo} onEnviado={load} />
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 whitespace-nowrap">
                         {(() => {
@@ -1465,7 +1650,7 @@ export const ContractBulkFirmaTab: React.FC<{
                         <FirmaContratoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} onGenerado={load} />
                       </td>
                       <td className="px-4 py-3">
-                        <FirmaReleaseCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onGenerado={load} />
+                        <FirmaReleaseCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} releasesAplicables={releasesQueFirman} onGenerado={load} />
                       </td>
                       <td className="px-4 py-3">
                         <p className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{r.userName}</p>
@@ -1477,6 +1662,9 @@ export const ContractBulkFirmaTab: React.FC<{
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.nombre_contrato || "—"}</td>
                       <td className="px-4 py-3">
                         <EstadoBadge name={r.nombre_estado_empleado || ""} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <EstadoImpositivoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} />
                       </td>
                     </tr>
                   );

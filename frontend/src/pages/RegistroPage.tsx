@@ -662,6 +662,13 @@ export const RegistroPage: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Aviso al elegir un tipo de entidad real (no aplica a "No tengo Banco", que ya tiene su propia leyenda). */}
+                {form.tipoEntidadFinanciera && form.tipoEntidadFinanciera !== SIN_BANCO && (
+                  <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-300">
+                    <span className="font-semibold">IMPORTANTE:</span> La cuenta debe estar a tu nombre.
+                  </div>
+                )}
+
                 {/* "No tengo Banco": pedido de creación de cuenta + leyenda (sin entidad ni CBU) */}
                 {form.tipoEntidadFinanciera === SIN_BANCO && (
                   <div className={`rounded-lg border bg-gray-800/50 p-5 space-y-3 ${fieldErrors.solicitaCreacionCuenta ? 'border-red-500 ring-2 ring-red-500/40' : 'border-gray-700'}`}>

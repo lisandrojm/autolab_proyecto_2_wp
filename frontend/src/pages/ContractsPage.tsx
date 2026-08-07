@@ -20,8 +20,9 @@ import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Card } from "../components/ui/Card";
+import { Modal } from "../components/ui/Modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileContract, faBriefcase, faHourglassHalf, faTable, faGrip, faChevronLeft, faChevronRight, faClock, faEdit, faTrash, faUser, faIdCard, faBuilding } from "@fortawesome/free-solid-svg-icons";
+import { faFileContract, faBriefcase, faHourglassHalf, faTable, faGrip, faChevronLeft, faChevronRight, faClock, faEdit, faTrash, faUser, faIdCard, faBuilding, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { sweetAlert } from "../utils/sweetAlert";
 
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -112,6 +113,8 @@ export const ContractsPage: React.FC = () => {
   const [mgmtTab, setMgmtTab] = useState<"alta_afip" | "constancia_cuit" | "firma">("alta_afip");
   // Cantidad de contratos de cada trámite, informada por ContractBulkAfipTab para mostrarla en las pestañas.
   const [mgmtCounts, setMgmtCounts] = useState<{ alta: number; cuit: number }>({ alta: 0, cuit: 0 });
+  // Explicación de qué es cada pestaña de "Gestión de Contratos" (modal informativo).
+  const [mgmtTabsInfoOpen, setMgmtTabsInfoOpen] = useState(false);
 
   const estadoContratoOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -402,15 +405,20 @@ export const ContractsPage: React.FC = () => {
           </div>
             </div>
           ) : (
-            <div className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
-              <button className={tabBtnClass(mgmtTab === "alta_afip")} onClick={() => setMgmtTab("alta_afip")}>
-                Alta temprana de AFIP ({mgmtCounts.alta})
-              </button>
-              <button className={tabBtnClass(mgmtTab === "constancia_cuit")} onClick={() => setMgmtTab("constancia_cuit")}>
-                Constancia de CUIT ({mgmtCounts.cuit})
-              </button>
-              <button className={tabBtnClass(mgmtTab === "firma")} onClick={() => setMgmtTab("firma")}>
-                Firma digital
+            <div className="flex items-center justify-between gap-2 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex overflow-x-auto">
+                <button className={tabBtnClass(mgmtTab === "alta_afip")} onClick={() => setMgmtTab("alta_afip")}>
+                  Alta temprana de AFIP ({mgmtCounts.alta})
+                </button>
+                <button className={tabBtnClass(mgmtTab === "constancia_cuit")} onClick={() => setMgmtTab("constancia_cuit")}>
+                  Constancia de CUIT ({mgmtCounts.cuit})
+                </button>
+                <button className={tabBtnClass(mgmtTab === "firma")} onClick={() => setMgmtTab("firma")}>
+                  Firma digital
+                </button>
+              </div>
+              <button type="button" onClick={() => setMgmtTabsInfoOpen(true)} title="Qué es cada pestaña" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0 mb-2">
+                <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
               </button>
             </div>
           )}
@@ -706,6 +714,33 @@ export const ContractsPage: React.FC = () => {
       )}
 
       <MemberContractsManagerModal isOpen={!!managedUser} onClose={() => setManagedUser(null)} userId={managedUser?.id || null} userName={managedUser?.name} contratoFrames={contratoFrames} releases={releases} />
+
+      {mgmtTabsInfoOpen && (
+        <Modal isOpen={mgmtTabsInfoOpen} onClose={() => setMgmtTabsInfoOpen(false)} title="Qué es cada pestaña" size="md" zIndex={80}>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Alta temprana de AFIP · Constancia de CUIT</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Son los contratos que ya se registraron en la aplicación pero todavía no se hizo nada en ARCA.
+              </p>
+              <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1.5 list-disc list-inside mt-2">
+                <li>
+                  <strong>Alta temprana de AFIP</strong>: contratos que necesitan un Alta.
+                </li>
+                <li>
+                  <strong>Constancia de CUIT</strong>: contratos a los que hay que verificarles si el CUIT está activo o no en ARCA.
+                </li>
+              </ul>
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Firma digital</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Contratos a los que ya se les generó el Alta temprana de AFIP, o ya se validó que la Constancia de CUIT está activa. Esos documentos ya están cargados en Dropbox, en <span className="font-mono text-xs">FZERO S.R.L/HelloSign/Outbox</span>.
+              </p>
+            </div>
+          </div>
+        </Modal>
+      )}
     </PageLayout>
   );
 };
