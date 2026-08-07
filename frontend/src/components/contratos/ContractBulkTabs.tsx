@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload } from "@fortawesome/free-solid-svg-icons";
+import { faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faArrowUpRightFromSquare, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI, ContractOverviewRow, Contract } from "../../api/users";
 import { companiesAPI, Company } from "../../api/companies";
 import { infoAPI, InfoItem } from "../../api/info";
@@ -20,7 +20,7 @@ import { Modal } from "../ui/Modal";
 import { ContractDocsColumns, ContractDocsHeaders, downloadContractRow, downloadReleaseRow, uploadAltaRow } from "./ContractRowDocs";
 import { resolveAfip, AfipRowResult } from "./afipCompleteness";
 import { buildAltaRecord, buildAltaTxt, downloadTxt } from "./afipTxt";
-import { ConstanciaBulkDrop, ConstanciaBadge, BotonArca, BotonCopiarPendientes, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, fmtCuit } from "./ConstanciaBulk";
+import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, fmtCuit } from "./ConstanciaBulk";
 import { sweetAlert } from "../../utils/sweetAlert";
 
 const obrasSocialesApi = createSimpleCatalogApi("/obras-sociales");
@@ -100,6 +100,14 @@ export const ContractBulkAfipTab: React.FC<{
   const [detalle, setDetalle] = useState<{ row: ImpositivoRow; result: AfipRowResult } | null>(null);
   // Detalle de los datos para la Constancia de CUIT/CUIL (único requisito: el CUIT/CUIL).
   const [constancia, setConstancia] = useState<{ row: ImpositivoRow; cuil: string } | null>(null);
+  // Explicación de qué hace la columna "Verificar (Opc)" (modal informativo).
+  const [verificarInfoOpen, setVerificarInfoOpen] = useState(false);
+  // Explicación de qué hacer en AFIP/ARCA con el TXT ya generado (modal informativo).
+  const [cargarArcaInfoOpen, setCargarArcaInfoOpen] = useState(false);
+  // Explicación del flujo completo: Generar TXT → Cargar en ARCA → sincronización automática.
+  const [flujoTxtInfoOpen, setFlujoTxtInfoOpen] = useState(false);
+  // Explicación de qué son y de dónde salen los datos que exige la columna "Datos AFIP".
+  const [datosAfipInfoOpen, setDatosAfipInfoOpen] = useState(false);
 
   useEffect(() => {
     categoriaSatAPI.list().then(setCategorias).catch(() => setCategorias([]));
@@ -367,46 +375,51 @@ export const ContractBulkAfipTab: React.FC<{
               onClick={() => generarTxt(fuenteTxt, nombreArchivoTxt)}
               disabled={fuenteTxt.every((x) => !x.result.completo)}
               title={seleccionados.length > 0 ? "Generar el TXT con los contratos seleccionados (solo los completos)" : "Generar el TXT con los contratos completos del listado (o marcá algunos con el check)"}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
             >
               <FontAwesomeIcon icon={faFileLines} className="h-4 w-4" />
-              Generar TXT (AFIP){seleccionados.length > 0 ? ` (${seleccionados.length})` : ""}
+              Generar TXT Masivo (AFIP){seleccionados.length > 0 ? ` (${seleccionados.length})` : ""}
+            </button>
+            <button type="button" onClick={() => setFlujoTxtInfoOpen(true)} title="Qué hacer con el TXT" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 shrink-0">
+              <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => window.open("https://www.arca.gob.ar", "_blank", "noopener,noreferrer")}
+              title="Abrir ARCA para subir el TXT ya generado"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shrink-0"
+            >
+              <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-4 w-4" />
+              Cargar en ARCA
+            </button>
+            <button type="button" onClick={() => setCargarArcaInfoOpen(true)} title="Qué hacer en ARCA" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0">
+              <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
             </button>
           </div>
         </div>
       )}
 
-      {/* Constancia de CUIT: worklist (qué falta pedirle a ARCA) + carga masiva de los PDFs bajados. */}
+      {/* Constancia de CUIT: worklist (qué falta pedirle a ARCA). */}
       {filterTipo === "constancia_cuit" && !loading && (
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200/60 dark:border-green-800/60" title="Constancias cargadas y todavía vigentes">
-                <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />
-                {countConstVigentes} vigentes
-              </span>
-              <button
-                onClick={() => setSoloPendientes((v) => !v)}
-                className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold border transition-colors ${
-                  soloPendientes
-                    ? "bg-amber-500 text-white border-amber-500"
-                    : "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/60 hover:bg-amber-100 dark:hover:bg-amber-900/30"
-                }`}
-                title="Mostrar solo las constancias que faltan o ya vencieron"
-              >
-                <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
-                {countConstPendientes} pendientes
-              </button>
-            </div>
-            <div className="flex items-center gap-2">
-              <BotonConsultarAfipBulk rows={constanciaRows.map((x) => x.row)} onConsultado={load} />
-              <BotonCopiarPendientes rows={filtered.map((x) => x.row)} />
-            </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200/60 dark:border-green-800/60" title="Constancias cargadas y todavía vigentes">
+              <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />
+              {countConstVigentes} vigentes
+            </span>
+            <button
+              onClick={() => setSoloPendientes((v) => !v)}
+              className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold border transition-colors ${
+                soloPendientes
+                  ? "bg-amber-500 text-white border-amber-500"
+                  : "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/60 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+              }`}
+              title="Mostrar solo las constancias que faltan o ya vencieron"
+            >
+              <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
+              {countConstPendientes} pendientes
+            </button>
           </div>
-          {/* Los targets son TODOS los contratos que esperan constancia, no solo los visibles: la
-              misma constancia sirve para todos los contratos de esa persona, y así soltar un PDF
-              nunca falla por tener un filtro puesto. */}
-          <ConstanciaBulkDrop rows={constanciaRows.map((x) => x.row)} onUploaded={load} />
+          <BotonConsultarAfipBulk rows={constanciaRows.map((x) => x.row)} onConsultado={load} />
         </div>
       )}
 
@@ -510,20 +523,43 @@ export const ContractBulkAfipTab: React.FC<{
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
           <div className="overflow-x-auto custom-scrollbar max-h-[640px]">
-            <table className="w-full text-left border-collapse min-w-[1950px]">
-              <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
+            <table className="w-full text-left border-separate border-spacing-0 min-w-[1950px]">
+              <thead className="sticky top-0 z-40 bg-gray-50 dark:bg-gray-900 shadow-sm">
                 <tr className="border-b border-gray-100 dark:border-gray-800">
-                  <th className="px-4 py-3 w-10">
+                  <th className="sticky top-0 left-0 z-50 px-4 py-3 w-12 bg-gray-50 dark:bg-gray-900">
                     <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={selectableFiltered.length === 0} title="Seleccionar todos los completos" className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                   </th>
+                  <th className="sticky top-0 left-12 z-50 px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">
+                    Acciones
+                  </th>
+                  {filterTipo === "constancia_cuit" && (
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1.5">
+                        Verificar (Opc)
+                        <button type="button" onClick={() => setVerificarInfoOpen(true)} title="Qué hace esta columna" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
+                          <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                        </button>
+                      </span>
+                    </th>
+                  )}
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Alta / Baja</th>
                   {filterTipo === "constancia_cuit" && (
                     <>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Dato para buscar la Constancia de Inscripción / CUIT en ARCA">Datos CUIT/CUIL</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Constancia</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Estado en el Padrón de AFIP/ARCA">ARCA</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Si la constancia quedó archivada en Dropbox">DROPBOX</th>
                     </>
                   )}
-                  {filterTipo === "alta_temprana_afip" && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Datos AFIP</th>}
+                  {filterTipo === "alta_temprana_afip" && (
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1.5">
+                        Datos AFIP
+                        <button type="button" onClick={() => setDatosAfipInfoOpen(true)} title="Por qué a veces no se puede generar el TXT" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
+                          <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                        </button>
+                      </span>
+                    </th>
+                  )}
                   <ContractDocsHeaders showContrato={false} showRelease={false} altaLabel={filterTipo === "alta_temprana_afip" ? "Alta AFIP" : "Alta Servicios"} />
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">CUIT</th>
@@ -535,8 +571,8 @@ export const ContractBulkAfipTab: React.FC<{
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {filtered.map(({ row: r, result }) => (
-                  <tr key={`${r._id}-${r.contractIndex}`} className={`hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? "bg-emerald-50/50 dark:bg-emerald-900/10" : ""}`}>
-                    <td className="px-4 py-3">
+                  <tr key={`${r._id}-${r.contractIndex}`} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? "bg-emerald-50/50 dark:bg-emerald-900/10" : ""}`}>
+                    <td className={`sticky left-0 z-20 px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${selected.has(rowKey(r)) ? "!bg-[#f6fefa] dark:!bg-[#1d2d37]" : ""}`}>
                       <input
                         type="checkbox"
                         checked={selected.has(rowKey(r))}
@@ -546,6 +582,29 @@ export const ContractBulkAfipTab: React.FC<{
                         className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                       />
                     </td>
+                    <td
+                      className={`sticky left-12 z-20 px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)] ${selected.has(rowKey(r)) ? "!bg-[#f6fefa] dark:!bg-[#1d2d37]" : ""}`}
+                    >
+                      {filterTipo === "alta_temprana_afip" ? (
+                        <button
+                          type="button"
+                          onClick={() => generarTxt([{ row: r, result }], `alta_afip_${r.userName.replace(/\s+/g, "_")}`)}
+                          disabled={!result.completo}
+                          title={result.completo ? "Generar el TXT de AFIP de esta persona" : "Faltan datos AFIP para generar el TXT de esta persona"}
+                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                        >
+                          <FontAwesomeIcon icon={faFileLines} className="h-3 w-3" />
+                          Generar TXT
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-1.5 whitespace-nowrap">
+                          <BotonValidarCuit row={r} onConsultado={load} compacto />
+                        </div>
+                      )}
+                    </td>
+                    {filterTipo === "constancia_cuit" && (
+                      <td className="px-4 py-3">{constanciaPendiente(r) ? <BotonArca cuit={r.cuit} compacto /> : <span className="text-xs text-gray-400">—</span>}</td>
+                    )}
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 whitespace-nowrap">
                       {(() => {
                         const vigente = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
@@ -585,13 +644,12 @@ export const ContractBulkAfipTab: React.FC<{
                             );
                           })()}
                         </td>
-                        {/* Vigencia de la constancia cargada + atajo para ir a buscarla a ARCA. */}
+                        {/* Estado en AFIP/ARCA y archivado en Dropbox, por separado (acciones — Validar/ARCA — viven en la columna sticky "Acciones"). */}
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-2 whitespace-nowrap">
-                            <ConstanciaBadge row={r} />
-                            <BotonValidarCuit row={r} onConsultado={load} compacto />
-                            {constanciaPendiente(r) && <BotonArca cuit={r.cuit} compacto />}
-                          </div>
+                          <ArcaBadge row={r} />
+                        </td>
+                        <td className="px-4 py-3">
+                          <DropboxBadge row={r} />
                         </td>
                       </>
                     )}
@@ -758,6 +816,88 @@ export const ContractBulkAfipTab: React.FC<{
           </div>
         </Modal>
       )}
+
+      {verificarInfoOpen && (
+        <Modal isOpen={verificarInfoOpen} onClose={() => setVerificarInfoOpen(false)} title="Verificar (Opc)" size="sm" zIndex={80}>
+          <div className="space-y-3">
+            <p className="text-sm text-gray-700 dark:text-gray-200">
+              Botón opcional para cotejar la constancia contra el original en el portal de AFIP/ARCA, además de la consulta automática al Padrón que ya hace "Validar".
+            </p>
+            <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1.5 list-disc list-inside">
+              <li>Copia el CUIT/CUIL de la persona al portapapeles.</li>
+              <li>Abre el portal de ARCA en una pestaña nueva, listo para pegarlo.</li>
+              <li>Solo aparece cuando la constancia está pendiente (falta, venció, o no se pudo archivar).</li>
+            </ul>
+          </div>
+        </Modal>
+      )}
+
+      {cargarArcaInfoOpen && (
+        <Modal isOpen={cargarArcaInfoOpen} onClose={() => setCargarArcaInfoOpen(false)} title="Cargar en ARCA" size="sm" zIndex={80}>
+          <div className="space-y-3">
+            <p className="text-sm text-gray-700 dark:text-gray-200">Este botón redirige a la página de AFIP/ARCA. Una vez ahí:</p>
+            <ol className="text-sm text-gray-600 dark:text-gray-300 space-y-2 list-decimal list-inside">
+              <li>
+                Iniciar sesión con Clave Fiscal en <span className="font-mono text-xs">https://www.arca.gob.ar</span> (dominio oficial actual — es el portal <span className="font-mono text-xs">afip.gob.ar</span> renombrado; si ya tenés abierto{" "}
+                <span className="font-mono text-xs">portalcf.cloud.afip.gob.ar/portal/app/</span>, es el mismo portal de acceso).
+              </li>
+              <li>
+                Una vez dentro, abrir el servicio <strong>"Simplificación Registral - Empleadores"</strong>.
+              </li>
+              <li>
+                Ir a <strong>Relaciones Laborales → Carga masiva</strong>, donde se sube el archivo TXT con el formato de campos requerido.
+              </li>
+            </ol>
+          </div>
+        </Modal>
+      )}
+
+      {flujoTxtInfoOpen && (
+        <Modal isOpen={flujoTxtInfoOpen} onClose={() => setFlujoTxtInfoOpen(false)} title="Qué hacer con el TXT" size="sm" zIndex={80}>
+          <div className="space-y-3">
+            <ol className="text-sm text-gray-600 dark:text-gray-300 space-y-2 list-decimal list-inside">
+              <li>
+                <strong>Generar TXT Masivo (AFIP)</strong>: descarga el archivo TXT con las altas completas, listo para importar.
+              </li>
+              <li>
+                <strong>Cargar en ARCA</strong>: abre el portal de AFIP/ARCA para importar ese TXT y generar las altas.
+              </li>
+              <li>
+                Cuando AFIP sincronice las altas, se guardarán automáticamente en la carpeta de Dropbox <span className="font-mono text-xs">FZERO S.R.L/AFIP/Alta temprana de Afip</span> y los contratos van a aparecer en la bandeja <strong>Firma Digital</strong>.
+              </li>
+            </ol>
+          </div>
+        </Modal>
+      )}
+
+      {datosAfipInfoOpen && (
+        <Modal isOpen={datosAfipInfoOpen} onClose={() => setDatosAfipInfoOpen(false)} title="Datos AFIP" size="sm" zIndex={80}>
+          <div className="space-y-3">
+            <p className="text-sm text-gray-700 dark:text-gray-200">
+              El TXT de Alta temprana necesita un conjunto fijo de códigos por persona. Si a alguno le "Faltan N", significa que esos códigos no se pudieron armar todavía — y por eso ese contrato queda afuera del TXT hasta completarlos.
+            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Los códigos salen de:</p>
+            <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1.5 list-disc list-inside">
+              <li>
+                <strong>Tipo de Contrato</strong>: modalidad, tipo de servicio, actividad y modalidad de liquidación.
+              </li>
+              <li>
+                <strong>Categoría SAT</strong>: categoría profesional y sueldo bruto.
+              </li>
+              <li>
+                <strong>Obra Social</strong>: código RNOS.
+              </li>
+              <li>
+                <strong>Sede</strong>: código de sucursal.
+              </li>
+              <li>
+                <strong>Datos personales</strong>: CUIL.
+              </li>
+            </ul>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">Tocá el badge "Faltan N" de una fila para ver exactamente cuáles faltan.</p>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
@@ -836,6 +976,7 @@ const FirmaContratoCell: React.FC<{
 }> = ({ record, contratoFrames, allEstados, onGenerado }) => {
   const [generando, setGenerando] = useState(false);
   const [descargando, setDescargando] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
   const template = findTemplate(record as unknown as Contract, contratoFrames);
   const puedeGenerar = templateHasContent(template);
   const tramite = estadoImpositivoDelContrato(record as unknown as Contract, contratoFrames, allEstados)?.data?.tipoImpositivo as TipoImpositivo | undefined;
@@ -878,9 +1019,23 @@ const FirmaContratoCell: React.FC<{
     }
   };
 
+  const eliminar = async () => {
+    const confirm = await sweetAlert.confirm("Eliminar contrato generado", "Se borra el PDF generado y se puede volver a generar (por ejemplo, para elegir otra empresa). Esto no afecta nada ya enviado a firmar.", "Sí, eliminar", "Cancelar");
+    if (!confirm.isConfirmed) return;
+    setEliminando(true);
+    try {
+      await firmaDigitalAPI.eliminarContrato({ projectId: record.projectId, userId: record.userId, contractIndex: record.contractIndex });
+      onGenerado();
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo eliminar el contrato.");
+    } finally {
+      setEliminando(false);
+    }
+  };
+
   if (!contratoGenerado(record)) {
     return (
-      <div className="flex items-center min-w-[120px]" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center justify-center min-w-[120px]" onClick={(e) => e.stopPropagation()}>
         {puedeGenerar ? (
           <GenerarMenu empresas={empresasParaGenerar} onGenerar={generar} generando={generando} />
         ) : (
@@ -893,10 +1048,10 @@ const FirmaContratoCell: React.FC<{
   }
 
   return (
-    <div className="flex flex-col gap-1 min-w-[120px]" onClick={(e) => e.stopPropagation()}>
-      <div className="flex items-center gap-2">
+    <div className="flex flex-col items-center gap-1 min-w-[120px]" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center justify-center gap-3">
         <a href={getImageUrl(record.firmaContratoUrl)} target="_blank" rel="noopener noreferrer" title={record.firmaContratoNombre || "Ver Contrato"} className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
-          <FontAwesomeIcon icon={faFilePdf} className="h-3.5 w-3.5 text-violet-600" />
+          <FontAwesomeIcon icon={faFilePdf} className="h-6 w-6 text-violet-600" />
         </a>
         <button
           type="button"
@@ -905,7 +1060,16 @@ const FirmaContratoCell: React.FC<{
           title="Descargar contrato"
           className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <FontAwesomeIcon icon={descargando ? faSpinner : faDownload} spin={descargando} className="h-3.5 w-3.5" />
+          <FontAwesomeIcon icon={descargando ? faSpinner : faDownload} spin={descargando} className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={eliminar}
+          disabled={eliminando}
+          title="Eliminar y volver a generar"
+          className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <FontAwesomeIcon icon={eliminando ? faSpinner : faTrash} spin={eliminando} className="h-4 w-4" />
         </button>
       </div>
       {record.firmaEnviadaAt && (
@@ -932,6 +1096,7 @@ const FirmaReleaseCell: React.FC<{
 }> = ({ record, contratoFrames, allEstados, activeReleases, onGenerado }) => {
   const [generando, setGenerando] = useState(false);
   const [descargando, setDescargando] = useState<string | null>(null);
+  const [eliminando, setEliminando] = useState(false);
   const firmaReleases = record.firmaReleases || [];
   const tramite = estadoImpositivoDelContrato(record as unknown as Contract, contratoFrames, allEstados)?.data?.tipoImpositivo as TipoImpositivo | undefined;
 
@@ -971,26 +1136,40 @@ const FirmaReleaseCell: React.FC<{
     }
   };
 
+  const eliminar = async () => {
+    const confirm = await sweetAlert.confirm("Eliminar release(s) generados", "Se borran los PDFs generados (todos juntos, se generan como grupo) y se puede volver a generar. Esto no afecta nada ya enviado a firmar.", "Sí, eliminar", "Cancelar");
+    if (!confirm.isConfirmed) return;
+    setEliminando(true);
+    try {
+      await firmaDigitalAPI.eliminarRelease({ projectId: record.projectId, userId: record.userId, contractIndex: record.contractIndex });
+      onGenerado();
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudieron eliminar los release(s).");
+    } finally {
+      setEliminando(false);
+    }
+  };
+
   if (activeReleases.length === 0) {
     return <span className="text-xs text-gray-400">—</span>;
   }
 
   if (!releasesGenerados(record, activeReleases)) {
     return (
-      <div className="flex items-center min-w-[120px]" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center justify-center min-w-[120px]" onClick={(e) => e.stopPropagation()}>
         <GenerarMenu empresas={empresasParaGenerar} onGenerar={generar} generando={generando} />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-1 min-w-[150px]" onClick={(e) => e.stopPropagation()}>
+    <div className="flex flex-col items-center gap-1 min-w-[150px]" onClick={(e) => e.stopPropagation()}>
       {firmaReleases.map((r) => {
         const label = activeReleases.find((ar) => ar._id === r.releaseId)?.name || "Release";
         return (
-          <div key={r.releaseId} className="flex items-center gap-2">
+          <div key={r.releaseId} className="flex items-center justify-center gap-3">
             <a href={getImageUrl(r.url)} target="_blank" rel="noopener noreferrer" title={r.nombre} className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
-              <FontAwesomeIcon icon={faFilePdf} className="h-3.5 w-3.5 text-violet-600" />
+              <FontAwesomeIcon icon={faFilePdf} className="h-6 w-6 text-violet-600" />
             </a>
             <button
               type="button"
@@ -999,7 +1178,16 @@ const FirmaReleaseCell: React.FC<{
               title={`Descargar ${label}`}
               className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <FontAwesomeIcon icon={descargando === r.url ? faSpinner : faDownload} spin={descargando === r.url} className="h-3.5 w-3.5" />
+              <FontAwesomeIcon icon={descargando === r.url ? faSpinner : faDownload} spin={descargando === r.url} className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={eliminar}
+              disabled={eliminando}
+              title="Eliminar y volver a generar"
+              className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <FontAwesomeIcon icon={eliminando ? faSpinner : faTrash} spin={eliminando} className="h-4 w-4" />
             </button>
           </div>
         );

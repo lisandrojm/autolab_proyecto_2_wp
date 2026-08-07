@@ -38,6 +38,12 @@ export interface GenerarReleaseResult {
   firmaReleasesGeneradoAt: string;
 }
 
+export interface EliminarFirmaTarget {
+  projectId: string;
+  userId: string;
+  contractIndex: number;
+}
+
 export interface EnviarFirmaTarget {
   projectId: string;
   userId: string;
@@ -72,6 +78,16 @@ export const firmaDigitalAPI = {
   async generarRelease(payload: GenerarReleasePayload): Promise<GenerarReleaseResult> {
     const { data } = await axios.post("/firma-digital/generar-release", payload);
     return data;
+  },
+
+  /** Ícono de tacho junto al Contrato ya generado — borra el PDF y limpia los campos para poder volver a "Generar". */
+  async eliminarContrato(target: EliminarFirmaTarget): Promise<void> {
+    await axios.post("/firma-digital/eliminar-contrato", target);
+  },
+
+  /** Ícono de tacho junto al/los Release(s) ya generados — borra los PDFs y limpia los campos. */
+  async eliminarRelease(target: EliminarFirmaTarget): Promise<void> {
+    await axios.post("/firma-digital/eliminar-release", target);
   },
 
   /** Puede tardar (una subida a Dropbox por documento) — timeout propio más largo. */

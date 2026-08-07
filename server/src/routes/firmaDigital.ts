@@ -158,6 +158,90 @@ router.post("/generar-release", async (req: AuthenticatedRequest & TenantRequest
   }
 });
 
+/** Borra un archivo guardado en disco a partir de su URL pública `/storage/...` — no falla si ya no existe. */
+function borrarArchivoStorage(urlStorage?: string): void {
+  if (!urlStorage) return;
+  const rel = urlStorage.replace(/^\/storage\//, "storage/");
+  fs.rm(path.join(__dirname, "../..", rel), { force: true }, () => {});
+}
+
+const eliminarSchema = z.object({
+  projectId: z.string().min(1),
+  userId: z.string().min(1),
+  contractIndex: z.number().int().min(0),
+});
+
+// POST /firma-digital/eliminar-contrato - ícono de tacho junto al Contrato ya generado: borra el PDF
+// y limpia los campos, para poder volver a "Generar" (p. ej. si se eligió mal la empresa).
+router.post("/eliminar-contrato", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const parsed = eliminarSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Datos inválidos." });
+      return;
+    }
+    const { projectId, userId, contractIndex } = parsed.data;
+    const up = await UserProject.findOne({ projectId, userId });
+    const contract: any = up?.contracts?.[contractIndex];
+    if (!up || !contract) {
+      res.status(404).json({ error: "Contrato no encontrado." });
+      return;
+    }
+
+    borrarArchivoStorage(contract.firmaContratoUrl);
+    up.contracts[contractIndex] = {
+      ...contract.toObject(),
+      firmaContratoUrl: null,
+      firmaContratoNombre: null,
+      firmaEmpresaContratoId: null,
+      firmaGeneradoAt: null,
+      firmaEnviadaAt: null,
+    } as any;
+    up.markModified("contracts");
+    await up.save();
+
+    res.json({ ok: true });
+  } catch (error: any) {
+    console.error("Firma digital eliminar-contrato error:", error);
+    res.status(500).json({ error: error?.message || "No se pudo eliminar el contrato." });
+  }
+});
+
+// POST /firma-digital/eliminar-release - ícono de tacho junto al/los Release(s) ya generados: borra
+// los PDFs y limpia los campos, para poder volver a "Generar".
+router.post("/eliminar-release", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const parsed = eliminarSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Datos inválidos." });
+      return;
+    }
+    const { projectId, userId, contractIndex } = parsed.data;
+    const up = await UserProject.findOne({ projectId, userId });
+    const contract: any = up?.contracts?.[contractIndex];
+    if (!up || !contract) {
+      res.status(404).json({ error: "Contrato no encontrado." });
+      return;
+    }
+
+    ((contract.firmaReleases || []) as { url: string }[]).forEach((r) => borrarArchivoStorage(r.url));
+    up.contracts[contractIndex] = {
+      ...contract.toObject(),
+      firmaReleases: [],
+      firmaEmpresaReleaseId: null,
+      firmaReleasesGeneradoAt: null,
+      firmaEnviadaAt: null,
+    } as any;
+    up.markModified("contracts");
+    await up.save();
+
+    res.json({ ok: true });
+  } catch (error: any) {
+    console.error("Firma digital eliminar-release error:", error);
+    res.status(500).json({ error: error?.message || "No se pudieron eliminar los release(s)." });
+  }
+});
+
 const enviarTargetSchema = z.object({
   projectId: z.string().min(1),
   userId: z.string().min(1),
