@@ -70,19 +70,22 @@ const EstadoImpositivoCell: React.FC<{ record: ContractOverviewRow; contratoFram
 };
 
 /**
- * Celda "Empresa" de la pestaña Alta temprana de AFIP: elegir (o cambiar) la Empresa del Contrato
- * directo desde la tabla, sin abrir el wizard completo de "Configurar Miembro". Es obligatoria para
- * poder generar el TXT: un mismo archivo se sube a la sesión de ARCA de UNA sola empresa, así que
- * cada contrato tiene que tener la suya definida antes de poder incluirse.
+ * Celda "Empresa Contrato" / "Empresa Release" de la pestaña Alta temprana de AFIP: elegir (o
+ * cambiar) la empresa directo desde la tabla, sin abrir el wizard completo de "Configurar Miembro".
+ * La de Contrato es obligatoria para poder generar el TXT (un mismo archivo se sube a la sesión de
+ * ARCA de UNA sola empresa, así que cada contrato tiene que tener la suya definida antes de poder
+ * incluirse); la de Release es opcional.
  */
-const EmpresaContratoCell: React.FC<{ record: ContractOverviewRow; onGuardado: () => void }> = ({ record, onGuardado }) => {
+const EmpresaSelectCell: React.FC<{ record: ContractOverviewRow; campo: "contrato" | "release"; requerido: boolean; onGuardado: () => void }> = ({ record, campo, requerido, onGuardado }) => {
   const [guardando, setGuardando] = useState(false);
-  const empresas = record.contratoEmpresas || [];
+  const empresas = (campo === "contrato" ? record.contratoEmpresas : record.releaseEmpresas) || [];
+  const empresaIdActual = campo === "contrato" ? record.empresaContratoId : record.empresaReleaseId;
 
   const guardar = async (empresaId: string) => {
     setGuardando(true);
     try {
-      await projectsAPI.updateContratoEmpresa(record.projectId, record.userId, record.contractIndex, empresaId);
+      if (campo === "contrato") await projectsAPI.updateContratoEmpresa(record.projectId, record.userId, record.contractIndex, empresaId);
+      else await projectsAPI.updateReleaseEmpresa(record.projectId, record.userId, record.contractIndex, empresaId);
       onGuardado();
     } catch (e: any) {
       sweetAlert.error("Error", e?.response?.data?.error || "No se pudo guardar la empresa.");
@@ -93,24 +96,26 @@ const EmpresaContratoCell: React.FC<{ record: ContractOverviewRow; onGuardado: (
 
   if (empresas.length === 0) {
     return (
-      <span className="text-xs text-gray-400" title="El proyecto no tiene empresas configuradas para Contrato">
+      <span className="text-xs text-gray-400" title={`El proyecto no tiene empresas configuradas para ${campo === "contrato" ? "Contrato" : "Release"}`}>
         Sin empresas
       </span>
     );
   }
 
+  const faltaYEsRequerido = requerido && !empresaIdActual;
+
   return (
     <select
-      value={record.empresaContratoId || ""}
+      value={empresaIdActual || ""}
       disabled={guardando}
       onChange={(e) => guardar(e.target.value)}
       onClick={(e) => e.stopPropagation()}
-      title={record.empresaContratoId ? "Cambiar la empresa del contrato" : "Elegí la empresa del contrato — es obligatoria para generar el TXT"}
+      title={empresaIdActual ? "Cambiar la empresa" : requerido ? "Elegí la empresa — es obligatoria para generar el TXT" : "Elegí la empresa (opcional)"}
       className={`text-xs rounded-md border px-2 py-1.5 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/40 disabled:opacity-50 disabled:cursor-wait ${
-        record.empresaContratoId ? "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200" : "border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-400 font-semibold"
+        faltaYEsRequerido ? "border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-400 font-semibold" : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
       }`}
     >
-      <option value="">{record.empresaContratoId ? "Sin empresa" : "Elegir empresa..."}</option>
+      <option value="">{empresaIdActual ? "Sin empresa" : "Elegir empresa..."}</option>
       {empresas.map((e) => (
         <option key={e.id} value={e.id}>
           {e.label}
@@ -184,6 +189,8 @@ export const ContractBulkAfipTab: React.FC<{
   const [datosAfipInfoOpen, setDatosAfipInfoOpen] = useState(false);
   // Explicación de qué es la columna "Datos CUIT/CUIL" y por qué gatea Validar / Validar ARCA Masivo.
   const [datosCuitInfoOpen, setDatosCuitInfoOpen] = useState(false);
+  // Explicación de por qué "Empresa Contrato" es obligatoria (modal informativo).
+  const [empresaContratoInfoOpen, setEmpresaContratoInfoOpen] = useState(false);
 
   useEffect(() => {
     categoriaSatAPI.list().then(setCategorias).catch(() => setCategorias([]));
@@ -673,9 +680,17 @@ export const ContractBulkAfipTab: React.FC<{
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">CUIT</th>
                   {filterTipo === "alta_temprana_afip" && (
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Obligatoria para poder generar el TXT">
-                      Empresa <span className="text-red-500">*</span>
-                    </th>
+                    <>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1.5">
+                          Empresa Contrato <span className="text-red-500">*</span>
+                          <button type="button" onClick={() => setEmpresaContratoInfoOpen(true)} title="Por qué es obligatoria" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
+                            <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                          </button>
+                        </span>
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Empresa Release</th>
+                    </>
                   )}
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Cliente</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto</th>
@@ -804,9 +819,14 @@ export const ContractBulkAfipTab: React.FC<{
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{fmtCuit(r.cuit) || "—"}</td>
                     {filterTipo === "alta_temprana_afip" && (
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                        <EmpresaContratoCell record={r} onGuardado={load} />
-                      </td>
+                      <>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <EmpresaSelectCell record={r} campo="contrato" requerido onGuardado={load} />
+                        </td>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <EmpresaSelectCell record={r} campo="release" requerido={false} onGuardado={load} />
+                        </td>
+                      </>
                     )}
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || "—"}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || "—"}</td>
@@ -1037,6 +1057,19 @@ export const ContractBulkAfipTab: React.FC<{
               Si dice <strong>"Falta 1"</strong> es porque ese usuario todavía no tiene el CUIT/CUIL cargado. Hasta que se cargue, esa fila no se puede tildar y los botones <strong>"Validar"</strong> y <strong>"Validar ARCA Masivo"</strong> quedan deshabilitados para esa persona (no hay CUIT que consultar en el Padrón de AFIP).
             </p>
             <p className="text-[11px] text-gray-500 dark:text-gray-400">Cargá el CUIT/CUIL en los datos personales del usuario para poder validarlo.</p>
+          </div>
+        </Modal>
+      )}
+
+      {empresaContratoInfoOpen && (
+        <Modal isOpen={empresaContratoInfoOpen} onClose={() => setEmpresaContratoInfoOpen(false)} title="Empresa Contrato" size="sm" zIndex={80}>
+          <div className="space-y-3">
+            <p className="text-sm text-gray-700 dark:text-gray-200">
+              Es obligatoria porque un mismo TXT se sube a la sesión de ARCA de <strong>una sola empresa</strong>: sin saber a cuál corresponde cada contrato, no se puede armar el archivo (por eso las filas sin Empresa Contrato quedan afuera del TXT hasta que se elija una).
+            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              La Alta temprana de AFIP se genera con la <strong>misma empresa</strong> que la elegida acá como Empresa del Contrato — no hace falta volver a elegirla en otro lado.
+            </p>
           </div>
         </Modal>
       )}

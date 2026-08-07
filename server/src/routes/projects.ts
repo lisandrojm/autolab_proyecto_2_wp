@@ -1541,6 +1541,49 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/empresa-cont
   }
 });
 
+// PATCH /projects/:projectId/members/:userId/contracts/:index/empresa-release - Igual que
+// empresa-contrato de arriba, pero para la Empresa del Release (no es obligatoria).
+router.patch("/projects/:projectId/members/:userId/contracts/:index/empresa-release", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { projectId, userId, index } = req.params;
+    const empresaReleaseId = req.body?.empresaReleaseId ? String(req.body.empresaReleaseId) : "";
+    const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("_id").lean();
+    if (!project) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+    const up = await UserProject.findOne({ projectId, userId });
+    const idx = Number(index);
+    if (!up || !Number.isInteger(idx) || idx < 0 || idx >= up.contracts.length) {
+      res.status(404).json({ error: "Contrato no encontrado" });
+      return;
+    }
+
+    let nombreEmpresaRelease = "";
+    if (empresaReleaseId) {
+      const empresa = await Company.findById(empresaReleaseId).select("razonSocial").lean();
+      if (!empresa) {
+        res.status(400).json({ error: "La empresa elegida no existe" });
+        return;
+      }
+      nombreEmpresaRelease = (empresa as any).razonSocial || "";
+    }
+
+    up.contracts[idx] = {
+      ...(up.contracts[idx] as any).toObject(),
+      empresaReleaseId: empresaReleaseId || null,
+      nombre_empresa_release: nombreEmpresaRelease,
+    } as any;
+    up.markModified("contracts");
+    await up.save();
+
+    res.json({ empresaReleaseId: empresaReleaseId || null, nombre_empresa_release: nombreEmpresaRelease });
+  } catch (error) {
+    console.error("Update contract empresa-release error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // PATCH /projects/:projectId/members/:userId/contracts/:index/alta-documento - Sube (o reemplaza) el
 // PDF de "Alta" (AFIP/Servicios) de UN contrato puntual (por índice).
 router.patch(

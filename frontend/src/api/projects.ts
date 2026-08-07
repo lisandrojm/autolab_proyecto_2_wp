@@ -480,6 +480,12 @@ class ProjectsAPI {
     return data;
   }
 
+  /** Igual que `updateContratoEmpresa`, pero para la Empresa del Release (no es obligatoria). */
+  async updateReleaseEmpresa(projectId: string, userId: string, contractIndex: number, empresaReleaseId: string): Promise<{ empresaReleaseId: string | null; nombre_empresa_release: string }> {
+    const { data } = await axios.patch(`/projects/${projectId}/members/${userId}/contracts/${contractIndex}/empresa-release`, { empresaReleaseId }, { headers: this.getHeaders() });
+    return data;
+  }
+
   /** Sube (o reemplaza) el PDF de "Alta" (AFIP/Servicios) de un contrato puntual (por índice). */
   async uploadAltaDocumento(projectId: string, userId: string, contractIndex: number, file: File): Promise<{ altaDocumentoUrl: string; altaDocumentoNombre: string }> {
     const formData = new FormData();
