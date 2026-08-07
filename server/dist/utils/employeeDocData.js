@@ -10,10 +10,12 @@ const fechaCompacta = (s) => {
 };
 /**
  * Nomenclatura de archivos descargados (contratos y releases):
- *   [proyecto]_[Contrato|Release]_[nombreDoc]_[apellido]_[nombres]_[cuit]_Desde_[fechaAlta][_Hasta_[fechaBaja]]_[extra]
+ *   [proyecto]_[Contrato|Release]_[nombreDoc]_[apellido]_[nombres]_[email]_[cuit]_Desde_[fechaAlta][_Hasta_[fechaBaja]]_[extra]
  *
  * - `proyecto`: número/ID externo del proyecto (ej. 426).
  * - `nombreDoc`: opcional; para releases es el nombre del release.
+ * - `email`: el de la persona, para identificarla sin ambigüedad de un vistazo (dos personas pueden
+ *   compartir apellido y nombre).
  * - `extra`: opcional; texto libre adicional (p. ej. "Constancia de Cuit" para identificar el trámite
  *   de origen en Firma Digital).
  * - `Desde`/`Hasta`: fecha de alta/baja del contrato, para que se entienda de un vistazo el período —
@@ -31,11 +33,12 @@ export function buildDocFileName(opts) {
     const nombre = (user?.firstName || "").trim();
     const apellido = (user?.lastName || "").trim();
     const persona = [apellido, nombre].filter(Boolean).join("_");
+    const email = (user?.email || "").trim();
     const cuit = normalizarCuit(user?.metadata?.cuit);
     const fechaAlta = fechaCompacta(contract?.fecha_alta_contrato);
     const fechaBaja = fechaCompacta(contract?.fecha_baja_contrato);
     const rango = fechaAlta ? `Desde_${fechaAlta}${fechaBaja ? `_Hasta_${fechaBaja}` : ""}` : "";
-    const parts = [String(proyecto).trim(), tipo, (docName || "").trim(), persona, cuit, rango, (extra || "").trim()].filter((p) => p && String(p).trim() !== "");
+    const parts = [String(proyecto).trim(), tipo, (docName || "").trim(), persona, email, cuit, rango, (extra || "").trim()].filter((p) => p && String(p).trim() !== "");
     // Eliminar caracteres inválidos para nombres de archivo (se conservan espacios y acentos).
     return parts.join("_").replace(/[\\/:*?"<>|]/g, "_");
 }

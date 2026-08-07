@@ -228,6 +228,9 @@ const enviarTargetSchema = z.object({
     // Ya calculado por el frontend (estadoImpositivoDelContrato) — determina si además del
     // Contrato/Release hay que sumar el documento de Alta temprana de AFIP ya cargado.
     tipoImpositivo: z.enum(["alta_temprana_afip", "constancia_cuit"]).optional(),
+    // Si el Contrato de este trámite tiene tildado "Se envía a firmar" (default true) — ya lo calcula
+    // el frontend con el Tipo de Contrato. Cuando es false no se exige el Contrato generado ni se sube.
+    incluirContrato: z.boolean().optional().default(true),
 });
 /** Lee un archivo guardado en disco local a partir de su URL pública `/storage/...`. */
 function leerArchivoStorage(urlStorage) {
@@ -264,7 +267,7 @@ router.post("/enviar", async (req, res) => {
         const userIds = [...new Set(targets.map((t) => t.userId))];
         const [projects, users] = await Promise.all([
             Project.find({ _id: { $in: projectIds }, tenantId: req.tenantObjectId }).select("_id").lean(),
-            User.find({ _id: { $in: userIds }, tenantId: req.tenantObjectId }).select("_id firstName lastName metadata.cuit").lean(),
+            User.find({ _id: { $in: userIds }, tenantId: req.tenantObjectId }).select("_id firstName lastName email metadata.cuit").lean(),
         ]);
         const projectIdsValidos = new Set(projects.map((p) => String(p._id)));
         const userById = new Map(users.map((u) => [String(u._id), u]));
@@ -282,16 +285,20 @@ router.post("/enviar", async (req, res) => {
                     resultados.push({ ...base, ok: false, error: "Contrato no encontrado." });
                     continue;
                 }
-                if (!contract.firmaGeneradoAt || !contract.firmaContratoUrl) {
-                    resultados.push({ ...base, ok: false, error: 'Todavía no se generaron los documentos — usá "Generar" primero.' });
+                if (t.incluirContrato && (!contract.firmaGeneradoAt || !contract.firmaContratoUrl)) {
+                    resultados.push({ ...base, ok: false, error: 'Todavía no se generó el Contrato — usá "Generar" primero.' });
                     continue;
                 }
                 const user = userById.get(t.userId);
                 const carpeta = outboxCarpeta.replace(/\/$/, "");
                 const archivos = [
-                    { nombre: contract.firmaContratoNombre || "Contrato.pdf", buffer: leerArchivoStorage(contract.firmaContratoUrl) },
+                    ...(t.incluirContrato && contract.firmaContratoUrl ? [{ nombre: contract.firmaContratoNombre || "Contrato.pdf", buffer: leerArchivoStorage(contract.firmaContratoUrl) }] : []),
                     ...(contract.firmaReleases || []).map((r) => ({ nombre: r.nombre, buffer: leerArchivoStorage(r.url) })),
                 ];
+                if (archivos.length === 0) {
+                    resultados.push({ ...base, ok: false, error: "No hay ningún documento generado para enviar." });
+                    continue;
+                }
                 // Alta temprana de AFIP: el documento ya cargado (altaDocumentoUrl) se suma, pero renombrado
                 // con el CUIT (buildDocFileName) — el nombre original que le puso quien lo subió a mano no
                 // necesariamente lo trae, y el cron de estadoDropboxCronService.ts matchea por CUIT en el nombre.

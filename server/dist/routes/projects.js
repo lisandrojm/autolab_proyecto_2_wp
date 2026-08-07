@@ -1345,6 +1345,48 @@ router.delete("/projects/:projectId/members/:userId/contracts/:index", requireTe
         res.status(500).json({ error: "Internal server error" });
     }
 });
+// PATCH /projects/:projectId/members/:userId/contracts/:index/empresa-contrato - Actualiza SOLO la
+// Empresa del Contrato de un contrato puntual (por índice), sin tocar el resto de sus campos — para
+// poder elegirla desde la tabla (p. ej. "Alta temprana de AFIP") sin abrir el wizard de "Configurar
+// Miembro" completo. `nombre_empresa_contrato` se deriva acá mismo, igual que en /assign-member.
+router.patch("/projects/:projectId/members/:userId/contracts/:index/empresa-contrato", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
+    try {
+        const { projectId, userId, index } = req.params;
+        const empresaContratoId = req.body?.empresaContratoId ? String(req.body.empresaContratoId) : "";
+        const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("_id").lean();
+        if (!project) {
+            res.status(404).json({ error: "Project not found" });
+            return;
+        }
+        const up = await UserProject.findOne({ projectId, userId });
+        const idx = Number(index);
+        if (!up || !Number.isInteger(idx) || idx < 0 || idx >= up.contracts.length) {
+            res.status(404).json({ error: "Contrato no encontrado" });
+            return;
+        }
+        let nombreEmpresaContrato = "";
+        if (empresaContratoId) {
+            const empresa = await Company.findById(empresaContratoId).select("razonSocial").lean();
+            if (!empresa) {
+                res.status(400).json({ error: "La empresa elegida no existe" });
+                return;
+            }
+            nombreEmpresaContrato = empresa.razonSocial || "";
+        }
+        up.contracts[idx] = {
+            ...up.contracts[idx].toObject(),
+            empresaContratoId: empresaContratoId || null,
+            nombre_empresa_contrato: nombreEmpresaContrato,
+        };
+        up.markModified("contracts");
+        await up.save();
+        res.json({ empresaContratoId: empresaContratoId || null, nombre_empresa_contrato: nombreEmpresaContrato });
+    }
+    catch (error) {
+        console.error("Update contract empresa-contrato error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 // PATCH /projects/:projectId/members/:userId/contracts/:index/alta-documento - Sube (o reemplaza) el
 // PDF de "Alta" (AFIP/Servicios) de UN contrato puntual (por índice).
 router.patch("/projects/:projectId/members/:userId/contracts/:index/alta-documento", requireTenant, authenticateToken, requireAnyRole, uploadAltaDocumento, async (req, res) => {

@@ -272,7 +272,7 @@ router.post("/consulta-padron/bulk", async (req, res) => {
         const userIds = [...new Set(targets.map((t) => t.userId))].filter((id) => Types.ObjectId.isValid(id));
         const [projects, users] = await Promise.all([
             Project.find({ _id: { $in: projectIds }, tenantId: req.tenantObjectId }).select("_id").lean(),
-            User.find({ _id: { $in: userIds }, tenantId: req.tenantObjectId }).select("_id firstName lastName metadata.cuit").lean(),
+            User.find({ _id: { $in: userIds }, tenantId: req.tenantObjectId }).select("_id firstName lastName email metadata.cuit").lean(),
         ]);
         const projectIdsValidos = new Set(projects.map((p) => String(p._id)));
         const userById = new Map(users.map((u) => [String(u._id), u]));
