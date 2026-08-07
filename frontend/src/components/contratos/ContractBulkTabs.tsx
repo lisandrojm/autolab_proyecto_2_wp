@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faArrowUpRightFromSquare, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI, ContractOverviewRow, Contract } from "../../api/users";
+import { projectsAPI } from "../../api/projects";
 import { companiesAPI, Company } from "../../api/companies";
 import { infoAPI, InfoItem } from "../../api/info";
 import { ContratoFrameItem } from "../../api/contratosFrame";
@@ -37,6 +38,12 @@ const hoyStamp = (): string => {
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
 };
 
+/** Mismo estilo que las pestañas principales (ContractsPage.tsx) — para el filtro de Empresa como tabs. */
+const empresaTabClass = (active: boolean): string =>
+  `px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+    active ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+  }`;
+
 type TipoImpositivo = "alta_temprana_afip" | "constancia_cuit";
 const TIPO_LABEL: Record<TipoImpositivo, string> = {
   alta_temprana_afip: "Alta temprana de AFIP",
@@ -59,6 +66,57 @@ const EstadoImpositivoCell: React.FC<{ record: ContractOverviewRow; contratoFram
     <EstadoSecundarioBadge estado={estadoImpositivo} className="text-[10px] whitespace-nowrap" />
   ) : (
     <EstadoBadge name={estadoImpositivo.name} className="text-[10px] whitespace-nowrap" />
+  );
+};
+
+/**
+ * Celda "Empresa" de la pestaña Alta temprana de AFIP: elegir (o cambiar) la Empresa del Contrato
+ * directo desde la tabla, sin abrir el wizard completo de "Configurar Miembro". Es obligatoria para
+ * poder generar el TXT: un mismo archivo se sube a la sesión de ARCA de UNA sola empresa, así que
+ * cada contrato tiene que tener la suya definida antes de poder incluirse.
+ */
+const EmpresaContratoCell: React.FC<{ record: ContractOverviewRow; onGuardado: () => void }> = ({ record, onGuardado }) => {
+  const [guardando, setGuardando] = useState(false);
+  const empresas = record.contratoEmpresas || [];
+
+  const guardar = async (empresaId: string) => {
+    setGuardando(true);
+    try {
+      await projectsAPI.updateContratoEmpresa(record.projectId, record.userId, record.contractIndex, empresaId);
+      onGuardado();
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo guardar la empresa.");
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  if (empresas.length === 0) {
+    return (
+      <span className="text-xs text-gray-400" title="El proyecto no tiene empresas configuradas para Contrato">
+        Sin empresas
+      </span>
+    );
+  }
+
+  return (
+    <select
+      value={record.empresaContratoId || ""}
+      disabled={guardando}
+      onChange={(e) => guardar(e.target.value)}
+      onClick={(e) => e.stopPropagation()}
+      title={record.empresaContratoId ? "Cambiar la empresa del contrato" : "Elegí la empresa del contrato — es obligatoria para generar el TXT"}
+      className={`text-xs rounded-md border px-2 py-1.5 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/40 disabled:opacity-50 disabled:cursor-wait ${
+        record.empresaContratoId ? "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200" : "border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-400 font-semibold"
+      }`}
+    >
+      <option value="">{record.empresaContratoId ? "Sin empresa" : "Elegir empresa..."}</option>
+      {empresas.map((e) => (
+        <option key={e.id} value={e.id}>
+          {e.label}
+        </option>
+      ))}
+    </select>
   );
 };
 
@@ -350,7 +408,8 @@ export const ContractBulkAfipTab: React.FC<{
             selectFilters={[
               { label: "Cliente", value: filterClientId, onChange: setFilterClientId, placeholder: "Todos los clientes", options: clientOptions },
               { label: "Proyecto", value: filterProjectId, onChange: setFilterProjectId, placeholder: "Todos los proyectos", options: projectOptions },
-              { label: "Empresa", value: filterEmpresaId, onChange: setFilterEmpresaId, placeholder: "Todas las empresas", options: empresaOptions },
+              // "Empresa" en Alta temprana de AFIP se filtra con los tabs de abajo, no acá.
+              ...(filterTipo === "alta_temprana_afip" ? [] : [{ label: "Empresa", value: filterEmpresaId, onChange: setFilterEmpresaId, placeholder: "Todas las empresas", options: empresaOptions }]),
               { label: "Rol/es", value: filterRolMobile, onChange: setFilterRolMobile, placeholder: "Todos los roles", options: MOBILE_ROLE_OPTIONS },
               { label: "Tipo de contrato", value: filterTipoContrato, onChange: setFilterTipoContrato, placeholder: "Todos los tipos", options: tipoContratoOptions },
               { label: "Estado de contrato", value: filterEstadoContrato, onChange: setFilterEstadoContrato, placeholder: "Todos los estados", options: estadoContratoOptions, renderOption: (opt: { label: string }) => <EstadoBadge name={opt.label} /> },
@@ -369,6 +428,20 @@ export const ContractBulkAfipTab: React.FC<{
           </div>
         )}
       </div>
+
+      {/* Filtro de Empresa como tabs — solo en Alta temprana de AFIP (en Constancia de CUIT no aplica). */}
+      {filterTipo === "alta_temprana_afip" && empresaOptions.length > 0 && (
+        <div className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+          <button onClick={() => setFilterEmpresaId("")} className={empresaTabClass(filterEmpresaId === "")}>
+            Todas las empresas
+          </button>
+          {empresaOptions.map((e) => (
+            <button key={e.value} onClick={() => setFilterEmpresaId(e.value)} className={empresaTabClass(filterEmpresaId === e.value)}>
+              {e.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Barra de completitud + acción, en la misma línea. El TXT solo aplica a Alta temprana de AFIP. */}
       {filterTipo === "alta_temprana_afip" && (
@@ -548,7 +621,7 @@ export const ContractBulkAfipTab: React.FC<{
             <table className="w-full text-left border-separate border-spacing-0 min-w-[1950px]">
               <thead className="sticky top-0 z-40 bg-gray-50 dark:bg-gray-900 shadow-sm">
                 <tr className="border-b border-gray-100 dark:border-gray-800">
-                  <th className="sticky top-0 left-0 z-50 px-4 py-3 w-12 bg-gray-50 dark:bg-gray-900">
+                  <th className="sticky top-0 left-0 z-50 px-4 py-3 w-12 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700">
                     <input
                       type="checkbox"
                       checked={allSel}
@@ -599,6 +672,11 @@ export const ContractBulkAfipTab: React.FC<{
                   <ContractDocsHeaders showContrato={false} showRelease={false} altaLabel={filterTipo === "alta_temprana_afip" ? "Alta AFIP" : "Alta Servicios"} />
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">CUIT</th>
+                  {filterTipo === "alta_temprana_afip" && (
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Obligatoria para poder generar el TXT">
+                      Empresa <span className="text-red-500">*</span>
+                    </th>
+                  )}
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Cliente</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Contrato</th>
@@ -609,7 +687,7 @@ export const ContractBulkAfipTab: React.FC<{
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {filtered.map(({ row: r, result }) => (
                   <tr key={`${r._id}-${r.contractIndex}`} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? "bg-emerald-50/50 dark:bg-emerald-900/10" : ""}`}>
-                    <td className={`sticky left-0 z-20 px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${selected.has(rowKey(r)) ? "!bg-[#f6fefa] dark:!bg-[#1d2d37]" : ""}`}>
+                    <td className={`sticky left-0 z-20 px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${selected.has(rowKey(r)) ? "!bg-[#f6fefa] dark:!bg-[#1d2d37]" : ""}`}>
                       <input
                         type="checkbox"
                         checked={selected.has(rowKey(r))}
@@ -627,8 +705,10 @@ export const ContractBulkAfipTab: React.FC<{
                           type="button"
                           onClick={() => generarTxt([{ row: r, result }], `alta_afip_${r.userName.replace(/\s+/g, "_")}`)}
                           disabled={!result.completo}
-                          title={result.completo ? "Generar el TXT de AFIP de esta persona" : "Faltan datos AFIP para generar el TXT de esta persona"}
-                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                          title={result.completo ? "Generar el TXT de AFIP de esta persona" : !r.empresaContratoId ? "Elegí la Empresa del contrato para poder generar el TXT" : "Faltan datos AFIP para generar el TXT de esta persona"}
+                          className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold transition-colors whitespace-nowrap ${
+                            result.completo ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                          }`}
                         >
                           <FontAwesomeIcon icon={faFileLines} className="h-3 w-3" />
                           Generar TXT
@@ -723,6 +803,11 @@ export const ContractBulkAfipTab: React.FC<{
                       <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{fmtCuit(r.cuit) || "—"}</td>
+                    {filterTipo === "alta_temprana_afip" && (
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <EmpresaContratoCell record={r} onGuardado={load} />
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || "—"}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || "—"}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.nombre_contrato || "—"}</td>
@@ -932,6 +1017,9 @@ export const ContractBulkAfipTab: React.FC<{
               </li>
               <li>
                 <strong>Datos personales</strong>: CUIL.
+              </li>
+              <li>
+                <strong>Empresa del Contrato</strong>: se elige en la columna "Empresa" — un mismo TXT se sube a la sesión de ARCA de una sola empresa, así que hace falta saber a cuál corresponde cada contrato.
               </li>
             </ul>
             <p className="text-[11px] text-gray-500 dark:text-gray-400">Tocá el badge "Faltan N" de una fila para ver exactamente cuáles faltan.</p>
@@ -1572,7 +1660,7 @@ export const ContractBulkFirmaTab: React.FC<{
             <table className="w-full text-left border-separate border-spacing-0 min-w-[1600px]">
               <thead className="sticky top-0 z-40 bg-gray-50 dark:bg-gray-900 shadow-sm">
                 <tr className="border-b border-gray-100 dark:border-gray-800">
-                  <th className="sticky top-0 left-0 z-50 px-4 py-3 w-12 bg-gray-50 dark:bg-gray-900">
+                  <th className="sticky top-0 left-0 z-50 px-4 py-3 w-12 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700">
                     <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={enviables.length === 0} title="Seleccionar todos los generados" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                   </th>
                   <th className="sticky top-0 left-12 z-50 px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">
@@ -1599,7 +1687,7 @@ export const ContractBulkFirmaTab: React.FC<{
                   const enviable = calcularEnviable(r, contratoFrames, releasesQueFirman);
                   return (
                     <tr key={rowKey(r)} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? "bg-blue-50/50 dark:bg-blue-900/10" : ""}`}>
-                      <td className={`sticky left-0 z-20 px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${selected.has(rowKey(r)) ? "!bg-[#f7faff] dark:!bg-[#1f2b3f]" : ""}`}>
+                      <td className={`sticky left-0 z-20 px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${selected.has(rowKey(r)) ? "!bg-[#f7faff] dark:!bg-[#1f2b3f]" : ""}`}>
                         <input
                           type="checkbox"
                           checked={selected.has(rowKey(r))}

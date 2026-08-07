@@ -496,21 +496,21 @@ export const RegistroPage: React.FC = () => {
               <div className="space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className={labelClass}>Nombre como figura en el DNI *</label>
+                    <label className={labelClass}>Nombre como figura en el DNI <span className="text-red-500">*</span></label>
                     <input className={inputClass('firstName')} autoComplete="off" placeholder="Ej: Juan" value={form.firstName} onChange={(e) => set('firstName', e.target.value)} />
                   </div>
                   <div>
-                    <label className={labelClass}>Apellido como figura en el DNI *</label>
+                    <label className={labelClass}>Apellido como figura en el DNI <span className="text-red-500">*</span></label>
                     <input className={inputClass('lastName')} autoComplete="off" placeholder="Ej: Pérez" value={form.lastName} onChange={(e) => set('lastName', e.target.value)} />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className={labelClass}>Email *</label>
+                    <label className={labelClass}>Email <span className="text-red-500">*</span></label>
                     <input type="email" className={inputClass('email')} autoComplete="off" placeholder="usuario@ejemplo.com" value={form.email} onChange={(e) => set('email', e.target.value)} />
                   </div>
                   <div>
-                    <label className={labelClass}>Cuil *</label>
+                    <label className={labelClass}>Cuil <span className="text-red-500">*</span></label>
                     <CuitInput className={fieldClass} invalid={!!fieldErrors.cuit} value={form.cuit} onChange={(v) => set('cuit', v)} placeholder="20-XXXXXXXX-X" />
                   </div>
                 </div>
@@ -527,13 +527,13 @@ export const RegistroPage: React.FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label className={labelClass}>Documento *</label>
+                    <label className={labelClass}>Documento <span className="text-red-500">*</span></label>
                     <input className={inputClass('documento')} autoComplete="off" placeholder="DNI / Pasaporte" value={form.documento} onChange={(e) => set('documento', e.target.value)} />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className={labelClass}>Fecha nacimiento *</label>
+                    <label className={labelClass}>Fecha nacimiento <span className="text-red-500">*</span></label>
                     <input type="date" className={inputClass('fechaNac')} value={form.fechaNac} onChange={(e) => set('fechaNac', e.target.value)} />
                   </div>
                   <div>
@@ -596,27 +596,27 @@ export const RegistroPage: React.FC = () => {
               <div className="space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className={labelClass}>Pais *</label>
+                    <label className={labelClass}>Pais <span className="text-red-500">*</span></label>
                     <input className={inputClass('pais')} autoComplete="off" placeholder="Ej: Argentina" value={form.pais} onChange={(e) => set('pais', e.target.value)} />
                   </div>
                   <div>
-                    <label className={labelClass}>Localidad *</label>
+                    <label className={labelClass}>Localidad <span className="text-red-500">*</span></label>
                     <input className={inputClass('localidad')} autoComplete="off" placeholder="Ej: CABA" value={form.localidad} onChange={(e) => set('localidad', e.target.value)} />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className={labelClass}>Calle *</label>
+                    <label className={labelClass}>Calle <span className="text-red-500">*</span></label>
                     <input className={inputClass('calle')} autoComplete="off" placeholder="Ej: Av. Libertador" value={form.calle} onChange={(e) => set('calle', e.target.value)} />
                   </div>
                   <div>
-                    <label className={labelClass}>Altura *</label>
+                    <label className={labelClass}>Altura <span className="text-red-500">*</span></label>
                     <input className={inputClass('altura')} autoComplete="off" placeholder="Ej: 1234" value={form.altura} onChange={(e) => set('altura', e.target.value)} />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className={labelClass}>Piso / Depto *</label>
+                    <label className={labelClass}>Piso / Depto <span className="text-red-500">*</span></label>
                     <input className={inputClass('pisoDepto')} autoComplete="off" placeholder="Ej: 4B" value={form.pisoDepto} onChange={(e) => set('pisoDepto', e.target.value)} />
                   </div>
                   <div>
@@ -626,7 +626,7 @@ export const RegistroPage: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className={labelClass}>Telefono *</label>
+                    <label className={labelClass}>Telefono <span className="text-red-500">*</span></label>
                     <input className={inputClass('telefono')} autoComplete="off" placeholder="Ej: 11 1234-5678" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} />
                   </div>
                   <div>
@@ -650,7 +650,7 @@ export const RegistroPage: React.FC = () => {
                 {/* Paso 1: tipo de entidad financiera */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className={labelClass}>Tipo de Entidad Financiera *</label>
+                    <label className={labelClass}>Tipo de Entidad Financiera <span className="text-red-500">*</span></label>
                     <select className={inputClass('tipoEntidadFinanciera')} value={form.tipoEntidadFinanciera} onChange={(e) => onTipoEntidadChange(e.target.value)}>
                       <option value="">Seleccionar...</option>
                       {TIPO_ENTIDAD_OPTIONS.map((o) => (
@@ -684,7 +684,7 @@ export const RegistroPage: React.FC = () => {
                 {form.tipoEntidadFinanciera && form.tipoEntidadFinanciera !== SIN_BANCO && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                      <label className={labelClass}>{labelTipo(form.tipoEntidadFinanciera)} *</label>
+                      <label className={labelClass}>{labelTipo(form.tipoEntidadFinanciera)} <span className="text-red-500">*</span></label>
                       <SearchableSelect title={labelTipo(form.tipoEntidadFinanciera)} value={form.bancoId} options={bancosFiltrados} onChange={(v) => set('bancoId', v)} invalid={fieldErrors.bancoId} />
                       {bancosFiltrados.length === 0 && <p className="mt-2 text-xs text-amber-400">No hay entidades cargadas de este tipo. Cargalas en el ABM de Entidades Financieras.</p>}
                     </div>
@@ -697,7 +697,7 @@ export const RegistroPage: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       {camposDe(form.tipoEntidadFinanciera).tipoCuenta && (
                         <div>
-                          <label className={labelClass}>Tipo de cuenta *</label>
+                          <label className={labelClass}>Tipo de cuenta <span className="text-red-500">*</span></label>
                           <select className={inputClass('tipoDeCuentaBancaria')} value={form.tipoDeCuentaBancaria} onChange={(e) => set('tipoDeCuentaBancaria', e.target.value)}>
                             <option value="">Seleccionar...</option>
                             <option value="Caja de ahorro $">Caja de ahorro $</option>
@@ -707,18 +707,18 @@ export const RegistroPage: React.FC = () => {
                         </div>
                       )}
                       <div>
-                        <label className={labelClass}>{camposDe(form.tipoEntidadFinanciera).cbuLabel} *</label>
+                        <label className={labelClass}>{camposDe(form.tipoEntidadFinanciera).cbuLabel} <span className="text-red-500">*</span></label>
                         <input className={inputClass('cbu')} autoComplete="off" placeholder="22 dígitos" minLength={22} maxLength={22} value={form.cbu} onChange={(e) => set('cbu', e.target.value)} />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <div>
-                        <label className={labelClass}>Alias *</label>
+                        <label className={labelClass}>Alias <span className="text-red-500">*</span></label>
                         <input className={inputClass('aliasBancario')} autoComplete="off" placeholder="Ej: LUNES.MALETA.CUNA" value={form.aliasBancario} onChange={(e) => set('aliasBancario', e.target.value)} />
                       </div>
                       {camposDe(form.tipoEntidadFinanciera).nroCuenta && (
                         <div>
-                          <label className={labelClass}>Nro. de cuenta *</label>
+                          <label className={labelClass}>Nro. de cuenta <span className="text-red-500">*</span></label>
                           <input className={inputClass('nroDeCuentaBancaria')} autoComplete="off" placeholder="Ej: 347-333020/7" value={form.nroDeCuentaBancaria} onChange={(e) => set('nroDeCuentaBancaria', e.target.value)} />
                         </div>
                       )}

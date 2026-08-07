@@ -473,6 +473,13 @@ class ProjectsAPI {
     });
   }
 
+  /** Actualiza SOLO la Empresa del Contrato de un contrato puntual (por índice), sin abrir el wizard
+   *  completo de "Configurar Miembro". Pasar "" para desasignarla. */
+  async updateContratoEmpresa(projectId: string, userId: string, contractIndex: number, empresaContratoId: string): Promise<{ empresaContratoId: string | null; nombre_empresa_contrato: string }> {
+    const { data } = await axios.patch(`/projects/${projectId}/members/${userId}/contracts/${contractIndex}/empresa-contrato`, { empresaContratoId }, { headers: this.getHeaders() });
+    return data;
+  }
+
   /** Sube (o reemplaza) el PDF de "Alta" (AFIP/Servicios) de un contrato puntual (por índice). */
   async uploadAltaDocumento(projectId: string, userId: string, contractIndex: number, file: File): Promise<{ altaDocumentoUrl: string; altaDocumentoNombre: string }> {
     const formData = new FormData();

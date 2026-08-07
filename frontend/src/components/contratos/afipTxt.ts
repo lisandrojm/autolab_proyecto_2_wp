@@ -37,7 +37,18 @@ const fechaAfip = (s: string): string => {
 export function buildAltaRecord(row: ContractOverviewRow, cat: AfipCatalogs): string | null {
   const v = resolveAfipValues(row, cat);
   const faltaObligatorio =
-    v.cuil.length !== 11 || !v.fechaInicio || v.retribucion <= 0 || !v.categoriaProf || !v.modalidadContrato || !v.tipoServicio || !v.actividad || !v.modalidadLiq || !v.rnos || !v.sucursal;
+    v.cuil.length !== 11 ||
+    !v.fechaInicio ||
+    v.retribucion <= 0 ||
+    !v.categoriaProf ||
+    !v.modalidadContrato ||
+    !v.tipoServicio ||
+    !v.actividad ||
+    !v.modalidadLiq ||
+    !v.rnos ||
+    !v.sucursal ||
+    // No es un campo del registro en sí (ver resolveAfip): un mismo TXT es para una sola empresa.
+    !row.empresaContratoId;
   if (faltaObligatorio) return null;
 
   const fechaFin = fechaAfip(v.fechaFin);

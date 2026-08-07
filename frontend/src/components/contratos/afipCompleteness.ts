@@ -84,6 +84,11 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
     { key: "rnos", label: "Código RNOS (obra social)", value: v.rnos, ok: !!v.rnos },
     { key: "sucursal", label: "Código de sucursal (sede)", value: v.sucursal, ok: !!v.sucursal },
   ];
+  // No es un campo del registro AFIP (el TXT no lleva el CUIT de la empleadora), pero se exige igual:
+  // un mismo TXT se sube a la sesión de UNA sola empresa en ARCA, así que hace falta saber a cuál
+  // corresponde cada contrato antes de poder incluirlo.
+  checks.push({ key: "empresa", label: "Empresa del Contrato", value: row.nombre_empresa_contrato || "", ok: !!row.empresaContratoId });
+
   const faltantes = checks.filter((c) => !c.ok).length;
   return { checks, faltantes, completo: faltantes === 0 };
 }
