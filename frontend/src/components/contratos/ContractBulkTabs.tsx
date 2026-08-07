@@ -436,11 +436,12 @@ export const ContractBulkAfipTab: React.FC<{
         )}
       </div>
 
-      {/* Filtro de Empresa como tabs — solo en Alta temprana de AFIP (en Constancia de CUIT no aplica). */}
+      {/* Filtro de Empresa Contrato como tabs — solo en Alta temprana de AFIP (en Constancia de CUIT no aplica). */}
       {filterTipo === "alta_temprana_afip" && empresaOptions.length > 0 && (
-        <div className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+        <div className="flex items-center border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+          <span className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap shrink-0">Empresa Contrato:</span>
           <button onClick={() => setFilterEmpresaId("")} className={empresaTabClass(filterEmpresaId === "")}>
-            Todas las empresas
+            Todas
           </button>
           {empresaOptions.map((e) => (
             <button key={e.value} onClick={() => setFilterEmpresaId(e.value)} className={empresaTabClass(filterEmpresaId === e.value)}>
@@ -679,19 +680,20 @@ export const ContractBulkAfipTab: React.FC<{
                   <ContractDocsHeaders showContrato={false} showRelease={false} altaLabel={filterTipo === "alta_temprana_afip" ? "Alta AFIP" : "Alta Servicios"} />
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">CUIT</th>
-                  {filterTipo === "alta_temprana_afip" && (
-                    <>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5">
-                          Empresa Contrato <span className="text-red-500">*</span>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1.5">
+                      Empresa Contrato
+                      {filterTipo === "alta_temprana_afip" && (
+                        <>
+                          <span className="text-red-500">*</span>
                           <button type="button" onClick={() => setEmpresaContratoInfoOpen(true)} title="Por qué es obligatoria" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
                             <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
                           </button>
-                        </span>
-                      </th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Empresa Release</th>
-                    </>
-                  )}
+                        </>
+                      )}
+                    </span>
+                  </th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Empresa Release</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Cliente</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Contrato</th>
