@@ -475,6 +475,20 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         // nombres largos de los campos en cada uno pesa más que los valores (medido: 1017 KB con select
         // contra 630 KB así). Se renombran a los nombres reales apenas llegan, así el resto del handler
         // no se entera.
+        //
+        // Las fechas van siempre (definen cuál es el contrato activo), pero el nombre del contrato, el
+        // estado y el flag de reemplazo solo se traen si hay un filtro que los mire: sin filtros, pedirlos
+        // es casi la mitad del payload para nada.
+        const necesitaNombreContrato = !!req.query.tipoContrato || !!req.query.search;
+        const necesitaEstado = !!req.query.estadoContrato || !!req.query.estados;
+        const necesitaReemplazo = !!req.query.reemplazo;
+        const camposContrato = { a: "$$x.fecha_alta_contrato", b: "$$x.fecha_baja_contrato", g: "$$x.fecha_carga" };
+        if (necesitaNombreContrato)
+            camposContrato.n = "$$x.nombre_contrato";
+        if (necesitaEstado)
+            camposContrato.e = "$$x.nombre_estado_empleado";
+        if (necesitaReemplazo)
+            camposContrato.m = "$$x.reemplazo";
         const membershipsRaw = await UserProject.aggregate([
             { $match: { projectId: { $in: projectIds } } },
             {
@@ -482,13 +496,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                     p: "$projectId",
                     u: "$userId",
                     r: "$nombre_rol_frame",
-                    c: {
-                        $map: {
-                            input: { $ifNull: ["$contracts", []] },
-                            as: "x",
-                            in: { a: "$$x.fecha_alta_contrato", b: "$$x.fecha_baja_contrato", g: "$$x.fecha_carga", n: "$$x.nombre_contrato", e: "$$x.nombre_estado_empleado", m: "$$x.reemplazo" },
-                        },
-                    },
+                    c: { $map: { input: { $ifNull: ["$contracts", []] }, as: "x", in: camposContrato } },
                 },
             },
         ]);
@@ -608,17 +616,31 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         const total = rows.length;
         const totalPages = Math.max(1, Math.ceil(total / limit));
         const pageRows = rows.slice((page - 1) * limit, page * limit);
-        // FASE 2 — recién acá se traen los contratos completos, y solo de las filas de esta página.
+        // FASE 2 — los contratos completos, solo de las filas de esta página y solo el contrato ACTIVO
+        // de cada una. Traer el array `contracts` entero movía todos los contratos de esas personas (hay
+        // quien tiene 146), y de ahí se usaba uno: eran 8,6 s para 30 filas. El índice ya lo resolvió la
+        // FASE 1, así que se le pide a Mongo justo ese elemento con un $switch por membership.
         const tFase2 = Date.now();
-        const contratosPorMembership = new Map();
+        const contratoActivoPorMembership = new Map();
         if (pageRows.length > 0) {
-            const docs = await UserProject.find({ _id: { $in: pageRows.map((r) => r._id) } })
-                .select("contracts")
-                .lean();
-            docs.forEach((d) => contratosPorMembership.set(String(d._id), d.contracts || []));
+            const ids = pageRows.map((r) => new Types.ObjectId(r._id));
+            const docs = await UserProject.aggregate([
+                { $match: { _id: { $in: ids } } },
+                {
+                    $project: {
+                        c: {
+                            $arrayElemAt: [
+                                { $ifNull: ["$contracts", []] },
+                                { $switch: { branches: pageRows.map((r) => ({ case: { $eq: ["$_id", new Types.ObjectId(r._id)] }, then: r.contractIndex })), default: 0 } },
+                            ],
+                        },
+                    },
+                },
+            ]);
+            docs.forEach((d) => contratoActivoPorMembership.set(String(d._id), d.c || {}));
         }
         const fullRows = pageRows.map((r) => {
-            const c = contratosPorMembership.get(r._id)?.[r.contractIndex] || {};
+            const c = contratoActivoPorMembership.get(r._id) || {};
             return {
                 ...r,
                 nombre_contrato: c.nombre_contrato || "",
