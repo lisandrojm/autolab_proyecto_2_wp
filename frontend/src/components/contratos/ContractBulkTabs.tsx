@@ -23,8 +23,17 @@ import { resolveAfip, AfipRowResult } from './afipCompleteness';
 import { buildAltaRecord, buildAltaTxt, downloadTxt } from './afipTxt';
 import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, fmtCuit } from './ConstanciaBulk';
 import { sweetAlert } from '../../utils/sweetAlert';
+import { cachedFetch, invalidateRefCache } from '../../utils/refCache';
 
 const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
+
+/**
+ * Prefijo de caché del listado de contratos que comparten las pestañas de Gestión. Cada una monta y
+ * desmonta su propio componente al cambiar de tab, así que sin esto cada click repite una consulta
+ * de varios segundos. Al invalidar por prefijo, cualquier acción que modifique datos refresca las
+ * tres pestañas de una.
+ */
+const CONTRACTS_OVERVIEW_CACHE = 'contracts-overview:';
 
 /** Mismas opciones de rol que el filtro de la pestaña Contratos. */
 const MOBILE_ROLE_OPTIONS = [
@@ -219,23 +228,32 @@ export const ContractBulkAfipTab: React.FC<{
   // entero: traerlo completo para descartarlo acá movía megas al pedo y el endpoint se pasaba del
   // timeout. Y si falla hay que decirlo — quedarse callado dejaba la pantalla igual que cuando no
   // hay contratos impositivos, así que un error de red se leía como "no hay nada que hacer acá".
-  const load = useCallback(() => {
-    if (estadosImpositivos.length === 0) {
-      setRows([]);
-      setLoading(false);
-      return Promise.resolve();
-    }
-    setLoading(true);
-    setLoadError('');
-    return usersAPI
-      .listContractsOverview({ limit: 5000, estados: estadosImpositivos })
-      .then((res) => setRows(res.rows))
-      .catch((e: any) => {
+  //
+  // Va por `cachedFetch` porque cambiar de sub-pestaña desmonta el componente: sin caché, volver a
+  // "Alta temprana" después de pasar por "Firma digital" repetía una consulta de varios segundos
+  // para mostrar exactamente lo mismo. `load(true)` fuerza el refresco y es lo que usan las acciones
+  // que modifican datos.
+  const load = useCallback(
+    (force = false) => {
+      if (estadosImpositivos.length === 0) {
         setRows([]);
-        setLoadError(e?.response?.data?.error || e?.message || 'No se pudieron cargar los contratos.');
-      })
-      .finally(() => setLoading(false));
-  }, [estadosImpositivos]);
+        setLoading(false);
+        return Promise.resolve();
+      }
+      const key = `${CONTRACTS_OVERVIEW_CACHE}impositivos:${estadosImpositivos.join(',')}`;
+      if (force) invalidateRefCache(CONTRACTS_OVERVIEW_CACHE);
+      setLoading(true);
+      setLoadError('');
+      return cachedFetch(key, () => usersAPI.listContractsOverview({ limit: 5000, estados: estadosImpositivos }))
+        .then((res) => setRows(res.rows))
+        .catch((e: any) => {
+          setRows([]);
+          setLoadError(e?.response?.data?.error || e?.message || 'No se pudieron cargar los contratos.');
+        })
+        .finally(() => setLoading(false));
+    },
+    [estadosImpositivos],
+  );
 
   useEffect(() => {
     load();
@@ -245,7 +263,7 @@ export const ContractBulkAfipTab: React.FC<{
   const handleDownloadRelease = (record: ContractOverviewRow, release: Release, empresaId?: string) => downloadReleaseRow(record, release, empresaId);
   const handleUploadAlta = async (record: ContractOverviewRow, file: File) => {
     await uploadAltaRow(record, file);
-    load();
+    load(true);
   };
 
   // Genera el TXT de Alta masiva de AFIP para los contratos con datos completos del conjunto dado;
@@ -518,7 +536,7 @@ export const ContractBulkAfipTab: React.FC<{
               {countConstPendientes} pendientes
             </button>
           </div>
-          <BotonConsultarAfipBulk rows={seleccionados.length > 0 ? seleccionados.map((x) => x.row) : constanciaRows.map((x) => x.row)} onConsultado={load} />
+          <BotonConsultarAfipBulk rows={seleccionados.length > 0 ? seleccionados.map((x) => x.row) : constanciaRows.map((x) => x.row)} onConsultado={() => load(true)} />
         </div>
       )}
 
@@ -531,7 +549,7 @@ export const ContractBulkAfipTab: React.FC<{
           <FontAwesomeIcon icon={faTriangleExclamation} className="h-8 w-8 text-red-500" />
           <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">No se pudieron cargar los contratos</p>
           <p className="text-xs text-gray-500 dark:text-gray-400 max-w-md">{loadError}</p>
-          <button type="button" onClick={() => load()} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+          <button type="button" onClick={() => load(true)} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors">
             Reintentar
           </button>
         </div>
@@ -586,7 +604,7 @@ export const ContractBulkAfipTab: React.FC<{
                         CUIT/CUIL: {cuil ? 'OK' : 'Falta 1'}
                       </button>
                       <ConstanciaBadge row={r} />
-                      <BotonValidarCuit row={r} onConsultado={load} compacto />
+                      <BotonValidarCuit row={r} onConsultado={() => load(true)} compacto />
                       {constanciaPendiente(r) && <BotonArca cuit={r.cuit} compacto />}
                     </>
                   )}
@@ -688,7 +706,7 @@ export const ContractBulkAfipTab: React.FC<{
                         </button>
                       ) : (
                         <div className="flex items-center gap-1.5 whitespace-nowrap">
-                          <BotonValidarCuit row={r} onConsultado={load} compacto />
+                          <BotonValidarCuit row={r} onConsultado={() => load(true)} compacto />
                         </div>
                       )}
                     </td>
@@ -748,10 +766,10 @@ export const ContractBulkAfipTab: React.FC<{
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{fmtCuit(r.cuit) || '—'}</td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      <EmpresaSelectCell record={r} campo="contrato" requerido={filterTipo === 'alta_temprana_afip'} onGuardado={load} />
+                      <EmpresaSelectCell record={r} campo="contrato" requerido={filterTipo === 'alta_temprana_afip'} onGuardado={() => load(true)} />
                     </td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      <EmpresaSelectCell record={r} campo="release" requerido={false} onGuardado={load} />
+                      <EmpresaSelectCell record={r} campo="release" requerido={false} onGuardado={() => load(true)} />
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
@@ -1368,9 +1386,12 @@ export const ContractBulkFirmaTab: React.FC<{
   // ni se mandan a firmar acá, aunque sigan existiendo como release del proyecto.
   const releasesQueFirman = useMemo(() => activeReleases.filter(releaseRequiereFirma), [activeReleases]);
 
-  const load = useCallback(() => {
+  // Mismo caché compartido que las otras pestañas de Gestión (ver CONTRACTS_OVERVIEW_CACHE):
+  // volver acá desde otra sub-pestaña no repite la consulta. `load(true)` fuerza el refresco.
+  const load = useCallback((force = false) => {
+    if (force) invalidateRefCache(CONTRACTS_OVERVIEW_CACHE);
     setLoading(true);
-    return Promise.all([usersAPI.listContractsOverview({ limit: 5000 }), firmaDigitalAPI.config()])
+    return Promise.all([cachedFetch(`${CONTRACTS_OVERVIEW_CACHE}todos`, () => usersAPI.listContractsOverview({ limit: 5000 })), firmaDigitalAPI.config()])
       .then(([res, cfg]) => {
         setRows(res.rows);
         setConfig(cfg);
@@ -1476,7 +1497,7 @@ export const ContractBulkFirmaTab: React.FC<{
         sweetAlert.success('Enviado', `${res.enviados} contrato(s) enviado(s) a firmar.`);
       }
       setSelected(new Set());
-      load();
+      load(true);
     } catch (e: any) {
       sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo enviar a firmar.');
     } finally {
@@ -1560,7 +1581,7 @@ export const ContractBulkFirmaTab: React.FC<{
                         <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!enviable} onChange={() => toggleSel(rowKey(r))} title={enviable ? 'Incluir en el envío a firmar' : r.firmaEnviadaAt ? 'Ya se envió a firmar' : 'Generá primero el Contrato y el/los Release(s) ("Generar")'} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                       </td>
                       <td className={`sticky left-12 z-20 px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)] ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
-                        <FirmaEnviarCell record={r} contratoAplica={contratoAplica} releasesAplicables={releasesQueFirman} tipoImpositivo={tipo} onEnviado={load} />
+                        <FirmaEnviarCell record={r} contratoAplica={contratoAplica} releasesAplicables={releasesQueFirman} tipoImpositivo={tipo} onEnviado={() => load(true)} />
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 whitespace-nowrap">
                         {(() => {
@@ -1591,10 +1612,10 @@ export const ContractBulkFirmaTab: React.FC<{
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <FirmaContratoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} onGenerado={load} />
+                        <FirmaContratoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} onGenerado={() => load(true)} />
                       </td>
                       <td className="px-4 py-3">
-                        <FirmaReleaseCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} releasesAplicables={releasesQueFirman} onGenerado={load} />
+                        <FirmaReleaseCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} releasesAplicables={releasesQueFirman} onGenerado={() => load(true)} />
                       </td>
                       <td className="px-4 py-3">
                         <p className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{r.userName}</p>
