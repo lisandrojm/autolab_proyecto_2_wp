@@ -47,7 +47,7 @@ const normalizarEstado = (s) => (s || "")
     .replace(/[\u0300-\u036f]/g, "")
     .trim();
 // "Falta pedido de AFIP" y "Pedido de AFIP" son el mismo estado (igual que `estadoLabel` en el front).
-const ESTADO_ALIAS = { "falta pedido de afip": "pedido de afip" };
+const ESTADO_ALIAS = { "falta pedido de afip": "pedido de afip", "pedido servicios": "pedido de servicios" };
 const estadoCanonico = (s) => {
     const n = normalizarEstado(s);
     return ESTADO_ALIAS[n] || n;
