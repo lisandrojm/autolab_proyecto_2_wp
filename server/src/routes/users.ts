@@ -512,13 +512,42 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
     const empresasPorProyecto = new Map<string, { contratoEmpresas: any[]; releaseEmpresas: any[] }>();
     projectsList.forEach((p: any) => empresasPorProyecto.set(String(p._id), { contratoEmpresas: toEmpresas(p.contratoEmpresas), releaseEmpresas: toEmpresas(p.releaseEmpresas) }));
 
+    const tFase1 = Date.now();
+
     // FASE 1 — barrido liviano. Hay que recorrer TODOS los contratos de todas las personas para
     // elegir el activo y aplicar los filtros, pero de cada contrato alcanzan seis campos: traer el
     // contrato entero movía ~3,6 MB por una página de 25 filas y la consulta se pasaba del
     // socketTimeout (500). Los datos completos se piden en la FASE 2, solo para la página devuelta.
-    const memberships: any[] = await UserProject.find({ projectId: { $in: projectIds } })
-      .select("projectId userId nombre_rol_frame contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga contracts.nombre_contrato contracts.nombre_estado_empleado contracts.reemplazo")
-      .lean();
+    //
+    // Va por aggregate con claves de UNA letra en vez de un select: con ~4000 contratos, repetir los
+    // nombres largos de los campos en cada uno pesa más que los valores (medido: 1017 KB con select
+    // contra 630 KB así). Se renombran a los nombres reales apenas llegan, así el resto del handler
+    // no se entera.
+    const membershipsRaw: any[] = await UserProject.aggregate([
+      { $match: { projectId: { $in: projectIds } } },
+      {
+        $project: {
+          p: "$projectId",
+          u: "$userId",
+          r: "$nombre_rol_frame",
+          c: {
+            $map: {
+              input: { $ifNull: ["$contracts", []] },
+              as: "x",
+              in: { a: "$$x.fecha_alta_contrato", b: "$$x.fecha_baja_contrato", g: "$$x.fecha_carga", n: "$$x.nombre_contrato", e: "$$x.nombre_estado_empleado", m: "$$x.reemplazo" },
+            },
+          },
+        },
+      },
+    ]);
+    const memberships: any[] = membershipsRaw.map((d: any) => ({
+      _id: d._id,
+      projectId: d.p,
+      userId: d.u,
+      nombre_rol_frame: d.r,
+      contracts: (d.c || []).map((c: any) => ({ fecha_alta_contrato: c.a, fecha_baja_contrato: c.b, fecha_carga: c.g, nombre_contrato: c.n, nombre_estado_empleado: c.e, reemplazo: c.m })),
+    }));
+    const msFase1 = Date.now() - tFase1;
 
     // Usuario, roles y cliente se resuelven con tres consultas en bloque en vez de con populate por
     // membership (el populate de `metadata` completo traía 40+ campos por persona, incluido el array
@@ -637,6 +666,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
     const pageRows = rows.slice((page - 1) * limit, page * limit);
 
     // FASE 2 — recién acá se traen los contratos completos, y solo de las filas de esta página.
+    const tFase2 = Date.now();
     const contratosPorMembership = new Map<string, any[]>();
     if (pageRows.length > 0) {
       const docs: any[] = await UserProject.find({ _id: { $in: pageRows.map((r) => r._id) } })
@@ -690,6 +720,10 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         tipo_contrato_id: c.tipo_contrato_id ?? null,
       };
     });
+
+    // Deja a la vista dónde se va el tiempo (es la consulta más pesada de la app y depende del
+    // ancho de banda contra Atlas, no del CPU): sin esto hay que adivinar si tarda por la fase 1 o la 2.
+    console.log(`[contracts-overview] fase1 ${msFase1}ms (${memberships.length} memberships) · fase2 ${Date.now() - tFase2}ms (${pageRows.length} filas) · total ${total}`);
 
     res.json({ rows: fullRows, total, page, totalPages });
   } catch (error) {
