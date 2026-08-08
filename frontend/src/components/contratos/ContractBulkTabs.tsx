@@ -125,6 +125,8 @@ export const ContractBulkAfipTab: React.FC<{
 }> = ({ allEstados, contratoFrames, releases, initialProjectId = '', tipo: filterTipo, onCounts }) => {
   const [rows, setRows] = useState<ContractOverviewRow[]>([]);
   const [loading, setLoading] = useState(true);
+  /** Motivo por el que falló la carga (vacío = sin error). Ver `load()`. */
+  const [loadError, setLoadError] = useState('');
   const [search, setSearch] = useState('');
   const [soloIncompletos, setSoloIncompletos] = useState(false);
   /** Sub-pestaña Constancia de CUIT: mostrar solo las que faltan o ya vencieron (el worklist). */
@@ -210,16 +212,30 @@ export const ContractBulkAfipTab: React.FC<{
     return m;
   }, [allEstados]);
 
+  /** Nombres de los estados marcados como impositivos: son los únicos contratos que muestra esta pantalla. */
+  const estadosImpositivos = useMemo(() => allEstados.filter((e) => e.data?.esImpositivo && e.name).map((e) => e.name), [allEstados]);
+
+  // Se le piden al server SOLO los contratos con estado impositivo (unas decenas) en vez del padrón
+  // entero: traerlo completo para descartarlo acá movía megas al pedo y el endpoint se pasaba del
+  // timeout. Y si falla hay que decirlo — quedarse callado dejaba la pantalla igual que cuando no
+  // hay contratos impositivos, así que un error de red se leía como "no hay nada que hacer acá".
   const load = useCallback(() => {
+    if (estadosImpositivos.length === 0) {
+      setRows([]);
+      setLoading(false);
+      return Promise.resolve();
+    }
     setLoading(true);
+    setLoadError('');
     return usersAPI
-      .listContractsOverview({ limit: 5000 })
+      .listContractsOverview({ limit: 5000, estados: estadosImpositivos })
       .then((res) => setRows(res.rows))
-      .catch(() => {
-        /* noop */
+      .catch((e: any) => {
+        setRows([]);
+        setLoadError(e?.response?.data?.error || e?.message || 'No se pudieron cargar los contratos.');
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [estadosImpositivos]);
 
   useEffect(() => {
     load();
@@ -509,6 +525,15 @@ export const ContractBulkAfipTab: React.FC<{
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <LoadingSpinner message="Cargando contratos..." />
+        </div>
+      ) : loadError ? (
+        <div className="flex flex-col items-center justify-center gap-3 py-16 px-4 text-center">
+          <FontAwesomeIcon icon={faTriangleExclamation} className="h-8 w-8 text-red-500" />
+          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">No se pudieron cargar los contratos</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 max-w-md">{loadError}</p>
+          <button type="button" onClick={() => load()} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+            Reintentar
+          </button>
         </div>
       ) : filtered.length === 0 ? (
         <EmptyState icon={faFileInvoiceDollar} title="Sin contratos impositivos" description={impositivoRows.length === 0 ? 'Ningún contrato tiene hoy un estado impositivo (Alta temprana de AFIP o Constancia de CUIT). Asigná uno de esos estados en el contrato del miembro.' : 'No hay resultados con los filtros aplicados.'} />

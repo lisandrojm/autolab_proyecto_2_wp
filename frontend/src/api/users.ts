@@ -440,6 +440,9 @@ class UsersAPI {
       tipoContrato?: string;
       estadoContrato?: string;
       reemplazo?: string;
+      /** Varios estados a la vez (nombres). Lo usa Gestión de Contratos para pedirle al server solo
+       *  los contratos con estado impositivo en vez de traerse el padrón entero. */
+      estados?: string[];
     } = {},
   ): Promise<{ rows: ContractOverviewRow[]; total: number; page: number; totalPages: number }> {
     const searchParams = new URLSearchParams();
@@ -454,6 +457,7 @@ class UsersAPI {
     if (params.tipoContrato) searchParams.append("tipoContrato", params.tipoContrato);
     if (params.estadoContrato) searchParams.append("estadoContrato", params.estadoContrato);
     if (params.reemplazo) searchParams.append("reemplazo", params.reemplazo);
+    if (params.estados?.length) searchParams.append("estados", params.estados.join(","));
 
     const { data } = await axios.get(`/users/contracts-overview?${searchParams.toString()}`, { headers: this.getHeaders() });
     return {

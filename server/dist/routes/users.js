@@ -465,11 +465,30 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         };
         const empresasPorProyecto = new Map();
         projectsList.forEach((p) => empresasPorProyecto.set(String(p._id), { contratoEmpresas: toEmpresas(p.contratoEmpresas), releaseEmpresas: toEmpresas(p.releaseEmpresas) }));
+        // FASE 1 — barrido liviano. Hay que recorrer TODOS los contratos de todas las personas para
+        // elegir el activo y aplicar los filtros, pero de cada contrato alcanzan seis campos: traer el
+        // contrato entero movía ~3,6 MB por una página de 25 filas y la consulta se pasaba del
+        // socketTimeout (500). Los datos completos se piden en la FASE 2, solo para la página devuelta.
         const memberships = await UserProject.find({ projectId: { $in: projectIds } })
-            .select("projectId userId nombre_rol_frame contracts")
-            .populate({ path: "userId", select: "firstName lastName email metadata roles", populate: { path: "roles", select: "name", model: Role } })
-            .populate({ path: "projectId", select: "name clientId", populate: { path: "clientId", select: "name", model: Client } })
+            .select("projectId userId nombre_rol_frame contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga contracts.nombre_contrato contracts.nombre_estado_empleado contracts.reemplazo")
             .lean();
+        // Usuario, roles y cliente se resuelven con tres consultas en bloque en vez de con populate por
+        // membership (el populate de `metadata` completo traía 40+ campos por persona, incluido el array
+        // de proyectos, para usar cuatro).
+        // Hay memberships viejos sin userId: si se cuelan, el $in revienta al castear a ObjectId.
+        const userIds = [...new Set(memberships.map((m) => String(m.userId || "")))].filter((id) => Types.ObjectId.isValid(id));
+        const [usersList, clientsList] = await Promise.all([
+            User.find({ _id: { $in: userIds } })
+                .select("firstName lastName email roles metadata.activo metadata.id metadata.cuit metadata.osId")
+                .populate({ path: "roles", select: "name", model: Role })
+                .lean(),
+            Client.find({ _id: { $in: [...new Set(projectsList.map((p) => String(p.clientId?._id || p.clientId || "")))].filter((id) => Types.ObjectId.isValid(id)) } })
+                .select("name")
+                .lean(),
+        ]);
+        const userMap = new Map(usersList.map((u) => [String(u._id), u]));
+        const clientNameById = new Map(clientsList.map((c) => [String(c._id), c.name]));
+        const projectMap = new Map(projectsList.map((p) => [String(p._id), p]));
         const search = req.query.search ? String(req.query.search) : "";
         const fuzzySearch = search ? createFuzzySearchRegex(search) : "";
         const searchRegex = fuzzySearch ? new RegExp(fuzzySearch, "i") : null;
@@ -485,10 +504,20 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 .filter(Boolean)
             : [];
         const roleFilterRegex = roleNameParts.length > 0 ? new RegExp(`^${roleNameParts.join("[^a-z0-9]*")}$`, "i") : null;
+        // Estados impositivos (u otros) pedidos por la pantalla de Gestión de Contratos: filtrar acá
+        // evita devolverle el padrón entero al front para que descarte casi todo del lado del cliente.
+        const estadosFiltro = req.query.estados
+            ? String(req.query.estados)
+                .split(",")
+                .map((e) => estadoCanonico(e.trim()))
+                .filter(Boolean)
+            : [];
+        // Filas "livianas": lo mínimo para filtrar, ordenar y paginar. El contrato completo se resuelve
+        // después, ya recortado a la página.
         const rows = [];
         for (const m of memberships) {
-            const user = m.userId;
-            const project = m.projectId;
+            const user = userMap.get(String(m.userId));
+            const project = projectMap.get(String(m.projectId));
             if (!user || !project)
                 continue;
             const contratos = m.contracts || [];
@@ -506,6 +535,8 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 continue;
             if (estadoContrato && estadoCanonico(String(contratoActivo.nombre_estado_empleado ?? "")) !== estadoCanonico(estadoContrato))
                 continue;
+            if (estadosFiltro.length > 0 && !estadosFiltro.includes(estadoCanonico(String(contratoActivo.nombre_estado_empleado ?? ""))))
+                continue;
             if (reemplazo) {
                 const esReemplazo = !!contratoActivo.reemplazo;
                 if (reemplazo === "con" ? !esReemplazo : esReemplazo)
@@ -519,6 +550,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 if (!candidatos.some((c) => c && searchRegex.test(String(c))))
                     continue;
             }
+            const clientId = project.clientId ? String(project.clientId?._id || project.clientId) : "";
             rows.push({
                 _id: String(m._id),
                 userId: String(user._id),
@@ -527,57 +559,19 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 userActivo: !!user.metadata?.activo,
                 userExternalId: user.metadata?.id ?? null,
                 userRoles: (user.roles || []).map((r) => ({ _id: String(r._id), name: r.name })),
-                clientId: project.clientId?._id ? String(project.clientId._id) : project.clientId ? String(project.clientId) : "",
-                clientName: project.clientId?.name || "",
+                clientId,
+                clientName: clientNameById.get(clientId) || "",
                 projectId: String(project._id),
                 projectName: project.name || "",
                 nombreRolFrame: m.nombre_rol_frame || "",
                 contractsInProject: contratos.length,
                 contractIndex: contratos.indexOf(contratoActivo),
-                nombre_contrato: contratoActivo.nombre_contrato || "",
-                nombre_estado_empleado: contratoActivo.nombre_estado_empleado || "",
-                nombre_sede: contratoActivo.nombre_sede || "",
-                areaShiftAssignments: contratoActivo.areaShiftAssignments || [],
-                reemplazo: !!contratoActivo.reemplazo,
-                empleado_id_reemplezado: contratoActivo.empleado_id_reemplezado ?? null,
-                fecha_alta_contrato: contratoActivo.fecha_alta_contrato || "",
-                fecha_baja_contrato: contratoActivo.fecha_baja_contrato || "",
-                sueldo_mano: contratoActivo.sueldo_mano,
-                cantidad_jornadas_laborales: contratoActivo.cantidad_jornadas_laborales,
-                hora_inicio: contratoActivo.hora_inicio,
-                hora_fin: contratoActivo.hora_fin,
-                // Documentos descargables/subibles del contrato ACTIVO (para las columnas de la tabla).
-                altaDocumentoUrl: contratoActivo.altaDocumentoUrl || "",
-                altaDocumentoNombre: contratoActivo.altaDocumentoNombre || "",
-                // Datos leídos del PDF de la Constancia de CUIT (vigencia = cuándo hay que volver a pedirla).
-                constanciaVigenciaDesde: contratoActivo.constanciaVigenciaDesde || "",
-                constanciaVigenciaHasta: contratoActivo.constanciaVigenciaHasta || "",
-                constanciaVerificador: contratoActivo.constanciaVerificador || "",
-                // Resultado de la última consulta al Padrón de AFIP (reemplaza al PDF como fuente de verdad).
-                constanciaAfipEstado: contratoActivo.constanciaAfipEstado || "",
-                constanciaAfipConsultadaAt: contratoActivo.constanciaAfipConsultadaAt || "",
-                // Recién con esto el trámite se considera terminado (ver ConstanciaBulk.tsx estadoConstancia).
-                constanciaAfipDropboxSubidaAt: contratoActivo.constanciaAfipDropboxSubidaAt || "",
-                // "Firma Digital": Contrato y Release(s) se generan con botones independientes — paso 2
-                // (Enviar a firmar) marca firmaEnviadaAt recién cuando ambos están generados.
-                firmaContratoUrl: contratoActivo.firmaContratoUrl || "",
-                firmaContratoNombre: contratoActivo.firmaContratoNombre || "",
-                firmaReleases: contratoActivo.firmaReleases || [],
-                firmaGeneradoAt: contratoActivo.firmaGeneradoAt || "",
-                firmaReleasesGeneradoAt: contratoActivo.firmaReleasesGeneradoAt || "",
-                firmaEnviadaAt: contratoActivo.firmaEnviadaAt || "",
-                empresaContratoId: contratoActivo.empresaContratoId ? String(contratoActivo.empresaContratoId) : "",
-                empresaReleaseId: contratoActivo.empresaReleaseId ? String(contratoActivo.empresaReleaseId) : "",
-                nombre_empresa_contrato: contratoActivo.nombre_empresa_contrato || "",
-                nombre_empresa_release: contratoActivo.nombre_empresa_release || "",
+                // Los campos del contrato activo se completan en la FASE 2 (solo para la página devuelta).
                 contratoEmpresas: empresasPorProyecto.get(String(project._id))?.contratoEmpresas || [],
                 releaseEmpresas: empresasPorProyecto.get(String(project._id))?.releaseEmpresas || [],
                 // Datos para el chequeo de completitud AFIP (se resuelven contra los catálogos en el front).
                 cuit: user.metadata?.cuit || "",
                 osId: user.metadata?.osId ?? null,
-                categoria_sat_id: contratoActivo.categoria_sat_id ?? null,
-                sede_id: contratoActivo.sede_id ?? null,
-                tipo_contrato_id: contratoActivo.tipo_contrato_id ?? null,
             });
         }
         rows.sort((a, b) => a.userName.localeCompare(b.userName, "es", { sensitivity: "base" }));
@@ -586,7 +580,60 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         const total = rows.length;
         const totalPages = Math.max(1, Math.ceil(total / limit));
         const pageRows = rows.slice((page - 1) * limit, page * limit);
-        res.json({ rows: pageRows, total, page, totalPages });
+        // FASE 2 — recién acá se traen los contratos completos, y solo de las filas de esta página.
+        const contratosPorMembership = new Map();
+        if (pageRows.length > 0) {
+            const docs = await UserProject.find({ _id: { $in: pageRows.map((r) => r._id) } })
+                .select("contracts")
+                .lean();
+            docs.forEach((d) => contratosPorMembership.set(String(d._id), d.contracts || []));
+        }
+        const fullRows = pageRows.map((r) => {
+            const c = contratosPorMembership.get(r._id)?.[r.contractIndex] || {};
+            return {
+                ...r,
+                nombre_contrato: c.nombre_contrato || "",
+                nombre_estado_empleado: c.nombre_estado_empleado || "",
+                nombre_sede: c.nombre_sede || "",
+                areaShiftAssignments: c.areaShiftAssignments || [],
+                reemplazo: !!c.reemplazo,
+                empleado_id_reemplezado: c.empleado_id_reemplezado ?? null,
+                fecha_alta_contrato: c.fecha_alta_contrato || "",
+                fecha_baja_contrato: c.fecha_baja_contrato || "",
+                sueldo_mano: c.sueldo_mano,
+                cantidad_jornadas_laborales: c.cantidad_jornadas_laborales,
+                hora_inicio: c.hora_inicio,
+                hora_fin: c.hora_fin,
+                // Documentos descargables/subibles del contrato ACTIVO (para las columnas de la tabla).
+                altaDocumentoUrl: c.altaDocumentoUrl || "",
+                altaDocumentoNombre: c.altaDocumentoNombre || "",
+                // Datos leídos del PDF de la Constancia de CUIT (vigencia = cuándo hay que volver a pedirla).
+                constanciaVigenciaDesde: c.constanciaVigenciaDesde || "",
+                constanciaVigenciaHasta: c.constanciaVigenciaHasta || "",
+                constanciaVerificador: c.constanciaVerificador || "",
+                // Resultado de la última consulta al Padrón de AFIP (reemplaza al PDF como fuente de verdad).
+                constanciaAfipEstado: c.constanciaAfipEstado || "",
+                constanciaAfipConsultadaAt: c.constanciaAfipConsultadaAt || "",
+                // Recién con esto el trámite se considera terminado (ver ConstanciaBulk.tsx estadoConstancia).
+                constanciaAfipDropboxSubidaAt: c.constanciaAfipDropboxSubidaAt || "",
+                // "Firma Digital": Contrato y Release(s) se generan con botones independientes — paso 2
+                // (Enviar a firmar) marca firmaEnviadaAt recién cuando ambos están generados.
+                firmaContratoUrl: c.firmaContratoUrl || "",
+                firmaContratoNombre: c.firmaContratoNombre || "",
+                firmaReleases: c.firmaReleases || [],
+                firmaGeneradoAt: c.firmaGeneradoAt || "",
+                firmaReleasesGeneradoAt: c.firmaReleasesGeneradoAt || "",
+                firmaEnviadaAt: c.firmaEnviadaAt || "",
+                empresaContratoId: c.empresaContratoId ? String(c.empresaContratoId) : "",
+                empresaReleaseId: c.empresaReleaseId ? String(c.empresaReleaseId) : "",
+                nombre_empresa_contrato: c.nombre_empresa_contrato || "",
+                nombre_empresa_release: c.nombre_empresa_release || "",
+                categoria_sat_id: c.categoria_sat_id ?? null,
+                sede_id: c.sede_id ?? null,
+                tipo_contrato_id: c.tipo_contrato_id ?? null,
+            };
+        });
+        res.json({ rows: fullRows, total, page, totalPages });
     }
     catch (error) {
         console.error("Get contracts overview error:", error);

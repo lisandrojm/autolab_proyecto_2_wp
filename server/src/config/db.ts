@@ -36,7 +36,9 @@ export async function connectDB() {
     dbName: env.MONGO_DB_NAME,
     serverSelectionTimeoutMS: 10000,
     connectTimeoutMS: 10000,
-    socketTimeoutMS: 20000,
+    // 20s cortaba consultas grandes por la mitad y el endpoint devolvía 500 en vez de datos. Se
+    // alinea con el timeout del cliente HTTP (axios, 60s) para que el que corte sea el navegador.
+    socketTimeoutMS: 60000,
   };
 
   try {
