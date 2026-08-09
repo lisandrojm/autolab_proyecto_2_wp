@@ -27,6 +27,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const [projects, setProjects] = useState<Project[]>([]);
   const [platformUsers, setPlatformUsers] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  /** Roles frame de la persona elegida (vacío si el nombre se escribió a mano). Ver el select de Rol/es Frame. */
+  const rolesDelUsuario: string[] = selectedUser?.metadata?.roleFrameIds || [];
   const [showUserResults, setShowUserResults] = useState(false);
   const [userSearchTerm, setUserSearchTerm] = useState("");
   const [selectedRoleFilters, setSelectedRoleFilters] = useState<string[]>([]);
@@ -456,10 +458,20 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               <FontAwesomeIcon icon={faBriefcase} className="text-blue-500 text-[10px]" />
               Rol/es Frame*
             </label>
-            <select name="roleFrameId" value={formData.roleFrameId} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white">
+            {/* El rol sale del que ya tiene la persona: si tiene uno solo se completa y se bloquea
+                (no hay nada que elegir), y solo se habilita cuando tiene dos o más. Si el nombre se
+                escribió a mano —persona que todavía no es usuario— se ofrecen todos. */}
+            <select
+              name="roleFrameId"
+              value={formData.roleFrameId}
+              onChange={handleChange}
+              disabled={rolesDelUsuario.length === 1}
+              title={rolesDelUsuario.length === 1 ? "La persona tiene un solo rol frame asignado" : undefined}
+              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white disabled:opacity-70 disabled:cursor-not-allowed"
+            >
               <option value="">Selecciona rol</option>
               {roleFrames
-                .filter((rf) => !selectedUser?.metadata?.roleFrameIds?.length || selectedUser.metadata.roleFrameIds.includes(rf._id))
+                .filter((rf) => rolesDelUsuario.length === 0 || rolesDelUsuario.includes(rf._id))
                 .map((rf) => (
                   <option key={rf._id} value={rf._id}>
                     {rf.name}
