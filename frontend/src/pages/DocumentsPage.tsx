@@ -15,7 +15,7 @@ export function DocumentsPage() {
 
   return (
     <PageLayout
-      title="Documentos (Dropbox)"
+      title="Dropbox | Documentos"
       faIcon={{ icon: faFileText }}
       itemCount={itemCount}
       shouldShowInfo={false}

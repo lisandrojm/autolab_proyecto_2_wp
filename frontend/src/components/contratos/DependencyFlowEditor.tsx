@@ -468,7 +468,7 @@ export const DependencyFlowEditor: React.FC = () => {
           className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm"
         >
           <FontAwesomeIcon icon={faFileText} />
-          <span>Documentos (Dropbox)</span>
+          <span>Dropbox | Documentos</span>
         </a>
         <a
           href="/escaneo-dropbox"
@@ -476,7 +476,7 @@ export const DependencyFlowEditor: React.FC = () => {
           className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm"
         >
           <FontAwesomeIcon icon={faCog} />
-          <span>Configuración | Documentos (Dropbox)</span>
+          <span>Configuración | Dropbox</span>
         </a>
       </div>
 

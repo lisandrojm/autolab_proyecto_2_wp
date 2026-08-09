@@ -78,7 +78,7 @@ const MODULE_LABELS: Record<string, string> = {
   'admin_orders:view': 'Pedidos',
   'admin_vacations:view': 'Vacaciones',
   'admin_activity_logs:view': 'Novedades',
-  'admin_hr_documents:view': 'Documentos (Dropbox)',
+  'admin_hr_documents:view': 'Dropbox | Documentos',
   'project_responsible:eligible': 'Responsable de Proyecto',
   'admin_areas:view': 'Areas',
   'admin_positions:view': 'Cargos',
@@ -104,7 +104,7 @@ const MODULE_LABELS: Record<string, string> = {
   'config_empresas:view': 'Empresas',
   'config_membretes:view': 'Empresa/s | Membrete/s y firma',
   'config_profile:view': 'Mi Perfil',
-  'config_escaneo_dropbox:view': 'Documentos (Dropbox)',
+  'config_escaneo_dropbox:view': 'Dropbox | Documentos',
   'config_afip:view': 'AFIP',
 
   'mobile_collaborator:view': 'Colaborador',

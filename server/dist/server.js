@@ -70,6 +70,7 @@ import { userProjectRoutes } from "./routes/userProjects.js";
 import { dropboxRoutes } from "./routes/dropbox.js";
 import { afipRoutes } from "./routes/afip.js";
 import { firmaDigitalRoutes } from "./routes/firmaDigital.js";
+import { dropboxSignRoutes } from "./routes/dropboxSign.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 // ───────────────── Red de seguridad a nivel proceso ─────────────────
@@ -190,6 +191,7 @@ app.use("/api/v1/user-projects", userProjectRoutes);
 app.use("/api/v1/dropbox", dropboxRoutes);
 app.use("/api/v1/afip", afipRoutes);
 app.use("/api/v1/firma-digital", firmaDigitalRoutes);
+app.use("/api/v1/dropbox-sign", dropboxSignRoutes);
 // ───────────────── 404 + errores (al final) ─────────────────
 app.use(notFoundHandler);
 app.use(errorHandler);

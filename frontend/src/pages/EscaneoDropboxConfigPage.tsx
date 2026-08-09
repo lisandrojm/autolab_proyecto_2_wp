@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowsRotate, faBolt, faFolder, faTriangleExclamation, faSpinner, faCheck, faStopwatch, faSitemap } from "@fortawesome/free-solid-svg-icons";
+import { faArrowsRotate, faBolt, faFolder, faSpinner, faCheck, faStopwatch, faSitemap } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { infoAPI, InfoItem } from "../api/info";
 import { dropboxAPI, DropboxStatus, EscaneoConfig } from "../api/dropbox";
+import { DropboxConexionCard } from "../components/documents/DropboxConexionCard";
 import { sweetAlert } from "../utils/sweetAlert";
 
 /** Nombre de carpeta (última parte del path), para mostrar algo legible en vez del path completo. */
@@ -21,6 +22,8 @@ export function EscaneoDropboxConfigPage() {
   const [config, setConfig] = useState<EscaneoConfig | null>(null);
   const [estados, setEstados] = useState<InfoItem[]>([]);
   const [loading, setLoading] = useState(true);
+  /** Explicación de cómo funciona el escaneo (modal del ⓘ de la cabecera, como el resto de las páginas). */
+  const [showInfo, setShowInfo] = useState(false);
   const [escaneando, setEscaneando] = useState(false);
   const [intervaloInput, setIntervaloInput] = useState("");
   const [savingIntervalo, setSavingIntervalo] = useState(false);
@@ -93,37 +96,40 @@ export function EscaneoDropboxConfigPage() {
   }, [config?.proximoEscaneoAt, ahora]);
 
   return (
-    <PageLayout title="Documentos (Dropbox)" subtitle="Configuración del escaneo automático por Dropbox (transición de estados)" faIcon={{ icon: faArrowsRotate }} shouldShowInfo={false}>
+    <PageLayout
+      title="Dropbox | Documentos"
+      subtitle="Configuración del escaneo automático por Dropbox (transición de estados)"
+      faIcon={{ icon: faArrowsRotate }}
+      shouldShowInfo
+      infoModal={{
+        isOpen: showInfo,
+        onOpen: () => setShowInfo(true),
+        onClose: () => setShowInfo(false),
+        title: "Escaneo automático por Dropbox",
+        content: (
+          <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+            <p>
+              Cuando un <strong>Estado</strong> tiene una <strong>transición automática</strong> configurada, el sistema revisa solo la carpeta de Dropbox indicada: si aparece un archivo nuevo y se puede
+              identificar sin ambigüedad a qué contrato pertenece, lo avanza a ese Estado.
+            </p>
+            <p>
+              Para identificar el contrato, el sistema prueba en este orden: <strong>1)</strong> el CUIT en el nombre del archivo, <strong>2)</strong> si no lo encuentra ahí, el CUIT dentro del contenido
+              del PDF, y <strong>3)</strong> si tampoco hay CUIT disponible, el nombre y apellido de la persona en el nombre del archivo. Si no logra identificar exactamente un contrato, no hace nada —
+              nunca adivina.
+            </p>
+          </div>
+        ),
+      }}
+    >
       {loading ? (
         <div className="flex justify-center py-16 text-gray-400">
           <FontAwesomeIcon icon={faSpinner} spin className="mr-2" /> Cargando...
         </div>
       ) : (
         <div className="space-y-4 max-w-3xl">
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-3 text-sm text-gray-600 dark:text-gray-300">
-            <p>
-              Cuando un <strong>Estado</strong> tiene una <strong>transición automática</strong> configurada, el sistema revisa solo la carpeta de Dropbox indicada: si aparece un archivo nuevo y se puede
-              identificar sin ambigüedad a qué contrato pertenece, lo avanza a ese Estado.
-            </p>
-            <a
-              href="/contratos?tab=dependencies"
-              className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm w-fit"
-            >
-              <FontAwesomeIcon icon={faSitemap} />
-              <span>Dependencias</span>
-            </a>
-            <p>
-              Para identificar el contrato, el sistema prueba en este orden: <strong>1)</strong> el CUIT en el nombre del archivo, <strong>2)</strong> si no lo encuentra ahí, el CUIT dentro del contenido
-              del PDF, y <strong>3)</strong> si tampoco hay CUIT disponible, el nombre y apellido de la persona en el nombre del archivo. Si no logra identificar exactamente un contrato, no hace nada —
-              nunca adivina.
-            </p>
-            {!status?.connected && (
-              <p className="flex items-start gap-1.5 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300">
-                <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                <span>Dropbox no está conectado — hace falta conectarlo (pestaña HelloSign en Documentos) para que el escaneo funcione.</span>
-              </p>
-            )}
-          </div>
+          {/* Vincular / desvincular la cuenta desde acá: el escaneo depende justamente de ella, así
+              que tener que ir a otra pantalla para cambiarla no tenía sentido. */}
+          <DropboxConexionCard status={status} onChanged={cargar} />
 
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
             <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Frecuencia del escaneo</p>
@@ -204,8 +210,14 @@ export function EscaneoDropboxConfigPage() {
                 ))}
               </div>
             )}
-            <a href="/contratos?tab=dependencies" className="inline-block mt-3 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-              Configurar transición automática →
+            {/* Las carpetas vigiladas salen de las dependencias entre estados: el acceso a editarlas
+                va acá, junto a lo que configura. */}
+            <a
+              href="/contratos?tab=dependencies"
+              className="mt-4 px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm w-fit"
+            >
+              <FontAwesomeIcon icon={faSitemap} />
+              <span>Dependencias</span>
             </a>
           </div>
         </div>

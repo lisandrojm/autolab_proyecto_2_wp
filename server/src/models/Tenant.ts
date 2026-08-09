@@ -61,6 +61,29 @@ export interface ITenant extends Document {
       servicioPadronFaultString?: string;
       servicioPadronVerificadoAt?: Date;
     };
+    /**
+     * Casilla de correo que recibe las copias de "documento enviado" de Dropbox Sign (se activa en
+     * Dropbox Sign → Configuración → Perfil → Notificaciones). Leyéndola se detecta qué contratos ya
+     * se enviaron a firmar, para moverlos de "Outbox" a "Pendbox" sin que nadie toque archivos.
+     */
+    dropboxSign?: {
+      /** Casilla que recibe las notificaciones (ej. rrhh@frame.com.ar). */
+      email?: string;
+      imapHost?: string;
+      imapPort?: number;
+      imapSecure?: boolean;
+      /** Usuario IMAP: suele ser el mismo email, pero algunos proveedores usan otro. */
+      imapUser?: string;
+      /** Contraseña IMAP — cifrada en reposo, igual que el resto de las credenciales. */
+      imapPasswordEnc?: string;
+      /** Mientras esté en false no se lee la casilla ni se mueve ningún archivo. */
+      enabled?: boolean;
+      configuredAt?: Date;
+      /** Última lectura de la casilla y su resultado, para poder diagnosticar desde la UI. */
+      lastCheckAt?: Date;
+      lastCheckOk?: boolean;
+      lastCheckDetalle?: string;
+    };
   };
   subscription: { plan: "free" | "basic" | "pro" | "enterprise"; status: "active" | "suspended" | "cancelled"; expiresAt?: Date };
   usage: {
@@ -160,6 +183,19 @@ const tenantSchema = new Schema<ITenant>(
         servicioPadronFaultCode: { type: String },
         servicioPadronFaultString: { type: String },
         servicioPadronVerificadoAt: { type: Date },
+      },
+      dropboxSign: {
+        email: { type: String },
+        imapHost: { type: String },
+        imapPort: { type: Number, default: 993 },
+        imapSecure: { type: Boolean, default: true },
+        imapUser: { type: String },
+        imapPasswordEnc: { type: String },
+        enabled: { type: Boolean, default: false },
+        configuredAt: { type: Date },
+        lastCheckAt: { type: Date },
+        lastCheckOk: { type: Boolean },
+        lastCheckDetalle: { type: String },
       },
     },
 
