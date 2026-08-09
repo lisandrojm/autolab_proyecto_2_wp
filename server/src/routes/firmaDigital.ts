@@ -29,10 +29,10 @@ const PATRON_ENVIO_CONSTANCIA_CUIT = [/constancia/i, /cuit/i];
 const PATRON_OUTBOX = [/outbox/i];
 // "Requested signatures": donde Dropbox Sign deja los contratos ya firmados.
 const PATRON_FIRMADOS = [/requested/i, /signature/i];
-// Carpeta intermedia (hermana de Outbox): el contrato ya se envió a firmar y espera la firma del
-// destinatario. Se puebla moviendo el archivo desde Outbox — así Outbox queda solo con lo que
-// todavía no se envió y no se puede mandar dos veces por error.
-const PATRON_PENDIENTE_FIRMA = [/pendiente/i, /firma/i];
+// "Pendbox": carpeta intermedia (hermana de Outbox). El contrato ya se envió a firmar y espera la
+// firma del destinatario. Se puebla moviendo el archivo desde Outbox — así Outbox queda solo con lo
+// que todavía no se envió y no se puede mandar dos veces por error.
+const PATRON_PENDIENTE_FIRMA = [/pendbox/i];
 
 // GET /firma-digital/config - qué estado alimenta la bandeja "Firma Digital" (el que ya se dispara
 // automáticamente al llegar un archivo a "Alta temprana de Afip" o "Constancia de cuit") y a qué
