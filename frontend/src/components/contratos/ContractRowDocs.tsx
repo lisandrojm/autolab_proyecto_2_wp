@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFilePdf, faUpload, faDownload, faSpinner, faLock } from "@fortawesome/free-solid-svg-icons";
+import { faFilePdf, faUpload, faDownload, faSpinner, faLock, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { ContractOverviewRow, Contract } from "../../api/users";
 import { ContratoFrameItem, contratoFrameAPI } from "../../api/contratosFrame";
 import { InfoItem } from "../../api/info";
@@ -285,3 +286,57 @@ export const ContractDocsColumns: React.FC<{
     </>
   );
 };
+
+/* --------- Acciones de la fila: editar / eliminar ESE contrato --------- */
+
+/** Cabecera de la columna de acciones (misma que la tabla de Contratos). */
+export const ContractActionsHeader: React.FC = () => <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right whitespace-nowrap">Acciones</th>;
+
+/**
+ * Editar y eliminar el contrato de la fila, con el mismo comportamiento que la tabla de Contratos:
+ * editar abre el equipo del proyecto con el wizard precargado en ese contrato, y eliminar borra solo
+ * ese contrato (por índice), no a la persona del proyecto.
+ */
+export const ContractActionsButtons: React.FC<{ record: ContractOverviewRow; onDeleted: () => void }> = ({ record, onDeleted }) => {
+  const navigate = useNavigate();
+  const [borrando, setBorrando] = useState(false);
+
+  const editar = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/projects/${record.projectId}/team`, { state: { openWizardFor: { userId: record.userId, contractIndex: record.contractIndex } } });
+  };
+
+  const eliminar = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const res = await sweetAlert.confirm("¿Eliminar contrato?", `Se eliminará este contrato de "${record.projectName}". Esta acción no se puede deshacer.`, "Sí, eliminar");
+    if (!res.isConfirmed) return;
+    try {
+      setBorrando(true);
+      await projectsAPI.deleteMemberContract(record.projectId, record.userId, record.contractIndex);
+      sweetAlert.success("Contrato eliminado", "El contrato fue eliminado.");
+      onDeleted();
+    } catch {
+      sweetAlert.error("Error", "No se pudo eliminar el contrato.");
+    } finally {
+      setBorrando(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-end gap-1">
+      <button type="button" onClick={editar} title="Editar este contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+        <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+      </button>
+      <button type="button" onClick={eliminar} disabled={borrando} title="Eliminar este contrato" className="p-1.5 rounded text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <FontAwesomeIcon icon={borrando ? faSpinner : faTrash} spin={borrando} className="h-4 w-4" />
+      </button>
+    </div>
+  );
+};
+
+/** Los mismos botones como celda de tabla. */
+export const ContractActionsCell: React.FC<{ record: ContractOverviewRow; onDeleted: () => void }> = ({ record, onDeleted }) => (
+  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+    <ContractActionsButtons record={record} onDeleted={onDeleted} />
+  </td>
+);

@@ -18,7 +18,7 @@ import { SearchAndFilters } from '../ui/SearchAndFilters';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { EmptyState } from '../ui/EmptyState';
 import { Modal } from '../ui/Modal';
-import { ContractDocsColumns, ContractDocsHeaders, downloadContractRow, downloadReleaseRow, uploadAltaRow } from './ContractRowDocs';
+import { ContractDocsColumns, ContractDocsHeaders, ContractActionsButtons, ContractActionsCell, ContractActionsHeader, downloadContractRow, downloadReleaseRow, uploadAltaRow } from './ContractRowDocs';
 import { resolveAfip, AfipRowResult } from './afipCompleteness';
 import { buildAltaRecord, buildAltaTxt, downloadTxt } from './afipTxt';
 import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, fmtCuit } from './ConstanciaBulk';
@@ -644,6 +644,9 @@ export const ContractBulkAfipTab: React.FC<{
                       AFIP: {result.completo ? 'Completo' : `Faltan ${result.faltantes}`}
                     </button>
                   )}
+                  <span className="ml-auto">
+                    <ContractActionsButtons record={r} onDeleted={() => load(true)} />
+                  </span>
                 </div>
               </div>
             );
@@ -720,6 +723,7 @@ export const ContractBulkAfipTab: React.FC<{
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Contrato</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Estado</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Estado Impositivo</th>
+                  <ContractActionsHeader />
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -820,6 +824,7 @@ export const ContractBulkAfipTab: React.FC<{
                     <td className="px-4 py-3">
                       <EstadoImpositivoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} />
                     </td>
+                    <ContractActionsCell record={r} onDeleted={() => load(true)} />
                   </tr>
                 ))}
               </tbody>
@@ -1597,6 +1602,7 @@ export const ContractBulkFirmaTab: React.FC<{
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Tipo de Contrato</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Estado</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Estado Impositivo</th>
+                  <ContractActionsHeader />
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -1661,6 +1667,7 @@ export const ContractBulkFirmaTab: React.FC<{
                       <td className="px-4 py-3">
                         <EstadoImpositivoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} />
                       </td>
+                      <ContractActionsCell record={r} onDeleted={() => load(true)} />
                     </tr>
                   );
                 })}
