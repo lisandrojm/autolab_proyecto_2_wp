@@ -101,6 +101,12 @@ export interface IUserMetadata {
   isSolicitud?: boolean;
   /** Ciclo de vida de la solicitud de alta (espeja los estados de un Pedido). */
   solicitudStatus?: "pendiente" | "aprobada" | "rechazada" | "cancelada";
+  /**
+   * Usuario REAL al que corresponde esta solicitud, cuando se pidió el alta de alguien que ya existe
+   * en el sistema. Con esto la solicitud se muestra dentro de la ficha de esa persona en vez de
+   * generar una tarjeta duplicada. Vacío = alta de alguien que todavía no es usuario.
+   */
+  solicitudUserId?: Types.ObjectId;
   projectIds?: Types.ObjectId[];
   rolesFrameIds?: string[] | Types.ObjectId[];
 }
@@ -212,6 +218,7 @@ const userSchema = new Schema<IUser>(
       isReplacement: Boolean,
       isSolicitud: { type: Boolean, default: false },
       solicitudStatus: { type: String, enum: ["pendiente", "aprobada", "rechazada", "cancelada"] },
+      solicitudUserId: { type: Schema.Types.ObjectId, ref: "User" },
       projectIds: [{ type: Schema.Types.ObjectId, ref: "Project" }],
       roles_frame: {
         type: [{ type: Schema.Types.ObjectId, ref: "RoleFrame" }],

@@ -94,6 +94,12 @@ export interface IUserMetadata {
     isSolicitud?: boolean;
     /** Ciclo de vida de la solicitud de alta (espeja los estados de un Pedido). */
     solicitudStatus?: "pendiente" | "aprobada" | "rechazada" | "cancelada";
+    /**
+     * Usuario REAL al que corresponde esta solicitud, cuando se pidió el alta de alguien que ya existe
+     * en el sistema. Con esto la solicitud se muestra dentro de la ficha de esa persona en vez de
+     * generar una tarjeta duplicada. Vacío = alta de alguien que todavía no es usuario.
+     */
+    solicitudUserId?: Types.ObjectId;
     projectIds?: Types.ObjectId[];
     rolesFrameIds?: string[] | Types.ObjectId[];
 }

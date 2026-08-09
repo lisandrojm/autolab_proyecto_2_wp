@@ -173,6 +173,18 @@ export interface User {
     sedes: string[];
     rolFrames: string[];
   };
+  /**
+   * Solicitudes de alta pendientes que corresponden a ESTA persona (las pedidas para alguien que ya
+   * es usuario). Vienen del listado para poder mostrarlas dentro de su ficha en vez de como una
+   * tarjeta aparte.
+   */
+  solicitudesPendientes?: {
+    _id: string;
+    proyectos: { _id: string; name: string }[];
+    startDate?: string;
+    dueDate?: string;
+    createdAt?: string;
+  }[];
   metadata?: {
     projects?: UserProjectMetadata[];
     documento?: string;
@@ -180,6 +192,9 @@ export interface User {
     isSolicitud?: boolean;
     /** Estado de la solicitud de alta (ciclo tipo Pedido). */
     solicitudStatus?: "pendiente" | "aprobada" | "rechazada" | "cancelada";
+    /** Usuario real al que corresponde la solicitud (vacío si el alta es de alguien que no existe aún). */
+    solicitudUserId?: string;
+    roles_frame?: (string | { _id: string; name: string })[];
     activo?: boolean;
     roleFrameId?: string;
     categoriaSatId?: string;

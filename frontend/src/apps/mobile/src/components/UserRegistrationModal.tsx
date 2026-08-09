@@ -159,7 +159,11 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         metadata: {
           fullName: formData.fullName,
           projectIds: formData.projectIds,
-          rolesFrameIds: [formData.roleFrameId],
+          // Si el alta se pidió para alguien que YA es usuario, se guarda el vínculo: así la
+          // solicitud se muestra dentro de su ficha en vez de crear una tarjeta duplicada. Si el
+          // nombre se escribió a mano (persona que todavía no existe), queda vacío.
+          solicitudUserId: selectedUser?._id || undefined,
+          roles_frame: [formData.roleFrameId],
           categoriaSatId: formData.categoriaSatId,
           startDate: formData.startDate,
           dueDate: formData.dueDate,
@@ -383,9 +387,15 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                           const externalRolFrames = user.externalInfo?.rolFrames || [];
 
                           // Collect all assigned role frame IDs and category IDs from project history
+                          // Los roles frame de una persona pueden estar guardados con tres nombres
+                          // distintos según cómo se creó el usuario. Si no se leen los tres, la
+                          // solicitud arranca sin rol aunque la persona lo tenga cargado
+                          // (`roles_frame` es el campo real del modelo, y era el que faltaba).
                           const assignedRoleFrameIds = new Set<string>();
-                          if (meta.rolesFrameIds?.[0]) assignedRoleFrameIds.add(meta.rolesFrameIds[0]);
-                          if (meta.roleFrameId) assignedRoleFrameIds.add(meta.roleFrameId);
+                          [...(meta.roles_frame || []), ...(meta.rolesFrameIds || []), ...(meta.roleFrameId ? [meta.roleFrameId] : [])].forEach((rf: any) => {
+                            const rfId = typeof rf === "string" ? rf : rf?._id;
+                            if (rfId) assignedRoleFrameIds.add(String(rfId));
+                          });
 
                           const assignedCategoriaSatIds = new Set<string>();
                           if (meta.categoriaSatId) assignedCategoriaSatIds.add(meta.categoriaSatId);

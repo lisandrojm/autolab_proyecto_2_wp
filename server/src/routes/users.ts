@@ -157,6 +157,22 @@ async function resolveProjectTeamFilterIds(projectId: string, filtros: TeamFilte
   return ids;
 }
 
+/**
+ * En el modelo el campo real es `metadata.roles_frame` y `rolesFrameIds` es un alias de Mongoose
+ * (ver models/User.ts). Los alias NO se aplican en rutas anidadas: mandar
+ * `metadata.rolesFrameIds` guardaba un array VACÍO y el rol frame se perdía en silencio (así se
+ * creaban las solicitudes de alta, que después figuraban "Sin rol"). Se normaliza acá y no en cada
+ * cliente para que valga también para los que ya están publicados.
+ */
+const normalizarRolesFrame = (metadata: any): void => {
+  if (!metadata || typeof metadata !== "object") return;
+  const alias = metadata.rolesFrameIds;
+  if (Array.isArray(alias) && alias.length > 0 && (!Array.isArray(metadata.roles_frame) || metadata.roles_frame.length === 0)) {
+    metadata.roles_frame = alias;
+  }
+  delete metadata.rolesFrameIds;
+};
+
 const createUserSchema = z.object({
     email: z.string().email(),
     password: z.string().min(6),
@@ -286,6 +302,13 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
     // Trae TODA solicitud de alta sin importar su estado (pendiente/aprobada/rechazada/cancelada).
     if (req.query.solicitudAny === "true") {
       andConditions.push({ "metadata.solicitudStatus": { $exists: true, $ne: null } });
+    } else if (req.query.isSolicitud === undefined) {
+      // Listado normal de Usuarios: las solicitudes que corresponden a alguien que YA es usuario no
+      // se listan aparte (se muestran dentro de la ficha de esa persona, ver `solicitudesPendientes`),
+      // para no duplicar la tarjeta. Las de gente que todavía no existe sí siguen apareciendo.
+      // `null` matchea tanto el campo ausente como el nulo (las solicitudes viejas y los usuarios
+      // normales no lo tienen), así que solo se excluyen las que sí quedaron vinculadas.
+      andConditions.push({ "metadata.solicitudUserId": null });
     }
 
     if (req.query.metadataActivo !== undefined) {
@@ -462,8 +485,37 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
       };
     });
 
+    // Solicitudes de alta pendientes de las personas de ESTA página: se adjuntan a su ficha para
+    // mostrarlas ahí (con el proyecto pedido) en lugar de listarlas como una tarjeta duplicada.
+    const idsPagina = enrichedUsers.map((u: any) => u._id).filter(Boolean);
+    const solicitudesPorUsuario = new Map<string, any[]>();
+    if (idsPagina.length > 0) {
+      const pendientes: any[] = await User.find({
+        "metadata.isSolicitud": true,
+        "metadata.solicitudStatus": "pendiente",
+        "metadata.solicitudUserId": { $in: idsPagina },
+      })
+        .select("metadata.solicitudUserId metadata.projectIds metadata.startDate metadata.dueDate createdAt")
+        .populate({ path: "metadata.projectIds", select: "name", model: Project })
+        .lean();
+
+      pendientes.forEach((s: any) => {
+        const dueño = String(s.metadata?.solicitudUserId || "");
+        if (!dueño) return;
+        const lista = solicitudesPorUsuario.get(dueño) || [];
+        lista.push({
+          _id: String(s._id),
+          proyectos: (s.metadata?.projectIds || []).map((p: any) => ({ _id: String(p?._id || p), name: p?.name || "" })).filter((p: any) => p.name),
+          startDate: s.metadata?.startDate || "",
+          dueDate: s.metadata?.dueDate || "",
+          createdAt: s.createdAt,
+        });
+        solicitudesPorUsuario.set(dueño, lista);
+      });
+    }
+
     res.json({
-      users: enrichedUsers,
+      users: enrichedUsers.map((u: any) => ({ ...u, solicitudesPendientes: solicitudesPorUsuario.get(String(u._id)) || [] })),
       pagination: {
         page: Number(page),
         limit: Number(limit),
@@ -756,6 +808,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
 router.post("/", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const data = createUserSchema.parse(req.body);
+    normalizarRolesFrame((data as any).metadata);
 
     if ((data as any).levelId === null) {
       (data as any).levelId = undefined;
@@ -1039,6 +1092,7 @@ router.get("/:id/all-contracts", requireTenant, authenticateToken, requirePermis
 router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const data = updateUserSchema.parse(req.body);
+    normalizarRolesFrame((data as any).metadata);
     const userId = req.params.id;
     const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
 

@@ -1,6 +1,6 @@
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUsers, faUserShield, faLayerGroup, faUserTie, faUserGraduate, faClock, faBuilding, faIdCard, faBriefcase, faFileContract, faUmbrellaBeach, faChevronDown, faChevronUp, faLock, faInfoCircle, faBell } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUsers, faUserShield, faLayerGroup, faUserTie, faUserGraduate, faClock, faBuilding, faIdCard, faBriefcase, faFileContract, faUmbrellaBeach, faChevronDown, faChevronUp, faLock, faInfoCircle, faBell, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { User } from "../../api/users";
 import { Project } from "../../api/projects";
 import { Client } from "../../api/clients";
@@ -203,6 +203,8 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
     : null;
 
   const isSolicitud = user.metadata?.isSolicitud;
+  /** Solicitudes de alta pendientes pedidas para ESTA persona (ver `solicitudesPendientes` en la API). */
+  const solicitudesPendientes = user.solicitudesPendientes || [];
   const fullName = isSolicitud && user.metadata?.fullName ? user.metadata.fullName : user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : user.email.split("@")[0];
 
   // Helper for Project/Client badges in Solicitud
@@ -272,6 +274,9 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
         iconClassName: isSolicitud ? "text-amber-600" : "text-blue-600",
         badges: [
           ...(isSolicitud ? [{ text: "Solicitud de Alta", variant: "warning" as const }] : []),
+          // Alta pedida para una persona que YA es usuario: se avisa en su propia ficha en vez de
+          // crear una tarjeta aparte (el detalle, con el proyecto, va en la sección Proyectos).
+          ...(solicitudesPendientes.length > 0 ? [{ text: `⚠ ${solicitudesPendientes.length} solicitud${solicitudesPendientes.length > 1 ? "es" : ""} de alta`, variant: "warning" as const }] : []),
           ...(user.tenant && user.tenant.name
             ? [
                 {
@@ -493,6 +498,32 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
             </div>
           );
         })()}
+
+        {/* Altas pedidas para esta persona y todavía sin aprobar: se muestran acá, junto a sus
+            proyectos, en vez de generar una tarjeta de usuario duplicada. */}
+        {solicitudesPendientes.length > 0 && (
+          <div className="mt-3 space-y-1.5">
+            <label className="text-[10px] font-black text-amber-600 dark:text-amber-500 uppercase tracking-widest flex items-center gap-1.5">
+              <FontAwesomeIcon icon={faTriangleExclamation} />
+              Solicitud de alta pendiente
+            </label>
+            {solicitudesPendientes.map((s) => (
+              <div key={s._id} className="flex flex-wrap items-center gap-1.5 p-2 rounded-lg bg-amber-50/70 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-800/50">
+                <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 text-amber-500 shrink-0" />
+                {s.proyectos.length > 0 ? (
+                  s.proyectos.map((p) => (
+                    <span key={p._id} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-white dark:bg-gray-900 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shadow-sm">
+                      <FontAwesomeIcon icon={faBriefcase} className="mr-1 opacity-50" />
+                      {p.name}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-[10px] text-amber-700 dark:text-amber-400 italic">Sin proyecto indicado</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       {vacationModalOpen && selectedVacationUser && (
         <InfoModal
