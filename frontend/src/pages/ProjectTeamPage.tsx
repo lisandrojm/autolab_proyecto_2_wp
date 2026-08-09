@@ -872,19 +872,24 @@ export const ProjectTeamPage: React.FC = () => {
    */
   const esEdicionMiembro = useMemo(() => !!selectedUserForWizard && teamMembers.some((m) => m._id === selectedUserForWizard._id), [selectedUserForWizard, teamMembers]);
 
+  /** Personas distintas asignadas como coordinadoras (una puede coordinar varias combinaciones área/turno). */
+  const coordinadoresCount = useMemo(() => {
+    const coordIds = new Set((project?.coordinatorAssignments || []).map((asm) => (typeof asm.userId === 'object' ? asm.userId?._id : asm.userId)).filter(Boolean));
+    return coordIds.size;
+  }, [project?.coordinatorAssignments]);
+
   const displayedCount = useMemo(() => {
     if (activeTab === 'equipo') {
       return teamTotal;
     }
     if (activeTab === 'coordinadores') {
-      const coordIds = new Set((project?.coordinatorAssignments || []).map((asm) => (typeof asm.userId === 'object' ? asm.userId?._id : asm.userId)).filter(Boolean));
-      return coordIds.size;
+      return coordinadoresCount;
     }
     if (activeTab === 'solicitudes') {
       return solicitudesCount;
     }
     return teamMembers.length;
-  }, [activeTab, teamTotal, project?.coordinatorAssignments, solicitudesCount, teamMembers.length]);
+  }, [activeTab, teamTotal, coordinadoresCount, solicitudesCount, teamMembers.length]);
 
   const hasMobileCoordinator = useMemo(() => {
     return teamMembers.some((u) =>
@@ -1472,12 +1477,35 @@ export const ProjectTeamPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state, project]);
 
+  /**
+   * Campos del paso 1 que faltan completar. Es la única fuente de verdad de qué es obligatorio: los
+   * asteriscos de las etiquetas salen de esta misma lista, para que no prometan algo que después no
+   * se valida (antes el único chequeo real era el de área/turno).
+   */
+  const faltantesPaso1 = (): string[] => {
+    const faltan: string[] = [];
+    if (!wizardData.rol_frame_id) faltan.push('Role Frame a Desempeñar');
+    if (!wizardData.categoria_sat_id) faltan.push('Categoría SAT');
+    if (!wizardData.contrato_id) faltan.push('Tipo de contrato');
+    // La Plantilla solo se elige a mano cuando el contrato tiene más de una (si hay una sola se
+    // asigna sola, y si no hay ninguna se puede guardar igual: solo no se podrá generar el PDF).
+    const plantillas = contratoFrames.filter((cf) => (typeof cf.contratoId === 'object' ? cf.contratoId?._id : cf.contratoId) === wizardData.contrato_id);
+    if (plantillas.length > 1 && !wizardData.contrato_frame_id) faltan.push('Plantilla');
+    if (!wizardData.estado_id) faltan.push('Estado');
+    // Un contrato a plazo tiene que decir cuándo termina; los de tiempo indeterminado no llevan baja
+    // (de hecho el campo ni se muestra).
+    const contratoSel = contratos.find((c) => c._id === wizardData.contrato_id);
+    if (contratoSel && !contratoSel.data.esTiempoIndeterminado && !wizardData.fecha_baja_contrato) faltan.push('Fecha baja contrato');
+    if (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0) faltan.push('Área y turno (al menos uno)');
+    return faltan;
+  };
+
   const handleSaveWizard = async () => {
     if (!selectedUserForWizard || !project) return;
 
-    // Validate area/shift assignment is required
-    if (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0) {
-      sweetAlert.error('Campo requerido', 'Debes seleccionar al menos un área y turno para el miembro.');
+    const faltan = faltantesPaso1();
+    if (faltan.length > 0) {
+      sweetAlert.error('Faltan campos obligatorios', `Completá: ${faltan.join(', ')}.`);
       setWizardStep(1);
       return;
     }
@@ -2172,11 +2200,11 @@ export const ProjectTeamPage: React.FC = () => {
             <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar flex-nowrap">
               <button onClick={() => setActiveTab('equipo')} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'equipo' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}>
                 <FontAwesomeIcon icon={faUsers} className="text-xs" />
-                Equipo
+                Equipo ({teamTotal})
               </button>
               <button onClick={() => setActiveTab('coordinadores')} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'coordinadores' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}>
                 <FontAwesomeIcon icon={faUserTie} className="text-xs" />
-                Coordinadores
+                Coordinadores ({coordinadoresCount})
                 <span
                   role="button"
                   onClick={(e) => {
@@ -3060,10 +3088,12 @@ export const ProjectTeamPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      // Validate step 1: at least one area/shift must be selected
-                      if (wizardStep === 1 && (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0)) {
-                        sweetAlert.error('Campo requerido', 'Debes seleccionar al menos un área y turno para el miembro.');
-                        return;
+                      if (wizardStep === 1) {
+                        const faltan = faltantesPaso1();
+                        if (faltan.length > 0) {
+                          sweetAlert.error('Faltan campos obligatorios', `Completá: ${faltan.join(', ')}.`);
+                          return;
+                        }
                       }
                       setWizardStep((wizardStep + 1) as any);
                     }}
@@ -3095,9 +3125,13 @@ export const ProjectTeamPage: React.FC = () => {
                       key={s.step}
                       type="button"
                       onClick={() => {
-                        if (wizardStep === 1 && s.step > 1 && (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0)) {
-                          sweetAlert.error('Campo requerido', 'Debes seleccionar al menos un área y turno para el miembro.');
-                          return;
+                        // Mismo criterio que el botón SIGUIENTE: no se sale del paso 1 sin completarlo.
+                        if (wizardStep === 1 && s.step > 1) {
+                          const faltan = faltantesPaso1();
+                          if (faltan.length > 0) {
+                            sweetAlert.error('Faltan campos obligatorios', `Completá: ${faltan.join(', ')}.`);
+                            return;
+                          }
                         }
                         setWizardStep(s.step as any);
                       }}
@@ -3107,6 +3141,11 @@ export const ProjectTeamPage: React.FC = () => {
                     </button>
                   ))}
                 </div>
+                {/* Va acá arriba, fuera del contenido que scrollea, para que se lea desde cualquiera
+                    de los tres pasos. */}
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-2 ml-1">
+                  Los campos marcados con <span className="text-red-500 font-bold">*</span> son obligatorios.
+                </p>
               </div>
 
               {/* Step Content (Scrollable) */}
@@ -3115,12 +3154,12 @@ export const ProjectTeamPage: React.FC = () => {
                 {wizardStep === 1 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2 space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empleado *</label>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empleado <span className="text-red-500">*</span></label>
                       <input type="text" className="input-field w-full bg-gray-50 dark:bg-transparent" value={`${selectedUserForWizard?.firstName} ${selectedUserForWizard?.lastName}`} readOnly />
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Role Frame a Desempeñar *</label>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Role Frame a Desempeñar <span className="text-red-500">*</span></label>
                       <select className="input-field w-full" value={wizardData.rol_frame_id} onChange={(e) => setWizardData((prev) => ({ ...prev, rol_frame_id: e.target.value, categoria_sat_id: '' }))} required>
                         <option value="">Selecciona role frame...</option>
                         {userAssignedRoleFrames.map((rf) => (
@@ -3132,7 +3171,7 @@ export const ProjectTeamPage: React.FC = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Categoria SAT *</label>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Categoria SAT <span className="text-red-500">*</span></label>
                       <select className="input-field w-full" value={wizardData.categoria_sat_id} onChange={(e) => setWizardData((prev) => ({ ...prev, categoria_sat_id: e.target.value }))} required>
                         <option value="">Selecciona categoria...</option>
                         {availableCategoriasSat.map((c: any) => (
@@ -3144,7 +3183,7 @@ export const ProjectTeamPage: React.FC = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Tipo de contrato *</label>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Tipo de contrato <span className="text-red-500">*</span></label>
                       <select
                         className="input-field w-full"
                         value={wizardData.contrato_id}
@@ -3184,7 +3223,7 @@ export const ProjectTeamPage: React.FC = () => {
                       if (plantillasDelContrato.length > 1) {
                         return (
                           <div className="space-y-1.5">
-                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Plantilla *</label>
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Plantilla <span className="text-red-500">*</span></label>
                             <select
                               className="input-field w-full"
                               value={wizardData.contrato_frame_id}
@@ -3230,7 +3269,7 @@ export const ProjectTeamPage: React.FC = () => {
                       {esAltaNueva ? (
                         <>
                           <div className="flex items-center gap-1.5 ml-1">
-                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Estado *</label>
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Estado <span className="text-red-500">*</span></label>
                             <button type="button" onClick={() => setShowEstadoInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Dónde se configura?" aria-label="Información sobre el Estado">
                               <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
                             </button>
@@ -3247,7 +3286,7 @@ export const ProjectTeamPage: React.FC = () => {
                         </>
                       ) : (
                         <>
-                          <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Estado *</label>
+                          <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Estado <span className="text-red-500">*</span></label>
                           <EstadoSelect
                             options={estadosDisponibles.map((e) => ({ value: String(e.data.id), name: e.name, orden: (e.data as any)?.orden }))}
                             value={wizardData.estado_id}
@@ -3282,7 +3321,7 @@ export const ProjectTeamPage: React.FC = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Cargo *</label>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Cargo</label>
                       <select className="input-field w-full" value={wizardData.positionId} onChange={(e) => setWizardData((prev) => ({ ...prev, positionId: e.target.value, levelId: '' }))} required>
                         <option value="">Selecciona cargo...</option>
                         {allPositions.map((p) => (
@@ -3294,7 +3333,7 @@ export const ProjectTeamPage: React.FC = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Nivel *</label>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Nivel</label>
                       <select className="input-field w-full" value={wizardData.levelId} onChange={(e) => setWizardData((prev) => ({ ...prev, levelId: e.target.value }))} disabled={!wizardData.positionId} required>
                         <option value="">{wizardData.positionId ? 'Selecciona nivel...' : 'Primero selecciona cargo'}</option>
                         {allLevels
@@ -3326,7 +3365,7 @@ export const ProjectTeamPage: React.FC = () => {
 
                     {!(contratos.find((c) => c._id === wizardData.contrato_id)?.data.esTiempoIndeterminado ?? false) && (
                       <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha baja contrato</label>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha baja contrato <span className="text-red-500">*</span></label>
                         <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_baja_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_baja_contrato: e.target.value }))} />
                       </div>
                     )}
@@ -3400,7 +3439,7 @@ export const ProjectTeamPage: React.FC = () => {
                     <div className="md:col-span-2 space-y-3 pt-6 border-t border-gray-100 dark:border-gray-700">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
                         <FontAwesomeIcon icon={faLayerGroup} className="mr-1" />
-                        Asignación por Área y Turno *
+                        Asignación por Área y Turno <span className="text-red-500">*</span>
                       </label>
                       <p className="text-[11px] text-gray-500 dark:text-gray-400 -mt-1 ml-1">Selecciona las áreas y turnos donde trabajará este miembro. Los turnos con horarios superpuestos se bloquean automáticamente.</p>
 
@@ -3596,11 +3635,11 @@ export const ProjectTeamPage: React.FC = () => {
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Cantidad de jornadas laborales *</label>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Cantidad de jornadas laborales <span className="text-red-500">*</span></label>
                         <input type="number" className="input-field w-full" value={wizardData.cantidad_jornadas_laborales} onChange={(e) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: Number(e.target.value) }))} />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo por jornada *</label>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo por jornada <span className="text-red-500">*</span></label>
                         <input type="number" className="input-field w-full" value={wizardData.sueldo_jornada} onChange={(e) => setWizardData((prev) => ({ ...prev, sueldo_jornada: Number(e.target.value) }))} />
                       </div>
                     </div>
@@ -3611,7 +3650,7 @@ export const ProjectTeamPage: React.FC = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo en mano texto *</label>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo en mano texto <span className="text-red-500">*</span></label>
                       <input type="text" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" placeholder="Ej: Cincuenta mil pesos" value={wizardData.sueldo_mano_texto} readOnly />
                     </div>
 
@@ -3643,7 +3682,7 @@ export const ProjectTeamPage: React.FC = () => {
                 {wizardStep === 3 && (
                   <div className="space-y-4">
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sede *</label>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sede <span className="text-red-500">*</span></label>
                       <select className="input-field w-full" value={wizardData.sede_id} onChange={(e) => setWizardData((prev) => ({ ...prev, sede_id: e.target.value }))}>
                         <option value="">Selecciona sede...</option>
                         {allSedes.map((s) => (

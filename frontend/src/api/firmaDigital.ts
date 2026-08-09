@@ -6,6 +6,10 @@ export interface FirmaDigitalConfig {
   estadoEnvioDocNombre: string | null;
   /** Path de la carpeta "Outbox" de Dropbox Sign, resuelto de la misma forma — null si no está configurada. */
   outboxCarpeta: string | null;
+  /** Path de la carpeta intermedia: ya enviado a firmar, esperando la firma del destinatario. */
+  pendienteFirmaCarpeta: string | null;
+  /** Path de "Requested signatures": donde Dropbox Sign deja los contratos ya firmados. */
+  firmadosCarpeta: string | null;
 }
 
 export interface GenerarContratoPayload {

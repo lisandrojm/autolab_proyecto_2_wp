@@ -24,14 +24,25 @@ router.use(requireTenant, authenticateToken);
 const PATRON_ENVIO_ALTA_AFIP = [/alta/i, /temprana|afip/i];
 const PATRON_ENVIO_CONSTANCIA_CUIT = [/constancia/i, /cuit/i];
 const PATRON_OUTBOX = [/outbox/i];
+// "Requested signatures": donde Dropbox Sign deja los contratos ya firmados.
+const PATRON_FIRMADOS = [/requested/i, /signature/i];
+// Carpeta intermedia (hermana de Outbox): el contrato ya se envió a firmar y espera la firma del
+// destinatario. Se puebla moviendo el archivo desde Outbox — así Outbox queda solo con lo que
+// todavía no se envió y no se puede mandar dos veces por error.
+const PATRON_PENDIENTE_FIRMA = [/pendiente/i, /firma/i];
 // GET /firma-digital/config - qué estado alimenta la bandeja "Firma Digital" (el que ya se dispara
 // automáticamente al llegar un archivo a "Alta temprana de Afip" o "Constancia de cuit") y a qué
 // carpeta de Dropbox hay que subir cuando se manda a firmar ("Outbox", la que ya vigila el estado
 // siguiente). No hardcodea nombres de estado — los resuelve por la config real de cada tenant.
 router.get("/config", async (_req, res) => {
     try {
-        const [estadoEnvioDocNombre, outboxCarpeta] = await Promise.all([resolverEstadoPorCarpetas([PATRON_ENVIO_ALTA_AFIP, PATRON_ENVIO_CONSTANCIA_CUIT]), resolverCarpetaPorPatron(PATRON_OUTBOX)]);
-        res.json({ estadoEnvioDocNombre, outboxCarpeta });
+        const [estadoEnvioDocNombre, outboxCarpeta, pendienteFirmaCarpeta, firmadosCarpeta] = await Promise.all([
+            resolverEstadoPorCarpetas([PATRON_ENVIO_ALTA_AFIP, PATRON_ENVIO_CONSTANCIA_CUIT]),
+            resolverCarpetaPorPatron(PATRON_OUTBOX),
+            resolverCarpetaPorPatron(PATRON_PENDIENTE_FIRMA),
+            resolverCarpetaPorPatron(PATRON_FIRMADOS),
+        ]);
+        res.json({ estadoEnvioDocNombre, outboxCarpeta, pendienteFirmaCarpeta, firmadosCarpeta });
     }
     catch (error) {
         console.error("Firma digital config error:", error);

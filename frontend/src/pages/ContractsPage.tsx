@@ -27,6 +27,7 @@ import { sweetAlert } from "../utils/sweetAlert";
 
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { ContractBulkAfipTab, ContractBulkFirmaTab } from "../components/contratos/ContractBulkTabs";
+import { ContractDropboxTab } from "../components/contratos/ContractDropboxTabs";
 
 /** Mismas opciones que usa el filtro "Rol/es" del tab Equipo de Gestionar Equipo. */
 const MOBILE_ROLE_OPTIONS = [
@@ -111,7 +112,13 @@ export const ContractsPage: React.FC = () => {
   // Pestañas de la página: "Contratos" (la vista actual) y "Gestión de Contratos" (acciones masivas).
   const [mainTab, setMainTab] = useState<"contracts" | "management">(initialTab);
   // Sub-pestañas de "Gestión de Contratos".
-  const [mgmtTab, setMgmtTab] = useState<"alta_afip" | "constancia_cuit" | "firma">("alta_afip");
+  const [mgmtTab, setMgmtTab] = useState<"alta_afip" | "constancia_cuit" | "firma" | "para_firmar" | "pendiente_firma" | "firmados">("alta_afip");
+  // Cantidades de las pestañas que leen de Dropbox. `null` = todavía no se abrió esa pestaña, así que
+  // no se muestra número (leerlas implica pegarle a Dropbox y no vale hacerlo al abrir la página).
+  const [paraFirmarCount, setParaFirmarCount] = useState<number | null>(null);
+  const [pendienteFirmaCount, setPendienteFirmaCount] = useState<number | null>(null);
+  const [firmadosCount, setFirmadosCount] = useState<number | null>(null);
+  const dropboxCounts = { para_firmar: paraFirmarCount, pendiente_firma: pendienteFirmaCount, firmados: firmadosCount };
   // Cantidad de contratos de cada trámite, informada por ContractBulkAfipTab para mostrarla en las pestañas.
   const [mgmtCounts, setMgmtCounts] = useState<{ alta: number; cuit: number; firma: number }>({ alta: 0, cuit: 0, firma: 0 });
   // Explicación de qué es cada pestaña de "Gestión de Contratos" (modal informativo).
@@ -417,6 +424,17 @@ export const ContractsPage: React.FC = () => {
                 <button className={tabBtnClass(mgmtTab === "firma")} onClick={() => setMgmtTab("firma")}>
                   Firma digital ({mgmtCounts.firma})
                 </button>
+                {/* Estas tres no salen de la base: son las carpetas de Dropbox Sign, en el orden del
+                    circuito de firma (generado → enviado → firmado). */}
+                <button className={tabBtnClass(mgmtTab === "para_firmar")} onClick={() => setMgmtTab("para_firmar")}>
+                  Para Firmar{dropboxCounts.para_firmar !== null ? ` (${dropboxCounts.para_firmar})` : ""}
+                </button>
+                <button className={tabBtnClass(mgmtTab === "pendiente_firma")} onClick={() => setMgmtTab("pendiente_firma")}>
+                  Pendiente de firma{dropboxCounts.pendiente_firma !== null ? ` (${dropboxCounts.pendiente_firma})` : ""}
+                </button>
+                <button className={tabBtnClass(mgmtTab === "firmados")} onClick={() => setMgmtTab("firmados")}>
+                  Firmados{dropboxCounts.firmados !== null ? ` (${dropboxCounts.firmados})` : ""}
+                </button>
               </div>
               <button type="button" onClick={() => setMgmtTabsInfoOpen(true)} title="Qué es cada pestaña" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0 mb-2">
                 <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
@@ -427,7 +445,9 @@ export const ContractsPage: React.FC = () => {
       }
     >
       {mainTab === "management" ? (
-        mgmtTab === "firma" ? (
+        mgmtTab === "para_firmar" || mgmtTab === "pendiente_firma" || mgmtTab === "firmados" ? (
+          <ContractDropboxTab tipo={mgmtTab} onCount={mgmtTab === "para_firmar" ? setParaFirmarCount : mgmtTab === "pendiente_firma" ? setPendienteFirmaCount : setFirmadosCount} />
+        ) : mgmtTab === "firma" ? (
           <ContractBulkFirmaTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} />
         ) : (
           <ContractBulkAfipTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} initialProjectId={initialProjectId} tipo={mgmtTab === "alta_afip" ? "alta_temprana_afip" : "constancia_cuit"} onCounts={setMgmtCounts} />
@@ -661,6 +681,26 @@ export const ContractsPage: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Último contrato: mismos datos y misma validación de vigencia que la columna
+                    "Alta / Baja" de la tabla, para que las dos vistas digan lo mismo. */}
+                <div className="pt-4 border-t border-gray-100 dark:border-gray-700/50">
+                  <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Último contrato</label>
+                  {(() => {
+                    const vigente = isContractVigente(record.fecha_alta_contrato, record.fecha_baja_contrato);
+                    return (
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>
+                        <span className="text-[10px] text-gray-600 dark:text-gray-400">
+                          <span className="text-gray-400">Alta:</span> {formatDate(record.fecha_alta_contrato)}
+                        </span>
+                        <span className="text-[10px] text-gray-600 dark:text-gray-400">
+                          <span className="text-gray-400">Baja:</span> {record.fecha_baja_contrato ? formatDate(record.fecha_baja_contrato) : "—"}
+                        </span>
+                      </div>
+                    );
+                  })()}
+                </div>
+
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700/50">
                   <div className="flex flex-col gap-0.5">
                     <div className="flex items-center gap-1.5 text-[10px] text-gray-600 dark:text-gray-400 font-medium">
@@ -738,6 +778,22 @@ export const ContractsPage: React.FC = () => {
               <p className="text-sm text-gray-600 dark:text-gray-300">
                 Contratos a los que ya se les generó el Alta temprana de AFIP, o ya se validó que la Constancia de CUIT está activa. Esos documentos ya están cargados en Dropbox, en <span className="font-mono text-xs">FZERO S.R.L/HelloSign/Outbox</span>.
               </p>
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Para Firmar · Pendiente de firma · Firmados</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Estas tres no salen de la aplicación: son lo que hay en las carpetas de Dropbox Sign, en el orden del circuito de firma.</p>
+              <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1.5 list-disc list-inside mt-2">
+                <li>
+                  <strong>Para Firmar</strong>: carpeta <span className="font-mono text-xs">Outbox</span>. Contratos ya generados, listos para importar en Dropbox Sign y enviarlos a firmar desde ahí. Todavía no se envió nada.
+                </li>
+                <li>
+                  <strong>Pendiente de firma</strong>: carpeta <span className="font-mono text-xs">Pendiente de firma</span>. Ya se envió la solicitud y se espera la firma del destinatario. El archivo se mueve
+                  acá desde Outbox, así no se puede enviar dos veces por error.
+                </li>
+                <li>
+                  <strong>Firmados</strong>: carpeta <span className="font-mono text-xs">Requested signatures</span>. Contratos que ya volvieron firmados y se pueden descargar.
+                </li>
+              </ul>
             </div>
           </div>
         </Modal>

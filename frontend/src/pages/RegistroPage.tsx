@@ -474,7 +474,10 @@ export const RegistroPage: React.FC = () => {
       <div className="shrink-0 border-b border-gray-800">
         <div className="max-w-5xl mx-auto px-6 pt-6">
           <h1 className="text-3xl font-light text-gray-100">Registro</h1>
-          <p className="text-center text-sm text-red-400 -mt-6 mb-4">Los campos marcados con * son obligatorios</p>
+          {/* Solo el asterisco va en rojo; el texto usa el gris de las pestañas inactivas. */}
+          <p className="text-center text-sm text-gray-400 -mt-6 mb-4">
+            Los campos marcados con <span className="text-red-500">*</span> son obligatorios
+          </p>
           <div className="flex">
             {tabs.map((t) => (
               <button key={t.key} type="button" onClick={() => setActiveTab(t.key)} className={`flex-1 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === t.key ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-gray-400 hover:text-gray-200'}`}>
