@@ -787,7 +787,7 @@ export const ContractsPage: React.FC = () => {
                   <strong>Para Firmar</strong>: carpeta <span className="font-mono text-xs">Outbox</span>. Contratos ya generados, listos para importar en Dropbox Sign y enviarlos a firmar desde ahí. Todavía no se envió nada.
                 </li>
                 <li>
-                  <strong>Pendiente de firma</strong>: carpeta <span className="font-mono text-xs">Pendiente de firma</span>. Ya se envió la solicitud y se espera la firma del destinatario. El archivo se mueve
+                  <strong>Pendiente de firma</strong>: carpeta <span className="font-mono text-xs">Pendbox</span>. Ya se envió la solicitud y se espera la firma del destinatario. El archivo se mueve
                   acá desde Outbox, así no se puede enviar dos veces por error.
                 </li>
                 <li>

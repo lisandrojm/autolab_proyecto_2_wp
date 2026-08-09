@@ -14,7 +14,7 @@ const DROPBOX_SIGN_URL = "https://www.dropbox.com/sign";
 /** Nombre de la carpeta de Dropbox que alimenta cada bandeja (para el mensaje de "no se encontró"). */
 const CARPETA_ESPERADA: Record<TipoBandejaDropbox, string> = {
   para_firmar: "Outbox",
-  pendiente_firma: "Pendiente de firma",
+  pendiente_firma: "Pendbox",
   firmados: "Requested signatures",
 };
 
@@ -39,8 +39,8 @@ export type TipoBandejaDropbox = "para_firmar" | "pendiente_firma" | "firmados";
  *
  * 1. `para_firmar` — carpeta "Outbox": contratos generados, listos para IMPORTAR en Dropbox Sign y
  *    enviarlos a firmar desde ahí. Todavía no se envió nada.
- * 2. `pendiente_firma` — carpeta "Pendiente de firma": ya se envió la solicitud y se espera la firma
- *    del destinatario. El archivo llega acá moviéndose desde Outbox, así Outbox queda solo con lo no
+ * 2. `pendiente_firma` — carpeta "Pendbox": ya se envió la solicitud y se espera la firma del
+ *    destinatario. El archivo llega acá moviéndose desde Outbox, así Outbox queda solo con lo no
  *    enviado y no se puede mandar dos veces por error.
  * 3. `firmados` — carpeta "Requested signatures": Dropbox Sign deja acá lo que ya volvió firmado.
  *
@@ -179,7 +179,7 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
           title={`No se encontró la carpeta "${CARPETA_ESPERADA[tipo]}"`}
           description={
             tipo === "pendiente_firma"
-              ? 'Esta carpeta hay que crearla a mano en Dropbox, como hermana de "Outbox" dentro de la misma estructura de Dropbox Sign. Hasta que exista, esta bandeja queda vacía.'
+              ? 'Esta carpeta hay que crearla a mano en Dropbox, con el nombre exacto "Pendbox", como hermana de "Outbox" dentro de la misma estructura de Dropbox Sign. Hasta que exista, esta bandeja queda vacía.'
               : "Revisá que la cuenta de Dropbox esté conectada y que la carpeta de Dropbox Sign exista con ese nombre (Documentos → Dropbox)."
           }
         />
