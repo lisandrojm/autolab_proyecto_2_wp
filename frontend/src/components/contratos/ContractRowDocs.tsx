@@ -327,7 +327,7 @@ export const ContractActionsButtons: React.FC<{ record: ContractOverviewRow; onD
       <button type="button" onClick={editar} title="Editar este contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
         <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
       </button>
-      <button type="button" onClick={eliminar} disabled={borrando} title="Eliminar este contrato" className="p-1.5 rounded text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+      <button type="button" onClick={eliminar} disabled={borrando} title="Eliminar este contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
         <FontAwesomeIcon icon={borrando ? faSpinner : faTrash} spin={borrando} className="h-4 w-4" />
       </button>
     </div>

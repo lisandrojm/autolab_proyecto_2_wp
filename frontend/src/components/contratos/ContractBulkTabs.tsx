@@ -1184,7 +1184,14 @@ const FirmaContratoCell: React.FC<{
             No se envía a Firma
           </span>
         ) : puedeGenerar ? (
-          <GenerarMenu empresas={empresasParaGenerar} onGenerar={generar} generando={generando} label="Generar Contrato" />
+          // Sin empresa elegida no se ofrece generar: primero hay que elegirla (en ámbar, como
+          // requerida), y recién ahí aparece el botón con el nombre de la empresa a la vista, para
+          // que no se genere el PDF con una empresa que no se sabe cuál es.
+          !savedContratoEmpresaId && contratoEmpresas.length > 0 ? (
+            <EmpresaSelectCell record={record} campo="contrato" requerido onGuardado={onGenerado} />
+          ) : (
+            <GenerarMenu empresas={empresasParaGenerar} onGenerar={generar} generando={generando} label={savedContratoEmpresaId ? `Generar Contrato · ${empresasParaGenerar[0]?.label || ''}` : 'Generar Contrato'} />
+          )
         ) : (
           <span className="text-xs text-gray-400" title="La plantilla de este tipo de contrato no tiene contenido redactado">
             Sin plantilla
@@ -1301,7 +1308,12 @@ const FirmaReleaseCell: React.FC<{
   if (!releasesGenerados(record, releasesAplicables)) {
     return (
       <div className="flex items-center justify-center min-w-[120px]" onClick={(e) => e.stopPropagation()}>
-        <GenerarMenu empresas={empresasParaGenerar} onGenerar={generar} generando={generando} label="Generar Release" />
+        {/* Mismo criterio que el Contrato: la empresa se elige antes de generar, no en el momento. */}
+        {!savedReleaseEmpresaId && releaseEmpresas.length > 0 ? (
+          <EmpresaSelectCell record={record} campo="release" requerido onGuardado={onGenerado} />
+        ) : (
+          <GenerarMenu empresas={empresasParaGenerar} onGenerar={generar} generando={generando} label={savedReleaseEmpresaId ? `Generar Release · ${empresasParaGenerar[0]?.label || ''}` : 'Generar Release'} />
+        )}
       </div>
     );
   }

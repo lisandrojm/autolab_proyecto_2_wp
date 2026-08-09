@@ -864,6 +864,13 @@ export const ProjectTeamPage: React.FC = () => {
   // no depende de project.assignedUsers (que puede quedar desincronizado).
   const teamMembers = useMemo(() => allUsers, [allUsers]);
 
+  /**
+   * El wizard es "Configurar Miembro" (edición) cuando la persona ya está en el equipo, y "Agregar
+   * Miembro" cuando no. En edición los datos vienen precargados del contrato actual, así que se
+   * puede guardar desde cualquier paso; en un alta nueva no, porque quedaría un contrato a medias.
+   */
+  const esEdicionMiembro = useMemo(() => !!selectedUserForWizard && teamMembers.some((m) => m._id === selectedUserForWizard._id), [selectedUserForWizard, teamMembers]);
+
   const displayedCount = useMemo(() => {
     if (activeTab === 'equipo') {
       return teamTotal;
@@ -3027,7 +3034,7 @@ export const ProjectTeamPage: React.FC = () => {
           <Modal
             isOpen={!!selectedUserForWizard}
             onClose={() => setSelectedUserForWizard(null)}
-            title={teamMembers.some((m) => m._id === selectedUserForWizard?._id) ? 'Configurar Miembro' : 'Agregar Miembro'}
+            title={esEdicionMiembro ? 'Configurar Miembro' : 'Agregar Miembro'}
             subtitle={
               selectedUserForWizard ? (
                 <div className="flex flex-col gap-0.5">
@@ -3063,7 +3070,10 @@ export const ProjectTeamPage: React.FC = () => {
                   >
                     SIGUIENTE
                   </button>
-                ) : (
+                ) : null}
+                {/* En edición se puede guardar sin recorrer los tres pasos: los datos ya vienen
+                    cargados del contrato, así que lo que no se tocó queda como estaba. */}
+                {(wizardStep === 3 || esEdicionMiembro) && (
                   <button type="button" onClick={handleSaveWizard} className="flex-1 py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 shadow-lg shadow-green-600/20 transition-all active:scale-95 uppercase tracking-wider">
                     GUARDAR
                   </button>
