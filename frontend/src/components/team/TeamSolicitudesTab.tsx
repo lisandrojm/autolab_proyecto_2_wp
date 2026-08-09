@@ -200,7 +200,7 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          <button onClick={() => onApprove(user)} className="px-2.5 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors flex items-center gap-1.5 shadow-sm" title="Aprobar y agregar al equipo">
+                          <button onClick={() => onApprove(user)} className="px-2.5 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors flex items-center gap-1.5 shadow-sm" title="Aprobar y agregar al equipo">
                             <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
                             Aprobar
                           </button>
