@@ -130,7 +130,7 @@ export const ContractBulkAfipTab: React.FC<{
   initialProjectId?: string;
   tipo: TipoImpositivo;
   /** Informa al padre la cantidad de contratos de cada trámite, para mostrarla en sus propias pestañas. */
-  onCounts?: (counts: { alta: number; cuit: number }) => void;
+  onCounts?: (counts: { alta: number; cuit: number; firma: number }) => void;
 }> = ({ allEstados, contratoFrames, releases, initialProjectId = '', tipo: filterTipo, onCounts }) => {
   const [rows, setRows] = useState<ContractOverviewRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -233,18 +233,35 @@ export const ContractBulkAfipTab: React.FC<{
   // "Alta temprana" después de pasar por "Firma digital" repetía una consulta de varios segundos
   // para mostrar exactamente lo mismo. `load(true)` fuerza el refresco y es lo que usan las acciones
   // que modifican datos.
+  // Estado que alimenta la bandeja de "Firma digital". Se pide acá —aunque esa pestaña sea otro
+  // componente— porque esta es la única que está montada al abrir la página: es lo que permite
+  // mostrar su contador sin haber entrado. `null` = todavía resolviéndose.
+  const [estadoEnvioDoc, setEstadoEnvioDoc] = useState<string | null>(null);
+  useEffect(() => {
+    cachedFetch(`${CONTRACTS_OVERVIEW_CACHE}firma-config`, () => firmaDigitalAPI.config())
+      .then((cfg) => setEstadoEnvioDoc(cfg?.estadoEnvioDocNombre || ''))
+      .catch(() => setEstadoEnvioDoc(''));
+  }, []);
+
+  // Los contratos en "Envío de documentación" viajan en la misma consulta que los impositivos: son
+  // los que necesita la pestaña de Firma y, de paso, evitan una segunda consulta solo para contarlos.
+  const estadosPedidos = useMemo(() => (estadoEnvioDoc ? [...estadosImpositivos, estadoEnvioDoc] : estadosImpositivos), [estadosImpositivos, estadoEnvioDoc]);
+
   const load = useCallback(
     (force = false) => {
+      // Sin la config todavía no se sabe qué estados pedir: esperar evita disparar la consulta
+      // pesada dos veces (una sin el estado de envío y otra con él).
+      if (estadoEnvioDoc === null) return Promise.resolve();
       if (estadosImpositivos.length === 0) {
         setRows([]);
         setLoading(false);
         return Promise.resolve();
       }
-      const key = `${CONTRACTS_OVERVIEW_CACHE}impositivos:${estadosImpositivos.join(',')}`;
+      const key = `${CONTRACTS_OVERVIEW_CACHE}impositivos:${estadosPedidos.join(',')}`;
       if (force) invalidateRefCache(CONTRACTS_OVERVIEW_CACHE);
       setLoading(true);
       setLoadError('');
-      return cachedFetch(key, () => usersAPI.listContractsOverview({ limit: 5000, estados: estadosImpositivos }))
+      return cachedFetch(key, () => usersAPI.listContractsOverview({ limit: 5000, estados: estadosPedidos }))
         .then((res) => setRows(res.rows))
         .catch((e: any) => {
           setRows([]);
@@ -252,7 +269,7 @@ export const ContractBulkAfipTab: React.FC<{
         })
         .finally(() => setLoading(false));
     },
-    [estadosImpositivos],
+    [estadosImpositivos, estadosPedidos, estadoEnvioDoc],
   );
 
   useEffect(() => {
@@ -335,12 +352,20 @@ export const ContractBulkAfipTab: React.FC<{
   const countCompletos = impositivoRows.filter((x) => x.result.completo).length;
   const countIncompletos = impositivoRows.length - countCompletos;
 
+  // Contador de "Firma digital": los contratos en el estado de envío de documentación, con los mismos
+  // filtros de la barra que aplican los otros dos, para que los tres números sean comparables.
+  const claveEnvioDoc = estadoEnvioDoc ? claveEstado(estadoEnvioDoc) : '';
+  const countFirma = useMemo(
+    () => (claveEnvioDoc ? rows.filter((r) => claveEstado(r.nombre_estado_empleado || '') === claveEnvioDoc && matchesCommonFilters(r as ImpositivoRow)).length : 0),
+    [rows, claveEnvioDoc, matchesCommonFilters],
+  );
+
   // Ref para no re-disparar el aviso al padre por un `onCounts` con identidad nueva en cada render.
   const onCountsRef = useRef(onCounts);
   onCountsRef.current = onCounts;
   useEffect(() => {
-    onCountsRef.current?.({ alta: countAlta, cuit: countCuit });
-  }, [countAlta, countCuit]);
+    onCountsRef.current?.({ alta: countAlta, cuit: countCuit, firma: countFirma });
+  }, [countAlta, countCuit, countFirma]);
 
   // Constancias de CUIT: vigentes vs. pendientes (las que faltan o ya vencieron, que son las que hay
   // que volver a pedirle a ARCA). Se cuentan sobre todas las de ese trámite, como countAlta/countCuit.
@@ -357,17 +382,22 @@ export const ContractBulkAfipTab: React.FC<{
     });
   }, [rowsPorFiltrosComunes, filterTipo, soloIncompletos, soloPendientes]);
 
-  // Opciones de los selects del filtro avanzado, derivadas de lo cargado.
+  // Opciones de los selects del filtro avanzado. Salen de `impositivoRows` y no de `rows` porque en
+  // la consulta también vienen los contratos en "Envío de documentación" (para el contador de Firma):
+  // ofrecer un cliente o proyecto que solo tiene contratos de esos daría siempre cero resultados acá.
   const clientOptions = useMemo(() => {
     const m = new Map<string, string>();
-    rows.forEach((r) => r.clientId && m.set(r.clientId, r.clientName || r.clientId));
+    impositivoRows.forEach(({ row: r }) => r.clientId && m.set(r.clientId, r.clientName || r.clientId));
     return [...m].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
-  }, [rows]);
+  }, [impositivoRows]);
   const projectOptions = useMemo(() => {
     const m = new Map<string, string>();
-    rows.filter((r) => !filterClientId || r.clientId === filterClientId).forEach((r) => r.projectId && m.set(r.projectId, r.projectName || r.projectId));
+    impositivoRows
+      .map(({ row }) => row)
+      .filter((r) => !filterClientId || r.clientId === filterClientId)
+      .forEach((r) => r.projectId && m.set(r.projectId, r.projectName || r.projectId));
     return [...m].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
-  }, [rows, filterClientId]);
+  }, [impositivoRows, filterClientId]);
   const tipoContratoOptions = useMemo(() => {
     const s = new Set<string>();
     impositivoRows.forEach((x) => x.row.nombre_contrato && s.add(x.row.nombre_contrato));

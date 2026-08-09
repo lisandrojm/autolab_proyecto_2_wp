@@ -46,10 +46,11 @@ const tabBtnClass = (active: boolean): string =>
 
 export const ContractsPage: React.FC = () => {
   const navigate = useNavigate();
-  // Se puede entrar desde otra pantalla (ej. Gestionar Equipo) con ?tab=management&projectId=...
-  // para caer directo en "Gestión de Contratos" filtrado por ese proyecto.
+  // "Gestión de Contratos" es la pestaña de trabajo (y la primera), así que es la que abre por
+  // defecto. Con ?tab=contracts se entra al listado, y desde Gestionar Equipo se sigue llegando con
+  // ?tab=management&projectId=... para caer filtrado por ese proyecto.
   const [searchParams] = useSearchParams();
-  const initialTab = searchParams.get("tab") === "management" ? "management" : "contracts";
+  const initialTab = searchParams.get("tab") === "contracts" ? "contracts" : "management";
   const initialProjectId = searchParams.get("projectId") || "";
 
   const [rows, setRows] = useState<ContractOverviewRow[]>([]);
@@ -112,7 +113,7 @@ export const ContractsPage: React.FC = () => {
   // Sub-pestañas de "Gestión de Contratos".
   const [mgmtTab, setMgmtTab] = useState<"alta_afip" | "constancia_cuit" | "firma">("alta_afip");
   // Cantidad de contratos de cada trámite, informada por ContractBulkAfipTab para mostrarla en las pestañas.
-  const [mgmtCounts, setMgmtCounts] = useState<{ alta: number; cuit: number }>({ alta: 0, cuit: 0 });
+  const [mgmtCounts, setMgmtCounts] = useState<{ alta: number; cuit: number; firma: number }>({ alta: 0, cuit: 0, firma: 0 });
   // Explicación de qué es cada pestaña de "Gestión de Contratos" (modal informativo).
   const [mgmtTabsInfoOpen, setMgmtTabsInfoOpen] = useState(false);
 
@@ -307,11 +308,11 @@ export const ContractsPage: React.FC = () => {
         <div className="space-y-4">
           {/* Pestañas principales de la página */}
           <div className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
-            <button className={tabBtnClass(mainTab === "contracts")} onClick={() => setMainTab("contracts")}>
-              Contratos
-            </button>
             <button className={tabBtnClass(mainTab === "management")} onClick={() => setMainTab("management")}>
               Gestión de Contratos
+            </button>
+            <button className={tabBtnClass(mainTab === "contracts")} onClick={() => setMainTab("contracts")}>
+              Contratos
             </button>
           </div>
 
@@ -414,7 +415,7 @@ export const ContractsPage: React.FC = () => {
                   Constancia de CUIT ({mgmtCounts.cuit})
                 </button>
                 <button className={tabBtnClass(mgmtTab === "firma")} onClick={() => setMgmtTab("firma")}>
-                  Firma digital
+                  Firma digital ({mgmtCounts.firma})
                 </button>
               </div>
               <button type="button" onClick={() => setMgmtTabsInfoOpen(true)} title="Qué es cada pestaña" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0 mb-2">
