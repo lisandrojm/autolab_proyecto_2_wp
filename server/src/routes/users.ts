@@ -1350,12 +1350,13 @@ router.patch("/:id/confirmar-cambio-cuenta", requireTenant, authenticateToken, r
   }
 });
 
-// PATCH /users/:id/solicitud-status - Cambiar el estado de una solicitud (rechazada/cancelada) SIN borrarla
+// PATCH /users/:id/solicitud-status - Cambiar el estado de una solicitud SIN borrarla. Se permite
+// volver a "pendiente" para deshacer un rechazo/cancelación hecho por error.
 router.patch("/:id/solicitud-status", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { status } = req.body || {};
-    if (!["rechazada", "cancelada"].includes(String(status))) {
-      res.status(400).json({ error: "Estado inválido. Sólo se acepta 'rechazada' o 'cancelada'." });
+    if (!["rechazada", "cancelada", "pendiente"].includes(String(status))) {
+      res.status(400).json({ error: "Estado inválido. Sólo se acepta 'rechazada', 'cancelada' o 'pendiente'." });
       return;
     }
 
@@ -1364,9 +1365,9 @@ router.patch("/:id/solicitud-status", requireTenant, authenticateToken, requireP
       res.status(404).json({ error: "Solicitud no encontrada" });
       return;
     }
-    // Sólo se puede rechazar/cancelar una solicitud que sigue pendiente.
+    // Una vez aprobada ya es un usuario real: no se puede volver atrás desde acá.
     if (!user.metadata?.isSolicitud || user.metadata?.solicitudStatus === "aprobada") {
-      res.status(400).json({ error: "Esta solicitud ya fue aprobada o no está pendiente." });
+      res.status(400).json({ error: "Esta solicitud ya fue aprobada o no es una solicitud." });
       return;
     }
 

@@ -635,7 +635,8 @@ export const ProjectTeamPage: React.FC = () => {
     const fetchCount = async () => {
       try {
         const solis = await usersAPI.listSolicitudes();
-        const count = solis.filter((u) => u.metadata?.projectIds?.includes(projectId)).length;
+        // El badge cuenta solo las PENDIENTES: las rechazadas siguen listadas, pero ya no son tarea pendiente.
+        const count = solis.filter((u) => u.metadata?.projectIds?.includes(projectId) && (u.metadata?.solicitudStatus || 'pendiente') === 'pendiente').length;
         setSolicitudesCount(count);
       } catch (e) {
         console.error('Error fetching solicitudes count:', e);
@@ -1549,7 +1550,7 @@ export const ProjectTeamPage: React.FC = () => {
         setSolicitudesRefresh((x) => x + 1);
         try {
           const solis = await usersAPI.listSolicitudes();
-          setSolicitudesCount(solis.filter((u) => u.metadata?.projectIds?.includes(projectId!)).length);
+          setSolicitudesCount(solis.filter((u) => u.metadata?.projectIds?.includes(projectId!) && (u.metadata?.solicitudStatus || 'pendiente') === 'pendiente').length);
         } catch {
           /* noop */
         }

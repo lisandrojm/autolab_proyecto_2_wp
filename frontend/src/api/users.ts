@@ -566,8 +566,8 @@ class UsersAPI {
     return rows.map(normalizeUser);
   }
 
-  /** Rechaza o cancela una solicitud SIN borrarla (queda con su estado). */
-  async setSolicitudStatus(id: string, status: "rechazada" | "cancelada"): Promise<User> {
+  /** Cambia el estado de una solicitud SIN borrarla. "pendiente" deshace un rechazo/cancelación. */
+  async setSolicitudStatus(id: string, status: "rechazada" | "cancelada" | "pendiente"): Promise<User> {
     const { data } = await axios.patch(`/users/${id}/solicitud-status`, { status }, { headers: this.getHeaders() });
     const user = normalizeUser(data);
     emitUsersChanged("update", id);

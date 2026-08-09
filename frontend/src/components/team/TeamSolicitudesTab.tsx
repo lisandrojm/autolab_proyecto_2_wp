@@ -1,11 +1,21 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faTimes, faUserPlus, faClock, faSearch } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faTimes, faUserPlus, faClock, faSearch, faRotateLeft, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI, User } from "../../api/users";
 import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../api/categoriasSat";
 import { Project } from "../../api/projects";
 import { sweetAlert } from "../../utils/sweetAlert";
+
+type EstadoSolicitud = "pendiente" | "aprobada" | "rechazada" | "cancelada";
+
+/** Cómo se muestra cada estado de una solicitud. Una rechazada NO desaparece: queda listada así. */
+const ESTADO_SOLICITUD: Record<EstadoSolicitud, { texto: string; clase: string; icono: typeof faClock }> = {
+  pendiente: { texto: "PENDIENTE", clase: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400", icono: faClock },
+  aprobada: { texto: "APROBADA", clase: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400", icono: faCheck },
+  rechazada: { texto: "RECHAZADA", clase: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400", icono: faTimes },
+  cancelada: { texto: "CANCELADA", clase: "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300", icono: faTimes },
+};
 
 interface TeamSolicitudesTabProps {
   projectId: string;
@@ -100,6 +110,17 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
     }
   };
 
+  /** Deshace un rechazo/cancelación: la solicitud vuelve a la cola como pendiente. */
+  const handleReabrir = async (user: User) => {
+    try {
+      await usersAPI.setSolicitudStatus(user._id, "pendiente");
+      sweetAlert.success("Solicitud reabierta", "Volvió a quedar pendiente de aprobación.");
+      fetchSolicitudes();
+    } catch (error: any) {
+      sweetAlert.error("Error", error.response?.data?.error || "Error al reabrir la solicitud");
+    }
+  };
+
   /** Borrado definitivo: solo desde el admin, para depurar el listado. */
   const handleDelete = async (user: User) => {
     const result = await sweetAlert.confirm("¿Eliminar solicitud?", `Se eliminará definitivamente la solicitud de ${user.metadata?.fullName || "este usuario"}. Esta acción no se puede deshacer.`, "Sí, eliminar");
@@ -169,9 +190,12 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
                 {filteredSolicitudes.map((user) => {
                   const meta = user.metadata;
                   const displayName = meta?.fullName || `${user.firstName} ${user.lastName}`;
+                  const estado = (meta?.solicitudStatus || "pendiente") as EstadoSolicitud;
+                  // Las que ya no están en juego se atenúan, para que la fila no se lea igual que una pendiente.
+                  const filaApagada = estado === "rechazada" || estado === "cancelada";
 
                   return (
-                    <tr key={user._id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                    <tr key={user._id} className={`border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${filaApagada ? "opacity-60 bg-gray-50/60 dark:bg-gray-900/30" : ""}`}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-bold text-xs shrink-0">{displayName.charAt(0).toUpperCase()}</div>
@@ -193,21 +217,40 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{meta?.schedule || "-"}</td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{meta?.dailyRate ? `$${meta.dailyRate.toLocaleString("es-AR")}` : "-"}</td>
                       <td className="px-4 py-3 text-center">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                          <FontAwesomeIcon icon={faClock} className="text-[8px]" />
-                          PENDIENTE
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${ESTADO_SOLICITUD[estado].clase}`}>
+                          <FontAwesomeIcon icon={ESTADO_SOLICITUD[estado].icono} className="text-[8px]" />
+                          {ESTADO_SOLICITUD[estado].texto}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
+                        {/* Una solicitud rechazada o cancelada no se aprueba de una: primero se
+                            reabre, así queda explícito que se está deshaciendo la decisión. */}
                         <div className="flex items-center justify-end gap-1.5">
-                          <button onClick={() => onApprove(user)} className="px-2.5 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors flex items-center gap-1.5 shadow-sm" title="Aprobar y agregar al equipo">
-                            <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
-                            Aprobar
-                          </button>
-                          <button onClick={() => handleReject(user)} className="px-2.5 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 rounded transition-colors flex items-center gap-1.5" title="Rechazar solicitud">
-                            <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
-                            Rechazar
-                          </button>
+                          {estado === "pendiente" ? (
+                            <>
+                              <button onClick={() => onApprove(user)} className="px-2.5 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors flex items-center gap-1.5 shadow-sm" title="Aprobar y agregar al equipo">
+                                <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
+                                Aprobar
+                              </button>
+                              <button onClick={() => handleReject(user)} className="px-2.5 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 rounded transition-colors flex items-center gap-1.5" title="Rechazar solicitud">
+                                <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                                Rechazar
+                              </button>
+                            </>
+                          ) : estado === "aprobada" ? (
+                            <span className="text-xs text-gray-400 italic">Ya aprobada</span>
+                          ) : (
+                            <>
+                              <button onClick={() => handleReabrir(user)} className="px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded transition-colors flex items-center gap-1.5" title="Volver a dejarla pendiente">
+                                <FontAwesomeIcon icon={faRotateLeft} className="text-[10px]" />
+                                Volver a pendiente
+                              </button>
+                              {/* Recién acá se ofrece borrar: una solicitud pendiente se rechaza, no se elimina. */}
+                              <button onClick={() => handleDelete(user)} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Eliminar definitivamente">
+                                <FontAwesomeIcon icon={faTrash} className="text-[11px]" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
