@@ -18,7 +18,10 @@ const createShiftSchema = z.object({
 });
 const updateShiftSchema = createShiftSchema.partial();
 // GET /shifts/count - Contar turnos
-router.get("/count", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
+// Lectura abierta a cualquier usuario autenticado del tenant (igual que el resto de los catálogos
+// de referencia): mobile la necesita para coordinadores sin admin_users:view. Solo crear/editar/
+// eliminar/reordenar sigue exigiendo el permiso admin.
+router.get("/count", requireTenant, authenticateToken, async (req, res) => {
     try {
         const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
         let filter = {};
@@ -38,8 +41,8 @@ router.get("/count", requireTenant, authenticateToken, requirePermission("admin_
         res.status(500).json({ error: "Internal server error" });
     }
 });
-// GET /shifts - Listar turnos
-router.get("/", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
+// GET /shifts - Listar turnos (lectura abierta, ver nota en /count)
+router.get("/", requireTenant, authenticateToken, async (req, res) => {
     try {
         const { page = 1, limit = 100, name } = req.query;
         const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
@@ -113,8 +116,8 @@ router.post("/", requireTenant, authenticateToken, requirePermission("admin_user
         res.status(500).json({ error: "Internal server error" });
     }
 });
-// GET /shifts/:id - Obtener turno específico
-router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
+// GET /shifts/:id - Obtener turno específico (lectura abierta, ver nota en /count)
+router.get("/:id", requireTenant, authenticateToken, async (req, res) => {
     try {
         const shiftId = toObjectIdOrNull(req.params.id);
         const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");

@@ -24,7 +24,10 @@ const createAreaSchema = z.object({
 });
 const updateAreaSchema = createAreaSchema.partial();
 // GET /areas/count - Contar areas
-router.get("/count", requireTenant, authenticateToken, requirePermission("admin_areas:view"), async (req, res) => {
+// Lectura abierta a cualquier usuario autenticado del tenant (igual que el resto de los catálogos
+// de referencia): mobile la necesita para coordinadores sin admin_areas:view. Solo crear/editar/
+// eliminar sigue exigiendo el permiso admin.
+router.get("/count", requireTenant, authenticateToken, async (req, res) => {
     try {
         const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
         let filter = {};
@@ -44,8 +47,8 @@ router.get("/count", requireTenant, authenticateToken, requirePermission("admin_
         res.status(500).json({ error: "Internal server error" });
     }
 });
-// GET /areas - Listar areas
-router.get("/", requireTenant, authenticateToken, requirePermission("admin_areas:view"), async (req, res) => {
+// GET /areas - Listar areas (lectura abierta, ver nota en /count)
+router.get("/", requireTenant, authenticateToken, async (req, res) => {
     try {
         const { page = 1, limit = 100, name } = req.query;
         const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
@@ -113,8 +116,8 @@ router.post("/", requireTenant, authenticateToken, requirePermission("admin_area
         res.status(500).json({ error: "Internal server error" });
     }
 });
-// GET /areas/:id - Obtener area específica
-router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_areas:view"), async (req, res) => {
+// GET /areas/:id - Obtener area específica (lectura abierta, ver nota en /count)
+router.get("/:id", requireTenant, authenticateToken, async (req, res) => {
     try {
         const areaId = toObjectIdOrNull(req.params.id);
         const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");

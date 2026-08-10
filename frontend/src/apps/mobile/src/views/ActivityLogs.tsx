@@ -688,6 +688,9 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [activeProjectTab, setActiveProjectTab] = useState<"info" | "schedule" | "team">("info");
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isLoadingReports, setIsLoadingReports] = useState(true);
+  /** Evita disparar loadData() dos veces en simultáneo (ej. doble-montaje en desarrollo): duplicar
+   *  las 5 llamadas —una de ellas pesada— aumenta el riesgo de timeouts sin necesidad. */
+  const loadDataInFlightRef = useRef(false);
 
   // vacation info modal
   const [vacationModalOpen, setVacationModalOpen] = useState(false);
@@ -926,9 +929,15 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
   useEffect(() => {
     loadData();
+    // "Historial de Novedades" (Mis Novedades) no depende de nada de loadData(): se dispara aparte
+    // para que cargue rápido y solo, sin quedar atrás en la cola de las otras 5 llamadas (algunas
+    // pesadas, como Employees). Antes esperaba a que TODO lo demás terminara para recién arrancar.
+    fetchReports();
   }, []);
 
   const loadData = async () => {
+    if (loadDataInFlightRef.current) return;
+    loadDataInFlightRef.current = true;
     setIsLoadingData(true);
     try {
       // Las 5 llamadas son independientes entre sí (nada acá depende de otra), así que se disparan
@@ -936,9 +945,9 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       // que tarde la más lenta (típicamente "Employees", que trae usuarios con todos sus contratos).
       // Cada una mantiene su propio try/catch para que si una falla no tire abajo a las demás.
       await Promise.all([loadTypes(), loadEmployees(), loadProjects(), loadAreasAndShifts(), loadVacations()]);
-      fetchReports();
     } finally {
       setIsLoadingData(false);
+      loadDataInFlightRef.current = false;
     }
   };
 
@@ -1225,9 +1234,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               }),
             );
 
-    console.log("DEBUG projectEmployees - Evaluating for project:", selectedProjectId);
-    console.log("DEBUG myCoordinatedCombinations:", myCoordinatedCombinations);
-
     const filtered = sourceEmployees.filter((e) => {
       if (!e.isActive) {
         return false;
@@ -1419,7 +1425,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       }
 
       empSortKeys.set(emp.id, { shiftOrder, shiftName });
-      console.log(`SORT_DEBUG: ${emp.name} → shiftId=${resolved.shiftId} shiftName="${shiftName}" order=${shiftOrder}`);
     }
 
     const sorted = [...filtered].sort((a, b) => {
@@ -1434,11 +1439,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       return a.name.localeCompare(b.name);
     });
 
-    console.log("DEBUG projectEmployees - Final sorted order:");
-    sorted.forEach((e, i) => {
-      const key = empSortKeys.get(e.id);
-      console.log(`  ${i + 1}. ${e.name}: shift="${key?.shiftName}" order=${key?.shiftOrder}`);
-    });
     return sorted;
   }, [employees, selectedProjectId, selectedAreaId, selectedShiftId, myCoordinatedCombinations, profile, selectedProject, allShifts]);
 
