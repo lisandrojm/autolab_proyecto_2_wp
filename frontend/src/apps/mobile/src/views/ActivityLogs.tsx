@@ -931,22 +931,37 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const loadData = async () => {
     setIsLoadingData(true);
     try {
-      // 1. Fetch Types
-      const types = await activityLogTypesAPI.getAll();
-      const activeTypes = types.filter((t) => t.isActive);
-      setLogTypes(activeTypes);
+      // Las 5 llamadas son independientes entre sí (nada acá depende de otra), así que se disparan
+      // todas juntas en vez de una atrás de la otra — antes tardaba la SUMA de las 5, ahora tarda lo
+      // que tarde la más lenta (típicamente "Employees", que trae usuarios con todos sus contratos).
+      // Cada una mantiene su propio try/catch para que si una falla no tire abajo a las demás.
+      await Promise.all([loadTypes(), loadEmployees(), loadProjects(), loadAreasAndShifts(), loadVacations()]);
+      fetchReports();
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
 
-      // 2. Fetch Employees
+  const loadTypes = async () => {
+    try {
+      const types = await activityLogTypesAPI.getAll();
+      setLogTypes(types.filter((t) => t.isActive));
+    } catch (e) {
+      console.error("Error loading activity log types", e);
+    }
+  };
+
+  const loadEmployees = async () => {
+    try {
+      let users: any[] = [];
       try {
-        let users: any[] = [];
-        try {
-          const usersResp = await usersAPI.list({ limit: 2000 });
-          users = usersResp.users || [];
-        } catch (e) {
-          console.warn("usersAPI.list failed (likely non-admin 403), falling back to directory endpoint", e);
-          users = await usersAPI.getDirectory({ status: "all" });
-        }
-        setEmployees(
+        const usersResp = await usersAPI.list({ limit: 2000 });
+        users = usersResp.users || [];
+      } catch (e) {
+        console.warn("usersAPI.list failed (likely non-admin 403), falling back to directory endpoint", e);
+        users = await usersAPI.getDirectory({ status: "all" });
+      }
+      setEmployees(
           users.map((u) => ({
             id: u._id,
             name: `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email,
@@ -993,38 +1008,36 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               }) || [],
           })),
         );
-      } catch (e) {
-        console.error("Error loading users", e);
-      }
+    } catch (e) {
+      console.error("Error loading users", e);
+    }
+  };
 
-      // 3. Fetch Projects
-      try {
-        const allProjects = await projectsAPI.listAll();
-        setAllProjectsCache(allProjects);
-      } catch (e) {
-        console.error("Error loading projects", e);
-      }
+  const loadProjects = async () => {
+    try {
+      const allProjects = await projectsAPI.listAll();
+      setAllProjectsCache(allProjects);
+    } catch (e) {
+      console.error("Error loading projects", e);
+    }
+  };
 
-      // 4. Fetch Areas & Shifts
-      try {
-        const [areas, shifts] = await Promise.all([areasAPI.listAll(), shiftsAPI.getAll()]);
-        setAllAreas(areas);
-        setAllShifts(shifts);
-      } catch (e) {
-        console.error("Error loading areas/shifts", e);
-      }
+  const loadAreasAndShifts = async () => {
+    try {
+      const [areas, shifts] = await Promise.all([areasAPI.listAll(), shiftsAPI.getAll()]);
+      setAllAreas(areas);
+      setAllShifts(shifts);
+    } catch (e) {
+      console.error("Error loading areas/shifts", e);
+    }
+  };
 
-      // 5. Fetch Vacations
-      try {
-        const vacationsList = await vacationsAPI.getAll();
-        setAllVacations(vacationsList);
-      } catch (e) {
-        console.error("Error loading vacations in mobile ActivityLogs", e);
-      }
-
-      fetchReports();
-    } finally {
-      setIsLoadingData(false);
+  const loadVacations = async () => {
+    try {
+      const vacationsList = await vacationsAPI.getAll();
+      setAllVacations(vacationsList);
+    } catch (e) {
+      console.error("Error loading vacations in mobile ActivityLogs", e);
     }
   };
 
