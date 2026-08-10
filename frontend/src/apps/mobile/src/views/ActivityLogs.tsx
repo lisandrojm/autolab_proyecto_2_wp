@@ -1137,7 +1137,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       .getProject(selectedProjectId)
       .then((proj) => {
         if (isMounted) {
-          console.log("DEBUG: Loaded full project details with teamConfig:", proj);
           setFullProjectData(proj);
         }
       })
