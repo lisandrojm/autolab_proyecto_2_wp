@@ -12,6 +12,7 @@ import { vacationsAPI } from "../../../../api/vacations";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUsers, faArrowLeft, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText, faUserPlus, faUserSlash, faSearch, faFilter, faExclamationTriangle, faUmbrellaBeach, faPen } from "@fortawesome/free-solid-svg-icons";
 import { useProfile } from "../hooks/useProfile";
+import { useAuthStore } from "../../../../stores/authStore";
 import { ViewType } from "../types";
 import { sweetAlert } from "../utils/sweetAlert";
 import { Modal } from "../components/Modal";
@@ -691,6 +692,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   /** Evita disparar loadData() dos veces en simultáneo (ej. doble-montaje en desarrollo): duplicar
    *  las 5 llamadas —una de ellas pesada— aumenta el riesgo de timeouts sin necesidad. */
   const loadDataInFlightRef = useRef(false);
+  // Para saber de antemano si conviene ni intentar /users (ver loadEmployees): la mayoría de los
+  // coordinadores NO tiene admin_users:view, así que hoy siempre pegan un 403 antes de caer al
+  // endpoint liviano. `user` se hidrata sincrónicamente desde localStorage al loguearse.
+  const { hasPermission } = useAuthStore();
 
   // vacation info modal
   const [vacationModalOpen, setVacationModalOpen] = useState(false);
@@ -963,12 +968,19 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const loadEmployees = async () => {
     try {
       let users: any[] = [];
-      try {
-        const usersResp = await usersAPI.list({ limit: 2000 });
-        users = usersResp.users || [];
-      } catch (e) {
-        console.warn("usersAPI.list failed (likely non-admin 403), falling back to directory endpoint", e);
+      // La mayoría de los coordinadores no tiene admin_users:view: si ya lo sabemos (localStorage,
+      // sincrónico), vamos directo al endpoint liviano en vez de pegar un 403 esperado en cada carga.
+      if (!hasPermission("admin_users:view")) {
         users = await usersAPI.getDirectory({ status: "all" });
+      } else {
+        try {
+          const usersResp = await usersAPI.list({ limit: 2000 });
+          users = usersResp.users || [];
+        } catch (e) {
+          // Igual puede fallar (ej. permiso revocado sin refrescar sesión): mismo fallback de siempre.
+          console.warn("usersAPI.list failed (likely non-admin 403), falling back to directory endpoint", e);
+          users = await usersAPI.getDirectory({ status: "all" });
+        }
       }
       setEmployees(
           users.map((u) => ({
