@@ -1021,7 +1021,10 @@ router.get("/directory", requireTenant, authenticateToken, async (req: Authentic
     // infla el payload y fue lo que estaba causando timeouts. El historial completo sigue disponible
     // desde `/users` o `/users/:id` para quien sí lo necesite.
     const users = await User.find(filter)
-      .select("firstName lastName email projectIds metadata")
+      .select("firstName lastName email projectIds roles metadata")
+      // `roles` (solo el nombre): mobile lo necesita para distinguir a los coordinadores al armar
+      // el roster de novedades. Es un array chico de refs, cuesta bastante menos que lo de arriba.
+      .populate({ path: "roles", select: "name", model: Role })
       .populate("projectIds", "name")
       .populate({
         path: "metadata.projects",

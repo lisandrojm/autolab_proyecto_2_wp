@@ -12,7 +12,6 @@ import { vacationsAPI } from "../../../../api/vacations";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUsers, faArrowLeft, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText, faUserPlus, faUserSlash, faSearch, faFilter, faExclamationTriangle, faUmbrellaBeach, faPen } from "@fortawesome/free-solid-svg-icons";
 import { useProfile } from "../hooks/useProfile";
-import { useAuthStore } from "../../../../stores/authStore";
 import { ViewType } from "../types";
 import { sweetAlert } from "../utils/sweetAlert";
 import { Modal } from "../components/Modal";
@@ -694,10 +693,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   /** Evita disparar loadData() dos veces en simultáneo (ej. doble-montaje en desarrollo): duplicar
    *  las 5 llamadas —una de ellas pesada— aumenta el riesgo de timeouts sin necesidad. */
   const loadDataInFlightRef = useRef(false);
-  // Para saber de antemano si conviene ni intentar /users (ver loadEmployees): la mayoría de los
-  // coordinadores NO tiene admin_users:view, así que hoy siempre pegan un 403 antes de caer al
-  // endpoint liviano. `user` se hidrata sincrónicamente desde localStorage al loguearse.
-  const { hasPermission } = useAuthStore();
 
   // vacation info modal
   const [vacationModalOpen, setVacationModalOpen] = useState(false);
@@ -969,21 +964,11 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
   const loadEmployees = async () => {
     try {
-      let users: any[] = [];
-      // La mayoría de los coordinadores no tiene admin_users:view: si ya lo sabemos (localStorage,
-      // sincrónico), vamos directo al endpoint liviano en vez de pegar un 403 esperado en cada carga.
-      if (!hasPermission("admin_users:view")) {
-        users = await usersAPI.getDirectory({ status: "all" });
-      } else {
-        try {
-          const usersResp = await usersAPI.list({ limit: 2000 });
-          users = usersResp.users || [];
-        } catch (e) {
-          // Igual puede fallar (ej. permiso revocado sin refrescar sesión): mismo fallback de siempre.
-          console.warn("usersAPI.list failed (likely non-admin 403), falling back to directory endpoint", e);
-          users = await usersAPI.getDirectory({ status: "all" });
-        }
-      }
+      // Siempre el directorio, sea admin o no: trae exactamente lo que mobile usa (nombre, email,
+      // roles, proyectos y los contratos acotados a vigencia + área/turno) y está cacheado en el
+      // server. El listado admin `/users?limit=2000` traía TODO el historial de contratos de los
+      // ~1500 usuarios del tenant y se iba a timeout (60s) antes de caer igual acá.
+      const users = await usersAPI.getDirectory({ status: "all" });
       setEmployees(
           users.map((u) => ({
             id: u._id,
@@ -1357,13 +1342,18 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           return false;
         }
       } else {
-        // If "Todas", check if employee's area/shift is in my coordinated list
+        // "Todas las Áreas | Turnos" NO significa "todo el proyecto": significa todas las áreas/
+        // turnos QUE YO COORDINO. Solo se ve el proyecto entero cuando no hay a quién coordinar.
         const userRoles = (profile?.roleNames || []).map((r) => r.toLowerCase());
         const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
         const allAssignments = selectedProject?.coordinatorAssignments || [];
         const noRestrictions = allAssignments.length === 0;
+        // Si YO tengo asignaciones de coordinador en este proyecto, mandan sobre el rol: un Admin
+        // que además coordina un área carga las novedades de SU área, no las de todo el proyecto
+        // (antes el `isAdmin` salteaba el filtro entero y devolvía el proyecto completo).
+        const coordinoAlgoAca = myCoordinatedCombinations.length > 0;
 
-        if (!isAdmin && !noRestrictions) {
+        if (!noRestrictions && (coordinoAlgoAca || !isAdmin)) {
           const isMine = employeeCombinations.some((combo) => myCoordinatedCombinations.some((myCombo) => myCombo.areaId === combo.areaId && (myCombo.shiftId === combo.shiftId || !myCombo.shiftId || !combo.shiftId)));
           if (!isMine) {
             return false;
