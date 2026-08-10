@@ -112,15 +112,27 @@ const EmpresaSelectCell: React.FC<{ record: ContractOverviewRow; campo: 'contrat
 
   const faltaYEsRequerido = requerido && !empresaIdActual;
 
+  // Un <select> nativo no puede tener un ícono adentro del control: el spinner se superpone
+  // encima del select (con padding-left de más para no tapar el texto) para que se vea "dentro".
   return (
-    <select value={empresaIdActual || ''} disabled={guardando} onChange={(e) => guardar(e.target.value)} onClick={(e) => e.stopPropagation()} title={empresaIdActual ? 'Cambiar la empresa' : requerido ? 'Elegí la empresa — es obligatoria para generar el TXT' : 'Elegí la empresa (opcional)'} className={`text-xs rounded-md border px-2 py-1.5 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/40 disabled:opacity-50 disabled:cursor-wait ${faltaYEsRequerido ? 'border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-400 font-semibold' : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200'}`}>
-      <option value="">{empresaIdActual ? 'Sin empresa' : 'Elegir empresa...'}</option>
-      {empresas.map((e) => (
-        <option key={e.id} value={e.id}>
-          {e.label}
-        </option>
-      ))}
-    </select>
+    <div className="relative inline-block">
+      <select
+        value={empresaIdActual || ''}
+        disabled={guardando}
+        onChange={(e) => guardar(e.target.value)}
+        onClick={(e) => e.stopPropagation()}
+        title={empresaIdActual ? 'Cambiar la empresa' : requerido ? 'Elegí la empresa — es obligatoria para generar el TXT' : 'Elegí la empresa (opcional)'}
+        className={`text-xs rounded-md border py-1.5 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/40 disabled:opacity-50 disabled:cursor-wait ${guardando ? 'pl-6 pr-2' : 'px-2'} ${faltaYEsRequerido ? 'border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-400 font-semibold' : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200'}`}
+      >
+        <option value="">{empresaIdActual ? 'Sin empresa' : 'Elegir empresa...'}</option>
+        {empresas.map((e) => (
+          <option key={e.id} value={e.id}>
+            {e.label}
+          </option>
+        ))}
+      </select>
+      {guardando && <FontAwesomeIcon icon={faSpinner} spin className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-blue-500 pointer-events-none" title="Guardando..." />}
+    </div>
   );
 };
 

@@ -1,14 +1,15 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IObraSocial extends Document {
+  /** Código RNOS (6 díg., posible cero a la izquierda) para el TXT de Alta masiva de AFIP.
+   *  Es el mismo "ID Externo" genérico de los catálogos FRAME: para Obras Sociales, ese id
+   *  siempre fue el código RNOS, así que no hace falta un campo separado. */
   externalId: string;
   name: string;
   data: {
     id: number;
     nombre: string;
   };
-  /** Código RNOS (6 díg.) para el TXT de Alta masiva de AFIP. Se carga por obra social. */
-  codigoRnos?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,7 +22,6 @@ const obraSocialSchema = new Schema<IObraSocial>(
       id: { type: Number },
       nombre: { type: String },
     },
-    codigoRnos: { type: String },
   },
   {
     timestamps: true,

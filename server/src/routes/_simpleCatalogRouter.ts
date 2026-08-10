@@ -24,6 +24,20 @@ export interface SimpleCatalogConfig {
    * Solo lo usan los catálogos que lo requieren (ej. Bancos → tipoEntidad); el resto no se ve afectado.
    */
   extraStringFields?: Array<{ key: string; excelHeader?: string; aliases?: string[] }>;
+  /**
+   * Encabezado de columna del Excel (plantilla + import) para "ID Externo", por si en este catálogo
+   * ese id tiene otro nombre de dominio (ej. Obras Sociales → "RNOS"). Default: "ID Externo (opcional)".
+   * Los alias de import siempre incluyen además "ID Externo (opcional)"/"ID Externo"/"externalId"/"Id"/"ID".
+   */
+  externalIdExcelHeader?: string;
+  /** Encabezados adicionales aceptados al importar, más allá de los genéricos y `externalIdExcelHeader`. */
+  externalIdExcelAliases?: string[];
+  /**
+   * Normaliza `externalId` antes de guardarlo (create/update/import), ej. sacarle los guiones de
+   * visualización del RNOS para que `data.id` (usado para vincular con FRAME) siga siendo un número
+   * válido. Por defecto no se transforma: el resto de los catálogos no se ve afectado.
+   */
+  sanitizeExternalId?: (value: string) => string;
 }
 
 interface SimpleCatalogDoc {
@@ -57,8 +71,9 @@ export function createSimpleCatalogRouter(
     try {
       const samples = config.sampleNames && config.sampleNames.length > 0 ? config.sampleNames : ["Ejemplo 1", "Ejemplo 2"];
       const extraHeaders = (config.extraStringFields || []).map((f) => f.excelHeader || f.key);
+      const externalIdHeader = config.externalIdExcelHeader || "ID Externo (opcional)";
       const wsData: (string | number)[][] = [
-        ["ID Externo (opcional)", "Nombre", ...extraHeaders],
+        [externalIdHeader, "Nombre", ...extraHeaders],
         ...samples.map((n) => ["", n, ...extraHeaders.map(() => "")]),
       ];
 
@@ -103,7 +118,14 @@ export function createSimpleCatalogRouter(
         const row = rawRows[i];
         const rowNum = i + 2;
         const nombre = row["Nombre"] ?? row["nombre"] ?? row["NAME"] ?? row["Name"];
-        const externalId = row["ID Externo (opcional)"] ?? row["ID Externo"] ?? row["externalId"] ?? row["Id"] ?? row["ID"] ?? "";
+        const externalIdCandidates = [config.externalIdExcelHeader, "ID Externo (opcional)", "ID Externo", "externalId", "Id", "ID", ...(config.externalIdExcelAliases || [])].filter(Boolean) as string[];
+        let externalId: unknown = "";
+        for (const h of externalIdCandidates) {
+          if (row[h] !== undefined) {
+            externalId = row[h];
+            break;
+          }
+        }
 
         if (!nombre || String(nombre).trim() === "") {
           errors.push(`Fila ${rowNum}: La columna 'Nombre' es obligatoria.`);
@@ -123,7 +145,8 @@ export function createSimpleCatalogRouter(
           if (val !== undefined && val !== null && String(val).trim() !== "") extras[f.key] = String(val).trim();
         }
 
-        parsed.push({ externalId: String(externalId ?? "").trim(), nombre: String(nombre).trim(), extras });
+        const rawExternalId = String(externalId ?? "").trim();
+        parsed.push({ externalId: config.sanitizeExternalId ? config.sanitizeExternalId(rawExternalId) : rawExternalId, nombre: String(nombre).trim(), extras });
       }
 
       if (errors.length > 0) {
@@ -170,10 +193,11 @@ export function createSimpleCatalogRouter(
         res.status(400).json({ error: "El nombre es obligatorio" });
         return;
       }
-      const idNum = externalId ? Number(externalId) : undefined;
+      const cleanExternalId = externalId ? (config.sanitizeExternalId ? config.sanitizeExternalId(String(externalId).trim()) : String(externalId).trim()) : "";
+      const idNum = cleanExternalId ? Number(cleanExternalId) : undefined;
       const newItem: SimpleCatalogDoc = {
         name: nombre.trim(),
-        externalId: externalId ? String(externalId).trim() : "",
+        externalId: cleanExternalId,
         data: { id: idNum !== undefined && !isNaN(idNum) ? idNum : undefined, nombre: nombre.trim() },
       };
       for (const f of config.extraStringFields || []) {
@@ -206,8 +230,9 @@ export function createSimpleCatalogRouter(
         item.data.nombre = String(nombre).trim();
       }
       if (externalId !== undefined) {
-        item.externalId = String(externalId).trim();
-        const idNum = Number(externalId);
+        const cleanExternalId = config.sanitizeExternalId ? config.sanitizeExternalId(String(externalId).trim()) : String(externalId).trim();
+        item.externalId = cleanExternalId;
+        const idNum = Number(cleanExternalId);
         item.data = item.data || {};
         item.data.id = !isNaN(idNum) ? idNum : item.data.id;
       }

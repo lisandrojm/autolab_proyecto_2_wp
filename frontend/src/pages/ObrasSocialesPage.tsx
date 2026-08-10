@@ -5,6 +5,17 @@ import { createSimpleCatalogApi } from "../api/simpleCatalog";
 
 const obrasSocialesApi = createSimpleCatalogApi("/obras-sociales");
 
+/** El "ID Externo" de Obras Sociales siempre fue el código RNOS: se muestra con los guiones del
+ *  formato oficial (X-XXXX-X), rellenando con ceros a la izquierda hasta 6 dígitos. */
+const formatRnos = (raw: string): string => {
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+  const padded = digits.padStart(6, "0").slice(-6);
+  return `${padded[0]}-${padded.slice(1, 5)}-${padded[5]}`;
+};
+
+const sanitizeRnos = (v: string): string => v.replace(/\D/g, "");
+
 export const ObrasSocialesPage: React.FC = () => (
   <SimpleCatalogManager
     title="Obras Sociales"
@@ -13,7 +24,10 @@ export const ObrasSocialesPage: React.FC = () => (
     entityLabel="obra social"
     api={obrasSocialesApi}
     templateBaseName="obras_sociales"
-    extraFields={[{ key: "codigoRnos", label: "Código RNOS (AFIP)", showColumn: true, columnLabel: "RNOS", placeholder: "6 dígitos, ej: 400905" }]}
+    externalIdLabel="RNOS"
+    externalIdPlaceholder="6 dígitos, ej: 400905"
+    formatExternalId={formatRnos}
+    sanitizeExternalId={sanitizeRnos}
     helpKey="obrasSociales"
   />
 );

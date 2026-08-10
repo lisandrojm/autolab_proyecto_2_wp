@@ -39,9 +39,18 @@ interface SimpleCatalogManagerProps {
   extraFields?: CatalogExtraField[];
   /** Clave de ayuda para el modal de info (i). */
   helpKey?: HelpKey;
+  /** Etiqueta de "ID Externo" (columna, campo del form, badge de tarjeta), por si en este catálogo
+   *  ese id tiene otro nombre de dominio (ej. Obras Sociales → "RNOS"). Default: "ID Externo". */
+  externalIdLabel?: string;
+  /** Placeholder del input de "ID Externo". Default: "ID de FRAME". */
+  externalIdPlaceholder?: string;
+  /** Formatea `externalId` SOLO para mostrarlo (columna, tarjeta, input al editar), ej. agregarle guiones al RNOS. */
+  formatExternalId?: (value: string) => string;
+  /** Normaliza lo que se escribió (ej. sacar los guiones que puso `formatExternalId`) antes de guardar. */
+  sanitizeExternalId?: (value: string) => string;
 }
 
-export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], helpKey }) => {
+export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], helpKey, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId }) => {
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -124,7 +133,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
   const openEdit = (item: SimpleCatalogItem) => {
     setEditing(item);
     setNombre(item.name || '');
-    setExternalId(item.externalId || '');
+    setExternalId((formatExternalId ? formatExternalId(item.externalId || '') : item.externalId) || '');
     setExtraValues(Object.fromEntries(extraFields.map((f) => [f.key, item[f.key] != null ? String(item[f.key]) : defaultExtra(f)])));
     setShowModal(true);
   };
@@ -140,13 +149,14 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
       return;
     }
     const extraPayload = Object.fromEntries(extraFields.map((f) => [f.key, String(extraValues[f.key] ?? '').trim()]));
+    const cleanExternalId = sanitizeExternalId ? sanitizeExternalId(externalId.trim()) : externalId.trim();
     setSaving(true);
     try {
       if (editing) {
-        await api.update(editing._id, { nombre: nombre.trim(), externalId: externalId.trim(), ...extraPayload });
+        await api.update(editing._id, { nombre: nombre.trim(), externalId: cleanExternalId, ...extraPayload });
         sweetAlert.success('Actualizado', `${title} actualizado correctamente.`);
       } else {
-        await api.create({ nombre: nombre.trim(), externalId: externalId.trim(), ...extraPayload });
+        await api.create({ nombre: nombre.trim(), externalId: cleanExternalId, ...extraPayload });
         sweetAlert.success('Creado', `Registro de ${entityLabel} creado.`);
       }
       setShowModal(false);
@@ -254,7 +264,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
               header={{
                 title: item.name,
                 icon,
-                badges: [...extraFields.filter((f) => f.showColumn && item[f.key]).map((f) => ({ text: extraDisplay(f, item[f.key]), variant: 'cyan' as const })), ...(item.externalId ? [{ text: `ID ${item.externalId}`, variant: 'blue' as const }] : [])],
+                badges: [...extraFields.filter((f) => f.showColumn && item[f.key]).map((f) => ({ text: extraDisplay(f, item[f.key]), variant: 'cyan' as const })), ...(item.externalId ? [{ text: `${externalIdLabel} ${formatExternalId ? formatExternalId(item.externalId) : item.externalId}`, variant: 'blue' as const }] : [])],
               }}
               footer={{
                 actions: [
@@ -295,7 +305,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                       {f.columnLabel || f.label}
                     </th>
                   ))}
-                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID Externo</th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{externalIdLabel}</th>
                 <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
@@ -310,7 +320,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                         {extraDisplay(f, item[f.key])}
                       </td>
                     ))}
-                  <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono">{item.externalId || '—'}</td>
+                  <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono">{item.externalId ? (formatExternalId ? formatExternalId(item.externalId) : item.externalId) : '—'}</td>
                   <td className="px-5 py-3 text-sm text-right">
                     <button onClick={() => openEdit(item)} className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 mr-3" title="Editar">
                       <FontAwesomeIcon icon={faEdit} />
@@ -364,8 +374,8 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                 </div>
               ))}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ID Externo (opcional)</label>
-                <input type="text" value={externalId} onChange={(e) => setExternalId(e.target.value)} placeholder="ID de FRAME" className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white" />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{externalIdLabel} (opcional)</label>
+                <input type="text" value={externalId} onChange={(e) => setExternalId(e.target.value)} placeholder={externalIdPlaceholder} className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white" />
               </div>
             </div>
             <div className="flex justify-end gap-2 border-t border-gray-200 dark:border-gray-700 px-5 py-4">
@@ -397,7 +407,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
               </button>
             </div>
             <div className="px-5 py-4 space-y-3">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Descargá la plantilla, completala y subila acá. Los registros se actualizan/crean por nombre o ID externo.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Descargá la plantilla, completala y subila acá. Los registros se actualizan/crean por nombre o {externalIdLabel.toLowerCase()}.</p>
               <label className="flex items-center gap-3 px-4 py-6 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900/30">
                 <FontAwesomeIcon icon={faFileExcel} className="text-emerald-600 text-xl" />
                 <span className="text-sm text-gray-600 dark:text-gray-300">{importFile ? importFile.name : 'Seleccionar archivo .xlsx'}</span>

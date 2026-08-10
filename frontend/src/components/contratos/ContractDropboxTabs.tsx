@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUpRightFromSquare, faCircleInfo, faDownload, faFilePdf, faFolderOpen, faRotateRight, faSpinner, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { faArrowUpRightFromSquare, faCircleInfo, faDownload, faFilePdf, faFileZipper, faFolderOpen, faPen, faRotateRight, faSpinner, faTrash, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { dropboxAPI, DropboxEntry } from "../../api/dropbox";
 import { firmaDigitalAPI } from "../../api/firmaDigital";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
@@ -34,6 +34,34 @@ const fmtFecha = (iso?: string): string => {
 export type TipoBandejaDropbox = "para_firmar" | "enviado_firma" | "firmados";
 
 /**
+ * Cuenta los archivos de las 3 carpetas de Dropbox de una sola vez, para mostrar el número en las
+ * pestañas apenas se entra a "Gestión de Contratos" (sin esperar a que el usuario abra cada una).
+ * Cada carpeta que falle (sin config, sin conexión, etc.) cuenta como 0 en vez de tirar la página abajo.
+ */
+export const fetchDropboxCounts = async (): Promise<Record<TipoBandejaDropbox, number>> => {
+  const cfg = await firmaDigitalAPI.config();
+  const carpetas: Record<TipoBandejaDropbox, string | null | undefined> = {
+    para_firmar: cfg?.outboxCarpeta,
+    enviado_firma: cfg?.pendienteFirmaCarpeta,
+    firmados: cfg?.firmadosCarpeta,
+  };
+  const tipos = Object.keys(carpetas) as TipoBandejaDropbox[];
+  const counts = await Promise.all(
+    tipos.map(async (tipo) => {
+      const path = carpetas[tipo];
+      if (!path) return 0;
+      try {
+        const res = await dropboxAPI.list(path, true);
+        return (res.entries || []).filter((e) => e.tag === "file").length;
+      } catch {
+        return 0;
+      }
+    }),
+  );
+  return Object.fromEntries(tipos.map((tipo, i) => [tipo, counts[i]])) as Record<TipoBandejaDropbox, number>;
+};
+
+/**
  * Pestañas que muestran contratos que no viven en la base sino en carpetas de Dropbox. Son las tres
  * etapas del circuito de firma, en orden:
  *
@@ -45,7 +73,11 @@ export type TipoBandejaDropbox = "para_firmar" | "enviado_firma" | "firmados";
  *    mandar dos veces por error.
  * 3. `firmados` — carpeta "Requested signatures": Dropbox Sign deja acá lo que ya volvió firmado.
  *
- * En las dos primeras no hay acciones sobre el archivo: el envío y la firma se hacen en Dropbox Sign.
+ * En "para_firmar" y "firmados" el archivo todavía no está en manos de Dropbox Sign (el primero) o ya
+ * volvió (el último), así que se puede descargar, renombrar o eliminar directo desde acá — misma
+ * lógica que el explorador de "Dropbox | Documentos" (selección, ZIP masivo, editar, eliminar). En
+ * "enviado_firma" la solicitud ya está en curso en Dropbox Sign: no se ofrece ninguna acción para no
+ * pisar lo que está pasando ahí.
  */
 export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: (n: number) => void }> = ({ tipo, onCount }) => {
   const [entries, setEntries] = useState<DropboxEntry[]>([]);
@@ -53,13 +85,21 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [descargando, setDescargando] = useState<string | null>(null);
+  const [eliminando, setEliminando] = useState<string | null>(null);
+  const [descargandoZip, setDescargandoZip] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [filtro, setFiltro] = useState("");
   /** Explicación de cómo se importan los contratos desde Outbox (modal del ⓘ). */
   const [infoOpen, setInfoOpen] = useState(false);
 
+  /** "enviado_firma" queda de solo lectura: la solicitud ya está en curso en Dropbox Sign. */
+  const permiteAcciones = tipo !== "enviado_firma";
+  const MAX_ZIP_FILES = 50; // debe coincidir con ZIP_MAX_FILES del backend
+
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
+    setSelected(new Set()); // la selección es por carpeta; al recargar se limpia
     try {
       const cfg = await firmaDigitalAPI.config();
       const path = tipo === "para_firmar" ? cfg?.outboxCarpeta : tipo === "enviado_firma" ? cfg?.pendienteFirmaCarpeta : cfg?.firmadosCarpeta;
@@ -105,6 +145,91 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
     }
   };
 
+  const toggleSelected = (path: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  };
+
+  const allSelected = filtradas.length > 0 && filtradas.every((e) => selected.has(e.path));
+
+  const toggleSelectAll = () => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allSelected) filtradas.forEach((e) => next.delete(e.path));
+      else filtradas.forEach((e) => next.add(e.path));
+      return next;
+    });
+  };
+
+  const handleBulkDownload = async () => {
+    const paths = Array.from(selected);
+    if (paths.length === 0) return;
+    if (paths.length > MAX_ZIP_FILES) {
+      sweetAlert.error("Demasiados archivos", `Máximo ${MAX_ZIP_FILES} archivos por descarga. Deseleccioná algunos.`);
+      return;
+    }
+    setDescargandoZip(true);
+    try {
+      const blob = await dropboxAPI.downloadZip(paths, true);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `contratos_${tipo}_${new Date().toISOString().slice(0, 10)}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setSelected(new Set());
+    } catch (e: any) {
+      // Con responseType "blob" el error del server también llega como Blob: lo leemos para mostrar el mensaje.
+      let msg = "No se pudo generar el ZIP.";
+      try {
+        const txt = await e?.response?.data?.text?.();
+        if (txt) msg = JSON.parse(txt).error || msg;
+      } catch {
+        /* dejamos el mensaje genérico */
+      }
+      sweetAlert.error("Error", msg);
+    } finally {
+      setDescargandoZip(false);
+    }
+  };
+
+  const handleRename = async (entry: DropboxEntry) => {
+    const newName = window.prompt("Nuevo nombre:", entry.name);
+    if (!newName || newName.trim() === "" || newName === entry.name) return;
+    const parent = entry.path.substring(0, entry.path.lastIndexOf("/"));
+    try {
+      await dropboxAPI.move(entry.path, `${parent}/${newName.trim()}`, true);
+      await load();
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo renombrar.");
+    }
+  };
+
+  const handleDelete = async (entry: DropboxEntry) => {
+    const res = await sweetAlert.confirm("¿Eliminar?", `Se va a eliminar "${entry.name}" de Dropbox. Esta acción no se puede deshacer.`, "Sí, eliminar");
+    if (!res.isConfirmed) return;
+    setEliminando(entry.path);
+    try {
+      await dropboxAPI.remove(entry.path, true);
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(entry.path);
+        return next;
+      });
+      await load();
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo eliminar.");
+    } finally {
+      setEliminando(null);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Mismo patrón que "Cargar en ARCA": el botón, y al lado el ⓘ con la explicación. */}
@@ -143,7 +268,7 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
                 Cuando vuelven firmados quedan en <strong>Requested signatures</strong> y pasan a verse en la pestaña <strong>Firmados</strong>.
               </li>
             </ol>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400">El envío y la firma se hacen en Dropbox Sign, no en la aplicación: por eso acá no hay ninguna acción sobre los archivos.</p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">El envío y la firma se hacen en Dropbox Sign, no en la aplicación. Desde acá sí podés descargar, renombrar o eliminar los archivos de Outbox antes de importarlos.</p>
           </div>
         </Modal>
       )}
@@ -160,6 +285,23 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
           <FontAwesomeIcon icon={loading ? faSpinner : faRotateRight} spin={loading} className="h-4 w-4" />
         </button>
       </div>
+
+      {/* Barra de selección masiva — igual que en "Dropbox | Documentos" */}
+      {permiteAcciones && selected.size > 0 && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5">
+          <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+            {selected.size} archivo{selected.size === 1 ? "" : "s"} seleccionado{selected.size === 1 ? "" : "s"}
+          </span>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setSelected(new Set())} className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 whitespace-nowrap">
+              Deseleccionar
+            </button>
+            <button onClick={handleBulkDownload} disabled={descargandoZip} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-60">
+              <FontAwesomeIcon icon={descargandoZip ? faSpinner : faFileZipper} spin={descargandoZip} /> Descargar {selected.size} (ZIP)
+            </button>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -192,6 +334,20 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
             <table className="w-full text-left border-collapse">
               <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
                 <tr className="border-b border-gray-100 dark:border-gray-800">
+                  {permiteAcciones && (
+                    <th className="px-4 py-3 w-10">
+                      <input
+                        type="checkbox"
+                        className="cursor-pointer accent-blue-600"
+                        checked={allSelected}
+                        ref={(el) => {
+                          if (el) el.indeterminate = !allSelected && filtradas.some((e) => selected.has(e.path));
+                        }}
+                        onChange={toggleSelectAll}
+                        title="Seleccionar todos los archivos"
+                      />
+                    </th>
+                  )}
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Contrato</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Tamaño</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Modificado</th>
@@ -200,7 +356,12 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {filtradas.map((e) => (
-                  <tr key={e.path} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
+                  <tr key={e.path} className={`hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(e.path) ? "bg-blue-50/60 dark:bg-blue-900/10" : ""}`}>
+                    {permiteAcciones && (
+                      <td className="px-4 py-3">
+                        <input type="checkbox" className="cursor-pointer accent-blue-600" checked={selected.has(e.path)} onChange={() => toggleSelected(e.path)} />
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       <span className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
                         <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
@@ -212,15 +373,22 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
                     <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtTamanio(e.size)}</td>
                     <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtFecha(e.serverModified)}</td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center justify-end">
-                        {/* En "Pendiente" la firma se completa en Dropbox Sign, así que acá no se ofrece
-                            ninguna acción sobre el archivo: la única salida es el botón de arriba. */}
-                        {tipo === "firmados" ? (
-                          <button type="button" onClick={() => descargar(e)} disabled={descargando === e.path} title="Abrir el contrato firmado" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-50">
-                            <FontAwesomeIcon icon={descargando === e.path ? faSpinner : faDownload} spin={descargando === e.path} className="h-4 w-4" />
-                          </button>
+                      <div className="flex items-center justify-end gap-1">
+                        {/* "Enviado a la firma" queda de solo lectura: la solicitud ya está en curso en Dropbox Sign. */}
+                        {permiteAcciones ? (
+                          <>
+                            <button type="button" onClick={() => descargar(e)} disabled={descargando === e.path} title="Descargar" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-50">
+                              <FontAwesomeIcon icon={descargando === e.path ? faSpinner : faDownload} spin={descargando === e.path} className="h-4 w-4" />
+                            </button>
+                            <button type="button" onClick={() => handleRename(e)} title="Renombrar" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors">
+                              <FontAwesomeIcon icon={faPen} className="h-4 w-4" />
+                            </button>
+                            <button type="button" onClick={() => handleDelete(e)} disabled={eliminando === e.path} title="Eliminar" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50">
+                              <FontAwesomeIcon icon={eliminando === e.path ? faSpinner : faTrash} spin={eliminando === e.path} className="h-4 w-4" />
+                            </button>
+                          </>
                         ) : (
-                          <span className="text-[11px] text-gray-400 italic">{tipo === "para_firmar" ? "Se importa desde Dropbox Sign" : "Esperando la firma"}</span>
+                          <span className="text-[11px] text-gray-400 italic">Esperando la firma</span>
                         )}
                       </div>
                     </td>

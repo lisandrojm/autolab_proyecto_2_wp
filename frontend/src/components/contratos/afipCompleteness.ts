@@ -64,7 +64,8 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
     tipoServicio: tipo?.data?.afipTipoServicio || "",
     actividad: tipo?.data?.afipActividad || "",
     modalidadLiq: tipo?.data?.afipModalidadLiquidacion || "",
-    rnos: (obraSocial as { codigoRnos?: string } | undefined)?.codigoRnos ? String((obraSocial as { codigoRnos?: string }).codigoRnos) : "",
+    // El "ID Externo" de la Obra Social siempre fue el código RNOS (ver ObrasSocialesPage.tsx).
+    rnos: soloDigitos(obraSocial?.externalId),
     sucursal: sede?.data?.codigoSucursal ? String(sede.data.codigoSucursal) : "",
   };
 }

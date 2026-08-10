@@ -27,7 +27,7 @@ import { sweetAlert } from "../utils/sweetAlert";
 
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { ContractBulkAfipTab, ContractBulkFirmaTab } from "../components/contratos/ContractBulkTabs";
-import { ContractDropboxTab } from "../components/contratos/ContractDropboxTabs";
+import { ContractDropboxTab, fetchDropboxCounts } from "../components/contratos/ContractDropboxTabs";
 
 /** Mismas opciones que usa el filtro "Rol/es" del tab Equipo de Gestionar Equipo. */
 const MOBILE_ROLE_OPTIONS = [
@@ -36,6 +36,36 @@ const MOBILE_ROLE_OPTIONS = [
 ];
 
 const PAGE_SIZE = 25;
+
+/** Explicación puntual de cada pestaña de "Gestión de Contratos": si vive en la base o en una
+ *  carpeta de Dropbox, y si interviene Dropbox Sign. Se muestra con el ⓘ propio de cada pestaña
+ *  (aparte del info general que explica el conjunto). */
+const SUB_TAB_INFO: Record<"alta_afip" | "constancia_cuit" | "firma" | "para_firmar" | "enviado_firma" | "firmados", { title: string; text: string }> = {
+  alta_afip: {
+    title: "Alta temprana de AFIP",
+    text: "Vive en la base de datos de la aplicación, no en Dropbox. Son los contratos registrados que todavía necesitan un Alta Temprana en AFIP/ARCA. No interviene Dropbox Sign.",
+  },
+  constancia_cuit: {
+    title: "Constancia de CUIT",
+    text: "Vive en la base de datos, no en Dropbox. Son los contratos a los que hay que verificarles si el CUIT está activo en ARCA. No interviene Dropbox Sign.",
+  },
+  firma: {
+    title: "Firma digital",
+    text: "Vive en la base de datos: lista contratos ya dados de alta en AFIP. Acá se generan los PDF de Contrato y Release, que se guardan en la carpeta Outbox de Dropbox. Todavía no interviene Dropbox Sign en esta pestaña.",
+  },
+  para_firmar: {
+    title: "Para Firmar",
+    text: "No sale de la base de datos: muestra el contenido de la carpeta Outbox de Dropbox. Son los PDF ya generados, listos para importar a Dropbox Sign y enviarlos a firmar desde ahí. Todavía no se envió nada.",
+  },
+  enviado_firma: {
+    title: "Enviado a la firma",
+    text: "No sale de la base de datos: muestra la carpeta Pendbox de Dropbox. La solicitud ya se envió desde Dropbox Sign y se espera la firma del destinatario (se detecta por el mail de aviso de Dropbox Sign).",
+  },
+  firmados: {
+    title: "Firmados",
+    text: "No sale de la base de datos: muestra la carpeta \"Requested signatures\" de Dropbox. Son los contratos que Dropbox Sign ya devolvió firmados, listos para descargar.",
+  },
+};
 
 /** Clases de un botón de pestaña (mismo estilo que el resto de los tabs de la app). */
 const tabBtnClass = (active: boolean): string =>
@@ -113,16 +143,34 @@ export const ContractsPage: React.FC = () => {
   const [mainTab, setMainTab] = useState<"contracts" | "management">(initialTab);
   // Sub-pestañas de "Gestión de Contratos".
   const [mgmtTab, setMgmtTab] = useState<"alta_afip" | "constancia_cuit" | "firma" | "para_firmar" | "enviado_firma" | "firmados">("alta_afip");
-  // Cantidades de las pestañas que leen de Dropbox. `null` = todavía no se abrió esa pestaña, así que
-  // no se muestra número (leerlas implica pegarle a Dropbox y no vale hacerlo al abrir la página).
+  // Cantidades de las pestañas que leen de Dropbox. `null` = todavía no se leyeron.
   const [paraFirmarCount, setParaFirmarCount] = useState<number | null>(null);
   const [pendienteFirmaCount, setPendienteFirmaCount] = useState<number | null>(null);
   const [firmadosCount, setFirmadosCount] = useState<number | null>(null);
   const dropboxCounts = { para_firmar: paraFirmarCount, enviado_firma: pendienteFirmaCount, firmados: firmadosCount };
+  // Al entrar a "Gestión de Contratos" se leen las 3 carpetas de Dropbox una sola vez, para que el
+  // número aparezca en las 3 pestañas aunque el usuario no las haya abierto todavía (igual que las
+  // pestañas de AFIP/CUIT/Firma). Al abrir cada pestaña, ContractDropboxTab vuelve a leer su carpeta
+  // y actualiza el número con datos frescos.
+  const dropboxCountsFetchedRef = useRef(false);
+  useEffect(() => {
+    if (mainTab !== "management" || dropboxCountsFetchedRef.current) return;
+    dropboxCountsFetchedRef.current = true;
+    fetchDropboxCounts()
+      .then((c) => {
+        setParaFirmarCount(c.para_firmar);
+        setPendienteFirmaCount(c.enviado_firma);
+        setFirmadosCount(c.firmados);
+      })
+      .catch(() => {});
+  }, [mainTab]);
   // Cantidad de contratos de cada trámite, informada por ContractBulkAfipTab para mostrarla en las pestañas.
   const [mgmtCounts, setMgmtCounts] = useState<{ alta: number; cuit: number; firma: number }>({ alta: 0, cuit: 0, firma: 0 });
-  // Explicación de qué es cada pestaña de "Gestión de Contratos" (modal informativo).
+  // Explicación de qué es cada pestaña de "Gestión de Contratos" (modal informativo general).
   const [mgmtTabsInfoOpen, setMgmtTabsInfoOpen] = useState(false);
+  // Explicación puntual de UNA pestaña de "Gestión de Contratos" (si vive en Dropbox, si interviene
+  // Dropbox Sign, etc.), aparte del info general de arriba.
+  const [subTabInfoOpen, setSubTabInfoOpen] = useState<typeof mgmtTab | null>(null);
 
   const estadoContratoOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -314,9 +362,13 @@ export const ContractsPage: React.FC = () => {
       searchAndFilters={
         <div className="space-y-4">
           {/* Pestañas principales de la página */}
-          <div className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+          <div className="flex items-center border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
             <button className={tabBtnClass(mainTab === "management")} onClick={() => setMainTab("management")}>
               Gestión de Contratos
+            </button>
+            {/* Info general: qué es cada una de las pestañas de "Gestión de Contratos" (AFIP, Firma digital y Dropbox Sign). */}
+            <button type="button" onClick={() => setMgmtTabsInfoOpen(true)} title="Qué es cada pestaña de Gestión de Contratos" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0 -ml-2 mr-2">
+              <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
             </button>
             <button className={tabBtnClass(mainTab === "contracts")} onClick={() => setMainTab("contracts")}>
               Contratos
@@ -413,32 +465,57 @@ export const ContractsPage: React.FC = () => {
           </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between gap-2 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex overflow-x-auto">
+            <div className="flex overflow-x-auto border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-1 shrink-0">
                 <button className={tabBtnClass(mgmtTab === "alta_afip")} onClick={() => setMgmtTab("alta_afip")}>
                   Alta temprana de AFIP ({mgmtCounts.alta})
                 </button>
+                <button type="button" onClick={() => setSubTabInfoOpen("alta_afip")} title={SUB_TAB_INFO.alta_afip.title} className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0 -ml-3 mb-2">
+                  <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                </button>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
                 <button className={tabBtnClass(mgmtTab === "constancia_cuit")} onClick={() => setMgmtTab("constancia_cuit")}>
                   Constancia de CUIT ({mgmtCounts.cuit})
                 </button>
+                <button type="button" onClick={() => setSubTabInfoOpen("constancia_cuit")} title={SUB_TAB_INFO.constancia_cuit.title} className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0 -ml-3 mb-2">
+                  <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                </button>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
                 <button className={tabBtnClass(mgmtTab === "firma")} onClick={() => setMgmtTab("firma")}>
                   Firma digital ({mgmtCounts.firma})
                 </button>
-                {/* Estas tres no salen de la base: son las carpetas de Dropbox Sign, en el orden del
-                    circuito de firma (generado → enviado → firmado). */}
+                <button type="button" onClick={() => setSubTabInfoOpen("firma")} title={SUB_TAB_INFO.firma.title} className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0 -ml-3 mb-2">
+                  <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                </button>
+              </div>
+              {/* Estas tres no salen de la base: son las carpetas de Dropbox Sign, en el orden del
+                  circuito de firma (generado → enviado → firmado). */}
+              <div className="flex items-center gap-1 shrink-0">
                 <button className={tabBtnClass(mgmtTab === "para_firmar")} onClick={() => setMgmtTab("para_firmar")}>
                   Para Firmar{dropboxCounts.para_firmar !== null ? ` (${dropboxCounts.para_firmar})` : ""}
                 </button>
+                <button type="button" onClick={() => setSubTabInfoOpen("para_firmar")} title={SUB_TAB_INFO.para_firmar.title} className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0 -ml-3 mb-2">
+                  <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                </button>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
                 <button className={tabBtnClass(mgmtTab === "enviado_firma")} onClick={() => setMgmtTab("enviado_firma")}>
                   Enviado a la firma{dropboxCounts.enviado_firma !== null ? ` (${dropboxCounts.enviado_firma})` : ""}
                 </button>
+                <button type="button" onClick={() => setSubTabInfoOpen("enviado_firma")} title={SUB_TAB_INFO.enviado_firma.title} className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0 -ml-3 mb-2">
+                  <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                </button>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
                 <button className={tabBtnClass(mgmtTab === "firmados")} onClick={() => setMgmtTab("firmados")}>
                   Firmados{dropboxCounts.firmados !== null ? ` (${dropboxCounts.firmados})` : ""}
                 </button>
+                <button type="button" onClick={() => setSubTabInfoOpen("firmados")} title={SUB_TAB_INFO.firmados.title} className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0 -ml-3 mb-2">
+                  <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                </button>
               </div>
-              <button type="button" onClick={() => setMgmtTabsInfoOpen(true)} title="Qué es cada pestaña" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0 mb-2">
-                <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
-              </button>
             </div>
           )}
         </div>
@@ -759,10 +836,15 @@ export const ContractsPage: React.FC = () => {
       {mgmtTabsInfoOpen && (
         <Modal isOpen={mgmtTabsInfoOpen} onClose={() => setMgmtTabsInfoOpen(false)} title="Qué es cada pestaña" size="md" zIndex={80}>
           <div className="space-y-4">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Estas 6 pestañas son las etapas de un mismo circuito: primero el contrato se da de alta en <strong>AFIP/ARCA</strong>, después se genera su documento en <strong>Firma digital</strong> y, por último, se
+              firma digitalmente en <strong>Dropbox Sign</strong> (las últimas tres pestañas). Las tres primeras leen la base de datos de la aplicación; las tres últimas leen directamente las carpetas de Dropbox
+              donde trabaja Dropbox Sign.
+            </p>
             <div>
               <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Alta temprana de AFIP · Constancia de CUIT</p>
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                Son los contratos que ya se registraron en la aplicación pero todavía no se hizo nada en ARCA.
+                Son los contratos que ya se registraron en la aplicación pero todavía no se hizo nada en ARCA. No interviene Dropbox ni Dropbox Sign en esta etapa.
               </p>
               <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1.5 list-disc list-inside mt-2">
                 <li>
@@ -777,12 +859,13 @@ export const ContractsPage: React.FC = () => {
               <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Firma digital</p>
               <p className="text-sm text-gray-600 dark:text-gray-300">
                 Contratos cuyo documento ya llegó a <span className="font-mono text-xs">AFIP/Alta temprana de Afip</span> o <span className="font-mono text-xs">AFIP/Constancia de cuit</span>. Acá se generan
-                los PDF de Contrato y Release, que quedan en la carpeta <span className="font-mono text-xs">Outbox</span>.
+                los PDF de Contrato y Release, que quedan en la carpeta <span className="font-mono text-xs">Outbox</span> de Dropbox: es el paso previo a importarlos en Dropbox Sign, pero todavía no se
+                envía nada a firmar desde esta pestaña.
               </p>
             </div>
             <div>
               <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Para Firmar · Enviado a la firma · Firmados</p>
-              <p className="text-sm text-gray-600 dark:text-gray-300">Estas tres no salen de la aplicación: son lo que hay en las carpetas de Dropbox Sign, en el orden del circuito de firma.</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Estas tres no salen de la aplicación: son lo que hay en las carpetas de Dropbox de Dropbox Sign, en el orden del circuito de firma.</p>
               <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1.5 list-disc list-inside mt-2">
                 <li>
                   <strong>Para Firmar</strong>: carpeta <span className="font-mono text-xs">Outbox</span>. Contratos ya generados, listos para importar en Dropbox Sign y enviarlos a firmar desde ahí. Todavía no se envió nada.
@@ -798,6 +881,12 @@ export const ContractsPage: React.FC = () => {
               </ul>
             </div>
           </div>
+        </Modal>
+      )}
+
+      {subTabInfoOpen && (
+        <Modal isOpen={!!subTabInfoOpen} onClose={() => setSubTabInfoOpen(null)} title={SUB_TAB_INFO[subTabInfoOpen].title} size="sm" zIndex={80}>
+          <p className="text-sm text-gray-600 dark:text-gray-300">{SUB_TAB_INFO[subTabInfoOpen].text}</p>
         </Modal>
       )}
     </PageLayout>
