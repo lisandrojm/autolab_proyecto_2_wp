@@ -978,10 +978,27 @@ router.post("/", requireTenant, authenticateToken, requirePermission("admin_user
 
 // GET /users/directory - Listar usuarios del tenant para selectores (Sin permiso de admin)
 // Query params: ?status=active|inactive|all (default: active)
+// Caché corta en memoria de /users/directory por tenant+status: el populate anidado de
+// metadata.projects (contratos de ~1500+ usuarios) mide 30+ segundos incluso ya acotado a los
+// campos usados — la latencia real está en el roundtrip a Mongo, no en el volumen que viaja. Este
+// directorio es de solo lectura y no cambia todo el tiempo, así que amortizar con un TTL corto es
+// más efectivo que seguir exprimiendo la query. Si el proceso corre en varias instancias (PM2
+// cluster), cada una cachea por su cuenta: la inconsistencia entre instancias con un TTL de este
+// tamaño es aceptable acá (roster de un reporte, no un dato transaccional).
+const DIRECTORY_CACHE_TTL_MS = 90_000;
+const directoryCache = new Map<string, { at: number; data: unknown }>();
+
 router.get("/directory", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const filter: any = { tenantId: req.tenantObjectId };
     const status = req.query.status as string | undefined;
+    const cacheKey = `${req.tenantObjectId}:${status || "active"}`;
+    const cached = directoryCache.get(cacheKey);
+    if (cached && Date.now() - cached.at < DIRECTORY_CACHE_TTL_MS) {
+      res.json(cached.data);
+      return;
+    }
+
+    const filter: any = { tenantId: req.tenantObjectId };
 
     if (status === "inactive") {
       filter["metadata.activo"] = { $ne: true };
@@ -992,22 +1009,32 @@ router.get("/directory", requireTenant, authenticateToken, async (req: Authentic
       filter["metadata.activo"] = true;
     }
 
+    // Ningún consumidor de este directory (RequestsPage.tsx, mobile ActivityLogs.tsx) lee
+    // positionId/levelId/areaId POBLADOS de metadata.projects (solo el areaId crudo, como id) —
+    // ese sub-populate triple, multiplicado por cada proyecto de cada uno de los ~1500+ usuarios
+    // del tenant, era puro costo sin uso. `/users` (el endpoint completo) sigue poblándolos para
+    // quien sí los necesite.
+    //
+    // `contracts` también se acota a los campos que realmente se leen (vigencia + área/turno): hay
+    // UserProject con hasta ~95 contratos históricos, cada uno con decenas de campos (sueldos, URLs
+    // de PDFs, el JSON crudo de la consulta a AFIP, etc.) que nadie mira desde este directory — solo
+    // infla el payload y fue lo que estaba causando timeouts. El historial completo sigue disponible
+    // desde `/users` o `/users/:id` para quien sí lo necesite.
     const users = await User.find(filter)
       .select("firstName lastName email projectIds metadata")
       .populate("projectIds", "name")
       .populate({
         path: "metadata.projects",
         model: UserProject,
-        select: "projectId positionId levelId areaId nombre_proyecto nombre_rol_frame contracts", 
-        populate: [
-          { path: "positionId", select: "name", model: Position },
-          { path: "levelId", select: "name", model: Level },
-          { path: "areaId", select: "name", model: Area },
-        ],
+        select:
+          "projectId positionId levelId areaId nombre_proyecto nombre_rol_frame " +
+          "contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga " +
+          "contracts.hora_inicio contracts.hora_fin contracts.areaId contracts.shiftId contracts.areaShiftAssignments",
       })
       .sort({ firstName: 1, lastName: 1 })
       .lean();
 
+    directoryCache.set(cacheKey, { at: Date.now(), data: users });
     res.json(users);
   } catch (error) {
     console.error("Get user directory error:", error);
