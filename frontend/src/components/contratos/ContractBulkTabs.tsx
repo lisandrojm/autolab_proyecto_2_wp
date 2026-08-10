@@ -21,7 +21,7 @@ import { Modal } from '../ui/Modal';
 import { ContractDocsColumns, ContractDocsHeaders, ContractActionsButtons, ContractActionsCell, ContractActionsHeader, downloadContractRow, downloadReleaseRow, uploadAltaRow } from './ContractRowDocs';
 import { resolveAfip, AfipRowResult } from './afipCompleteness';
 import { buildAltaRecord, buildAltaTxt, downloadTxt } from './afipTxt';
-import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, fmtCuit } from './ConstanciaBulk';
+import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, cuitEsValido, fmtCuit } from './ConstanciaBulk';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { cachedFetch, invalidateRefCache, updateRefCache } from '../../utils/refCache';
 
@@ -452,7 +452,7 @@ export const ContractBulkAfipTab: React.FC<{
   // Qué hace falta para poder tildar una fila depende del trámite: en Alta temprana de AFIP son los
   // datos completos para el TXT; en Constancia de CUIT alcanza con tener el CUIT/CUIL cargado (es lo
   // único que necesita "Validar ARCA Masivo").
-  const esSeleccionable = useCallback((row: ImpositivoRow, result: AfipRowResult): boolean => (filterTipo === 'constancia_cuit' ? !!fmtCuit(row.cuit) : result.completo), [filterTipo]);
+  const esSeleccionable = useCallback((row: ImpositivoRow, result: AfipRowResult): boolean => (filterTipo === 'constancia_cuit' ? cuitEsValido(row.cuit) : result.completo), [filterTipo]);
   const selectableFiltered = useMemo(() => filtered.filter((x) => esSeleccionable(x.row, x.result)), [filtered, esSeleccionable]);
   const allSel = selectableFiltered.length > 0 && selectableFiltered.every((x) => selected.has(rowKey(x.row)));
   const toggleAll = () =>
@@ -615,7 +615,7 @@ export const ContractBulkAfipTab: React.FC<{
       ) : effectiveViewMode === 'cards' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map(({ row: r, result }) => {
-            const cuil = fmtCuit(r.cuit);
+            const cuil = cuitEsValido(r.cuit) ? fmtCuit(r.cuit) : '';
             return (
               <div key={`${r._id}-${r.contractIndex}`} className={`bg-white dark:bg-gray-800 rounded-xl border p-4 flex flex-col gap-3 ${selected.has(rowKey(r)) ? 'border-emerald-400 dark:border-emerald-700' : 'border-gray-200 dark:border-gray-700'}`}>
                 <div className="flex items-start justify-between gap-2">
@@ -794,7 +794,7 @@ export const ContractBulkAfipTab: React.FC<{
                       <>
                         <td className="px-4 py-3">
                           {(() => {
-                            const cuil = fmtCuit(r.cuit);
+                            const cuil = cuitEsValido(r.cuit) ? fmtCuit(r.cuit) : '';
                             return (
                               <button onClick={() => setConstancia({ row: r, cuil })} title="Ver los datos necesarios para buscar la Constancia de CUIT/CUIL en ARCA" className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap transition-colors ${cuil ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100'}`}>
                                 <FontAwesomeIcon icon={cuil ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
@@ -808,7 +808,7 @@ export const ContractBulkAfipTab: React.FC<{
                           <ArcaBadge row={r} />
                         </td>
                         <td className="px-4 py-3">
-                          <DropboxBadge row={r} />
+                          <DropboxBadge row={r} onEliminado={() => load(true)} />
                         </td>
                       </>
                     )}
@@ -914,24 +914,50 @@ export const ContractBulkAfipTab: React.FC<{
             </div>
           }
         >
-          <div className="space-y-3">
-            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold ${constancia.cuil ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'}`}>
-              <FontAwesomeIcon icon={constancia.cuil ? faCheck : faTriangleExclamation} />
-              {constancia.cuil ? 'Listo para buscar la constancia en ARCA.' : 'Falta 1 dato para buscar la constancia.'}
-            </div>
-            <ul className="divide-y divide-gray-100 dark:divide-gray-700/60 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <li className="flex items-center justify-between gap-3 px-3 py-2">
-                <span className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 min-w-0">
-                  <FontAwesomeIcon icon={constancia.cuil ? faCheck : faXmark} className={`h-3.5 w-3.5 shrink-0 ${constancia.cuil ? 'text-green-500' : 'text-red-500'}`} />
-                  <span className="truncate">CUIT / CUIL</span>
-                </span>
-                {constancia.cuil ? <span className="text-sm font-mono text-gray-600 dark:text-gray-300 shrink-0">{constancia.cuil}</span> : <span className="text-[11px] font-semibold text-red-600 dark:text-red-400 shrink-0">Falta</span>}
-              </li>
-            </ul>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400">
-              Para obtener la <strong>Constancia de Inscripción / CUIT</strong> en ARCA se ingresa el <strong>CUIT/CUIL</strong> de la persona (es el único dato requerido). Si falta, cargalo en los datos personales del usuario.
-            </p>
-          </div>
+          {(() => {
+            // Tres estados distintos, no dos: puede faltar, puede estar cargado pero no ser un CUIT
+            // real (ej. 00000000000), o estar bien. El del medio antes se mostraba como "Listo".
+            const cargado = fmtCuit(constancia.row.cuit);
+            const valido = cuitEsValido(constancia.row.cuit);
+            const cfg = valido
+              ? { clase: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400', icono: faCheck, texto: 'Listo para buscar la constancia en ARCA.' }
+              : cargado
+                ? { clase: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400', icono: faTriangleExclamation, texto: 'El CUIT/CUIL cargado no es válido: hay que corregirlo.' }
+                : { clase: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400', icono: faTriangleExclamation, texto: 'Falta 1 dato para buscar la constancia.' };
+            return (
+              <div className="space-y-3">
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold ${cfg.clase}`}>
+                  <FontAwesomeIcon icon={cfg.icono} />
+                  {cfg.texto}
+                </div>
+                <ul className="divide-y divide-gray-100 dark:divide-gray-700/60 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  <li className="flex items-center justify-between gap-3 px-3 py-2">
+                    <span className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 min-w-0">
+                      <FontAwesomeIcon icon={valido ? faCheck : faXmark} className={`h-3.5 w-3.5 shrink-0 ${valido ? 'text-green-500' : 'text-red-500'}`} />
+                      <span className="truncate">CUIT / CUIL</span>
+                    </span>
+                    {cargado ? (
+                      <span className={`text-sm font-mono shrink-0 ${valido ? 'text-gray-600 dark:text-gray-300' : 'text-red-600 dark:text-red-400 line-through'}`}>{cargado}</span>
+                    ) : (
+                      <span className="text-[11px] font-semibold text-red-600 dark:text-red-400 shrink-0">Falta</span>
+                    )}
+                  </li>
+                </ul>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                  {valido || !cargado ? (
+                    <>
+                      Para obtener la <strong>Constancia de Inscripción / CUIT</strong> en ARCA se ingresa el <strong>CUIT/CUIL</strong> de la persona (es el único dato requerido). Si falta, cargalo en los
+                      datos personales del usuario.
+                    </>
+                  ) : (
+                    <>
+                      Ese número tiene 11 dígitos pero no es un CUIT/CUIL real: no pasa el dígito verificador. Consultarlo en ARCA solo devuelve error. Corregilo en los datos personales de la persona.
+                    </>
+                  )}
+                </p>
+              </div>
+            );
+          })()}
         </Modal>
       )}
 

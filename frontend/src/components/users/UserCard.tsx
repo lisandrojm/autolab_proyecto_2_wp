@@ -1,6 +1,7 @@
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUsers, faUserShield, faLayerGroup, faUserTie, faUserGraduate, faClock, faBuilding, faIdCard, faBriefcase, faFileContract, faUmbrellaBeach, faChevronDown, faChevronUp, faLock, faInfoCircle, faBell, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUsers, faUserShield, faLayerGroup, faUserTie, faUserGraduate, faClock, faBuilding, faIdCard, faBriefcase, faFileContract, faUmbrellaBeach, faChevronDown, faChevronUp, faLock, faInfoCircle, faBell, faTriangleExclamation, faFileInvoice } from "@fortawesome/free-solid-svg-icons";
+import { formatCuit } from "../../utils/cuit";
 import { User } from "../../api/users";
 import { Project } from "../../api/projects";
 import { Client } from "../../api/clients";
@@ -302,7 +303,7 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
       }}
       footer={actions ? { actions } : undefined}
     >
-      {/* DNI y Antigüedad */}
+      {/* DNI, CUIT y Antigüedad */}
       <div className="grid grid-cols-2 gap-3 mb-3">
         {user.metadata?.documento && (
           <div>
@@ -314,6 +315,17 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
               {user.metadata.documento}
             </div>
 
+          </div>
+        )}
+        {user.metadata?.cuit && (
+          <div>
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
+              <FontAwesomeIcon icon={faFileInvoice} className="text-gray-300" />
+              CUIT
+            </label>
+            <div className="text-gray-900 dark:text-gray-100 text-sm font-semibold cursor-text select-all" title="Haz clic para copiar">
+              {formatCuit(user.metadata.cuit)}
+            </div>
           </div>
         )}
         {(() => {

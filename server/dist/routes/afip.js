@@ -10,10 +10,10 @@ import { AfipLog } from "../models/AfipLog.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { encryptSecret } from "../utils/secretCrypto.js";
-import { normalizarCuit } from "../utils/constanciaPdf.js";
+import { normalizarCuit, cuitEsValido } from "../utils/constanciaPdf.js";
 import { buildDocFileName } from "../utils/employeeDocData.js";
 import { getTenantAfipConfig, verificarCredenciales, verificarServicioPadron, consultarPadron, clearTenantTicket, getCertificadoInfo } from "../services/afipService.js";
-import { getTenantDropboxConfig, uploadFile, getTemporaryLink } from "../services/dropboxService.js";
+import { getTenantDropboxConfig, uploadFile, getTemporaryLink, deleteEntry } from "../services/dropboxService.js";
 const router = Router();
 router.use(requireTenant, authenticateToken);
 const isAdmin = (req) => (req.user?.roles || []).some((r) => ["admin", "superadmin"].includes(r.toLowerCase()));
@@ -294,7 +294,10 @@ router.post("/consulta-padron/bulk", async (req, res) => {
             if (!user || !projectIdsValidos.has(t.projectId))
                 continue;
             const cuit = normalizarCuit(user?.metadata?.cuit);
-            if (!cuit) {
+            // Un CUIT que no pasa el dígito verificador (típico: 00000000000) no se consulta: AFIP solo
+            // devuelve error y queda registrado como un fallo del webservice que en realidad es un dato mal
+            // cargado. Cuenta como "sin CUIT" para que la UI lo muestre como pendiente de corregir.
+            if (!cuit || !cuitEsValido(cuit)) {
                 sinCuit.push(t);
                 continue;
             }
@@ -413,6 +416,61 @@ router.post("/consulta-padron/bulk", async (req, res) => {
         // había fallado AFIP, Mongo o Dropbox.
         console.error("AFIP consulta padrón bulk error:", error);
         res.status(500).json({ error: `No se pudo completar la consulta al Padrón: ${error?.message || "error interno"}` });
+    }
+});
+/**
+ * POST /afip/constancia-archivada/eliminar - borra de Dropbox el JSON de la validación y limpia la
+ * marca en el contrato.
+ *
+ * Para qué: ese archivo es justamente lo que el escaneo automático vigila para avanzar el contrato
+ * de bandeja. Si se validó por error (o hay que rehacerlo), borrarlo desde acá evita que en la
+ * próxima sincronización el contrato se mueva solo.
+ */
+router.post("/constancia-archivada/eliminar", async (req, res) => {
+    try {
+        const parsed = padronTargetSchema.safeParse(req.body || {});
+        if (!parsed.success) {
+            res.status(400).json({ error: "Faltan datos del contrato." });
+            return;
+        }
+        const { projectId, userId, contractIndex } = parsed.data;
+        const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("_id").lean();
+        if (!project) {
+            res.status(404).json({ error: "Proyecto no encontrado" });
+            return;
+        }
+        const up = await UserProject.findOne({ projectId, userId });
+        if (!up || contractIndex < 0 || contractIndex >= up.contracts.length) {
+            res.status(404).json({ error: "Contrato no encontrado" });
+            return;
+        }
+        const contrato = up.contracts[contractIndex];
+        const path = contrato?.constanciaAfipDropboxPath;
+        // Borrar en Dropbox es best-effort: si el archivo ya no está (o Dropbox falla), igual se limpia
+        // la marca — si no, el contrato quedaría marcado como archivado para siempre y sin forma de
+        // corregirlo desde la aplicación.
+        let avisoDropbox = "";
+        if (path) {
+            try {
+                const tenant = await Tenant.findById(req.tenantObjectId).lean();
+                const dropboxCfg = getTenantDropboxConfig(tenant);
+                if (dropboxCfg)
+                    await deleteEntry(String(req.tenantObjectId), dropboxCfg, path);
+                else
+                    avisoDropbox = "Dropbox no está conectado: el archivo sigue en la carpeta.";
+            }
+            catch (e) {
+                avisoDropbox = `No se pudo borrar el archivo de Dropbox (${e?.message || "error"}), pero se quitó la marca.`;
+            }
+        }
+        up.contracts[contractIndex] = { ...contrato.toObject(), constanciaAfipDropboxSubidaAt: undefined, constanciaAfipDropboxPath: undefined };
+        up.markModified("contracts");
+        await up.save();
+        res.json({ ok: true, aviso: avisoDropbox });
+    }
+    catch (error) {
+        console.error("AFIP eliminar constancia archivada error:", error);
+        res.status(500).json({ error: `No se pudo eliminar el archivo: ${error?.message || "error interno"}` });
     }
 });
 export { router as afipRoutes };

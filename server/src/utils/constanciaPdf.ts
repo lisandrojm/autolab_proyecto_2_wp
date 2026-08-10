@@ -22,6 +22,26 @@ export const normalizarCuit = (raw?: string | null): string => {
   return d.length === 11 ? d : "";
 };
 
+/** Prefijos que usa AFIP: 20/23/24/25/26/27 personas físicas, 30/33/34 jurídicas. */
+const PREFIJOS_CUIT = ["20", "23", "24", "25", "26", "27", "30", "33", "34"];
+
+/**
+ * ¿El CUIT es realmente un CUIT? Tener 11 dígitos no alcanza: hay personas cargadas con
+ * `00000000000`, y consultarlas en el Padrón solo devuelve error y ensucia los logs de AFIP.
+ * Valida prefijo + dígito verificador (módulo 11) — el mismo criterio que el front (`cuitEsValido`).
+ */
+export const cuitEsValido = (raw?: string | null): boolean => {
+  const d = normalizarCuit(raw);
+  if (!d) return false;
+  if (!PREFIJOS_CUIT.includes(d.slice(0, 2))) return false;
+  if (/^(\d)\1{10}$/.test(d)) return false;
+  const pesos = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
+  const suma = pesos.reduce((acc, p, i) => acc + p * Number(d[i]), 0);
+  const resto = suma % 11;
+  const verificador = resto === 0 ? 0 : resto === 1 ? 9 : 11 - resto;
+  return verificador === Number(d[10]);
+};
+
 /** "02-08-2026" → "2026-08-02". Devuelve undefined si no matchea el formato. */
 const fechaArcaAIso = (s?: string): string | undefined => {
   const m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(String(s || "").trim());

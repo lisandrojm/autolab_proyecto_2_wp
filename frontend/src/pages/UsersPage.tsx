@@ -23,17 +23,49 @@ import { UserFormModal } from '../components/users/UserFormModal';
 import { Card } from '../components/ui/Card';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faLayerGroup, faHourglassHalf, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faUserPlus, faCopy, faCheck, faBan, faBell } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faLayerGroup, faHourglassHalf, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faUserPlus, faCopy, faCheck, faBan, faBell, faSort, faSortUp, faSortDown } from '@fortawesome/free-solid-svg-icons';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getImageUrl } from '../utils/imageHelpers';
 import { cachedFetch, invalidateRefCache } from '../utils/refCache';
+import { formatCuit } from '../utils/cuit';
 
 const HELP_KEY = 'users' as const;
 
 type ModalTab = 'general' | 'domicilio' | 'bancarios' | 'proyectos';
 
 type ModalMode = 'edit' | 'password';
+
+/** Columnas ordenables de la tabla. Cada valor lo entiende `GET /users?sort=`. */
+type SortableColumn = 'name' | 'roles' | 'cuit' | 'contratos' | 'estado';
+
+/** Encabezado clickeable, estilo datatable: 1er click asc, 2do desc, 3ro vuelve al orden por defecto. */
+const SortableTh: React.FC<{
+  columna: SortableColumn;
+  activa: SortableColumn | null;
+  direccion: 'asc' | 'desc';
+  onSort: (c: SortableColumn) => void;
+  className?: string;
+  children: React.ReactNode;
+}> = ({ columna, activa, direccion, onSort, className = '', children }) => {
+  const esActiva = activa === columna;
+  return (
+    <th className={`py-4 px-6 text-xs font-bold uppercase tracking-widest ${esActiva ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400'} ${className}`}>
+      <button
+        type="button"
+        onClick={() => onSort(columna)}
+        className="inline-flex items-center gap-1.5 uppercase tracking-widest hover:text-primary-600 dark:hover:text-primary-400 transition-colors focus:outline-none"
+        title={esActiva ? (direccion === 'asc' ? 'Orden ascendente — clic para invertir' : 'Orden descendente — clic para quitar el orden') : 'Ordenar por esta columna'}
+      >
+        <span>{children}</span>
+        <FontAwesomeIcon
+          icon={esActiva ? (direccion === 'asc' ? faSortUp : faSortDown) : faSort}
+          className={esActiva ? 'text-[11px]' : 'text-[11px] opacity-40'}
+        />
+      </button>
+    </th>
+  );
+};
 
 // Invalida el caché compartido (mapa de nombres + proyectos) tras mutar usuarios.
 const invalidateUsersPageCache = () => {
@@ -79,6 +111,22 @@ export const UsersPage: React.FC = () => {
   const [filterIsReplacement, setFilterIsReplacement] = useState(false);
   const [filterIsSolicitud, setFilterIsSolicitud] = useState(false);
   const [filterUserStatus, setFilterUserStatus] = useState<string>('');
+
+  // Orden de la tabla. Se resuelve en el server (la lista está paginada: ordenar en el cliente
+  // ordenaría solo las 25 filas visibles). `null` = orden por defecto (más nuevos primero).
+  const [sortBy, setSortBy] = useState<SortableColumn | null>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const toggleSort = (col: SortableColumn) => {
+    if (sortBy === col) {
+      // 3er click sobre la misma columna: vuelve al orden por defecto.
+      if (sortDir === 'desc') setSortBy(null);
+      else setSortDir('desc');
+    } else {
+      setSortBy(col);
+      setSortDir('asc');
+    }
+  };
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -290,7 +338,7 @@ export const UsersPage: React.FC = () => {
     }, 300);
     return () => clearTimeout(h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, startDate, endDate, clientId, allProjects.length, filterProjectId, filterRoleFrameId, filterRoleId, filterActiveContract, filterIsReplacement, filterIsSolicitud, filterUserStatus]);
+  }, [searchTerm, startDate, endDate, clientId, allProjects.length, filterProjectId, filterRoleFrameId, filterRoleId, filterActiveContract, filterIsReplacement, filterIsSolicitud, filterUserStatus, sortBy, sortDir]);
 
   // Refrescar cuando cambia la página
   useEffect(() => {
@@ -332,6 +380,10 @@ export const UsersPage: React.FC = () => {
         page: page,
         limit: limit,
       };
+      if (sortBy) {
+        params.sort = sortBy;
+        params.order = sortDir;
+      }
       if (searchTerm) params.email = searchTerm;
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
@@ -1677,10 +1729,11 @@ export const UsersPage: React.FC = () => {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-gray-50/50 dark:bg-gray-900/30 border-b border-gray-100 dark:border-gray-800">
-                      <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest">Usuario</th>
-                      <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest hidden md:table-cell">Roles</th>
-                      <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest hidden md:table-cell text-center">Contratos</th>
-                      <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest">Estado</th>
+                      <SortableTh columna="name" activa={sortBy} direccion={sortDir} onSort={toggleSort}>Usuario</SortableTh>
+                      <SortableTh columna="roles" activa={sortBy} direccion={sortDir} onSort={toggleSort} className="hidden md:table-cell">Roles</SortableTh>
+                      <SortableTh columna="cuit" activa={sortBy} direccion={sortDir} onSort={toggleSort} className="hidden lg:table-cell">CUIT</SortableTh>
+                      <SortableTh columna="contratos" activa={sortBy} direccion={sortDir} onSort={toggleSort} className="hidden md:table-cell text-center">Contratos</SortableTh>
+                      <SortableTh columna="estado" activa={sortBy} direccion={sortDir} onSort={toggleSort}>Estado</SortableTh>
                       <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Acciones</th>
                     </tr>
                   </thead>
@@ -1730,6 +1783,15 @@ export const UsersPage: React.FC = () => {
                             })}
                           </div>
                         </td>
+                        <td className="py-4 px-6 hidden lg:table-cell">
+                          {user.metadata?.cuit ? (
+                            <span className="text-xs font-mono text-gray-700 dark:text-gray-300 select-all" onClick={(e) => e.stopPropagation()}>
+                              {formatCuit(user.metadata.cuit)}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-400 dark:text-gray-600">—</span>
+                          )}
+                        </td>
                         <td className="py-4 px-6 hidden md:table-cell text-center">
                           <span className="text-xs text-gray-500">{(user.metadata?.projects || []).reduce((acc: number, p: any) => acc + (p.contracts?.length || 0), 0)}</span>
                         </td>
@@ -1744,16 +1806,28 @@ export const UsersPage: React.FC = () => {
                                   <FontAwesomeIcon icon={faLock} />
                                 </div>
                               ) : (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDelete(user);
-                                  }}
-                                  className="p-2 text-gray-400 hover:text-red-500"
-                                  title="Eliminar usuario"
-                                >
-                                  <FontAwesomeIcon icon={faTrash} />
-                                </button>
+                                <>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openEdit(user);
+                                    }}
+                                    className="p-2 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
+                                    title="Editar usuario"
+                                  >
+                                    <FontAwesomeIcon icon={faEdit} />
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDelete(user);
+                                    }}
+                                    className="p-2 text-gray-400 hover:text-red-500"
+                                    title="Eliminar usuario"
+                                  >
+                                    <FontAwesomeIcon icon={faTrash} />
+                                  </button>
+                                </>
                               ))}
                           </div>
                         </td>

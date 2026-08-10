@@ -398,12 +398,16 @@ class UsersAPI {
       reemplazo?: string; // "con" | "sin"
       lightweight?: boolean;
       slimProjects?: boolean;
+      /** Columna de orden: "name" | "email" | "cuit" | "documento" | "estado" | "contratos" | "roles". */
       sort?: string;
+      /** Dirección del orden. Por defecto "asc". */
+      order?: "asc" | "desc";
     } = {},
   ): Promise<UsersListResponse> {
     const searchParams = new URLSearchParams();
 
     if (params.sort) searchParams.append("sort", params.sort);
+    if (params.order) searchParams.append("order", params.order);
     if (params.page) searchParams.append("page", params.page.toString());
     if (params.limit) searchParams.append("limit", params.limit.toString());
     if (params.email) searchParams.append("email", params.email);

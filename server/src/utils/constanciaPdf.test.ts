@@ -12,7 +12,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { parseConstanciaTexto, normalizarCuit } from "./constanciaPdf.js";
+import { parseConstanciaTexto, normalizarCuit, cuitEsValido } from "./constanciaPdf.js";
 
 // Texto tal como sale de la extracción del PDF real (constancia de opción de un monotributista).
 const TEXTO_REAL = `2/8/26, 23:15 Formulario de Impresión de Constancia de Monotributo
@@ -75,5 +75,35 @@ describe("parseConstanciaTexto", () => {
     const r = parseConstanciaTexto("CONSTANCIA DE INSCRIPCIÓN\nCUIT: 20-12345678-3\nAPELLIDO NOMBRE");
     assert.equal(r.cuit, "20123456783");
     assert.equal(r.vigenciaHasta, undefined);
+  });
+});
+
+describe("cuitEsValido", () => {
+  // CUITs reales, tomados de consultas que AFIP resolvió OK en producción.
+  it("acepta CUIT/CUIL reales", () => {
+    assert.equal(cuitEsValido("23-27602575-9"), true);
+    assert.equal(cuitEsValido("27323863240"), true);
+    assert.equal(cuitEsValido("20-96265597-2"), true);
+  });
+
+  it("rechaza el relleno 00000000000 y otros repetidos", () => {
+    assert.equal(cuitEsValido("00000000000"), false);
+    assert.equal(cuitEsValido("11111111111"), false);
+    assert.equal(cuitEsValido("99999999999"), false);
+  });
+
+  it("rechaza prefijos que AFIP no usa", () => {
+    assert.equal(cuitEsValido("12345678901"), false);
+  });
+
+  it("rechaza un dígito verificador que no cierra", () => {
+    // Mismo CUIT válido de arriba con el último dígito cambiado.
+    assert.equal(cuitEsValido("23-27602575-8"), false);
+  });
+
+  it("rechaza vacío o incompleto", () => {
+    assert.equal(cuitEsValido(""), false);
+    assert.equal(cuitEsValido(null), false);
+    assert.equal(cuitEsValido("2327602575"), false);
   });
 });

@@ -131,4 +131,11 @@ export const afipAPI = {
     const { data } = await axios.get("/afip/constancia-link", { params: target });
     return data.url;
   },
+
+  /** Borra de Dropbox el JSON de la validación y limpia la marca, para que el escaneo automático no
+   *  avance el contrato de bandeja. */
+  async eliminarConstanciaArchivada(target: ConsultaPadronTarget): Promise<{ ok: boolean; aviso?: string }> {
+    const { data } = await axios.post("/afip/constancia-archivada/eliminar", target);
+    return data;
+  },
 };

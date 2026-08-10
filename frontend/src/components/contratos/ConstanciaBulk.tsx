@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUpRightFromSquare, faSpinner, faCheck, faTriangleExclamation, faLandmark, faBug } from "@fortawesome/free-solid-svg-icons";
+import { faArrowUpRightFromSquare, faSpinner, faCheck, faTriangleExclamation, faLandmark, faBug, faCircleInfo, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { ContractOverviewRow } from "../../api/users";
 import { afipAPI, ResultadoConsultaPadron } from "../../api/afip";
 import { sweetAlert } from "../../utils/sweetAlert";
@@ -14,10 +14,30 @@ import { Modal } from "../ui/Modal";
  */
 export const ARCA_CONSTANCIA_URL = "https://seti.afip.gob.ar/padron-puc-constancia-internet/ConsultaConstanciaAction.do";
 
-/** CUIT/CUIL formateado NN-NNNNNNNN-N (vacío si no tiene 11 dígitos). */
+/** CUIT/CUIL formateado NN-NNNNNNNN-N (vacío si no tiene 11 dígitos). Formatear NO valida: ver `cuitEsValido`. */
 export const fmtCuit = (raw?: string): string => {
   const d = String(raw || "").replace(/\D/g, "");
   return d.length === 11 ? `${d.slice(0, 2)}-${d.slice(2, 10)}-${d.slice(10)}` : "";
+};
+
+/** Prefijos que usa AFIP: 20/23/24/25/26/27 personas físicas, 30/33/34 jurídicas. */
+const PREFIJOS_CUIT = ["20", "23", "24", "25", "26", "27", "30", "33", "34"];
+
+/**
+ * ¿El CUIT es realmente un CUIT? Tener 11 dígitos no alcanza: había personas cargadas con
+ * `00000000000`, que pasaban como "completo" y se mandaban igual a consultar al Padrón, donde AFIP
+ * devolvía error. Se valida prefijo + dígito verificador (módulo 11), que además atrapa tipeos.
+ */
+export const cuitEsValido = (raw?: string): boolean => {
+  const d = String(raw || "").replace(/\D/g, "");
+  if (d.length !== 11) return false;
+  if (!PREFIJOS_CUIT.includes(d.slice(0, 2))) return false;
+  if (/^(\d)\1{10}$/.test(d)) return false; // 00000000000, 11111111111, etc.
+  const pesos = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
+  const suma = pesos.reduce((acc, p, i) => acc + p * Number(d[i]), 0);
+  const resto = suma % 11;
+  const verificador = resto === 0 ? 0 : resto === 1 ? 9 : 11 - resto;
+  return verificador === Number(d[10]);
 };
 
 /** "YYYY-MM-DD" → "DD/MM/YYYY". */
@@ -144,19 +164,83 @@ export const ArcaBadge: React.FC<{ row: ContractOverviewRow }> = ({ row }) => {
 
 /** Badge SOLO de si la constancia quedó archivada en Dropbox — independiente del estado en AFIP
  *  (ver `ArcaBadge`). Recién con esto el trámite se considera terminado. */
-export const DropboxBadge: React.FC<{ row: ContractOverviewRow }> = ({ row }) => {
+export const DropboxBadge: React.FC<{ row: ContractOverviewRow; onEliminado?: () => void }> = ({ row, onEliminado }) => {
   const guardado = !!row.constanciaAfipDropboxSubidaAt;
+  const [borrando, setBorrando] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
+
+  const eliminar = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const res = await sweetAlert.confirm(
+      "¿Eliminar el archivo de Dropbox?",
+      "Se borra el JSON de la validación y el contrato deja de estar listo para avanzar en la próxima sincronización. La consulta a AFIP no se pierde: se puede volver a validar.",
+      "Sí, eliminar",
+    );
+    if (!res.isConfirmed) return;
+    setBorrando(true);
+    try {
+      const r = await afipAPI.eliminarConstanciaArchivada({ projectId: row.projectId, userId: row.userId, contractIndex: row.contractIndex });
+      if (r.aviso) sweetAlert.warning("Se quitó la marca", r.aviso);
+      else sweetAlert.success("Eliminado", "El archivo se borró de Dropbox.");
+      onEliminado?.();
+    } catch (err: any) {
+      sweetAlert.error("Error", err?.response?.data?.error || "No se pudo eliminar el archivo.");
+    } finally {
+      setBorrando(false);
+    }
+  };
+
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap ${
-        guardado
-          ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800"
-          : "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800"
-      }`}
-      title={guardado ? `Archivado ${fmtFechaHora(row.constanciaAfipDropboxSubidaAt)}` : "Todavía no se archivó en Dropbox"}
-    >
-      <FontAwesomeIcon icon={guardado ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
-      {guardado ? "Guardado" : "Sin guardar"}
+    <span className="inline-flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+      <span
+        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap ${
+          guardado
+            ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800"
+            : "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800"
+        }`}
+        title={guardado ? `Archivado ${fmtFechaHora(row.constanciaAfipDropboxSubidaAt)}` : "Todavía no se archivó en Dropbox"}
+      >
+        <FontAwesomeIcon icon={guardado ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
+        {guardado ? "Guardado" : "Sin guardar"}
+      </span>
+      {guardado && (
+        <>
+          {/* El archivo en Dropbox es lo que dispara el avance de bandeja: conviene decir qué va a
+              pasar, porque no ocurre al instante sino en la próxima sincronización. */}
+          <button type="button" onClick={() => setInfoOpen(true)} title="Qué pasa al sincronizar" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0">
+            <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+          </button>
+          {onEliminado && (
+            <button
+              type="button"
+              onClick={eliminar}
+              disabled={borrando}
+              title="Eliminar el archivo de Dropbox para que NO avance de bandeja"
+              className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50 shrink-0"
+            >
+              <FontAwesomeIcon icon={borrando ? faSpinner : faTrash} spin={borrando} className="h-3 w-3" />
+            </button>
+          )}
+        </>
+      )}
+
+      {infoOpen && (
+        <Modal isOpen={infoOpen} onClose={() => setInfoOpen(false)} title="Qué pasa en la próxima sincronización" size="sm" zIndex={80}>
+          <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+            <p>
+              El CUIT dio <strong>Activo en AFIP</strong> y el resultado quedó <strong>archivado en Dropbox</strong>. Eso es exactamente lo que vigila el escaneo automático.
+            </p>
+            <p>
+              En la próxima sincronización el contrato va a avanzar solo a <strong>Envío de documentación</strong> y va a pasar a verse en la bandeja <strong>Firma digital</strong>. No es inmediato:
+              depende del intervalo configurado en <span className="font-mono text-xs">Configuración → Dropbox | Documentos</span> (por defecto, cada 20 minutos).
+            </p>
+            <p className="flex items-start gap-1.5 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300">
+              <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              <span>Si no querés que avance (se validó por error, o hay que rehacerlo), eliminá el archivo con el tacho de al lado antes de que sincronice.</span>
+            </p>
+          </div>
+        </Modal>
+      )}
     </span>
   );
 };
@@ -212,7 +296,7 @@ export const BotonConsultarAfipBulk: React.FC<{
   onConsultado: () => void;
 }> = ({ rows, onConsultado }) => {
   const [consultando, setConsultando] = useState(false);
-  const pendientes = rows.filter((r) => constanciaPendiente(r) && fmtCuit(r.cuit));
+  const pendientes = rows.filter((r) => constanciaPendiente(r) && cuitEsValido(r.cuit));
 
   const handleClick = async () => {
     if (pendientes.length === 0) {
@@ -268,6 +352,11 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
     e.stopPropagation();
     if (!cuit) {
       sweetAlert.error("Sin CUIT", "Esta persona no tiene un CUIT/CUIL cargado.");
+      return;
+    }
+    // Consultar un CUIT que no es un CUIT solo devuelve un error de AFIP y ensucia los logs.
+    if (!cuitEsValido(row.cuit)) {
+      sweetAlert.error("CUIT inválido", `${cuit} no es un CUIT/CUIL válido (no pasa el dígito verificador). Corregilo en los datos personales de la persona antes de consultar a ARCA.`);
       return;
     }
     setConsultando(true);

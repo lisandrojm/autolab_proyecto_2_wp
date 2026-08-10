@@ -383,16 +383,79 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
                 .populate({ path: "tenantId", select: "name", model: Tenant })
                 .populate(projectsPopulate)
                 .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame });
-        // Orden: por defecto _id desc (más nuevos primero). Con ?sort=name se ordena
-        // alfabéticamente por nombre/apellido, case- y acento-insensible (collation es).
-        if (req.query.sort === "name") {
-            query = query.collation({ locale: "es", strength: 1 }).sort({ firstName: 1, lastName: 1 });
+        // Orden: por defecto _id desc (más nuevos primero). Con ?sort=<columna>&order=asc|desc se ordena
+        // por la columna pedida, case- y acento-insensible (collation es). `sort=name` sin `order` sigue
+        // dando el alfabético ascendente de siempre.
+        // Ordenar en el server (y no sobre la página ya cargada) es lo único correcto acá: la lista está
+        // paginada, así que ordenar en el cliente ordenaría 50 de 1500 filas.
+        const sortKey = String(req.query.sort || "");
+        const sortDir = req.query.order === "desc" ? -1 : 1;
+        // Columnas que salen directo del documento del usuario.
+        const CAMPOS_ORDENABLES = {
+            name: ["firstName", "lastName"],
+            email: ["email"],
+            cuit: ["metadata.cuit"],
+            documento: ["metadata.documento"],
+            estado: ["metadata.activo"],
+        };
+        // Columnas calculadas (dependen de otra colección). Se resuelven con una agregación liviana que
+        // solo devuelve los _id de la página ya ordenados; el populate pesado de arriba corre después
+        // sobre esos pocos documentos, no sobre los ~1500 del tenant.
+        let idsOrdenados = null;
+        if (sortKey === "contratos" || sortKey === "roles") {
+            const pipeline = [{ $match: filter }];
+            if (sortKey === "contratos") {
+                pipeline.push({
+                    $lookup: {
+                        // Ojo: la colección no es la pluralización por defecto, está fijada en el modelo.
+                        from: UserProject.collection.name,
+                        localField: "metadata.projects",
+                        foreignField: "_id",
+                        as: "_ups",
+                        pipeline: [{ $project: { n: { $size: { $ifNull: ["$contracts", []] } } } }],
+                    },
+                }, { $addFields: { _orden: { $sum: "$_ups.n" } } });
+            }
+            else {
+                pipeline.push({
+                    $lookup: {
+                        from: Role.collection.name,
+                        localField: "roles",
+                        foreignField: "_id",
+                        as: "_roles",
+                        pipeline: [{ $project: { name: 1 } }],
+                    },
+                }, 
+                // Con varios roles ordena por el primero alfabéticamente, que es el que la tabla muestra primero.
+                { $addFields: { _orden: { $min: "$_roles.name" } } });
+            }
+            pipeline.push({ $sort: { _orden: sortDir, _id: 1 } }, { $skip: skip }, { $limit: limitNum }, { $project: { _id: 1 } });
+            const ordenados = await User.aggregate(pipeline).collation({ locale: "es", strength: 1 }).exec();
+            idsOrdenados = ordenados.map((d) => d._id);
+        }
+        if (idsOrdenados) {
+            // La agregación ya paginó: acá solo se hidratan esos _id (el orden se reaplica más abajo).
+            query = query.find({ _id: { $in: idsOrdenados } });
+        }
+        else if (CAMPOS_ORDENABLES[sortKey]) {
+            const spec = {};
+            for (const campo of CAMPOS_ORDENABLES[sortKey])
+                spec[campo] = sortDir;
+            // Desempate estable: sin esto dos usuarios con el mismo valor pueden repetirse o saltearse
+            // entre páginas, porque Mongo no garantiza un orden para los empates.
+            spec._id = 1;
+            query = query.collation({ locale: "es", strength: 1 }).sort(spec).skip(skip).limit(limitNum);
         }
         else {
-            query = query.sort({ _id: -1 });
+            query = query.sort({ _id: -1 }).skip(skip).limit(limitNum);
         }
-        query = query.skip(skip).limit(limitNum).lean();
+        query = query.lean();
         const [users, total] = await Promise.all([query.exec(), User.countDocuments(filter).exec()]);
+        // `find({_id: {$in: [...]}})` no respeta el orden del array: hay que reaplicarlo.
+        if (idsOrdenados) {
+            const posicion = new Map(idsOrdenados.map((id, i) => [String(id), i]));
+            users.sort((a, b) => (posicion.get(String(a._id)) ?? 0) - (posicion.get(String(b._id)) ?? 0));
+        }
         // Filter out projects that no longer exist for each user
         const cleanedUsers = users.map((u) => {
             if (u.metadata?.projects && Array.isArray(u.metadata.projects)) {
