@@ -82,12 +82,14 @@ const isContractVigente = (fechaBaja?: string | null): boolean => {
  * Vigencia del contrato que rige hoy para el miembro en el proyecto: el vigente más reciente.
  * OJO: no alcanza con "el último cargado" (un tiempo indeterminado abierto puede tener detrás un
  * contrato viejo ya vencido) ni con "algún contrato vigente" (los contratos viejos sin fecha de
- * baja darían vigente para siempre). Si el backend no mandó los contratos no se asume vencido,
- * para no vaciar la lista.
+ * baja darían vigente para siempre). Si no llegaron los contratos, NO se asume vigente: para el
+ * reporte de asistencia es preferible dejar afuera a alguien dudoso que sumarlo sin poder
+ * confirmarlo (antes esto devolvía `true` "para no vaciar la lista", pero tapaba en silencio los
+ * casos en que el backend no traía `metadata.projects` poblado — ver populate de assignedUsers en
+ * GET /projects/:projectId).
  */
 const lastContractIsVigente = (contracts?: any[]): boolean => {
-  if (!Array.isArray(contracts)) return true;
-  if (contracts.length === 0) return false;
+  if (!Array.isArray(contracts) || contracts.length === 0) return false;
   return esContratoVigente(getContratoActivo(contracts));
 };
 
@@ -1253,9 +1255,11 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
       const projMeta = e.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId));
 
-      // Solo se pasan novedades de gente con contrato VIGENTE en este proyecto (mismo criterio que
-      // la columna Alta/Baja del panel web: sin fecha de baja o baja de hoy en adelante).
-      if (projMeta && !projMeta.lastContractVigente) {
+      // Solo se pasan novedades de gente ACTIVA con contrato VIGENTE en este proyecto (mismo
+      // criterio que la columna Alta/Baja del panel web: alta <= hoy <= baja, o sin baja). Si no
+      // se pudo resolver el contrato de este proyecto para la persona, se la excluye en vez de
+      // dejarla pasar sin confirmar — antes, sin `projMeta`, el chequeo se salteaba entero.
+      if (!projMeta || !projMeta.lastContractVigente) {
         return false;
       }
 
