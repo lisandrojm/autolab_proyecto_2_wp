@@ -23,7 +23,7 @@ import { resolveAfip, AfipRowResult } from './afipCompleteness';
 import { buildAltaRecord, buildAltaTxt, downloadTxt } from './afipTxt';
 import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, fmtCuit } from './ConstanciaBulk';
 import { sweetAlert } from '../../utils/sweetAlert';
-import { cachedFetch, invalidateRefCache } from '../../utils/refCache';
+import { cachedFetch, invalidateRefCache, updateRefCache } from '../../utils/refCache';
 
 const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
 
@@ -78,7 +78,11 @@ const EstadoImpositivoCell: React.FC<{ record: ContractOverviewRow; contratoFram
  * ARCA de UNA sola empresa, así que cada contrato tiene que tener la suya definida antes de poder
  * incluirse); la de Release es opcional.
  */
-const EmpresaSelectCell: React.FC<{ record: ContractOverviewRow; campo: 'contrato' | 'release'; requerido: boolean; onGuardado: () => void }> = ({ record, campo, requerido, onGuardado }) => {
+/** Campos de la fila que cambian al elegir (o quitar) la empresa de un documento. */
+export const parcheEmpresa = (campo: 'contrato' | 'release', empresaId: string, label: string): Partial<ContractOverviewRow> =>
+  campo === 'contrato' ? { empresaContratoId: empresaId, nombre_empresa_contrato: label } : { empresaReleaseId: empresaId, nombre_empresa_release: label };
+
+const EmpresaSelectCell: React.FC<{ record: ContractOverviewRow; campo: 'contrato' | 'release'; requerido: boolean; onGuardado: (patch?: Partial<ContractOverviewRow>) => void }> = ({ record, campo, requerido, onGuardado }) => {
   const [guardando, setGuardando] = useState(false);
   const empresas = (campo === 'contrato' ? record.contratoEmpresas : record.releaseEmpresas) || [];
   const empresaIdActual = campo === 'contrato' ? record.empresaContratoId : record.empresaReleaseId;
@@ -88,7 +92,9 @@ const EmpresaSelectCell: React.FC<{ record: ContractOverviewRow; campo: 'contrat
     try {
       if (campo === 'contrato') await projectsAPI.updateContratoEmpresa(record.projectId, record.userId, record.contractIndex, empresaId);
       else await projectsAPI.updateReleaseEmpresa(record.projectId, record.userId, record.contractIndex, empresaId);
-      onGuardado();
+      // Se sabe exactamente qué cambió: se avisa el parche para actualizar SOLO esta fila, en vez de
+      // recargar el listado entero por elegir una empresa.
+      onGuardado(parcheEmpresa(campo, empresaId, empresas.find((e) => e.id === empresaId)?.label || ''));
     } catch (e: any) {
       sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo guardar la empresa.');
     } finally {
@@ -275,6 +281,27 @@ export const ContractBulkAfipTab: React.FC<{
   useEffect(() => {
     load();
   }, [load]);
+
+  /**
+   * Aplica el cambio de UNA fila sin recargar el listado: con ~800 contratos, releer todo por haber
+   * elegido una empresa son varios segundos de espera por cada click. El caché compartido se parchea
+   * igual, así las otras pestañas ven el mismo dato sin volver a consultar.
+   *
+   * Si el que llama no sabe qué cambió (no manda parche), se recarga como antes.
+   */
+  const aplicarCambio = useCallback(
+    (record: ContractOverviewRow, patch?: Partial<ContractOverviewRow>) => {
+      if (!patch) return load(true);
+      const esLaFila = (r: ContractOverviewRow) => r._id === record._id && r.contractIndex === record.contractIndex;
+      setRows((prev) => prev.map((r) => (esLaFila(r) ? { ...r, ...patch } : r)));
+      updateRefCache<{ rows: ContractOverviewRow[] }>(`${CONTRACTS_OVERVIEW_CACHE}impositivos:${estadosPedidos.join(',')}`, (data) => ({
+        ...data,
+        rows: (data.rows || []).map((r) => (esLaFila(r) ? { ...r, ...patch } : r)),
+      }));
+      return Promise.resolve();
+    },
+    [load, estadosPedidos],
+  );
 
   const handleDownloadContract = (record: ContractOverviewRow, empresaId?: string) => downloadContractRow(record, contratoFrames, empresaId);
   const handleDownloadRelease = (record: ContractOverviewRow, release: Release, empresaId?: string) => downloadReleaseRow(record, release, empresaId);
@@ -800,10 +827,10 @@ export const ContractBulkAfipTab: React.FC<{
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{fmtCuit(r.cuit) || '—'}</td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      <EmpresaSelectCell record={r} campo="contrato" requerido={filterTipo === 'alta_temprana_afip'} onGuardado={() => load(true)} />
+                      <EmpresaSelectCell record={r} campo="contrato" requerido={filterTipo === 'alta_temprana_afip'} onGuardado={(patch) => aplicarCambio(r, patch)} />
                     </td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      <EmpresaSelectCell record={r} campo="release" requerido={false} onGuardado={() => load(true)} />
+                      <EmpresaSelectCell record={r} campo="release" requerido={false} onGuardado={(patch) => aplicarCambio(r, patch)} />
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
@@ -1023,7 +1050,7 @@ export const ContractBulkAfipTab: React.FC<{
  * empresa...". Solo tiene sentido antes de generar el PDF; una vez generado, el documento ya salió
  * con esa empresa y lo que corresponde es eliminarlo.
  */
-const QuitarEmpresaBtn: React.FC<{ record: ContractOverviewRow; campo: 'contrato' | 'release'; onQuitado: () => void }> = ({ record, campo, onQuitado }) => {
+const QuitarEmpresaBtn: React.FC<{ record: ContractOverviewRow; campo: 'contrato' | 'release'; onQuitado: (patch?: Partial<ContractOverviewRow>) => void }> = ({ record, campo, onQuitado }) => {
   const [quitando, setQuitando] = useState(false);
 
   const quitar = async (e: React.MouseEvent) => {
@@ -1032,7 +1059,7 @@ const QuitarEmpresaBtn: React.FC<{ record: ContractOverviewRow; campo: 'contrato
     try {
       if (campo === 'contrato') await projectsAPI.updateContratoEmpresa(record.projectId, record.userId, record.contractIndex, '');
       else await projectsAPI.updateReleaseEmpresa(record.projectId, record.userId, record.contractIndex, '');
-      onQuitado();
+      onQuitado(parcheEmpresa(campo, '', ''));
     } catch (err: any) {
       sweetAlert.error('Error', err?.response?.data?.error || 'No se pudo quitar la empresa.');
     } finally {
@@ -1145,7 +1172,7 @@ const FirmaContratoCell: React.FC<{
   record: ContractOverviewRow;
   contratoFrames: ContratoFrameItem[];
   allEstados: InfoItem[];
-  onGenerado: () => void;
+  onGenerado: (patch?: Partial<ContractOverviewRow>) => void;
 }> = ({ record, contratoFrames, allEstados, onGenerado }) => {
   const [generando, setGenerando] = useState(false);
   const [descargando, setDescargando] = useState(false);
@@ -1163,7 +1190,7 @@ const FirmaContratoCell: React.FC<{
     if (!template) return;
     setGenerando(true);
     try {
-      await firmaDigitalAPI.generarContrato({
+      const res = await firmaDigitalAPI.generarContrato({
         projectId: record.projectId,
         userId: record.userId,
         contractIndex: record.contractIndex,
@@ -1171,7 +1198,8 @@ const FirmaContratoCell: React.FC<{
         empresaContratoId: empresaId,
         tramite,
       });
-      onGenerado();
+      // La respuesta ya trae los campos que cambian: se parchea la fila en vez de releer el listado.
+      onGenerado({ firmaContratoUrl: res.firmaContratoUrl, firmaContratoNombre: res.firmaContratoNombre, firmaGeneradoAt: res.firmaGeneradoAt });
     } catch (e: any) {
       sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo generar el contrato.');
     } finally {
@@ -1197,7 +1225,7 @@ const FirmaContratoCell: React.FC<{
     setEliminando(true);
     try {
       await firmaDigitalAPI.eliminarContrato({ projectId: record.projectId, userId: record.userId, contractIndex: record.contractIndex });
-      onGenerado();
+      onGenerado({ firmaContratoUrl: '', firmaContratoNombre: '', firmaGeneradoAt: '' });
     } catch (e: any) {
       sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo eliminar el contrato.');
     } finally {
@@ -1269,7 +1297,7 @@ const FirmaReleaseCell: React.FC<{
   activeReleases: Release[];
   /** Solo los releases activos cuyo Tipo tiene tildado "Se envía a firmar". */
   releasesAplicables: Release[];
-  onGenerado: () => void;
+  onGenerado: (patch?: Partial<ContractOverviewRow>) => void;
 }> = ({ record, contratoFrames, allEstados, activeReleases, releasesAplicables, onGenerado }) => {
   const [generando, setGenerando] = useState(false);
   const [descargando, setDescargando] = useState<string | null>(null);
@@ -1284,7 +1312,7 @@ const FirmaReleaseCell: React.FC<{
   const generar = async (empresaId?: string) => {
     setGenerando(true);
     try {
-      await firmaDigitalAPI.generarRelease({
+      const res = await firmaDigitalAPI.generarRelease({
         projectId: record.projectId,
         userId: record.userId,
         contractIndex: record.contractIndex,
@@ -1292,7 +1320,7 @@ const FirmaReleaseCell: React.FC<{
         empresaReleaseId: empresaId,
         tramite,
       });
-      onGenerado();
+      onGenerado({ firmaReleases: res.firmaReleases, firmaReleasesGeneradoAt: res.firmaReleasesGeneradoAt });
     } catch (e: any) {
       sweetAlert.error('Error', e?.response?.data?.error || 'No se pudieron generar los release(s).');
     } finally {
@@ -1317,7 +1345,7 @@ const FirmaReleaseCell: React.FC<{
     setEliminando(true);
     try {
       await firmaDigitalAPI.eliminarRelease({ projectId: record.projectId, userId: record.userId, contractIndex: record.contractIndex });
-      onGenerado();
+      onGenerado({ firmaReleases: [], firmaReleasesGeneradoAt: '' });
     } catch (e: any) {
       sweetAlert.error('Error', e?.response?.data?.error || 'No se pudieron eliminar los release(s).');
     } finally {
@@ -1386,7 +1414,7 @@ const FirmaEnviarCell: React.FC<{
   contratoAplica: boolean;
   releasesAplicables: Release[];
   tipoImpositivo?: TipoImpositivo;
-  onEnviado: () => void;
+  onEnviado: (patch?: Partial<ContractOverviewRow>) => void;
 }> = ({ record, contratoAplica, releasesAplicables, tipoImpositivo, onEnviado }) => {
   const [enviando, setEnviando] = useState(false);
   const contratoOk = !contratoAplica || contratoGenerado(record);
@@ -1487,6 +1515,21 @@ export const ContractBulkFirmaTab: React.FC<{
   useEffect(() => {
     load();
   }, [load]);
+
+  /** Igual que en la otra pestaña: se parchea solo la fila tocada en vez de releer todo. */
+  const aplicarCambio = useCallback(
+    (record: ContractOverviewRow, patch?: Partial<ContractOverviewRow>) => {
+      if (!patch) return load(true);
+      const esLaFila = (r: ContractOverviewRow) => r._id === record._id && r.contractIndex === record.contractIndex;
+      setRows((prev) => prev.map((r) => (esLaFila(r) ? { ...r, ...patch } : r)));
+      updateRefCache<{ rows: ContractOverviewRow[] }>(`${CONTRACTS_OVERVIEW_CACHE}todos`, (data) => ({
+        ...data,
+        rows: (data.rows || []).map((r) => (esLaFila(r) ? { ...r, ...patch } : r)),
+      }));
+      return Promise.resolve();
+    },
+    [load],
+  );
 
   // Trámite impositivo de ORIGEN del contrato (por su tipo/plantilla, no por el estado actual —
   // sigue siendo válido aunque el contrato ya haya avanzado a "Envío de documentación").
@@ -1664,7 +1707,7 @@ export const ContractBulkFirmaTab: React.FC<{
                         <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!enviable} onChange={() => toggleSel(rowKey(r))} title={enviable ? 'Incluir en el envío a firmar' : r.firmaEnviadaAt ? 'Ya se envió a firmar' : 'Generá primero el Contrato y el/los Release(s) ("Generar")'} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                       </td>
                       <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)] ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
-                        <FirmaEnviarCell record={r} contratoAplica={contratoAplica} releasesAplicables={releasesQueFirman} tipoImpositivo={tipo} onEnviado={() => load(true)} />
+                        <FirmaEnviarCell record={r} contratoAplica={contratoAplica} releasesAplicables={releasesQueFirman} tipoImpositivo={tipo} onEnviado={(patch) => aplicarCambio(r, patch)} />
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 whitespace-nowrap">
                         {(() => {
@@ -1695,10 +1738,10 @@ export const ContractBulkFirmaTab: React.FC<{
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <FirmaContratoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} onGenerado={() => load(true)} />
+                        <FirmaContratoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} onGenerado={(patch) => aplicarCambio(r, patch)} />
                       </td>
                       <td className="px-4 py-3">
-                        <FirmaReleaseCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} releasesAplicables={releasesQueFirman} onGenerado={() => load(true)} />
+                        <FirmaReleaseCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} releasesAplicables={releasesQueFirman} onGenerado={(patch) => aplicarCambio(r, patch)} />
                       </td>
                       <td className="px-4 py-3">
                         <p className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{r.userName}</p>

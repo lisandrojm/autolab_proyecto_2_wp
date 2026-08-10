@@ -36,6 +36,17 @@ export async function cachedFetch<T>(key: string, fn: () => Promise<T>, ttl = DE
   return inflight as Promise<T>;
 }
 
+/**
+ * Modifica en el lugar el valor ya cacheado de una clave, sin volver a consultar. Sirve cuando se
+ * sabe exactamente qué cambió (por ejemplo, un campo de una fila): así la pantalla queda consistente
+ * sin pagar de nuevo una consulta pesada. Si la clave no está cacheada, no hace nada.
+ */
+export function updateRefCache<T>(key: string, updater: (data: T) => T): void {
+  const hit = store.get(key);
+  if (!hit || hit.data === undefined) return;
+  store.set(key, { at: hit.at, data: updater(hit.data as T) });
+}
+
 /** Invalida una clave, un prefijo (si termina en ':') o todo el caché si no se pasa nada. */
 export function invalidateRefCache(keyOrPrefix?: string): void {
   if (!keyOrPrefix) {
