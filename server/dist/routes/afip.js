@@ -255,7 +255,18 @@ router.post("/consulta-padron/bulk", async (req, res) => {
         // consulta a AFIP sigue funcionando igual — solo que el contrato queda "activo pero sin archivar"
         // en vez de completo, hasta que se resuelva esa configuración.
         const dropboxCfg = getTenantDropboxConfig(tenant);
-        const carpetaConstancia = dropboxCfg ? await resolverCarpetaConstanciaCuit() : null;
+        // "Best-effort" de verdad: si resolver la carpeta falla (Mongo lento, Dropbox caído), la consulta
+        // a AFIP tiene que seguir igual. Antes una excepción acá tiraba toda la request con 500 y no se
+        // validaba ningún CUIT, aunque AFIP estuviera perfecto.
+        let carpetaConstancia = null;
+        if (dropboxCfg) {
+            try {
+                carpetaConstancia = await resolverCarpetaConstanciaCuit();
+            }
+            catch (e) {
+                console.error("AFIP: no se pudo resolver la carpeta de Constancia de CUIT (se sigue sin archivar):", e?.message || e);
+            }
+        }
         let targets = [];
         try {
             targets = z.array(padronTargetSchema).max(5000).parse(req.body?.targets);
@@ -398,8 +409,10 @@ router.post("/consulta-padron/bulk", async (req, res) => {
         });
     }
     catch (error) {
+        // El motivo va al cliente: "Internal server error" obligaba a entrar al server para saber si
+        // había fallado AFIP, Mongo o Dropbox.
         console.error("AFIP consulta padrón bulk error:", error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: `No se pudo completar la consulta al Padrón: ${error?.message || "error interno"}` });
     }
 });
 export { router as afipRoutes };
