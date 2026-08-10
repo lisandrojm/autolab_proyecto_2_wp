@@ -43,8 +43,19 @@ interface EmployeeOption {
     contractEndTime?: string;
     areaId?: string;
     shiftId?: string;
+    /** Áreas/turnos del contrato vigente (mismo campo que usa el panel web como fallback cuando no
+     *  hay fila en project.teamConfig). Preferido sobre `areaId`/`shiftId`, que son legacy y ya casi
+     *  nadie los tiene cargados. */
+    areaShiftAssignments?: { areaId: string; shiftIds: string[] }[];
   }>;
 }
+
+/** Normaliza `contract.areaShiftAssignments` (poblado o no) a `{areaId, shiftIds}[]` de strings. */
+const normalizeAreaShiftAssignments = (raw: any): { areaId: string; shiftIds: string[] }[] =>
+  (raw || []).map((asa: any) => ({
+    areaId: String(asa.areaId?._id || asa.areaId || ""),
+    shiftIds: (asa.shiftIds || []).map((s: any) => String(s?._id || s || "")),
+  }));
 
 /**
  * Un contrato está vigente si no tiene fecha de baja, o si la baja es de hoy en adelante.
@@ -977,6 +988,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                   contractEndTime: activeContract?.hora_fin || undefined,
                   areaId: p.areaId || activeContract?.areaId || undefined,
                   shiftId: p.shiftId || activeContract?.shiftId || undefined,
+                  areaShiftAssignments: normalizeAreaShiftAssignments(activeContract?.areaShiftAssignments),
                 };
               }) || [],
           })),
@@ -1019,9 +1031,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const fetchReports = async () => {
     setIsLoadingReports(true);
     try {
-      const data = await activityReportsAPI.getAll();
-      // Filter for mobile view? Or show all allowed?
-      // Default API shows own reports for non-admin.
+      // "Mis Novedades": siempre las propias, aunque el usuario sea Admin (ver activityReports.ts).
+      const data = await activityReportsAPI.getAll({ mine: true });
       setReports(data);
     } catch (e) {
       console.error("Error loading reports", e);
@@ -1195,6 +1206,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                       contractEndTime: activeContract?.hora_fin || undefined,
                       areaId: p.areaId || activeContract?.areaId || undefined,
                       shiftId: p.shiftId || activeContract?.shiftId || undefined,
+                      areaShiftAssignments: normalizeAreaShiftAssignments(activeContract?.areaShiftAssignments),
                     };
                   }) || [],
                 positionName: typeof au.positionId === "object" ? au.positionId?.name : undefined,
@@ -1226,7 +1238,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       });
 
       const isCoordGlobal = e.roles?.some((r) => r.name?.toLowerCase()?.includes("coordinador"));
-      const hasPersonalContractShift = projMeta && (projMeta.areaId || projMeta.shiftId || (projMeta.contractStartTime && projMeta.contractEndTime));
+      const hasPersonalContractShift = projMeta && (projMeta.areaId || projMeta.shiftId || projMeta.areaShiftAssignments?.length || (projMeta.contractStartTime && projMeta.contractEndTime));
 
       if (teamConfigMember && teamConfigMember.areaShiftAssignments?.length > 0) {
         teamConfigMember.areaShiftAssignments.forEach((asa: any) => {
@@ -1260,6 +1272,17 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             const aId = String(asm.areaId?._id || asm.areaId || "");
             const sId = String(asm.shiftId?._id || asm.shiftId || "");
             employeeCombinations.push({ areaId: aId, shiftId: sId });
+          }
+        });
+      } else if (projMeta?.areaShiftAssignments?.length) {
+        // Mismo fallback que usa el panel web (área/turno del CONTRATO vigente) cuando el miembro
+        // todavía no tiene fila en project.teamConfig — antes esto se perdía y la persona quedaba
+        // afuera del reporte de mobile aunque sí figurara en "Gestionar Equipo".
+        projMeta.areaShiftAssignments.forEach((asa) => {
+          if (asa.shiftIds.length > 0) {
+            asa.shiftIds.forEach((sId) => employeeCombinations.push({ areaId: asa.areaId, shiftId: sId }));
+          } else {
+            employeeCombinations.push({ areaId: asa.areaId, shiftId: "" });
           }
         });
       } else {

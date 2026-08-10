@@ -52,8 +52,12 @@ router.get("/", async (req, res) => {
         const filter = {
             tenantId: req.tenantObjectId,
         };
-        // If not admin, only show own reports
-        if (!isAdmin) {
+        // "Mis Novedades" en mobile siempre pide las propias con ?mine=1, sea admin o no — evita que un
+        // coordinador con rol Admin dispare un fetch (con populate de attendance) de TODO el historial
+        // del tenant solo para filtrarlo a "las mías" en el cliente. El panel de admin en desktop
+        // (RequestsPage) sigue pidiendo sin este parámetro y ve todo, como siempre.
+        const forceOwn = req.query.mine === "1" || req.query.mine === "true";
+        if (!isAdmin || forceOwn) {
             filter.userId = userId;
         }
         const reports = await Request.find(filter)

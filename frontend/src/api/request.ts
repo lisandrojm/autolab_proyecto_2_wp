@@ -36,8 +36,10 @@ export interface ActivityReport {
 }
 
 export const activityReportsAPI = {
-  getAll: async () => {
-    const response = await axiosClient.get<ActivityReport[]>("/activity-reports");
+  /** `mine`: fuerza que devuelva SOLO los reportes propios, aunque quien pide sea Admin (ver mobile
+   *  "Mis Novedades" — sin esto, un admin dispara un fetch de todo el historial del tenant). */
+  getAll: async (params?: { mine?: boolean }) => {
+    const response = await axiosClient.get<ActivityReport[]>("/activity-reports", { params });
     return response.data;
   },
 
