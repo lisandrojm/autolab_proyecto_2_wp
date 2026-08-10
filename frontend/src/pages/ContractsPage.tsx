@@ -112,13 +112,13 @@ export const ContractsPage: React.FC = () => {
   // Pestañas de la página: "Contratos" (la vista actual) y "Gestión de Contratos" (acciones masivas).
   const [mainTab, setMainTab] = useState<"contracts" | "management">(initialTab);
   // Sub-pestañas de "Gestión de Contratos".
-  const [mgmtTab, setMgmtTab] = useState<"alta_afip" | "constancia_cuit" | "firma" | "para_firmar" | "pendiente_firma" | "firmados">("alta_afip");
+  const [mgmtTab, setMgmtTab] = useState<"alta_afip" | "constancia_cuit" | "firma" | "para_firmar" | "enviado_firma" | "firmados">("alta_afip");
   // Cantidades de las pestañas que leen de Dropbox. `null` = todavía no se abrió esa pestaña, así que
   // no se muestra número (leerlas implica pegarle a Dropbox y no vale hacerlo al abrir la página).
   const [paraFirmarCount, setParaFirmarCount] = useState<number | null>(null);
   const [pendienteFirmaCount, setPendienteFirmaCount] = useState<number | null>(null);
   const [firmadosCount, setFirmadosCount] = useState<number | null>(null);
-  const dropboxCounts = { para_firmar: paraFirmarCount, pendiente_firma: pendienteFirmaCount, firmados: firmadosCount };
+  const dropboxCounts = { para_firmar: paraFirmarCount, enviado_firma: pendienteFirmaCount, firmados: firmadosCount };
   // Cantidad de contratos de cada trámite, informada por ContractBulkAfipTab para mostrarla en las pestañas.
   const [mgmtCounts, setMgmtCounts] = useState<{ alta: number; cuit: number; firma: number }>({ alta: 0, cuit: 0, firma: 0 });
   // Explicación de qué es cada pestaña de "Gestión de Contratos" (modal informativo).
@@ -429,8 +429,8 @@ export const ContractsPage: React.FC = () => {
                 <button className={tabBtnClass(mgmtTab === "para_firmar")} onClick={() => setMgmtTab("para_firmar")}>
                   Para Firmar{dropboxCounts.para_firmar !== null ? ` (${dropboxCounts.para_firmar})` : ""}
                 </button>
-                <button className={tabBtnClass(mgmtTab === "pendiente_firma")} onClick={() => setMgmtTab("pendiente_firma")}>
-                  Pendiente de firma{dropboxCounts.pendiente_firma !== null ? ` (${dropboxCounts.pendiente_firma})` : ""}
+                <button className={tabBtnClass(mgmtTab === "enviado_firma")} onClick={() => setMgmtTab("enviado_firma")}>
+                  Enviado a la firma{dropboxCounts.enviado_firma !== null ? ` (${dropboxCounts.enviado_firma})` : ""}
                 </button>
                 <button className={tabBtnClass(mgmtTab === "firmados")} onClick={() => setMgmtTab("firmados")}>
                   Firmados{dropboxCounts.firmados !== null ? ` (${dropboxCounts.firmados})` : ""}
@@ -445,8 +445,8 @@ export const ContractsPage: React.FC = () => {
       }
     >
       {mainTab === "management" ? (
-        mgmtTab === "para_firmar" || mgmtTab === "pendiente_firma" || mgmtTab === "firmados" ? (
-          <ContractDropboxTab tipo={mgmtTab} onCount={mgmtTab === "para_firmar" ? setParaFirmarCount : mgmtTab === "pendiente_firma" ? setPendienteFirmaCount : setFirmadosCount} />
+        mgmtTab === "para_firmar" || mgmtTab === "enviado_firma" || mgmtTab === "firmados" ? (
+          <ContractDropboxTab tipo={mgmtTab} onCount={mgmtTab === "para_firmar" ? setParaFirmarCount : mgmtTab === "enviado_firma" ? setPendienteFirmaCount : setFirmadosCount} />
         ) : mgmtTab === "firma" ? (
           <ContractBulkFirmaTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} />
         ) : (
@@ -776,19 +776,21 @@ export const ContractsPage: React.FC = () => {
             <div>
               <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Firma digital</p>
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                Contratos a los que ya se les generó el Alta temprana de AFIP, o ya se validó que la Constancia de CUIT está activa. Esos documentos ya están cargados en Dropbox, en <span className="font-mono text-xs">FZERO S.R.L/HelloSign/Outbox</span>.
+                Contratos cuyo documento ya llegó a <span className="font-mono text-xs">AFIP/Alta temprana de Afip</span> o <span className="font-mono text-xs">AFIP/Constancia de cuit</span>. Acá se generan
+                los PDF de Contrato y Release, que quedan en la carpeta <span className="font-mono text-xs">Outbox</span>.
               </p>
             </div>
             <div>
-              <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Para Firmar · Pendiente de firma · Firmados</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Para Firmar · Enviado a la firma · Firmados</p>
               <p className="text-sm text-gray-600 dark:text-gray-300">Estas tres no salen de la aplicación: son lo que hay en las carpetas de Dropbox Sign, en el orden del circuito de firma.</p>
               <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1.5 list-disc list-inside mt-2">
                 <li>
                   <strong>Para Firmar</strong>: carpeta <span className="font-mono text-xs">Outbox</span>. Contratos ya generados, listos para importar en Dropbox Sign y enviarlos a firmar desde ahí. Todavía no se envió nada.
                 </li>
                 <li>
-                  <strong>Pendiente de firma</strong>: carpeta <span className="font-mono text-xs">Pendbox</span>. Ya se envió la solicitud y se espera la firma del destinatario. El archivo se mueve
-                  acá desde Outbox, así no se puede enviar dos veces por error.
+                  <strong>Enviado a la firma</strong>: carpeta <span className="font-mono text-xs">Pendbox</span>. La solicitud <strong>ya se envió</strong> desde Dropbox Sign y se espera la firma del
+                  destinatario. Se detecta por el correo de aviso que manda Dropbox Sign —es la única forma de saberlo—, y con eso el archivo se mueve desde Outbox, así no se puede enviar dos veces por
+                  error.
                 </li>
                 <li>
                   <strong>Firmados</strong>: carpeta <span className="font-mono text-xs">Requested signatures</span>. Contratos que ya volvieron firmados y se pueden descargar.

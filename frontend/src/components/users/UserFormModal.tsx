@@ -7,7 +7,7 @@ import { InfoModal } from "../ui/InfoModal";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { fuzzyMatch } from "../../utils/searchHelpers";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faEye, faEyeSlash, faToggleOn, faToggleOff, faMapMarkerAlt, faUniversity, faSearch, faTimes, faMobileAlt } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faEye, faEyeSlash, faToggleOn, faToggleOff, faMapMarkerAlt, faUniversity, faSearch, faTimes, faMobileAlt, faKey, faCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
 
 type ModalTab = "general" | "domicilio" | "bancarios";
 
@@ -52,6 +52,9 @@ interface UserFormData {
   inHouse?: boolean;
   rolesFrameIds?: string[];
 }
+
+/** Largo mínimo de contraseña (el mismo que exigía el `minLength` del input). */
+const PASSWORD_MIN = 6;
 
 const emptyForm = (): UserFormData => ({
   email: "",
@@ -104,6 +107,12 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   // Password mode
   const [newPassword, setNewPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [repetirPassword, setRepetirPassword] = useState("");
+  // Validación en vivo: el botón Actualizar queda deshabilitado hasta que las dos condiciones se
+  // cumplan, así el error se ve mientras se escribe y no después de mandar.
+  const largoOk = newPassword.length >= PASSWORD_MIN;
+  const passwordsCoinciden = !!newPassword && newPassword === repetirPassword;
+  const passwordValida = largoOk && passwordsCoinciden;
 
   // Rol/es Frame search
   const [roleFrameSearch, setRoleFrameSearch] = useState("");
@@ -161,6 +170,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     if (mode === "password") {
       initializedRef.current = true;
       setNewPassword("");
+      setRepetirPassword("");
       setShowNewPassword(false);
       return;
     }
@@ -335,6 +345,11 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    // Doble chequeo: el botón ya está deshabilitado, pero el form también se puede mandar con Enter.
+    if (!passwordValida) {
+      sweetAlert.error("Revisá la contraseña", `Tiene que tener al menos ${PASSWORD_MIN} caracteres y coincidir en los dos campos.`);
+      return;
+    }
     try {
       await usersAPI.updatePassword(user._id, newPassword);
       sweetAlert.success("Contraseña actualizada", "La contraseña se ha actualizado correctamente");
@@ -347,20 +362,32 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   };
 
   const title =
-    mode === "password"
-      ? "Cambiar Contraseña"
-      : formData.isSolicitud
+    mode === "password" ? (
+      <span className="flex items-center gap-2">
+        <FontAwesomeIcon icon={faKey} className="h-4 w-4 text-blue-500" />
+        Cambiar contraseña
+      </span>
+    ) : formData.isSolicitud
         ? "Aprobar Solicitud de Alta"
         : user
           ? `Editar Usuario: ${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email
           : "Nuevo Usuario";
 
-  const subtitle = mode === "password" ? undefined : formData.isSolicitud ? "Completa los datos para dar de alta al usuario" : "Define datos básicos y roles";
+  // En "Cambiar contraseña" el subtítulo dice de QUIÉN es: el modal se abre desde la tarjeta de una
+  // persona y antes no había forma de confirmar que era la correcta.
+  const subtitle =
+    mode === "password"
+      ? user
+        ? `${`${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email}${user.firstName || user.lastName ? ` · ${user.email}` : ""}`
+        : undefined
+      : formData.isSolicitud
+        ? "Completa los datos para dar de alta al usuario"
+        : "Define datos básicos y roles";
 
   const actions =
     mode === "password"
       ? [
-          { label: "Actualizar", onClick: () => document.querySelector<HTMLFormElement>("#password-form")?.requestSubmit(), variant: "primary" as const },
+          { label: "Actualizar", onClick: () => document.querySelector<HTMLFormElement>("#password-form")?.requestSubmit(), variant: "primary" as const, disabled: !passwordValida },
           { label: "Cancelar", onClick: onClose, variant: "ghost" as const },
         ]
       : [
@@ -374,14 +401,58 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         <form id="password-form" onSubmit={handlePasswordSubmit}>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nueva Contraseña *</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Nueva contraseña <span className="text-red-500">*</span>
+              </label>
               <div className="relative">
-                <input type={showNewPassword ? "text" : "password"} required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="input-field pr-10" placeholder="••••••••" minLength={6} />
-                <button type="button" onClick={() => setShowNewPassword((v) => !v)} className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="input-field pr-10"
+                  placeholder="••••••••"
+                  minLength={PASSWORD_MIN}
+                  autoComplete="new-password"
+                  autoFocus
+                />
+                <button type="button" onClick={() => setShowNewPassword((v) => !v)} title={showNewPassword ? "Ocultar" : "Mostrar"} className="absolute inset-y-0 right-0 pr-3 flex items-center">
                   <FontAwesomeIcon icon={showNewPassword ? faEyeSlash : faEye} className="h-4 w-4 text-gray-400" />
                 </button>
               </div>
             </div>
+
+            {/* Repetirla evita el error más caro de esta pantalla: dejar a alguien afuera por un
+                typo, porque no hay forma de verificar la contraseña anterior. */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Repetir contraseña <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  required
+                  value={repetirPassword}
+                  onChange={(e) => setRepetirPassword(e.target.value)}
+                  className={`input-field pr-10 ${repetirPassword && !passwordsCoinciden ? "border-red-400 dark:border-red-600" : ""}`}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                />
+              </div>
+            </div>
+
+            <ul className="space-y-1 text-xs">
+              <li className={`flex items-center gap-1.5 ${largoOk ? "text-green-600 dark:text-green-400" : "text-gray-500 dark:text-gray-400"}`}>
+                <FontAwesomeIcon icon={largoOk ? faCheck : faXmark} className="h-3 w-3" />
+                Al menos {PASSWORD_MIN} caracteres
+              </li>
+              <li className={`flex items-center gap-1.5 ${repetirPassword ? (passwordsCoinciden ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400") : "text-gray-500 dark:text-gray-400"}`}>
+                <FontAwesomeIcon icon={repetirPassword && passwordsCoinciden ? faCheck : faXmark} className="h-3 w-3" />
+                Las dos contraseñas coinciden
+              </li>
+            </ul>
+
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">La persona va a poder entrar con esta contraseña de inmediato. No se le avisa por mail desde acá.</p>
           </div>
         </form>
       ) : (

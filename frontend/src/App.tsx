@@ -42,6 +42,7 @@ import { VacationsRulesPage } from "./pages/VacationsRulesPage";
 import { DocumentsPage } from "./pages/DocumentsPage";
 import { EscaneoDropboxConfigPage } from "./pages/EscaneoDropboxConfigPage";
 import { DropboxSignConfigPage } from "./pages/DropboxSignConfigPage";
+import { FirmasPendientesPage } from "./pages/FirmasPendientesPage";
 import { AfipConfigPage } from "./pages/AfipConfigPage";
 import { VacationsCalendarPage } from "./pages/VacationsCalendarPage";
 import { PdfTemplatesPage } from "./pages/PdfTemplatesPage";
@@ -449,6 +450,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <DropboxSignConfigPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/firmas-pendientes"
+                element={
+                  <ProtectedRoute>
+                    <FirmasPendientesPage />
                   </ProtectedRoute>
                 }
               />

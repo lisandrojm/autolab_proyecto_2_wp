@@ -14,7 +14,7 @@ const fmtFechaHora = (iso?: string | null): string => {
 /**
  * "DropboxSign | Firmas": casilla de correo que recibe las copias de "documento enviado" de Dropbox
  * Sign. Es lo que permite detectar qué contratos ya se mandaron a firmar y moverlos de "Outbox" a
- * "Pendbox" — o sea, lo que separa la bandeja "Para Firmar" de "Pendiente de firma".
+ * "Pendbox" — o sea, lo que separa la bandeja "Para Firmar" de "Enviado a la firma".
  */
 export const DropboxSignConfigPage: React.FC = () => {
   const [cfg, setCfg] = useState<DropboxSignConfig | null>(null);
@@ -77,7 +77,7 @@ export const DropboxSignConfigPage: React.FC = () => {
             <p>
               Leyendo esa casilla, el sistema detecta el envío, identifica el contrato con el mismo criterio de siempre (CUIT en el nombre del archivo, después CUIT dentro del PDF, después nombre y
               apellido) y mueve el archivo de <span className="font-mono text-xs">Outbox</span> a <span className="font-mono text-xs">Pendbox</span>. Eso es lo que hace avanzar el contrato de{" "}
-              <strong>Para Firmar</strong> a <strong>Pendiente de firma</strong>, y evita que se mande a firmar dos veces.
+              <strong>Para Firmar</strong> a <strong>Enviado a la firma</strong>, y evita que se mande a firmar dos veces.
             </p>
             <p className="flex items-start gap-1.5 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300">
               <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 shrink-0 mt-0.5" />

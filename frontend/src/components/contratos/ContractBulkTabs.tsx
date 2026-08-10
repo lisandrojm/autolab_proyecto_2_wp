@@ -1018,6 +1018,35 @@ export const ContractBulkAfipTab: React.FC<{
 
 /** Mismo dropdown que `DownloadMenu` (ContractCard.tsx) pero para la acción "Generar" (paso 1): no
  *  descarga nada, solo dispara `onGenerar(empresaId)` — el PDF queda guardado en el server. */
+/**
+ * Deshace la elección de empresa de un contrato: la borra y la celda vuelve a mostrar "Elegir
+ * empresa...". Solo tiene sentido antes de generar el PDF; una vez generado, el documento ya salió
+ * con esa empresa y lo que corresponde es eliminarlo.
+ */
+const QuitarEmpresaBtn: React.FC<{ record: ContractOverviewRow; campo: 'contrato' | 'release'; onQuitado: () => void }> = ({ record, campo, onQuitado }) => {
+  const [quitando, setQuitando] = useState(false);
+
+  const quitar = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setQuitando(true);
+    try {
+      if (campo === 'contrato') await projectsAPI.updateContratoEmpresa(record.projectId, record.userId, record.contractIndex, '');
+      else await projectsAPI.updateReleaseEmpresa(record.projectId, record.userId, record.contractIndex, '');
+      onQuitado();
+    } catch (err: any) {
+      sweetAlert.error('Error', err?.response?.data?.error || 'No se pudo quitar la empresa.');
+    } finally {
+      setQuitando(false);
+    }
+  };
+
+  return (
+    <button type="button" onClick={quitar} disabled={quitando} title="Quitar la empresa elegida" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50 shrink-0">
+      <FontAwesomeIcon icon={quitando ? faSpinner : faTrash} spin={quitando} className="h-3.5 w-3.5" />
+    </button>
+  );
+};
+
 const GenerarMenu: React.FC<{ empresas: EmpresaOption[]; onGenerar: (empresaId?: string) => void; generando: boolean; label?: string }> = ({ empresas, onGenerar, generando, label = 'Generar' }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -1190,7 +1219,10 @@ const FirmaContratoCell: React.FC<{
           !savedContratoEmpresaId && contratoEmpresas.length > 0 ? (
             <EmpresaSelectCell record={record} campo="contrato" requerido onGuardado={onGenerado} />
           ) : (
-            <GenerarMenu empresas={empresasParaGenerar} onGenerar={generar} generando={generando} label={savedContratoEmpresaId ? `Generar Contrato · ${empresasParaGenerar[0]?.label || ''}` : 'Generar Contrato'} />
+            <div className="flex items-center gap-1">
+              <GenerarMenu empresas={empresasParaGenerar} onGenerar={generar} generando={generando} label={savedContratoEmpresaId ? `Generar Contrato · ${empresasParaGenerar[0]?.label || ''}` : 'Generar Contrato'} />
+              {savedContratoEmpresaId && <QuitarEmpresaBtn record={record} campo="contrato" onQuitado={onGenerado} />}
+            </div>
           )
         ) : (
           <span className="text-xs text-gray-400" title="La plantilla de este tipo de contrato no tiene contenido redactado">
@@ -1312,7 +1344,10 @@ const FirmaReleaseCell: React.FC<{
         {!savedReleaseEmpresaId && releaseEmpresas.length > 0 ? (
           <EmpresaSelectCell record={record} campo="release" requerido onGuardado={onGenerado} />
         ) : (
-          <GenerarMenu empresas={empresasParaGenerar} onGenerar={generar} generando={generando} label={savedReleaseEmpresaId ? `Generar Release · ${empresasParaGenerar[0]?.label || ''}` : 'Generar Release'} />
+          <div className="flex items-center gap-1">
+            <GenerarMenu empresas={empresasParaGenerar} onGenerar={generar} generando={generando} label={savedReleaseEmpresaId ? `Generar Release · ${empresasParaGenerar[0]?.label || ''}` : 'Generar Release'} />
+            {savedReleaseEmpresaId && <QuitarEmpresaBtn record={record} campo="release" onQuitado={onGenerado} />}
+          </div>
         )}
       </div>
     );
