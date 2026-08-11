@@ -20,6 +20,26 @@ export const fmtCuit = (raw?: string): string => {
   return d.length === 11 ? `${d.slice(0, 2)}-${d.slice(2, 10)}-${d.slice(10)}` : "";
 };
 
+/** Texto único para la gente sin CUIT/CUIL argentino (extranjeros): mismo cartel en toda la app. */
+export const SIN_CUIT_LABEL = "No posee CUIT";
+
+/**
+ * ¿Esta persona NO tiene CUIT/CUIL argentino? Cuenta como "sin CUIT" tanto el campo vacío como los
+ * placeholders que quedaron cargados en su momento (todos ceros, o cualquier repetición del mismo
+ * dígito), que no identifican a nadie. Un CUIT mal tipeado NO entra acá: eso es un dato a corregir,
+ * no una persona sin CUIT.
+ */
+export const noPoseeCuit = (raw?: string): boolean => {
+  const d = String(raw || "").replace(/\D/g, "");
+  return d.length === 0 || /^(\d)\1*$/.test(d);
+};
+
+/**
+ * Cómo mostrar el CUIT en pantalla: formateado si es válido, "No posee CUIT" si la persona no tiene,
+ * y un guión si hay algo cargado pero no es un CUIT reconocible (dato a revisar).
+ */
+export const cuitDisplay = (raw?: string): string => fmtCuit(raw) || (noPoseeCuit(raw) ? SIN_CUIT_LABEL : "—");
+
 /** Prefijos que usa AFIP: 20/23/24/25/26/27 personas físicas, 30/33/34 jurídicas. */
 const PREFIJOS_CUIT = ["20", "23", "24", "25", "26", "27", "30", "33", "34"];
 

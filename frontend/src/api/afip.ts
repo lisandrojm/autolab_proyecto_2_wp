@@ -75,6 +75,16 @@ export interface ResultadoConsultaPadronBulk {
   contratosActualizados: number;
 }
 
+/** Resultado de habilitar la firma de gente sin CUIT (ver afipAPI.habilitarFirma). */
+export interface HabilitarFirmaResult {
+  ok: boolean;
+  /** Carpeta de Dropbox donde se archivaron los JSON. */
+  carpeta: string;
+  habilitados: { userId: string; nombre: string; path: string }[];
+  /** Los que no se pudieron habilitar, con el motivo (ej. tiene CUIT y le corresponde el trámite real). */
+  omitidos: { userId: string; nombre: string; motivo: string }[];
+}
+
 /** Un registro persistente de un llamado real a AFIP (guardado por el server en cada consulta). */
 export interface AfipLogEntry {
   _id: string;
@@ -116,6 +126,16 @@ export const afipAPI = {
   /** Puede tardar (una consulta SOAP por CUIT, con concurrencia acotada) — timeout propio más largo. */
   async consultarPadronBulk(targets: ConsultaPadronTarget[]): Promise<ResultadoConsultaPadronBulk> {
     const { data } = await axios.post("/afip/consulta-padron/bulk", { targets }, { timeout: 180000 });
+    return data;
+  },
+
+  /**
+   * Salida para la gente SIN CUIT/CUIL argentino: archiva un JSON en la carpeta de Dropbox que ya
+   * vigila la transición automática de ese trámite, para que el contrato avance a Firma digital sin
+   * pasar por AFIP (que no le aplica). Ver POST /afip/habilitar-firma.
+   */
+  async habilitarFirma(targets: ConsultaPadronTarget[], tipo: "alta_temprana_afip" | "constancia_cuit"): Promise<HabilitarFirmaResult> {
+    const { data } = await axios.post("/afip/habilitar-firma", { targets, tipo }, { timeout: 120000 });
     return data;
   },
 

@@ -11,7 +11,7 @@ import { EstadoBadge, EstadoSecundarioBadge, TramiteImpositivoBadge, estadoLabel
 import { MemberContractsManagerModal } from "../components/team/MemberContractsManagerModal";
 import { estadoImpositivoDelContrato } from "../components/team/ContractCard";
 import { ContractDocsColumns, ContractDocsHeaders, downloadContractRow, downloadReleaseRow, uploadAltaRow } from "../components/contratos/ContractRowDocs";
-import { fmtCuit } from "../components/contratos/ConstanciaBulk";
+import { fmtCuit, cuitDisplay } from "../components/contratos/ConstanciaBulk";
 import { releasesAPI, Release } from "../api/release";
 import { isContractVigente, formatDate } from "../components/team/EmployeeContractsModal";
 import { cachedFetch } from "../utils/refCache";
@@ -578,7 +578,7 @@ export const ContractsPage: React.FC = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{fmtCuit(record.cuit) || "—"}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(record.cuit)}</td>
                     <td className="px-4 py-3 text-center">
                       <span className="text-sm font-bold px-2.5 py-1 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" title="Contratos de esta persona en el proyecto">
                         {record.contractsInProject}
