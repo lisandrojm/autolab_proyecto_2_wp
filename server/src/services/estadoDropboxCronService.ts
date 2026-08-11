@@ -116,10 +116,15 @@ function extraerCuitDeNombre(nombreArchivo: string): string {
   return m ? normalizarCuit(m[1]) : "";
 }
 
-/** Todos los tokens de 8 dígitos aislados del nombre de archivo (candidatos a `YYYYMMDD`). */
+/**
+ * Todos los tokens de 8 dígitos aislados del nombre de archivo (candidatos a `YYYYMMDD`).
+ * Se excluyen los que vienen etiquetados como número de documento (`DNI-23232274` y variantes, ver
+ * `buildIdentidadTag` en employeeDocData.ts): un DNI de 8 dígitos puede parecer una fecha válida
+ * (ej. 20010115 → 2001-01-15) y desempataría contra el contrato equivocado.
+ */
 function extraerFechasDeNombre(nombreArchivo: string): string[] {
   const out: string[] = [];
-  const re = /(?<!\d)(\d{8})(?!\d)/g;
+  const re = /(?<!\d)(?<!(?:DNI|CI|LE|LC|PAS|DOC)-)(\d{8})(?!\d)/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(nombreArchivo))) out.push(m[1]);
   return out;

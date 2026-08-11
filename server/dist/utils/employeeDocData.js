@@ -9,8 +9,50 @@ const fechaCompacta = (s) => {
     return m ? `${m[1]}${m[2]}${m[3]}` : "";
 };
 /**
+ * Siglas del catálogo `tipo-documento` (Info) por su `data.id`, para el nombre de archivo.
+ * Son las mismas que muestra el catálogo, salvo Pasaporte → PAS (token corto y sin ambigüedad).
+ */
+const SIGLA_TIPO_DOCUMENTO = {
+    1: "DNI",
+    2: "CI",
+    3: "LE",
+    4: "LC",
+    5: "PAS",
+};
+/**
+ * Bloque identificador de la persona para el NOMBRE de archivo de cualquier PDF que genere la
+ * plataforma (Firma Digital, Pedidos y Vacaciones). Es idéntico en los tres flujos, así que alcanza
+ * con el nombre del archivo —lo único que viaja en el aviso de Dropbox Sign y lo que se ve al listar
+ * una carpeta— para saber de quién es un documento sin abrirlo.
+ *
+ *   `CUIL-{11 dígitos}_{DNI|CI|LE|LC|PAS|DOC}-{número}`   ej. `CUIL-23232274409_DNI-23232274`
+ *
+ * Los números van sin puntos ni guiones internos, para que sean tokens aislados y parseables:
+ *   /CUIL-(\d{11})/            → CUIL/CUIT
+ *   /(DNI|CI|LE|LC|PAS|DOC)-([A-Za-z0-9]+)/  → tipo y número de documento
+ *
+ * Cada parte se omite si el dato no está cargado (nunca se escribe una etiqueta con valor vacío).
+ * `DOC` es el fallback cuando hay número pero no está cargado el tipo.
+ */
+export function buildIdentidadTag(user) {
+    const cuitCrudo = normalizarCuit(user?.metadata?.cuit);
+    // Un CUIT de todos ceros es el placeholder que quedó cargado en la gente sin CUIL argentino
+    // (típicamente extranjeros con pasaporte): no identifica a nadie y, si se escribiera, el matching
+    // por CUIT de `estadoDropboxCronService.ts` lo tomaría como válido y daría ambiguo entre todos ellos.
+    const cuit = /^0+$/.test(cuitCrudo) ? "" : cuitCrudo;
+    // Se conservan letras porque los pasaportes son alfanuméricos.
+    const documento = String(user?.metadata?.documento ?? "").replace(/[^A-Za-z0-9]/g, "");
+    const sigla = SIGLA_TIPO_DOCUMENTO[Number(user?.metadata?.tipoDocumentoId)] || "DOC";
+    const partes = [];
+    if (cuit)
+        partes.push(`CUIL-${cuit}`);
+    if (documento)
+        partes.push(`${sigla}-${documento}`);
+    return partes.join("_");
+}
+/**
  * Nomenclatura de archivos descargados (contratos y releases):
- *   [proyecto]_[Contrato|Release]_[nombreDoc]_[apellido]_[nombres]_[email]_[cuit]_Desde_[fechaAlta][_Hasta_[fechaBaja]]_[extra]
+ *   [proyecto]_[Contrato|Release]_[nombreDoc]_[apellido]_[nombres]_[email]_[identidad]_Desde_[fechaAlta][_Hasta_[fechaBaja]]_[extra]
  *
  * - `proyecto`: número/ID externo del proyecto (ej. 426).
  * - `nombreDoc`: opcional; para releases es el nombre del release.
@@ -24,7 +66,9 @@ const fechaCompacta = (s) => {
  *   solo no alcanza para identificar el contrato al ver volver este archivo desde Dropbox Sign (que
  *   preserva el nombre) — cambiar ese formato rompería ese matching, por eso NO se usan separadores
  *   dentro de la fecha aunque sí alrededor (mantiene el token de 8 dígitos aislado y detectable).
- * - `cuit`: token compacto (sin separadores), mismo motivo.
+ * - `identidad`: bloque `CUIL-...[_DNI-...]` de `buildIdentidadTag()`, común a los PDF de Pedidos y
+ *   Vacaciones. El CUIT sigue siendo un token de 11 dígitos aislado, así que el matching por CUIT de
+ *   `estadoDropboxCronService.ts` sigue funcionando igual que cuando iba suelto.
  * Devuelve el nombre SIN extensión (el caller agrega la extensión correspondiente).
  */
 export function buildDocFileName(opts) {
@@ -34,11 +78,11 @@ export function buildDocFileName(opts) {
     const apellido = (user?.lastName || "").trim();
     const persona = [apellido, nombre].filter(Boolean).join("_");
     const email = (user?.email || "").trim();
-    const cuit = normalizarCuit(user?.metadata?.cuit);
+    const identidad = buildIdentidadTag(user);
     const fechaAlta = fechaCompacta(contract?.fecha_alta_contrato);
     const fechaBaja = fechaCompacta(contract?.fecha_baja_contrato);
     const rango = fechaAlta ? `Desde_${fechaAlta}${fechaBaja ? `_Hasta_${fechaBaja}` : ""}` : "";
-    const parts = [String(proyecto).trim(), tipo, (docName || "").trim(), persona, email, cuit, rango, (extra || "").trim()].filter((p) => p && String(p).trim() !== "");
+    const parts = [String(proyecto).trim(), tipo, (docName || "").trim(), persona, email, identidad, rango, (extra || "").trim()].filter((p) => p && String(p).trim() !== "");
     // Eliminar caracteres inválidos para nombres de archivo (se conservan espacios y acentos).
     return parts.join("_").replace(/[\\/:*?"<>|]/g, "_");
 }

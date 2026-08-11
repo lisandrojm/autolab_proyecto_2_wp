@@ -4,12 +4,33 @@ import fs from "fs";
 import { IOrder } from "../models/Order.js";
 import { IOrderConfig } from "../models/OrderConfig.js";
 import { IPdf } from "../models/Pdf.js";
-import { IUser } from "../models/User.js";
+import { IUser, User } from "../models/User.js";
 import { IVacation } from "../models/Vacation.js";
 import { savePdfToStorage, savePdfVacationToStorage } from "./pdfStorage.js";
+import { buildIdentidadTag } from "./employeeDocData.js";
 import { Company } from "../models/Company.js";
 import { resolveContractEmpresa } from "./contractEmpresa.js";
 import { prepareVariables, prepareVacationVariables, replacePdfVariables, getDummyVariables, getSystemVariables, sanitizeHtml } from "./pdfVariableReplacer.js";
+
+/**
+ * Bloque `CUIL-...[_DNI-...]` para el nombre del archivo. Si el `user` que llegó no trae `metadata`
+ * (según por qué ruta se generó el PDF, algún populate podría no incluirla), se recarga de la base:
+ * el requisito es que TODOS los PDF salgan con el mismo bloque para poder identificarlos después
+ * desde el mail o la carpeta. Si aun así no hay datos cargados, devuelve "" y el nombre queda como antes.
+ */
+async function resolverIdentidadTag(user: any): Promise<string> {
+  const tag = buildIdentidadTag(user);
+  if (tag) return tag;
+  const userId = user?._id || user?.id;
+  if (!userId) return "";
+  try {
+    const fresco = await User.findById(userId).select("metadata.cuit metadata.documento metadata.tipoDocumentoId").lean();
+    return buildIdentidadTag(fresco);
+  } catch (e) {
+    console.warn("[PDF GENERATOR] No se pudo resolver CUIL/documento para el nombre del archivo:", (e as any)?.message || e);
+    return "";
+  }
+}
 
 /**
  * Mapea la empresa (Company) al `config` que espera getSystemVariables / buildPdfHtml
@@ -310,7 +331,7 @@ export async function generateOrderPDF(order: IOrder, category: IOrderConfig, te
     console.log("[PDF GENERATOR] Tenant ID:", tenantId);
     console.log("[PDF GENERATOR] User ID:", userId);
 
-    const pdfUrl = await savePdfToStorage(tenantId, userId, order.orderNumber, pdfBuffer);
+    const pdfUrl = await savePdfToStorage(tenantId, userId, order.orderNumber, pdfBuffer, await resolverIdentidadTag(user));
     console.log("[PDF GENERATOR] PDF saved successfully!");
     console.log("[PDF GENERATOR] PDF URL:", pdfUrl);
 
@@ -396,7 +417,7 @@ export async function generateVacationPDF(vacation: IVacation, template: IPdf, u
     console.log("[PDF GENERATOR] Tenant ID:", tenantId);
     console.log("[PDF GENERATOR] User ID:", userId);
 
-    const pdfUrl = await savePdfVacationToStorage(tenantId, userId, vacationNumber, pdfBuffer);
+    const pdfUrl = await savePdfVacationToStorage(tenantId, userId, vacationNumber, pdfBuffer, await resolverIdentidadTag(user));
     console.log("[PDF GENERATOR] Vacation PDF saved successfully!");
     console.log("[PDF GENERATOR] PDF URL:", pdfUrl);
 

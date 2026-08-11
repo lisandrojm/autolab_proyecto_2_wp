@@ -14,7 +14,13 @@ async function ensureDir(dir) {
 function isValidObjectId(id) {
     return /^[a-f0-9]{24}$/i.test(id);
 }
-export async function savePdfToStorage(tenantId, userId, orderNumber, pdfBuffer) {
+/**
+ * `identidadTag`: bloque `CUIL-...[_DNI-...]` de `buildIdentidadTag()` (employeeDocData.ts), el mismo
+ * que llevan los PDF de Firma Digital. Va en el nombre del archivo para poder identificar de quién es
+ * el documento sin abrirlo (desde el mail o al listar la carpeta). Si la persona no tiene los datos
+ * cargados llega vacío y el nombre queda como antes.
+ */
+export async function savePdfToStorage(tenantId, userId, orderNumber, pdfBuffer, identidadTag) {
     try {
         console.log("[PDF STORAGE] Starting PDF save process...");
         console.log("[PDF STORAGE] Tenant ID:", tenantId);
@@ -40,7 +46,8 @@ export async function savePdfToStorage(tenantId, userId, orderNumber, pdfBuffer)
         await ensureDir(storageDir);
         const timestamp = Date.now();
         const sanitizedOrderNumber = orderNumber.replace(/[^a-zA-Z0-9-]/g, "_");
-        const filename = `pedido_${sanitizedOrderNumber}_${timestamp}.pdf`;
+        const identidad = (identidadTag || "").replace(/[^a-zA-Z0-9_-]/g, "");
+        const filename = `pedido_${sanitizedOrderNumber}${identidad ? `_${identidad}` : ""}_${timestamp}.pdf`;
         console.log("[PDF STORAGE] Filename:", filename);
         const filePath = path.join(storageDir, filename);
         console.log("[PDF STORAGE] Full file path:", filePath);
@@ -61,7 +68,8 @@ export async function savePdfToStorage(tenantId, userId, orderNumber, pdfBuffer)
         throw new Error("Failed to save PDF to storage");
     }
 }
-export async function savePdfVacationToStorage(tenantId, userId, vacationNumber, pdfBuffer) {
+/** `identidadTag`: ver `savePdfToStorage`. */
+export async function savePdfVacationToStorage(tenantId, userId, vacationNumber, pdfBuffer, identidadTag) {
     try {
         console.log("[PDF STORAGE] Starting vacation PDF save process...");
         console.log("[PDF STORAGE] Tenant ID:", tenantId);
@@ -87,7 +95,8 @@ export async function savePdfVacationToStorage(tenantId, userId, vacationNumber,
         await ensureDir(storageDir);
         const timestamp = Date.now();
         const sanitizedVacationNumber = vacationNumber.replace(/[^a-zA-Z0-9-]/g, "_");
-        const filename = `vacacion_${sanitizedVacationNumber}_${timestamp}.pdf`;
+        const identidad = (identidadTag || "").replace(/[^a-zA-Z0-9_-]/g, "");
+        const filename = `vacacion_${sanitizedVacationNumber}${identidad ? `_${identidad}` : ""}_${timestamp}.pdf`;
         console.log("[PDF STORAGE] Filename:", filename);
         const filePath = path.join(storageDir, filename);
         console.log("[PDF STORAGE] Full file path:", filePath);

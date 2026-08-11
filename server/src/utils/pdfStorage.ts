@@ -16,11 +16,18 @@ function isValidObjectId(id: string): boolean {
   return /^[a-f0-9]{24}$/i.test(id);
 }
 
+/**
+ * `identidadTag`: bloque `CUIL-...[_DNI-...]` de `buildIdentidadTag()` (employeeDocData.ts), el mismo
+ * que llevan los PDF de Firma Digital. Va en el nombre del archivo para poder identificar de quién es
+ * el documento sin abrirlo (desde el mail o al listar la carpeta). Si la persona no tiene los datos
+ * cargados llega vacío y el nombre queda como antes.
+ */
 export async function savePdfToStorage(
   tenantId: string,
   userId: string,
   orderNumber: string,
-  pdfBuffer: Buffer
+  pdfBuffer: Buffer,
+  identidadTag?: string
 ): Promise<string> {
   try {
     console.log("[PDF STORAGE] Starting PDF save process...");
@@ -54,7 +61,8 @@ export async function savePdfToStorage(
 
     const timestamp = Date.now();
     const sanitizedOrderNumber = orderNumber.replace(/[^a-zA-Z0-9-]/g, "_");
-    const filename = `pedido_${sanitizedOrderNumber}_${timestamp}.pdf`;
+    const identidad = (identidadTag || "").replace(/[^a-zA-Z0-9_-]/g, "");
+    const filename = `pedido_${sanitizedOrderNumber}${identidad ? `_${identidad}` : ""}_${timestamp}.pdf`;
     console.log("[PDF STORAGE] Filename:", filename);
 
     const filePath = path.join(storageDir, filename);
@@ -80,11 +88,13 @@ export async function savePdfToStorage(
   }
 }
 
+/** `identidadTag`: ver `savePdfToStorage`. */
 export async function savePdfVacationToStorage(
   tenantId: string,
   userId: string,
   vacationNumber: string,
-  pdfBuffer: Buffer
+  pdfBuffer: Buffer,
+  identidadTag?: string
 ): Promise<string> {
   try {
     console.log("[PDF STORAGE] Starting vacation PDF save process...");
@@ -118,7 +128,8 @@ export async function savePdfVacationToStorage(
 
     const timestamp = Date.now();
     const sanitizedVacationNumber = vacationNumber.replace(/[^a-zA-Z0-9-]/g, "_");
-    const filename = `vacacion_${sanitizedVacationNumber}_${timestamp}.pdf`;
+    const identidad = (identidadTag || "").replace(/[^a-zA-Z0-9_-]/g, "");
+    const filename = `vacacion_${sanitizedVacationNumber}${identidad ? `_${identidad}` : ""}_${timestamp}.pdf`;
     console.log("[PDF STORAGE] Filename:", filename);
 
     const filePath = path.join(storageDir, filename);
