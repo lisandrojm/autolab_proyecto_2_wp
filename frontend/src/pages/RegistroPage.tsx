@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams, Link } from 'react-router-dom';
 import { CuitInput, isValidCuit } from '../components/ui/CuitInput';
+import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido } from '../utils/nacionalidadDocumento';
 
 type Tab = 'general' | 'domicilio' | 'bancarios';
 
@@ -189,6 +190,8 @@ export const RegistroPage: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<Tab>('general');
   const [form, setForm] = useState<RegistroForm>(emptyForm);
+  /** Solo para extranjeros: si declaró tener CUIL. Los argentinos siempre lo llevan. */
+  const [tieneCuil, setTieneCuil] = useState(true);
   const [generos, setGeneros] = useState<InfoOption[]>([]);
   const [tiposDocumento, setTiposDocumento] = useState<InfoOption[]>([]);
   const [nivelesEstudio, setNivelesEstudio] = useState<InfoOption[]>([]);
@@ -262,13 +265,41 @@ export const RegistroPage: React.FC = () => {
   // Entidades filtradas por el tipo elegido (las no clasificadas cuentan como "banco").
   const bancosFiltrados = useMemo(() => (form.tipoEntidadFinanciera ? bancos.filter((b) => (b.tipoEntidad || 'banco') === form.tipoEntidadFinanciera) : []), [bancos, form.tipoEntidadFinanciera]);
 
+  // --- Nacionalidad → Tipo de documento / CUIL (ver utils/nacionalidadDocumento.ts) ---
+  const nacionalidadElegida = !!form.nacionalidadId;
+  const esArgentino = useMemo(() => esNacionalidadArgentina(nacionalidades, form.nacionalidadId), [nacionalidades, form.nacionalidadId]);
+  // Argentino/a: sin Pasaporte. Otra nacionalidad: con Pasaporte (puede estar nacionalizado/a).
+  const tiposDocumentoDisponibles = useMemo(() => tiposDocumentoParaNacionalidad(tiposDocumento, esArgentino), [tiposDocumento, esArgentino]);
+  // El CUIL es obligatorio para argentinos; para extranjeros solo si declararon tenerlo.
+  const cuilVisible = esArgentino || tieneCuil;
+  const cuilObligatorio = esArgentino;
+
+  /** Al cambiar la nacionalidad hay que revisar lo que dependía de ella para no dejar datos inválidos. */
+  const onNacionalidadChange = (nuevoId: string) => {
+    const ahoraEsArgentino = esNacionalidadArgentina(nacionalidades, nuevoId);
+    const tiposValidos = tiposDocumentoParaNacionalidad(tiposDocumento, ahoraEsArgentino);
+    setForm((prev) => ({
+      ...prev,
+      nacionalidadId: nuevoId,
+      // Si el tipo elegido ya no está disponible (tenía Pasaporte y pasó a argentino/a), se limpia.
+      tipoDocumentoId: tipoDocumentoSigueValido(tiposValidos, prev.tipoDocumentoId) ? prev.tipoDocumentoId : '',
+    }));
+    // Un argentino/a siempre lleva CUIL: no queda arrastrado un "no tiene" declarado antes.
+    if (ahoraEsArgentino) setTieneCuil(true);
+    setFieldErrors((prev) => ({ ...prev, nacionalidadId: false, tipoDocumentoId: false }));
+    setError(null);
+  };
+
   // Campos obligatorios por paso (los marcados con * en la UI).
+  // El CUIL solo es obligatorio para argentinos: un extranjero puede no tenerlo (lo declara con el
+  // checkbox y en ese caso el campo ni se muestra).
   const REQUIRED_BY_STEP: Record<'general' | 'domicilio', { key: keyof RegistroForm; label: string }[]> = {
     general: [
       { key: 'firstName', label: 'Nombre' },
       { key: 'lastName', label: 'Apellido' },
       { key: 'email', label: 'Email' },
-      { key: 'cuit', label: 'Cuil' },
+      { key: 'nacionalidadId', label: 'Nacionalidad' },
+      ...(cuilObligatorio ? [{ key: 'cuit' as keyof RegistroForm, label: 'Cuil' }] : []),
       { key: 'documento', label: 'Documento' },
       { key: 'fechaNac', label: 'Fecha de nacimiento' },
     ],
@@ -336,7 +367,8 @@ export const RegistroPage: React.FC = () => {
       setError('Ingresá un email válido (ej: nombre@dominio.com).');
       return;
     }
-    if (activeTab === 'general' && !isValidCuit(form.cuit)) {
+    // El formato del CUIL se valida solo si corresponde cargarlo (argentino, o extranjero que declaró tenerlo).
+    if (activeTab === 'general' && cuilVisible && !isValidCuit(form.cuit)) {
       setFieldErrors({ cuit: true });
       setError('El CUIT/CUIL no es válido. Revisá los 11 dígitos.');
       return;
@@ -369,7 +401,7 @@ export const RegistroPage: React.FC = () => {
         setError('Ingresá un email válido (ej: nombre@dominio.com).');
         return;
       }
-      if (step === 'general' && !isValidCuit(form.cuit)) {
+      if (step === 'general' && cuilVisible && !isValidCuit(form.cuit)) {
         setActiveTab('general');
         setFieldErrors({ cuit: true });
         setError('El CUIT/CUIL no es válido. Revisá los 11 dígitos.');
@@ -512,28 +544,62 @@ export const RegistroPage: React.FC = () => {
                     <label className={labelClass}>Email <span className="text-red-500">*</span></label>
                     <input type="email" className={inputClass('email')} autoComplete="off" placeholder="usuario@ejemplo.com" value={form.email} onChange={(e) => set('email', e.target.value)} />
                   </div>
+                  {/* La nacionalidad va PRIMERO: de ella dependen el tipo de documento y el CUIL. */}
                   <div>
-                    <label className={labelClass}>Cuil <span className="text-red-500">*</span></label>
-                    <CuitInput className={fieldClass} invalid={!!fieldErrors.cuit} value={form.cuit} onChange={(v) => set('cuit', v)} placeholder="20-XXXXXXXX-X" />
+                    <label className={labelClass}>Nacionalidad <span className="text-red-500">*</span></label>
+                    <SearchableSelect title="Nacionalidad" value={form.nacionalidadId} options={nacionalidades} onChange={onNacionalidadChange} />
+                    {!nacionalidadElegida && <p className="text-[11px] text-gray-400 mt-1">Elegila para completar documento y CUIL.</p>}
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <label className={labelClass}>Tipo documento</label>
-                    <select className={fieldClass} value={form.tipoDocumentoId} onChange={(e) => set('tipoDocumentoId', e.target.value)}>
-                      <option value="">Seleccionar...</option>
-                      {tiposDocumento.map((o) => (
-                        <option key={o.id} value={o.id}>
-                          {o.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelClass}>Documento <span className="text-red-500">*</span></label>
-                    <input className={inputClass('documento')} autoComplete="off" placeholder="DNI / Pasaporte" value={form.documento} onChange={(e) => set('documento', e.target.value)} />
-                  </div>
-                </div>
+                {/* Documento y CUIL recién aparecen con la nacionalidad elegida. */}
+                {nacionalidadElegida && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div>
+                        <label className={labelClass}>Tipo documento</label>
+                        <select className={fieldClass} value={form.tipoDocumentoId} onChange={(e) => set('tipoDocumentoId', e.target.value)}>
+                          <option value="">Seleccionar...</option>
+                          {tiposDocumentoDisponibles.map((o) => (
+                            <option key={o.id} value={o.id}>
+                              {o.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelClass}>Documento <span className="text-red-500">*</span></label>
+                        <input className={inputClass('documento')} autoComplete="off" placeholder={esArgentino ? 'Nº de documento' : 'DNI / Pasaporte'} value={form.documento} onChange={(e) => set('documento', e.target.value)} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div>
+                        <label className={labelClass}>
+                          Cuil {cuilObligatorio && <span className="text-red-500">*</span>}
+                        </label>
+                        {/* Los extranjeros pueden no tener CUIL: se declara antes de pedirlo. */}
+                        {!esArgentino && (
+                          <label className="flex items-center gap-2 mb-2 text-xs text-gray-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="accent-blue-600 cursor-pointer"
+                              checked={tieneCuil}
+                              onChange={(e) => {
+                                setTieneCuil(e.target.checked);
+                                if (!e.target.checked) set('cuit', '');
+                              }}
+                            />
+                            Tiene CUIT / CUIL argentino
+                          </label>
+                        )}
+                        {cuilVisible ? (
+                          <CuitInput className={fieldClass} invalid={!!fieldErrors.cuit} value={form.cuit} onChange={(v) => set('cuit', v)} placeholder="20-XXXXXXXX-X" />
+                        ) : (
+                          <p className="text-[11px] text-gray-400">Te registrás sin CUIT/CUIL. Se puede cargar más adelante.</p>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
                     <label className={labelClass}>Fecha nacimiento <span className="text-red-500">*</span></label>
@@ -563,10 +629,7 @@ export const RegistroPage: React.FC = () => {
                       ))}
                     </select>
                   </div>
-                  <div>
-                    <label className={labelClass}>Nacionalidad</label>
-                    <SearchableSelect title="Nacionalidad" value={form.nacionalidadId} options={nacionalidades} onChange={(v) => set('nacionalidadId', v)} />
-                  </div>
+                  {/* Nacionalidad se movió arriba: es la que decide documento y CUIL. */}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
