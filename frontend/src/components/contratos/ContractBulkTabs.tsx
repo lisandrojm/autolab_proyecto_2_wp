@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faArrowUpRightFromSquare, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faArrowUpRightFromSquare, faTrash, faUpload } from '@fortawesome/free-solid-svg-icons';
 import { usersAPI, ContractOverviewRow, Contract, SinCuitValidacion } from '../../api/users';
 import { projectsAPI } from '../../api/projects';
 import { companiesAPI, Company } from '../../api/companies';
@@ -12,7 +12,7 @@ import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatal
 import { Release } from '../../api/release';
 import { firmaDigitalAPI, FirmaDigitalConfig } from '../../api/firmaDigital';
 import { afipAPI } from '../../api/afip';
-import { SinCuitValidacionModal } from './SinCuitValidacionModal';
+import { SinCuitValidacionModal, TIPO_DOC_SIN_CUIT_LABEL } from './SinCuitValidacionModal';
 import { claveEstado, EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../EstadoSelect';
 import { isContractVigente, formatDate, estadoImpositivoDelContrato, findTemplate, templateHasContent, EmpresaOption } from '../team/ContractCard';
 import { getImageUrl, downloadFileFromUrl } from '../../utils/imageHelpers';
@@ -67,7 +67,7 @@ const TIPO_LABEL: Record<TipoImpositivo, string> = {
 type TabTramite = TipoImpositivo | 'sin_cuit';
 
 /** Fila de contrato enriquecida con el trámite impositivo de su estado actual. */
-type ImpositivoRow = ContractOverviewRow & { _tipo?: TipoImpositivo; _estadoName: string };
+type ImpositivoRow = ContractOverviewRow & { _tipo?: TipoImpositivo; _estadoName: string; /** El estado admite gente sin CUIT: a esa gente el badge le dice "Sin CUIT". */ _aceptaSinCuit?: boolean };
 
 /**
  * Columna "Estado Impositivo": el Estado impositivo (Alta AFIP / Alta Servicios) vinculado al TIPO de
@@ -124,6 +124,71 @@ const CeldaValidacionSinCuit: React.FC<{ row: ContractOverviewRow; onAbrir: () =
       <button type="button" onClick={(e) => { e.stopPropagation(); onAbrir(); }} className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline w-fit">
         <FontAwesomeIcon icon={faFileLines} className="h-3 w-3" />
         {docs === 0 ? 'Cargar documentación' : `Documentación (${docs})`}
+      </button>
+    </div>
+  );
+};
+
+/**
+ * Celda "Documentación" de la pestaña "Sin CUIT": una fila por documento de respaldo, con el mismo
+ * juego de íconos que usa la columna Contrato del resto del módulo (ver / descargar / eliminar).
+ * Todos los adjuntos se guardan como PDF y con la nomenclatura estándar de documentos del contrato.
+ */
+const CeldaDocumentacionSinCuit: React.FC<{ row: ContractOverviewRow; onAbrir: () => void; onCambio: (v: SinCuitValidacion) => void }> = ({ row, onAbrir, onCambio }) => {
+  const [borrando, setBorrando] = useState<number | null>(null);
+  const documentos = row.sinCuitValidacion?.documentos || [];
+
+  const borrar = async (e: React.MouseEvent, docIndex: number) => {
+    e.stopPropagation();
+    const conf = await sweetAlert.confirm('¿Eliminar el documento?', 'Se va a quitar este respaldo. Si es el último, la validación vuelve a quedar pendiente.', 'Sí, eliminar');
+    if (!conf.isConfirmed) return;
+    setBorrando(docIndex);
+    try {
+      const r = await afipAPI.sinCuitBorrarDocumento({ projectId: row.projectId, userId: row.userId, contractIndex: row.contractIndex, docIndex });
+      onCambio(r.sinCuitValidacion);
+    } catch (err: any) {
+      sweetAlert.error('Error', err?.response?.data?.error || 'No se pudo eliminar el documento.');
+    } finally {
+      setBorrando(null);
+    }
+  };
+
+  if (documentos.length === 0) {
+    return (
+      <button type="button" onClick={(e) => { e.stopPropagation(); onAbrir(); }} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors whitespace-nowrap">
+        <FontAwesomeIcon icon={faUpload} className="h-3 w-3" />
+        Cargar
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      {documentos.map((d, i) => (
+        <div key={i} className="flex items-center gap-1.5 whitespace-nowrap">
+          <span className="text-[11px] text-gray-600 dark:text-gray-300 truncate max-w-[150px]" title={`${TIPO_DOC_SIN_CUIT_LABEL[d.tipo] || d.tipo} ${d.numero}`}>
+            {TIPO_DOC_SIN_CUIT_LABEL[d.tipo] || d.tipo}
+          </span>
+          {d.archivoUrl ? (
+            <>
+              <a href={getImageUrl(d.archivoUrl)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} title={d.archivoNombre || 'Ver PDF'} className="p-1 rounded text-violet-600 hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors">
+                <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4" />
+              </a>
+              <a href={getImageUrl(d.archivoUrl)} download={d.archivoNombre || undefined} onClick={(e) => e.stopPropagation()} title="Descargar" className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+                <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
+              </a>
+            </>
+          ) : (
+            <span className="text-[10px] text-gray-400 italic">sin archivo</span>
+          )}
+          <button type="button" onClick={(e) => borrar(e, i)} disabled={borrando === i} title="Eliminar" className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-600 transition-colors disabled:opacity-50">
+            <FontAwesomeIcon icon={borrando === i ? faSpinner : faTrash} spin={borrando === i} className="h-4 w-4" />
+          </button>
+        </div>
+      ))}
+      <button type="button" onClick={(e) => { e.stopPropagation(); onAbrir(); }} className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline w-fit">
+        <FontAwesomeIcon icon={faUpload} className="h-3 w-3" />
+        Agregar
       </button>
     </div>
   );
@@ -361,8 +426,8 @@ export const ContractBulkAfipTab: React.FC<{
 
   // clave-estado (normalizada) → trámite impositivo, para los estados marcados como impositivos.
   const impositivoPorClave = useMemo(() => {
-    const m = new Map<string, { tipo?: TipoImpositivo; name: string }>();
-    allEstados.filter((e) => e.data?.esImpositivo).forEach((e) => m.set(claveEstado(e.name), { tipo: e.data?.tipoImpositivo as TipoImpositivo | undefined, name: e.name }));
+    const m = new Map<string, { tipo?: TipoImpositivo; name: string; aceptaSinCuit?: boolean }>();
+    allEstados.filter((e) => e.data?.esImpositivo).forEach((e) => m.set(claveEstado(e.name), { tipo: e.data?.tipoImpositivo as TipoImpositivo | undefined, name: e.name, aceptaSinCuit: !!e.data?.aceptaSinCuit }));
     return m;
   }, [allEstados]);
 
@@ -472,7 +537,7 @@ export const ContractBulkAfipTab: React.FC<{
     for (const r of rows) {
       const imp = impositivoPorClave.get(claveEstado(r.nombre_estado_empleado || ''));
       if (imp) {
-        const row: ImpositivoRow = { ...r, _tipo: imp.tipo, _estadoName: imp.name };
+        const row: ImpositivoRow = { ...r, _tipo: imp.tipo, _estadoName: imp.name, _aceptaSinCuit: imp.aceptaSinCuit };
         out.push({ row, result: resolveAfip(row, afipCat) });
       }
     }
@@ -806,12 +871,23 @@ export const ContractBulkAfipTab: React.FC<{
                   </div>
                 </div>
 
-                {r._tipo && (
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap w-fit ${r._tipo === 'alta_temprana_afip' ? 'bg-purple-600 text-white border-purple-600 dark:bg-purple-500 dark:border-purple-500' : 'bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700'}`}>
-                    <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" />
-                    {TIPO_LABEL[r._tipo]}
-                  </span>
-                )}
+                {r._tipo &&
+                  (() => {
+                    // Mismo criterio que TramiteImpositivoBadge: si el estado acepta gente sin CUIT y
+                    // esta persona no lo tiene, el badge dice "Sin CUIT" (su trámite queda pendiente).
+                    const sinCuitBadge = !!r._aceptaSinCuit && noPoseeCuit(r.cuit, r.sinCuit);
+                    const cls = sinCuitBadge
+                      ? 'bg-violet-100 text-violet-800 border-violet-500 border-dashed dark:bg-violet-500/25 dark:text-violet-200 dark:border-violet-400'
+                      : r._tipo === 'alta_temprana_afip'
+                        ? 'bg-purple-600 text-white border-purple-600 dark:bg-purple-500 dark:border-purple-500'
+                        : 'bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700';
+                    return (
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap w-fit ${cls}`}>
+                        <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" />
+                        {sinCuitBadge ? 'Sin CUIT' : TIPO_LABEL[r._tipo]}
+                      </span>
+                    );
+                  })()}
 
                 <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700/60">
                   {layoutConstancia && (
@@ -865,6 +941,7 @@ export const ContractBulkAfipTab: React.FC<{
                       )}
                     </th>
                   )}
+                  {filterTipo === 'sin_cuit' && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Documentación</th>}
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Alta / Baja</th>
                   {layoutConstancia && (
                     <>
@@ -878,9 +955,11 @@ export const ContractBulkAfipTab: React.FC<{
                           </span>
                         </th>
                       )}
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Estado en el Padrón de AFIP/ARCA">
-                        ARCA
-                      </th>
+                      {filterTipo !== 'sin_cuit' && (
+                        <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Estado en el Padrón de AFIP/ARCA">
+                          ARCA
+                        </th>
+                      )}
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Si la constancia quedó archivada en Dropbox">
                         DROPBOX
                       </th>
@@ -896,7 +975,7 @@ export const ContractBulkAfipTab: React.FC<{
                       </span>
                     </th>
                   )}
-                  <ContractDocsHeaders showContrato={false} showRelease={false} altaLabel={filterTipo === 'alta_temprana_afip' ? 'Alta AFIP' : 'Alta Servicios'} />
+                  {filterTipo !== 'sin_cuit' && <ContractDocsHeaders showContrato={false} showRelease={false} altaLabel={filterTipo === 'alta_temprana_afip' ? 'Alta AFIP' : 'Alta Servicios'} />}
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">CUIT</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
@@ -953,6 +1032,11 @@ export const ContractBulkAfipTab: React.FC<{
                         )}
                       </td>
                     )}
+                    {filterTipo === 'sin_cuit' && (
+                      <td className="px-4 py-3">
+                        <CeldaDocumentacionSinCuit row={r} onAbrir={() => setValidacionRow(r)} onCambio={(v) => aplicarValidacionSinCuit(r, v)} />
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 whitespace-nowrap">
                       {(() => {
                         const vigente = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
@@ -987,9 +1071,11 @@ export const ContractBulkAfipTab: React.FC<{
                           </td>
                         )}
                         {/* Estado en AFIP/ARCA y archivado en Dropbox, por separado (acciones — Validar/ARCA — viven en la columna sticky "Acciones"). */}
-                        <td className="px-4 py-3">
-                          <ArcaBadge row={r} />
-                        </td>
+                        {filterTipo !== 'sin_cuit' && (
+                          <td className="px-4 py-3">
+                            <ArcaBadge row={r} />
+                          </td>
+                        )}
                         <td className="px-4 py-3">
                           <DropboxBadge row={r} onEliminado={() => load(true)} />
                         </td>
@@ -1003,7 +1089,7 @@ export const ContractBulkAfipTab: React.FC<{
                         </button>
                       </td>
                     )}
-                    <ContractDocsColumns record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onDownloadContract={handleDownloadContract} onDownloadRelease={handleDownloadRelease} onUploadAlta={handleUploadAlta} showContrato={false} showRelease={false} hideAltaLabel />
+                    {filterTipo !== 'sin_cuit' && <ContractDocsColumns record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onDownloadContract={handleDownloadContract} onDownloadRelease={handleDownloadRelease} onUploadAlta={handleUploadAlta} showContrato={false} showRelease={false} hideAltaLabel />}
                     <td className="px-4 py-3">
                       <p className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{r.userName}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>

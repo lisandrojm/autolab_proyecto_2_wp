@@ -116,6 +116,67 @@ const CAMPOS_POR_TIPO: Record<string, CamposTipo> = {
 const camposDe = (tipo: string): CamposTipo => CAMPOS_POR_TIPO[tipo] || CAMPOS_POR_TIPO.otro;
 const labelTipo = (tipo: string): string => TIPO_ENTIDAD_OPTIONS.find((o) => o.value === tipo)?.label || 'Entidad';
 
+/**
+ * Qué pasa si la persona no tiene CUIT/CUIL: explica el circuito "Sin CUIT" de Contratos, para que
+ * quien se registra sepa de antemano que puede avanzar igual y qué se le va a pedir después.
+ */
+const InfoSinCuit: React.FC = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        title="¿Qué pasa si no tengo CUIT/CUIL?"
+        aria-label="¿Qué pasa si no tengo CUIT/CUIL?"
+        className="ml-1.5 inline-flex items-center justify-center h-4 w-4 rounded-full border border-gray-500 text-gray-400 hover:text-blue-400 hover:border-blue-400 transition-colors text-[10px] font-bold align-middle"
+      >
+        i
+      </button>
+      {open &&
+        createPortal(
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={() => setOpen(false)}>
+            <div className="w-full max-w-lg rounded-xl border border-gray-700 bg-gray-800 shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
+                <h3 className="text-sm font-bold text-gray-100">Si todavía no tenés CUIT/CUIL</h3>
+                <button type="button" onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-200 text-lg leading-none">
+                  ✕
+                </button>
+              </div>
+              <div className="px-5 py-4 space-y-3 text-sm text-gray-300">
+                <p>
+                  Podés registrarte igual: destildá <strong>&quot;Tiene CUIT / CUIL argentino&quot;</strong> y seguí con el resto de los datos.
+                </p>
+                <p>
+                  Tu trámite de AFIP/ANSES <strong>no se descarta</strong>: queda <strong>pendiente</strong> hasta que cuentes con la documentación migratoria necesaria (DNI precario, residencia en trámite,
+                  etc.).
+                </p>
+                <div>
+                  <p className="font-semibold text-gray-200 mb-1">Mientras tanto, con tus contratos:</p>
+                  <ul className="space-y-1.5 list-disc list-inside text-gray-300">
+                    <li>
+                      Quedan en un circuito aparte llamado <strong>Sin CUIT</strong>, en vez de los trámites normales de AFIP.
+                    </li>
+                    <li>Se te va a pedir documentación de respaldo (pasaporte, DNI precario, constancia de residencia en trámite o CUIL provisorio).</li>
+                    <li>Una vez validada esa documentación, el contrato avanza igual y se generan tu Contrato y tu Release para firmar.</li>
+                    <li>Cuando obtengas el CUIL, se carga en tu ficha y pasás al circuito normal de AFIP.</li>
+                  </ul>
+                </div>
+                <p className="text-[11px] text-gray-500">Si ya tenés CUIT/CUIL, dejá el check tildado y cargalo: es lo que agiliza el alta.</p>
+              </div>
+              <div className="flex justify-end px-5 py-3 border-t border-gray-700">
+                <button type="button" onClick={() => setOpen(false)} className="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700">
+                  Entendido
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+};
+
 /** Selector con modal y buscador, para listas largas (Nacionalidad, Obra social, Rol frame). */
 const SearchableSelect: React.FC<{
   title: string;
@@ -578,6 +639,7 @@ export const RegistroPage: React.FC = () => {
                       <div>
                         <label className={labelClass}>
                           Cuil {cuilObligatorio && <span className="text-red-500">*</span>}
+                          <InfoSinCuit />
                         </label>
                         {/* Los extranjeros pueden no tener CUIL: se declara antes de pedirlo. */}
                         {!esArgentino && (

@@ -647,7 +647,7 @@ export const ContractsPage: React.FC = () => {
                             ) : (
                               <EstadoBadge name={estadoImpositivo.name} className="text-[10px] whitespace-nowrap" />
                             )}
-                            <TramiteImpositivoBadge estado={estadoImpositivo} />
+                            <TramiteImpositivoBadge estado={estadoImpositivo} persona={{ cuit: record.cuit, sinCuit: record.sinCuit }} />
                           </div>
                         );
                       })()}

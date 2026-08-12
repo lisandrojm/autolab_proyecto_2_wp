@@ -30,7 +30,10 @@ export const TIPOS_DOC_SIN_CUIT: { value: string; label: string }[] = [
   { value: "otro", label: "Otro" },
 ];
 
-const labelTipo = (tipo: string): string => TIPOS_DOC_SIN_CUIT.find((t) => t.value === tipo)?.label || tipo;
+/** Etiqueta legible de cada tipo, para mostrarlo fuera del modal (columna Documentación). */
+export const TIPO_DOC_SIN_CUIT_LABEL: Record<string, string> = Object.fromEntries(TIPOS_DOC_SIN_CUIT.map((t) => [t.value, t.label]));
+
+const labelTipo = (tipo: string): string => TIPO_DOC_SIN_CUIT_LABEL[tipo] || tipo;
 
 const fmtFechaHora = (iso?: string): string => {
   if (!iso) return "";

@@ -4,11 +4,12 @@ import { rolesAPI, Role } from "../../api/roles";
 import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
 import { infoAPI, InfoItem } from "../../api/info";
 import { InfoModal } from "../ui/InfoModal";
+import { Modal } from "../ui/Modal";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { fuzzyMatch } from "../../utils/searchHelpers";
 import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido } from "../../utils/nacionalidadDocumento";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faEye, faEyeSlash, faToggleOn, faToggleOff, faMapMarkerAlt, faUniversity, faSearch, faTimes, faMobileAlt, faKey, faCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faEye, faEyeSlash, faToggleOn, faToggleOff, faMapMarkerAlt, faUniversity, faSearch, faTimes, faMobileAlt, faKey, faCheck, faXmark, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 
 type ModalTab = "general" | "domicilio" | "bancarios";
 
@@ -105,6 +106,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   const [modalActiveTab, setModalActiveTab] = useState<ModalTab>("general");
   /** Solo para extranjeros: si declaró tener CUIL. Los argentinos siempre lo llevan. */
   const [tieneCuil, setTieneCuil] = useState(true);
+  /** Explicación del circuito "Sin CUIT" de Contratos (modal del ⓘ al lado del CUIT/CUIL). */
+  const [sinCuitInfoOpen, setSinCuitInfoOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   // Password mode
@@ -581,7 +584,14 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">CUIT / CUIL {esArgentino ? "*" : ""}</label>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                          <span className="inline-flex items-center gap-1.5">
+                            CUIT / CUIL {esArgentino ? "*" : ""}
+                            <button type="button" onClick={() => setSinCuitInfoOpen(true)} title="¿Qué pasa si no tiene CUIT/CUIL?" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
+                              <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+                            </button>
+                          </span>
+                        </label>
                         {/* Los extranjeros pueden no tener CUIL: se declara antes de pedirlo. */}
                         {!esArgentino && (
                           <label className="flex items-center gap-2 mb-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
@@ -940,6 +950,31 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
             )}
           </div>
         </form>
+      )}
+      {sinCuitInfoOpen && (
+        <Modal isOpen={sinCuitInfoOpen} onClose={() => setSinCuitInfoOpen(false)} title="Si la persona todavía no tiene CUIT/CUIL" size="md" zIndex={90}>
+          <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+            <p>
+              Se puede dar de alta igual: destildá <strong>&quot;Tiene CUIT / CUIL argentino&quot;</strong> y seguí con el resto de los datos.
+            </p>
+            <p>
+              Su trámite de AFIP/ANSES <strong>no se descarta</strong>: queda <strong>pendiente</strong> hasta que cuente con la documentación migratoria necesaria (DNI precario, residencia en trámite, etc.).
+            </p>
+            <div>
+              <p className="font-semibold text-gray-800 dark:text-gray-100 mb-1">Mientras tanto, con sus contratos:</p>
+              <ul className="space-y-1.5 list-disc list-inside">
+                <li>
+                  Aparecen en la pestaña <strong>Sin CUIT</strong> de Contratos, y no en Alta temprana de AFIP ni en Constancia de CUIT.
+                </li>
+                <li>Hay que cargarles documentación de respaldo (pasaporte, DNI precario, constancia de residencia en trámite o CUIL provisorio) y marcar la validación.</li>
+                <li>
+                  Recién ahí se los puede enviar a <strong>Generar Documentos</strong>, donde se generan el Contrato y el Release como siempre.
+                </li>
+                <li>Queda una fecha de seguimiento (90 días por defecto) para revisar si ya obtuvo el CUIL y pasarlo al circuito normal.</li>
+              </ul>
+            </div>
+          </div>
+        </Modal>
       )}
     </InfoModal>
   );

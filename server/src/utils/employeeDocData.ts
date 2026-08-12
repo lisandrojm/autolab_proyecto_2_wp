@@ -75,7 +75,7 @@ export function buildIdentidadTag(user: any): string {
  *   `estadoDropboxCronService.ts` sigue funcionando igual que cuando iba suelto.
  * Devuelve el nombre SIN extensión (el caller agrega la extensión correspondiente).
  */
-export function buildDocFileName(opts: { tipo: "Contrato" | "Release" | "ConstanciaCUIT" | "AltaAFIP"; user: any; up: any; contract: any; docName?: string; extra?: string }): string {
+export function buildDocFileName(opts: { tipo: "Contrato" | "Release" | "ConstanciaCUIT" | "AltaAFIP" | "Documentacion"; user: any; up: any; contract: any; docName?: string; extra?: string }): string {
   const { tipo, user, up, contract, docName, extra } = opts;
   const proyecto = up?.externalProjectId ?? contract?.proyecto_id ?? up?.nombre_proyecto ?? contract?.nombre_proyecto ?? "";
   const nombre = (user?.firstName || "").trim();

@@ -183,6 +183,18 @@ export const EstadoSecundarioBadge: React.FC<{ estado: { name: string; data?: { 
 };
 
 /** Etiqueta del trámite impositivo (excluyente) que representa un estado impositivo. */
+/**
+ * ¿La persona NO tiene CUIT/CUIL argentino? Mismo criterio que `noPoseeCuit` de ConstanciaBulk: el
+ * flag explícito de su ficha, o un CUIT vacío / de un solo dígito repetido (00-00000000-0 y
+ * similares) que no identifica a nadie. Se replica acá para no crear un import circular entre
+ * EstadoSelect y los componentes de contratos.
+ */
+const noPoseeCuitBadge = (cuit?: string, sinCuit?: boolean): boolean => {
+  if (sinCuit === true) return true;
+  const d = String(cuit || "").replace(/\D/g, "");
+  return d.length === 0 || /^(\d)\1*$/.test(d);
+};
+
 const TIPO_IMPOSITIVO_LABEL: Record<string, string> = {
   alta_temprana_afip: "Alta temprana de AFIP",
   constancia_cuit: "Constancia de CUIT",
@@ -193,16 +205,36 @@ const TIPO_IMPOSITIVO_LABEL: Record<string, string> = {
  * Mismo violeta invertido que en el ABM de Estados: "Alta temprana de AFIP" relleno (positivo) y
  * "Constancia de CUIT" contorno (negativo). No muestra nada si el estado no tiene trámite definido.
  */
-export const TramiteImpositivoBadge: React.FC<{ estado: { data?: { tipoImpositivo?: string } } | null; className?: string }> = ({ estado, className = "" }) => {
+/**
+ * Badge del trámite impositivo del estado.
+ *
+ * Si el estado tiene "Acepta sin CUIT" y la persona NO tiene CUIT/CUIL argentino, se muestra
+ * "Sin CUIT" en lugar del trámite: su trámite de AFIP queda pendiente hasta que tenga la
+ * documentación migratoria. Así un mismo estado puede tener personas con y sin CUIT, cada una con
+ * el badge que le corresponde. Los tres son violetas pero bien distinguibles entre sí:
+ * Alta temprana = violeta sólido, Constancia = violeta claro, Sin CUIT = violeta con borde punteado.
+ */
+export const TramiteImpositivoBadge: React.FC<{
+  estado: { data?: { tipoImpositivo?: string; aceptaSinCuit?: boolean } } | null;
+  /** Persona del contrato, para decidir si corresponde el badge "Sin CUIT". */
+  persona?: { cuit?: string; sinCuit?: boolean };
+  className?: string;
+}> = ({ estado, persona, className = "" }) => {
   const tipo = estado?.data?.tipoImpositivo;
   if (!tipo) return null;
-  const label = TIPO_IMPOSITIVO_LABEL[tipo] || tipo;
-  const cls =
-    tipo === "alta_temprana_afip"
+
+  const sinCuit = !!estado?.data?.aceptaSinCuit && noPoseeCuitBadge(persona?.cuit, persona?.sinCuit);
+  const label = sinCuit ? "Sin CUIT" : TIPO_IMPOSITIVO_LABEL[tipo] || tipo;
+  const cls = sinCuit
+    ? "bg-violet-100 text-violet-800 border-violet-500 border-dashed dark:bg-violet-500/25 dark:text-violet-200 dark:border-violet-400"
+    : tipo === "alta_temprana_afip"
       ? "bg-purple-600 text-white border-purple-600 dark:bg-purple-500 dark:border-purple-500"
       : "bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700";
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap ${cls} ${className}`}>
+    <span
+      title={sinCuit ? "La persona todavía no tiene CUIT/CUIL: el trámite de AFIP queda pendiente" : undefined}
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap ${cls} ${className}`}
+    >
       <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" />
       {label}
     </span>

@@ -131,6 +131,13 @@ interface FormState {
   colorEtiquetaSecundaria: string;
   /** Trámite impositivo (solo con esImpositivo tildado): "Alta temprana de AFIP" o "Constancia de CUIT". */
   tipoImpositivo: TipoImpositivo | '';
+  /**
+   * El estado admite también personas SIN CUIT/CUIL argentino. A esas personas el badge del trámite
+   * les muestra "Sin CUIT" en lugar del trámite de AFIP, porque su trámite queda pendiente hasta que
+   * tengan la documentación migratoria. Las que sí tienen CUIT siguen viendo el trámite normal, así
+   * que un mismo estado puede convivir con los dos casos.
+   */
+  aceptaSinCuit: boolean;
 }
 
 const FORM_VACIO: FormState = {
@@ -141,6 +148,7 @@ const FORM_VACIO: FormState = {
   etiquetaSecundaria: '',
   colorEtiquetaSecundaria: COLOR_POR_DEFECTO,
   tipoImpositivo: '',
+  aceptaSinCuit: false,
 };
 
 export const ContractStatesTab: React.FC = () => {
@@ -153,6 +161,7 @@ export const ContractStatesTab: React.FC = () => {
   const [editando, setEditando] = useState<InfoItem | null>(null);
   const [form, setForm] = useState<FormState>(FORM_VACIO);
   const [showBadgeSecundarioInfo, setShowBadgeSecundarioInfo] = useState(false);
+  const [showAceptaSinCuitInfo, setShowAceptaSinCuitInfo] = useState(false);
   const [showTipoImpositivoInfo, setShowTipoImpositivoInfo] = useState(false);
 
   // Vista tarjetas/tabla, como el resto de los ABM: la tabla solo en pantallas grandes.
@@ -292,6 +301,7 @@ export const ContractStatesTab: React.FC = () => {
       etiquetaSecundaria: estado.data?.etiquetaSecundaria || '',
       colorEtiquetaSecundaria: estado.data?.colorEtiquetaSecundaria || COLOR_POR_DEFECTO,
       tipoImpositivo: (estado.data?.tipoImpositivo as TipoImpositivo) || '',
+      aceptaSinCuit: !!estado.data?.aceptaSinCuit,
     });
     setShowModal(true);
   };
@@ -338,6 +348,7 @@ export const ContractStatesTab: React.FC = () => {
       etiquetaSecundaria: form.esImpositivo ? form.etiquetaSecundaria.trim() : undefined,
       colorEtiquetaSecundaria: form.esImpositivo ? form.colorEtiquetaSecundaria : undefined,
       tipoImpositivo: form.esImpositivo && form.tipoImpositivo ? form.tipoImpositivo : undefined,
+      aceptaSinCuit: form.esImpositivo ? form.aceptaSinCuit : undefined,
       // transicionAutomatica NO se manda desde acá: se edita desde "Orden de dependencias".
     };
 
@@ -592,6 +603,39 @@ export const ContractStatesTab: React.FC = () => {
                   })}
                 </div>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Uno u otro: un estado impositivo es "Alta temprana de AFIP" o "Constancia de CUIT", nunca los dos.</p>
+
+                {/* Convivencia con gente sin CUIT: el trámite de AFIP les queda pendiente, pero el
+                    estado es el mismo — solo cambia el badge que se les muestra. */}
+                <div className="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-purple-200/60 dark:border-purple-800/40">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Acepta sin CUIT</p>
+                    <button
+                      type="button"
+                      onClick={() => setShowAceptaSinCuitInfo(true)}
+                      className="text-purple-400 hover:text-purple-600 dark:hover:text-purple-300 transition-colors shrink-0"
+                      title="¿Qué es esto?"
+                      aria-label="Información sobre Acepta sin CUIT"
+                    >
+                      <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+                    </button>
+                    {/* El badge resultante se muestra apenas se activa el switch. */}
+                    {form.aceptaSinCuit && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap bg-violet-100 text-violet-800 border-violet-500 dark:bg-violet-500/25 dark:text-violet-200 dark:border-violet-400 border-dashed">
+                        <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" />
+                        Sin CUIT
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={form.aceptaSinCuit}
+                    onClick={() => setForm((p) => ({ ...p, aceptaSinCuit: !p.aceptaSinCuit }))}
+                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${form.aceptaSinCuit ? 'bg-purple-600' : 'bg-gray-300 dark:bg-gray-600'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${form.aceptaSinCuit ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center gap-1.5 pt-1 border-t border-purple-200/60 dark:border-purple-800/40">
@@ -694,6 +738,28 @@ export const ContractStatesTab: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      <InfoModal
+        isOpen={showAceptaSinCuitInfo}
+        onClose={() => setShowAceptaSinCuitInfo(false)}
+        title="Acepta sin CUIT"
+        subtitle="Personas con el trámite de AFIP pendiente"
+        size="sm"
+        zIndex={120}
+        actions={[{ label: 'Entendido', onClick: () => setShowAceptaSinCuitInfo(false), variant: 'primary' }]}
+      >
+        <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+          <p>Permite que en este estado convivan personas con y sin CUIT/CUIL argentino.</p>
+          <p>
+            A las que no lo tengan —CUIT en ceros, o sin el check de <strong>Tiene CUIT / CUIL argentino</strong> en su ficha— se les muestra el badge <strong>Sin CUIT</strong> en lugar del trámite de AFIP,
+            porque su trámite queda <strong>pendiente</strong> hasta que cuenten con la documentación migratoria.
+          </p>
+          <p>Las que sí tienen CUIT siguen viendo el trámite normal del estado, así que un mismo estado sirve para los dos casos.</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Sus contratos se gestionan desde la pestaña <strong>Sin CUIT</strong> de Contratos, donde se carga la documentación de respaldo antes de enviarlos a Generar Documentos.
+          </p>
+        </div>
+      </InfoModal>
 
       <InfoModal
         isOpen={showBadgeSecundarioInfo}

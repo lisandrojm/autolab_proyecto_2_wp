@@ -688,38 +688,42 @@ router.post("/habilitar-firma", async (req: AuthenticatedRequest & TenantRequest
 const __afipFilename = fileURLToPath(import.meta.url);
 const __afipDirname = dirname(__afipFilename);
 
-/** Mismo criterio que el documento de "Alta": se guarda bajo la carpeta del EMPLEADO, no del admin. */
-const sinCuitDocStorage = multer.diskStorage({
-  destination: async (req: any, _file, cb) => {
-    try {
-      const tenantId = req.tenantId || "unknown_tenant";
-      const employeeUserId = req.body?.userId || req.params?.userId || "unknown_user";
-      const dir = path.join(__afipDirname, "../../storage", tenantId, employeeUserId, "sin-cuit");
-      await fs.mkdir(dir, { recursive: true });
-      cb(null, dir);
-    } catch (err) {
-      console.error("Error en multer destination (sin-cuit):", err);
-      cb(err as any, "");
-    }
-  },
-  filename: (_req: any, file, cb) => {
-    const docId = new mongoose.Types.ObjectId();
-    const ext = path.extname(file.originalname).toLowerCase() || ".pdf";
-    cb(null, `sincuit_${docId}${ext}`);
-  },
-});
-
 const TIPOS_DOC_SIN_CUIT = ["pasaporte", "dni_precario", "residencia_tramite", "cuil_provisorio", "otro"] as const;
 const EXT_PERMITIDAS = [".pdf", ".jpg", ".jpeg", ".png"];
 
+/**
+ * El archivo se recibe en memoria porque SIEMPRE se guarda como PDF: si suben una foto (JPG/PNG) se
+ * convierte acá, así toda la documentación de respaldo queda en un formato único y con la misma
+ * nomenclatura que el resto de los documentos del contrato (`buildDocFileName`).
+ */
 const uploadSinCuitDoc = multer({
-  storage: sinCuitDocStorage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (EXT_PERMITIDAS.includes(path.extname(file.originalname).toLowerCase())) return cb(null, true);
     cb(new Error("Solo se permiten PDF o imágenes (JPG/PNG)"));
   },
 }).single("archivo");
+
+/** Envuelve una imagen en un PDF de una página del tamaño de la propia imagen. */
+async function imagenAPdf(buffer: Buffer): Promise<Buffer> {
+  const { default: PDFDocument } = await import("pdfkit");
+  return await new Promise<Buffer>((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ autoFirstPage: false });
+      const chunks: Buffer[] = [];
+      doc.on("data", (c: Buffer) => chunks.push(c));
+      doc.on("end", () => resolve(Buffer.concat(chunks)));
+      doc.on("error", reject);
+      const img = (doc as any).openImage(buffer);
+      doc.addPage({ size: [img.width, img.height], margin: 0 });
+      (doc as any).image(img, 0, 0);
+      doc.end();
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
 
 /** Días por defecto para volver a revisar si la persona ya obtuvo el CUIL. */
 const DIAS_SEGUIMIENTO_DEFAULT = 90;
@@ -760,13 +764,34 @@ router.post("/sin-cuit/documento", uploadSinCuitDoc, async (req: AuthenticatedRe
 
     const contrato: any = (up.contracts[contractIndex] as any).toObject();
     const validacion = contrato.sinCuitValidacion || { documentos: [] };
+    const yaCargados = (validacion.documentos || []).length;
+
+    // El archivo, si vino, se guarda SIEMPRE como PDF y con la misma nomenclatura que el resto de los
+    // documentos del contrato, numerado correlativo: `{proyecto}_Documentacion_{NN}_{Apellido_Nombre}_...`
+    let archivoUrl: string | undefined;
+    let archivoNombre: string | undefined;
+    if (req.file) {
+      const empleado = await User.findById(userId).select("firstName lastName email metadata").lean();
+      const correlativo = String(yaCargados + 1).padStart(2, "0");
+      const base = buildDocFileName({ tipo: "Documentacion", user: empleado, up, contract: contrato, docName: correlativo });
+      const esPdf = path.extname(req.file.originalname).toLowerCase() === ".pdf";
+      const pdfBuffer = esPdf ? req.file.buffer : await imagenAPdf(req.file.buffer);
+      const dir = path.join(__afipDirname, "../../storage", tenantId, String(userId), "sin-cuit");
+      await fs.mkdir(dir, { recursive: true });
+      // El nombre en disco lleva un sufijo único: si se recarga el mismo correlativo no se pisa el anterior.
+      const enDisco = `${base}__${new mongoose.Types.ObjectId()}.pdf`.replace(/\s+/g, "_");
+      await fs.writeFile(path.join(dir, enDisco), pdfBuffer);
+      archivoUrl = `/storage/${tenantId}/${userId}/sin-cuit/${enDisco}`;
+      archivoNombre = `${base}.pdf`;
+    }
+
     validacion.documentos = [
       ...(validacion.documentos || []),
       {
         tipo,
         numero: String(numero).trim(),
-        archivoUrl: req.file ? `/storage/${tenantId}/${userId}/sin-cuit/${req.file.filename}` : undefined,
-        archivoNombre: req.file?.originalname,
+        archivoUrl,
+        archivoNombre,
         observaciones: String(observaciones || "").trim() || undefined,
         cargadoPor: req.user!.userId,
         cargadoPorNombre: nombreQuien,

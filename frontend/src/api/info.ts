@@ -19,6 +19,8 @@ export interface InfoItem {
     colorEtiquetaSecundaria?: string;
     /** Estados impositivos: trámite que representa (excluyente). */
     tipoImpositivo?: "alta_temprana_afip" | "constancia_cuit";
+    /** El estado admite personas SIN CUIT/CUIL argentino (badge "Sin CUIT" en vez del trámite). */
+    aceptaSinCuit?: boolean;
     /** Estados: orden visual en el ABM y en el dropdown del wizard (guía, no bloquea transiciones). */
     orden?: number;
     /** Estados: paso del flujo de dependencias (alternativas comparten número). Ausente = fuera del flujo. */
@@ -50,6 +52,8 @@ export interface EstadoPayload {
   etiquetaSecundaria?: string;
   colorEtiquetaSecundaria?: string;
   tipoImpositivo?: "alta_temprana_afip" | "constancia_cuit";
+  /** El estado admite también personas SIN CUIT/CUIL argentino (se les muestra el badge "Sin CUIT"). */
+  aceptaSinCuit?: boolean;
   /**
    * Opcional: si se omite, el backend no la toca (se preserva la que ya tenía el estado — se edita
    * desde "Orden de dependencias", no desde el formulario de Editar Estado). `null` la borra.
