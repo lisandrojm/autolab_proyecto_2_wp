@@ -106,24 +106,20 @@ const CeldaValidacionSinCuit: React.FC<{ row: ContractOverviewRow; onAbrir: () =
   };
 
   return (
-    <div className="flex flex-col gap-1.5 whitespace-nowrap">
+    <div className="whitespace-nowrap">
       <button
         type="button"
         role="switch"
         aria-checked={validado}
         onClick={toggle}
         disabled={guardando}
-        title={docs === 0 ? 'Cargá la documentación de respaldo para poder validar' : validado ? 'Quitar la validación' : 'Marcar como validado'}
+        title={docs === 0 ? 'Cargá la documentación de respaldo (columna Documentación) para poder validar' : validado ? 'Quitar la validación' : 'Marcar como validado'}
         className="inline-flex items-center gap-2"
       >
         <span className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${validado ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'} ${docs === 0 ? 'opacity-50' : ''}`}>
           <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${validado ? 'translate-x-[1.15rem]' : 'translate-x-0.5'}`} />
         </span>
         <span className={`text-[11px] font-semibold ${validado ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>{guardando ? 'Guardando...' : validado ? 'Validado' : 'Sin validar'}</span>
-      </button>
-      <button type="button" onClick={(e) => { e.stopPropagation(); onAbrir(); }} className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline w-fit">
-        <FontAwesomeIcon icon={faFileLines} className="h-3 w-3" />
-        {docs === 0 ? 'Cargar documentación' : `Documentación (${docs})`}
       </button>
     </div>
   );
@@ -324,6 +320,98 @@ const EmpresaSelectCell: React.FC<{ record: ContractOverviewRow; campo: 'contrat
         ))}
       </select>
       {guardando && <FontAwesomeIcon icon={faSpinner} spin className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-blue-500 pointer-events-none" title="Guardando..." />}
+    </div>
+  );
+};
+
+/**
+ * Asignación MASIVA de la empresa (Contrato o Release) a los contratos tildados.
+ *
+ * Las empresas disponibles salen de cada PROYECTO (`contratoEmpresas`/`releaseEmpresas`), así que al
+ * mezclar filas de proyectos distintos no todas admiten la misma: el select ofrece la unión, y al
+ * aplicar se saltean las filas donde esa empresa no está habilitada (se informa cuántas quedaron
+ * afuera en vez de fallar en silencio).
+ */
+const AsignarEmpresaMasivo: React.FC<{
+  campo: 'contrato' | 'release';
+  filas: ContractOverviewRow[];
+  onAplicado: (patches: { row: ContractOverviewRow; patch: Partial<ContractOverviewRow> }[]) => void;
+}> = ({ campo, filas, onAplicado }) => {
+  const [empresaId, setEmpresaId] = useState('');
+  const [aplicando, setAplicando] = useState(false);
+
+  const label = campo === 'contrato' ? 'Empresa Contrato' : 'Empresa Release';
+  // Unión de las empresas habilitadas en los proyectos de las filas elegidas.
+  const opciones = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const r of filas) {
+      for (const e of (campo === 'contrato' ? r.contratoEmpresas : r.releaseEmpresas) || []) m.set(e.id, e.label);
+    }
+    return [...m.entries()].map(([id, lbl]) => ({ id, label: lbl })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [filas, campo]);
+
+  const aplicar = async () => {
+    if (!empresaId) return;
+    const nombre = opciones.find((o) => o.id === empresaId)?.label || '';
+    const aplicables = filas.filter((r) => ((campo === 'contrato' ? r.contratoEmpresas : r.releaseEmpresas) || []).some((e) => e.id === empresaId));
+    const salteadas = filas.length - aplicables.length;
+    if (aplicables.length === 0) {
+      sweetAlert.error('No se puede aplicar', `Ninguno de los contratos elegidos tiene habilitada "${nombre}" en su proyecto.`);
+      return;
+    }
+    const conf = await sweetAlert.confirm(
+      `¿Asignar ${label}?`,
+      `Se va a poner "${nombre}" como ${label} en ${aplicables.length} contrato(s).${salteadas > 0 ? ` Se saltean ${salteadas} porque su proyecto no tiene esa empresa habilitada.` : ''}`,
+      'Sí, asignar',
+    );
+    if (!conf.isConfirmed) return;
+
+    setAplicando(true);
+    const patches: { row: ContractOverviewRow; patch: Partial<ContractOverviewRow> }[] = [];
+    let fallidas = 0;
+    for (const r of aplicables) {
+      try {
+        if (campo === 'contrato') await projectsAPI.updateContratoEmpresa(r.projectId, r.userId, r.contractIndex, empresaId);
+        else await projectsAPI.updateReleaseEmpresa(r.projectId, r.userId, r.contractIndex, empresaId);
+        patches.push({ row: r, patch: parcheEmpresa(campo, empresaId, nombre) });
+      } catch {
+        fallidas++;
+      }
+    }
+    setAplicando(false);
+    onAplicado(patches);
+    setEmpresaId('');
+    if (fallidas > 0) sweetAlert.error('Se asignaron con errores', `${patches.length} actualizados, ${fallidas} fallaron.`);
+    else sweetAlert.success('Listo', `${patches.length} contrato(s) actualizados con "${nombre}".`);
+  };
+
+  if (opciones.length === 0) return null;
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <select
+        value={empresaId}
+        onChange={(e) => setEmpresaId(e.target.value)}
+        title={`Asignar ${label} a los contratos tildados`}
+        className="text-xs rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+      >
+        <option value="">{label}...</option>
+        {opciones.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        onClick={aplicar}
+        disabled={!empresaId || aplicando}
+        title={empresaId ? `Asignar a ${filas.length} contrato(s)` : 'Elegí una empresa'}
+        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold bg-gray-700 text-white hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+      >
+        <FontAwesomeIcon icon={aplicando ? faSpinner : faCheck} spin={aplicando} className="h-3 w-3" />
+        Aplicar
+      </button>
     </div>
   );
 };
@@ -677,7 +765,14 @@ export const ContractBulkAfipTab: React.FC<{
    *  CUIT/CUIL, ARCA, Dropbox...). Lo que cambia es el contenido de la acción, no la tabla. */
   const layoutConstancia = filterTipo === 'constancia_cuit' || filterTipo === 'sin_cuit';
 
-  const esSeleccionable = useCallback((row: ImpositivoRow, result: AfipRowResult): boolean => (filterTipo === 'constancia_cuit' ? cuitEsValido(row.cuit) : result.completo), [filterTipo]);
+  /**
+   * El check es de selección GENERAL: se puede marcar cualquier fila. Cada acción masiva aplica
+   * después su propio criterio (el TXT arma solo los completos y avisa cuántos omitió; Validar ARCA
+   * solo consulta los que tienen CUIT válido). Antes solo se podían marcar los contratos ya
+   * completos, lo que dejaba fuera justo a los que había que corregir — no se podían tildar para
+   * asignarles la Empresa en masa porque les faltaba, precisamente, la Empresa.
+   */
+  const esSeleccionable = useCallback((_row: ImpositivoRow, _result: AfipRowResult): boolean => true, []);
   const selectableFiltered = useMemo(() => filtered.filter((x) => esSeleccionable(x.row, x.result)), [filtered, esSeleccionable]);
   const allSel = selectableFiltered.length > 0 && selectableFiltered.every((x) => selected.has(rowKey(x.row)));
   const toggleAll = () =>
@@ -688,6 +783,13 @@ export const ContractBulkAfipTab: React.FC<{
       return n;
     });
   const seleccionados = useMemo(() => filtered.filter((x) => selected.has(rowKey(x.row))), [filtered, selected]);
+  /** Aplica en la tabla (y en la caché) los cambios de una asignación masiva de empresa. */
+  const aplicarPatchesEmpresa = useCallback(
+    (patches: { row: ContractOverviewRow; patch: Partial<ContractOverviewRow> }[]) => {
+      for (const { row, patch } of patches) aplicarCambio(row, patch);
+    },
+    [aplicarCambio],
+  );
   // El TXT se arma con lo seleccionado; si no hay selección, con todo lo filtrado (comodidad).
   const fuenteTxt = seleccionados.length > 0 ? seleccionados : filtered;
   // Con el filtro de Empresa puesto, el nombre del archivo lo deja claro (cada empresa presenta su TXT por separado).
@@ -785,8 +887,19 @@ export const ContractBulkAfipTab: React.FC<{
               {countIncompletos} incompletos
             </button>
           </div>
-          <div className="flex items-center gap-3">
-            {seleccionados.length > 0 && <span className="text-xs text-gray-500 dark:text-gray-400">{seleccionados.length} seleccionado(s)</span>}
+          <div className="flex flex-wrap items-center gap-3">
+            {seleccionados.length > 0 ? (
+              <span className="text-xs text-gray-500 dark:text-gray-400">{seleccionados.length} seleccionado(s)</span>
+            ) : (
+              <span className="text-xs text-gray-400 dark:text-gray-500">Tildá contratos para asignarles la Empresa en masa</span>
+            )}
+            {/* Asignación masiva de empresa: solo con filas tildadas (sobre ellas se aplica). */}
+            {seleccionados.length > 0 && (
+              <>
+                <AsignarEmpresaMasivo campo="contrato" filas={seleccionados.map((x) => x.row)} onAplicado={aplicarPatchesEmpresa} />
+                <AsignarEmpresaMasivo campo="release" filas={seleccionados.map((x) => x.row)} onAplicado={aplicarPatchesEmpresa} />
+              </>
+            )}
             <button onClick={() => generarTxt(fuenteTxt, nombreArchivoTxt)} disabled={fuenteTxt.every((x) => !x.result.completo)} title={seleccionados.length > 0 ? 'Generar el TXT con los contratos seleccionados (solo los completos)' : 'Generar el TXT con los contratos completos del listado (o marcá algunos con el check)'} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0">
               <FontAwesomeIcon icon={faFileLines} className="h-4 w-4" />
               Generar TXT Masivo (AFIP){seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
@@ -845,7 +958,7 @@ export const ContractBulkAfipTab: React.FC<{
               <div key={`${r._id}-${r.contractIndex}`} className={`bg-white dark:bg-gray-800 rounded-xl border p-4 flex flex-col gap-3 ${selected.has(rowKey(r)) ? 'border-emerald-400 dark:border-emerald-700' : 'border-gray-200 dark:border-gray-700'}`}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3 min-w-0">
-                    <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!esSeleccionable(r, result)} onChange={() => toggleSel(rowKey(r))} title={esSeleccionable(r, result) ? (filterTipo === 'constancia_cuit' ? 'Incluir en Validar ARCA Masivo' : 'Incluir esta persona en el TXT') : filterTipo === 'constancia_cuit' ? 'Falta el CUIT/CUIL de esta persona' : 'Faltan datos AFIP: no se puede incluir en el TXT'} className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0" />
+                    <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!esSeleccionable(r, result)} onChange={() => toggleSel(rowKey(r))} title="Seleccionar para las acciones masivas (asignar Empresa, generar TXT, validar en ARCA)" className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0" />
                     <FontAwesomeIcon icon={faUser} className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0" />
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{r.userName}</p>
@@ -924,7 +1037,7 @@ export const ContractBulkAfipTab: React.FC<{
               <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
                 <tr className="border-b border-gray-100 dark:border-gray-800">
                   <th className="sticky top-0 left-0 z-[15] px-4 py-3 w-12 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700">
-                    <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={selectableFiltered.length === 0} title={filterTipo === 'constancia_cuit' ? 'Seleccionar todos los que tienen CUIT/CUIL cargado' : 'Seleccionar todos los completos'} className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
+                    <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={selectableFiltered.length === 0} title="Seleccionar todos los del listado" className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                   </th>
                   <th className="sticky top-0 left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">Acciones</th>
                   {layoutConstancia && (
@@ -1004,7 +1117,7 @@ export const ContractBulkAfipTab: React.FC<{
                 {filtered.map(({ row: r, result }) => (
                   <tr key={`${r._id}-${r.contractIndex}`} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : ''}`}>
                     <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
-                      <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!esSeleccionable(r, result)} onChange={() => toggleSel(rowKey(r))} title={esSeleccionable(r, result) ? (filterTipo === 'constancia_cuit' ? 'Incluir en Validar ARCA Masivo' : 'Incluir esta persona en el TXT') : filterTipo === 'constancia_cuit' ? 'Falta el CUIT/CUIL de esta persona' : 'Faltan datos AFIP: no se puede incluir en el TXT'} className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
+                      <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!esSeleccionable(r, result)} onChange={() => toggleSel(rowKey(r))} title="Seleccionar para las acciones masivas (asignar Empresa, generar TXT, validar en ARCA)" className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                     </td>
                     <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)] ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
                       {/* Sin CUIT los trámites de AFIP no aplican: la salida es generar los documentos. */}

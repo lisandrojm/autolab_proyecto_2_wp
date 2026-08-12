@@ -106,6 +106,48 @@ const ChipTipoImpositivo: React.FC<{ estado: InfoItem }> = ({ estado }) => {
   );
 };
 
+/**
+ * Badge "Sin CUIT": el estado admite además personas sin CUIT/CUIL argentino (switch "Acepta sin
+ * CUIT"). Mismo estilo que el badge que ven esas personas en Contratos —violeta con borde punteado—
+ * para que se reconozca como lo mismo.
+ */
+const ChipAceptaSinCuit: React.FC<{ estado: InfoItem }> = ({ estado }) => {
+  if (!estado.data?.aceptaSinCuit) return null;
+  return (
+    <span
+      title="Este estado también admite personas sin CUIT/CUIL argentino"
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border border-dashed whitespace-nowrap bg-violet-100 text-violet-800 border-violet-500 dark:bg-violet-500/25 dark:text-violet-200 dark:border-violet-400"
+    >
+      <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" />
+      Sin CUIT
+    </span>
+  );
+};
+
+/**
+ * Los estados se listan separados por índole: los IMPOSITIVOS (los que representan un trámite de
+ * AFIP y definen por qué pestaña de Contratos pasa el contrato) y el resto (los del circuito de
+ * firma y los operativos). Sin esa separación se leían todos como una misma lista y se confundían.
+ */
+const GRUPOS_ESTADOS: { key: string; titulo: string; descripcion: string; icono: typeof faFileInvoiceDollar; claseIcono: string; pertenece: (e: InfoItem) => boolean }[] = [
+  {
+    key: 'impositivos',
+    titulo: 'Estados impositivos',
+    descripcion: 'Representan un trámite ante AFIP (Alta temprana o Constancia de CUIT) y definen por qué pestaña de Gestión de Contratos pasa el contrato.',
+    icono: faFileInvoiceDollar,
+    claseIcono: 'text-purple-500',
+    pertenece: (e) => !!e.data?.esImpositivo,
+  },
+  {
+    key: 'no-impositivos',
+    titulo: 'Otros estados',
+    descripcion: 'No representan un trámite de AFIP: son las etapas del circuito de firma y los estados operativos del contrato.',
+    icono: faTags,
+    claseIcono: 'text-slate-400',
+    pertenece: (e) => !e.data?.esImpositivo,
+  },
+];
+
 /** Trámite impositivo que representa un estado impositivo. Excluyentes: siempre uno solo. */
 type TipoImpositivo = 'alta_temprana_afip' | 'constancia_cuit';
 const TIPOS_IMPOSITIVO: { value: TipoImpositivo; label: string; descripcion: string }[] = [
@@ -162,6 +204,8 @@ export const ContractStatesTab: React.FC = () => {
   const [form, setForm] = useState<FormState>(FORM_VACIO);
   const [showBadgeSecundarioInfo, setShowBadgeSecundarioInfo] = useState(false);
   const [showAceptaSinCuitInfo, setShowAceptaSinCuitInfo] = useState(false);
+  /** Grupo (impositivos / otros) cuya explicación se está mostrando en el ⓘ. */
+  const [grupoInfo, setGrupoInfo] = useState<(typeof GRUPOS_ESTADOS)[number] | null>(null);
   const [showTipoImpositivoInfo, setShowTipoImpositivoInfo] = useState(false);
 
   // Vista tarjetas/tabla, como el resto de los ABM: la tabla solo en pantallas grandes.
@@ -489,11 +533,47 @@ export const ContractStatesTab: React.FC = () => {
             </div>
           ) : (
             <SortableContext items={mostrar.map((e) => e._id)} strategy={verticalListSortingStrategy}>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {mostrar.map((estado) => (
-                  <SortableEstadoCard key={estado._id} estado={estado} isReorderMode={isReorderMode} nombreTipoContrato={nombreTipoContrato} abrirEditar={abrirEditar} eliminar={eliminar} />
-                ))}
-              </div>
+              {/* Agrupados por índole (impositivos / resto) para que no se confundan entre sí. En modo
+                  reorder NO se agrupa: ahí se arrastra sobre la lista completa y partirla en dos
+                  bloques haría que el orden que se ve no sea el orden real que se está guardando. */}
+              {isReorderMode ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {mostrar.map((estado) => (
+                    <SortableEstadoCard key={estado._id} estado={estado} isReorderMode={isReorderMode} nombreTipoContrato={nombreTipoContrato} abrirEditar={abrirEditar} eliminar={eliminar} />
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  {GRUPOS_ESTADOS.map((grupo) => {
+                    const delGrupo = mostrar.filter((e) => grupo.pertenece(e));
+                    if (delGrupo.length === 0) return null;
+                    return (
+                      <section key={grupo.key}>
+                        <div className="flex items-center gap-2 mb-3">
+                          <FontAwesomeIcon icon={grupo.icono} className={`h-3.5 w-3.5 ${grupo.claseIcono}`} />
+                          <h3 className="text-sm font-bold text-gray-700 dark:text-gray-200">{grupo.titulo}</h3>
+                          <span className="text-xs text-gray-400">({delGrupo.length})</span>
+                          <button
+                            type="button"
+                            onClick={() => setGrupoInfo(grupo)}
+                            title="¿Qué son estos estados?"
+                            aria-label={`Información sobre ${grupo.titulo}`}
+                            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors shrink-0"
+                          >
+                            <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+                          </button>
+                          <span className="flex-1 border-t border-gray-200 dark:border-gray-700 ml-2" />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                          {delGrupo.map((estado) => (
+                            <SortableEstadoCard key={estado._id} estado={estado} isReorderMode={isReorderMode} nombreTipoContrato={nombreTipoContrato} abrirEditar={abrirEditar} eliminar={eliminar} />
+                          ))}
+                        </div>
+                      </section>
+                    );
+                  })}
+                </div>
+              )}
             </SortableContext>
           )}
         </DndContext>
@@ -740,6 +820,17 @@ export const ContractStatesTab: React.FC = () => {
       </Modal>
 
       <InfoModal
+        isOpen={!!grupoInfo}
+        onClose={() => setGrupoInfo(null)}
+        title={grupoInfo?.titulo || ''}
+        size="sm"
+        zIndex={120}
+        actions={[{ label: 'Entendido', onClick: () => setGrupoInfo(null), variant: 'primary' }]}
+      >
+        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{grupoInfo?.descripcion}</p>
+      </InfoModal>
+
+      <InfoModal
         isOpen={showAceptaSinCuitInfo}
         onClose={() => setShowAceptaSinCuitInfo(false)}
         title="Acepta sin CUIT"
@@ -848,6 +939,7 @@ const SortableEstadoRow: React.FC<SortableEstadoProps & { index: number; onEnabl
           <div className="flex flex-wrap items-center gap-1">
             <ChipImpositivo />
             <ChipTipoImpositivo estado={estado} />
+            <ChipAceptaSinCuit estado={estado} />
           </div>
         ) : (
           <span className="text-xs text-gray-400">—</span>
@@ -913,6 +1005,7 @@ const SortableEstadoCard: React.FC<SortableEstadoProps> = ({ estado, isReorderMo
             </span>
             {estado.data?.esImpositivo ? <ChipImpositivo /> : null}
             {estado.data?.esImpositivo ? <ChipTipoImpositivo estado={estado} /> : null}
+            {estado.data?.esImpositivo ? <ChipAceptaSinCuit estado={estado} /> : null}
             <ChipPasoDependencia estado={estado} />
             <EstadoSecundarioBadge estado={estado} className="text-[10px]" />
           </div>

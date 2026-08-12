@@ -22,12 +22,14 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { Card } from "../components/ui/Card";
 import { Modal } from "../components/ui/Modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faDropbox } from "@fortawesome/free-brands-svg-icons";
 import { faFileContract, faBriefcase, faHourglassHalf, faTable, faGrip, faChevronLeft, faChevronRight, faClock, faEdit, faTrash, faUser, faIdCard, faBuilding, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { sweetAlert } from "../utils/sweetAlert";
 
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { ContractBulkAfipTab, ContractBulkFirmaTab } from "../components/contratos/ContractBulkTabs";
 import { ContractDropboxTab, fetchDropboxCounts } from "../components/contratos/ContractDropboxTabs";
+import { firmaDigitalAPI, FirmaDigitalConfig } from "../api/firmaDigital";
 
 /** Mismas opciones que usa el filtro "Rol/es" del tab Equipo de Gestionar Equipo. */
 const MOBILE_ROLE_OPTIONS = [
@@ -142,6 +144,11 @@ export const ContractsPage: React.FC = () => {
   // Modal de gestión de TODOS los contratos de una persona (cross-proyecto)
   const [managedUser, setManagedUser] = useState<{ id: string; name: string } | null>(null);
   const [releases, setReleases] = useState<Release[]>([]);
+  /** Carpetas reales de Dropbox Sign (Outbox/Pendbox/Requested signatures) según la configuración. */
+  const [firmaCfg, setFirmaCfg] = useState<FirmaDigitalConfig | null>(null);
+  useEffect(() => {
+    firmaDigitalAPI.config().then(setFirmaCfg).catch(() => setFirmaCfg(null));
+  }, []);
   useEffect(() => {
     contratoFrameAPI.list().then(setContratoFrames).catch(() => setContratoFrames([]));
     infoAPI.listEstados().then(setAllEstados).catch(() => setAllEstados([]));
@@ -212,6 +219,26 @@ export const ContractsPage: React.FC = () => {
   // Explicación puntual de UNA pestaña de "Gestión de Contratos" (si vive en Dropbox, si interviene
   // Dropbox Sign, etc.), aparte del info general de arriba.
   const [subTabInfoOpen, setSubTabInfoOpen] = useState<typeof mgmtTab | null>(null);
+
+  /**
+   * Qué carpetas de Dropbox alimentan cada paso. Salen de la configuración real, no de una lista fija:
+   *  - Paso 2 (Generar Documentos): las carpetas vigiladas del estado al que llegan los contratos con
+   *    el trámite impositivo terminado (Alta temprana de Afip, Constancia de cuit, Sin cuit).
+   *  - Pasos 3 a 5: las carpetas de Dropbox Sign configuradas (Outbox, Pendbox, Requested signatures).
+   */
+  const carpetasPorTab = useMemo<Partial<Record<MgmtTab, string[]>>>(() => {
+    const estadoEnvio = firmaCfg?.estadoEnvioDocNombre ? allEstados.find((e) => e.name === firmaCfg.estadoEnvioDocNombre) : undefined;
+    const carpetasEnvio = ((estadoEnvio?.data as any)?.transicionAutomatica?.carpetas || []).map((c: any) => c?.dropboxCarpeta).filter(Boolean) as string[];
+    return {
+      firma: carpetasEnvio,
+      para_firmar: [firmaCfg?.outboxCarpeta].filter(Boolean) as string[],
+      enviado_firma: [firmaCfg?.pendienteFirmaCarpeta].filter(Boolean) as string[],
+      firmados: [firmaCfg?.firmadosCarpeta].filter(Boolean) as string[],
+    };
+  }, [firmaCfg, allEstados]);
+
+  /** Paso cuyas carpetas de Dropbox se están mostrando en el modal del ícono. */
+  const [carpetasInfo, setCarpetasInfo] = useState<{ titulo: string; carpetas: string[] } | null>(null);
 
   const estadoContratoOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -535,13 +562,24 @@ export const ContractsPage: React.FC = () => {
                         <span className={`text-sm font-medium ${activo ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"}`}>{paso.label}</span>
                         {total !== null && <span className="text-xs text-gray-400">({total})</span>}
                       </button>
+                      {/* Estos pasos se alimentan de carpetas de Dropbox: el ícono muestra cuáles. */}
+                      {paso.tabs.length === 1 && (carpetasPorTab[paso.tabs[0]]?.length ?? 0) > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setCarpetasInfo({ titulo: paso.label, carpetas: carpetasPorTab[paso.tabs[0]] || [] })}
+                          title="Ver las carpetas de Dropbox de este paso"
+                          className="text-blue-500 hover:text-blue-600 transition-colors shrink-0"
+                        >
+                          <FontAwesomeIcon icon={faDropbox} className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                       {/* El paso 1 no lleva ⓘ acá: cada una de sus tres variantes tiene el suyo abajo. */}
                       {paso.tabs.length === 1 && (
                         <button
                           type="button"
                           onClick={() => setSubTabInfoOpen(paso.tabs[0])}
                           title={SUB_TAB_INFO[paso.tabs[0]].title}
-                          className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0 -ml-1"
+                          className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0 ml-1"
                         >
                           <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
                         </button>
@@ -945,6 +983,26 @@ export const ContractsPage: React.FC = () => {
                 </li>
               </ul>
             </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Carpetas de Dropbox que alimentan un paso. */}
+      {carpetasInfo && (
+        <Modal isOpen={!!carpetasInfo} onClose={() => setCarpetasInfo(null)} title={`Carpetas de Dropbox — ${carpetasInfo.titulo}`} size="sm" zIndex={80}>
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Lo que se ve en <strong>{carpetasInfo.titulo}</strong> sale de {carpetasInfo.carpetas.length === 1 ? "esta carpeta" : "estas carpetas"} de Dropbox:
+            </p>
+            <ul className="space-y-1.5">
+              {carpetasInfo.carpetas.map((c) => (
+                <li key={c} className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
+                  <FontAwesomeIcon icon={faDropbox} className="h-4 w-4 text-blue-500 shrink-0" />
+                  <span className="font-mono text-xs text-gray-700 dark:text-gray-200 break-all">{c.replace(/^\//, "")}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">Se configuran en Dropbox | Documentos → Configurar transición automática.</p>
           </div>
         </Modal>
       )}

@@ -326,8 +326,26 @@ router.patch("/estados/:id", requireTenant, authenticateToken, async (req, res) 
             return;
         }
         // Se preserva `data.id`: es lo que referencian los contratos ya guardados (estado_id).
+        //
+        // El merge se hace sobre un objeto PLANO: al hacer spread del subdocumento de Mongoose se
+        // arrastran las claves declaradas en el schema pero sin valor (ej. `transicionAutomatica`) como
+        // `undefined`, y al reasignarlas Mongoose intenta castear ese `undefined` y tira
+        // "Cast to Object failed" — el estado no se podía guardar (500) si no tenía transición
+        // configurada. Por eso también se descartan las claves sin valor antes de asignar.
+        const dataActual = typeof estado.data?.toObject === "function" ? estado.data.toObject() : { ...(estado.data || {}) };
+        // `transicionAutomatica: undefined` con la clave PRESENTE significa "borrarla" (ver
+        // parseEstadoBody); si la clave no vino, se preserva la que ya estaba.
+        const borrarTransicion = Object.prototype.hasOwnProperty.call(parsed.data, "transicionAutomatica") && parsed.data.transicionAutomatica === undefined;
+        const nuevaData = { ...dataActual, ...parsed.data, id: dataActual?.id };
+        for (const k of Object.keys(nuevaData)) {
+            if (nuevaData[k] === undefined)
+                delete nuevaData[k];
+        }
+        if (borrarTransicion)
+            delete nuevaData.transicionAutomatica;
         estado.name = parsed.name;
-        estado.data = { ...(estado.data || {}), ...parsed.data, id: estado.data?.id };
+        estado.data = nuevaData;
+        estado.markModified("data");
         await estado.save();
         res.json(estado.toObject());
     }
