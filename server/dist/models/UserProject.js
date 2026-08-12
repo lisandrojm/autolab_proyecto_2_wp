@@ -77,6 +77,26 @@ const contractSchema = new Schema({
             shiftIds: [{ type: Schema.Types.ObjectId, ref: "Shift" }],
         },
     ],
+    sinCuitValidacion: {
+        documentos: [
+            {
+                _id: false,
+                tipo: { type: String, enum: ["pasaporte", "dni_precario", "residencia_tramite", "cuil_provisorio", "otro"] },
+                numero: { type: String },
+                archivoUrl: { type: String },
+                archivoNombre: { type: String },
+                observaciones: { type: String },
+                cargadoPor: { type: Schema.Types.ObjectId, ref: "User" },
+                cargadoPorNombre: { type: String },
+                cargadoAt: { type: Date },
+            },
+        ],
+        validado: { type: Boolean },
+        validadoPor: { type: Schema.Types.ObjectId, ref: "User" },
+        validadoPorNombre: { type: String },
+        validadoAt: { type: Date },
+        fechaSeguimiento: { type: String },
+    },
 }, { _id: false }); // subdocument, no need for _id usually unless we want addressable contracts
 const userProjectSchema = new Schema({
     projectId: { type: Schema.Types.ObjectId, ref: "Project", required: true },

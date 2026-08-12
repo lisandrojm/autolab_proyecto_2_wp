@@ -683,7 +683,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
     const userIds = [...new Set(memberships.map((m: any) => String(m.userId || "")))].filter((id) => Types.ObjectId.isValid(id));
     const [usersList, clientsList] = await Promise.all([
       User.find({ _id: { $in: userIds } })
-        .select("firstName lastName email roles metadata.activo metadata.id metadata.cuit metadata.osId")
+        .select("firstName lastName email roles metadata.activo metadata.id metadata.cuit metadata.sinCuit metadata.osId")
         .populate({ path: "roles", select: "name", model: Role })
         .lean(),
       Client.find({ _id: { $in: [...new Set(projectsList.map((p: any) => String(p.clientId?._id || p.clientId || "")))].filter((id) => Types.ObjectId.isValid(id)) } })
@@ -780,6 +780,9 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         releaseEmpresas: empresasPorProyecto.get(String(project._id))?.releaseEmpresas || [],
         // Datos para el chequeo de completitud AFIP (se resuelven contra los catálogos en el front).
         cuit: user.metadata?.cuit || "",
+        // Declaración explícita de "no tiene CUIT/CUIL argentino" (extranjeros): la usa la
+        // pestaña "Sin CUIT" de Gestión de Contratos para separarlos de los trámites de AFIP.
+        sinCuit: user.metadata?.sinCuit === true,
         osId: user.metadata?.osId ?? null,
       });
     }
@@ -859,6 +862,8 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         categoria_sat_id: c.categoria_sat_id ?? null,
         sede_id: c.sede_id ?? null,
         tipo_contrato_id: c.tipo_contrato_id ?? null,
+        // Flujo "Sin CUIT": documentación de respaldo + OK manual (pestaña Sin CUIT de Contratos).
+        sinCuitValidacion: c.sinCuitValidacion || null,
       };
     });
 

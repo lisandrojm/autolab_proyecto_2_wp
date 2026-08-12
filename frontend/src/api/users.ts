@@ -56,6 +56,27 @@ export interface Contract {
 }
 
 /** Fila de la página global "Contratos" (`GET /users/contracts-overview`): usuario × proyecto, con su contrato activo. */
+/** Un documento de respaldo del flujo "Sin CUIT" (extranjeros con el trámite de AFIP pendiente). */
+export interface SinCuitDocumento {
+  tipo: "pasaporte" | "dni_precario" | "residencia_tramite" | "cuil_provisorio" | "otro";
+  numero: string;
+  archivoUrl?: string;
+  archivoNombre?: string;
+  observaciones?: string;
+  cargadoPorNombre?: string;
+  cargadoAt?: string;
+}
+
+/** Estado de la validación excepcional del flujo "Sin CUIT" (ver pestaña Sin CUIT de Contratos). */
+export interface SinCuitValidacion {
+  documentos: SinCuitDocumento[];
+  validado?: boolean;
+  validadoPorNombre?: string;
+  validadoAt?: string;
+  /** Cuándo revisar si ya obtuvo CUIL y puede pasar al flujo normal de AFIP ("YYYY-MM-DD"). */
+  fechaSeguimiento?: string;
+}
+
 export interface ContractOverviewRow {
   _id: string;
   userId: string;
@@ -113,6 +134,10 @@ export interface ContractOverviewRow {
   releaseEmpresas?: { id: string; label: string }[];
   // FKs para el chequeo de completitud AFIP (se resuelven contra los catálogos en el front).
   cuit?: string;
+  /** La persona declaró NO tener CUIT/CUIL argentino: va por el circuito "Sin CUIT", no por AFIP. */
+  sinCuit?: boolean;
+  /** Flujo "Sin CUIT": documentación de respaldo cargada + OK manual de quien revisa. */
+  sinCuitValidacion?: SinCuitValidacion | null;
   osId?: number | null;
   categoria_sat_id?: number | null;
   sede_id?: number | null;
@@ -210,6 +235,8 @@ export interface User {
     generoId?: number;
     tipoDocumentoId?: number;
     cuit?: string;
+    /** Declaró no tener CUIT/CUIL argentino (extranjeros). */
+    sinCuit?: boolean;
     estadoCivil?: string;
     calle?: string;
     altura?: string;

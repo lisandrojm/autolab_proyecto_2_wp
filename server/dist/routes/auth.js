@@ -633,6 +633,9 @@ router.post("/registro", async (req, res) => {
         const metadata = {
             activo: true,
             cuit: body.cuit || undefined,
+            // Declaración explícita de "no tiene CUIT/CUIL argentino" (extranjeros): distinto de "no se
+            // cargó todavía". Habilita el circuito de documentos sin AFIP (ver afip.ts -> habilitar-firma).
+            sinCuit: body.sinCuit === true || body.sinCuit === "true" ? true : undefined,
             tipoDocumentoId: num(body.tipoDocumentoId),
             documento: documento || undefined,
             fechaNac: body.fechaNac || undefined,

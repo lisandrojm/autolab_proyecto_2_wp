@@ -295,6 +295,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           tipoDocumentoId: formData.tipoDocumentoId,
           documento: formData.documento,
           cuit: formData.cuit,
+          // Se persiste la declaración de "no tiene CUIT/CUIL argentino" para poder listarlos
+          // después (pestaña "Sin CUIT"): no alcanza con inferirlo de un campo vacío.
+          sinCuit: !esArgentino && !tieneCuil,
           estadoCivil: formData.estadoCivil,
           calle: formData.calle,
           altura: formData.altura,

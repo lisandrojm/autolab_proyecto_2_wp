@@ -24,12 +24,18 @@ export const fmtCuit = (raw?: string): string => {
 export const SIN_CUIT_LABEL = "No posee CUIT";
 
 /**
- * ¿Esta persona NO tiene CUIT/CUIL argentino? Cuenta como "sin CUIT" tanto el campo vacío como los
- * placeholders que quedaron cargados en su momento (todos ceros, o cualquier repetición del mismo
- * dígito), que no identifican a nadie. Un CUIT mal tipeado NO entra acá: eso es un dato a corregir,
- * no una persona sin CUIT.
+ * ¿Esta persona NO tiene CUIT/CUIL argentino? Se consideran dos fuentes:
+ *
+ *  - `sinCuit`: la declaración explícita que se hace al dar de alta a la persona (el check "Tiene
+ *    CUIT / CUIL argentino" destildado). Es la fuente de verdad para los usuarios nuevos.
+ *  - El valor del CUIT en sí: vacío, o un placeholder de un solo dígito repetido (00-00000000-0 y
+ *    similares) que no identifica a nadie. Cubre a los que ya estaban cargados así en la base antes
+ *    de que existiera el flag.
+ *
+ * Un CUIT mal tipeado NO entra acá: eso es un dato a corregir, no una persona sin CUIT.
  */
-export const noPoseeCuit = (raw?: string): boolean => {
+export const noPoseeCuit = (raw?: string, sinCuit?: boolean): boolean => {
+  if (sinCuit === true) return true;
   const d = String(raw || "").replace(/\D/g, "");
   return d.length === 0 || /^(\d)\1*$/.test(d);
 };
@@ -38,7 +44,12 @@ export const noPoseeCuit = (raw?: string): boolean => {
  * Cómo mostrar el CUIT en pantalla: formateado si es válido, "No posee CUIT" si la persona no tiene,
  * y un guión si hay algo cargado pero no es un CUIT reconocible (dato a revisar).
  */
-export const cuitDisplay = (raw?: string): string => fmtCuit(raw) || (noPoseeCuit(raw) ? SIN_CUIT_LABEL : "—");
+export const cuitDisplay = (raw?: string, sinCuit?: boolean): string => {
+  // El chequeo de "no posee" va PRIMERO: un placeholder como 00000000000 tiene 11 dígitos y
+  // `fmtCuit` lo formatea igual ("00-00000000-0"), tapando el cartel que corresponde mostrar.
+  if (noPoseeCuit(raw, sinCuit)) return SIN_CUIT_LABEL;
+  return fmtCuit(raw) || "—";
+};
 
 /** Prefijos que usa AFIP: 20/23/24/25/26/27 personas físicas, 30/33/34 jurídicas. */
 const PREFIJOS_CUIT = ["20", "23", "24", "25", "26", "27", "30", "33", "34"];

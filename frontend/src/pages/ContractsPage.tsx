@@ -40,7 +40,7 @@ const PAGE_SIZE = 25;
 /** Explicación puntual de cada pestaña de "Gestión de Contratos": si vive en la base o en una
  *  carpeta de Dropbox, y si interviene Dropbox Sign. Se muestra con el ⓘ propio de cada pestaña
  *  (aparte del info general que explica el conjunto). */
-const SUB_TAB_INFO: Record<"alta_afip" | "constancia_cuit" | "firma" | "para_firmar" | "enviado_firma" | "firmados", { title: string; text: string }> = {
+const SUB_TAB_INFO: Record<"alta_afip" | "constancia_cuit" | "sin_cuit" | "firma" | "para_firmar" | "enviado_firma" | "firmados", { title: string; text: string }> = {
   alta_afip: {
     title: "Alta temprana de AFIP",
     text: "Vive en la base de datos de la aplicación, no en Dropbox. Son los contratos registrados que todavía necesitan un Alta Temprana en AFIP/ARCA. No interviene Dropbox Sign.",
@@ -49,8 +49,13 @@ const SUB_TAB_INFO: Record<"alta_afip" | "constancia_cuit" | "firma" | "para_fir
     title: "Constancia de CUIT",
     text: "Vive en la base de datos, no en Dropbox. Son los contratos a los que hay que verificarles si el CUIT está activo en ARCA. No interviene Dropbox Sign.",
   },
+  sin_cuit: {
+    title: "Sin CUIT",
+    text:
+      "Personas extranjeras que TODAVÍA no tienen CUIT/CUIL argentino: su trámite de AFIP/ANSES queda pendiente hasta que cuenten con la documentación migratoria (DNI precario, residencia en trámite, etc.), así que no aparecen en Alta temprana ni en Constancia de CUIT y se agrupan acá. Se carga la documentación de respaldo, se marca la validación y se las envía a Generar Documentos de forma excepcional: se archiva un comprobante en \"AFIP/Sin cuit\", el contrato avanza y desde ahí se le generan el Contrato y el Release.",
+  },
   firma: {
-    title: "Firma digital",
+    title: "Generar Documentos",
     text: "Vive en la base de datos: lista contratos ya dados de alta en AFIP. Acá se generan los PDF de Contrato y Release, que se guardan en la carpeta Outbox de Dropbox. Todavía no interviene Dropbox Sign en esta pestaña.",
   },
   para_firmar: {
@@ -142,7 +147,7 @@ export const ContractsPage: React.FC = () => {
   // Pestañas de la página: "Contratos" (la vista actual) y "Gestión de Contratos" (acciones masivas).
   const [mainTab, setMainTab] = useState<"contracts" | "management">(initialTab);
   // Sub-pestañas de "Gestión de Contratos".
-  const [mgmtTab, setMgmtTab] = useState<"alta_afip" | "constancia_cuit" | "firma" | "para_firmar" | "enviado_firma" | "firmados">("alta_afip");
+  const [mgmtTab, setMgmtTab] = useState<"alta_afip" | "constancia_cuit" | "sin_cuit" | "firma" | "para_firmar" | "enviado_firma" | "firmados">("alta_afip");
   // Cantidades de las pestañas que leen de Dropbox. `null` = todavía no se leyeron.
   const [paraFirmarCount, setParaFirmarCount] = useState<number | null>(null);
   const [pendienteFirmaCount, setPendienteFirmaCount] = useState<number | null>(null);
@@ -165,7 +170,7 @@ export const ContractsPage: React.FC = () => {
       .catch(() => {});
   }, [mainTab]);
   // Cantidad de contratos de cada trámite, informada por ContractBulkAfipTab para mostrarla en las pestañas.
-  const [mgmtCounts, setMgmtCounts] = useState<{ alta: number; cuit: number; firma: number }>({ alta: 0, cuit: 0, firma: 0 });
+  const [mgmtCounts, setMgmtCounts] = useState<{ alta: number; cuit: number; firma: number; sinCuit: number }>({ alta: 0, cuit: 0, firma: 0, sinCuit: 0 });
   // Explicación de qué es cada pestaña de "Gestión de Contratos" (modal informativo general).
   const [mgmtTabsInfoOpen, setMgmtTabsInfoOpen] = useState(false);
   // Explicación puntual de UNA pestaña de "Gestión de Contratos" (si vive en Dropbox, si interviene
@@ -483,8 +488,16 @@ export const ContractsPage: React.FC = () => {
                 </button>
               </div>
               <div className="flex items-center gap-1 shrink-0">
+                <button className={tabBtnClass(mgmtTab === "sin_cuit")} onClick={() => setMgmtTab("sin_cuit")}>
+                  Sin CUIT ({mgmtCounts.sinCuit})
+                </button>
+                <button type="button" onClick={() => setSubTabInfoOpen("sin_cuit")} title={SUB_TAB_INFO.sin_cuit.title} className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0 -ml-3 mb-2">
+                  <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                </button>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
                 <button className={tabBtnClass(mgmtTab === "firma")} onClick={() => setMgmtTab("firma")}>
-                  Firma digital ({mgmtCounts.firma})
+                  Generar Documentos ({mgmtCounts.firma})
                 </button>
                 <button type="button" onClick={() => setSubTabInfoOpen("firma")} title={SUB_TAB_INFO.firma.title} className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0 -ml-3 mb-2">
                   <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
@@ -527,7 +540,7 @@ export const ContractsPage: React.FC = () => {
         ) : mgmtTab === "firma" ? (
           <ContractBulkFirmaTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} />
         ) : (
-          <ContractBulkAfipTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} initialProjectId={initialProjectId} tipo={mgmtTab === "alta_afip" ? "alta_temprana_afip" : "constancia_cuit"} onCounts={setMgmtCounts} />
+          <ContractBulkAfipTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} initialProjectId={initialProjectId} tipo={mgmtTab === "alta_afip" ? "alta_temprana_afip" : mgmtTab === "sin_cuit" ? "sin_cuit" : "constancia_cuit"} onCounts={setMgmtCounts} />
         )
       ) : (
         <>
@@ -578,7 +591,7 @@ export const ContractsPage: React.FC = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(record.cuit)}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(record.cuit, record.sinCuit)}</td>
                     <td className="px-4 py-3 text-center">
                       <span className="text-sm font-bold px-2.5 py-1 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" title="Contratos de esta persona en el proyecto">
                         {record.contractsInProject}
@@ -837,7 +850,7 @@ export const ContractsPage: React.FC = () => {
         <Modal isOpen={mgmtTabsInfoOpen} onClose={() => setMgmtTabsInfoOpen(false)} title="Qué es cada pestaña" size="md" zIndex={80}>
           <div className="space-y-4">
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              Estas 6 pestañas son las etapas de un mismo circuito: primero el contrato se da de alta en <strong>AFIP/ARCA</strong>, después se genera su documento en <strong>Firma digital</strong> y, por último, se
+              Estas pestañas son las etapas de un mismo circuito: primero el contrato se da de alta en <strong>AFIP/ARCA</strong> (o va por <strong>Sin CUIT</strong> si la persona no tiene CUIL argentino), después se genera su documento en <strong>Generar Documentos</strong> y, por último, se
               firma digitalmente en <strong>Dropbox Sign</strong> (las últimas tres pestañas). Las tres primeras leen la base de datos de la aplicación; las tres últimas leen directamente las carpetas de Dropbox
               donde trabaja Dropbox Sign.
             </p>
@@ -856,7 +869,11 @@ export const ContractsPage: React.FC = () => {
               </ul>
             </div>
             <div>
-              <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Firma digital</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Sin CUIT</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                Personas que todavía no tienen CUIT/CUIL argentino: su trámite de AFIP queda pendiente hasta que cuenten con la documentación migratoria, así que no figuran en las dos pestañas anteriores. Se carga la documentación de respaldo, se valida y se las envía a <strong>Generar Documentos</strong> de forma excepcional.
+              </p>
+              <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Generar Documentos</p>
               <p className="text-sm text-gray-600 dark:text-gray-300">
                 Contratos cuyo documento ya llegó a <span className="font-mono text-xs">AFIP/Alta temprana de Afip</span> o <span className="font-mono text-xs">AFIP/Constancia de cuit</span>. Acá se generan
                 los PDF de Contrato y Release, que quedan en la carpeta <span className="font-mono text-xs">Outbox</span> de Dropbox: es el paso previo a importarlos en Dropbox Sign, pero todavía no se

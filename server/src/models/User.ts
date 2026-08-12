@@ -43,6 +43,10 @@ export interface IUserMetadata {
   tipoDocumentoId?: number;
   documento?: string;
   cuit?: string;
+  /** La persona NO tiene CUIT/CUIL argentino (típicamente extranjeros). Se declara explícitamente
+   *  al darla de alta: es distinto de "todavía no se cargó", y es lo que habilita el circuito de
+   *  documentos sin pasar por AFIP (ver routes/afip.ts → habilitar-firma). */
+  sinCuit?: boolean;
   estadoCivil?: string | null;
   calle?: string;
   altura?: string;
@@ -167,6 +171,7 @@ const userSchema = new Schema<IUser>(
       tipoDocumentoId: Number,
       documento: String,
       cuit: String,
+      sinCuit: Boolean,
       estadoCivil: String,
       calle: String,
       altura: String,

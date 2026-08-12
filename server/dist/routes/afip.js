@@ -1,6 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
-import { Types } from "mongoose";
+import multer from "multer";
+import path from "path";
+import { promises as fs } from "fs";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+import mongoose, { Types } from "mongoose";
 import { Tenant } from "../models/Tenant.js";
 import { Project } from "../models/Project.js";
 import { User } from "../models/User.js";
@@ -500,12 +505,24 @@ router.post("/habilitar-firma", async (req, res) => {
             res.status(400).json({ error: "Dropbox no está conectado para esta organización." });
             return;
         }
-        // La misma carpeta que ya vigila la transición automática de ese trámite.
-        const carpeta = await resolverCarpetaPorPatron(tipo === "alta_temprana_afip" ? [/alta/i, /temprana|afip/i] : [/constancia/i, /cuit/i]);
+        // Carpeta propia "Sin cuit": esta gente no pasa por los trámites de AFIP, así que su comprobante
+        // se archiva aparte y no se mezcla con las constancias/altas reales.
+        //
+        // Si además está dada de alta como carpeta vigilada (Documentos → Configurar transición
+        // automática), el cron la ve y el contrato avanza solo a Generar Documentos. Si no lo está, el
+        // archivo igual se guarda —en "Sin cuit", al lado de las otras de AFIP— pero el avance de estado
+        // no va a dispararse: eso se avisa en la respuesta en vez de fallar sin más.
+        let carpeta = await resolverCarpetaPorPatron([/sin/i, /cuit/i]);
+        const carpetaVigilada = !!carpeta;
         if (!carpeta) {
-            const nombre = tipo === "alta_temprana_afip" ? "Alta temprana de Afip" : "Constancia de cuit";
-            res.status(400).json({ error: `No se encontró ninguna carpeta de Dropbox configurada como "${nombre}" en Documentos → Configurar transición automática.` });
-            return;
+            // Hermana de la carpeta de Constancia de CUIT (misma raíz de AFIP).
+            const carpetaConstancia = await resolverCarpetaPorPatron([/constancia/i, /cuit/i]);
+            if (!carpetaConstancia) {
+                res.status(400).json({ error: 'No se encontró ninguna carpeta de AFIP configurada en Documentos → Configurar transición automática, así que no se puede deducir dónde archivar el comprobante.' });
+                return;
+            }
+            const raiz = carpetaConstancia.replace(/\/$/, "").split("/").slice(0, -1).join("/");
+            carpeta = `${raiz}/Sin cuit`;
         }
         let targets = [];
         try {
@@ -549,14 +566,35 @@ router.post("/habilitar-firma", async (req, res) => {
                 continue;
             }
             const contract = up.contracts[t.contractIndex];
-            const docName = tipo === "alta_temprana_afip" ? "SinCuitAltaAFIP" : "SinCuitConstanciaCUIT";
-            const nombreArchivo = buildDocFileName({ tipo: tipo === "alta_temprana_afip" ? "AltaAFIP" : "ConstanciaCUIT", user, up, contract, docName });
+            // Espejo de la regla de la UI: hace falta la documentación de respaldo cargada y el OK manual.
+            const validacion = contract?.sinCuitValidacion;
+            if (!validacion?.validado || (validacion?.documentos || []).length === 0) {
+                omitidos.push({ userId: t.userId, nombre, motivo: "Falta cargar la documentación de respaldo y marcar la validación." });
+                continue;
+            }
+            const nombreArchivo = buildDocFileName({ tipo: tipo === "alta_temprana_afip" ? "AltaAFIP" : "ConstanciaCUIT", user, up, contract, docName: "SinCuit" });
             const contenido = Buffer.from(JSON.stringify({
-                // Marca explícita de por qué existe este archivo (no vino de una consulta a AFIP).
+                // Equivalente al JSON de la constancia de CUIT, pero para quien no tiene CUIT: en vez del
+                // resultado de la consulta a AFIP, deja asentada la validación manual que se hizo acá.
+                estado: "validado ok",
+                validado: true,
                 origen: "habilitacion-manual-sin-cuit",
                 tramite: tipo,
-                motivo: "La persona no posee CUIT/CUIL argentino, por lo que el trámite de AFIP no aplica.",
+                motivo: "La persona todavía no posee CUIT/CUIL argentino: el trámite de AFIP queda PENDIENTE hasta que cuente con la documentación migratoria necesaria. El contrato avanza de forma excepcional con la documentación de respaldo detallada acá.",
                 cuit: null,
+                respaldo: {
+                    validadoPor: validacion?.validadoPorNombre || null,
+                    validadoAt: validacion?.validadoAt || null,
+                    fechaSeguimiento: validacion?.fechaSeguimiento || null,
+                    documentos: (validacion?.documentos || []).map((d) => ({
+                        tipo: d.tipo,
+                        numero: d.numero,
+                        archivoNombre: d.archivoNombre || null,
+                        observaciones: d.observaciones || null,
+                        cargadoPor: d.cargadoPorNombre || null,
+                        cargadoAt: d.cargadoAt || null,
+                    })),
+                },
                 documento: { tipoDocumentoId: user?.metadata?.tipoDocumentoId ?? null, numero: user?.metadata?.documento ?? null },
                 nacionalidadId: user?.metadata?.nacionalidadId ?? null,
                 habilitadoEn: new Date().toISOString(),
@@ -584,11 +622,201 @@ router.post("/habilitar-firma", async (req, res) => {
                 omitidos.push({ userId: t.userId, nombre, motivo: `No se pudo subir a Dropbox: ${detalle}` });
             }
         }
-        res.json({ ok: true, carpeta, habilitados, omitidos });
+        res.json({
+            ok: true,
+            carpeta,
+            habilitados,
+            omitidos,
+            carpetaVigilada,
+            aviso: carpetaVigilada
+                ? undefined
+                : `El comprobante se archivó en "${carpeta}", pero esa carpeta NO está configurada como carpeta vigilada en Documentos → Configurar transición automática, así que el contrato no va a pasar solo a Generar Documentos. Agregala al estado correspondiente para que el avance sea automático.`,
+        });
     }
     catch (error) {
         console.error("AFIP habilitar-firma error:", error);
         res.status(500).json({ error: `No se pudo habilitar la firma: ${error?.message || "error interno"}` });
+    }
+});
+/* ─────────────────────────── Flujo "Sin CUIT": documentación de respaldo ───────────────────────────
+ * Personas extranjeras que todavía no tienen CUIT/CUIL argentino. El trámite de AFIP/ANSES NO está
+ * descartado: queda pendiente hasta que cuenten con la documentación migratoria necesaria. Mientras
+ * tanto se avanza con el contrato de forma excepcional, respaldado por lo que se carga acá.
+ * Exclusivo de la pestaña "Sin CUIT" — no toca Alta temprana ni Constancia de CUIT.
+ * ────────────────────────────────────────────────────────────────────────────────────────────────── */
+const __afipFilename = fileURLToPath(import.meta.url);
+const __afipDirname = dirname(__afipFilename);
+/** Mismo criterio que el documento de "Alta": se guarda bajo la carpeta del EMPLEADO, no del admin. */
+const sinCuitDocStorage = multer.diskStorage({
+    destination: async (req, _file, cb) => {
+        try {
+            const tenantId = req.tenantId || "unknown_tenant";
+            const employeeUserId = req.body?.userId || req.params?.userId || "unknown_user";
+            const dir = path.join(__afipDirname, "../../storage", tenantId, employeeUserId, "sin-cuit");
+            await fs.mkdir(dir, { recursive: true });
+            cb(null, dir);
+        }
+        catch (err) {
+            console.error("Error en multer destination (sin-cuit):", err);
+            cb(err, "");
+        }
+    },
+    filename: (_req, file, cb) => {
+        const docId = new mongoose.Types.ObjectId();
+        const ext = path.extname(file.originalname).toLowerCase() || ".pdf";
+        cb(null, `sincuit_${docId}${ext}`);
+    },
+});
+const TIPOS_DOC_SIN_CUIT = ["pasaporte", "dni_precario", "residencia_tramite", "cuil_provisorio", "otro"];
+const EXT_PERMITIDAS = [".pdf", ".jpg", ".jpeg", ".png"];
+const uploadSinCuitDoc = multer({
+    storage: sinCuitDocStorage,
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+        if (EXT_PERMITIDAS.includes(path.extname(file.originalname).toLowerCase()))
+            return cb(null, true);
+        cb(new Error("Solo se permiten PDF o imágenes (JPG/PNG)"));
+    },
+}).single("archivo");
+/** Días por defecto para volver a revisar si la persona ya obtuvo el CUIL. */
+const DIAS_SEGUIMIENTO_DEFAULT = 90;
+/** Ubica el contrato de un target validando que pertenezca a este tenant. */
+async function buscarContratoSinCuit(req, projectId, userId, contractIndex) {
+    if (!Types.ObjectId.isValid(projectId) || !Types.ObjectId.isValid(userId))
+        return { error: "Identificadores inválidos." };
+    const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("_id").lean();
+    if (!project)
+        return { error: "No se encontró el proyecto en esta organización." };
+    const up = await UserProject.findOne({ projectId, userId });
+    if (!up || contractIndex < 0 || contractIndex >= up.contracts.length)
+        return { error: "No se encontró el contrato indicado." };
+    return { up };
+}
+// POST /afip/sin-cuit/documento (multipart) - agrega un documento de respaldo al contrato.
+router.post("/sin-cuit/documento", uploadSinCuitDoc, async (req, res) => {
+    try {
+        const { projectId, userId, tipo, numero, observaciones } = req.body || {};
+        const contractIndex = Number(req.body?.contractIndex);
+        if (!TIPOS_DOC_SIN_CUIT.includes(tipo)) {
+            res.status(400).json({ error: "El tipo de documento no es válido." });
+            return;
+        }
+        if (!String(numero || "").trim()) {
+            res.status(400).json({ error: "El número/identificador del documento es obligatorio." });
+            return;
+        }
+        const { up, error } = await buscarContratoSinCuit(req, String(projectId), String(userId), contractIndex);
+        if (error || !up) {
+            res.status(400).json({ error: error || "No se encontró el contrato." });
+            return;
+        }
+        const quien = await User.findById(req.user.userId).select("firstName lastName").lean();
+        const nombreQuien = `${quien?.firstName || ""} ${quien?.lastName || ""}`.trim();
+        const tenantId = req.tenantId || "unknown_tenant";
+        const contrato = up.contracts[contractIndex].toObject();
+        const validacion = contrato.sinCuitValidacion || { documentos: [] };
+        validacion.documentos = [
+            ...(validacion.documentos || []),
+            {
+                tipo,
+                numero: String(numero).trim(),
+                archivoUrl: req.file ? `/storage/${tenantId}/${userId}/sin-cuit/${req.file.filename}` : undefined,
+                archivoNombre: req.file?.originalname,
+                observaciones: String(observaciones || "").trim() || undefined,
+                cargadoPor: req.user.userId,
+                cargadoPorNombre: nombreQuien,
+                cargadoAt: new Date(),
+            },
+        ];
+        // Fecha de seguimiento: se fija con el primer respaldo y no se pisa después.
+        if (!validacion.fechaSeguimiento) {
+            const d = new Date();
+            d.setDate(d.getDate() + DIAS_SEGUIMIENTO_DEFAULT);
+            validacion.fechaSeguimiento = d.toISOString().slice(0, 10);
+        }
+        up.contracts[contractIndex] = { ...contrato, sinCuitValidacion: validacion };
+        up.markModified("contracts");
+        await up.save();
+        res.json({ ok: true, sinCuitValidacion: validacion });
+    }
+    catch (error) {
+        console.error("AFIP sin-cuit documento error:", error);
+        res.status(500).json({ error: error?.message || "No se pudo guardar la documentación." });
+    }
+});
+// PATCH /afip/sin-cuit/validado - marca/desmarca el OK manual (exige al menos un respaldo cargado).
+router.patch("/sin-cuit/validado", async (req, res) => {
+    try {
+        const { projectId, userId, validado, fechaSeguimiento } = req.body || {};
+        const contractIndex = Number(req.body?.contractIndex);
+        const { up, error } = await buscarContratoSinCuit(req, String(projectId), String(userId), contractIndex);
+        if (error || !up) {
+            res.status(400).json({ error: error || "No se encontró el contrato." });
+            return;
+        }
+        const contrato = up.contracts[contractIndex].toObject();
+        const validacion = contrato.sinCuitValidacion || { documentos: [] };
+        // La regla del flujo: sin respaldo cargado no se puede dar por validado.
+        if (validado === true && (validacion.documentos || []).length === 0) {
+            res.status(400).json({ error: "Cargá al menos un documento de respaldo antes de marcar la validación." });
+            return;
+        }
+        const quien = await User.findById(req.user.userId).select("firstName lastName").lean();
+        validacion.validado = validado === true;
+        validacion.validadoPor = validado === true ? req.user.userId : undefined;
+        validacion.validadoPorNombre = validado === true ? `${quien?.firstName || ""} ${quien?.lastName || ""}`.trim() : undefined;
+        validacion.validadoAt = validado === true ? new Date() : undefined;
+        if (typeof fechaSeguimiento === "string" && /^\d{4}-\d{2}-\d{2}$/.test(fechaSeguimiento)) {
+            validacion.fechaSeguimiento = fechaSeguimiento;
+        }
+        up.contracts[contractIndex] = { ...contrato, sinCuitValidacion: validacion };
+        up.markModified("contracts");
+        await up.save();
+        res.json({ ok: true, sinCuitValidacion: validacion });
+    }
+    catch (error) {
+        console.error("AFIP sin-cuit validado error:", error);
+        res.status(500).json({ error: "No se pudo guardar la validación." });
+    }
+});
+// DELETE /afip/sin-cuit/documento - quita un respaldo por índice (y borra el archivo del disco).
+router.delete("/sin-cuit/documento", async (req, res) => {
+    try {
+        const { projectId, userId } = req.body || {};
+        const contractIndex = Number(req.body?.contractIndex);
+        const docIndex = Number(req.body?.docIndex);
+        const { up, error } = await buscarContratoSinCuit(req, String(projectId), String(userId), contractIndex);
+        if (error || !up) {
+            res.status(400).json({ error: error || "No se encontró el contrato." });
+            return;
+        }
+        const contrato = up.contracts[contractIndex].toObject();
+        const validacion = contrato.sinCuitValidacion || { documentos: [] };
+        const doc = (validacion.documentos || [])[docIndex];
+        if (!doc) {
+            res.status(400).json({ error: "No se encontró el documento indicado." });
+            return;
+        }
+        if (doc.archivoUrl) {
+            const abs = path.join(__afipDirname, "../..", String(doc.archivoUrl).replace(/^\/storage\//, "storage/"));
+            fs.unlink(abs).catch(() => { });
+        }
+        validacion.documentos = (validacion.documentos || []).filter((_, i) => i !== docIndex);
+        // Sin respaldo no puede quedar validado: se cae la validación junto con el último documento.
+        if (validacion.documentos.length === 0 && validacion.validado) {
+            validacion.validado = false;
+            validacion.validadoPor = undefined;
+            validacion.validadoPorNombre = undefined;
+            validacion.validadoAt = undefined;
+        }
+        up.contracts[contractIndex] = { ...contrato, sinCuitValidacion: validacion };
+        up.markModified("contracts");
+        await up.save();
+        res.json({ ok: true, sinCuitValidacion: validacion });
+    }
+    catch (error) {
+        console.error("AFIP sin-cuit borrar documento error:", error);
+        res.status(500).json({ error: "No se pudo eliminar el documento." });
     }
 });
 export { router as afipRoutes };

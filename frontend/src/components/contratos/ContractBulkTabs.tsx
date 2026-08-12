@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faArrowUpRightFromSquare, faTrash } from '@fortawesome/free-solid-svg-icons';
-import { usersAPI, ContractOverviewRow, Contract } from '../../api/users';
+import { usersAPI, ContractOverviewRow, Contract, SinCuitValidacion } from '../../api/users';
 import { projectsAPI } from '../../api/projects';
 import { companiesAPI, Company } from '../../api/companies';
 import { infoAPI, InfoItem } from '../../api/info';
@@ -12,6 +12,7 @@ import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatal
 import { Release } from '../../api/release';
 import { firmaDigitalAPI, FirmaDigitalConfig } from '../../api/firmaDigital';
 import { afipAPI } from '../../api/afip';
+import { SinCuitValidacionModal } from './SinCuitValidacionModal';
 import { claveEstado, EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../EstadoSelect';
 import { isContractVigente, formatDate, estadoImpositivoDelContrato, findTemplate, templateHasContent, EmpresaOption } from '../team/ContractCard';
 import { getImageUrl, downloadFileFromUrl } from '../../utils/imageHelpers';
@@ -57,6 +58,14 @@ const TIPO_LABEL: Record<TipoImpositivo, string> = {
   constancia_cuit: 'Constancia de CUIT',
 };
 
+/**
+ * Pestañas de la tabla. "sin_cuit" NO es un trámite impositivo como los otros dos: es un corte
+ * transversal por la persona (no tiene CUIT/CUIL argentino), que puede estar en cualquiera de los
+ * dos trámites. Esa gente se saca de las pestañas de AFIP —esos trámites no le aplican— y se
+ * agrupa acá, donde en vez de "Generar TXT"/"Validar ARCA" se la manda a generar documentos.
+ */
+type TabTramite = TipoImpositivo | 'sin_cuit';
+
 /** Fila de contrato enriquecida con el trámite impositivo de su estado actual. */
 type ImpositivoRow = ContractOverviewRow & { _tipo?: TipoImpositivo; _estadoName: string };
 
@@ -67,35 +76,101 @@ type ImpositivoRow = ContractOverviewRow & { _tipo?: TipoImpositivo; _estadoName
  * que la columna "Estado impositivo" de Gestionar Equipo (ProjectTeamPage.tsx).
  */
 /**
- * Botón "Habilitar Firma": reemplaza a "Generar TXT" / "Validar en ARCA" para la gente que NO tiene
- * CUIT/CUIL argentino. Esos trámites de AFIP no le aplican (no hay CUIT que dar de alta ni constancia
- * que pedir), así que quedaría trabada antes de Firma digital. En su lugar archiva un JSON en la
- * misma carpeta de Dropbox que vigila la transición automática del trámite, y el contrato avanza a
- * Firma digital — desde donde ya se le puede generar el Contrato y el Release.
+ * Celda "Validación" de la pestaña "Sin CUIT": estado de la documentación de respaldo + switch.
+ *
+ * El switch queda deshabilitado hasta que haya al menos un documento cargado (regla del flujo: la
+ * excepción tiene que estar respaldada). El link de abajo abre el modal donde se carga.
  */
-const BotonHabilitarFirma: React.FC<{ row: ContractOverviewRow; tipo: TipoImpositivo; onHabilitado: () => void }> = ({ row, tipo, onHabilitado }) => {
+const CeldaValidacionSinCuit: React.FC<{ row: ContractOverviewRow; onAbrir: () => void; onCambio: (v: SinCuitValidacion) => void }> = ({ row, onAbrir, onCambio }) => {
+  const [guardando, setGuardando] = useState(false);
+  const validacion = row.sinCuitValidacion;
+  const docs = validacion?.documentos?.length || 0;
+  const validado = !!validacion?.validado;
+
+  const toggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (docs === 0) {
+      // Sin respaldo no se puede validar: en vez de un switch muerto, se abre dónde cargarlo.
+      onAbrir();
+      return;
+    }
+    setGuardando(true);
+    try {
+      const r = await afipAPI.sinCuitSetValidado({ projectId: row.projectId, userId: row.userId, contractIndex: row.contractIndex, validado: !validado });
+      onCambio(r.sinCuitValidacion);
+    } catch (err: any) {
+      sweetAlert.error('No se pudo validar', err?.response?.data?.error || 'No se pudo guardar la validación.');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5 whitespace-nowrap">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={validado}
+        onClick={toggle}
+        disabled={guardando}
+        title={docs === 0 ? 'Cargá la documentación de respaldo para poder validar' : validado ? 'Quitar la validación' : 'Marcar como validado'}
+        className="inline-flex items-center gap-2"
+      >
+        <span className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${validado ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'} ${docs === 0 ? 'opacity-50' : ''}`}>
+          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${validado ? 'translate-x-[1.15rem]' : 'translate-x-0.5'}`} />
+        </span>
+        <span className={`text-[11px] font-semibold ${validado ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>{guardando ? 'Guardando...' : validado ? 'Validado' : 'Sin validar'}</span>
+      </button>
+      <button type="button" onClick={(e) => { e.stopPropagation(); onAbrir(); }} className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline w-fit">
+        <FontAwesomeIcon icon={faFileLines} className="h-3 w-3" />
+        {docs === 0 ? 'Cargar documentación' : `Documentación (${docs})`}
+      </button>
+    </div>
+  );
+};
+
+/**
+ * Acción de la pestaña "Sin CUIT": "Enviar a Generar Documentos".
+ *
+ * Reemplaza a "Generar TXT" / "Validar ARCA" para la gente que todavía NO tiene CUIT/CUIL argentino:
+ * su trámite de AFIP/ANSES queda PENDIENTE hasta que cuente con la documentación migratoria, y sin
+ * esto quedaría trabada antes de poder firmar. En su lugar se archiva un comprobante JSON en la carpeta
+ * "AFIP/Sin cuit" de Dropbox, el contrato avanza a Generar Documentos y desde ahí se le generan el
+ * Contrato y el Release.
+ *
+ * Se habilita solo con el switch de la columna Validación en ON.
+ */
+const BotonHabilitarFirma: React.FC<{
+  row: ContractOverviewRow;
+  /** Trámite en el que venía el contrato (queda registrado en el comprobante). */
+  tramite: TipoImpositivo;
+  validado: boolean;
+  onHabilitado: () => void;
+}> = ({ row, tramite, validado, onHabilitado }) => {
   const [enviando, setEnviando] = useState(false);
 
   const handleClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const tramite = tipo === 'alta_temprana_afip' ? 'Alta temprana de AFIP' : 'Constancia de CUIT';
     const confirm = await sweetAlert.confirm(
-      '¿Habilitar la firma?',
-      `${row.userName} no posee CUIT/CUIL, así que el trámite de ${tramite} no le corresponde. Se va a archivar un comprobante en Dropbox para que el contrato pase a Firma digital y se le puedan generar el Contrato y el Release.`,
-      'Sí, habilitar',
+      '¿Enviar a Generar Documentos?',
+      `${row.userName} todavía no posee CUIT/CUIL. El trámite de AFIP queda PENDIENTE hasta que cuente con la documentación migratoria necesaria. Se va a archivar un comprobante en "AFIP/Sin cuit" con la documentación de respaldo, y el contrato avanzará a Generar Documentos de forma excepcional.`,
+      'Sí, enviar',
     );
     if (!confirm.isConfirmed) return;
     setEnviando(true);
     try {
-      const res = await afipAPI.habilitarFirma([{ projectId: row.projectId, userId: row.userId, contractIndex: row.contractIndex }], tipo);
+      const res = await afipAPI.habilitarFirma([{ projectId: row.projectId, userId: row.userId, contractIndex: row.contractIndex }], tramite);
       if (res.habilitados.length > 0) {
-        sweetAlert.success('Firma habilitada', `Se archivó el comprobante de ${row.userName}. En el próximo escaneo de Dropbox el contrato pasa a Firma digital.`);
+        // Si la carpeta "Sin cuit" todavía no está vigilada, el archivo se guardó igual pero el
+        // contrato NO va a avanzar solo: hay que decirlo, si no parece que quedó todo listo.
+        if (res.aviso) sweetAlert.error('Archivado, pero falta un paso', res.aviso);
+        else sweetAlert.success('Enviado', `Se archivó el comprobante de ${row.userName}. En el próximo escaneo de Dropbox el contrato pasa a Generar Documentos.`);
         onHabilitado();
       } else {
-        sweetAlert.error('No se pudo habilitar', res.omitidos[0]?.motivo || 'No se pudo archivar el comprobante.');
+        sweetAlert.error('No se pudo enviar', res.omitidos[0]?.motivo || 'No se pudo archivar el comprobante.');
       }
     } catch (err: any) {
-      sweetAlert.error('Error', err?.response?.data?.error || 'No se pudo habilitar la firma.');
+      sweetAlert.error('Error', err?.response?.data?.error || 'No se pudo enviar a Generar Documentos.');
     } finally {
       setEnviando(false);
     }
@@ -105,12 +180,14 @@ const BotonHabilitarFirma: React.FC<{ row: ContractOverviewRow; tipo: TipoImposi
     <button
       type="button"
       onClick={handleClick}
-      disabled={enviando}
-      title="No posee CUIT: habilitar la firma sin pasar por AFIP"
-      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold bg-violet-600 text-white hover:bg-violet-700 transition-colors whitespace-nowrap disabled:opacity-60"
+      disabled={enviando || !validado}
+      title={validado ? 'Archivar el comprobante y pasar a Generar Documentos' : 'Marcá la validación para poder enviar'}
+      className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold transition-colors whitespace-nowrap ${
+        validado ? 'bg-violet-600 text-white hover:bg-violet-700' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+      } disabled:opacity-60`}
     >
       <FontAwesomeIcon icon={enviando ? faSpinner : faFileSignature} spin={enviando} className="h-3 w-3" />
-      Habilitar Firma
+      Enviar a Generar Documentos
     </button>
   );
 };
@@ -196,9 +273,9 @@ export const ContractBulkAfipTab: React.FC<{
   contratoFrames: ContratoFrameItem[];
   releases: Release[];
   initialProjectId?: string;
-  tipo: TipoImpositivo;
+  tipo: TabTramite;
   /** Informa al padre la cantidad de contratos de cada trámite, para mostrarla en sus propias pestañas. */
-  onCounts?: (counts: { alta: number; cuit: number; firma: number }) => void;
+  onCounts?: (counts: { alta: number; cuit: number; firma: number; sinCuit: number }) => void;
 }> = ({ allEstados, contratoFrames, releases, initialProjectId = '', tipo: filterTipo, onCounts }) => {
   const [rows, setRows] = useState<ContractOverviewRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -436,8 +513,11 @@ export const ContractBulkAfipTab: React.FC<{
 
   const rowsPorFiltrosComunes = useMemo(() => impositivoRows.filter((x) => matchesCommonFilters(x.row)), [impositivoRows, matchesCommonFilters]);
 
-  const countAlta = rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'alta_temprana_afip').length;
-  const countCuit = rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'constancia_cuit').length;
+  // Los contadores siguen el mismo corte que la tabla: la gente sin CUIT se cuenta aparte y no
+  // infla los trámites de AFIP, que no le aplican.
+  const countAlta = rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'alta_temprana_afip' && !noPoseeCuit(x.row.cuit, x.row.sinCuit)).length;
+  const countCuit = rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'constancia_cuit' && !noPoseeCuit(x.row.cuit, x.row.sinCuit)).length;
+  const countSinCuit = rowsPorFiltrosComunes.filter((x) => noPoseeCuit(x.row.cuit, x.row.sinCuit)).length;
   const countCompletos = impositivoRows.filter((x) => x.result.completo).length;
   const countIncompletos = impositivoRows.length - countCompletos;
 
@@ -453,8 +533,8 @@ export const ContractBulkAfipTab: React.FC<{
   const onCountsRef = useRef(onCounts);
   onCountsRef.current = onCounts;
   useEffect(() => {
-    onCountsRef.current?.({ alta: countAlta, cuit: countCuit, firma: countFirma });
-  }, [countAlta, countCuit, countFirma]);
+    onCountsRef.current?.({ alta: countAlta, cuit: countCuit, firma: countFirma, sinCuit: countSinCuit });
+  }, [countAlta, countCuit, countFirma, countSinCuit]);
 
   // Constancias de CUIT: vigentes vs. pendientes (las que faltan o ya vencieron, que son las que hay
   // que volver a pedirle a ARCA). Se cuentan sobre todas las de ese trámite, como countAlta/countCuit.
@@ -464,7 +544,14 @@ export const ContractBulkAfipTab: React.FC<{
 
   const filtered = useMemo(() => {
     return rowsPorFiltrosComunes.filter(({ row: r, result }) => {
-      if (filterTipo && r._tipo !== filterTipo) return false;
+      // "Sin CUIT" agrupa a la gente sin CUIT/CUIL de CUALQUIERA de los dos trámites; las pestañas
+      // de AFIP, al revés, la excluyen (esos trámites no le aplican y quedaría trabada ahí).
+      if (filterTipo === 'sin_cuit') {
+        if (!noPoseeCuit(r.cuit, r.sinCuit)) return false;
+      } else {
+        if (noPoseeCuit(r.cuit, r.sinCuit)) return false;
+        if (filterTipo && r._tipo !== filterTipo) return false;
+      }
       if (soloIncompletos && result.completo) return false;
       if (soloPendientes && filterTipo === 'constancia_cuit' && !constanciaPendiente(r)) return false;
       return true;
@@ -504,6 +591,13 @@ export const ContractBulkAfipTab: React.FC<{
   // Selección de filas para armar el TXT. Solo se pueden marcar los contratos con datos AFIP completos.
   const rowKey = (r: ContractOverviewRow) => `${r._id}-${r.contractIndex}`;
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  /** Pestaña "Sin CUIT": fila cuyo modal de documentación de respaldo está abierto. */
+  const [validacionRow, setValidacionRow] = useState<ContractOverviewRow | null>(null);
+  /** Refresca la validación de UNA fila (y del modal abierto) sin recargar toda la tabla. */
+  const aplicarValidacionSinCuit = useCallback((row: ContractOverviewRow, sinCuitValidacion: SinCuitValidacion) => {
+    setRows((prev) => prev.map((x) => (x._id === row._id && x.contractIndex === row.contractIndex ? { ...x, sinCuitValidacion } : x)));
+    setValidacionRow((prev) => (prev && prev._id === row._id && prev.contractIndex === row.contractIndex ? { ...prev, sinCuitValidacion } : prev));
+  }, []);
   const toggleSel = (k: string) =>
     setSelected((prev) => {
       const n = new Set(prev);
@@ -514,6 +608,10 @@ export const ContractBulkAfipTab: React.FC<{
   // Qué hace falta para poder tildar una fila depende del trámite: en Alta temprana de AFIP son los
   // datos completos para el TXT; en Constancia de CUIT alcanza con tener el CUIT/CUIL cargado (es lo
   // único que necesita "Validar ARCA Masivo").
+  /** "Sin CUIT" usa el MISMO layout de columnas que "Constancia de CUIT" (Verificar, Datos
+   *  CUIT/CUIL, ARCA, Dropbox...). Lo que cambia es el contenido de la acción, no la tabla. */
+  const layoutConstancia = filterTipo === 'constancia_cuit' || filterTipo === 'sin_cuit';
+
   const esSeleccionable = useCallback((row: ImpositivoRow, result: AfipRowResult): boolean => (filterTipo === 'constancia_cuit' ? cuitEsValido(row.cuit) : result.completo), [filterTipo]);
   const selectableFiltered = useMemo(() => filtered.filter((x) => esSeleccionable(x.row, x.result)), [filtered, esSeleccionable]);
   const allSel = selectableFiltered.length > 0 && selectableFiltered.every((x) => selected.has(rowKey(x.row)));
@@ -716,12 +814,14 @@ export const ContractBulkAfipTab: React.FC<{
                 )}
 
                 <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700/60">
-                  {filterTipo === 'constancia_cuit' && (
+                  {layoutConstancia && (
                     <>
-                      <button onClick={() => setConstancia({ row: r, cuil })} className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border transition-colors ${cuil ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100'}`}>
-                        <FontAwesomeIcon icon={cuil ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
-                        CUIT/CUIL: {cuil ? 'OK' : 'Falta 1'}
-                      </button>
+                      {filterTipo !== 'sin_cuit' && (
+                        <button onClick={() => setConstancia({ row: r, cuil })} className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border transition-colors ${cuil ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100'}`}>
+                          <FontAwesomeIcon icon={cuil ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
+                          CUIT/CUIL: {cuil ? 'OK' : 'Falta 1'}
+                        </button>
+                      )}
                       <ConstanciaBadge row={r} />
                       <BotonValidarCuit row={r} onConsultado={() => load(true)} compacto />
                       {constanciaPendiente(r) && <BotonArca cuit={r.cuit} compacto />}
@@ -751,27 +851,33 @@ export const ContractBulkAfipTab: React.FC<{
                     <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={selectableFiltered.length === 0} title={filterTipo === 'constancia_cuit' ? 'Seleccionar todos los que tienen CUIT/CUIL cargado' : 'Seleccionar todos los completos'} className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                   </th>
                   <th className="sticky top-0 left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">Acciones</th>
-                  {filterTipo === 'constancia_cuit' && (
+                  {layoutConstancia && (
                     <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1.5">
-                        Verificar (Opc)
-                        <button type="button" onClick={() => setVerificarInfoOpen(true)} title="Qué hace esta columna" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
-                          <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-                        </button>
-                      </span>
-                    </th>
-                  )}
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Alta / Baja</th>
-                  {filterTipo === 'constancia_cuit' && (
-                    <>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      {filterTipo === 'sin_cuit' ? (
+                        'Validación'
+                      ) : (
                         <span className="inline-flex items-center gap-1.5">
-                          Datos CUIT/CUIL
-                          <button type="button" onClick={() => setDatosCuitInfoOpen(true)} title="Por qué a veces no se puede validar" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
+                          Verificar (Opc)
+                          <button type="button" onClick={() => setVerificarInfoOpen(true)} title="Qué hace esta columna" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
                             <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
                           </button>
                         </span>
-                      </th>
+                      )}
+                    </th>
+                  )}
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Alta / Baja</th>
+                  {layoutConstancia && (
+                    <>
+                      {filterTipo !== 'sin_cuit' && (
+                        <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1.5">
+                            Datos CUIT/CUIL
+                            <button type="button" onClick={() => setDatosCuitInfoOpen(true)} title="Por qué a veces no se puede validar" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
+                              <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                            </button>
+                          </span>
+                        </th>
+                      )}
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Estado en el Padrón de AFIP/ARCA">
                         ARCA
                       </th>
@@ -822,9 +928,9 @@ export const ContractBulkAfipTab: React.FC<{
                       <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!esSeleccionable(r, result)} onChange={() => toggleSel(rowKey(r))} title={esSeleccionable(r, result) ? (filterTipo === 'constancia_cuit' ? 'Incluir en Validar ARCA Masivo' : 'Incluir esta persona en el TXT') : filterTipo === 'constancia_cuit' ? 'Falta el CUIT/CUIL de esta persona' : 'Faltan datos AFIP: no se puede incluir en el TXT'} className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                     </td>
                     <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)] ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
-                      {/* Sin CUIT los trámites de AFIP no aplican: la salida es habilitar la firma. */}
-                      {noPoseeCuit(r.cuit) ? (
-                        <BotonHabilitarFirma row={r} tipo={filterTipo} onHabilitado={() => load(true)} />
+                      {/* Sin CUIT los trámites de AFIP no aplican: la salida es generar los documentos. */}
+                      {noPoseeCuit(r.cuit, r.sinCuit) ? (
+                        <BotonHabilitarFirma row={r} tramite={r._tipo || 'constancia_cuit'} validado={!!r.sinCuitValidacion?.validado} onHabilitado={() => load(true)} />
                       ) : filterTipo === 'alta_temprana_afip' ? (
                         <button type="button" onClick={() => generarTxt([{ row: r, result }], `alta_afip_${r.userName.replace(/\s+/g, '_')}`)} disabled={!result.completo} title={result.completo ? 'Generar el TXT de AFIP de esta persona' : !r.empresaContratoId ? 'Elegí la Empresa del contrato para poder generar el TXT' : 'Faltan datos AFIP para generar el TXT de esta persona'} className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold transition-colors whitespace-nowrap ${result.completo ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>
                           <FontAwesomeIcon icon={faFileLines} className="h-3 w-3" />
@@ -836,7 +942,17 @@ export const ContractBulkAfipTab: React.FC<{
                         </div>
                       )}
                     </td>
-                    {filterTipo === 'constancia_cuit' && <td className="px-4 py-3">{noPoseeCuit(r.cuit) ? <span className="text-[11px] text-gray-400 italic whitespace-nowrap">No posee CUIT</span> : constanciaPendiente(r) ? <BotonArca cuit={r.cuit} compacto /> : <span className="text-xs text-gray-400">—</span>}</td>}
+                    {layoutConstancia && (
+                      <td className="px-4 py-3">
+                        {filterTipo === 'sin_cuit' ? (
+                          <CeldaValidacionSinCuit row={r} onAbrir={() => setValidacionRow(r)} onCambio={(v) => aplicarValidacionSinCuit(r, v)} />
+                        ) : constanciaPendiente(r) ? (
+                          <BotonArca cuit={r.cuit} compacto />
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 whitespace-nowrap">
                       {(() => {
                         const vigente = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
@@ -855,19 +971,21 @@ export const ContractBulkAfipTab: React.FC<{
                         );
                       })()}
                     </td>
-                    {filterTipo === 'constancia_cuit' && (
+                    {layoutConstancia && (
                       <>
-                        <td className="px-4 py-3">
-                          {(() => {
-                            const cuil = cuitEsValido(r.cuit) ? fmtCuit(r.cuit) : '';
-                            return (
-                              <button onClick={() => setConstancia({ row: r, cuil })} title="Ver los datos necesarios para buscar la Constancia de CUIT/CUIL en ARCA" className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap transition-colors ${cuil ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100'}`}>
-                                <FontAwesomeIcon icon={cuil ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
-                                {cuil ? 'Completo' : 'Falta 1'}
-                              </button>
-                            );
-                          })()}
-                        </td>
+                        {filterTipo !== 'sin_cuit' && (
+                          <td className="px-4 py-3">
+                            {(() => {
+                              const cuil = cuitEsValido(r.cuit) ? fmtCuit(r.cuit) : '';
+                              return (
+                                <button onClick={() => setConstancia({ row: r, cuil })} title="Ver los datos necesarios para buscar la Constancia de CUIT/CUIL en ARCA" className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap transition-colors ${cuil ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100'}`}>
+                                  <FontAwesomeIcon icon={cuil ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
+                                  {cuil ? 'Completo' : 'Falta 1'}
+                                </button>
+                              );
+                            })()}
+                          </td>
+                        )}
                         {/* Estado en AFIP/ARCA y archivado en Dropbox, por separado (acciones — Validar/ARCA — viven en la columna sticky "Acciones"). */}
                         <td className="px-4 py-3">
                           <ArcaBadge row={r} />
@@ -890,7 +1008,7 @@ export const ContractBulkAfipTab: React.FC<{
                       <p className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{r.userName}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit)}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <EmpresaSelectCell record={r} campo="contrato" requerido={filterTipo === 'alta_temprana_afip'} onGuardado={(patch) => aplicarCambio(r, patch)} />
                     </td>
@@ -1024,6 +1142,16 @@ export const ContractBulkAfipTab: React.FC<{
             );
           })()}
         </Modal>
+      )}
+
+      {/* Documentación de respaldo del flujo "Sin CUIT" (trámite de AFIP pendiente). */}
+      {validacionRow && (
+        <SinCuitValidacionModal
+          row={validacionRow}
+          isOpen={!!validacionRow}
+          onClose={() => setValidacionRow(null)}
+          onChange={(v) => aplicarValidacionSinCuit(validacionRow, v)}
+        />
       )}
 
       {verificarInfoOpen && (
@@ -1838,7 +1966,7 @@ export const ContractBulkFirmaTab: React.FC<{
                         <p className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{r.userName}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
                       </td>
-                      <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit)}</td>
+                      <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.nombre_contrato || '—'}</td>

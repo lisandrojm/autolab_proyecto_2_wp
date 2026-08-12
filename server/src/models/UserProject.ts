@@ -89,6 +89,35 @@ interface IContract {
     areaId: Types.ObjectId | string;
     shiftIds: (Types.ObjectId | string)[];
   }[];
+  /**
+   * Flujo "Sin CUIT" (personas extranjeras que todavía no tienen CUIT/CUIL argentino). El trámite de
+   * AFIP/ANSES no está descartado: queda PENDIENTE hasta que la persona cuente con la documentación
+   * migratoria necesaria (DNI precario, residencia en trámite, etc.). Mientras tanto se avanza con el
+   * contrato de forma excepcional, respaldado por la documentación que se carga acá.
+   *
+   * Es exclusivo de esa pestaña: no toca "Alta temprana de AFIP" ni "Constancia de CUIT".
+   */
+  sinCuitValidacion?: {
+    /** Documentación de respaldo cargada. Hace falta al menos una para poder marcar `validado`. */
+    documentos: {
+      tipo: "pasaporte" | "dni_precario" | "residencia_tramite" | "cuil_provisorio" | "otro";
+      numero: string;
+      archivoUrl?: string;
+      archivoNombre?: string;
+      observaciones?: string;
+      /** Quién cargó el respaldo (se completa en el server, no llega del cliente). */
+      cargadoPor?: Types.ObjectId | string;
+      cargadoPorNombre?: string;
+      cargadoAt?: Date;
+    }[];
+    /** OK manual de quien revisa: habilita "Enviar a Generar Documentos". */
+    validado?: boolean;
+    validadoPor?: Types.ObjectId | string;
+    validadoPorNombre?: string;
+    validadoAt?: Date;
+    /** Cuándo volver a revisar si ya obtuvo CUIL y puede pasar al flujo normal de AFIP ("YYYY-MM-DD"). */
+    fechaSeguimiento?: string;
+  };
 }
 
 export interface IUserProject extends Document {
@@ -183,6 +212,26 @@ const contractSchema = new Schema<IContract>(
         shiftIds: [{ type: Schema.Types.ObjectId, ref: "Shift" }],
       },
     ],
+    sinCuitValidacion: {
+      documentos: [
+        {
+          _id: false,
+          tipo: { type: String, enum: ["pasaporte", "dni_precario", "residencia_tramite", "cuil_provisorio", "otro"] },
+          numero: { type: String },
+          archivoUrl: { type: String },
+          archivoNombre: { type: String },
+          observaciones: { type: String },
+          cargadoPor: { type: Schema.Types.ObjectId, ref: "User" },
+          cargadoPorNombre: { type: String },
+          cargadoAt: { type: Date },
+        },
+      ],
+      validado: { type: Boolean },
+      validadoPor: { type: Schema.Types.ObjectId, ref: "User" },
+      validadoPorNombre: { type: String },
+      validadoAt: { type: Date },
+      fechaSeguimiento: { type: String },
+    },
   },
   { _id: false },
 ); // subdocument, no need for _id usually unless we want addressable contracts

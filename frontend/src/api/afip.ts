@@ -1,4 +1,5 @@
 import axios from "./axiosConfig";
+import { SinCuitValidacion } from "./users";
 
 /** "ok" = autoconsulta contra Padrón A13 respondió bien; "no_autorizado" = el login WSAA funciona
  *  pero AFIP no devuelve datos para el propio CUIT representada (servicio no autorizado en el
@@ -83,6 +84,10 @@ export interface HabilitarFirmaResult {
   habilitados: { userId: string; nombre: string; path: string }[];
   /** Los que no se pudieron habilitar, con el motivo (ej. tiene CUIT y le corresponde el trámite real). */
   omitidos: { userId: string; nombre: string; motivo: string }[];
+  /** ¿La carpeta "Sin cuit" está dada de alta como carpeta vigilada? Si no, el archivo se guarda igual
+   *  pero el contrato NO avanza solo a Generar Documentos (ver `aviso`). */
+  carpetaVigilada?: boolean;
+  aviso?: string;
 }
 
 /** Un registro persistente de un llamado real a AFIP (guardado por el server en cada consulta). */
@@ -136,6 +141,42 @@ export const afipAPI = {
    */
   async habilitarFirma(targets: ConsultaPadronTarget[], tipo: "alta_temprana_afip" | "constancia_cuit"): Promise<HabilitarFirmaResult> {
     const { data } = await axios.post("/afip/habilitar-firma", { targets, tipo }, { timeout: 120000 });
+    return data;
+  },
+
+  /* ── Flujo "Sin CUIT": documentación de respaldo del trámite de AFIP pendiente ── */
+
+  /** Agrega un documento de respaldo (con archivo opcional) al contrato. */
+  async sinCuitAgregarDocumento(payload: {
+    projectId: string;
+    userId: string;
+    contractIndex: number;
+    tipo: string;
+    numero: string;
+    observaciones?: string;
+    archivo?: File | null;
+  }): Promise<{ ok: boolean; sinCuitValidacion: SinCuitValidacion }> {
+    const form = new FormData();
+    form.append("projectId", payload.projectId);
+    form.append("userId", payload.userId);
+    form.append("contractIndex", String(payload.contractIndex));
+    form.append("tipo", payload.tipo);
+    form.append("numero", payload.numero);
+    if (payload.observaciones) form.append("observaciones", payload.observaciones);
+    if (payload.archivo) form.append("archivo", payload.archivo);
+    const { data } = await axios.post("/afip/sin-cuit/documento", form, { headers: { "Content-Type": "multipart/form-data" }, timeout: 60000 });
+    return data;
+  },
+
+  /** Marca/desmarca el OK manual. El server exige al menos un documento de respaldo cargado. */
+  async sinCuitSetValidado(payload: { projectId: string; userId: string; contractIndex: number; validado: boolean; fechaSeguimiento?: string }): Promise<{ ok: boolean; sinCuitValidacion: SinCuitValidacion }> {
+    const { data } = await axios.patch("/afip/sin-cuit/validado", payload);
+    return data;
+  },
+
+  /** Quita un documento de respaldo por índice. */
+  async sinCuitBorrarDocumento(payload: { projectId: string; userId: string; contractIndex: number; docIndex: number }): Promise<{ ok: boolean; sinCuitValidacion: SinCuitValidacion }> {
+    const { data } = await axios.delete("/afip/sin-cuit/documento", { data: payload });
     return data;
   },
 

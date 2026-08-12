@@ -422,6 +422,9 @@ export const RegistroPage: React.FC = () => {
         // con el actual desplegado (que todavía espera `password`).
         password: form.documento,
         cuit: form.cuit,
+        // Declaración explícita de "no tiene CUIT/CUIL argentino": se persiste para poder listarlos
+        // después (pestaña "Sin CUIT") en vez de inferirlo de un campo vacío.
+        sinCuit: !esArgentino && !tieneCuil,
         tipoDocumentoId: form.tipoDocumentoId,
         documento: form.documento,
         fechaNac: form.fechaNac,
