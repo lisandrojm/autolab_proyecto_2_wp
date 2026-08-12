@@ -2,6 +2,7 @@ import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faUsers, faUserShield, faLayerGroup, faUserTie, faUserGraduate, faClock, faBuilding, faIdCard, faBriefcase, faFileContract, faUmbrellaBeach, faChevronDown, faChevronUp, faLock, faInfoCircle, faBell, faTriangleExclamation, faFileInvoice } from "@fortawesome/free-solid-svg-icons";
 import { formatCuit } from "../../utils/cuit";
+import { noPoseeCuit } from "../contratos/ConstanciaBulk";
 import { User } from "../../api/users";
 import { Project } from "../../api/projects";
 import { Client } from "../../api/clients";
@@ -278,16 +279,18 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
           // Alta pedida para una persona que YA es usuario: se avisa en su propia ficha en vez de
           // crear una tarjeta aparte (el detalle, con el proyecto, va en la sección Proyectos).
           ...(solicitudesPendientes.length > 0 ? [{ text: `⚠ ${solicitudesPendientes.length} solicitud${solicitudesPendientes.length > 1 ? "es" : ""} de alta`, variant: "warning" as const }] : []),
-          ...(user.tenant && user.tenant.name
+          { text: user.metadata?.activo ? "Activo" : "Inactivo", variant: user.metadata?.activo ? "green" : "destructive" },
+          // Sin CUIT/CUIL argentino: sus contratos van por el circuito "Sin CUIT" (el trámite de
+          // AFIP queda pendiente). Mismo criterio y mismo estilo que el badge de Contratos.
+          ...(noPoseeCuit(user.metadata?.cuit, user.metadata?.sinCuit)
             ? [
                 {
-                  text: user.tenant.name,
+                  text: "SIN CUIT",
                   variant: "default" as const,
-                  className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+                  className: "bg-violet-100 text-violet-800 border border-dashed border-violet-500 dark:bg-violet-500/25 dark:text-violet-200 dark:border-violet-400",
                 },
               ]
             : []),
-          { text: user.metadata?.activo ? "Activo" : "Inactivo", variant: user.metadata?.activo ? "green" : "destructive" },
           ...solicitudProjectBadges,
           ...(user.isSystem
             ? [

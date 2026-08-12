@@ -513,28 +513,33 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {/* Misma leyenda que el Registro público, para que se entienda qué significa el asterisco. */}
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Los campos marcados con <span className="text-red-500">*</span> son obligatorios
+            </p>
+
             {/* Tab Content */}
             {modalActiveTab === "general" && (
               <div className="space-y-6 animate-fadeIn">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nombre *</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nombre <span className="text-red-500">*</span></label>
                     <input type="text" required value={formData.firstName} onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))} className="input-field" placeholder="Ej: Juan" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Apellido *</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Apellido <span className="text-red-500">*</span></label>
                     <input type="text" required value={formData.lastName} onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))} className="input-field" placeholder="Ej: Pérez" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Email *</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Email <span className="text-red-500">*</span></label>
                     <input type="email" required value={formData.email} onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))} className="input-field" placeholder="usuario@ejemplo.com" />
                   </div>
                   {(!user || formData.isSolicitud) && (
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{formData.isSolicitud ? "Asignar Contraseña *" : "Contraseña *"}</label>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{formData.isSolicitud ? "Asignar Contraseña" : "Contraseña"} <span className="text-red-500">*</span></label>
                       <div className="relative">
                         <input type={showPassword ? "text" : "password"} required value={formData.password} onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))} className="input-field pr-10" placeholder="••••••••" minLength={6} />
                         <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -548,7 +553,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                 {/* La nacionalidad va PRIMERO: de ella dependen el tipo de documento y el CUIL. */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nacionalidad *</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nacionalidad <span className="text-red-500">*</span></label>
                     <select required value={formData.nacionalidadId || ""} onChange={(e) => handleNacionalidadChange(parseInt(e.target.value) || undefined)} className="input-field">
                       <option value="">Seleccionar...</option>
                       {nationalityOptions.map((it) => (
@@ -577,7 +582,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Documento *</label>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Documento <span className="text-red-500">*</span></label>
                         <input type="text" required value={formData.documento || ""} onChange={(e) => setFormData((prev) => ({ ...prev, documento: e.target.value }))} className="input-field" placeholder={esArgentino ? "Nº de documento" : "DNI / Pasaporte"} />
                       </div>
                     </div>
@@ -586,7 +591,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                       <div>
                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                           <span className="inline-flex items-center gap-1.5">
-                            CUIT / CUIL {esArgentino ? "*" : ""}
+                            CUIT / CUIL {esArgentino && <span className="text-red-500">*</span>}
                             <button type="button" onClick={() => setSinCuitInfoOpen(true)} title="¿Qué pasa si no tiene CUIT/CUIL?" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
                               <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
                             </button>
@@ -694,7 +699,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Fecha de Ingreso *</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Fecha de Ingreso <span className="text-red-500">*</span></label>
                     <input type="date" required value={formData.hireDate} onChange={(e) => setFormData((prev) => ({ ...prev, hireDate: e.target.value }))} className="input-field" />
                   </div>
                   <div>

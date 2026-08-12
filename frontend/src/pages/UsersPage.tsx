@@ -29,6 +29,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { getImageUrl } from '../utils/imageHelpers';
 import { cachedFetch, invalidateRefCache } from '../utils/refCache';
 import { formatCuit } from '../utils/cuit';
+import { noPoseeCuit } from '../components/contratos/ConstanciaBulk';
 
 const HELP_KEY = 'users' as const;
 
@@ -1796,7 +1797,15 @@ export const UsersPage: React.FC = () => {
                           <span className="text-xs text-gray-500">{(user.metadata?.projects || []).reduce((acc: number, p: any) => acc + (p.contracts?.length || 0), 0)}</span>
                         </td>
                         <td className="py-4 px-6">
-                          <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${user.metadata?.activo ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'}`}>{user.metadata?.activo ? 'Activo' : 'Inactivo'}</span>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${user.metadata?.activo ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'}`}>{user.metadata?.activo ? 'Activo' : 'Inactivo'}</span>
+                            {/* Sin CUIT/CUIL argentino: sus contratos van por el circuito "Sin CUIT". */}
+                            {noPoseeCuit(user.metadata?.cuit, user.metadata?.sinCuit) && (
+                              <span title="No tiene CUIT/CUIL argentino: sus contratos van por el circuito Sin CUIT" className="text-[10px] font-bold px-2 py-1 rounded uppercase border border-dashed bg-violet-100 text-violet-800 border-violet-500 dark:bg-violet-500/25 dark:text-violet-200 dark:border-violet-400">
+                                Sin CUIT
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="py-4 px-6 text-right">
                           <div className="flex justify-end gap-1">

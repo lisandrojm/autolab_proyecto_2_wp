@@ -36,7 +36,7 @@ export declare function buildIdentidadTag(user: any): string;
  * Devuelve el nombre SIN extensión (el caller agrega la extensión correspondiente).
  */
 export declare function buildDocFileName(opts: {
-    tipo: "Contrato" | "Release" | "ConstanciaCUIT" | "AltaAFIP";
+    tipo: "Contrato" | "Release" | "ConstanciaCUIT" | "AltaAFIP" | "Documentacion";
     user: any;
     up: any;
     contract: any;

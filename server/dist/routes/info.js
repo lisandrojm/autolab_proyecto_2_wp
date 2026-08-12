@@ -129,6 +129,8 @@ function parseEstadoBody(body) {
         etiquetaSecundaria: etiquetaSecundaria || undefined,
         colorEtiquetaSecundaria: esImpositivo ? colorEtiquetaSecundaria || undefined : undefined,
         tipoImpositivo: esImpositivo ? tipoImpositivo : undefined,
+        // Convivencia con gente sin CUIT: solo aplica a estados impositivos.
+        aceptaSinCuit: esImpositivo ? body?.aceptaSinCuit === true : undefined,
     };
     // Los estados impositivos van por defecto al Paso 1 del flujo de dependencias. Solo se toca
     // `ordenDependencia` cuando es impositivo; en los no impositivos NO se incluye la clave, para que

@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { useSearchParams, Link } from 'react-router-dom';
 import { CuitInput, isValidCuit } from '../components/ui/CuitInput';
 import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido } from '../utils/nacionalidadDocumento';
@@ -129,9 +131,9 @@ const InfoSinCuit: React.FC = () => {
         onClick={() => setOpen(true)}
         title="¿Qué pasa si no tengo CUIT/CUIL?"
         aria-label="¿Qué pasa si no tengo CUIT/CUIL?"
-        className="ml-1.5 inline-flex items-center justify-center h-4 w-4 rounded-full border border-gray-500 text-gray-400 hover:text-blue-400 hover:border-blue-400 transition-colors text-[10px] font-bold align-middle"
+        className="ml-1.5 text-gray-400 hover:text-gray-200 transition-colors normal-case tracking-normal font-normal align-middle"
       >
-        i
+        <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
       </button>
       {open &&
         createPortal(
@@ -360,7 +362,7 @@ export const RegistroPage: React.FC = () => {
       { key: 'lastName', label: 'Apellido' },
       { key: 'email', label: 'Email' },
       { key: 'nacionalidadId', label: 'Nacionalidad' },
-      ...(cuilObligatorio ? [{ key: 'cuit' as keyof RegistroForm, label: 'Cuil' }] : []),
+      ...(cuilObligatorio ? [{ key: 'cuit' as keyof RegistroForm, label: 'CUIT / CUIL' }] : []),
       { key: 'documento', label: 'Documento' },
       { key: 'fechaNac', label: 'Fecha de nacimiento' },
     ],
@@ -638,7 +640,7 @@ export const RegistroPage: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <div>
                         <label className={labelClass}>
-                          Cuil {cuilObligatorio && <span className="text-red-500">*</span>}
+                          CUIT / CUIL {cuilObligatorio && <span className="text-red-500">*</span>}
                           <InfoSinCuit />
                         </label>
                         {/* Los extranjeros pueden no tener CUIL: se declara antes de pedirlo. */}
