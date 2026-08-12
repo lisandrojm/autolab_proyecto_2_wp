@@ -645,18 +645,22 @@ export const RegistroPage: React.FC = () => {
                         </label>
                         {/* Los extranjeros pueden no tener CUIL: se declara antes de pedirlo. */}
                         {!esArgentino && (
-                          <label className="flex items-center gap-2 mb-2 text-xs text-gray-300 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              className="accent-blue-600 cursor-pointer"
-                              checked={tieneCuil}
-                              onChange={(e) => {
-                                setTieneCuil(e.target.checked);
-                                if (!e.target.checked) set('cuit', '');
-                              }}
-                            />
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={tieneCuil}
+                            onClick={() => {
+                              const nuevo = !tieneCuil;
+                              setTieneCuil(nuevo);
+                              if (!nuevo) set('cuit', '');
+                            }}
+                            className="flex items-center gap-2 mb-2 text-xs text-gray-300"
+                          >
+                            <span className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${tieneCuil ? 'bg-blue-600' : 'bg-gray-600'}`}>
+                              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${tieneCuil ? 'translate-x-[1.15rem]' : 'translate-x-0.5'}`} />
+                            </span>
                             Tiene CUIT / CUIL argentino
-                          </label>
+                          </button>
                         )}
                         {cuilVisible ? (
                           <CuitInput className={fieldClass} invalid={!!fieldErrors.cuit} value={form.cuit} onChange={(v) => set('cuit', v)} placeholder="20-XXXXXXXX-X" />

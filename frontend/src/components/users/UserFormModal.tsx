@@ -4,6 +4,7 @@ import { rolesAPI, Role } from "../../api/roles";
 import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
 import { infoAPI, InfoItem } from "../../api/info";
 import { InfoModal } from "../ui/InfoModal";
+import { CuitInput, isValidCuit } from "../ui/CuitInput";
 import { Modal } from "../ui/Modal";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { fuzzyMatch } from "../../utils/searchHelpers";
@@ -282,6 +283,18 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   // ─────────── Submit ───────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // El CUIT/CUIL se valida con el algoritmo de AFIP (módulo 11), no solo por largo: un número mal
+    // tipeado se detecta acá y no viaja a la base ni al TXT de AFIP.
+    if (cuilVisible && formData.cuit && !isValidCuit(formData.cuit)) {
+      sweetAlert.error("CUIT/CUIL inválido", "El CUIT/CUIL no es válido. Revisá los 11 dígitos.");
+      setModalActiveTab("general");
+      return;
+    }
+    if (esArgentino && !formData.cuit) {
+      sweetAlert.error("Falta el CUIT/CUIL", "Para una persona argentina el CUIT/CUIL es obligatorio.");
+      setModalActiveTab("general");
+      return;
+    }
     try {
       const submitData: any = {
         email: formData.email,
@@ -392,9 +405,14 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
       ? user
         ? `${`${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email}${user.firstName || user.lastName ? ` · ${user.email}` : ""}`
         : undefined
-      : formData.isSolicitud
-        ? "Completa los datos para dar de alta al usuario"
-        : "Define datos básicos y roles";
+      : (
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span>{formData.isSolicitud ? "Completa los datos para dar de alta al usuario" : "Define datos básicos y roles"}</span>
+            <span className="text-gray-400 dark:text-gray-500">
+              · Los campos marcados con <span className="text-red-500">*</span> son obligatorios
+            </span>
+          </span>
+        );
 
   const actions =
     mode === "password"
@@ -513,11 +531,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* Misma leyenda que el Registro público, para que se entienda qué significa el asterisco. */}
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Los campos marcados con <span className="text-red-500">*</span> son obligatorios
-            </p>
-
             {/* Tab Content */}
             {modalActiveTab === "general" && (
               <div className="space-y-6 animate-fadeIn">
@@ -599,21 +612,25 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                         </label>
                         {/* Los extranjeros pueden no tener CUIL: se declara antes de pedirlo. */}
                         {!esArgentino && (
-                          <label className="flex items-center gap-2 mb-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              className="accent-blue-600 cursor-pointer"
-                              checked={tieneCuil}
-                              onChange={(e) => {
-                                setTieneCuil(e.target.checked);
-                                if (!e.target.checked) setFormData((prev) => ({ ...prev, cuit: "" }));
-                              }}
-                            />
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={tieneCuil}
+                            onClick={() => {
+                              const nuevo = !tieneCuil;
+                              setTieneCuil(nuevo);
+                              if (!nuevo) setFormData((prev) => ({ ...prev, cuit: "" }));
+                            }}
+                            className="flex items-center gap-2 mb-2 text-xs text-gray-600 dark:text-gray-300"
+                          >
+                            <span className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${tieneCuil ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}>
+                              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${tieneCuil ? "translate-x-[1.15rem]" : "translate-x-0.5"}`} />
+                            </span>
                             Tiene CUIT / CUIL argentino
-                          </label>
+                          </button>
                         )}
                         {cuilVisible ? (
-                          <input type="text" required={esArgentino} value={formData.cuit || ""} onChange={(e) => setFormData((prev) => ({ ...prev, cuit: e.target.value }))} className="input-field" placeholder="20-XXXXXXXX-X" />
+                          <CuitInput value={formData.cuit || ""} onChange={(v) => setFormData((prev) => ({ ...prev, cuit: v }))} className="input-field" placeholder="XX-XXXXXXXX-X" />
                         ) : (
                           <p className="text-[11px] text-gray-400">Se registra sin CUIT/CUIL. Se puede cargar más adelante.</p>
                         )}

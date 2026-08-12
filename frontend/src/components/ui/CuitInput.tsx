@@ -16,14 +16,23 @@ export function formatCuit(value: string): string {
   return `${d.slice(0, 2)}-${d.slice(2, 10)}-${d.slice(10)}`;
 }
 
+/** Prefijos que usa AFIP: 20/23/24/25/26/27 personas físicas, 30/33/34 jurídicas. */
+const PREFIJOS_CUIT = ["20", "23", "24", "25", "26", "27", "30", "33", "34"];
+
 /**
- * Valida el CUIT/CUIL con el algoritmo oficial de AFIP (módulo 11):
- * el último dígito (verificador) debe coincidir con el calculado a partir de
- * los 10 anteriores. Devuelve false si no tiene 11 dígitos.
+ * Valida el CUIT/CUIL con el criterio real de AFIP/ANSES. No alcanza con el módulo 11:
+ *  - 11 dígitos exactos,
+ *  - prefijo de tipo válido (persona física o jurídica),
+ *  - no un mismo dígito repetido (00000000000 y similares pasan el módulo 11 pero no existen —
+ *    eran el placeholder que se cargaba antes; hoy, para esa gente, va el circuito "Sin CUIT"),
+ *  - dígito verificador correcto.
+ * Mismo criterio que `cuitEsValido` de ConstanciaBulk, que es el que usa Contratos.
  */
 export function isValidCuit(value: string): boolean {
   const d = cleanCuit(value);
   if (d.length !== 11) return false;
+  if (!PREFIJOS_CUIT.includes(d.slice(0, 2))) return false;
+  if (/^(\d)\1{10}$/.test(d)) return false;
   const n = d.split("").map(Number);
   let sum = 0;
   for (let i = 0; i < 10; i++) sum += n[i] * MULT[i];

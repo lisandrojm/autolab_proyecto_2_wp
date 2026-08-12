@@ -72,6 +72,42 @@ const SUB_TAB_INFO: Record<"alta_afip" | "constancia_cuit" | "sin_cuit" | "firma
   },
 };
 
+/** Cada sub-pestaña de "Gestión de Contratos". */
+type MgmtTab = "alta_afip" | "constancia_cuit" | "sin_cuit" | "firma" | "para_firmar" | "enviado_firma" | "firmados";
+
+/**
+ * El circuito son 5 PASOS, no 7 pestañas: el paso 1 (trámite impositivo) tiene tres variantes
+ * EXCLUYENTES —según si al contrato le corresponde el alta temprana, la constancia, o va por el
+ * circuito sin CUIT— y del 2 al 5 son etapas consecutivas. Se muestra como stepper de dos niveles
+ * para que se entienda que las tres primeras son alternativas entre sí y no pasos sucesivos.
+ */
+const PASO_1_TABS: MgmtTab[] = ["alta_afip", "constancia_cuit", "sin_cuit"];
+
+const PASO_1_OPCIONES: { tab: MgmtTab; label: string; total: (c: { mgmtCounts: { alta: number; cuit: number; sinCuit: number } }) => number }[] = [
+  { tab: "alta_afip", label: "Alta temprana de AFIP", total: ({ mgmtCounts }) => mgmtCounts.alta },
+  { tab: "constancia_cuit", label: "Constancia de CUIT", total: ({ mgmtCounts }) => mgmtCounts.cuit },
+  { tab: "sin_cuit", label: "Sin CUIT", total: ({ mgmtCounts }) => mgmtCounts.sinCuit },
+];
+
+interface TotalesGestion {
+  mgmtCounts: { alta: number; cuit: number; firma: number; sinCuit: number };
+  dropboxCounts: { para_firmar: number | null; enviado_firma: number | null; firmados: number | null };
+}
+
+const PASOS_GESTION: { numero: number; label: string; descripcion: string; tabs: MgmtTab[]; total: (c: TotalesGestion) => number | null }[] = [
+  {
+    numero: 1,
+    label: "Trámite impositivo",
+    descripcion: "El contrato está en UNA de las tres variantes: Alta temprana de AFIP, Constancia de CUIT o Sin CUIT.",
+    tabs: PASO_1_TABS,
+    total: ({ mgmtCounts }) => mgmtCounts.alta + mgmtCounts.cuit + mgmtCounts.sinCuit,
+  },
+  { numero: 2, label: "Generar Documentos", descripcion: "Se generan los PDF de Contrato y Release, que quedan en la carpeta Outbox.", tabs: ["firma"], total: ({ mgmtCounts }) => mgmtCounts.firma },
+  { numero: 3, label: "Para Firmar", descripcion: "Documentos listos para importar en Dropbox Sign y enviarlos a firmar.", tabs: ["para_firmar"], total: ({ dropboxCounts }) => dropboxCounts.para_firmar },
+  { numero: 4, label: "Enviado a la firma", descripcion: "La solicitud ya se envió desde Dropbox Sign y se espera la firma.", tabs: ["enviado_firma"], total: ({ dropboxCounts }) => dropboxCounts.enviado_firma },
+  { numero: 5, label: "Firmados", descripcion: "Contratos que ya volvieron firmados.", tabs: ["firmados"], total: ({ dropboxCounts }) => dropboxCounts.firmados },
+];
+
 /** Clases de un botón de pestaña (mismo estilo que el resto de los tabs de la app). */
 const tabBtnClass = (active: boolean): string =>
   `px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
@@ -147,7 +183,7 @@ export const ContractsPage: React.FC = () => {
   // Pestañas de la página: "Contratos" (la vista actual) y "Gestión de Contratos" (acciones masivas).
   const [mainTab, setMainTab] = useState<"contracts" | "management">(initialTab);
   // Sub-pestañas de "Gestión de Contratos".
-  const [mgmtTab, setMgmtTab] = useState<"alta_afip" | "constancia_cuit" | "sin_cuit" | "firma" | "para_firmar" | "enviado_firma" | "firmados">("alta_afip");
+  const [mgmtTab, setMgmtTab] = useState<MgmtTab>("alta_afip");
   // Cantidades de las pestañas que leen de Dropbox. `null` = todavía no se leyeron.
   const [paraFirmarCount, setParaFirmarCount] = useState<number | null>(null);
   const [pendienteFirmaCount, setPendienteFirmaCount] = useState<number | null>(null);
@@ -470,65 +506,77 @@ export const ContractsPage: React.FC = () => {
           </div>
             </div>
           ) : (
-            <div className="flex overflow-x-auto border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center gap-1 shrink-0">
-                <button className={tabBtnClass(mgmtTab === "alta_afip")} onClick={() => setMgmtTab("alta_afip")}>
-                  Alta temprana de AFIP ({mgmtCounts.alta})
-                </button>
-                <button type="button" onClick={() => setSubTabInfoOpen("alta_afip")} title={SUB_TAB_INFO.alta_afip.title} className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0 -ml-3 mb-2">
-                  <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-                </button>
+            <div className="space-y-3">
+              {/* Paso 1: las tres variantes del trámite impositivo son EXCLUYENTES (el contrato está
+                  en una sola). Del 2 al 5 son etapas consecutivas. Por eso el stepper de dos niveles:
+                  arriba los 5 pasos, y la fila de variantes solo cuando se está parado en el paso 1. */}
+              <div className="flex items-center gap-1 overflow-x-auto pb-1">
+                {PASOS_GESTION.map((paso, i) => {
+                  const activo = paso.tabs.includes(mgmtTab);
+                  const total = paso.total({ mgmtCounts, dropboxCounts });
+                  return (
+                    <React.Fragment key={paso.numero}>
+                      {i > 0 && <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 text-gray-300 dark:text-gray-600 shrink-0" />}
+                      <button
+                        type="button"
+                        onClick={() => setMgmtTab(paso.tabs[0])}
+                        title={paso.descripcion}
+                        className={`group flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors whitespace-nowrap shrink-0 ${
+                          activo ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-transparent hover:bg-gray-100 dark:hover:bg-gray-800"
+                        }`}
+                      >
+                        <span
+                          className={`flex items-center justify-center h-5 w-5 rounded-full text-[11px] font-bold shrink-0 ${
+                            activo ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+                          }`}
+                        >
+                          {paso.numero}
+                        </span>
+                        <span className={`text-sm font-medium ${activo ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"}`}>{paso.label}</span>
+                        {total !== null && <span className="text-xs text-gray-400">({total})</span>}
+                      </button>
+                      {/* El paso 1 no lleva ⓘ acá: cada una de sus tres variantes tiene el suyo abajo. */}
+                      {paso.tabs.length === 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setSubTabInfoOpen(paso.tabs[0])}
+                          title={SUB_TAB_INFO[paso.tabs[0]].title}
+                          className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0 -ml-1"
+                        >
+                          <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                        </button>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <button className={tabBtnClass(mgmtTab === "constancia_cuit")} onClick={() => setMgmtTab("constancia_cuit")}>
-                  Constancia de CUIT ({mgmtCounts.cuit})
-                </button>
-                <button type="button" onClick={() => setSubTabInfoOpen("constancia_cuit")} title={SUB_TAB_INFO.constancia_cuit.title} className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0 -ml-3 mb-2">
-                  <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-                </button>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <button className={tabBtnClass(mgmtTab === "sin_cuit")} onClick={() => setMgmtTab("sin_cuit")}>
-                  Sin CUIT ({mgmtCounts.sinCuit})
-                </button>
-                <button type="button" onClick={() => setSubTabInfoOpen("sin_cuit")} title={SUB_TAB_INFO.sin_cuit.title} className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0 -ml-3 mb-2">
-                  <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-                </button>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <button className={tabBtnClass(mgmtTab === "firma")} onClick={() => setMgmtTab("firma")}>
-                  Generar Documentos ({mgmtCounts.firma})
-                </button>
-                <button type="button" onClick={() => setSubTabInfoOpen("firma")} title={SUB_TAB_INFO.firma.title} className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0 -ml-3 mb-2">
-                  <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-                </button>
-              </div>
-              {/* Estas tres no salen de la base: son las carpetas de Dropbox Sign, en el orden del
-                  circuito de firma (generado → enviado → firmado). */}
-              <div className="flex items-center gap-1 shrink-0">
-                <button className={tabBtnClass(mgmtTab === "para_firmar")} onClick={() => setMgmtTab("para_firmar")}>
-                  Para Firmar{dropboxCounts.para_firmar !== null ? ` (${dropboxCounts.para_firmar})` : ""}
-                </button>
-                <button type="button" onClick={() => setSubTabInfoOpen("para_firmar")} title={SUB_TAB_INFO.para_firmar.title} className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0 -ml-3 mb-2">
-                  <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-                </button>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <button className={tabBtnClass(mgmtTab === "enviado_firma")} onClick={() => setMgmtTab("enviado_firma")}>
-                  Enviado a la firma{dropboxCounts.enviado_firma !== null ? ` (${dropboxCounts.enviado_firma})` : ""}
-                </button>
-                <button type="button" onClick={() => setSubTabInfoOpen("enviado_firma")} title={SUB_TAB_INFO.enviado_firma.title} className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0 -ml-3 mb-2">
-                  <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-                </button>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <button className={tabBtnClass(mgmtTab === "firmados")} onClick={() => setMgmtTab("firmados")}>
-                  Firmados{dropboxCounts.firmados !== null ? ` (${dropboxCounts.firmados})` : ""}
-                </button>
-                <button type="button" onClick={() => setSubTabInfoOpen("firmados")} title={SUB_TAB_INFO.firmados.title} className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0 -ml-3 mb-2">
-                  <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-                </button>
-              </div>
+
+              {/* Variantes del paso 1: se muestran solo cuando el paso activo es ese. */}
+              {PASO_1_TABS.includes(mgmtTab) && (
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 px-3 py-2">
+                  <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mr-1">Elegí según el caso</span>
+                  {PASO_1_OPCIONES.map((op) => {
+                    const activo = mgmtTab === op.tab;
+                    return (
+                      <div key={op.tab} className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setMgmtTab(op.tab)}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm font-medium transition-colors whitespace-nowrap ${
+                            activo ? "border-blue-500 bg-white text-blue-600 dark:bg-gray-900 dark:text-blue-400" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-900/60"
+                          }`}
+                        >
+                          <span className={`h-3.5 w-3.5 rounded-full border-2 shrink-0 ${activo ? "border-blue-500 bg-blue-500 ring-2 ring-inset ring-white dark:ring-gray-900" : "border-gray-300 dark:border-gray-600"}`} />
+                          {op.label} ({op.total({ mgmtCounts })})
+                        </button>
+                        <button type="button" onClick={() => setSubTabInfoOpen(op.tab)} title={SUB_TAB_INFO[op.tab].title} className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0">
+                          <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>
