@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileSignature, faSpinner, faCheck, faTriangleExclamation, faEnvelope } from "@fortawesome/free-solid-svg-icons";
+import { faFileSignature, faSpinner, faCheck, faTriangleExclamation, faEnvelope, faInbox } from "@fortawesome/free-solid-svg-icons";
 import { dropboxSignAPI, DropboxSignConfig } from "../api/dropboxSign";
 import { PageLayout } from "../components/ui/PageLayout";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -41,6 +41,22 @@ export const DropboxSignConfigPage: React.FC = () => {
     cargar();
   }, []);
 
+  /** Corre la lectura de la casilla: `prueba` solo verifica la conexión, sin escribir en Dropbox. */
+  const [leyendo, setLeyendo] = useState<'prueba' | 'real' | null>(null);
+  const leerAhora = async (prueba: boolean) => {
+    setLeyendo(prueba ? 'prueba' : 'real');
+    try {
+      const r = await dropboxSignAPI.leer(prueba);
+      if (r.ok) sweetAlert.success(prueba ? 'Conexión OK' : 'Lectura completa', r.detalle);
+      else sweetAlert.error(prueba ? 'No se pudo conectar' : 'Lectura con problemas', r.detalle);
+      if (!prueba) await cargar();
+    } catch (e: any) {
+      sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo leer la casilla.');
+    } finally {
+      setLeyendo(null);
+    }
+  };
+
   const guardar = async () => {
     setGuardando(true);
     try {
@@ -75,13 +91,20 @@ export const DropboxSignConfigPage: React.FC = () => {
               Notificaciones, sin costo).
             </p>
             <p>
-              Leyendo esa casilla, el sistema detecta el envío, identifica el contrato con el mismo criterio de siempre (CUIT en el nombre del archivo, después CUIT dentro del PDF, después nombre y
-              apellido) y mueve el archivo de <span className="font-mono text-xs">Outbox</span> a <span className="font-mono text-xs">Pendbox</span>. Eso es lo que hace avanzar el contrato de{" "}
+              El sistema lee el <strong>asunto</strong> del aviso (“Se inició el proceso de firma de…”), que trae el nombre del documento con el CUIL y el número de documento adentro. No abre el PDF ni
+              los adjuntos.
+            </p>
+            <p>
+              Con esos datos busca el archivo en <span className="font-mono text-xs">Outbox</span>: si está, <strong>crea un JSON</strong> con la información del envío en{" "}
+              <span className="font-mono text-xs">Pendbox</span> —igual que el de Constancia de CUIT— y mueve el PDF a esa misma carpeta. Eso es lo que hace avanzar el contrato de{" "}
               <strong>Para Firmar</strong> a <strong>Enviado a la firma</strong>, y evita que se mande a firmar dos veces.
             </p>
             <p className="flex items-start gap-1.5 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300">
               <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-              <span>Si no logra identificar exactamente un contrato, no mueve nada — nunca adivina, igual que el escaneo de carpetas.</span>
+              <span>
+                Si el documento no está en <span className="font-mono text-xs">Outbox</span>, o si ya tiene su JSON en <span className="font-mono text-xs">Pendbox</span>, el aviso se saltea — nunca
+                adivina ni archiva dos veces, igual que el escaneo de carpetas.
+              </span>
             </p>
           </div>
         ),
@@ -140,10 +163,21 @@ export const DropboxSignConfigPage: React.FC = () => {
                 <input type="checkbox" checked={form.enabled} onChange={(e) => setForm((f) => ({ ...f, enabled: e.target.checked }))} className="rounded border-gray-300" />
                 Activar la lectura automática de la casilla
               </label>
-              <button type="button" onClick={guardar} disabled={guardando} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors">
-                <FontAwesomeIcon icon={guardando ? faSpinner : faCheck} spin={guardando} className="h-4 w-4" />
-                Guardar
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Probar = solo conecta y cuenta avisos. Leer ahora = procesa y archiva en Pendbox. */}
+                <button type="button" onClick={() => leerAhora(true)} disabled={!!leyendo || guardando} title="Conecta a la casilla y cuenta los avisos pendientes, sin escribir nada" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
+                  <FontAwesomeIcon icon={leyendo === 'prueba' ? faSpinner : faEnvelope} spin={leyendo === 'prueba'} className="h-4 w-4" />
+                  Probar conexión
+                </button>
+                <button type="button" onClick={() => leerAhora(false)} disabled={!!leyendo || guardando} title="Lee la casilla y archiva en Pendbox los avisos de envío a firmar" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-gray-700 text-white hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 disabled:opacity-50 transition-colors">
+                  <FontAwesomeIcon icon={leyendo === 'real' ? faSpinner : faInbox} spin={leyendo === 'real'} className="h-4 w-4" />
+                  Leer ahora
+                </button>
+                <button type="button" onClick={guardar} disabled={guardando} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                  <FontAwesomeIcon icon={guardando ? faSpinner : faCheck} spin={guardando} className="h-4 w-4" />
+                  Guardar
+                </button>
+              </div>
             </div>
           </div>
 

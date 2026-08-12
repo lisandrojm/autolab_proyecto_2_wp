@@ -18,10 +18,13 @@ import { getTenantDropboxConfig, uploadFile, listFolder, moveEntry } from "./dro
  *  1. Lee del ASUNTO el nombre del documento ("Se inició el proceso de firma de <archivo>").
  *  2. De ese nombre saca el CUIL/documento (la nomenclatura de `buildDocFileName`) y con eso ubica
  *     a la persona y su contrato.
- *  3. Archiva un JSON en la carpeta "Pendbox" —mismo formato que el de Constancia de CUIT— para que
- *     el contrato figure en "Enviado a la firma".
- *  4. Si el PDF todavía está en "Outbox", lo mueve a "Pendbox": así "Para Firmar" queda solo con lo
- *     que no se envió y no se manda dos veces por error.
+ *  3. Verifica que el PDF exista en "Outbox". Si no está, NO archiva nada: sin respaldo en Outbox el
+ *     aviso no se puede atribuir a un documento propio (puede ser de otra cuenta o de un reenvío).
+ *  4. Si ese documento ya fue archivado antes en "Pendbox", lo saltea. Los avisos se repiten
+ *     (reenvíos, recordatorios, resumen diario), así que el chequeo evita subir el JSON dos veces.
+ *  5. Archiva un JSON en "Pendbox" —mismo formato que el de Constancia de CUIT— para que el contrato
+ *     figure en "Enviado a la firma", y mueve el PDF de Outbox a Pendbox: así "Para Firmar" queda
+ *     solo con lo que no se envió y no se manda dos veces por error.
  */
 
 /** Asuntos que manda Dropbox Sign al iniciar el circuito de firma (ES/EN). */
@@ -56,12 +59,58 @@ export function extraerIdentidadDeArchivo(nombreArchivo: string): { cuit: string
   };
 }
 
+/** Solo alfanumérico y en minúsculas: el asunto trae el nombre con caracteres ya transformados. */
+const normalizarNombre = (v: string): string =>
+  String(v || "")
+    .toLowerCase()
+    .replace(/\.[a-z0-9]+$/i, "")
+    .replace(/[^a-z0-9]/g, "");
+
+/**
+ * Ubica en Outbox el PDF al que se refiere el aviso. El nombre del asunto NO se puede comparar
+ * carácter a carácter: Dropbox Sign reemplaza símbolos del original (la "@" del mail pasa a "_").
+ * Por eso se matchea por el bloque CUIL/documento —que es estable— y recién después por el nombre
+ * normalizado a solo alfanumérico. Si hay más de un candidato, devuelve null: nunca adivina.
+ */
+export function buscarEnOutbox(
+  entries: { tag: string; name: string; path: string }[],
+  archivo: string,
+  ident: { cuit: string; documento: string },
+): { name: string; path: string } | null {
+  const pdfs = entries.filter((e) => e.tag === "file" && /\.pdf$/i.test(e.name));
+  if (ident.cuit) {
+    const porCuit = pdfs.filter((e) => e.name.includes(ident.cuit));
+    const conDoc = ident.documento ? porCuit.filter((e) => e.name.includes(ident.documento)) : [];
+    if (conDoc.length === 1) return conDoc[0];
+    if (porCuit.length === 1) return porCuit[0];
+    if (porCuit.length > 1) return null;
+  }
+  const objetivo = normalizarNombre(archivo);
+  const porNombre = pdfs.filter((e) => normalizarNombre(e.name) === objetivo);
+  return porNombre.length === 1 ? porNombre[0] : null;
+}
+
+/** ¿Ese documento ya fue archivado en Pendbox? Compara normalizado, sin extensión. */
+export function yaArchivado(entries: { tag: string; name: string }[], archivo: string, ident: { cuit: string; documento: string }): boolean {
+  const objetivo = normalizarNombre(archivo);
+  return entries.some((e) => {
+    if (e.tag !== "file") return false;
+    if (normalizarNombre(e.name) === objetivo) return true;
+    // El JSON pudo haberse subido con otro nombre (autorename de Dropbox): el CUIL alcanza.
+    return Boolean(ident.cuit) && /\.json$/i.test(e.name) && e.name.includes(ident.cuit);
+  });
+}
+
 export interface ResultadoLectura {
   ok: boolean;
   detalle: string;
   avisos: number;
   archivados: number;
   movidos: number;
+  /** Avisos salteados porque ese documento ya tenía su JSON en Pendbox. */
+  duplicados: number;
+  /** Avisos salteados porque el PDF no aparece en Outbox (no se puede atribuir a un contrato). */
+  sinArchivoEnOutbox: number;
 }
 
 /** Ubica el contrato de la persona a partir del CUIL/documento leídos del nombre del archivo. */
@@ -85,11 +134,12 @@ async function ubicarContrato(tenantObjectId: any, ident: { cuit: string; docume
 export async function leerCasillaDropboxSign(tenantId: string, soloPrueba = false): Promise<ResultadoLectura> {
   const tenant = await Tenant.findById(tenantId).lean();
   const cfg: any = (tenant as any)?.integrations?.dropboxSign || {};
+  const vacio = { avisos: 0, archivados: 0, movidos: 0, duplicados: 0, sinArchivoEnOutbox: 0 };
   if (!cfg.email || !cfg.imapHost || !cfg.imapPasswordEnc) {
-    return { ok: false, detalle: "La casilla no está configurada (faltan correo, servidor o contraseña).", avisos: 0, archivados: 0, movidos: 0 };
+    return { ok: false, detalle: "La casilla no está configurada (faltan correo, servidor o contraseña).", ...vacio };
   }
   if (!soloPrueba && !cfg.enabled) {
-    return { ok: false, detalle: "La lectura automática está desactivada.", avisos: 0, archivados: 0, movidos: 0 };
+    return { ok: false, detalle: "La lectura automática está desactivada.", ...vacio };
   }
 
   const dropboxCfg = getTenantDropboxConfig(tenant);
@@ -107,7 +157,23 @@ export async function leerCasillaDropboxSign(tenantId: string, soloPrueba = fals
   let avisos = 0;
   let archivados = 0;
   let movidos = 0;
+  let duplicados = 0;
+  let sinArchivoEnOutbox = 0;
   const errores: string[] = [];
+
+  // Ambas carpetas se listan una sola vez y se mantienen en memoria: un aviso archivado agrega su
+  // JSON a `enPendbox` y saca el PDF de `enOutbox`, así los avisos repetidos de la misma corrida
+  // (Dropbox Sign manda recordatorios y resúmenes) también caen en el chequeo de duplicado.
+  let enOutbox: { tag: string; name: string; path: string }[] = [];
+  let enPendbox: { tag: string; name: string; path: string }[] = [];
+  if (!soloPrueba && dropboxCfg) {
+    try {
+      if (outbox) enOutbox = ((await listFolder(tenantId, dropboxCfg, outbox, true)).entries || []) as any[];
+      if (pendbox) enPendbox = ((await listFolder(tenantId, dropboxCfg, pendbox, true)).entries || []) as any[];
+    } catch (e: any) {
+      return { ok: false, detalle: `No se pudieron leer las carpetas de Dropbox: ${e?.message || e}`, ...vacio };
+    }
+  }
 
   try {
     await client.connect();
@@ -130,6 +196,24 @@ export async function leerCasillaDropboxSign(tenantId: string, soloPrueba = fals
 
         try {
           const ident = extraerIdentidadDeArchivo(archivo);
+
+          // Ya archivado: el aviso se marca leído y se sigue. No se sube el JSON de nuevo.
+          if (yaArchivado(enPendbox, archivo, ident)) {
+            duplicados++;
+            await client.messageFlagsAdd(String(uid), ["\\Seen"]);
+            continue;
+          }
+
+          // Sin PDF en Outbox no hay documento propio al que atribuir el aviso (puede ser de otra
+          // cuenta o un reenvío). Se deja SIN leer a propósito: si el PDF aparece después, el
+          // próximo tick lo toma.
+          const pdf = buscarEnOutbox(enOutbox, archivo, ident);
+          if (!pdf) {
+            sinArchivoEnOutbox++;
+            continue;
+          }
+          const nombreBase = pdf.name.replace(/\.pdf$/i, "");
+
           const encontrado = await ubicarContrato((tenant as any)._id, ident);
           const contrato: any = (encontrado?.up as any)?.contracts?.slice(-1)[0];
 
@@ -140,7 +224,8 @@ export async function leerCasillaDropboxSign(tenantId: string, soloPrueba = fals
                 estado: "enviado a firmar",
                 origen: "email-dropbox-sign",
                 asunto,
-                archivo,
+                archivo: nombreBase,
+                archivoOutbox: pdf.path,
                 fechaAviso: (msg as any)?.envelope?.date || null,
                 detectadoEn: new Date().toISOString(),
                 cuit: ident.cuit || null,
@@ -156,21 +241,20 @@ export async function leerCasillaDropboxSign(tenantId: string, soloPrueba = fals
             ),
           );
 
-          await uploadFile(tenantId, dropboxCfg, `${pendbox.replace(/\/$/, "")}/${archivo}.json`, contenido);
+          const nombreJson = `${nombreBase}.json`;
+          await uploadFile(tenantId, dropboxCfg, `${pendbox.replace(/\/$/, "")}/${nombreJson}`, contenido);
           archivados++;
+          // Se registra en el listado en memoria para que un aviso repetido de esta misma corrida
+          // caiga en el chequeo de duplicado sin volver a pedirle la carpeta a Dropbox.
+          enPendbox.push({ tag: "file", name: nombreJson, path: `${pendbox.replace(/\/$/, "")}/${nombreJson}` });
 
-          // El PDF, si sigue en Outbox, se mueve: "Para Firmar" queda solo con lo NO enviado.
-          if (outbox) {
-            try {
-              const enOutbox = await listFolder(tenantId, dropboxCfg, outbox, true);
-              const pdf = (enOutbox.entries || []).find((e) => e.tag === "file" && e.name.replace(/\.pdf$/i, "") === archivo);
-              if (pdf) {
-                await moveEntry(tenantId, dropboxCfg, pdf.path, `${pendbox.replace(/\/$/, "")}/${pdf.name}`);
-                movidos++;
-              }
-            } catch (e: any) {
-              errores.push(`No se pudo mover "${archivo}" de Outbox: ${e?.message || e}`);
-            }
+          // El PDF se mueve a Pendbox: "Para Firmar" queda solo con lo que NO se envió.
+          try {
+            await moveEntry(tenantId, dropboxCfg, pdf.path, `${pendbox.replace(/\/$/, "")}/${pdf.name}`);
+            movidos++;
+            enOutbox = enOutbox.filter((e) => e.path !== pdf.path);
+          } catch (e: any) {
+            errores.push(`No se pudo mover "${pdf.name}" de Outbox: ${e?.message || e}`);
           }
 
           await client.messageFlagsAdd(String(uid), ["\\Seen"]);
@@ -183,14 +267,22 @@ export async function leerCasillaDropboxSign(tenantId: string, soloPrueba = fals
     }
     await client.logout();
   } catch (e: any) {
-    return { ok: false, detalle: `No se pudo leer la casilla: ${e?.message || e}`, avisos, archivados, movidos };
+    return { ok: false, detalle: `No se pudo leer la casilla: ${e?.message || e}`, avisos, archivados, movidos, duplicados, sinArchivoEnOutbox };
   }
 
   const detalle = soloPrueba
     ? `Conexión OK. ${avisos} aviso(s) de envío sin leer en la casilla.`
-    : `${avisos} aviso(s) leídos · ${archivados} archivado(s) en Pendbox · ${movidos} PDF movido(s) desde Outbox.${errores.length ? ` ${errores.length} con error: ${errores.slice(0, 3).join(" | ")}` : ""}`;
+    : [
+        `${avisos} aviso(s) leídos`,
+        `${archivados} archivado(s) en Pendbox`,
+        `${movidos} PDF movido(s) desde Outbox`,
+        duplicados ? `${duplicados} ya estaban archivados` : "",
+        sinArchivoEnOutbox ? `${sinArchivoEnOutbox} sin PDF en Outbox` : "",
+      ]
+        .filter(Boolean)
+        .join(" · ") + (errores.length ? ` · ${errores.length} con error: ${errores.slice(0, 3).join(" | ")}` : "");
 
-  return { ok: errores.length === 0, detalle, avisos, archivados, movidos };
+  return { ok: errores.length === 0, detalle, avisos, archivados, movidos, duplicados, sinArchivoEnOutbox };
 }
 
 /** Corre la lectura para todos los tenants que la tengan activada (lo usa el scheduler). */

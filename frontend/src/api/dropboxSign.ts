@@ -39,6 +39,28 @@ class DropboxSignAPI {
     const { data } = await axios.put("/dropbox-sign/config", payload);
     return data;
   }
+
+  /**
+   * Corre la lectura de la casilla ahora mismo. `prueba` solo verifica la conexión y cuenta los
+   * avisos sin escribir nada en Dropbox. Puede tardar (conecta por IMAP y sube a Dropbox).
+   */
+  async leer(prueba = false): Promise<ResultadoLectura> {
+    const { data } = await axios.post("/dropbox-sign/leer", { prueba }, { timeout: 120000 });
+    return data;
+  }
+}
+
+/** Resultado de leer la casilla (ver dropboxSignMailService en el server). */
+export interface ResultadoLectura {
+  ok: boolean;
+  detalle: string;
+  avisos: number;
+  archivados: number;
+  movidos: number;
+  /** Salteados porque ese documento ya tenía su JSON en Pendbox. */
+  duplicados: number;
+  /** Salteados porque el PDF no aparece en Outbox. */
+  sinArchivoEnOutbox: number;
 }
 
 export const dropboxSignAPI = new DropboxSignAPI();
