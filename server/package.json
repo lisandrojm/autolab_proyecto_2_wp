@@ -49,6 +49,7 @@
     "helmet": "^7.1.0",
     "html-pdf-node": "^1.0.8",
     "html-to-docx": "^1.8.0",
+    "imapflow": "^1.7.0",
     "ioredis": "^5.8.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.0",

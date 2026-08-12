@@ -62,6 +62,59 @@ export const fetchDropboxCounts = async (): Promise<Record<TipoBandejaDropbox, n
 };
 
 /**
+ * Instructivo de cómo enviar a firmar en Dropbox Sign. Se muestra en dos lugares (el ⓘ del paso
+ * "Para Firmar" del stepper y el ⓘ de la propia pestaña), así que vive acá para no duplicarlo.
+ */
+export const InstructivoParaFirmar: React.FC = () => (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-700 dark:text-gray-200">
+              Lo que aparece en esta pestaña es lo que hay en la carpeta <strong>Outbox</strong> de Dropbox: contratos ya generados y <strong>listos para importar</strong> en Dropbox Sign. Todavía no se
+              envió nada a firmar.
+            </p>
+
+            <ol className="text-sm text-gray-600 dark:text-gray-300 space-y-2 list-decimal list-inside">
+              <li>
+                Entrá a Dropbox Sign (botón <strong>Ir a Dropbox Sign</strong>) y elegí <strong>Firmar documentos</strong>.
+              </li>
+              <li>
+                En <em>Seleccionar documentos para firmar</em>, elegí el origen <strong>Dropbox</strong>.
+              </li>
+              <li>
+                Navegá a la carpeta <span className="font-mono text-xs">HelloSign/Outbox</span> y seleccioná el archivo.
+              </li>
+              <li>
+                <strong>Agregar firmantes</strong>: cargá nombre y correo de quien tiene que firmar.
+              </li>
+              <li>
+                <strong>Insertar campos</strong>: colocá el campo de firma donde corresponda en el documento.
+              </li>
+              <li>
+                En <em>Revisar y enviar</em>, apretá <strong>Enviar para firmar</strong>.
+              </li>
+            </ol>
+
+            {/* El CC no es un detalle administrativo: es lo que dispara la detección del envío. */}
+            <div className="rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-900/20 px-3 py-2.5">
+              <p className="text-sm font-bold text-amber-800 dark:text-amber-300 mb-1">IMPORTANTE — antes de enviar</p>
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                En <em>Revisar y enviar</em>, agregá en <strong>CC</strong> el correo <span className="font-mono text-xs">rrhh@frame.com.ar</span>.
+              </p>
+              <p className="text-xs text-amber-700 dark:text-amber-300/90 mt-1.5">
+                Ese aviso de Dropbox Sign es la única forma que tiene el sistema de enterarse de que el documento se envió: con él, el archivo pasa solo de <strong>Outbox</strong> a{" "}
+                <strong>Pendbox</strong> y aparece en <strong>Enviado a la firma</strong>. Si no lo ponés, el contrato queda figurando como no enviado y se corre el riesgo de mandarlo dos veces.
+              </p>
+            </div>
+
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Cuando vuelve firmado queda en <span className="font-mono text-xs">Requested signatures</span> y se ve en la pestaña <strong>Firmados</strong>.
+            </p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              El envío y la firma se hacen en Dropbox Sign, no en la aplicación. Desde acá sí podés descargar, renombrar o eliminar los archivos de Outbox antes de importarlos.
+            </p>
+          </div>
+);
+
+/**
  * Pestañas que muestran contratos que no viven en la base sino en carpetas de Dropbox. Son las tres
  * etapas del circuito de firma, en orden:
  *
@@ -252,24 +305,8 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
       )}
 
       {infoOpen && (
-        <Modal isOpen={infoOpen} onClose={() => setInfoOpen(false)} title="Cómo enviarlos a firmar" size="sm" zIndex={80}>
-          <div className="space-y-3">
-            <p className="text-sm text-gray-700 dark:text-gray-200">
-              Lo que aparece en esta pestaña es lo que hay en la carpeta <strong>Outbox</strong> de Dropbox: contratos generados desde <strong>Firma digital</strong> que están <strong>listos para importar</strong> en
-              Dropbox Sign. Todavía no se envió nada a firmar.
-            </p>
-            <ol className="text-sm text-gray-600 dark:text-gray-300 space-y-2 list-decimal list-inside">
-              <li>Este botón abre Dropbox Sign en una pestaña nueva.</li>
-              <li>
-                Una vez ahí, importá los documentos desde la carpeta <strong>Outbox</strong>.
-              </li>
-              <li>Enviálos a firmar desde Dropbox Sign.</li>
-              <li>
-                Cuando vuelven firmados quedan en <strong>Requested signatures</strong> y pasan a verse en la pestaña <strong>Firmados</strong>.
-              </li>
-            </ol>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400">El envío y la firma se hacen en Dropbox Sign, no en la aplicación. Desde acá sí podés descargar, renombrar o eliminar los archivos de Outbox antes de importarlos.</p>
-          </div>
+        <Modal isOpen={infoOpen} onClose={() => setInfoOpen(false)} title="Cómo enviarlos a firmar en Dropbox Sign" size="md" zIndex={80}>
+          <InstructivoParaFirmar />
         </Modal>
       )}
 

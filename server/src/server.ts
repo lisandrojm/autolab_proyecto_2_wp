@@ -22,6 +22,7 @@ import { ensureAllTenantsHaveDefaultShifts } from "./services/shiftInitService.j
 import { errorHandler } from "./middleware/errorHandler.js";
 import { initCronScheduler } from "./services/cronService.js";
 import { initEstadoDropboxScheduler } from "./services/estadoDropboxCronService.js";
+import { initDropboxSignMailScheduler } from "./services/dropboxSignMailService.js";
 
 
 
@@ -272,6 +273,13 @@ connectDB()
       initEstadoDropboxScheduler();
     } catch (error) {
       console.error("❌ Failed to initialize estado-dropbox scheduler:", error);
+    }
+
+    // Lectura de la casilla de Dropbox Sign: detecta los envíos a firmar y los archiva en Pendbox.
+    try {
+      initDropboxSignMailScheduler();
+    } catch (error) {
+      console.error("❌ Failed to initialize dropbox-sign mail scheduler:", error);
     }
 
 

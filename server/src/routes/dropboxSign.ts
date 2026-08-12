@@ -4,6 +4,7 @@ import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { Tenant } from "../models/Tenant.js";
 import { encryptSecret } from "../utils/secretCrypto.js";
+import { leerCasillaDropboxSign } from "../services/dropboxSignMailService.js";
 
 /**
  * Configuración de "DropboxSign | Firmas": la casilla de correo que recibe las copias de
@@ -98,6 +99,31 @@ router.put("/config", async (req: AuthenticatedRequest & TenantRequest, res) => 
   } catch (error) {
     console.error("Dropbox Sign save config error:", error);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * POST /dropbox-sign/leer - corre la lectura de la casilla ahora mismo (solo admin).
+ * `prueba: true` solo verifica la conexión y cuenta los avisos, sin escribir nada en Dropbox.
+ */
+router.post("/leer", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    if (!isAdmin(req)) {
+      res.status(403).json({ error: "Solo un administrador puede leer la casilla." });
+      return;
+    }
+    const soloPrueba = req.body?.prueba === true;
+    const r = await leerCasillaDropboxSign(String(req.tenantObjectId), soloPrueba);
+    // El resultado queda registrado para poder verlo después desde la configuración.
+    if (!soloPrueba) {
+      await Tenant.findByIdAndUpdate(req.tenantObjectId, {
+        $set: { "integrations.dropboxSign.lastCheckAt": new Date(), "integrations.dropboxSign.lastCheckOk": r.ok, "integrations.dropboxSign.lastCheckDetalle": r.detalle },
+      });
+    }
+    res.json(r);
+  } catch (error: any) {
+    console.error("Dropbox Sign leer error:", error);
+    res.status(500).json({ error: error?.message || "No se pudo leer la casilla." });
   }
 });
 

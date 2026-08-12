@@ -28,7 +28,7 @@ import { sweetAlert } from "../utils/sweetAlert";
 
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { ContractBulkAfipTab, ContractBulkFirmaTab } from "../components/contratos/ContractBulkTabs";
-import { ContractDropboxTab, fetchDropboxCounts } from "../components/contratos/ContractDropboxTabs";
+import { ContractDropboxTab, fetchDropboxCounts, InstructivoParaFirmar } from "../components/contratos/ContractDropboxTabs";
 import { firmaDigitalAPI, FirmaDigitalConfig } from "../api/firmaDigital";
 
 /** Mismas opciones que usa el filtro "Rol/es" del tab Equipo de Gestionar Equipo. */
@@ -1007,8 +1007,15 @@ export const ContractsPage: React.FC = () => {
       )}
 
       {subTabInfoOpen && (
-        <Modal isOpen={!!subTabInfoOpen} onClose={() => setSubTabInfoOpen(null)} title={SUB_TAB_INFO[subTabInfoOpen].title} size="sm" zIndex={80}>
-          <p className="text-sm text-gray-600 dark:text-gray-300">{SUB_TAB_INFO[subTabInfoOpen].text}</p>
+        <Modal
+          isOpen={!!subTabInfoOpen}
+          onClose={() => setSubTabInfoOpen(null)}
+          title={subTabInfoOpen === "para_firmar" ? "Cómo enviarlos a firmar en Dropbox Sign" : SUB_TAB_INFO[subTabInfoOpen].title}
+          size={subTabInfoOpen === "para_firmar" ? "md" : "sm"}
+          zIndex={80}
+        >
+          {/* "Para Firmar" lleva el instructivo paso a paso (el mismo que el ⓘ de la pestaña). */}
+          {subTabInfoOpen === "para_firmar" ? <InstructivoParaFirmar /> : <p className="text-sm text-gray-600 dark:text-gray-300">{SUB_TAB_INFO[subTabInfoOpen].text}</p>}
         </Modal>
       )}
     </PageLayout>
