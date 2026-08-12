@@ -592,7 +592,6 @@ export const ContractsPage: React.FC = () => {
               {/* Variantes del paso 1: se muestran solo cuando el paso activo es ese. */}
               {PASO_1_TABS.includes(mgmtTab) && (
                 <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 px-3 py-2">
-                  <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mr-1">Elegí según el caso</span>
                   {PASO_1_OPCIONES.map((op) => {
                     const activo = mgmtTab === op.tab;
                     return (

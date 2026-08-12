@@ -334,9 +334,12 @@ const EmpresaSelectCell: React.FC<{ record: ContractOverviewRow; campo: 'contrat
  */
 const AsignarEmpresaMasivo: React.FC<{
   campo: 'contrato' | 'release';
+  /** Filas sobre las que se aplica (las tildadas). Vacío = control visible pero inactivo. */
   filas: ContractOverviewRow[];
+  /** De dónde salen las empresas del select: todo el listado, para que se vea aunque no haya selección. */
+  filasParaOpciones: ContractOverviewRow[];
   onAplicado: (patches: { row: ContractOverviewRow; patch: Partial<ContractOverviewRow> }[]) => void;
-}> = ({ campo, filas, onAplicado }) => {
+}> = ({ campo, filas, filasParaOpciones, onAplicado }) => {
   const [empresaId, setEmpresaId] = useState('');
   const [aplicando, setAplicando] = useState(false);
 
@@ -344,11 +347,13 @@ const AsignarEmpresaMasivo: React.FC<{
   // Unión de las empresas habilitadas en los proyectos de las filas elegidas.
   const opciones = useMemo(() => {
     const m = new Map<string, string>();
-    for (const r of filas) {
+    for (const r of filasParaOpciones) {
       for (const e of (campo === 'contrato' ? r.contratoEmpresas : r.releaseEmpresas) || []) m.set(e.id, e.label);
     }
     return [...m.entries()].map(([id, lbl]) => ({ id, label: lbl })).sort((a, b) => a.label.localeCompare(b.label));
-  }, [filas, campo]);
+  }, [filasParaOpciones, campo]);
+
+  const sinSeleccion = filas.length === 0;
 
   const aplicar = async () => {
     if (!empresaId) return;
@@ -392,8 +397,9 @@ const AsignarEmpresaMasivo: React.FC<{
       <select
         value={empresaId}
         onChange={(e) => setEmpresaId(e.target.value)}
-        title={`Asignar ${label} a los contratos tildados`}
-        className="text-xs rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+        disabled={sinSeleccion}
+        title={sinSeleccion ? `Tildá contratos para asignarles la ${label}` : `Asignar ${label} a los contratos tildados`}
+        className="text-xs rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/40 disabled:opacity-40 disabled:cursor-not-allowed"
       >
         <option value="">{label}...</option>
         {opciones.map((o) => (
@@ -405,8 +411,8 @@ const AsignarEmpresaMasivo: React.FC<{
       <button
         type="button"
         onClick={aplicar}
-        disabled={!empresaId || aplicando}
-        title={empresaId ? `Asignar a ${filas.length} contrato(s)` : 'Elegí una empresa'}
+        disabled={sinSeleccion || !empresaId || aplicando}
+        title={sinSeleccion ? `Tildá contratos para asignarles la ${label}` : empresaId ? `Asignar a ${filas.length} contrato(s)` : 'Elegí una empresa'}
         className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold bg-gray-700 text-white hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
       >
         <FontAwesomeIcon icon={aplicando ? faSpinner : faCheck} spin={aplicando} className="h-3 w-3" />
@@ -796,6 +802,20 @@ export const ContractBulkAfipTab: React.FC<{
   const empresaSeleccionada = companies.find((c) => c._id === filterEmpresaId);
   const nombreArchivoTxt = `altas_afip${empresaSeleccionada ? `_${empresaSeleccionada.razonSocial.replace(/[^a-zA-Z0-9]+/g, '_')}` : ''}`;
 
+  /**
+   * Asignación masiva de Empresa (Contrato/Release). Es el mismo bloque en las tres pestañas del
+   * trámite impositivo: la empresa hay que cargarla igual en todas, no solo en Alta temprana.
+   */
+  const asignacionMasivaEmpresa = (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className={`text-xs ${seleccionados.length > 0 ? 'text-gray-500 dark:text-gray-400' : 'text-gray-400 dark:text-gray-500'}`}>
+        {seleccionados.length > 0 ? `${seleccionados.length} seleccionado(s)` : 'Tildá contratos para asignar Empresa'}
+      </span>
+      <AsignarEmpresaMasivo campo="contrato" filas={seleccionados.map((x) => x.row)} filasParaOpciones={filtered.map((x) => x.row)} onAplicado={aplicarPatchesEmpresa} />
+      <AsignarEmpresaMasivo campo="release" filas={seleccionados.map((x) => x.row)} filasParaOpciones={filtered.map((x) => x.row)} onAplicado={aplicarPatchesEmpresa} />
+    </div>
+  );
+
   return (
     <div className="space-y-4">
       {/* Buscador + filtro avanzado (mismo que Contratos) + vista + acciones */}
@@ -888,18 +908,13 @@ export const ContractBulkAfipTab: React.FC<{
             </button>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            {seleccionados.length > 0 ? (
-              <span className="text-xs text-gray-500 dark:text-gray-400">{seleccionados.length} seleccionado(s)</span>
-            ) : (
-              <span className="text-xs text-gray-400 dark:text-gray-500">Tildá contratos para asignarles la Empresa en masa</span>
-            )}
-            {/* Asignación masiva de empresa: solo con filas tildadas (sobre ellas se aplica). */}
-            {seleccionados.length > 0 && (
-              <>
-                <AsignarEmpresaMasivo campo="contrato" filas={seleccionados.map((x) => x.row)} onAplicado={aplicarPatchesEmpresa} />
-                <AsignarEmpresaMasivo campo="release" filas={seleccionados.map((x) => x.row)} onAplicado={aplicarPatchesEmpresa} />
-              </>
-            )}
+            {/* Grupo 1 — asignación masiva de Empresa: siempre visible, se activa al tildar filas. */}
+            {asignacionMasivaEmpresa}
+
+            {/* Separador: lo de arriba edita datos; lo de abajo son las salidas hacia AFIP/ARCA. */}
+            <span className="hidden sm:block h-6 w-px bg-gray-200 dark:bg-gray-700" />
+
+            {/* Grupo 2 — salidas hacia AFIP: generar el TXT y abrir ARCA. */}
             <button onClick={() => generarTxt(fuenteTxt, nombreArchivoTxt)} disabled={fuenteTxt.every((x) => !x.result.completo)} title={seleccionados.length > 0 ? 'Generar el TXT con los contratos seleccionados (solo los completos)' : 'Generar el TXT con los contratos completos del listado (o marcá algunos con el check)'} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0">
               <FontAwesomeIcon icon={faFileLines} className="h-4 w-4" />
               Generar TXT Masivo (AFIP){seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
@@ -919,6 +934,9 @@ export const ContractBulkAfipTab: React.FC<{
       )}
 
       {/* Constancia de CUIT: worklist (qué falta pedirle a ARCA). */}
+      {/* "Sin CUIT" no tenía barra de acciones masivas: se agrega solo la asignación de Empresa. */}
+      {filterTipo === 'sin_cuit' && !loading && filtered.length > 0 && <div className="flex flex-wrap items-center justify-end gap-3">{asignacionMasivaEmpresa}</div>}
+
       {filterTipo === 'constancia_cuit' && !loading && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -931,7 +949,11 @@ export const ContractBulkAfipTab: React.FC<{
               {countConstPendientes} pendientes
             </button>
           </div>
-          <BotonConsultarAfipBulk rows={seleccionados.length > 0 ? seleccionados.map((x) => x.row) : constanciaRows.map((x) => x.row)} onConsultado={() => load(true)} />
+          <div className="flex flex-wrap items-center gap-3">
+            {asignacionMasivaEmpresa}
+            <span className="hidden sm:block h-6 w-px bg-gray-200 dark:bg-gray-700" />
+            <BotonConsultarAfipBulk rows={seleccionados.map((x) => x.row)} onConsultado={() => load(true)} />
+          </div>
         </div>
       )}
 
@@ -1138,7 +1160,11 @@ export const ContractBulkAfipTab: React.FC<{
                       <td className="px-4 py-3">
                         {filterTipo === 'sin_cuit' ? (
                           <CeldaValidacionSinCuit row={r} onAbrir={() => setValidacionRow(r)} onCambio={(v) => aplicarValidacionSinCuit(r, v)} />
-                        ) : constanciaPendiente(r) ? (
+                        ) : cuitEsValido(r.cuit) ? (
+                          // Es una verificación manual OPCIONAL contra ARCA: se ofrece siempre que haya
+                          // un CUIT con el que buscar. Antes se ocultaba salvo que la constancia figurara
+                          // "pendiente", así que no aparecía justo en los casos dudosos (ej. hay PDF
+                          // cargado pero no se pudo leer su fecha de vigencia).
                           <BotonArca cuit={r.cuit} compacto />
                         ) : (
                           <span className="text-xs text-gray-400">—</span>

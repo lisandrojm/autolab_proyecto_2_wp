@@ -322,7 +322,7 @@ export const BotonArca: React.FC<{ cuit?: string; compacto?: boolean; label?: st
  * estado de la constancia directo, sin descargar ni subir ningún PDF.
  */
 export const BotonConsultarAfipBulk: React.FC<{
-  /** Contratos a considerar: se filtran acá mismo a los pendientes (con CUIT cargado). */
+  /** Contratos TILDADOS a considerar: se filtran acá mismo a los pendientes (con CUIT válido). */
   rows: ContractOverviewRow[];
   onConsultado: () => void;
 }> = ({ rows, onConsultado }) => {
@@ -358,7 +358,7 @@ export const BotonConsultarAfipBulk: React.FC<{
       type="button"
       onClick={handleClick}
       disabled={consultando || pendientes.length === 0}
-      title="Valida el estado de cada CUIT seleccionado (o todos los pendientes, si no hay selección) directo en el Padrón de AFIP, sin ir uno por uno"
+      title={pendientes.length === 0 ? "Tildá contratos con CUIT pendiente de validar" : "Valida contra el Padrón de AFIP el CUIT de cada contrato tildado, sin ir uno por uno"}
       className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold border transition-colors bg-blue-600 text-white border-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <FontAwesomeIcon icon={consultando ? faSpinner : faLandmark} spin={consultando} className="h-3 w-3" />
