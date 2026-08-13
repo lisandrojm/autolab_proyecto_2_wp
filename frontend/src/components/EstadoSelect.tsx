@@ -35,7 +35,10 @@ const ESTADO_STYLES: Record<string, { label?: string; cls: string }> = {
   "falta pedido de afip": { label: "Pedido de AFIP", cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" },
   "pedido de afip": { cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" },
   "firma pendiente": { cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
-  "pedido servicios": { cls: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300" },
+  // Nombre viejo guardado en algunos contratos: se muestra con la etiqueta del ABM ("Pedido de
+  // Servicios"), igual que "Falta pedido de AFIP". Sin el `label`, los filtros que deduplican por
+  // etiqueta lo tratan como un estado aparte y aparece dos veces en la lista.
+  "pedido servicios": { label: "Pedido de Servicios", cls: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300" },
 };
 
 const styleFor = (name: string) => ESTADO_STYLES[normalize(name)] || { cls: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300" };
