@@ -35,6 +35,15 @@ export declare function yaArchivado(entries: {
     cuit: string;
     documento: string;
 }): boolean;
+/** Una línea por aviso encontrado: qué se decidió y por qué. Lo consume el modal de Logs. */
+export interface LineaLog {
+    resultado: "archivado" | "duplicado" | "sin-archivo" | "ignorado" | "error";
+    asunto?: string;
+    archivo?: string;
+    cuit?: string;
+    documento?: string;
+    detalle?: string;
+}
 export interface ResultadoLectura {
     ok: boolean;
     detalle: string;
@@ -45,6 +54,8 @@ export interface ResultadoLectura {
     duplicados: number;
     /** Avisos salteados porque el PDF no aparece en Outbox (no se puede atribuir a un contrato). */
     sinArchivoEnOutbox: number;
+    /** Qué pasó con cada aviso, para el modal de Logs. */
+    logs: LineaLog[];
 }
 /**
  * Lee la casilla del tenant y archiva en Pendbox un JSON por cada aviso de envío a firmar.

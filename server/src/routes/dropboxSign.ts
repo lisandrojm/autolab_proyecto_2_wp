@@ -52,6 +52,7 @@ router.get("/config", async (req: AuthenticatedRequest & TenantRequest, res) => 
       lastCheckAt: cfg.lastCheckAt || null,
       lastCheckOk: cfg.lastCheckOk ?? null,
       lastCheckDetalle: cfg.lastCheckDetalle || "",
+      lastCheckLogs: cfg.lastCheckLogs || [],
     });
   } catch (error) {
     console.error("Dropbox Sign config error:", error);
@@ -117,7 +118,12 @@ router.post("/leer", async (req: AuthenticatedRequest & TenantRequest, res) => {
     // El resultado queda registrado para poder verlo después desde la configuración.
     if (!soloPrueba) {
       await Tenant.findByIdAndUpdate(req.tenantObjectId, {
-        $set: { "integrations.dropboxSign.lastCheckAt": new Date(), "integrations.dropboxSign.lastCheckOk": r.ok, "integrations.dropboxSign.lastCheckDetalle": r.detalle },
+        $set: {
+          "integrations.dropboxSign.lastCheckAt": new Date(),
+          "integrations.dropboxSign.lastCheckOk": r.ok,
+          "integrations.dropboxSign.lastCheckDetalle": r.detalle,
+          "integrations.dropboxSign.lastCheckLogs": r.logs,
+        },
       });
     }
     res.json(r);

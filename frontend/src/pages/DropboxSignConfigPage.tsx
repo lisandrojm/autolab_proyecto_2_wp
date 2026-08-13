@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileSignature, faSpinner, faCheck, faTriangleExclamation, faEnvelope, faInbox } from "@fortawesome/free-solid-svg-icons";
-import { dropboxSignAPI, DropboxSignConfig } from "../api/dropboxSign";
+import { faFileSignature, faSpinner, faCheck, faTriangleExclamation, faEnvelope, faInbox, faListUl, faCircleCheck, faCircleMinus, faFolderOpen, faBan, faCircleXmark } from "@fortawesome/free-solid-svg-icons";
+import { dropboxSignAPI, DropboxSignConfig, LineaLog } from "../api/dropboxSign";
+import { InfoModal } from "../components/ui/InfoModal";
 import { PageLayout } from "../components/ui/PageLayout";
 import { sweetAlert } from "../utils/sweetAlert";
 
@@ -43,6 +44,7 @@ export const DropboxSignConfigPage: React.FC = () => {
 
   /** Corre la lectura de la casilla: `prueba` solo verifica la conexión, sin escribir en Dropbox. */
   const [leyendo, setLeyendo] = useState<'prueba' | 'real' | null>(null);
+  const [showLogs, setShowLogs] = useState(false);
   const leerAhora = async (prueba: boolean) => {
     setLeyendo(prueba ? 'prueba' : 'real');
     try {
@@ -173,6 +175,18 @@ export const DropboxSignConfigPage: React.FC = () => {
                   <FontAwesomeIcon icon={leyendo === 'real' ? faSpinner : faInbox} spin={leyendo === 'real'} className="h-4 w-4" />
                   Leer ahora
                 </button>
+                {/* Detalle aviso por aviso de la última lectura: sirve para entender por qué algo no se archivó. */}
+                <button
+                  type="button"
+                  onClick={() => setShowLogs(true)}
+                  disabled={!cfg?.lastCheckAt}
+                  title={cfg?.lastCheckAt ? "Ver qué pasó con cada aviso en la última lectura" : "Todavía no se corrió ninguna lectura"}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                >
+                  <FontAwesomeIcon icon={faListUl} className="h-4 w-4" />
+                  Logs
+                  {cfg?.lastCheckLogs?.length ? <span className="text-xs font-bold text-gray-500 dark:text-gray-400">({cfg.lastCheckLogs.length})</span> : null}
+                </button>
                 <button type="button" onClick={guardar} disabled={guardando} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors">
                   <FontAwesomeIcon icon={guardando ? faSpinner : faCheck} spin={guardando} className="h-4 w-4" />
                   Guardar
@@ -196,7 +210,73 @@ export const DropboxSignConfigPage: React.FC = () => {
           )}
         </div>
       )}
+
+      <InfoModal
+        isOpen={showLogs}
+        onClose={() => setShowLogs(false)}
+        title="Logs de la última lectura"
+        subtitle={cfg?.lastCheckAt ? `${fmtFechaHora(cfg.lastCheckAt)} · ${cfg.lastCheckDetalle || ""}` : undefined}
+        size="xl"
+        actions={[{ label: "Cerrar", onClick: () => setShowLogs(false), variant: "ghost" }]}
+      >
+        <LogsLectura logs={cfg?.lastCheckLogs || []} />
+      </InfoModal>
     </PageLayout>
+  );
+};
+
+/** Cómo se presenta cada resultado posible: color, ícono y qué significa. */
+const ESTILO_LOG: Record<LineaLog["resultado"], { label: string; icon: any; clase: string; ayuda: string }> = {
+  archivado: { label: "Archivado", icon: faCircleCheck, clase: "text-green-600 dark:text-green-400", ayuda: "Se creó el JSON en Pendbox y el PDF se movió desde Outbox." },
+  duplicado: { label: "Ya estaba", icon: faCircleMinus, clase: "text-gray-500 dark:text-gray-400", ayuda: "Ese documento ya tenía su JSON en Pendbox, así que no se archivó de nuevo." },
+  "sin-archivo": { label: "Sin PDF en Outbox", icon: faFolderOpen, clase: "text-amber-600 dark:text-amber-400", ayuda: "Llegó el aviso pero el documento no está en Outbox, así que no se puede atribuir a un contrato." },
+  ignorado: { label: "No es un envío", icon: faBan, clase: "text-gray-400 dark:text-gray-500", ayuda: "El asunto no corresponde a un envío a firmar (avisos de firmado, resúmenes, etc.)." },
+  error: { label: "Error", icon: faCircleXmark, clase: "text-red-600 dark:text-red-400", ayuda: "Falló algún paso al procesar este aviso." },
+};
+
+/** Detalle aviso por aviso de la última lectura, agrupado por resultado. */
+const LogsLectura: React.FC<{ logs: LineaLog[] }> = ({ logs }) => {
+  if (!logs.length) {
+    return (
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        La última lectura no encontró ningún aviso en la casilla. Si esperabas ver alguno, revisá que el envío a firmar tenga en copia al correo configurado acá y que haya ocurrido dentro de los últimos 30 días.
+      </p>
+    );
+  }
+
+  const orden: LineaLog["resultado"][] = ["archivado", "sin-archivo", "error", "duplicado", "ignorado"];
+  const grupos = orden.map((r) => ({ resultado: r, items: logs.filter((l) => l.resultado === r) })).filter((g) => g.items.length > 0);
+
+  return (
+    <div className="space-y-5">
+      {grupos.map((g) => {
+        const est = ESTILO_LOG[g.resultado];
+        return (
+          <div key={g.resultado}>
+            <p className={`flex items-center gap-2 text-sm font-bold ${est.clase}`}>
+              <FontAwesomeIcon icon={est.icon} className="h-4 w-4" />
+              {est.label}
+              <span className="text-xs font-semibold text-gray-400">({g.items.length})</span>
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 mb-2">{est.ayuda}</p>
+            <div className="space-y-2">
+              {g.items.map((l, i) => (
+                <div key={i} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-2.5 text-xs">
+                  <p className="font-mono text-gray-700 dark:text-gray-200 break-all">{l.archivo || l.asunto}</p>
+                  {(l.cuit || l.documento) && (
+                    <p className="mt-1 text-gray-500 dark:text-gray-400">
+                      {l.cuit ? `CUIL ${l.cuit}` : "sin CUIL"}
+                      {l.documento ? ` · Doc ${l.documento}` : ""}
+                    </p>
+                  )}
+                  {l.detalle && <p className="mt-1 text-gray-600 dark:text-gray-300">{l.detalle}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 };
 

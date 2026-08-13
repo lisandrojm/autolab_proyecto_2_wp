@@ -48,6 +48,7 @@ router.get("/config", async (req, res) => {
             lastCheckAt: cfg.lastCheckAt || null,
             lastCheckOk: cfg.lastCheckOk ?? null,
             lastCheckDetalle: cfg.lastCheckDetalle || "",
+            lastCheckLogs: cfg.lastCheckLogs || [],
         });
     }
     catch (error) {
@@ -110,7 +111,12 @@ router.post("/leer", async (req, res) => {
         // El resultado queda registrado para poder verlo después desde la configuración.
         if (!soloPrueba) {
             await Tenant.findByIdAndUpdate(req.tenantObjectId, {
-                $set: { "integrations.dropboxSign.lastCheckAt": new Date(), "integrations.dropboxSign.lastCheckOk": r.ok, "integrations.dropboxSign.lastCheckDetalle": r.detalle },
+                $set: {
+                    "integrations.dropboxSign.lastCheckAt": new Date(),
+                    "integrations.dropboxSign.lastCheckOk": r.ok,
+                    "integrations.dropboxSign.lastCheckDetalle": r.detalle,
+                    "integrations.dropboxSign.lastCheckLogs": r.logs,
+                },
             });
         }
         res.json(r);

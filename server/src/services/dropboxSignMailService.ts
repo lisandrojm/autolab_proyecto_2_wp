@@ -120,6 +120,16 @@ export function yaArchivado(entries: { tag: string; name: string }[], archivo: s
   });
 }
 
+/** Una línea por aviso encontrado: qué se decidió y por qué. Lo consume el modal de Logs. */
+export interface LineaLog {
+  resultado: "archivado" | "duplicado" | "sin-archivo" | "ignorado" | "error";
+  asunto?: string;
+  archivo?: string;
+  cuit?: string;
+  documento?: string;
+  detalle?: string;
+}
+
 export interface ResultadoLectura {
   ok: boolean;
   detalle: string;
@@ -130,6 +140,8 @@ export interface ResultadoLectura {
   duplicados: number;
   /** Avisos salteados porque el PDF no aparece en Outbox (no se puede atribuir a un contrato). */
   sinArchivoEnOutbox: number;
+  /** Qué pasó con cada aviso, para el modal de Logs. */
+  logs: LineaLog[];
 }
 
 /** Ubica el contrato de la persona a partir del CUIL/documento leídos del nombre del archivo. */
@@ -153,7 +165,7 @@ async function ubicarContrato(tenantObjectId: any, ident: { cuit: string; docume
 export async function leerCasillaDropboxSign(tenantId: string, soloPrueba = false): Promise<ResultadoLectura> {
   const tenant = await Tenant.findById(tenantId).lean();
   const cfg: any = (tenant as any)?.integrations?.dropboxSign || {};
-  const vacio = { avisos: 0, archivados: 0, movidos: 0, duplicados: 0, sinArchivoEnOutbox: 0 };
+  const vacio = { avisos: 0, archivados: 0, movidos: 0, duplicados: 0, sinArchivoEnOutbox: 0, logs: [] };
   if (!cfg.email || !cfg.imapHost || !cfg.imapPasswordEnc) {
     return { ok: false, detalle: "La casilla no está configurada (faltan correo, servidor o contraseña).", ...vacio };
   }
@@ -179,6 +191,7 @@ export async function leerCasillaDropboxSign(tenantId: string, soloPrueba = fals
   let duplicados = 0;
   let sinArchivoEnOutbox = 0;
   const errores: string[] = [];
+  const logs: LineaLog[] = [];
 
   // Ambas carpetas se listan una sola vez y se mantienen en memoria: un aviso archivado agrega su
   // JSON a `enPendbox` y saca el PDF de `enOutbox`, así los avisos repetidos de la misma corrida
@@ -215,21 +228,27 @@ export async function leerCasillaDropboxSign(tenantId: string, soloPrueba = fals
         const msg = await client.fetchOne(String(uid), { envelope: true }, { uid: true });
         const asunto = (msg as any)?.envelope?.subject || "";
         const archivo = extraerArchivoDeAsunto(asunto);
-        if (!archivo) continue;
+        if (!archivo) {
+          // Vino del SEARCH pero no es un aviso de envío (p. ej. "Fulano firmó...", resumen diario).
+          logs.push({ resultado: "ignorado", asunto, detalle: "El asunto no es un aviso de envío a firmar." });
+          continue;
+        }
         avisos++;
         if (soloPrueba) continue;
 
         if (!dropboxCfg || !pendbox) {
           errores.push("Dropbox no está conectado o falta la carpeta Pendbox");
+          logs.push({ resultado: "error", asunto, archivo, detalle: "Dropbox no está conectado o falta la carpeta Pendbox." });
           continue;
         }
 
+        // Fuera del try para que el log de error también pueda informar de qué persona se trataba.
+        const ident = extraerIdentidadDeArchivo(archivo);
         try {
-          const ident = extraerIdentidadDeArchivo(archivo);
-
           // Ya archivado en una corrida anterior: se sigue de largo sin volver a subir el JSON.
           if (yaArchivado(enPendbox, archivo, ident)) {
             duplicados++;
+            logs.push({ resultado: "duplicado", asunto, archivo, cuit: ident.cuit, documento: ident.documento, detalle: "Ya tenía su JSON en Pendbox; no se archiva de nuevo." });
             continue;
           }
 
@@ -239,6 +258,8 @@ export async function leerCasillaDropboxSign(tenantId: string, soloPrueba = fals
           const pdf = buscarEnOutbox(enOutbox, archivo, ident);
           if (!pdf) {
             sinArchivoEnOutbox++;
+            const pistas = ident.cuit ? `No hay ningún archivo en Outbox que contenga el CUIL ${ident.cuit}.` : "El título del aviso no trae CUIL ni documento, y ningún archivo de Outbox coincide por nombre.";
+            logs.push({ resultado: "sin-archivo", asunto, archivo, cuit: ident.cuit, documento: ident.documento, detalle: `${pistas} Outbox tiene ${enOutbox.filter((e) => e.tag === "file").length} archivo(s).` });
             continue;
           }
           const nombreBase = pdf.name.replace(/\.pdf$/i, "");
@@ -278,15 +299,27 @@ export async function leerCasillaDropboxSign(tenantId: string, soloPrueba = fals
           enPendbox.push({ tag: "file", name: nombreJson, path: `${pendbox.replace(/\/$/, "")}/${nombreJson}` });
 
           // El PDF se mueve a Pendbox: "Para Firmar" queda solo con lo que NO se envió.
+          let movido = false;
           try {
             await moveEntry(tenantId, dropboxCfg, pdf.path, `${pendbox.replace(/\/$/, "")}/${pdf.name}`);
             movidos++;
+            movido = true;
             enOutbox = enOutbox.filter((e) => e.path !== pdf.path);
           } catch (e: any) {
             errores.push(`No se pudo mover "${pdf.name}" de Outbox: ${e?.message || e}`);
           }
+
+          logs.push({
+            resultado: "archivado",
+            asunto,
+            archivo: nombreBase,
+            cuit: ident.cuit,
+            documento: ident.documento,
+            detalle: `Se archivó ${nombreJson} en Pendbox. ${movido ? "El PDF se movió desde Outbox." : "El PDF NO se pudo mover: sigue en Outbox."}${encontrado ? "" : " No se encontró la persona en el sistema con ese CUIL/documento."}`,
+          });
         } catch (e: any) {
           errores.push(`${archivo}: ${e?.message || e}`);
+          logs.push({ resultado: "error", asunto, archivo, cuit: ident?.cuit, documento: ident?.documento, detalle: String(e?.message || e) });
         }
       }
     } finally {
@@ -294,7 +327,7 @@ export async function leerCasillaDropboxSign(tenantId: string, soloPrueba = fals
     }
     await client.logout();
   } catch (e: any) {
-    return { ok: false, detalle: `No se pudo leer la casilla: ${e?.message || e}`, avisos, archivados, movidos, duplicados, sinArchivoEnOutbox };
+    return { ok: false, detalle: `No se pudo leer la casilla: ${e?.message || e}`, avisos, archivados, movidos, duplicados, sinArchivoEnOutbox, logs };
   }
 
   const detalle = soloPrueba
@@ -309,7 +342,7 @@ export async function leerCasillaDropboxSign(tenantId: string, soloPrueba = fals
         .filter(Boolean)
         .join(" · ") + (errores.length ? ` · ${errores.length} con error: ${errores.slice(0, 3).join(" | ")}` : "");
 
-  return { ok: errores.length === 0, detalle, avisos, archivados, movidos, duplicados, sinArchivoEnOutbox };
+  return { ok: errores.length === 0, detalle, avisos, archivados, movidos, duplicados, sinArchivoEnOutbox, logs };
 }
 
 /** Corre la lectura para todos los tenants que la tengan activada (lo usa el scheduler). */
@@ -320,7 +353,7 @@ export async function leerCasillasDeTodosLosTenants(): Promise<void> {
       const r = await leerCasillaDropboxSign(String(t._id));
       await Tenant.updateOne(
         { _id: t._id },
-        { $set: { "integrations.dropboxSign.lastCheckAt": new Date(), "integrations.dropboxSign.lastCheckOk": r.ok, "integrations.dropboxSign.lastCheckDetalle": r.detalle } },
+        { $set: { "integrations.dropboxSign.lastCheckAt": new Date(), "integrations.dropboxSign.lastCheckOk": r.ok, "integrations.dropboxSign.lastCheckDetalle": r.detalle, "integrations.dropboxSign.lastCheckLogs": r.logs } },
       );
     } catch (e: any) {
       console.error(`[DROPBOX-SIGN-MAIL] tenant ${t._id}:`, e?.message || e);

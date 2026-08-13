@@ -83,6 +83,15 @@ export interface ITenant extends Document {
       lastCheckAt?: Date;
       lastCheckOk?: boolean;
       lastCheckDetalle?: string;
+      /** Detalle aviso por aviso de la última lectura, para entender desde la UI qué pasó con cada uno. */
+      lastCheckLogs?: {
+        resultado: "archivado" | "duplicado" | "sin-archivo" | "ignorado" | "error";
+        asunto?: string;
+        archivo?: string;
+        cuit?: string;
+        documento?: string;
+        detalle?: string;
+      }[];
     };
   };
   subscription: { plan: "free" | "basic" | "pro" | "enterprise"; status: "active" | "suspended" | "cancelled"; expiresAt?: Date };
@@ -196,6 +205,17 @@ const tenantSchema = new Schema<ITenant>(
         lastCheckAt: { type: Date },
         lastCheckOk: { type: Boolean },
         lastCheckDetalle: { type: String },
+        lastCheckLogs: [
+          {
+            _id: false,
+            resultado: { type: String },
+            asunto: { type: String },
+            archivo: { type: String },
+            cuit: { type: String },
+            documento: { type: String },
+            detalle: { type: String },
+          },
+        ],
       },
     },
 

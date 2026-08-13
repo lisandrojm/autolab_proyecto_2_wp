@@ -16,6 +16,18 @@ export interface DropboxSignConfig {
   lastCheckAt: string | null;
   lastCheckOk: boolean | null;
   lastCheckDetalle: string;
+  /** Qué pasó con cada aviso en la última lectura. Lo muestra el modal de Logs. */
+  lastCheckLogs: LineaLog[];
+}
+
+/** Una línea del log: qué se decidió para un aviso y por qué. */
+export interface LineaLog {
+  resultado: "archivado" | "duplicado" | "sin-archivo" | "ignorado" | "error";
+  asunto?: string;
+  archivo?: string;
+  cuit?: string;
+  documento?: string;
+  detalle?: string;
 }
 
 export interface DropboxSignConfigPayload {
@@ -61,6 +73,7 @@ export interface ResultadoLectura {
   duplicados: number;
   /** Salteados porque el PDF no aparece en Outbox. */
   sinArchivoEnOutbox: number;
+  logs: LineaLog[];
 }
 
 export const dropboxSignAPI = new DropboxSignAPI();

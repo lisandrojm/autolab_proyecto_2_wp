@@ -70,6 +70,17 @@ const tenantSchema = new Schema({
             lastCheckAt: { type: Date },
             lastCheckOk: { type: Boolean },
             lastCheckDetalle: { type: String },
+            lastCheckLogs: [
+                {
+                    _id: false,
+                    resultado: { type: String },
+                    asunto: { type: String },
+                    archivo: { type: String },
+                    cuit: { type: String },
+                    documento: { type: String },
+                    detalle: { type: String },
+                },
+            ],
         },
     },
     subscription: {

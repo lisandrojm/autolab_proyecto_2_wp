@@ -87,6 +87,15 @@ export interface ITenant extends Document {
             lastCheckAt?: Date;
             lastCheckOk?: boolean;
             lastCheckDetalle?: string;
+            /** Detalle aviso por aviso de la última lectura, para entender desde la UI qué pasó con cada uno. */
+            lastCheckLogs?: {
+                resultado: "archivado" | "duplicado" | "sin-archivo" | "ignorado" | "error";
+                asunto?: string;
+                archivo?: string;
+                cuit?: string;
+                documento?: string;
+                detalle?: string;
+            }[];
         };
     };
     subscription: {
