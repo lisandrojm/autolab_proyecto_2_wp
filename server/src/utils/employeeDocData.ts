@@ -61,7 +61,8 @@ export function buildIdentidadTag(user: any): string {
  * - `proyecto`: número/ID externo del proyecto (ej. 426).
  * - `nombreDoc`: opcional; para releases es el nombre del release.
  * - `email`: el de la persona, para identificarla sin ambigüedad de un vistazo (dos personas pueden
- *   compartir apellido y nombre).
+ *   compartir apellido y nombre). El "@" va como "-" (lisandrojm-gmail.com): Dropbox Sign no admite
+ *   arroba en el título de la solicitud de firma.
  * - `extra`: opcional; texto libre adicional (p. ej. "Constancia de Cuit" para identificar el trámite
  *   de origen en Firma Digital).
  * - `Desde`/`Hasta`: fecha de alta/baja del contrato, para que se entienda de un vistazo el período —
@@ -81,7 +82,9 @@ export function buildDocFileName(opts: { tipo: "Contrato" | "Release" | "Constan
   const nombre = (user?.firstName || "").trim();
   const apellido = (user?.lastName || "").trim();
   const persona = [apellido, nombre].filter(Boolean).join("_");
-  const email = (user?.email || "").trim();
+  // El "@" se reemplaza por "-": Dropbox Sign no lo acepta en el título de la solicitud de firma, y
+  // ese título es lo que después se lee del asunto del aviso para detectar el envío.
+  const email = (user?.email || "").trim().replace(/@/g, "-");
   const identidad = buildIdentidadTag(user);
   const fechaAlta = fechaCompacta(contract?.fecha_alta_contrato);
   const fechaBaja = fechaCompacta(contract?.fecha_baja_contrato);

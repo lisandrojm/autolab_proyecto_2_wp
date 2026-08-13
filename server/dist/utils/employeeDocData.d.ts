@@ -21,7 +21,8 @@ export declare function buildIdentidadTag(user: any): string;
  * - `proyecto`: número/ID externo del proyecto (ej. 426).
  * - `nombreDoc`: opcional; para releases es el nombre del release.
  * - `email`: el de la persona, para identificarla sin ambigüedad de un vistazo (dos personas pueden
- *   compartir apellido y nombre).
+ *   compartir apellido y nombre). El "@" va como "-" (lisandrojm-gmail.com): Dropbox Sign no admite
+ *   arroba en el título de la solicitud de firma.
  * - `extra`: opcional; texto libre adicional (p. ej. "Constancia de Cuit" para identificar el trámite
  *   de origen en Firma Digital).
  * - `Desde`/`Hasta`: fecha de alta/baja del contrato, para que se entienda de un vistazo el período —
