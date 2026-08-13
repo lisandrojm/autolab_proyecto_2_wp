@@ -8,6 +8,12 @@ export interface IObraSocial extends Document {
     data: {
         id: number;
         nombre: string;
+        /**
+         * Obra social a usar cuando la persona no tiene ninguna asignada. Sin esto, el contrato queda
+         * sin código RNOS y no puede entrar en el TXT de alta masiva de AFIP. Solo una puede estar
+         * marcada: al marcar una se desmarca la anterior (ver `PATCH /:id/por-defecto`).
+         */
+        porDefecto?: boolean;
     };
     createdAt: Date;
     updatedAt: Date;

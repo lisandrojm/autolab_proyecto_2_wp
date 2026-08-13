@@ -4,7 +4,7 @@ export interface SimpleCatalogItem {
   _id: string;
   externalId: string;
   name: string;
-  data?: { id?: number; nombre?: string };
+  data?: { id?: number; nombre?: string; porDefecto?: boolean };
   createdAt?: string;
   updatedAt?: string;
   // Campos extra opcionales por catálogo (ej. Bancos → tipoEntidad).
@@ -18,6 +18,8 @@ export interface SimpleCatalogApi {
   create(data: { nombre: string; externalId?: string } & Record<string, unknown>): Promise<SimpleCatalogItem>;
   update(id: string, data: { nombre?: string; externalId?: string } & Record<string, unknown>): Promise<SimpleCatalogItem>;
   remove(id: string): Promise<{ message: string }>;
+  /** Marca este registro como el que se usa cuando la persona no tiene ninguno asignado. */
+  setPorDefecto(id: string, porDefecto: boolean): Promise<{ ok: boolean; porDefecto: boolean }>;
 }
 
 /**
@@ -52,6 +54,10 @@ export function createSimpleCatalogApi(basePath: string): SimpleCatalogApi {
     },
     async remove(id) {
       const { data } = await axios.delete(`${basePath}/${id}`);
+      return data;
+    },
+    async setPorDefecto(id, porDefecto) {
+      const { data } = await axios.patch(`${basePath}/${id}/por-defecto`, { porDefecto });
       return data;
     },
   };

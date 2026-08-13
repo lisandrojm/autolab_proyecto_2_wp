@@ -5,6 +5,7 @@ const obraSocialSchema = new Schema({
     data: {
         id: { type: Number },
         nombre: { type: String },
+        porDefecto: { type: Boolean },
     },
 }, {
     timestamps: true,

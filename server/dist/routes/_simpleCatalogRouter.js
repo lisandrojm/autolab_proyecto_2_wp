@@ -97,17 +97,21 @@ model, config) {
             }
             const bulkOps = parsed.map((item) => {
                 const idNum = item.externalId ? Number(item.externalId) : undefined;
+                // Se setean las claves de `data` una por una en lugar de reemplazar el objeto: si se pisara
+                // entero, reimportar el Excel borraría los campos que no vienen en la planilla (ej. la marca
+                // de obra social por defecto).
+                const set = {
+                    name: item.nombre,
+                    externalId: item.externalId,
+                    "data.nombre": item.nombre,
+                    ...item.extras,
+                };
+                if (idNum !== undefined && !isNaN(idNum))
+                    set["data.id"] = idNum;
                 return {
                     updateOne: {
                         filter: item.externalId ? { externalId: item.externalId } : { name: item.nombre },
-                        update: {
-                            $set: {
-                                name: item.nombre,
-                                externalId: item.externalId,
-                                data: { id: idNum !== undefined && !isNaN(idNum) ? idNum : undefined, nombre: item.nombre },
-                                ...item.extras,
-                            },
-                        },
+                        update: { $set: set },
                         upsert: true,
                     },
                 };

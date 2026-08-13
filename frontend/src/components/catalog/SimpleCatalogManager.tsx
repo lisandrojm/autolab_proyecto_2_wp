@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { faDownload, faUpload, faPlus, faEdit, faTrash, faTimes, faFileExcel } from '@fortawesome/free-solid-svg-icons';
+import { faDownload, faUpload, faPlus, faEdit, faTrash, faTimes, faFileExcel, faStar } from '@fortawesome/free-solid-svg-icons';
+import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { PageLayout } from '../ui/PageLayout';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Card } from '../ui/Card';
@@ -48,9 +49,19 @@ interface SimpleCatalogManagerProps {
   formatExternalId?: (value: string) => string;
   /** Normaliza lo que se escribió (ej. sacar los guiones que puso `formatExternalId`) antes de guardar. */
   sanitizeExternalId?: (value: string) => string;
+  /**
+   * Habilita marcar UN registro como "por defecto" (ej. la obra social a usar cuando la persona no
+   * tiene ninguna). Si no se pasa, el catálogo no muestra nada de esto.
+   */
+  porDefecto?: {
+    /** Texto de la columna y del botón, ej. "Por defecto". */
+    etiqueta: string;
+    /** Qué implica marcarlo — se muestra al confirmar. */
+    ayuda: string;
+  };
 }
 
-export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], helpKey, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId }) => {
+export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], helpKey, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, porDefecto }) => {
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -180,6 +191,27 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
     }
   };
 
+  /** Marca este registro como el "por defecto", o lo desmarca si ya lo era. Solo uno a la vez. */
+  const handlePorDefecto = async (item: SimpleCatalogItem) => {
+    if (!porDefecto) return;
+    const yaLoEs = !!item.data?.porDefecto;
+    const anterior = items.find((i) => i.data?.porDefecto && i._id !== item._id);
+    const result = await sweetAlert.confirm(
+      yaLoEs ? `¿Quitar "${porDefecto.etiqueta}"?` : `¿Marcar como ${porDefecto.etiqueta.toLowerCase()}?`,
+      yaLoEs
+        ? `"${item.name}" deja de usarse como valor por defecto. ${porDefecto.ayuda}`
+        : `${porDefecto.ayuda} Se va a usar "${item.name}".${anterior ? ` Reemplaza a "${anterior.name}", que queda sin la marca.` : ''}`,
+      yaLoEs ? 'Sí, quitar' : 'Sí, marcar',
+    );
+    if (!result.isConfirmed) return;
+    try {
+      await api.setPorDefecto(item._id, !yaLoEs);
+      await load();
+    } catch {
+      sweetAlert.error('Error', 'No se pudo cambiar el valor por defecto.');
+    }
+  };
+
   const handleDownloadTemplate = async () => {
     try {
       const blob = await api.downloadTemplate();
@@ -264,10 +296,23 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
               header={{
                 title: item.name,
                 icon,
-                badges: [...extraFields.filter((f) => f.showColumn && item[f.key]).map((f) => ({ text: extraDisplay(f, item[f.key]), variant: 'cyan' as const })), ...(item.externalId ? [{ text: `${externalIdLabel} ${formatExternalId ? formatExternalId(item.externalId) : item.externalId}`, variant: 'blue' as const }] : [])],
+                badges: [...(porDefecto && item.data?.porDefecto ? [{ text: porDefecto.etiqueta, variant: 'warning' as const }] : []), ...extraFields.filter((f) => f.showColumn && item[f.key]).map((f) => ({ text: extraDisplay(f, item[f.key]), variant: 'cyan' as const })), ...(item.externalId ? [{ text: `${externalIdLabel} ${formatExternalId ? formatExternalId(item.externalId) : item.externalId}`, variant: 'blue' as const }] : [])],
               }}
               footer={{
                 actions: [
+                  ...(porDefecto
+                    ? [
+                        {
+                          icon: item.data?.porDefecto ? faStar : faStarRegular,
+                          onClick: (e: React.MouseEvent) => {
+                            e.stopPropagation();
+                            handlePorDefecto(item);
+                          },
+                          title: item.data?.porDefecto ? `Es el valor por defecto` : `Marcar como ${porDefecto.etiqueta.toLowerCase()}`,
+                          variant: 'default' as const,
+                        },
+                      ]
+                    : []),
                   {
                     icon: faEdit,
                     onClick: (e) => {
@@ -306,6 +351,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                     </th>
                   ))}
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{externalIdLabel}</th>
+                {porDefecto && <th className="px-5 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{porDefecto.etiqueta}</th>}
                 <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
@@ -321,6 +367,17 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                       </td>
                     ))}
                   <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono">{item.externalId ? (formatExternalId ? formatExternalId(item.externalId) : item.externalId) : '—'}</td>
+                  {porDefecto && (
+                    <td className="px-5 py-3 text-sm text-center">
+                      <button
+                        onClick={() => handlePorDefecto(item)}
+                        title={item.data?.porDefecto ? `Es el valor por defecto — clic para quitarlo` : `Marcar como ${porDefecto.etiqueta.toLowerCase()}`}
+                        className={`p-1.5 rounded transition-colors ${item.data?.porDefecto ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}
+                      >
+                        <FontAwesomeIcon icon={item.data?.porDefecto ? faStar : faStarRegular} />
+                      </button>
+                    </td>
+                  )}
                   <td className="px-5 py-3 text-sm text-right">
                     <button onClick={() => openEdit(item)} className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 mr-3" title="Editar">
                       <FontAwesomeIcon icon={faEdit} />

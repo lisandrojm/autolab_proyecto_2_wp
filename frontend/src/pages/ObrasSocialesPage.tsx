@@ -29,5 +29,9 @@ export const ObrasSocialesPage: React.FC = () => (
     formatExternalId={formatRnos}
     sanitizeExternalId={sanitizeRnos}
     helpKey="obrasSociales"
+    porDefecto={{
+      etiqueta: "Por defecto",
+      ayuda: "Cuando la persona no tiene obra social asignada, se usa esta para completar el código RNOS de los datos AFIP.",
+    }}
   />
 );
