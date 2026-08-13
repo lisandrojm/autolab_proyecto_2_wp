@@ -33,6 +33,14 @@ export interface SimpleCatalogConfig {
     /** Encabezados adicionales aceptados al importar, más allá de los genéricos y `externalIdExcelHeader`. */
     externalIdExcelAliases?: string[];
     /**
+     * Encabezado de la columna "Nombre" en la plantilla, por si en este catálogo el nombre tiene otro
+     * nombre de dominio (ej. Convenios → "Actividad"). Default: "Nombre". Al importar se aceptan
+     * siempre además "Nombre"/"nombre"/"Name"/"NAME".
+     */
+    nombreExcelHeader?: string;
+    /** Encabezados adicionales aceptados para el nombre al importar. */
+    nombreExcelAliases?: string[];
+    /**
      * Normaliza `externalId` antes de guardarlo (create/update/import), ej. sacarle los guiones de
      * visualización del RNOS para que `data.id` (usado para vincular con FRAME) siga siendo un número
      * válido. Por defecto no se transforma: el resto de los catálogos no se ve afectado.

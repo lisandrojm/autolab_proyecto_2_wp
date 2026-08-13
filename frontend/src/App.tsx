@@ -52,6 +52,7 @@ import { HolidaysPage } from "./pages/HolidaysPage";
 import { CategoriasSatPage } from "./pages/CategoriasSatPage";
 import { BancosPage } from "./pages/BancosPage";
 import { ObrasSocialesPage } from "./pages/ObrasSocialesPage";
+import { ConveniosPage } from "./pages/ConveniosPage";
 import { CentrosCostoPage } from "./pages/CentrosCostoPage";
 import { ContratosPage } from "./pages/ContratosPage";
 import { EmpresasPage } from "./pages/EmpresasPage";
@@ -530,6 +531,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ObrasSocialesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/convenios"
+                element={
+                  <ProtectedRoute>
+                    <ConveniosPage />
                   </ProtectedRoute>
                 }
               />

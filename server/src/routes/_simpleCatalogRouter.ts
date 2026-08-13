@@ -33,6 +33,14 @@ export interface SimpleCatalogConfig {
   /** Encabezados adicionales aceptados al importar, más allá de los genéricos y `externalIdExcelHeader`. */
   externalIdExcelAliases?: string[];
   /**
+   * Encabezado de la columna "Nombre" en la plantilla, por si en este catálogo el nombre tiene otro
+   * nombre de dominio (ej. Convenios → "Actividad"). Default: "Nombre". Al importar se aceptan
+   * siempre además "Nombre"/"nombre"/"Name"/"NAME".
+   */
+  nombreExcelHeader?: string;
+  /** Encabezados adicionales aceptados para el nombre al importar. */
+  nombreExcelAliases?: string[];
+  /**
    * Normaliza `externalId` antes de guardarlo (create/update/import), ej. sacarle los guiones de
    * visualización del RNOS para que `data.id` (usado para vincular con FRAME) siga siendo un número
    * válido. Por defecto no se transforma: el resto de los catálogos no se ve afectado.
@@ -73,7 +81,7 @@ export function createSimpleCatalogRouter(
       const extraHeaders = (config.extraStringFields || []).map((f) => f.excelHeader || f.key);
       const externalIdHeader = config.externalIdExcelHeader || "ID Externo (opcional)";
       const wsData: (string | number)[][] = [
-        [externalIdHeader, "Nombre", ...extraHeaders],
+        [externalIdHeader, config.nombreExcelHeader || "Nombre", ...extraHeaders],
         ...samples.map((n) => ["", n, ...extraHeaders.map(() => "")]),
       ];
 
@@ -117,7 +125,14 @@ export function createSimpleCatalogRouter(
       for (let i = 0; i < rawRows.length; i++) {
         const row = rawRows[i];
         const rowNum = i + 2;
-        const nombre = row["Nombre"] ?? row["nombre"] ?? row["NAME"] ?? row["Name"];
+        const nombreCandidates = [config.nombreExcelHeader, "Nombre", "nombre", "NAME", "Name", ...(config.nombreExcelAliases || [])].filter(Boolean) as string[];
+        let nombre: unknown;
+        for (const h of nombreCandidates) {
+          if (row[h] !== undefined) {
+            nombre = row[h];
+            break;
+          }
+        }
         const externalIdCandidates = [config.externalIdExcelHeader, "ID Externo (opcional)", "ID Externo", "externalId", "Id", "ID", ...(config.externalIdExcelAliases || [])].filter(Boolean) as string[];
         let externalId: unknown = "";
         for (const h of externalIdCandidates) {
@@ -128,7 +143,7 @@ export function createSimpleCatalogRouter(
         }
 
         if (!nombre || String(nombre).trim() === "") {
-          errors.push(`Fila ${rowNum}: La columna 'Nombre' es obligatoria.`);
+          errors.push(`Fila ${rowNum}: La columna '${config.nombreExcelHeader || "Nombre"}' es obligatoria.`);
           continue;
         }
 

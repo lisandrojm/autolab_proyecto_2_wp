@@ -63,6 +63,7 @@ const ADMIN_PERMISSIONS = [
   'config_categorias_sat:view', // Categorías SAT
   'config_bancos:view', // Bancos
   'config_obras_sociales:view', // Obras Sociales
+  'config_convenios:view', // Convenios Colectivos de Trabajo
   'config_centros_costo:view', // Centros de Costos
   'config_contratos_frame:view', // Contratos FRAME
   'config_empresas:view', // Empresas

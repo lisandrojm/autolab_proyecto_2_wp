@@ -25,7 +25,7 @@ model, config) {
             const extraHeaders = (config.extraStringFields || []).map((f) => f.excelHeader || f.key);
             const externalIdHeader = config.externalIdExcelHeader || "ID Externo (opcional)";
             const wsData = [
-                [externalIdHeader, "Nombre", ...extraHeaders],
+                [externalIdHeader, config.nombreExcelHeader || "Nombre", ...extraHeaders],
                 ...samples.map((n) => ["", n, ...extraHeaders.map(() => "")]),
             ];
             const ws = xlsx.utils.aoa_to_sheet(wsData);
@@ -62,7 +62,14 @@ model, config) {
             for (let i = 0; i < rawRows.length; i++) {
                 const row = rawRows[i];
                 const rowNum = i + 2;
-                const nombre = row["Nombre"] ?? row["nombre"] ?? row["NAME"] ?? row["Name"];
+                const nombreCandidates = [config.nombreExcelHeader, "Nombre", "nombre", "NAME", "Name", ...(config.nombreExcelAliases || [])].filter(Boolean);
+                let nombre;
+                for (const h of nombreCandidates) {
+                    if (row[h] !== undefined) {
+                        nombre = row[h];
+                        break;
+                    }
+                }
                 const externalIdCandidates = [config.externalIdExcelHeader, "ID Externo (opcional)", "ID Externo", "externalId", "Id", "ID", ...(config.externalIdExcelAliases || [])].filter(Boolean);
                 let externalId = "";
                 for (const h of externalIdCandidates) {
@@ -72,7 +79,7 @@ model, config) {
                     }
                 }
                 if (!nombre || String(nombre).trim() === "") {
-                    errors.push(`Fila ${rowNum}: La columna 'Nombre' es obligatoria.`);
+                    errors.push(`Fila ${rowNum}: La columna '${config.nombreExcelHeader || "Nombre"}' es obligatoria.`);
                     continue;
                 }
                 const extras = {};
