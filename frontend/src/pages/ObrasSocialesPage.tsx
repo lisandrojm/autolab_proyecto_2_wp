@@ -1,6 +1,7 @@
 import React from "react";
-import { faBriefcaseMedical } from "@fortawesome/free-solid-svg-icons";
+import { faBriefcaseMedical, faStar } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
+import { ObraSocialDefaultsTab } from "../components/catalog/ObraSocialDefaultsTab";
 import { createSimpleCatalogApi } from "../api/simpleCatalog";
 
 const obrasSocialesApi = createSimpleCatalogApi("/obras-sociales");
@@ -29,9 +30,19 @@ export const ObrasSocialesPage: React.FC = () => (
     formatExternalId={formatRnos}
     sanitizeExternalId={sanitizeRnos}
     helpKey="obrasSociales"
+    // El listado solo señala cuál es la global; se elige en la pestaña "Por defecto".
     porDefecto={{
-      etiqueta: "Por defecto",
-      ayuda: "Cuando la persona no tiene obra social asignada, se usa esta para completar el código RNOS de los datos AFIP.",
+      etiqueta: "Por defecto (global)",
+      ayuda: 'Se usa cuando la persona no tiene obra social asignada. Para definir una distinta por empresa, entrá a la pestaña "Por defecto".',
+      esPorDefecto: (item) => !!(item.data as { porDefecto?: boolean } | undefined)?.porDefecto,
     }}
+    pestanas={[
+      {
+        id: "por-defecto",
+        label: "Por defecto",
+        icon: faStar,
+        render: (items, recargar) => <ObraSocialDefaultsTab obrasSociales={items} api={obrasSocialesApi} formatExternalId={formatRnos} onCambio={recargar} />,
+      },
+    ]}
   />
 );

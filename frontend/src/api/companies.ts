@@ -18,6 +18,8 @@ export interface Company {
   // Membrete: logo y firma (imágenes). La aclaración/cargo reutilizan firmanteNombre/firmanteCargo.
   logoUrl?: string;
   signatureUrl?: string;
+  /** Obra social por defecto de la empresa (data.id del catálogo). Vacío = usa la global. */
+  obraSocialId?: number | null;
   createdAt?: string;
   updatedAt?: string;
 }

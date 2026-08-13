@@ -22,6 +22,12 @@ export interface ICompany extends Document {
   // La aclaración de firma y el cargo reutilizan firmanteNombre / firmanteCargo.
   logoUrl?: string;
   signatureUrl?: string;
+  /**
+   * Obra social a usar para los contratos de esta empresa cuando la persona no tiene ninguna
+   * asignada. Guarda el `data.id` del catálogo (el RNOS numérico), igual que `osId` en el contrato.
+   * Si queda vacío, se usa la marcada como global en el catálogo de Obras Sociales.
+   */
+  obraSocialId?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -43,6 +49,7 @@ const companySchema = new Schema<ICompany>(
     representanteLegalEmail: { type: String },
     logoUrl: { type: String },
     signatureUrl: { type: String },
+    obraSocialId: { type: Number },
   },
   {
     timestamps: true,

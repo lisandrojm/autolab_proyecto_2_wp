@@ -21,6 +21,8 @@ const companySchema = z.object({
     representanteLegalEmail: z.string().optional().default(""),
     logoUrl: z.string().optional().default(""),
     signatureUrl: z.string().optional().default(""),
+    /** Obra social por defecto de esta empresa. `null` = usar la global del catálogo. */
+    obraSocialId: z.number().nullable().optional(),
 });
 // GET /companies
 router.get("/", authenticateToken, async (_req, res) => {

@@ -15,6 +15,7 @@ const companySchema = new Schema({
     representanteLegalEmail: { type: String },
     logoUrl: { type: String },
     signatureUrl: { type: String },
+    obraSocialId: { type: Number },
 }, {
     timestamps: true,
     collection: "companies",

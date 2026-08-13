@@ -15,6 +15,12 @@ export interface ICompany extends Document {
     representanteLegalEmail?: string;
     logoUrl?: string;
     signatureUrl?: string;
+    /**
+     * Obra social a usar para los contratos de esta empresa cuando la persona no tiene ninguna
+     * asignada. Guarda el `data.id` del catálogo (el RNOS numérico), igual que `osId` en el contrato.
+     * Si queda vacío, se usa la marcada como global en el catálogo de Obras Sociales.
+     */
+    obraSocialId?: number;
     createdAt: Date;
     updatedAt: Date;
 }

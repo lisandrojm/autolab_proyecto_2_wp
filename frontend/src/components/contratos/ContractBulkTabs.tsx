@@ -514,7 +514,8 @@ export const ContractBulkAfipTab: React.FC<{
       .catch(() => setCompanies([]));
   }, []);
 
-  const afipCat = useMemo(() => ({ categorias, tipos, obrasSociales, sedes }), [categorias, tipos, obrasSociales, sedes]);
+  // Las empresas entran al catálogo por su obra social por defecto (ver la cascada en resolveAfipValues).
+  const afipCat = useMemo(() => ({ categorias, tipos, obrasSociales, sedes, empresas: companies }), [categorias, tipos, obrasSociales, sedes, companies]);
 
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
 

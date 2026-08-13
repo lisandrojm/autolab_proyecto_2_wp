@@ -14,6 +14,8 @@ export interface AfipCatalogs {
   tipos: ContratoItem[]; // códigos AFIP por Tipo de Contrato
   obrasSociales: SimpleCatalogItem[]; // código RNOS
   sedes: InfoItem[]; // código de sucursal
+  /** Empresas, para su obra social por defecto propia. Opcional: sin esto se cae directo a la global. */
+  empresas?: Array<{ _id: string; obraSocialId?: number | null }>;
 }
 
 export interface AfipFieldCheck {
@@ -44,8 +46,10 @@ export interface AfipValues {
   actividad: string;
   modalidadLiq: string;
   rnos: string;
-  /** El RNOS no es de la persona: sale de la obra social marcada por defecto en el catálogo. */
+  /** El RNOS no es de la persona: sale de una obra social por defecto. */
   rnosPorDefecto: boolean;
+  /** De dónde salió el RNOS, para poder aclararlo en la vista de completitud. */
+  rnosOrigen: "persona" | "empresa" | "global" | "ninguno";
   sucursal: string;
 }
 
@@ -53,11 +57,15 @@ export interface AfipValues {
 export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): AfipValues {
   const categoria = row.categoria_sat_id != null ? cat.categorias.find((c) => c.data?.id === row.categoria_sat_id) : undefined;
   const tipo = cat.tipos.find((t) => t.name === row.nombre_contrato);
-  // Si la persona no tiene obra social asignada (o la que tiene ya no está en el catálogo), se usa
-  // la marcada como "por defecto" en Obras Sociales. Sin eso el contrato queda sin código RNOS y no
+  // Cascada de obra social: la de la persona manda; si no tiene, la de la empresa del contrato; y
+  // si esa tampoco, la global del catálogo. Sin ninguna, el contrato queda sin código RNOS y no
   // puede entrar en el TXT de alta masiva.
-  const obraSocialPropia = row.osId != null ? cat.obrasSociales.find((o) => Number((o.data as { id?: number } | undefined)?.id) === row.osId) : undefined;
-  const obraSocial = obraSocialPropia || cat.obrasSociales.find((o) => (o.data as { porDefecto?: boolean } | undefined)?.porDefecto);
+  const porDataId = (id?: number | null) => (id == null ? undefined : cat.obrasSociales.find((o) => Number((o.data as { id?: number } | undefined)?.id) === id));
+  const obraSocialPropia = porDataId(row.osId);
+  const empresa = row.empresaContratoId ? cat.empresas?.find((e) => e._id === row.empresaContratoId) : undefined;
+  const obraSocialEmpresa = porDataId(empresa?.obraSocialId);
+  const obraSocialGlobal = cat.obrasSociales.find((o) => (o.data as { porDefecto?: boolean } | undefined)?.porDefecto);
+  const obraSocial = obraSocialPropia || obraSocialEmpresa || obraSocialGlobal;
   const sede = row.sede_id != null ? cat.sedes.find((s) => Number(s.data?.id) === row.sede_id) : undefined;
 
   return {
@@ -73,6 +81,7 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
     // El "ID Externo" de la Obra Social siempre fue el código RNOS (ver ObrasSocialesPage.tsx).
     rnos: soloDigitos(obraSocial?.externalId),
     rnosPorDefecto: !obraSocialPropia && !!obraSocial,
+    rnosOrigen: obraSocialPropia ? "persona" : obraSocialEmpresa ? "empresa" : obraSocialGlobal ? "global" : "ninguno",
     sucursal: sede?.data?.codigoSucursal ? String(sede.data.codigoSucursal) : "",
   };
 }
@@ -89,7 +98,7 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
     { key: "tipoServicio", label: "Tipo de servicio", value: v.tipoServicio, ok: !!v.tipoServicio },
     { key: "actividad", label: "Actividad del domicilio", value: v.actividad, ok: !!v.actividad },
     { key: "modalidadLiq", label: "Modalidad de liquidación", value: v.modalidadLiq, ok: !!v.modalidadLiq },
-    { key: "rnos", label: v.rnosPorDefecto ? "Código RNOS (obra social por defecto)" : "Código RNOS (obra social)", value: v.rnos, ok: !!v.rnos },
+    { key: "rnos", label: v.rnosOrigen === "empresa" ? "Código RNOS (por defecto de la empresa)" : v.rnosOrigen === "global" ? "Código RNOS (por defecto global)" : "Código RNOS (obra social)", value: v.rnos, ok: !!v.rnos },
     { key: "sucursal", label: "Código de sucursal (sede)", value: v.sucursal, ok: !!v.sucursal },
   ];
   // No es un campo del registro AFIP (el TXT no lleva el CUIT de la empleadora), pero se exige igual:
