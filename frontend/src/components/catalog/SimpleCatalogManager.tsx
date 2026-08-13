@@ -350,14 +350,24 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                     </th>
                   ))}
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{externalIdLabel}</th>
-                {porDefecto && <th className="px-5 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{porDefecto.etiqueta}</th>}
                 <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
               {filtered.map((item) => (
                 <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
-                  <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">{item.name}</td>
+                  <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                    <span className="inline-flex items-center gap-2 flex-wrap">
+                      {item.name}
+                      {porDefecto && porDefecto.esPorDefecto(item) && (
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                          <FontAwesomeIcon icon={faStar} className="h-3 w-3" />
+                          {porDefecto.etiqueta}
+                          <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3 opacity-70 cursor-help" title={porDefecto.ayuda} />
+                        </span>
+                      )}
+                    </span>
+                  </td>
                   {extraFields
                     .filter((f) => f.showColumn)
                     .map((f) => (
@@ -366,19 +376,6 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                       </td>
                     ))}
                   <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono">{item.externalId ? (formatExternalId ? formatExternalId(item.externalId) : item.externalId) : '—'}</td>
-                  {porDefecto && (
-                    <td className="px-5 py-3 text-sm text-center">
-                      {porDefecto.esPorDefecto(item) ? (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
-                          <FontAwesomeIcon icon={faStar} className="h-3 w-3" />
-                          {porDefecto.etiqueta}
-                          <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3 opacity-70 cursor-help" title={porDefecto.ayuda} />
-                        </span>
-                      ) : (
-                        <span className="text-gray-300 dark:text-gray-600">—</span>
-                      )}
-                    </td>
-                  )}
                   <td className="px-5 py-3 text-sm text-right">
                     <button onClick={() => openEdit(item)} className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 mr-3" title="Editar">
                       <FontAwesomeIcon icon={faEdit} />
