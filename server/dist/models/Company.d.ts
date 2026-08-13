@@ -1,4 +1,4 @@
-import { Document, Model } from "mongoose";
+import mongoose, { Document, Model } from "mongoose";
 export interface ICompany extends Document {
     razonSocial: string;
     cuit?: string;
@@ -21,6 +21,8 @@ export interface ICompany extends Document {
      * Si queda vacío, se usa la marcada como global en el catálogo de Obras Sociales.
      */
     obraSocialId?: number;
+    /** Convenios Colectivos (CCT) que aplican a esta empresa. Referencias al catálogo de Convenios. */
+    convenioIds?: mongoose.Types.ObjectId[];
     createdAt: Date;
     updatedAt: Date;
 }

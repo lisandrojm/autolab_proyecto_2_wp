@@ -11,9 +11,14 @@ import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { sweetAlert } from '../utils/sweetAlert';
 import { fuzzyMatch } from '../utils/searchHelpers';
 import { companiesAPI, Company, CompanyInput } from '../api/companies';
+import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
+import { ConvenioSelector } from '../components/empresas/ConvenioSelector';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 
 const HELP_KEY = 'empresas' as const;
+
+/** Catálogo de convenios: se carga una vez para toda la página y se reusa en cada apertura del modal. */
+const conveniosApi = createSimpleCatalogApi('/convenios');
 
 const EMPTY_FORM: CompanyInput = {
   razonSocial: '',
@@ -29,11 +34,14 @@ const EMPTY_FORM: CompanyInput = {
   firmanteCargo: '',
   representanteLegalNombre: '',
   representanteLegalEmail: '',
+  convenioIds: [],
 };
 
 export const EmpresasPage: React.FC = () => {
   const navigate = useNavigate();
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
+  const [cargandoConvenios, setCargandoConvenios] = useState(true);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
@@ -65,6 +73,15 @@ export const EmpresasPage: React.FC = () => {
   useEffect(() => {
     if (isLarge) localStorage.setItem('empresasViewMode', viewMode);
   }, [viewMode, isLarge]);
+
+  // El catálogo de convenios se pide una sola vez: son miles y el modal se abre muchas veces.
+  useEffect(() => {
+    conveniosApi
+      .list()
+      .then(setConvenios)
+      .catch(() => sweetAlert.error('Error', 'No se pudieron cargar los convenios.'))
+      .finally(() => setCargandoConvenios(false));
+  }, []);
 
   const effectiveViewMode: ViewMode = isLarge ? viewMode : 'cards';
 
@@ -112,6 +129,7 @@ export const EmpresasPage: React.FC = () => {
       firmanteCargo: c.firmanteCargo || '',
       representanteLegalNombre: c.representanteLegalNombre || '',
       representanteLegalEmail: c.representanteLegalEmail || '',
+      convenioIds: (c.convenioIds || []).map((x) => String(x)),
     });
     setShowModal(true);
   };
@@ -380,6 +398,12 @@ export const EmpresasPage: React.FC = () => {
               {field('DNI', 'firmanteDni', { placeholder: '5.453.082' })}
               {field('Cargo', 'firmanteCargo', { placeholder: 'Socio Gerente' })}
             </div>
+          </div>
+
+          {/* Convenios */}
+          <div className="pt-4 border-t border-gray-100 dark:border-gray-700/50">
+            <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Convenios colectivos</h4>
+            <ConvenioSelector convenios={convenios} cargando={cargandoConvenios} value={form.convenioIds || []} onChange={(ids) => setForm((prev) => ({ ...prev, convenioIds: ids }))} />
           </div>
 
           {/* Representante legal */}

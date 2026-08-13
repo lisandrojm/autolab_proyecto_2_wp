@@ -20,6 +20,8 @@ export interface Company {
   signatureUrl?: string;
   /** Obra social por defecto de la empresa (data.id del catálogo). Vacío = usa la global. */
   obraSocialId?: number | null;
+  /** Ids de los Convenios Colectivos asociados a la empresa. */
+  convenioIds?: string[];
   createdAt?: string;
   updatedAt?: string;
 }

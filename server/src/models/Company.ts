@@ -28,6 +28,8 @@ export interface ICompany extends Document {
    * Si queda vacío, se usa la marcada como global en el catálogo de Obras Sociales.
    */
   obraSocialId?: number;
+  /** Convenios Colectivos (CCT) que aplican a esta empresa. Referencias al catálogo de Convenios. */
+  convenioIds?: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -50,6 +52,7 @@ const companySchema = new Schema<ICompany>(
     logoUrl: { type: String },
     signatureUrl: { type: String },
     obraSocialId: { type: Number },
+    convenioIds: [{ type: Schema.Types.ObjectId, ref: "Convenio" }],
   },
   {
     timestamps: true,

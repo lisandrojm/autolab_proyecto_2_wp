@@ -25,6 +25,8 @@ const companySchema = z.object({
   signatureUrl: z.string().optional().default(""),
   /** Obra social por defecto de esta empresa. `null` = usar la global del catálogo. */
   obraSocialId: z.number().nullable().optional(),
+  /** Ids del catálogo de Convenios. Se manda la lista completa: reemplaza la anterior. */
+  convenioIds: z.array(z.string()).optional(),
 });
 
 // GET /companies
