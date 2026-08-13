@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faToggleOn, faToggleOff, faSearch, faSpinner, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faToggleOff, faSearch, faSpinner, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogItem } from "../../api/simpleCatalog";
 
 interface Props {
@@ -44,17 +44,14 @@ export const ConvenioSelector: React.FC<Props> = ({ convenios, cargando, value, 
 
   const toggle = (id: string) => onChange(value.includes(id) ? value.filter((x) => x !== id) : [...value, id]);
 
-  const Fila: React.FC<{ item: SimpleCatalogItem; activo: boolean }> = ({ item, activo }) => (
+  /** Fila de resultado: los ya asociados no llegan acá (se listan arriba como badges). */
+  const Fila: React.FC<{ item: SimpleCatalogItem }> = ({ item }) => (
     <button
       type="button"
       onClick={() => toggle(item._id)}
-      className={`w-full text-left px-3 py-2 rounded-lg border flex items-start gap-3 transition-colors ${
-        activo
-          ? "bg-blue-50 border-blue-200 dark:bg-blue-900/25 dark:border-blue-800"
-          : "bg-white border-gray-200 hover:bg-gray-50 dark:bg-gray-900/40 dark:border-gray-700 dark:hover:bg-gray-800"
-      }`}
+      className="w-full text-left px-3 py-2 rounded-lg border flex items-start gap-3 transition-colors bg-white border-gray-200 hover:bg-gray-50 dark:bg-gray-900/40 dark:border-gray-700 dark:hover:bg-gray-800"
     >
-      <FontAwesomeIcon icon={activo ? faToggleOn : faToggleOff} className={`h-4 w-4 mt-0.5 shrink-0 ${activo ? "text-blue-600 dark:text-blue-400" : "text-gray-400"}`} />
+      <FontAwesomeIcon icon={faToggleOff} className="h-4 w-4 mt-0.5 shrink-0 text-gray-400" />
       <span className="min-w-0">
         <span className="block text-sm font-medium text-gray-900 dark:text-gray-100 break-words">
           {item.externalId && <span className="font-mono text-xs text-gray-500 dark:text-gray-400 mr-2">{item.externalId}</span>}
@@ -84,15 +81,31 @@ export const ConvenioSelector: React.FC<Props> = ({ convenios, cargando, value, 
         )}
       </div>
 
-      {/* Elegidos: siempre visibles, aunque no coincidan con la búsqueda actual. */}
+      {/* Elegidos: como badges con "×", igual que los filtros. Se ven todos de un vistazo aunque no
+          coincidan con la búsqueda actual. */}
       <div>
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Asociados ({seleccionados.length})</p>
         {seleccionados.length === 0 ? (
           <p className="text-xs text-gray-400 dark:text-gray-500 italic">Todavía no hay convenios asociados a esta empresa.</p>
         ) : (
-          <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+          <div className="flex items-center gap-2 flex-wrap max-h-40 overflow-y-auto">
             {seleccionados.map((c) => (
-              <Fila key={c._id} item={c} activo />
+              <span
+                key={c._id}
+                title={`${c.externalId ? `${c.externalId} — ` : ""}${c.name}${(c as { signatario?: string }).signatario ? ` (${(c as { signatario?: string }).signatario})` : ""}`}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-xs font-medium rounded border border-primary-200 dark:border-primary-800 max-w-full"
+              >
+                {c.externalId && <span className="font-mono opacity-70 shrink-0">{c.externalId}</span>}
+                <span className="truncate">{c.name}</span>
+                <button
+                  type="button"
+                  onClick={() => toggle(c._id)}
+                  title={`Quitar ${c.name}`}
+                  className="hover:bg-primary-200 dark:hover:bg-primary-800/50 rounded p-0.5 transition-colors shrink-0"
+                >
+                  <FontAwesomeIcon icon={faXmark} className="h-3 w-3" />
+                </button>
+              </span>
             ))}
           </div>
         )}
@@ -109,7 +122,7 @@ export const ConvenioSelector: React.FC<Props> = ({ convenios, cargando, value, 
           ) : (
             <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
               {resultados.slice(0, MAX_RESULTADOS).map((c) => (
-                <Fila key={c._id} item={c} activo={false} />
+                <Fila key={c._id} item={c} />
               ))}
             </div>
           )}
