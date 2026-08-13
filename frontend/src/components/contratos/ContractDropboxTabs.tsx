@@ -253,11 +253,18 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
   };
 
   const handleRename = async (entry: DropboxEntry) => {
-    const newName = window.prompt("Nuevo nombre:", entry.name);
-    if (!newName || newName.trim() === "" || newName === entry.name) return;
+    const res = await sweetAlert.prompt("Renombrar", {
+      text: `Se va a renombrar "${entry.name}" en Dropbox.`,
+      valorInicial: entry.name,
+      confirmText: "Renombrar",
+      // El nombre viaja a Dropbox tal cual: la barra separa carpetas y rompería la ruta.
+      validar: (v) => (v === entry.name ? "El nombre es el mismo." : v.includes("/") ? "El nombre no puede tener barras." : null),
+    });
+    if (!res.isConfirmed) return;
+    const newName = String(res.value || "").trim();
     const parent = entry.path.substring(0, entry.path.lastIndexOf("/"));
     try {
-      await dropboxAPI.move(entry.path, `${parent}/${newName.trim()}`, true);
+      await dropboxAPI.move(entry.path, `${parent}/${newName}`, true);
       await load();
     } catch (e: any) {
       sweetAlert.error("Error", e?.response?.data?.error || "No se pudo renombrar.");
@@ -265,7 +272,7 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
   };
 
   const handleDelete = async (entry: DropboxEntry) => {
-    const res = await sweetAlert.confirm("¿Eliminar?", `Se va a eliminar "${entry.name}" de Dropbox. Esta acción no se puede deshacer.`, "Sí, eliminar");
+    const res = await sweetAlert.confirm("¿Eliminar el archivo?", `Se va a eliminar "${entry.name}" de Dropbox. Esta acción no se puede deshacer.`, "Sí, eliminar");
     if (!res.isConfirmed) return;
     setEliminando(entry.path);
     try {

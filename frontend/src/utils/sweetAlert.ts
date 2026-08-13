@@ -63,6 +63,36 @@ export const sweetAlert = {
     });
   },
 
+  /**
+   * Pide un texto y confirma en el mismo paso — reemplazo de `window.prompt`, que no se puede
+   * estilar y queda fuera del look del resto de la app.
+   * `validar` devuelve el mensaje de error a mostrar, o null si el valor está bien.
+   */
+  prompt: (
+    title: string,
+    opts: { text?: string; valorInicial?: string; placeholder?: string; confirmText?: string; cancelText?: string; validar?: (valor: string) => string | null } = {},
+  ) => {
+    return Swal.fire({
+      title,
+      text: opts.text,
+      icon: "question",
+      input: "text",
+      inputValue: opts.valorInicial ?? "",
+      inputPlaceholder: opts.placeholder,
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: opts.confirmText || "Guardar",
+      cancelButtonText: opts.cancelText || "Cancelar",
+      reverseButtons: true,
+      inputValidator: (valor) => {
+        const v = String(valor || "").trim();
+        if (!v) return "Escribí un nombre.";
+        return opts.validar ? opts.validar(v) : null;
+      },
+    });
+  },
+
   info: (title: string, text: string, timer = 1800) => {
     return Swal.fire({
       icon: "info",
