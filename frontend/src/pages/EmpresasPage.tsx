@@ -134,6 +134,13 @@ export const EmpresasPage: React.FC = () => {
     setShowModal(true);
   };
 
+  /** Convenios de la empresa resueltos contra el catálogo ya cargado (se guardan como referencias). */
+  const conveniosDe = (c: Company): SimpleCatalogItem[] => {
+    const ids = (c.convenioIds || []).map((x) => String(x));
+    if (ids.length === 0) return [];
+    return convenios.filter((cv) => ids.includes(cv._id));
+  };
+
   const setField = (key: keyof CompanyInput, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
 
   const handleSave = async (e: React.FormEvent) => {
@@ -287,6 +294,23 @@ export const EmpresasPage: React.FC = () => {
                     {c.representanteLegalEmail && <span className="block text-[11px] text-gray-400">{c.representanteLegalEmail}</span>}
                   </div>
                 )}
+                {(c.convenioIds || []).length > 0 && (
+                  <div>
+                    <span className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Convenios</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {conveniosDe(c).map((cv) => (
+                        <span
+                          key={cv._id}
+                          title={`${cv.externalId ? `${cv.externalId} — ` : ''}${cv.name}`}
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-[10px] font-medium rounded border border-primary-200 dark:border-primary-800 max-w-[180px]"
+                        >
+                          {cv.externalId && <span className="font-mono opacity-70 shrink-0">{cv.externalId}</span>}
+                          <span className="truncate">{cv.name}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </Card>
           ))}
@@ -302,6 +326,7 @@ export const EmpresasPage: React.FC = () => {
                 <th className="px-4 py-3">Domicilio Legal</th>
                 <th className="px-4 py-3">Firmante</th>
                 <th className="px-4 py-3">Representante Legal</th>
+                <th className="px-4 py-3">Convenios</th>
                 <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
             </thead>
@@ -331,6 +356,26 @@ export const EmpresasPage: React.FC = () => {
                       </div>
                     ) : (
                       '—'
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {(c.convenioIds || []).length === 0 ? (
+                      <span className="text-gray-400 dark:text-gray-600">—</span>
+                    ) : cargandoConvenios ? (
+                      <span className="text-xs text-gray-400 italic">cargando…</span>
+                    ) : (
+                      <div className="flex items-center gap-1.5 flex-wrap max-w-[320px]">
+                        {conveniosDe(c).map((cv) => (
+                          <span
+                            key={cv._id}
+                            title={`${cv.externalId ? `${cv.externalId} — ` : ''}${cv.name}${(cv as { signatario?: string }).signatario ? ` (${(cv as { signatario?: string }).signatario})` : ''}`}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-[10px] font-medium rounded border border-primary-200 dark:border-primary-800 max-w-[150px]"
+                          >
+                            {cv.externalId && <span className="font-mono opacity-70 shrink-0">{cv.externalId}</span>}
+                            <span className="truncate">{cv.name}</span>
+                          </span>
+                        ))}
+                      </div>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
