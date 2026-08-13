@@ -97,15 +97,15 @@ export const DropboxSignConfigPage: React.FC = () => {
               los adjuntos.
             </p>
             <p>
-              Con esos datos busca el archivo en <span className="font-mono text-xs">Outbox</span>: si está, <strong>crea un JSON</strong> con la información del envío en{" "}
-              <span className="font-mono text-xs">Pendbox</span> —igual que el de Constancia de CUIT— y mueve el PDF a esa misma carpeta. Eso es lo que hace avanzar el contrato de{" "}
-              <strong>Para Firmar</strong> a <strong>Enviado a la firma</strong>, y evita que se mande a firmar dos veces.
+              Con esos datos busca el archivo en <span className="font-mono text-xs">Outbox</span> y, si está, lo <strong>mueve a</strong> <span className="font-mono text-xs">Pendbox</span>. Ese
+              movimiento es el único efecto: no se genera ningún archivo extra. Es lo que hace avanzar el contrato de <strong>Para Firmar</strong> a <strong>Enviado a la firma</strong>, y evita que se
+              mande a firmar dos veces.
             </p>
             <p className="flex items-start gap-1.5 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300">
               <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 shrink-0 mt-0.5" />
               <span>
-                Si el documento no está en <span className="font-mono text-xs">Outbox</span>, o si ya tiene su JSON en <span className="font-mono text-xs">Pendbox</span>, el aviso se saltea — nunca
-                adivina ni archiva dos veces, igual que el escaneo de carpetas.
+                Si el documento no está en <span className="font-mono text-xs">Outbox</span>, o si ya está en <span className="font-mono text-xs">Pendbox</span>, el aviso se saltea — nunca
+                adivina ni mueve dos veces, igual que el escaneo de carpetas.
               </span>
             </p>
           </div>
@@ -175,7 +175,7 @@ export const DropboxSignConfigPage: React.FC = () => {
                   <FontAwesomeIcon icon={leyendo === 'real' ? faSpinner : faInbox} spin={leyendo === 'real'} className="h-4 w-4" />
                   Leer ahora
                 </button>
-                {/* Detalle aviso por aviso de la última lectura: sirve para entender por qué algo no se archivó. */}
+                {/* Detalle aviso por aviso: sirve para entender por qué un documento no se movió. */}
                 <button
                   type="button"
                   onClick={() => setShowLogs(true)}
@@ -227,9 +227,9 @@ export const DropboxSignConfigPage: React.FC = () => {
 
 /** Cómo se presenta cada resultado posible: color, ícono y qué significa. */
 const ESTILO_LOG: Record<LineaLog["resultado"], { label: string; icon: any; clase: string; ayuda: string }> = {
-  archivado: { label: "Archivado", icon: faCircleCheck, clase: "text-green-600 dark:text-green-400", ayuda: "Se creó el JSON en Pendbox y el PDF se movió desde Outbox." },
-  duplicado: { label: "Ya estaba", icon: faCircleMinus, clase: "text-gray-500 dark:text-gray-400", ayuda: "Ese documento ya tenía su JSON en Pendbox, así que no se archivó de nuevo." },
-  "sin-archivo": { label: "Sin PDF en Outbox", icon: faFolderOpen, clase: "text-amber-600 dark:text-amber-400", ayuda: "Llegó el aviso pero el documento no está en Outbox, así que no se puede atribuir a un contrato." },
+  archivado: { label: "Movido a Pendbox", icon: faCircleCheck, clase: "text-green-600 dark:text-green-400", ayuda: "El PDF pasó de Outbox a Pendbox: el contrato queda como enviado a la firma." },
+  duplicado: { label: "Ya estaba", icon: faCircleMinus, clase: "text-gray-500 dark:text-gray-400", ayuda: "El documento ya estaba en Pendbox, así que no se volvió a mover." },
+  "sin-archivo": { label: "Sin PDF en Outbox", icon: faFolderOpen, clase: "text-amber-600 dark:text-amber-400", ayuda: "Llegó el aviso pero el documento no está en Outbox, así que no hay nada que mover." },
   ignorado: { label: "No es un envío", icon: faBan, clase: "text-gray-400 dark:text-gray-500", ayuda: "El asunto no corresponde a un envío a firmar (avisos de firmado, resúmenes, etc.)." },
   error: { label: "Error", icon: faCircleXmark, clase: "text-red-600 dark:text-red-400", ayuda: "Falló algún paso al procesar este aviso." },
 };

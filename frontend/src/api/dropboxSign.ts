@@ -75,9 +75,8 @@ export interface ResultadoLectura {
   ok: boolean;
   detalle: string;
   avisos: number;
-  archivados: number;
   movidos: number;
-  /** Salteados porque ese documento ya tenía su JSON en Pendbox. */
+  /** Salteados porque el documento ya estaba en Pendbox. */
   duplicados: number;
   /** Salteados porque el PDF no aparece en Outbox. */
   sinArchivoEnOutbox: number;

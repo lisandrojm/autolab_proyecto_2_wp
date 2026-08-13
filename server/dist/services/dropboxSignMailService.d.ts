@@ -27,8 +27,12 @@ export declare function buscarEnOutbox(entries: {
     name: string;
     path: string;
 } | null;
-/** ¿Ese documento ya fue archivado en Pendbox? Compara normalizado, sin extensión. */
-export declare function yaArchivado(entries: {
+/**
+ * ¿Ese documento ya está en Pendbox? Se compara por nombre normalizado y, sobre todo, por CUIL: el
+ * archivo real suele tener un nombre distinto al del asunto (Dropbox Sign transforma símbolos y el
+ * título de la solicitud es editable), así que el nombre solo no alcanza para reconocerlo.
+ */
+export declare function yaEstaEnPendbox(entries: {
     tag: string;
     name: string;
 }[], archivo: string, ident: {
@@ -48,7 +52,6 @@ export interface ResultadoLectura {
     ok: boolean;
     detalle: string;
     avisos: number;
-    archivados: number;
     movidos: number;
     /** Avisos salteados porque ese documento ya tenía su JSON en Pendbox. */
     duplicados: number;
