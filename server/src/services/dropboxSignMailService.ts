@@ -94,7 +94,9 @@ export function buscarEnOutbox(
   archivo: string,
   ident: { cuit: string; documento: string },
 ): { name: string; path: string } | null {
-  const pdfs = entries.filter((e) => e.tag === "file" && /\.pdf$/i.test(e.name));
+  // No se exige extensión: los documentos generados por el sistema quedan en Outbox SIN ".pdf"
+  // (solo se descartan los JSON, que son los archivos de control del propio circuito).
+  const pdfs = entries.filter((e) => e.tag === "file" && !/\.json$/i.test(e.name));
   if (ident.cuit) {
     const porCuit = pdfs.filter((e) => e.name.includes(ident.cuit));
     const conDoc = ident.documento ? porCuit.filter((e) => e.name.includes(ident.documento)) : [];
