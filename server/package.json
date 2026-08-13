@@ -9,6 +9,7 @@
     "dev": "dotenv -e .env.development -- tsx watch src/server.ts",
     "prod": "dotenv -e .env.production -- tsx src/server.ts",
     "build": "tsc -p tsconfig.json",
+    "convenios": "tsx src/scripts/convenios/conveniosToXlsx.ts",
     "start": "node dist/server.js",
     "start:prod": "dotenv -e .env.production -- node dist/server.js",
     "lint": "eslint src --ext .ts",
