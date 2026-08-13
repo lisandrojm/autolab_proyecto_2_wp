@@ -14,7 +14,11 @@ import { getTenantDropboxConfig, uploadFile, listFolder, moveEntry } from "./dro
  * copia por mail a quien se ponga en CC. Por eso el instructivo de "Para Firmar" pide agregar la
  * casilla configurada acá en CC: ese mail es la ÚNICA señal de que el envío ocurrió.
  *
- * Qué hace este job por cada aviso nuevo:
+ * La casilla la usan personas, así que el job es de solo lectura sobre el correo: no marca nada como
+ * leído ni mueve mensajes. Busca por asunto dentro de una ventana de días y lo que evita reprocesar
+ * es el JSON ya archivado en Pendbox.
+ *
+ * Qué hace por cada aviso encontrado:
  *  1. Lee del ASUNTO el nombre del documento ("Se inició el proceso de firma de <archivo>").
  *  2. De ese nombre saca el CUIL/documento (la nomenclatura de `buildDocFileName`) y con eso ubica
  *     a la persona y su contrato.
@@ -26,6 +30,19 @@ import { getTenantDropboxConfig, uploadFile, listFolder, moveEntry } from "./dro
  *     figure en "Enviado a la firma", y mueve el PDF de Outbox a Pendbox: así "Para Firmar" queda
  *     solo con lo que no se envió y no se manda dos veces por error.
  */
+
+/**
+ * Términos con los que se le pide la búsqueda al servidor IMAP. Van sin acentos a propósito: el
+ * SEARCH de IMAP es sensible al charset y "inició" puede fallar según el servidor. El filtro fino
+ * lo hace igual `extraerArchivoDeAsunto` sobre cada asunto encontrado.
+ */
+const TERMINOS_BUSQUEDA = ["proceso de firma", "signature request"];
+
+/** Ventana hacia atrás que se revisa en cada corrida. */
+const DIAS_ATRAS = 30;
+
+/** Tope de mensajes por corrida, para no barrer una bandeja enorme si la ventana trae de más. */
+const MAX_MENSAJES = 300;
 
 /** Asuntos que manda Dropbox Sign al iniciar el circuito de firma (ES/EN). */
 const ASUNTO_ENVIO = [/se inici[oó] el proceso de firma de\s+(.+)$/i, /you (?:were|have been) added to a signature request[:\s]+(.+)$/i, /signature request(?:ed)? (?:from|for)[:\s]+(.+)$/i];
@@ -179,10 +196,21 @@ export async function leerCasillaDropboxSign(tenantId: string, soloPrueba = fals
     await client.connect();
     const lock = await client.getMailboxLock("INBOX");
     try {
-      // Solo lo no leído: al archivarlo se marca como visto, así no se reprocesa en cada corrida.
-      const uids = await client.search({ seen: false });
-      for (const uid of (uids || []).slice(0, 200)) {
-        const msg = await client.fetchOne(String(uid), { envelope: true });
+      // La búsqueda es por ASUNTO dentro de una ventana de días, NO por "no leído": esta casilla la
+      // usan personas, y si alguien abre el aviso antes que el job, el flag \Seen lo haría invisible
+      // para siempre. Lo que evita reprocesar es el JSON ya archivado en Pendbox, y por eso tampoco
+      // se tocan los flags del mensaje: la bandeja queda tal como la dejó su dueño.
+      const desde = new Date(Date.now() - DIAS_ATRAS * 24 * 60 * 60 * 1000);
+      const encontrados = new Set<number>();
+      for (const termino of TERMINOS_BUSQUEDA) {
+        const r = await client.search({ subject: termino, since: desde }, { uid: true });
+        for (const u of r || []) encontrados.add(u);
+      }
+      // De más viejo a más nuevo: si un documento tiene varios avisos, gana el primero.
+      const uids = [...encontrados].sort((a, b) => a - b).slice(0, MAX_MENSAJES);
+
+      for (const uid of uids) {
+        const msg = await client.fetchOne(String(uid), { envelope: true }, { uid: true });
         const asunto = (msg as any)?.envelope?.subject || "";
         const archivo = extraerArchivoDeAsunto(asunto);
         if (!archivo) continue;
@@ -197,16 +225,15 @@ export async function leerCasillaDropboxSign(tenantId: string, soloPrueba = fals
         try {
           const ident = extraerIdentidadDeArchivo(archivo);
 
-          // Ya archivado: el aviso se marca leído y se sigue. No se sube el JSON de nuevo.
+          // Ya archivado en una corrida anterior: se sigue de largo sin volver a subir el JSON.
           if (yaArchivado(enPendbox, archivo, ident)) {
             duplicados++;
-            await client.messageFlagsAdd(String(uid), ["\\Seen"]);
             continue;
           }
 
           // Sin PDF en Outbox no hay documento propio al que atribuir el aviso (puede ser de otra
-          // cuenta o un reenvío). Se deja SIN leer a propósito: si el PDF aparece después, el
-          // próximo tick lo toma.
+          // cuenta o un reenvío). No se archiva nada; si el PDF aparece después, la próxima corrida
+          // lo toma, porque el aviso se sigue encontrando mientras esté dentro de la ventana.
           const pdf = buscarEnOutbox(enOutbox, archivo, ident);
           if (!pdf) {
             sinArchivoEnOutbox++;
@@ -256,8 +283,6 @@ export async function leerCasillaDropboxSign(tenantId: string, soloPrueba = fals
           } catch (e: any) {
             errores.push(`No se pudo mover "${pdf.name}" de Outbox: ${e?.message || e}`);
           }
-
-          await client.messageFlagsAdd(String(uid), ["\\Seen"]);
         } catch (e: any) {
           errores.push(`${archivo}: ${e?.message || e}`);
         }
@@ -271,7 +296,7 @@ export async function leerCasillaDropboxSign(tenantId: string, soloPrueba = fals
   }
 
   const detalle = soloPrueba
-    ? `Conexión OK. ${avisos} aviso(s) de envío sin leer en la casilla.`
+    ? `Conexión OK. ${avisos} aviso(s) de envío en los últimos ${DIAS_ATRAS} días.`
     : [
         `${avisos} aviso(s) leídos`,
         `${archivados} archivado(s) en Pendbox`,
