@@ -16,8 +16,16 @@ export interface DropboxSignConfig {
   lastCheckAt: string | null;
   lastCheckOk: boolean | null;
   lastCheckDetalle: string;
-  /** Qué pasó con cada aviso en la última lectura. Lo muestra el modal de Logs. */
-  lastCheckLogs: LineaLog[];
+  /** Historial de lecturas, de la más reciente a la más vieja. Lo muestra el modal de Logs. */
+  lastCheckHistorial: CorridaLog[];
+}
+
+/** Una corrida de la lectura, con todo lo que decidió. */
+export interface CorridaLog {
+  at: string;
+  ok: boolean;
+  detalle?: string;
+  logs?: LineaLog[];
 }
 
 /** Una línea del log: qué se decidió para un aviso y por qué. */

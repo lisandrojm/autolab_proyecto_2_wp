@@ -87,14 +87,23 @@ export interface ITenant extends Document {
             lastCheckAt?: Date;
             lastCheckOk?: boolean;
             lastCheckDetalle?: string;
-            /** Detalle aviso por aviso de la última lectura, para entender desde la UI qué pasó con cada uno. */
-            lastCheckLogs?: {
-                resultado: "archivado" | "duplicado" | "sin-archivo" | "ignorado" | "error";
-                asunto?: string;
-                archivo?: string;
-                cuit?: string;
-                documento?: string;
+            /**
+             * Historial de lecturas, de la más reciente a la más vieja. Solo se guardan las corridas que
+             * encontraron algo o que fallaron: el job corre cada 5 minutos y la mayoría no tiene nada que
+             * informar. Se conservan las últimas 50.
+             */
+            lastCheckHistorial?: {
+                at: Date;
+                ok: boolean;
                 detalle?: string;
+                logs?: {
+                    resultado: "archivado" | "duplicado" | "sin-archivo" | "ignorado" | "error";
+                    asunto?: string;
+                    archivo?: string;
+                    cuit?: string;
+                    documento?: string;
+                    detalle?: string;
+                }[];
             }[];
         };
     };

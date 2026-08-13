@@ -345,16 +345,38 @@ export async function leerCasillaDropboxSign(tenantId: string, soloPrueba = fals
   return { ok: errores.length === 0, detalle, avisos, archivados, movidos, duplicados, sinArchivoEnOutbox, logs };
 }
 
+/**
+ * Update de Mongo que deja registrada una lectura. La corrida se suma al historial solo si encontró
+ * algo o si falló: el job corre cada 5 minutos y guardar las corridas vacías llenaría el documento
+ * del tenant sin aportar nada. Se conservan las últimas 50, de la más reciente a la más vieja.
+ */
+export function registrarLectura(r: ResultadoLectura): any {
+  const update: any = {
+    $set: {
+      "integrations.dropboxSign.lastCheckAt": new Date(),
+      "integrations.dropboxSign.lastCheckOk": r.ok,
+      "integrations.dropboxSign.lastCheckDetalle": r.detalle,
+    },
+  };
+  if (r.logs.length > 0 || !r.ok) {
+    update.$push = {
+      "integrations.dropboxSign.lastCheckHistorial": {
+        $each: [{ at: new Date(), ok: r.ok, detalle: r.detalle, logs: r.logs }],
+        $position: 0,
+        $slice: 50,
+      },
+    };
+  }
+  return update;
+}
+
 /** Corre la lectura para todos los tenants que la tengan activada (lo usa el scheduler). */
 export async function leerCasillasDeTodosLosTenants(): Promise<void> {
   const tenants = await Tenant.find({ "integrations.dropboxSign.enabled": true }).select("_id").lean();
   for (const t of tenants as any[]) {
     try {
       const r = await leerCasillaDropboxSign(String(t._id));
-      await Tenant.updateOne(
-        { _id: t._id },
-        { $set: { "integrations.dropboxSign.lastCheckAt": new Date(), "integrations.dropboxSign.lastCheckOk": r.ok, "integrations.dropboxSign.lastCheckDetalle": r.detalle, "integrations.dropboxSign.lastCheckLogs": r.logs } },
-      );
+      await Tenant.updateOne({ _id: t._id }, registrarLectura(r));
     } catch (e: any) {
       console.error(`[DROPBOX-SIGN-MAIL] tenant ${t._id}:`, e?.message || e);
     }

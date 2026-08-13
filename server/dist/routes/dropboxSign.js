@@ -4,7 +4,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { Tenant } from "../models/Tenant.js";
 import { encryptSecret } from "../utils/secretCrypto.js";
-import { leerCasillaDropboxSign } from "../services/dropboxSignMailService.js";
+import { leerCasillaDropboxSign, registrarLectura } from "../services/dropboxSignMailService.js";
 /**
  * Configuración de "DropboxSign | Firmas": la casilla de correo que recibe las copias de
  * "documento enviado" de Dropbox Sign.
@@ -48,7 +48,7 @@ router.get("/config", async (req, res) => {
             lastCheckAt: cfg.lastCheckAt || null,
             lastCheckOk: cfg.lastCheckOk ?? null,
             lastCheckDetalle: cfg.lastCheckDetalle || "",
-            lastCheckLogs: cfg.lastCheckLogs || [],
+            lastCheckHistorial: cfg.lastCheckHistorial || [],
         });
     }
     catch (error) {
@@ -110,14 +110,7 @@ router.post("/leer", async (req, res) => {
         const r = await leerCasillaDropboxSign(String(req.tenantObjectId), soloPrueba);
         // El resultado queda registrado para poder verlo después desde la configuración.
         if (!soloPrueba) {
-            await Tenant.findByIdAndUpdate(req.tenantObjectId, {
-                $set: {
-                    "integrations.dropboxSign.lastCheckAt": new Date(),
-                    "integrations.dropboxSign.lastCheckOk": r.ok,
-                    "integrations.dropboxSign.lastCheckDetalle": r.detalle,
-                    "integrations.dropboxSign.lastCheckLogs": r.logs,
-                },
-            });
+            await Tenant.findByIdAndUpdate(req.tenantObjectId, registrarLectura(r));
         }
         res.json(r);
     }

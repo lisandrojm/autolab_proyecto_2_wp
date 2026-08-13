@@ -62,6 +62,12 @@ export interface ResultadoLectura {
  * `soloPrueba` conecta y cuenta los avisos sin escribir nada (para el botón "Probar" de la config).
  */
 export declare function leerCasillaDropboxSign(tenantId: string, soloPrueba?: boolean): Promise<ResultadoLectura>;
+/**
+ * Update de Mongo que deja registrada una lectura. La corrida se suma al historial solo si encontró
+ * algo o si falló: el job corre cada 5 minutos y guardar las corridas vacías llenaría el documento
+ * del tenant sin aportar nada. Se conservan las últimas 50, de la más reciente a la más vieja.
+ */
+export declare function registrarLectura(r: ResultadoLectura): any;
 /** Corre la lectura para todos los tenants que la tengan activada (lo usa el scheduler). */
 export declare function leerCasillasDeTodosLosTenants(): Promise<void>;
 /** Arranca el chequeo periódico de la casilla (lo llama server.ts al levantar). */

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileSignature, faSpinner, faCheck, faTriangleExclamation, faEnvelope, faInbox, faListUl, faCircleCheck, faCircleMinus, faFolderOpen, faBan, faCircleXmark } from "@fortawesome/free-solid-svg-icons";
-import { dropboxSignAPI, DropboxSignConfig, LineaLog } from "../api/dropboxSign";
+import { dropboxSignAPI, DropboxSignConfig, LineaLog, CorridaLog } from "../api/dropboxSign";
 import { InfoModal } from "../components/ui/InfoModal";
 import { PageLayout } from "../components/ui/PageLayout";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -185,7 +185,7 @@ export const DropboxSignConfigPage: React.FC = () => {
                 >
                   <FontAwesomeIcon icon={faListUl} className="h-4 w-4" />
                   Logs
-                  {cfg?.lastCheckLogs?.length ? <span className="text-xs font-bold text-gray-500 dark:text-gray-400">({cfg.lastCheckLogs.length})</span> : null}
+                  {cfg?.lastCheckHistorial?.length ? <span className="text-xs font-bold text-gray-500 dark:text-gray-400">({cfg.lastCheckHistorial.length})</span> : null}
                 </button>
                 <button type="button" onClick={guardar} disabled={guardando} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors">
                   <FontAwesomeIcon icon={guardando ? faSpinner : faCheck} spin={guardando} className="h-4 w-4" />
@@ -214,12 +214,12 @@ export const DropboxSignConfigPage: React.FC = () => {
       <InfoModal
         isOpen={showLogs}
         onClose={() => setShowLogs(false)}
-        title="Logs de la última lectura"
-        subtitle={cfg?.lastCheckAt ? `${fmtFechaHora(cfg.lastCheckAt)} · ${cfg.lastCheckDetalle || ""}` : undefined}
+        title="Logs de lecturas"
+        subtitle={`Últimas ${cfg?.lastCheckHistorial?.length || 0} lecturas con actividad · la más reciente arriba`}
         size="xl"
         actions={[{ label: "Cerrar", onClick: () => setShowLogs(false), variant: "ghost" }]}
       >
-        <LogsLectura logs={cfg?.lastCheckLogs || []} />
+        <HistorialLecturas corridas={cfg?.lastCheckHistorial || []} />
       </InfoModal>
     </PageLayout>
   );
@@ -234,21 +234,13 @@ const ESTILO_LOG: Record<LineaLog["resultado"], { label: string; icon: any; clas
   error: { label: "Error", icon: faCircleXmark, clase: "text-red-600 dark:text-red-400", ayuda: "Falló algún paso al procesar este aviso." },
 };
 
-/** Detalle aviso por aviso de la última lectura, agrupado por resultado. */
-const LogsLectura: React.FC<{ logs: LineaLog[] }> = ({ logs }) => {
-  if (!logs.length) {
-    return (
-      <p className="text-sm text-gray-500 dark:text-gray-400">
-        La última lectura no encontró ningún aviso en la casilla. Si esperabas ver alguno, revisá que el envío a firmar tenga en copia al correo configurado acá y que haya ocurrido dentro de los últimos 30 días.
-      </p>
-    );
-  }
-
+/** Las líneas de una corrida, agrupadas por resultado. */
+const LineasCorrida: React.FC<{ logs: LineaLog[] }> = ({ logs }) => {
   const orden: LineaLog["resultado"][] = ["archivado", "sin-archivo", "error", "duplicado", "ignorado"];
   const grupos = orden.map((r) => ({ resultado: r, items: logs.filter((l) => l.resultado === r) })).filter((g) => g.items.length > 0);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {grupos.map((g) => {
         const est = ESTILO_LOG[g.resultado];
         return (
@@ -261,21 +253,52 @@ const LogsLectura: React.FC<{ logs: LineaLog[] }> = ({ logs }) => {
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 mb-2">{est.ayuda}</p>
             <div className="space-y-2">
               {g.items.map((l, i) => (
-                <div key={i} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-2.5 text-xs">
-                  <p className="font-mono text-gray-700 dark:text-gray-200 break-all">{l.archivo || l.asunto}</p>
+                <div key={i} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-2.5 text-xs space-y-1">
+                  {/* break-all + whitespace-pre-wrap: los nombres son largos y hay que poder leerlos enteros. */}
+                  {l.archivo && <p className="font-mono text-gray-700 dark:text-gray-200 break-all whitespace-pre-wrap">{l.archivo}</p>}
+                  {l.asunto && l.asunto !== l.archivo && <p className="text-gray-500 dark:text-gray-400 break-all whitespace-pre-wrap">Asunto: {l.asunto}</p>}
                   {(l.cuit || l.documento) && (
-                    <p className="mt-1 text-gray-500 dark:text-gray-400">
+                    <p className="text-gray-500 dark:text-gray-400">
                       {l.cuit ? `CUIL ${l.cuit}` : "sin CUIL"}
                       {l.documento ? ` · Doc ${l.documento}` : ""}
                     </p>
                   )}
-                  {l.detalle && <p className="mt-1 text-gray-600 dark:text-gray-300">{l.detalle}</p>}
+                  {l.detalle && <p className="text-gray-600 dark:text-gray-300 break-words whitespace-pre-wrap">{l.detalle}</p>}
                 </div>
               ))}
             </div>
           </div>
         );
       })}
+    </div>
+  );
+};
+
+/** Historial de lecturas: una sección por corrida, de la más reciente a la más vieja. */
+const HistorialLecturas: React.FC<{ corridas: CorridaLog[] }> = ({ corridas }) => {
+  if (!corridas.length) {
+    return (
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Todavía no hay lecturas con actividad. Solo se guardan las corridas que encontraron algún aviso o que fallaron — las que no tienen nada que informar no se registran. Si esperabas ver alguna,
+        revisá que el envío a firmar tenga en copia al correo configurado acá y que haya ocurrido dentro de los últimos 30 días.
+      </p>
+    );
+  }
+
+  return (
+    <div className="max-h-[65vh] overflow-y-auto pr-1 space-y-4">
+      {corridas.map((c, idx) => (
+        <div key={idx} className="rounded-xl border border-gray-200 dark:border-gray-700 p-3">
+          <div className="flex items-start gap-2 mb-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+            <FontAwesomeIcon icon={c.ok ? faCircleCheck : faCircleXmark} className={`h-4 w-4 mt-0.5 shrink-0 ${c.ok ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`} />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{fmtFechaHora(c.at)}</p>
+              {c.detalle && <p className="text-xs text-gray-500 dark:text-gray-400 break-words whitespace-pre-wrap">{c.detalle}</p>}
+            </div>
+          </div>
+          {c.logs?.length ? <LineasCorrida logs={c.logs} /> : <p className="text-xs text-gray-400">Sin detalle por aviso.</p>}
+        </div>
+      ))}
     </div>
   );
 };
