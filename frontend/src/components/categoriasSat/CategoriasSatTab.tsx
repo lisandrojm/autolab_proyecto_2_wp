@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { fuzzyMatch } from '../../utils/searchHelpers';
+import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { categoriaSatAPI, CategoriaSatItem } from '../../api/categoriasSat';
 import { SearchAndFilters } from '../ui/SearchAndFilters';
 import { EmptyState } from '../ui/EmptyState';
@@ -9,8 +10,11 @@ import { InfoModal } from '../ui/InfoModal';
 import { ViewToggle, ViewMode } from '../ui/ViewToggle';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faListCheck, faChevronUp, faChevronDown, faDownload, faUpload, faFileExcel, faTimes, faPlus, faEdit, faTrash, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { faListCheck, faChevronUp, faChevronDown, faDownload, faUpload, faFileExcel, faTimes, faPlus, faEdit, faTrash, faArrowLeft, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { useAuthStore } from '../../stores/authStore';
+
+/** Catálogo de convenios: solo para poner el nombre del CCT en las solapas. */
+const conveniosApi = createSimpleCatalogApi('/convenios');
 
 type SortField = 'numeroCategoria' | 'nombre' | 'sueldoBruto' | 'neto' | 'codigoAfip' | 'presentismo' | 'sueldoBasico' | 'sueldoAdicional' | 'fechaActualizacion';
 type SortDir = 'asc' | 'desc';
@@ -31,6 +35,10 @@ const formatDate = (value: string | Date | undefined | null): string => {
 
 export const CategoriasSatTab: React.FC = () => {
   const [categorias, setCategorias] = useState<CategoriaSatItem[]>([]);
+  // Convenio seleccionado. Las categorías cuelgan de un convenio: la tabla que había era, en
+  // realidad, la del 0634/11 (SAT) sola. "" = todos.
+  const [convenioSel, setConvenioSel] = useState<string>('');
+  const [conveniosCat, setConveniosCat] = useState<SimpleCatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<SortField>('numeroCategoria');
@@ -275,6 +283,11 @@ export const CategoriasSatTab: React.FC = () => {
       setLoading(true);
       const data = await categoriaSatAPI.list();
       setCategorias(data);
+      // Solo para poner el nombre del convenio en las solapas; si falla, quedan los códigos.
+      conveniosApi
+        .list()
+        .then(setConveniosCat)
+        .catch(() => setConveniosCat([]));
     } catch (error) {
       console.error('Error fetching categorias SAT:', error);
     } finally {
@@ -296,7 +309,18 @@ export const CategoriasSatTab: React.FC = () => {
     return <FontAwesomeIcon icon={sortDir === 'asc' ? faChevronUp : faChevronDown} className="h-2.5 w-2.5 text-blue-500 ml-1" />;
   };
 
+  /** Convenios presentes en los datos, con su conteo. Se arman de los datos, no de una lista fija. */
+  const solapasConvenio = useMemo(() => {
+    const conteo = new Map<string, number>();
+    for (const c of categorias) conteo.set(String(c.data?.convenio || ''), (conteo.get(String(c.data?.convenio || '')) || 0) + 1);
+    const nombre = (cod: string) => conveniosCat.find((cv) => String(cv.externalId || '').trim() === cod)?.name || '';
+    return [...conteo.entries()]
+      .sort((a, b) => (a[0] === '' ? 1 : b[0] === '' ? -1 : a[0].localeCompare(b[0])))
+      .map(([codigo, total]) => ({ codigo, total, nombre: codigo ? nombre(codigo) : 'Sin convenio asignado' }));
+  }, [categorias, conveniosCat]);
+
   const filtered = categorias
+    .filter((c) => convenioSel === '' || String(c.data?.convenio || '') === convenioSel)
     .filter((c) => {
       const q = searchTerm.trim().toLowerCase();
       if (q.length === 0) return true;
@@ -370,6 +394,38 @@ export const CategoriasSatTab: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      {/* Solapas de convenio. Las categorías pertenecen a un CCT: el 0634/11 (SAT) es uno de varios,
+          y las de otro convenio tienen códigos de otro rango. Se arman de los datos, no de una lista
+          fija, así aparecen solas a medida que se cargan convenios nuevos. */}
+      {solapasConvenio.length > 1 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setConvenioSel('')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${convenioSel === '' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+          >
+            Todos <span className="opacity-70">({categorias.length})</span>
+          </button>
+          {solapasConvenio.map((s) => (
+            <button
+              key={s.codigo || 'sin'}
+              onClick={() => setConvenioSel(s.codigo)}
+              title={s.nombre || s.codigo}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors inline-flex items-center gap-1.5 max-w-[22rem] ${
+                convenioSel === s.codigo
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : s.codigo
+                    ? 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    : 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-800 hover:bg-amber-100'
+              }`}
+            >
+              {s.codigo ? <span className="font-mono opacity-80 shrink-0">{s.codigo}</span> : <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 shrink-0" />}
+              <span className="truncate font-normal">{s.nombre}</span>
+              <span className="opacity-70 shrink-0">({s.total})</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
         <div className="flex-1 w-full">
           <SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar por nombre, categoría, código ARCA..." />

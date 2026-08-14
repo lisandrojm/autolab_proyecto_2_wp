@@ -16,8 +16,8 @@ export const CategoriasSatPage: React.FC = () => {
 
   return (
     <PageLayout
-      title="Categorías SAT"
-      subtitle={activeTab === 'categorias' ? 'Listado de categorías SAT sincronizadas desde la base de datos' : 'Todos los roles externos del sistema y su asociación con categorías SAT'}
+      title="Categorías"
+      subtitle={activeTab === 'categorias' ? 'Categorías profesionales por Convenio Colectivo. La escala salarial vive en el grupo.' : 'Todos los roles externos del sistema y su asociación con categorías'}
       faIcon={{ icon: faListCheck }}
       shouldShowInfo={hasHelp(helpKey)}
       infoModal={{
@@ -33,7 +33,7 @@ export const CategoriasSatPage: React.FC = () => {
           {/* Tabs Header */}
           <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6 sticky top-[140px] z-20 bg-gray-100 dark:bg-gray-900 overflow-x-auto">
             <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'categorias' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => setActiveTab('categorias')}>
-              Categorías SAT
+              Categorías
             </button>
             <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'funciones' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => setActiveTab('funciones')}>
               Funciones FRAME

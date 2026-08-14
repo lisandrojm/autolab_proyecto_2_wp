@@ -2,6 +2,8 @@ import { Router } from "express";
 import multer from "multer";
 import xlsx from "xlsx";
 import { CategoriaSat } from "../models/CategoriaSat.js";
+import { Categoria } from "../models/Categoria.js";
+import { ConvenioGrupo } from "../models/ConvenioGrupo.js";
 import { authenticateToken } from "../middleware/auth.js";
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -10,7 +12,45 @@ const upload = multer({ storage: multer.memoryStorage() });
  */
 router.get("/", authenticateToken, async (req, res) => {
     try {
-        const items = await CategoriaSat.find().sort({ name: 1 }).lean();
+        // La escala salarial vive en el GRUPO (ver ConvenioGrupo), pero la respuesta mantiene la forma
+        // vieja —`data.sueldoBruto`, `data.codigoAfip`, `data.numeroCategoria`— con los valores
+        // resueltos desde el grupo. Así el generador del TXT, el chequeo de completitud y las funciones
+        // FRAME siguen consumiendo exactamente lo mismo, sin enterarse del cambio de modelo.
+        const [cats, grupos] = await Promise.all([Categoria.find().lean(), ConvenioGrupo.find().lean()]);
+        // Mientras `categorias` esté vacía (antes de correr la migración) se sirve la tabla vieja.
+        if (cats.length === 0) {
+            const items = await CategoriaSat.find().sort({ name: 1 }).lean();
+            return res.json(items);
+        }
+        const porGrupo = new Map(grupos.map((g) => [String(g._id), g]));
+        const items = cats
+            .map((c) => {
+            const g = porGrupo.get(String(c.grupoId)) || {};
+            return {
+                _id: c._id,
+                externalId: c.codigoArca || String(c.legacyId ?? ""),
+                name: c.nombre,
+                data: {
+                    id: c.legacyId,
+                    numeroCategoria: g.numero,
+                    nombre: c.nombre,
+                    // Se devuelve numérico por compatibilidad; el canónico de 6 dígitos va en `codigoArca`.
+                    codigoAfip: c.codigoArca ? Number(c.codigoArca) : 0,
+                    codigoArca: c.codigoArca,
+                    convenio: c.convenio,
+                    grupoId: c.grupoId,
+                    sueldoBasico: g.sueldoBasico ?? 0,
+                    sueldoAdicional: g.sueldoAdicional ?? 0,
+                    presentismo: g.presentismo ?? 0,
+                    sueldoBruto: g.sueldoBruto ?? 0,
+                    sueldoBrutoLetras: g.sueldoBrutoLetras ?? "",
+                    neto: g.neto ?? 0,
+                    sueldoNetoLetras: g.sueldoNetoLetras ?? "",
+                    fechaActualizacion: g.fechaActualizacion,
+                },
+            };
+        })
+            .sort((a, b) => String(a.name).localeCompare(String(b.name), "es", { sensitivity: "base" }));
         res.json(items);
     }
     catch (error) {

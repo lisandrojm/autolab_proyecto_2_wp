@@ -182,7 +182,7 @@ export const MobileNavbar: React.FC = () => {
     }> = [];
 
     if (isSuperAdminTenant) {
-      base.push({ path: '/tenants', icon: faBuilding, label: 'Tenants', scope: 'global', count: adminCounts.tenants }, { path: '/users', icon: faUserGear, label: 'Usuarios', scope: 'global', count: adminCounts.users }, { path: '/shifts', icon: faClock, label: 'Turnos', scope: 'global' }, { path: '/roles', icon: faUserShield, label: 'Roles', scope: 'global', count: adminCounts.roles }, { path: '/areas', icon: faLayerGroup, label: 'Áreas', scope: 'global', count: adminCounts.areas }, { path: '/positions', icon: faUserTie, label: 'Cargos', scope: 'global', count: adminCounts.positions }, { path: '/levels', icon: faUserGraduate, label: 'Niveles', scope: 'global', count: adminCounts.levels }, { path: '/clients', icon: faUsers, label: 'Clientes', scope: 'global', count: adminCounts.clients }, { path: '/categorias-sat', icon: faListCheck, label: 'Categorías SAT', scope: 'global' });
+      base.push({ path: '/tenants', icon: faBuilding, label: 'Tenants', scope: 'global', count: adminCounts.tenants }, { path: '/users', icon: faUserGear, label: 'Usuarios', scope: 'global', count: adminCounts.users }, { path: '/shifts', icon: faClock, label: 'Turnos', scope: 'global' }, { path: '/roles', icon: faUserShield, label: 'Roles', scope: 'global', count: adminCounts.roles }, { path: '/areas', icon: faLayerGroup, label: 'Áreas', scope: 'global', count: adminCounts.areas }, { path: '/positions', icon: faUserTie, label: 'Cargos', scope: 'global', count: adminCounts.positions }, { path: '/levels', icon: faUserGraduate, label: 'Niveles', scope: 'global', count: adminCounts.levels }, { path: '/clients', icon: faUsers, label: 'Clientes', scope: 'global', count: adminCounts.clients }, { path: '/categorias-sat', icon: faListCheck, label: 'Categorías', scope: 'global' });
     } else {
       if (hasPermission('admin_roles:view')) base.push({ path: '/roles', icon: faUserShield, label: 'Roles', scope: 'global', count: adminCounts.roles });
       if (hasPermission('admin_areas:view')) base.push({ path: '/areas', icon: faLayerGroup, label: 'Áreas', scope: 'global', count: adminCounts.areas });
@@ -213,7 +213,7 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission('config_releases:view')) base.push({ path: '/releases', icon: faFilePdf, label: 'Releases', scope: 'global' });
       if (hasPermission('config_releases:view')) base.push({ path: '/releases-tipos', icon: faRocket, label: 'Releases', scope: 'global' });
       // Categorías SAT y Funciones FRAME viven en un solo ítem con dos tabs: alcanza con cualquiera de los dos permisos.
-      if (hasPermission('config_categorias_sat:view') || hasPermission('config_frame_functions:view')) base.push({ path: '/categorias-sat', icon: faListCheck, label: 'Categorías SAT', scope: 'global' });
+      if (hasPermission('config_categorias_sat:view') || hasPermission('config_frame_functions:view')) base.push({ path: '/categorias-sat', icon: faListCheck, label: 'Categorías', scope: 'global' });
       if (hasPermission('config_bancos:view')) base.push({ path: '/bancos', icon: faBuildingColumns, label: 'Entidades Financieras', scope: 'global' });
       if (hasPermission('config_obras_sociales:view')) base.push({ path: '/obras-sociales', icon: faBriefcaseMedical, label: 'Obras Sociales', scope: 'global' });
       if (hasPermission('config_convenios:view')) base.push({ path: '/convenios', icon: faFileContract, label: 'Convenios', scope: 'global' });
