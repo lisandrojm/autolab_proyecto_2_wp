@@ -20,11 +20,11 @@ interface Props {
  * Configuración de qué obra social se usa cuando la persona no tiene ninguna asignada.
  *
  * Misma lógica que el fraccionamiento de Vacaciones: hay un valor global y cada empresa puede
- * pisarlo con el suyo. La jerarquía al resolver los datos AFIP es:
+ * pisarlo con el suyo. La jerarquía al resolver los datos ARCA es:
  *
  *   obra social de la persona  >  obra social de la empresa del contrato  >  global
  *
- * Sin esto el contrato queda sin código RNOS y no puede entrar en el TXT de alta masiva de AFIP.
+ * Sin esto el contrato queda sin código RNOS y no puede entrar en el TXT de alta masiva de ARCA.
  */
 export const ObraSocialDefaultsTab: React.FC<Props> = ({ obrasSociales, api, formatExternalId, onCambio }) => {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -94,7 +94,7 @@ export const ObraSocialDefaultsTab: React.FC<Props> = ({ obrasSociales, api, for
         <p className="text-sm text-gray-600 dark:text-gray-400">Se usa para completar el código RNOS cuando la persona no tiene obra social asignada. Cada empresa puede tener la suya; si no, se aplica la global.</p>
         <div className="mt-2 text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 p-2 rounded flex flex-col items-start gap-1">
           <p className="ml-1">
-            <strong>Para qué sirve:</strong> sin código RNOS el contrato no puede entrar en el TXT de alta masiva de AFIP.
+            <strong>Para qué sirve:</strong> sin código RNOS el contrato no puede entrar en el TXT de alta masiva de ARCA.
           </p>
           <p className="ml-1 font-bold">Jerarquía de aplicación: Obra social de la persona &gt; Empresa del contrato &gt; Global</p>
         </div>

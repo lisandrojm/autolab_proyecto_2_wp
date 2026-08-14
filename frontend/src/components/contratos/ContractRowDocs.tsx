@@ -49,12 +49,12 @@ export const uploadAltaRow = async (record: ContractOverviewRow, file: File) => 
 
 /** Las cabeceras de las columnas de documentos (mismo estilo que el resto de la tabla). */
 export const ContractDocsHeaders: React.FC<{
-  /** Si son false, se ocultan esas columnas (p. ej. en "Alta temprana de AFIP" confunden). */
+  /** Si son false, se ocultan esas columnas (p. ej. en "Alta temprana de ARCA" confunden). */
   showContrato?: boolean;
   showRelease?: boolean;
   /** Texto de la primera columna. Por defecto genérico; en pantallas donde el trámite es siempre el mismo (p. ej. Constancia de CUIT) conviene pasar uno específico. */
   altaLabel?: string;
-}> = ({ showContrato = true, showRelease = true, altaLabel = "Alta AFIP / Servicios" }) => (
+}> = ({ showContrato = true, showRelease = true, altaLabel = "Alta ARCA / Servicios" }) => (
   <>
     <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">{altaLabel}</th>
     {showContrato && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Contrato | Empresa</th>}
@@ -64,7 +64,7 @@ export const ContractDocsHeaders: React.FC<{
 
 /**
  * Las tres celdas de documentos del contrato ACTIVO de la fila (mismo comportamiento que la tarjeta del
- * modal): "Alta AFIP/Servicios" (ver/subir), "Contrato | Empresa" y "Release | Empresa" (descargar,
+ * modal): "Alta ARCA/Servicios" (ver/subir), "Contrato | Empresa" y "Release | Empresa" (descargar,
  * con menú de empresa cuando el proyecto tiene más de una). Devuelve tres <td> para insertar en la fila.
  */
 export const ContractDocsColumns: React.FC<{
@@ -77,10 +77,10 @@ export const ContractDocsColumns: React.FC<{
   onUploadAlta: (record: ContractOverviewRow, file: File) => Promise<void>;
   /** Si es false, el documento de Alta no se puede subir desde acá (se muestra un candado). */
   canUploadAlta?: boolean;
-  /** Si son false, se ocultan esas columnas (p. ej. en "Alta temprana de AFIP" confunden). */
+  /** Si son false, se ocultan esas columnas (p. ej. en "Alta temprana de ARCA" confunden). */
   showContrato?: boolean;
   showRelease?: boolean;
-  /** Oculta la etiqueta ("Alta AFIP"/"Alta Servicios") dentro de la celda, para no repetir lo que ya dice la cabecera de la columna. */
+  /** Oculta la etiqueta ("Alta ARCA"/"Alta Servicios") dentro de la celda, para no repetir lo que ya dice la cabecera de la columna. */
   hideAltaLabel?: boolean;
 }> = ({ record, contratoFrames, allEstados, activeReleases, onDownloadContract, onDownloadRelease, onUploadAlta, canUploadAlta = true, showContrato = true, showRelease = true, hideAltaLabel = false }) => {
   const [uploading, setUploading] = useState(false);
@@ -94,9 +94,9 @@ export const ContractDocsColumns: React.FC<{
   const canDownloadContract = templateHasContent(template);
   const tipoContrato = record.nombre_contrato || template?.data?.nombre || template?.name || "Contrato";
   const estadoImpositivo = estadoImpositivoDelContrato(asContract, contratoFrames, allEstados);
-  const tituloAlta = estadoImpositivo?.data?.etiquetaSecundaria?.trim() || (estadoImpositivo?.data?.tipoImpositivo === "alta_temprana_afip" ? "Alta AFIP" : "Documento de Servicios");
+  const tituloAlta = estadoImpositivo?.data?.etiquetaSecundaria?.trim() || (estadoImpositivo?.data?.tipoImpositivo === "alta_temprana_afip" ? "Alta ARCA" : "Documento de Servicios");
   // Constancia de CUIT ya no se satisface subiendo un PDF a mano: el "documento" es el JSON que
-  // "Validar CUIT" archiva solo en Dropbox al confirmar el CUIT activo en AFIP (constanciaAfipDropboxSubidaAt).
+  // "Validar CUIT" archiva solo en Dropbox al confirmar el CUIT activo en ARCA (constanciaAfipDropboxSubidaAt).
   // altaDocumentoUrl queda como reliquia del flujo viejo — no cuenta más para este trámite.
   const esConstanciaCuit = estadoImpositivo?.data?.tipoImpositivo === "constancia_cuit";
   // Si el contrato requiere Alta (tiene estado impositivo) y todavía no se subió/archivó el documento,
@@ -104,7 +104,7 @@ export const ContractDocsColumns: React.FC<{
   const requiereAlta = !!estadoImpositivo;
   const altaCargada = esConstanciaCuit ? !!record.constanciaAfipDropboxSubidaAt : !!record.altaDocumentoUrl;
   const descargaBloqueada = requiereAlta && !altaCargada;
-  const tituloBloqueo = esConstanciaCuit ? "Validá el CUIT en AFIP (pestaña Constancia de CUIT) para poder descargar" : `Subí primero el documento de ${tituloAlta} para poder descargar`;
+  const tituloBloqueo = esConstanciaCuit ? "Validá el CUIT en ARCA (pestaña Constancia de CUIT) para poder descargar" : `Subí primero el documento de ${tituloAlta} para poder descargar`;
 
   // Empresa efectiva: si el contrato tiene una fija guardada, esa sola; si no, las del proyecto.
   const savedContratoEmpresaId = record.empresaContratoId || "";
@@ -167,7 +167,7 @@ export const ContractDocsColumns: React.FC<{
 
   return (
     <>
-      {/* Alta AFIP / Servicios: ver o subir el PDF (solo si el contrato tiene un estado impositivo). */}
+      {/* Alta ARCA / Servicios: ver o subir el PDF (solo si el contrato tiene un estado impositivo). */}
       <td className="px-4 py-3" onClick={stop}>
         {estadoImpositivo ? (
           <div className="flex flex-col gap-1 min-w-[160px]">

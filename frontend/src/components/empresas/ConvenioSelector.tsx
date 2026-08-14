@@ -11,7 +11,7 @@ interface Props {
   onChange: (ids: string[]) => void;
 }
 
-/** Cuántos resultados se muestran a la vez: el nomenclador de AFIP tiene miles de convenios. */
+/** Cuántos resultados se muestran a la vez: el nomenclador de ARCA tiene miles de convenios. */
 const MAX_RESULTADOS = 40;
 
 /**

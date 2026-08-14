@@ -13,7 +13,7 @@ export interface ContratoItem {
     multiplicadorDiario: number;
     esTiempoIndeterminado: boolean;
     requiereFirma: boolean;
-    /** Códigos AFIP para el TXT de Alta masiva (específicos de convenio/modalidad). */
+    /** Códigos ARCA para el TXT de Alta masiva (específicos de convenio/modalidad). */
     afipModalidadContrato?: string;
     afipTipoServicio?: string;
     afipActividad?: string;

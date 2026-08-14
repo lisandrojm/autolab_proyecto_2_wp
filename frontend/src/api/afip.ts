@@ -2,7 +2,7 @@ import axios from "./axiosConfig";
 import { SinCuitValidacion } from "./users";
 
 /** "ok" = autoconsulta contra Padrón A13 respondió bien; "no_autorizado" = el login WSAA funciona
- *  pero AFIP no devuelve datos para el propio CUIT representada (servicio no autorizado en el
+ *  pero ARCA no devuelve datos para el propio CUIT representada (servicio no autorizado en el
  *  Administrador de Relaciones); "error" = falló la verificación en sí (transporte/WSAA);
  *  null = todavía no se corrió esta verificación (conexión anterior a esta feature). */
 export type ServicioPadronEstado = "ok" | "no_autorizado" | "error";
@@ -62,10 +62,10 @@ export interface ResultadoConsultaPadron {
   /** Con qué CUIT/ambiente del tenant se hizo la consulta — para diagnosticar sin acceso al server. */
   cuitRepresentada?: string;
   ambiente?: string;
-  /** faultcode/faultstring reales del SOAP Fault de AFIP, si la consulta terminó en uno. */
+  /** faultcode/faultstring reales del SOAP Fault de ARCA, si la consulta terminó en uno. */
   faultCode?: string;
   faultString?: string;
-  /** Respuesta cruda de AFIP (o el Fault, si lo hubo) tal cual la parseó el server. */
+  /** Respuesta cruda de ARCA (o el Fault, si lo hubo) tal cual la parseó el server. */
   raw?: any;
 }
 
@@ -90,7 +90,7 @@ export interface HabilitarFirmaResult {
   aviso?: string;
 }
 
-/** Un registro persistente de un llamado real a AFIP (guardado por el server en cada consulta). */
+/** Un registro persistente de un llamado real a ARCA (guardado por el server en cada consulta). */
 export interface AfipLogEntry {
   _id: string;
   tipo: "padron" | "servicio_test";
@@ -122,7 +122,7 @@ export const afipAPI = {
   },
 
   /** Re-corre la autoconsulta de prueba contra Padrón A13 con las credenciales ya guardadas — para
-   *  revalidar después de arreglar la autorización del servicio en AFIP, sin re-pegar el certificado. */
+   *  revalidar después de arreglar la autorización del servicio en ARCA, sin re-pegar el certificado. */
   async verificarServicio(): Promise<VerificacionServicioPadron> {
     const { data } = await axios.post("/afip/verificar-servicio", {}, { timeout: 30000 });
     return data;
@@ -137,14 +137,14 @@ export const afipAPI = {
   /**
    * Salida para la gente SIN CUIT/CUIL argentino: archiva un JSON en la carpeta de Dropbox que ya
    * vigila la transición automática de ese trámite, para que el contrato avance a Firma digital sin
-   * pasar por AFIP (que no le aplica). Ver POST /afip/habilitar-firma.
+   * pasar por ARCA (que no le aplica). Ver POST /afip/habilitar-firma.
    */
   async habilitarFirma(targets: ConsultaPadronTarget[], tipo: "alta_temprana_afip" | "constancia_cuit"): Promise<HabilitarFirmaResult> {
     const { data } = await axios.post("/afip/habilitar-firma", { targets, tipo }, { timeout: 120000 });
     return data;
   },
 
-  /* ── Flujo "Sin CUIT": documentación de respaldo del trámite de AFIP pendiente ── */
+  /* ── Flujo "Sin CUIT": documentación de respaldo del trámite de ARCA pendiente ── */
 
   /** Agrega un documento de respaldo (con archivo opcional) al contrato. */
   async sinCuitAgregarDocumento(payload: {
@@ -180,7 +180,7 @@ export const afipAPI = {
     return data;
   },
 
-  /** Últimos llamados reales a AFIP (Consulta Padrón / autoconsulta de servicio) — para diagnosticar
+  /** Últimos llamados reales a ARCA (Consulta Padrón / autoconsulta de servicio) — para diagnosticar
    *  sin depender de haber visto el toast en el momento. */
   async logs(): Promise<AfipLogEntry[]> {
     const { data } = await axios.get("/afip/logs");

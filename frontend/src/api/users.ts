@@ -46,7 +46,7 @@ export interface Contract {
   empresaReleaseId?: string;
   nombre_empresa_contrato?: string;
   nombre_empresa_release?: string;
-  // Documento de "Alta" (AFIP o Servicios, según el Estado impositivo vinculado a la Plantilla).
+  // Documento de "Alta" (ARCA o Servicios, según el Estado impositivo vinculado a la Plantilla).
   altaDocumentoUrl?: string;
   altaDocumentoNombre?: string;
   areaShiftAssignments?: {
@@ -56,7 +56,7 @@ export interface Contract {
 }
 
 /** Fila de la página global "Contratos" (`GET /users/contracts-overview`): usuario × proyecto, con su contrato activo. */
-/** Un documento de respaldo del flujo "Sin CUIT" (extranjeros con el trámite de AFIP pendiente). */
+/** Un documento de respaldo del flujo "Sin CUIT" (extranjeros con el trámite de ARCA pendiente). */
 export interface SinCuitDocumento {
   tipo: "pasaporte" | "dni_precario" | "residencia_tramite" | "cuil_provisorio" | "otro";
   numero: string;
@@ -73,7 +73,7 @@ export interface SinCuitValidacion {
   validado?: boolean;
   validadoPorNombre?: string;
   validadoAt?: string;
-  /** Cuándo revisar si ya obtuvo CUIL y puede pasar al flujo normal de AFIP ("YYYY-MM-DD"). */
+  /** Cuándo revisar si ya obtuvo CUIL y puede pasar al flujo normal de ARCA ("YYYY-MM-DD"). */
   fechaSeguimiento?: string;
 }
 
@@ -112,7 +112,7 @@ export interface ContractOverviewRow {
   constanciaVigenciaDesde?: string;
   constanciaVigenciaHasta?: string;
   constanciaVerificador?: string;
-  /** Resultado de la última consulta al Padrón de AFIP — reemplaza al PDF como fuente de verdad. */
+  /** Resultado de la última consulta al Padrón de ARCA — reemplaza al PDF como fuente de verdad. */
   constanciaAfipEstado?: "activo" | "inactivo" | "desconocido" | "";
   constanciaAfipConsultadaAt?: string;
   /** Recién con esto el trámite se considera terminado (ver ConstanciaBulk.tsx estadoConstancia). */
@@ -132,9 +132,9 @@ export interface ContractOverviewRow {
   /** Empresas del proyecto (con fallback a las del ABM) para el menú "Descargar con:". */
   contratoEmpresas?: { id: string; label: string }[];
   releaseEmpresas?: { id: string; label: string }[];
-  // FKs para el chequeo de completitud AFIP (se resuelven contra los catálogos en el front).
+  // FKs para el chequeo de completitud ARCA (se resuelven contra los catálogos en el front).
   cuit?: string;
-  /** La persona declaró NO tener CUIT/CUIL argentino: va por el circuito "Sin CUIT", no por AFIP. */
+  /** La persona declaró NO tener CUIT/CUIL argentino: va por el circuito "Sin CUIT", no por ARCA. */
   sinCuit?: boolean;
   /** Flujo "Sin CUIT": documentación de respaldo cargada + OK manual de quien revisa. */
   sinCuitValidacion?: SinCuitValidacion | null;

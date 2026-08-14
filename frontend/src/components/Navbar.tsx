@@ -30,6 +30,22 @@ interface AdminCounts {
 const MEMBRETE_PATH = '/empresas-membretes';
 const PLANTILLAS_PATHS = [MEMBRETE_PATH, '/pdfs', '/pdfs-vacaciones', '/contratos-frame', '/releases'];
 
+/**
+ * Subgrupo "ARCA" (dentro de Configuración): todo lo que depende del organismo (ex AFIP).
+ * El orden del array es el que se muestra en el menú (NO se reordena alfabéticamente):
+ * la Conexión va primera porque es el prerrequisito de lo demás.
+ */
+const ARCA_PATHS = ['/afip', '/categorias-sat', '/convenios', '/obras-sociales'];
+
+/**
+ * Subgrupos colapsables de Configuración. `storageKey` persiste el abierto/cerrado y
+ * `paths` decide qué items se sacan del listado plano para meterlos adentro del grupo.
+ */
+const CONFIG_GROUPS = [
+  { key: 'plantillas', storageKey: 'configPlantillasOpen', paths: PLANTILLAS_PATHS },
+  { key: 'arca', storageKey: 'configArcaOpen', paths: ARCA_PATHS },
+] as const;
+
 export const MobileNavbar: React.FC = () => {
   const { user, logout, hasPermission } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
@@ -56,24 +72,29 @@ export const MobileNavbar: React.FC = () => {
     else localStorage.removeItem('adminOpenSection');
   };
 
-  // Subgrupo "Plantillas" dentro de Configuración. Su estado vive acá (y no en NavMenu) porque
-  // NavMenu se redefine en cada render del padre y perdería el estado interno.
-  // Arranca abierto si lo dejaste abierto, o si entrás directo a una de sus páginas.
-  const [openPlantillas, setOpenPlantillas] = useState<boolean>(() => localStorage.getItem('configPlantillasOpen') === 'true' || PLANTILLAS_PATHS.includes(location.pathname));
-  const togglePlantillas = () => {
-    const newVal = !openPlantillas;
-    setOpenPlantillas(newVal);
-    localStorage.setItem('configPlantillasOpen', String(newVal));
+  // Subgrupos colapsables dentro de Configuración ("Plantillas", "ARCA"). Su estado vive acá
+  // (y no en NavMenu) porque NavMenu se redefine en cada render del padre y perdería el estado interno.
+  // Cada uno arranca abierto si lo dejaste abierto, o si entrás directo a una de sus páginas.
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => Object.fromEntries(CONFIG_GROUPS.map((g) => [g.key, localStorage.getItem(g.storageKey) === 'true' || (g.paths as readonly string[]).includes(location.pathname)])));
+  const toggleGroup = (key: string) => {
+    const group = CONFIG_GROUPS.find((g) => g.key === key);
+    if (!group) return;
+    setOpenGroups((prev) => {
+      const newVal = !prev[key];
+      localStorage.setItem(group.storageKey, String(newVal));
+      return { ...prev, [key]: newVal };
+    });
   };
   // Al NAVEGAR hacia una de sus páginas se abre solo. Se ignora el primer render para no pisar
   // el estado inicial: si no, estando parado en una de esas rutas nunca se podría colapsar.
-  const plantillasMounted = React.useRef(false);
+  const groupsMounted = React.useRef(false);
   useEffect(() => {
-    if (!plantillasMounted.current) {
-      plantillasMounted.current = true;
+    if (!groupsMounted.current) {
+      groupsMounted.current = true;
       return;
     }
-    if (PLANTILLAS_PATHS.includes(location.pathname)) setOpenPlantillas(true);
+    const group = CONFIG_GROUPS.find((g) => (g.paths as readonly string[]).includes(location.pathname));
+    if (group) setOpenGroups((prev) => ({ ...prev, [group.key]: true }));
   }, [location.pathname]);
   const [adminCounts, setAdminCounts] = useState<AdminCounts>({ clients: 0, tenants: 0, roles: 0, users: 0, areas: 0, positions: 0, levels: 0, projects: 0 });
   const SHOW_MENU_COUNTS = false;
@@ -202,7 +223,8 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission('config_escaneo_dropbox:view')) base.push({ path: '/escaneo-dropbox', icon: faArrowsRotate, label: 'Dropbox | Documentos', scope: 'global' });
       // Comparte permiso con el escaneo de Dropbox: las dos configuran la misma integración.
       if (hasPermission('config_escaneo_dropbox:view')) base.push({ path: '/dropbox-sign', icon: faFileSignature, label: 'DropboxSign | Firmas', scope: 'global' });
-      if (hasPermission('config_afip:view')) base.push({ path: '/afip', icon: faLandmark, label: 'AFIP', scope: 'global' });
+      // Dentro del subgrupo "ARCA" se muestra como "Conexión" (el organismo ya lo nombra el grupo).
+      if (hasPermission('config_afip:view')) base.push({ path: '/afip', icon: faLandmark, label: 'Conexión', scope: 'global' });
     }
 
     return base;
@@ -265,8 +287,8 @@ export const MobileNavbar: React.FC = () => {
 
     const generalAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ['/tenants'].includes(item.path)) : adminItems.filter((item) => ['/admin/projects', '/admin/contracts', '/orders', '/vacations', '/requests', '/documents', '/firmas-pendientes'].includes(item.path))).sort(byLabel);
 
-    // Ojo: los paths de PLANTILLAS_PATHS NO van acá, se agrupan aparte en el subgrupo "Plantillas".
-    const configPaths = ['/requests/config', '/order-types', '/shifts', '/vacations-rules', '/holidays', '/categorias-sat', '/clients', '/centros-costo', '/bancos', '/obras-sociales', '/convenios', '/empresas', '/contratos', '/releases-tipos', '/admin/sedes', '/escaneo-dropbox', '/dropbox-sign', '/afip'];
+    // Ojo: los paths de CONFIG_GROUPS (Plantillas, ARCA) NO van acá, se agrupan aparte en su subgrupo.
+    const configPaths = ['/requests/config', '/order-types', '/shifts', '/vacations-rules', '/holidays', '/clients', '/centros-costo', '/bancos', '/empresas', '/contratos', '/releases-tipos', '/admin/sedes', '/escaneo-dropbox', '/dropbox-sign'];
     // "Mi Perfil" se incluye como un item más para que entre en el orden alfabético
     const profileItem = { path: '/mi-perfil', icon: faIdCard, label: 'Mi Perfil', scope: 'global' as const };
 
@@ -276,25 +298,31 @@ export const MobileNavbar: React.FC = () => {
       ...plantillasBuilt.filter((i) => i.path === MEMBRETE_PATH),
       ...plantillasBuilt.filter((i) => i.path !== MEMBRETE_PATH).sort(byLabel),
     ];
-    const plantillasGroup = { path: '#plantillas', icon: faFilePdf, label: 'Plantillas', scope: 'global' as const, children: plantillasChildren };
+    const plantillasGroup = { path: '#plantillas', groupKey: 'plantillas', icon: faFilePdf, label: 'Plantillas', scope: 'global' as const, children: plantillasChildren };
+
+    // Subgrupo "ARCA": respeta el orden de ARCA_PATHS (Conexión primero, que es el prerrequisito).
+    const arcaChildren = ARCA_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems;
+    const arcaGroup = { path: '#arca', groupKey: 'arca', icon: faLandmark, label: 'ARCA', scope: 'global' as const, children: arcaChildren };
 
     const configItems = [
       ...adminItems.filter((item) => configPaths.includes(item.path)),
       ...(hasPermission('config_profile:view') ? [profileItem] : []),
       ...(plantillasChildren.length > 0 ? [plantillasGroup] : []),
+      ...(arcaChildren.length > 0 ? [arcaGroup] : []),
     ].sort(byLabel) as any[];
     // "Import WP" es un módulo temporal → va al FINAL de Configuración (después del orden alfabético).
     const importItem = adminItems.find((item) => item.path === '/users/import-wp');
     if (importItem) configItems.push(importItem);
 
     const renderMenuItem = (item: any, isChild = false) => {
-      // Subgrupo colapsable (ej: "Plantillas"). Debe ir primero: no es un link navegable.
+      // Subgrupo colapsable (ej: "Plantillas", "ARCA"). Debe ir primero: no es un link navegable.
       if (item.children) {
+        const isOpen = !!openGroups[item.groupKey];
         return (
           <div key={item.path}>
             <button
               type="button"
-              onClick={togglePlantillas}
+              onClick={() => toggleGroup(item.groupKey)}
               className="w-full group flex items-center justify-between px-2 py-2 rounded transition-all text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/50"
             >
               <div className="flex items-center space-x-3 flex-1 min-w-0">
@@ -303,10 +331,10 @@ export const MobileNavbar: React.FC = () => {
                 </div>
                 <span className="font-medium truncate">{item.label}</span>
               </div>
-              <FontAwesomeIcon icon={openPlantillas ? faChevronDown : faChevronRight} className="h-3 w-3 shrink-0" />
+              <FontAwesomeIcon icon={isOpen ? faChevronDown : faChevronRight} className="h-3 w-3 shrink-0" />
             </button>
 
-            {openPlantillas && <nav className="space-y-1 mt-1 ml-5 pl-2 border-l-2 border-gray-200 dark:border-gray-700">{item.children.map((child: any) => renderMenuItem(child, true))}</nav>}
+            {isOpen && <nav className="space-y-1 mt-1 ml-5 pl-2 border-l-2 border-gray-200 dark:border-gray-700">{item.children.map((child: any) => renderMenuItem(child, true))}</nav>}
           </div>
         );
       }

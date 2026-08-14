@@ -106,7 +106,7 @@ const MODULE_LABELS: Record<string, string> = {
   'config_membretes:view': 'Empresa/s | Membrete/s y firma',
   'config_profile:view': 'Mi Perfil',
   'config_escaneo_dropbox:view': 'Dropbox | Documentos',
-  'config_afip:view': 'AFIP',
+  'config_afip:view': 'ARCA',
 
   'mobile_collaborator:view': 'Colaborador',
   'mobile_coordinator:view': 'Coordinador',

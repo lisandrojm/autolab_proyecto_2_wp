@@ -2,9 +2,9 @@ import { ContractOverviewRow } from "../../api/users";
 import { AfipCatalogs, resolveAfipValues } from "./afipCompleteness";
 
 /**
- * Generación del archivo TXT de "Alta masiva sin límite de registros" de AFIP/ARCA.
+ * Generación del archivo TXT de "Alta masiva sin límite de registros" de ARCA.
  * Registro de ancho fijo de 130 caracteres, sin separadores. Los campos obligatorios numéricos van
- * con ceros a la izquierda; los opcionales, en blanco (espacios), tal como pide la interfaz de AFIP.
+ * con ceros a la izquierda; los opcionales, en blanco (espacios), tal como pide la interfaz de ARCA.
  */
 
 /** Solo dígitos, justificado a la derecha con ceros a la izquierda, a lo sumo `len` caracteres. */
@@ -20,7 +20,7 @@ const txt = (v: string, len: number): string => (v || "").slice(0, len).padEnd(l
 /** Campo opcional: se completa con espacios en blanco. */
 const blank = (len: number): string => " ".repeat(len);
 
-/** Fecha en formato AAAA/MM/DD que pide AFIP. Acepta "YYYY-MM-DD" o "DD/MM/YYYY". */
+/** Fecha en formato AAAA/MM/DD que pide ARCA. Acepta "YYYY-MM-DD" o "DD/MM/YYYY". */
 const fechaAfip = (s: string): string => {
   if (!s) return "";
   let m = /^(\d{4})[-/](\d{2})[-/](\d{2})/.exec(s);
@@ -80,7 +80,7 @@ export function buildAltaRecord(row: ContractOverviewRow, cat: AfipCatalogs): st
   return record;
 }
 
-/** Une varios registros con CRLF (formato que espera AFIP). */
+/** Une varios registros con CRLF (formato que espera ARCA). */
 export function buildAltaTxt(records: string[]): string {
   return records.join("\r\n");
 }

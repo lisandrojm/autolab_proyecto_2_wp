@@ -721,7 +721,7 @@ export const ProjectTeamPage: React.FC = () => {
   // Estados de contrato para filtrar: el catálogo (Info "estados") más los que aparezcan en los contratos
   // cargados, por si alguno quedó con un estado que ya no está en el catálogo.
   const estadoContratoOptions = useMemo(() => {
-    // Se deduplica por etiqueta canónica: "Falta pedido de AFIP" y "Pedido de AFIP" son el mismo estado.
+    // Se deduplica por etiqueta canónica: "Falta pedido de ARCA" y "Pedido de ARCA" son el mismo estado.
     const seen = new Set<string>();
     allEstados.forEach((e) => e.name && seen.add(estadoLabel(e.name)));
     // Último contrato del miembro en este proyecto (getActiveContract se declara más abajo, así que
@@ -1630,7 +1630,7 @@ export const ProjectTeamPage: React.FC = () => {
   };
 
   /**
-   * Sube el PDF de "Alta AFIP"/"Alta Servicios" de un contrato puntual. A diferencia de editar/eliminar,
+   * Sube el PDF de "Alta ARCA"/"Alta Servicios" de un contrato puntual. A diferencia de editar/eliminar,
    * el modal de contratos queda ABIERTO después de subir, así que en vez de recargar todo el equipo se
    * actualiza `selectedMemberForDetail` in-place (misma referencia que usa EmployeeContractsModal).
    */
@@ -2018,7 +2018,7 @@ export const ProjectTeamPage: React.FC = () => {
         <td className="px-4 py-3">
           {activeContract?.nombre_estado_empleado ? <EstadoBadge name={activeContract.nombre_estado_empleado} className="text-[10px] whitespace-nowrap" /> : <span className="text-xs text-gray-400">—</span>}
         </td>
-        {/* Estado impositivo (Alta AFIP / Alta Servicios): según el Tipo de Contrato, no el estado actual. */}
+        {/* Estado impositivo (Alta ARCA / Alta Servicios): según el Tipo de Contrato, no el estado actual. */}
         <td className="px-4 py-3">
           {(() => {
             const estadoImpositivo = activeContract ? estadoImpositivoDelContrato(activeContract, contratoFrames, allEstados) : null;
@@ -3772,7 +3772,7 @@ export const ProjectTeamPage: React.FC = () => {
       <InfoModal isOpen={showEstadoInfo} onClose={() => setShowEstadoInfo(false)} title="Estado del contrato" subtitle="De dónde sale y dónde se configura" size="sm" zIndex={120} actions={[{ label: 'Entendido', onClick: () => setShowEstadoInfo(false), variant: 'primary' }]}>
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-            El Estado se resuelve solo, a partir del <strong>Tipo de Contrato</strong> elegido: si tiene un Estado impositivo vinculado (por ejemplo "Pedido de AFIP" o "Pedido de Servicios"), se muestra acá.
+            El Estado se resuelve solo, a partir del <strong>Tipo de Contrato</strong> elegido: si tiene un Estado impositivo vinculado (por ejemplo "Pedido de ARCA" o "Pedido de Servicios"), se muestra acá.
             Si no tiene ninguno, no hay nada para mostrar.
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">

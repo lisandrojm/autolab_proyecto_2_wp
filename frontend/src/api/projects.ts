@@ -486,7 +486,7 @@ class ProjectsAPI {
     return data;
   }
 
-  /** Sube (o reemplaza) el PDF de "Alta" (AFIP/Servicios) de un contrato puntual (por índice). */
+  /** Sube (o reemplaza) el PDF de "Alta" (ARCA/Servicios) de un contrato puntual (por índice). */
   async uploadAltaDocumento(projectId: string, userId: string, contractIndex: number, file: File): Promise<{ altaDocumentoUrl: string; altaDocumentoNombre: string }> {
     const formData = new FormData();
     formData.append("document", file);

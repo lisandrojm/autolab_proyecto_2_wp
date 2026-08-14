@@ -30,7 +30,7 @@ export function DocumentsPage() {
               </button>
               <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === "afip" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`} onClick={() => setActiveTab("afip")}>
                 <FontAwesomeIcon icon={faLandmark} className="text-xs" />
-                AFIP
+                ARCA
               </button>
             </div>
             <a
@@ -45,7 +45,7 @@ export function DocumentsPage() {
           {/* Tab Content */}
           <div className="animate-in fade-in duration-300">
             {activeTab === "dropbox" && <DropboxTab onCountChange={handleCountChange} />}
-            {activeTab === "afip" && <DropboxTab key="afip" fixedRoot="/AFIP" rootLabel="AFIP" onCountChange={handleCountChange} />}
+            {activeTab === "afip" && <DropboxTab key="afip" fixedRoot="/AFIP" rootLabel="ARCA" onCountChange={handleCountChange} />}
           </div>
         </div>
       }

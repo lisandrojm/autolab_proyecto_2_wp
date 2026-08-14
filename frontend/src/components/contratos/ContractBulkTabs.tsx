@@ -54,14 +54,14 @@ const empresaTabClass = (active: boolean): string => `px-4 py-2 text-sm font-med
 
 type TipoImpositivo = 'alta_temprana_afip' | 'constancia_cuit';
 const TIPO_LABEL: Record<TipoImpositivo, string> = {
-  alta_temprana_afip: 'Alta temprana de AFIP',
+  alta_temprana_afip: 'Alta temprana de ARCA',
   constancia_cuit: 'Constancia de CUIT',
 };
 
 /**
  * Pestañas de la tabla. "sin_cuit" NO es un trámite impositivo como los otros dos: es un corte
  * transversal por la persona (no tiene CUIT/CUIL argentino), que puede estar en cualquiera de los
- * dos trámites. Esa gente se saca de las pestañas de AFIP —esos trámites no le aplican— y se
+ * dos trámites. Esa gente se saca de las pestañas de ARCA —esos trámites no le aplican— y se
  * agrupa acá, donde en vez de "Generar TXT"/"Validar ARCA" se la manda a generar documentos.
  */
 type TabTramite = TipoImpositivo | 'sin_cuit';
@@ -70,7 +70,7 @@ type TabTramite = TipoImpositivo | 'sin_cuit';
 type ImpositivoRow = ContractOverviewRow & { _tipo?: TipoImpositivo; _estadoName: string; /** El estado admite gente sin CUIT: a esa gente el badge le dice "Sin CUIT". */ _aceptaSinCuit?: boolean };
 
 /**
- * Columna "Estado Impositivo": el Estado impositivo (Alta AFIP / Alta Servicios) vinculado al TIPO de
+ * Columna "Estado Impositivo": el Estado impositivo (Alta ARCA / Alta Servicios) vinculado al TIPO de
  * contrato — no al estado actual, por eso sigue mostrándose igual en las tres pestañas aunque el
  * contrato ya haya avanzado (p. ej. a "Envío de documentación" o "Firma pendiente"). Mismo criterio
  * que la columna "Estado impositivo" de Gestionar Equipo (ProjectTeamPage.tsx).
@@ -194,7 +194,7 @@ const CeldaDocumentacionSinCuit: React.FC<{ row: ContractOverviewRow; onAbrir: (
  * Acción de la pestaña "Sin CUIT": "Enviar a Generar Documentos".
  *
  * Reemplaza a "Generar TXT" / "Validar ARCA" para la gente que todavía NO tiene CUIT/CUIL argentino:
- * su trámite de AFIP/ANSES queda PENDIENTE hasta que cuente con la documentación migratoria, y sin
+ * su trámite de ARCA/ANSES queda PENDIENTE hasta que cuente con la documentación migratoria, y sin
  * esto quedaría trabada antes de poder firmar. En su lugar se archiva un comprobante JSON en la carpeta
  * "AFIP/Sin cuit" de Dropbox, el contrato avanza a Generar Documentos y desde ahí se le generan el
  * Contrato y el Release.
@@ -214,7 +214,7 @@ const BotonHabilitarFirma: React.FC<{
     e.stopPropagation();
     const confirm = await sweetAlert.confirm(
       '¿Enviar a Generar Documentos?',
-      `${row.userName} todavía no posee CUIT/CUIL. El trámite de AFIP queda PENDIENTE hasta que cuente con la documentación migratoria necesaria. Se va a archivar un comprobante en "AFIP/Sin cuit" con la documentación de respaldo, y el contrato avanzará a Generar Documentos de forma excepcional.`,
+      `${row.userName} todavía no posee CUIT/CUIL. El trámite de ARCA queda PENDIENTE hasta que cuente con la documentación migratoria necesaria. Se va a archivar un comprobante en "AFIP/Sin cuit" con la documentación de respaldo, y el contrato avanzará a Generar Documentos de forma excepcional.`,
       'Sí, enviar',
     );
     if (!confirm.isConfirmed) return;
@@ -260,7 +260,7 @@ const EstadoImpositivoCell: React.FC<{ record: ContractOverviewRow; contratoFram
 };
 
 /**
- * Celda "Empresa Contrato" / "Empresa Release" de la pestaña Alta temprana de AFIP: elegir (o
+ * Celda "Empresa Contrato" / "Empresa Release" de la pestaña Alta temprana de ARCA: elegir (o
  * cambiar) la empresa directo desde la tabla, sin abrir el wizard completo de "Configurar Miembro".
  * La de Contrato es obligatoria para poder generar el TXT (un mismo archivo se sube a la sesión de
  * ARCA de UNA sola empresa, así que cada contrato tiene que tener la suya definida antes de poder
@@ -423,8 +423,8 @@ const AsignarEmpresaMasivo: React.FC<{
 };
 
 /**
- * Sub-pestaña "Altas de AFIP | Constancia de CUIT": lista SOLO lectura de los contratos cuyo estado
- * actual es un estado impositivo, con su trámite (Alta temprana de AFIP / Constancia de CUIT),
+ * Sub-pestaña "Altas de ARCA | Constancia de CUIT": lista SOLO lectura de los contratos cuyo estado
+ * actual es un estado impositivo, con su trámite (Alta temprana de ARCA / Constancia de CUIT),
  * filtros y exportación a CSV.
  */
 export const ContractBulkAfipTab: React.FC<{
@@ -455,7 +455,7 @@ export const ContractBulkAfipTab: React.FC<{
   const [filterClientId, setFilterClientId] = useState('');
   // Preseleccionado cuando se entra desde el proyecto (Gestionar Equipo → Gestión masiva de Contratos).
   const [filterProjectId, setFilterProjectId] = useState(initialProjectId);
-  // Empresa (ABM "Empresas"): agrupa/filtra las altas por la empleadora que las va a presentar en AFIP.
+  // Empresa (ABM "Empresas"): agrupa/filtra las altas por la empleadora que las va a presentar en ARCA.
   const [filterEmpresaId, setFilterEmpresaId] = useState('');
 
   // Vista tabla / tarjetas (como Contratos): la tabla solo en pantallas grandes.
@@ -468,7 +468,7 @@ export const ContractBulkAfipTab: React.FC<{
   }, []);
   const effectiveViewMode = isLarge ? viewMode : 'cards';
 
-  // Catálogos para resolver los datos AFIP (completitud).
+  // Catálogos para resolver los datos ARCA (completitud).
   const [categorias, setCategorias] = useState<CategoriaSatItem[]>([]);
   const [tipos, setTipos] = useState<ContratoItem[]>([]);
   const [obrasSociales, setObrasSociales] = useState<SimpleCatalogItem[]>([]);
@@ -480,11 +480,11 @@ export const ContractBulkAfipTab: React.FC<{
   const [constancia, setConstancia] = useState<{ row: ImpositivoRow; cuil: string } | null>(null);
   // Explicación de qué hace la columna "Verificar (Opc)" (modal informativo).
   const [verificarInfoOpen, setVerificarInfoOpen] = useState(false);
-  // Explicación de qué hacer en AFIP/ARCA con el TXT ya generado (modal informativo).
+  // Explicación de qué hacer en ARCA con el TXT ya generado (modal informativo).
   const [cargarArcaInfoOpen, setCargarArcaInfoOpen] = useState(false);
   // Explicación del flujo completo: Generar TXT → Cargar en ARCA → sincronización automática.
   const [flujoTxtInfoOpen, setFlujoTxtInfoOpen] = useState(false);
-  // Explicación de qué son y de dónde salen los datos que exige la columna "Datos AFIP".
+  // Explicación de qué son y de dónde salen los datos que exige la columna "Datos ARCA".
   const [datosAfipInfoOpen, setDatosAfipInfoOpen] = useState(false);
   // Explicación de qué es la columna "Datos CUIT/CUIL" y por qué gatea Validar / Validar ARCA Masivo.
   const [datosCuitInfoOpen, setDatosCuitInfoOpen] = useState(false);
@@ -609,24 +609,24 @@ export const ContractBulkAfipTab: React.FC<{
     load(true);
   };
 
-  // Genera el TXT de Alta masiva de AFIP para los contratos con datos completos del conjunto dado;
+  // Genera el TXT de Alta masiva de ARCA para los contratos con datos completos del conjunto dado;
   // omite los incompletos (no se puede armar una línea válida) e informa cuántos quedaron afuera.
   const generarTxt = (items: { row: ImpositivoRow; result: AfipRowResult }[], filenameBase: string) => {
     const registros = items.map((x) => buildAltaRecord(x.row, afipCat)).filter((r): r is string => r !== null);
     if (registros.length === 0) {
-      sweetAlert.error('Sin datos completos', 'Ningún contrato del conjunto tiene todos los datos AFIP cargados. Completá los faltantes (columna «Datos AFIP») antes de generar el TXT.');
+      sweetAlert.error('Sin datos completos', 'Ningún contrato del conjunto tiene todos los datos ARCA cargados. Completá los faltantes (columna «Datos ARCA») antes de generar el TXT.');
       return;
     }
     const omitidos = items.length - registros.length;
     downloadTxt(buildAltaTxt(registros), `${filenameBase}_${hoyStamp()}.txt`);
     if (omitidos > 0) {
-      sweetAlert.info('TXT generado', `Se incluyeron ${registros.length} alta(s). Se omitieron ${omitidos} contrato(s) por datos AFIP incompletos.`);
+      sweetAlert.info('TXT generado', `Se incluyeron ${registros.length} alta(s). Se omitieron ${omitidos} contrato(s) por datos ARCA incompletos.`);
     } else {
       sweetAlert.success('TXT generado', `Se incluyeron ${registros.length} alta(s) en el archivo.`);
     }
   };
 
-  // Solo los contratos cuyo estado actual es impositivo, con su chequeo de completitud AFIP.
+  // Solo los contratos cuyo estado actual es impositivo, con su chequeo de completitud ARCA.
   const impositivoRows = useMemo<{ row: ImpositivoRow; result: AfipRowResult }[]>(() => {
     const out: { row: ImpositivoRow; result: AfipRowResult }[] = [];
     for (const r of rows) {
@@ -674,7 +674,7 @@ export const ContractBulkAfipTab: React.FC<{
   const rowsPorFiltrosComunes = useMemo(() => impositivoRows.filter((x) => matchesCommonFilters(x.row)), [impositivoRows, matchesCommonFilters]);
 
   // Los contadores siguen el mismo corte que la tabla: la gente sin CUIT se cuenta aparte y no
-  // infla los trámites de AFIP, que no le aplican.
+  // infla los trámites de ARCA, que no le aplican.
   const countAlta = rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'alta_temprana_afip' && !noPoseeCuit(x.row.cuit, x.row.sinCuit)).length;
   const countCuit = rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'constancia_cuit' && !noPoseeCuit(x.row.cuit, x.row.sinCuit)).length;
   const countSinCuit = rowsPorFiltrosComunes.filter((x) => noPoseeCuit(x.row.cuit, x.row.sinCuit)).length;
@@ -705,7 +705,7 @@ export const ContractBulkAfipTab: React.FC<{
   const filtered = useMemo(() => {
     return rowsPorFiltrosComunes.filter(({ row: r, result }) => {
       // "Sin CUIT" agrupa a la gente sin CUIT/CUIL de CUALQUIERA de los dos trámites; las pestañas
-      // de AFIP, al revés, la excluyen (esos trámites no le aplican y quedaría trabada ahí).
+      // de ARCA, al revés, la excluyen (esos trámites no le aplican y quedaría trabada ahí).
       if (filterTipo === 'sin_cuit') {
         if (!noPoseeCuit(r.cuit, r.sinCuit)) return false;
       } else {
@@ -748,7 +748,7 @@ export const ContractBulkAfipTab: React.FC<{
   // poder elegir de antemano por cuál empresa se va a presentar el alta.
   const empresaOptions = useMemo(() => companies.map((c) => ({ value: c._id, label: c.razonSocial })).sort((a, b) => a.label.localeCompare(b.label)), [companies]);
 
-  // Selección de filas para armar el TXT. Solo se pueden marcar los contratos con datos AFIP completos.
+  // Selección de filas para armar el TXT. Solo se pueden marcar los contratos con datos ARCA completos.
   const rowKey = (r: ContractOverviewRow) => `${r._id}-${r.contractIndex}`;
   const [selected, setSelected] = useState<Set<string>>(new Set());
   /** Pestaña "Sin CUIT": fila cuyo modal de documentación de respaldo está abierto. */
@@ -765,7 +765,7 @@ export const ContractBulkAfipTab: React.FC<{
       else n.add(k);
       return n;
     });
-  // Qué hace falta para poder tildar una fila depende del trámite: en Alta temprana de AFIP son los
+  // Qué hace falta para poder tildar una fila depende del trámite: en Alta temprana de ARCA son los
   // datos completos para el TXT; en Constancia de CUIT alcanza con tener el CUIT/CUIL cargado (es lo
   // único que necesita "Validar ARCA Masivo").
   /** "Sin CUIT" usa el MISMO layout de columnas que "Constancia de CUIT" (Verificar, Datos
@@ -880,7 +880,7 @@ export const ContractBulkAfipTab: React.FC<{
         )}
       </div>
 
-      {/* Filtro de Empresa Contrato como tabs — solo en Alta temprana de AFIP (en Constancia de CUIT no aplica). */}
+      {/* Filtro de Empresa Contrato como tabs — solo en Alta temprana de ARCA (en Constancia de CUIT no aplica). */}
       {filterTipo === 'alta_temprana_afip' && empresaOptions.length > 0 && (
         <div className="flex items-center border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
           <span className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap shrink-0">Empresa Contrato | </span>
@@ -895,15 +895,15 @@ export const ContractBulkAfipTab: React.FC<{
         </div>
       )}
 
-      {/* Barra de completitud + acción, en la misma línea. El TXT solo aplica a Alta temprana de AFIP. */}
+      {/* Barra de completitud + acción, en la misma línea. El TXT solo aplica a Alta temprana de ARCA. */}
       {filterTipo === 'alta_temprana_afip' && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200/60 dark:border-green-800/60" title="Contratos con todos los datos AFIP cargados">
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200/60 dark:border-green-800/60" title="Contratos con todos los datos ARCA cargados">
               <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />
               {countCompletos} completos
             </span>
-            <button onClick={() => setSoloIncompletos((v) => !v)} className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold border transition-colors ${soloIncompletos ? 'bg-amber-500 text-white border-amber-500' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/60 hover:bg-amber-100 dark:hover:bg-amber-900/30'}`} title="Mostrar solo los contratos con datos AFIP faltantes">
+            <button onClick={() => setSoloIncompletos((v) => !v)} className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold border transition-colors ${soloIncompletos ? 'bg-amber-500 text-white border-amber-500' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/60 hover:bg-amber-100 dark:hover:bg-amber-900/30'}`} title="Mostrar solo los contratos con datos ARCA faltantes">
               <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
               {countIncompletos} incompletos
             </button>
@@ -912,13 +912,13 @@ export const ContractBulkAfipTab: React.FC<{
             {/* Grupo 1 — asignación masiva de Empresa: siempre visible, se activa al tildar filas. */}
             {asignacionMasivaEmpresa}
 
-            {/* Separador: lo de arriba edita datos; lo de abajo son las salidas hacia AFIP/ARCA. */}
+            {/* Separador: lo de arriba edita datos; lo de abajo son las salidas hacia ARCA. */}
             <span className="hidden sm:block h-6 w-px bg-gray-200 dark:bg-gray-700" />
 
-            {/* Grupo 2 — salidas hacia AFIP: generar el TXT y abrir ARCA. */}
+            {/* Grupo 2 — salidas hacia ARCA: generar el TXT y abrir ARCA. */}
             <button onClick={() => generarTxt(fuenteTxt, nombreArchivoTxt)} disabled={fuenteTxt.every((x) => !x.result.completo)} title={seleccionados.length > 0 ? 'Generar el TXT con los contratos seleccionados (solo los completos)' : 'Generar el TXT con los contratos completos del listado (o marcá algunos con el check)'} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0">
               <FontAwesomeIcon icon={faFileLines} className="h-4 w-4" />
-              Generar TXT Masivo (AFIP){seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
+              Generar TXT Masivo (ARCA){seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
             </button>
             <button type="button" onClick={() => setFlujoTxtInfoOpen(true)} title="Qué hacer con el TXT" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 shrink-0">
               <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
@@ -972,7 +972,7 @@ export const ContractBulkAfipTab: React.FC<{
           </button>
         </div>
       ) : filtered.length === 0 ? (
-        <EmptyState icon={faFileInvoiceDollar} title="Sin contratos impositivos" description={impositivoRows.length === 0 ? 'Ningún contrato tiene hoy un estado impositivo (Alta temprana de AFIP o Constancia de CUIT). Asigná uno de esos estados en el contrato del miembro.' : 'No hay resultados con los filtros aplicados.'} />
+        <EmptyState icon={faFileInvoiceDollar} title="Sin contratos impositivos" description={impositivoRows.length === 0 ? 'Ningún contrato tiene hoy un estado impositivo (Alta temprana de ARCA o Constancia de CUIT). Asigná uno de esos estados en el contrato del miembro.' : 'No hay resultados con los filtros aplicados.'} />
       ) : effectiveViewMode === 'cards' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map(({ row: r, result }) => {
@@ -1042,7 +1042,7 @@ export const ContractBulkAfipTab: React.FC<{
                   {filterTipo === 'alta_temprana_afip' && (
                     <button onClick={() => setDetalle({ row: r, result })} className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border transition-colors ${result.completo ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100'}`}>
                       <FontAwesomeIcon icon={result.completo ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
-                      AFIP: {result.completo ? 'Completo' : `Faltan ${result.faltantes}`}
+                      ARCA: {result.completo ? 'Completo' : `Faltan ${result.faltantes}`}
                     </button>
                   )}
                   <span className="ml-auto">
@@ -1092,7 +1092,7 @@ export const ContractBulkAfipTab: React.FC<{
                         </th>
                       )}
                       {filterTipo !== 'sin_cuit' && (
-                        <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Estado en el Padrón de AFIP/ARCA">
+                        <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Estado en el Padrón de ARCA">
                           ARCA
                         </th>
                       )}
@@ -1104,14 +1104,14 @@ export const ContractBulkAfipTab: React.FC<{
                   {filterTipo === 'alta_temprana_afip' && (
                     <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                       <span className="inline-flex items-center gap-1.5">
-                        Datos AFIP
+                        Datos ARCA
                         <button type="button" onClick={() => setDatosAfipInfoOpen(true)} title="Por qué a veces no se puede generar el TXT" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
                           <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
                         </button>
                       </span>
                     </th>
                   )}
-                  {filterTipo !== 'sin_cuit' && <ContractDocsHeaders showContrato={false} showRelease={false} altaLabel={filterTipo === 'alta_temprana_afip' ? 'Alta AFIP' : 'Alta Servicios'} />}
+                  {filterTipo !== 'sin_cuit' && <ContractDocsHeaders showContrato={false} showRelease={false} altaLabel={filterTipo === 'alta_temprana_afip' ? 'Alta ARCA' : 'Alta Servicios'} />}
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">CUIT</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
@@ -1143,11 +1143,11 @@ export const ContractBulkAfipTab: React.FC<{
                       <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!esSeleccionable(r, result)} onChange={() => toggleSel(rowKey(r))} title="Seleccionar para las acciones masivas (asignar Empresa, generar TXT, validar en ARCA)" className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                     </td>
                     <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)] ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
-                      {/* Sin CUIT los trámites de AFIP no aplican: la salida es generar los documentos. */}
+                      {/* Sin CUIT los trámites de ARCA no aplican: la salida es generar los documentos. */}
                       {noPoseeCuit(r.cuit, r.sinCuit) ? (
                         <BotonHabilitarFirma row={r} tramite={r._tipo || 'constancia_cuit'} validado={!!r.sinCuitValidacion?.validado} onHabilitado={() => load(true)} />
                       ) : filterTipo === 'alta_temprana_afip' ? (
-                        <button type="button" onClick={() => generarTxt([{ row: r, result }], `alta_afip_${r.userName.replace(/\s+/g, '_')}`)} disabled={!result.completo} title={result.completo ? 'Generar el TXT de AFIP de esta persona' : !r.empresaContratoId ? 'Elegí la Empresa del contrato para poder generar el TXT' : 'Faltan datos AFIP para generar el TXT de esta persona'} className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold transition-colors whitespace-nowrap ${result.completo ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>
+                        <button type="button" onClick={() => generarTxt([{ row: r, result }], `alta_afip_${r.userName.replace(/\s+/g, '_')}`)} disabled={!result.completo} title={result.completo ? 'Generar el TXT de ARCA de esta persona' : !r.empresaContratoId ? 'Elegí la Empresa del contrato para poder generar el TXT' : 'Faltan datos ARCA para generar el TXT de esta persona'} className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold transition-colors whitespace-nowrap ${result.completo ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>
                           <FontAwesomeIcon icon={faFileLines} className="h-3 w-3" />
                           Generar TXT
                         </button>
@@ -1210,7 +1210,7 @@ export const ContractBulkAfipTab: React.FC<{
                             })()}
                           </td>
                         )}
-                        {/* Estado en AFIP/ARCA y archivado en Dropbox, por separado (acciones — Validar/ARCA — viven en la columna sticky "Acciones"). */}
+                        {/* Estado en ARCA y archivado en Dropbox, por separado (acciones — Validar/ARCA — viven en la columna sticky "Acciones"). */}
                         {filterTipo !== 'sin_cuit' && (
                           <td className="px-4 py-3">
                             <ArcaBadge row={r} />
@@ -1223,7 +1223,7 @@ export const ContractBulkAfipTab: React.FC<{
                     )}
                     {filterTipo === 'alta_temprana_afip' && (
                       <td className="px-4 py-3">
-                        <button onClick={() => setDetalle({ row: r, result })} title="Ver detalle de los datos AFIP" className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap transition-colors ${result.completo ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100'}`}>
+                        <button onClick={() => setDetalle({ row: r, result })} title="Ver detalle de los datos ARCA" className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap transition-colors ${result.completo ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100'}`}>
                           <FontAwesomeIcon icon={result.completo ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
                           {result.completo ? 'Completo' : `Faltan ${result.faltantes}`}
                         </button>
@@ -1273,7 +1273,7 @@ export const ContractBulkAfipTab: React.FC<{
         <Modal
           isOpen={!!detalle}
           onClose={() => setDetalle(null)}
-          title={`Datos AFIP — ${detalle.row.userName}`}
+          title={`Datos ARCA — ${detalle.row.userName}`}
           subtitle={`${detalle.row.projectName} · ${detalle.row.nombre_contrato}`}
           size="md"
           zIndex={70}
@@ -1370,7 +1370,7 @@ export const ContractBulkAfipTab: React.FC<{
         </Modal>
       )}
 
-      {/* Documentación de respaldo del flujo "Sin CUIT" (trámite de AFIP pendiente). */}
+      {/* Documentación de respaldo del flujo "Sin CUIT" (trámite de ARCA pendiente). */}
       {validacionRow && (
         <SinCuitValidacionModal
           row={validacionRow}
@@ -1383,7 +1383,7 @@ export const ContractBulkAfipTab: React.FC<{
       {verificarInfoOpen && (
         <Modal isOpen={verificarInfoOpen} onClose={() => setVerificarInfoOpen(false)} title="Verificar (Opc)" size="sm" zIndex={80}>
           <div className="space-y-3">
-            <p className="text-sm text-gray-700 dark:text-gray-200">Botón opcional para cotejar la constancia contra el original en el portal de AFIP/ARCA, además de la consulta automática al Padrón que ya hace "Validar".</p>
+            <p className="text-sm text-gray-700 dark:text-gray-200">Botón opcional para cotejar la constancia contra el original en el portal de ARCA, además de la consulta automática al Padrón que ya hace "Validar".</p>
             <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1.5 list-disc list-inside">
               <li>Copia el CUIT/CUIL de la persona al portapapeles.</li>
               <li>Abre el portal de ARCA en una pestaña nueva, listo para pegarlo.</li>
@@ -1396,7 +1396,7 @@ export const ContractBulkAfipTab: React.FC<{
       {cargarArcaInfoOpen && (
         <Modal isOpen={cargarArcaInfoOpen} onClose={() => setCargarArcaInfoOpen(false)} title="Cargar en ARCA" size="sm" zIndex={80}>
           <div className="space-y-3">
-            <p className="text-sm text-gray-700 dark:text-gray-200">Este botón redirige a la página de AFIP/ARCA. Una vez ahí:</p>
+            <p className="text-sm text-gray-700 dark:text-gray-200">Este botón redirige a la página de ARCA. Una vez ahí:</p>
             <ol className="text-sm text-gray-600 dark:text-gray-300 space-y-2 list-decimal list-inside">
               <li>
                 Iniciar sesión con Clave Fiscal en <span className="font-mono text-xs">https://www.arca.gob.ar</span> (dominio oficial actual — es el portal <span className="font-mono text-xs">afip.gob.ar</span> renombrado; si ya tenés abierto <span className="font-mono text-xs">portalcf.cloud.afip.gob.ar/portal/app/</span>, es el mismo portal de acceso).
@@ -1417,13 +1417,13 @@ export const ContractBulkAfipTab: React.FC<{
           <div className="space-y-3">
             <ol className="text-sm text-gray-600 dark:text-gray-300 space-y-2 list-decimal list-inside">
               <li>
-                <strong>Generar TXT Masivo (AFIP)</strong>: descarga el archivo TXT con las altas completas, listo para importar.
+                <strong>Generar TXT Masivo (ARCA)</strong>: descarga el archivo TXT con las altas completas, listo para importar.
               </li>
               <li>
-                <strong>Cargar en ARCA</strong>: abre el portal de AFIP/ARCA para importar ese TXT y generar las altas.
+                <strong>Cargar en ARCA</strong>: abre el portal de ARCA para importar ese TXT y generar las altas.
               </li>
               <li>
-                Cuando AFIP sincronice las altas, se guardarán automáticamente en la carpeta de Dropbox <span className="font-mono text-xs">FZERO S.R.L/AFIP/Alta temprana de Afip</span> y los contratos van a aparecer en la bandeja <strong>Firma Digital</strong>.
+                Cuando ARCA sincronice las altas, se guardarán automáticamente en la carpeta de Dropbox <span className="font-mono text-xs">FZERO S.R.L/AFIP/Alta temprana de Afip</span> y los contratos van a aparecer en la bandeja <strong>Firma Digital</strong>.
               </li>
             </ol>
           </div>
@@ -1431,7 +1431,7 @@ export const ContractBulkAfipTab: React.FC<{
       )}
 
       {datosAfipInfoOpen && (
-        <Modal isOpen={datosAfipInfoOpen} onClose={() => setDatosAfipInfoOpen(false)} title="Datos AFIP" size="sm" zIndex={80}>
+        <Modal isOpen={datosAfipInfoOpen} onClose={() => setDatosAfipInfoOpen(false)} title="Datos ARCA" size="sm" zIndex={80}>
           <div className="space-y-3">
             <p className="text-sm text-gray-700 dark:text-gray-200">El TXT de Alta temprana necesita un conjunto fijo de códigos por persona. Si a alguno le "Faltan N", significa que esos códigos no se pudieron armar todavía — y por eso ese contrato queda afuera del TXT hasta completarlos.</p>
             <p className="text-sm text-gray-600 dark:text-gray-300">Los códigos salen de:</p>
@@ -1465,7 +1465,7 @@ export const ContractBulkAfipTab: React.FC<{
           <div className="space-y-3">
             <p className="text-sm text-gray-700 dark:text-gray-200">Es el CUIT/CUIL de la persona, cargado en sus datos personales — el único dato que hace falta para buscar la Constancia de Inscripción en ARCA.</p>
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              Si dice <strong>"Falta 1"</strong> es porque ese usuario todavía no tiene el CUIT/CUIL cargado. Hasta que se cargue, esa fila no se puede tildar y los botones <strong>"Validar"</strong> y <strong>"Validar ARCA Masivo"</strong> quedan deshabilitados para esa persona (no hay CUIT que consultar en el Padrón de AFIP).
+              Si dice <strong>"Falta 1"</strong> es porque ese usuario todavía no tiene el CUIT/CUIL cargado. Hasta que se cargue, esa fila no se puede tildar y los botones <strong>"Validar"</strong> y <strong>"Validar ARCA Masivo"</strong> quedan deshabilitados para esa persona (no hay CUIT que consultar en el Padrón de ARCA).
             </p>
             <p className="text-[11px] text-gray-500 dark:text-gray-400">Cargá el CUIT/CUIL en los datos personales del usuario para poder validarlo.</p>
           </div>
@@ -1479,7 +1479,7 @@ export const ContractBulkAfipTab: React.FC<{
               Es obligatoria porque un mismo TXT se sube a la sesión de ARCA de <strong>una sola empresa</strong>: sin saber a cuál corresponde cada contrato, no se puede armar el archivo (por eso las filas sin Empresa Contrato quedan afuera del TXT hasta que se elija una).
             </p>
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              La Alta temprana de AFIP se genera con la <strong>misma empresa</strong> que la elegida acá como Empresa del Contrato — no hace falta volver a elegirla en otro lado.
+              La Alta temprana de ARCA se genera con la <strong>misma empresa</strong> que la elegida acá como Empresa del Contrato — no hace falta volver a elegirla en otro lado.
             </p>
           </div>
         </Modal>
@@ -1905,11 +1905,11 @@ const FirmaEnviarCell: React.FC<{
 
 /**
  * Sub-pestaña "Firma digital": lista los contratos que ya terminaron su trámite impositivo (Alta
- * temprana de AFIP archivada, o Constancia de CUIT archivada — el cron de Dropbox ya los movió solo
+ * temprana de ARCA archivada, o Constancia de CUIT archivada — el cron de Dropbox ya los movió solo
  * al estado "Envío de documentación", ver `estadoDropboxCronService.ts`). Flujo en dos pasos:
  * 1) "Generar" arma el Contrato + Release(s) y los deja para revisar (ojito) — no envía nada.
  * 2) "Enviar a firmar" (bulk, o individual desde la columna "Acciones") sube los ya generados a la
- *    carpeta Dropbox "Outbox" que vigila Dropbox Sign (+ el Alta temprana de AFIP ya cargada, si ese
+ *    carpeta Dropbox "Outbox" que vigila Dropbox Sign (+ el Alta temprana de ARCA ya cargada, si ese
  *    fue el trámite de origen). La Constancia de CUIT nunca se sube: ya cumplió su función al mover
  *    al contrato a este estado.
  */
@@ -2037,7 +2037,7 @@ export const ContractBulkFirmaTab: React.FC<{
       return n;
     });
   const seleccionados = useMemo(() => enviables.filter((r) => selected.has(rowKey(r))), [enviables, selected]);
-  // Igual criterio que "Generar TXT (AFIP)": sin selección, se manda todo lo filtrado (comodidad).
+  // Igual criterio que "Generar TXT (ARCA)": sin selección, se manda todo lo filtrado (comodidad).
   const fuenteEnvio = seleccionados.length > 0 ? seleccionados : enviables;
 
   const handleEnviar = async () => {
@@ -2115,7 +2115,7 @@ export const ContractBulkFirmaTab: React.FC<{
           <LoadingSpinner message="Cargando contratos..." />
         </div>
       ) : filtered.length === 0 ? (
-        <EmptyState icon={faFileSignature} title="Sin contratos para firmar" description={rowsEnEnvio.length === 0 ? 'Ningún contrato está hoy en el estado de "Envío de documentación" (se llega ahí automáticamente al archivar el Alta temprana de AFIP o la Constancia de CUIT).' : 'No hay resultados con los filtros aplicados.'} />
+        <EmptyState icon={faFileSignature} title="Sin contratos para firmar" description={rowsEnEnvio.length === 0 ? 'Ningún contrato está hoy en el estado de "Envío de documentación" (se llega ahí automáticamente al archivar el Alta temprana de ARCA o la Constancia de CUIT).' : 'No hay resultados con los filtros aplicados.'} />
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
           <div className="overflow-x-auto custom-scrollbar max-h-[640px]">

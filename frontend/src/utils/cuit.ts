@@ -4,7 +4,7 @@
  * Si el valor guardado no tiene 11 dígitos se devuelve tal cual en vez de vacío: en un listado es
  * preferible ver el dato mal cargado (y poder corregirlo) que ver la celda en blanco. Ojo: esto es
  * distinto de `fmtCuit` en `components/contratos/ConstanciaBulk.tsx`, que devuelve "" a propósito
- * porque ahí el vacío significa "no hay CUIT usable para consultar AFIP".
+ * porque ahí el vacío significa "no hay CUIT usable para consultar ARCA".
  */
 export const formatCuit = (raw?: string | null): string => {
   const valor = String(raw || "").trim();

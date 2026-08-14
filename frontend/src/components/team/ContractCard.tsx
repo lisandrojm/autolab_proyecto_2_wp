@@ -170,7 +170,7 @@ export const findTemplate = (contract: Contract, contratoFrames: ContratoFrameIt
 };
 
 /**
- * Estado impositivo (AFIP/Servicios) vinculado al Tipo de Contrato de este contrato, si tiene uno
+ * Estado impositivo (ARCA/Servicios) vinculado al Tipo de Contrato de este contrato, si tiene uno
  * (a través de su Plantilla). Se usa tanto para el badge de la tarjeta como para la columna "Estado
  * impositivo" de las tablas de Gestionar Equipo y Contratos.
  */
@@ -209,8 +209,8 @@ export const buildDownloadFileName = (tipo: "Contrato" | "Release", user: User |
 type CategoriaAltaDocumento = "afip" | "servicios" | null;
 
 /**
- * Categoría (AFIP/Servicios) del Estado impositivo, para el título por defecto del bloque de alta.
- * Se ancla al `tipoImpositivo` (el trámite: Alta temprana de AFIP / Constancia de CUIT), que es el
+ * Categoría (ARCA/Servicios) del Estado impositivo, para el título por defecto del bloque de alta.
+ * Se ancla al `tipoImpositivo` (el trámite: Alta temprana de ARCA / Constancia de CUIT), que es el
  * identificador estable. Para estados viejos sin `tipoImpositivo` cae al nombre canónico como respaldo.
  * Devuelve null solo si NO hay estado impositivo: cualquier estado impositivo ofrece la subida del PDF.
  */
@@ -245,7 +245,7 @@ export interface ContractCardProps {
   deleteTitle?: string;
   onDownloadContract: (empresaId?: string) => void;
   onDownloadRelease: (release: Release, empresaId?: string) => void;
-  /** Sube (o reemplaza) el PDF de "Alta AFIP"/"Alta Servicios" de este contrato. */
+  /** Sube (o reemplaza) el PDF de "Alta ARCA"/"Alta Servicios" de este contrato. */
   onUploadAltaDocumento?: (file: File) => Promise<void>;
 }
 
@@ -275,7 +275,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
   const altaDocumentoInputRef = React.useRef<HTMLInputElement>(null);
 
   // Catálogo de Estados (Configuración → Estados): ya se carga una sola vez por sesión (lo dispara
-  // también EstadoBadge), acá se usa para saber qué Estado impositivo (AFIP/Servicios) tiene la plantilla.
+  // también EstadoBadge), acá se usa para saber qué Estado impositivo (ARCA/Servicios) tiene la plantilla.
   const estadosCatalog = useEstadoCatalogStore((s) => s.estados);
   const ensureEstadosLoaded = useEstadoCatalogStore((s) => s.ensureLoaded);
   React.useEffect(() => {
@@ -286,10 +286,10 @@ export const ContractCard: React.FC<ContractCardProps> = ({
   const template = findTemplate(contract, contratoFrames);
   const existeTemplate = !!template; // la plantilla existe en contratos-frame (aunque esté vacía)
   const canDownloadContract = templateHasContent(template);
-  // Estado impositivo vinculado a ESTA plantilla → de ahí sale el badge secundario ("Servicios"/"Alta de AFIP").
+  // Estado impositivo vinculado a ESTA plantilla → de ahí sale el badge secundario ("Servicios"/"Alta de ARCA").
   const estadoImpositivo = estadoImpositivoDelContrato(contract, contratoFrames, estadosCatalog);
   const categoriaAltaDocumento = categoriaAltaDocumentoDe(estadoImpositivo);
-  const tituloAltaDocumento = estadoImpositivo?.data?.etiquetaSecundaria?.trim() || (categoriaAltaDocumento === "afip" ? "Alta AFIP" : "Documento de Servicios");
+  const tituloAltaDocumento = estadoImpositivo?.data?.etiquetaSecundaria?.trim() || (categoriaAltaDocumento === "afip" ? "Alta ARCA" : "Documento de Servicios");
   const tipoContrato = contract.nombre_contrato || template?.data?.nombre || template?.name || "Contrato";
   // Sin Contrato vinculado (aún no populado) se asume que sí se envía, para no ocultar la descarga de golpe.
   const contratoRequiereFirma = typeof template?.contratoId === "object" ? template.contratoId?.data?.requiereFirma !== false : true;
@@ -393,7 +393,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
           </div>
         </div>
 
-        {/* Documento de "Alta" (AFIP/Servicios): para CUALQUIER estado impositivo, sin importar el
+        {/* Documento de "Alta" (ARCA/Servicios): para CUALQUIER estado impositivo, sin importar el
             estado actual del contrato. El título sale del badge secundario o de la categoría. */}
         {estadoImpositivo && (
           <div className={`mt-3 pt-3 border-t ${dividerClass}`}>

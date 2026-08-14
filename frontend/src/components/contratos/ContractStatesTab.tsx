@@ -74,8 +74,8 @@ const ChipImpositivo: React.FC = () => (
 );
 
 /**
- * Badge con el trámite impositivo (Alta temprana de AFIP / Constancia de CUIT) que representa el estado.
- * Mismo violeta pero invertido: "Alta temprana de AFIP" en positivo (relleno) y "Constancia de CUIT"
+ * Badge con el trámite impositivo (Alta temprana de ARCA / Constancia de CUIT) que representa el estado.
+ * Mismo violeta pero invertido: "Alta temprana de ARCA" en positivo (relleno) y "Constancia de CUIT"
  * en negativo (contorno), para distinguirlos de un vistazo.
  */
 /** Badge del paso del flujo de dependencias ("Paso N"). No muestra nada si el estado no está en el flujo. */
@@ -126,14 +126,14 @@ const ChipAceptaSinCuit: React.FC<{ estado: InfoItem }> = ({ estado }) => {
 
 /**
  * Los estados se listan separados por índole: los IMPOSITIVOS (los que representan un trámite de
- * AFIP y definen por qué pestaña de Contratos pasa el contrato) y el resto (los del circuito de
+ * ARCA y definen por qué pestaña de Contratos pasa el contrato) y el resto (los del circuito de
  * firma y los operativos). Sin esa separación se leían todos como una misma lista y se confundían.
  */
 const GRUPOS_ESTADOS: { key: string; titulo: string; descripcion: string; icono: typeof faFileInvoiceDollar; claseIcono: string; pertenece: (e: InfoItem) => boolean }[] = [
   {
     key: 'impositivos',
     titulo: 'Estados impositivos',
-    descripcion: 'Representan un trámite ante AFIP (Alta temprana o Constancia de CUIT) y definen por qué pestaña de Gestión de Contratos pasa el contrato.',
+    descripcion: 'Representan un trámite ante ARCA (Alta temprana o Constancia de CUIT) y definen por qué pestaña de Gestión de Contratos pasa el contrato.',
     icono: faFileInvoiceDollar,
     claseIcono: 'text-purple-500',
     pertenece: (e) => !!e.data?.esImpositivo,
@@ -141,7 +141,7 @@ const GRUPOS_ESTADOS: { key: string; titulo: string; descripcion: string; icono:
   {
     key: 'no-impositivos',
     titulo: 'Otros estados',
-    descripcion: 'No representan un trámite de AFIP: son las etapas del circuito de firma y los estados operativos del contrato.',
+    descripcion: 'No representan un trámite de ARCA: son las etapas del circuito de firma y los estados operativos del contrato.',
     icono: faTags,
     claseIcono: 'text-slate-400',
     pertenece: (e) => !e.data?.esImpositivo,
@@ -153,13 +153,13 @@ type TipoImpositivo = 'alta_temprana_afip' | 'constancia_cuit';
 const TIPOS_IMPOSITIVO: { value: TipoImpositivo; label: string; descripcion: string }[] = [
   {
     value: 'alta_temprana_afip',
-    label: 'Alta temprana de AFIP',
-    descripcion: 'Registro anticipado de la relación laboral en AFIP, que se hace ANTES de que la persona empiece a trabajar. Da de alta al trabajador en tiempo y forma.',
+    label: 'Alta temprana de ARCA',
+    descripcion: 'Registro anticipado de la relación laboral en ARCA, que se hace ANTES de que la persona empiece a trabajar. Da de alta al trabajador en tiempo y forma.',
   },
   {
     value: 'constancia_cuit',
     label: 'Constancia de CUIT',
-    descripcion: 'Comprobante de inscripción que emite AFIP acreditando el CUIT y la situación fiscal de la persona.',
+    descripcion: 'Comprobante de inscripción que emite ARCA acreditando el CUIT y la situación fiscal de la persona.',
   },
 ];
 
@@ -171,11 +171,11 @@ interface FormState {
   /** Badge secundario (solo con esImpositivo tildado): identifica el tipo de contrato en sus tarjetas. */
   etiquetaSecundaria: string;
   colorEtiquetaSecundaria: string;
-  /** Trámite impositivo (solo con esImpositivo tildado): "Alta temprana de AFIP" o "Constancia de CUIT". */
+  /** Trámite impositivo (solo con esImpositivo tildado): "Alta temprana de ARCA" o "Constancia de CUIT". */
   tipoImpositivo: TipoImpositivo | '';
   /**
    * El estado admite también personas SIN CUIT/CUIL argentino. A esas personas el badge del trámite
-   * les muestra "Sin CUIT" en lugar del trámite de AFIP, porque su trámite queda pendiente hasta que
+   * les muestra "Sin CUIT" en lugar del trámite de ARCA, porque su trámite queda pendiente hasta que
    * tengan la documentación migratoria. Las que sí tienen CUIT siguen viendo el trámite normal, así
    * que un mismo estado puede convivir con los dos casos.
    */
@@ -381,7 +381,7 @@ export const ContractStatesTab: React.FC = () => {
       return;
     }
     if (form.esImpositivo && !form.tipoImpositivo) {
-      sweetAlert.error('Falta el trámite impositivo', 'Elegí si el estado impositivo es "Alta temprana de AFIP" o "Constancia de CUIT" (uno u otro, nunca los dos).');
+      sweetAlert.error('Falta el trámite impositivo', 'Elegí si el estado impositivo es "Alta temprana de ARCA" o "Constancia de CUIT" (uno u otro, nunca los dos).');
       return;
     }
     const payload: EstadoPayload = {
@@ -682,9 +682,9 @@ export const ContractStatesTab: React.FC = () => {
                     );
                   })}
                 </div>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Uno u otro: un estado impositivo es "Alta temprana de AFIP" o "Constancia de CUIT", nunca los dos.</p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Uno u otro: un estado impositivo es "Alta temprana de ARCA" o "Constancia de CUIT", nunca los dos.</p>
 
-                {/* Convivencia con gente sin CUIT: el trámite de AFIP les queda pendiente, pero el
+                {/* Convivencia con gente sin CUIT: el trámite de ARCA les queda pendiente, pero el
                     estado es el mismo — solo cambia el badge que se les muestra. */}
                 <div className="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-purple-200/60 dark:border-purple-800/40">
                   <div className="flex items-center gap-2 min-w-0">
@@ -727,7 +727,7 @@ export const ContractStatesTab: React.FC = () => {
 
               <div className="space-y-1.5">
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Texto del badge secundario *</label>
-                <input className="input-field w-full" value={form.etiquetaSecundaria} onChange={(e) => setForm((p) => ({ ...p, etiquetaSecundaria: e.target.value }))} placeholder="Ej: Servicios, Alta de AFIP" />
+                <input className="input-field w-full" value={form.etiquetaSecundaria} onChange={(e) => setForm((p) => ({ ...p, etiquetaSecundaria: e.target.value }))} placeholder="Ej: Servicios, Alta de ARCA" />
               </div>
 
               <div className="space-y-2">
@@ -834,7 +834,7 @@ export const ContractStatesTab: React.FC = () => {
         isOpen={showAceptaSinCuitInfo}
         onClose={() => setShowAceptaSinCuitInfo(false)}
         title="Acepta sin CUIT"
-        subtitle="Personas con el trámite de AFIP pendiente"
+        subtitle="Personas con el trámite de ARCA pendiente"
         size="sm"
         zIndex={120}
         actions={[{ label: 'Entendido', onClick: () => setShowAceptaSinCuitInfo(false), variant: 'primary' }]}
@@ -842,7 +842,7 @@ export const ContractStatesTab: React.FC = () => {
         <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
           <p>Permite que en este estado convivan personas con y sin CUIT/CUIL argentino.</p>
           <p>
-            A las que no lo tengan —CUIT en ceros, o sin el check de <strong>Tiene CUIT / CUIL argentino</strong> en su ficha— se les muestra el badge <strong>Sin CUIT</strong> en lugar del trámite de AFIP,
+            A las que no lo tengan —CUIT en ceros, o sin el check de <strong>Tiene CUIT / CUIL argentino</strong> en su ficha— se les muestra el badge <strong>Sin CUIT</strong> en lugar del trámite de ARCA,
             porque su trámite queda <strong>pendiente</strong> hasta que cuenten con la documentación migratoria.
           </p>
           <p>Las que sí tienen CUIT siguen viendo el trámite normal del estado, así que un mismo estado sirve para los dos casos.</p>

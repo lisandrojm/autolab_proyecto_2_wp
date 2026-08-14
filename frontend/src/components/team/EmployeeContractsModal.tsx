@@ -40,7 +40,7 @@ interface EmployeeContractsModalProps {
    */
   onEdit: (user: User, contract?: Contract, contractIndex?: number) => void;
   onDelete: (userId: string) => void;
-  /** Sube (o reemplaza) el PDF de "Alta AFIP"/"Alta Servicios" de un contrato puntual (por índice original). */
+  /** Sube (o reemplaza) el PDF de "Alta ARCA"/"Alta Servicios" de un contrato puntual (por índice original). */
   onUploadAltaDocumento?: (user: User, contractIndex: number, file: File) => Promise<void>;
 }
 

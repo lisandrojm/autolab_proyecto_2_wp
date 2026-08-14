@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, useRef, useState } from "react";
 
-// Pesos oficiales del algoritmo de AFIP (módulo 11) para el dígito verificador.
+// Pesos oficiales del algoritmo de ARCA (módulo 11) para el dígito verificador.
 const MULT = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
 
 /** Deja sólo dígitos, con un máximo de 11 (largo de un CUIT/CUIL). */
@@ -16,11 +16,11 @@ export function formatCuit(value: string): string {
   return `${d.slice(0, 2)}-${d.slice(2, 10)}-${d.slice(10)}`;
 }
 
-/** Prefijos que usa AFIP: 20/23/24/25/26/27 personas físicas, 30/33/34 jurídicas. */
+/** Prefijos que usa ARCA: 20/23/24/25/26/27 personas físicas, 30/33/34 jurídicas. */
 const PREFIJOS_CUIT = ["20", "23", "24", "25", "26", "27", "30", "33", "34"];
 
 /**
- * Valida el CUIT/CUIL con el criterio real de AFIP/ANSES. No alcanza con el módulo 11:
+ * Valida el CUIT/CUIL con el criterio real de ARCA/ANSES. No alcanza con el módulo 11:
  *  - 11 dígitos exactos,
  *  - prefijo de tipo válido (persona física o jurídica),
  *  - no un mismo dígito repetido (00000000000 y similares pasan el módulo 11 pero no existen —
@@ -38,7 +38,7 @@ export function isValidCuit(value: string): boolean {
   for (let i = 0; i < 10; i++) sum += n[i] * MULT[i];
   let dv = 11 - (sum % 11);
   if (dv === 11) dv = 0;
-  if (dv === 10) dv = 9; // convención AFIP
+  if (dv === 10) dv = 9; // convención ARCA
   return dv === n[10];
 }
 
@@ -47,7 +47,7 @@ interface CuitInputProps {
   value: string;
   /** Callback con el valor limpio (sólo dígitos). */
   onChange: (clean: string) => void;
-  /** Se dispara al perder el foco con el resultado de la validación AFIP. */
+  /** Se dispara al perder el foco con el resultado de la validación ARCA. */
   onValidityChange?: (valid: boolean) => void;
   /** Fuerza el estado de error (ej.: campo obligatorio vacío desde el form). */
   invalid?: boolean;
@@ -61,7 +61,7 @@ interface CuitInputProps {
  * Input de CUIT/CUIL con máscara XX-XXXXXXXX-X.
  * - Sólo acepta números (cualquier otra tecla se ignora).
  * - Agrega/quita los guiones automáticamente y mantiene la posición del cursor.
- * - Valida con el algoritmo de AFIP (módulo 11) al perder el foco.
+ * - Valida con el algoritmo de ARCA (módulo 11) al perder el foco.
  * - Expone hacia afuera el valor limpio (11 dígitos, sin guiones).
  */
 export const CuitInput: React.FC<CuitInputProps> = ({

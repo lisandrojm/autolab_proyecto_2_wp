@@ -368,7 +368,7 @@ export const CategoriasSatTab: React.FC = () => {
     <div className="space-y-4">
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
         <div className="flex-1 w-full">
-          <SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar por nombre, categoría, código AFIP..." />
+          <SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar por nombre, categoría, código ARCA..." />
         </div>
         <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
           {canManage && (
@@ -430,7 +430,7 @@ export const CategoriasSatTab: React.FC = () => {
               className="cursor-pointer hover:scale-[1.03] hover:shadow-lg transition-all duration-200"
               header={{
                 title: cat.data?.nombre || cat.name || '—',
-                subtitle: cat.data?.codigoAfip ? `Cód. AFIP ${cat.data.codigoAfip}` : undefined,
+                subtitle: cat.data?.codigoAfip ? `Cód. ARCA ${cat.data.codigoAfip}` : undefined,
                 icon: faListCheck,
                 badges: [{ text: `Categoría ${cat.data?.numeroCategoria ?? '—'}`, variant: 'blue' }],
               }}
@@ -538,7 +538,7 @@ export const CategoriasSatTab: React.FC = () => {
                   </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group select-none hidden lg:table-cell" onClick={() => handleSort('codigoAfip')}>
                     <div className="flex items-center">
-                      Cód. AFIP
+                      Cód. ARCA
                       <SortIcon field="codigoAfip" />
                     </div>
                   </th>
@@ -641,7 +641,7 @@ export const CategoriasSatTab: React.FC = () => {
                     Columna obligatoria: <strong>numeroCategoria</strong>. Completa los valores a actualizar (sueldos y letras).
                   </li>
                   <li>Sube tu archivo completado en esta ventana.</li>
-                  <li>Solo se actualizarán los valores de las categorías existentes. No se crean, eliminan ni modifican nombres ni códigos AFIP.</li>
+                  <li>Solo se actualizarán los valores de las categorías existentes. No se crean, eliminan ni modifican nombres ni códigos ARCA.</li>
                 </ol>
               </div>
 
@@ -837,7 +837,7 @@ export const CategoriasSatTab: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Código AFIP</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Código ARCA</label>
               <input type="number" value={formData.codigoAfip} onChange={(e) => setFormData((prev) => ({ ...prev, codigoAfip: e.target.value }))} className="input-field" placeholder="Ej: 35283" />
             </div>
 

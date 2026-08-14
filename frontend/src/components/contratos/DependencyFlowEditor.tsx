@@ -189,7 +189,7 @@ export const DependencyFlowEditor: React.FC = () => {
   const [savingEvento, setSavingEvento] = useState(false);
   // Selector de carpeta de Dropbox: navega el árbol real en vez de tipear la ruta a ciegas. Navega TODO
   // el Dropbox conectado (no solo el rootPath de Dropbox Sign) porque puede haber carpetas separadas
-  // para otros trámites (p. ej. una carpeta "AFIP" aparte de "HelloSign").
+  // para otros trámites (p. ej. una carpeta "ARCA" aparte de "HelloSign").
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerPath, setPickerPath] = useState("");
   const [pickerEntries, setPickerEntries] = useState<DropboxEntry[]>([]);
@@ -464,7 +464,7 @@ export const DependencyFlowEditor: React.FC = () => {
       <div className="flex items-center gap-2">
         <a
           href="/documents"
-          title="Ver las carpetas de Dropbox (HelloSign y AFIP)"
+          title="Ver las carpetas de Dropbox (HelloSign y ARCA)"
           className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm"
         >
           <FontAwesomeIcon icon={faFileText} />
@@ -716,7 +716,7 @@ export const DependencyFlowEditor: React.FC = () => {
         <p className="flex items-start gap-1.5 p-2.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300">
           <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 shrink-0 mt-0.5" />
           <span>
-            <strong>Cómo identifica a quién corresponde cada archivo:</strong> los contratos que descargás desde la plataforma ya incluyen el CUIT y las fechas del contrato en el nombre del archivo, así que el sistema los reconoce sin ambigüedad al volver firmados desde Dropbox Sign. Si subís un documento vos manualmente (por ejemplo, un trámite de AFIP), el sistema primero intenta leer el CUIT del propio PDF; si no puede, incluí el CUIT de la persona (los 11 dígitos) en el nombre del archivo para que se identifique con seguridad.
+            <strong>Cómo identifica a quién corresponde cada archivo:</strong> los contratos que descargás desde la plataforma ya incluyen el CUIT y las fechas del contrato en el nombre del archivo, así que el sistema los reconoce sin ambigüedad al volver firmados desde Dropbox Sign. Si subís un documento vos manualmente (por ejemplo, un trámite de ARCA), el sistema primero intenta leer el CUIT del propio PDF; si no puede, incluí el CUIT de la persona (los 11 dígitos) en el nombre del archivo para que se identifique con seguridad.
           </span>
         </p>
       </div>

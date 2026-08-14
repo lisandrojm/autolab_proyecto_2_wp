@@ -22,7 +22,7 @@ interface DropboxTabProps {
   /** Reporta hacia el contenedor la cantidad de items visibles (según filtro) para mostrarla junto al título. */
   onCountChange?: (count: number | undefined) => void;
   /**
-   * Si se pasa, este tab navega esa carpeta (fuera del `rootPath` configurado del tenant, p. ej. "/AFIP")
+   * Si se pasa, este tab navega esa carpeta (fuera del `rootPath` configurado del tenant, p. ej. "/ARCA")
    * en vez de la carpeta raíz normal — todas las llamadas al backend van con `full=true` para poder leer
    * y escribir ahí (ver `full` en `frontend/src/api/dropbox.ts` y en `server/src/routes/dropbox.ts`).
    */

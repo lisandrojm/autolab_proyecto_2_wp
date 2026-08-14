@@ -283,8 +283,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   // ─────────── Submit ───────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // El CUIT/CUIL se valida con el algoritmo de AFIP (módulo 11), no solo por largo: un número mal
-    // tipeado se detecta acá y no viaja a la base ni al TXT de AFIP.
+    // El CUIT/CUIL se valida con el algoritmo de ARCA (módulo 11), no solo por largo: un número mal
+    // tipeado se detecta acá y no viaja a la base ni al TXT de ARCA.
     if (cuilVisible && formData.cuit && !isValidCuit(formData.cuit)) {
       sweetAlert.error("CUIT/CUIL inválido", "El CUIT/CUIL no es válido. Revisá los 11 dígitos.");
       setModalActiveTab("general");
@@ -980,13 +980,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
               Se puede dar de alta igual: destildá <strong>&quot;Tiene CUIT / CUIL argentino&quot;</strong> y seguí con el resto de los datos.
             </p>
             <p>
-              Su trámite de AFIP/ANSES <strong>no se descarta</strong>: queda <strong>pendiente</strong> hasta que cuente con la documentación migratoria necesaria (DNI precario, residencia en trámite, etc.).
+              Su trámite de ARCA/ANSES <strong>no se descarta</strong>: queda <strong>pendiente</strong> hasta que cuente con la documentación migratoria necesaria (DNI precario, residencia en trámite, etc.).
             </p>
             <div>
               <p className="font-semibold text-gray-800 dark:text-gray-100 mb-1">Mientras tanto, con sus contratos:</p>
               <ul className="space-y-1.5 list-disc list-inside">
                 <li>
-                  Aparecen en la pestaña <strong>Sin CUIT</strong> de Contratos, y no en Alta temprana de AFIP ni en Constancia de CUIT.
+                  Aparecen en la pestaña <strong>Sin CUIT</strong> de Contratos, y no en Alta temprana de ARCA ni en Constancia de CUIT.
                 </li>
                 <li>Hay que cargarles documentación de respaldo (pasaporte, DNI precario, constancia de residencia en trámite o CUIL provisorio) y marcar la validación.</li>
                 <li>

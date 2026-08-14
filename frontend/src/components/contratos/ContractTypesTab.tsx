@@ -29,7 +29,7 @@ interface FormState {
   isActive: boolean;
   /** Estados (no globales) que van a quedar vinculados a TODAS las Plantillas de este Contrato. */
   estadoIds: string[];
-  /** Códigos AFIP para el TXT de Alta masiva (específicos de convenio/modalidad de este contrato). */
+  /** Códigos ARCA para el TXT de Alta masiva (específicos de convenio/modalidad de este contrato). */
   afipModalidadContrato: string;
   afipTipoServicio: string;
   afipActividad: string;
@@ -583,14 +583,14 @@ export const ContractTypesTab: React.FC = () => {
             <span className="text-gray-700 dark:text-gray-300">Contrato activo</span>
           </label>
 
-          {/* Códigos AFIP para el TXT de Alta masiva: específicos del convenio/modalidad de este tipo de contrato. */}
+          {/* Códigos ARCA para el TXT de Alta masiva: específicos del convenio/modalidad de este tipo de contrato. */}
           <div className="space-y-3 p-3 rounded-lg border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/40 dark:bg-indigo-900/10">
             <div className="flex items-center gap-1.5">
               <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-3.5 w-3.5 text-indigo-500" />
-              <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">Códigos AFIP (Alta masiva)</p>
+              <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">Códigos ARCA (Alta masiva)</p>
             </div>
             <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-0.5">
-              Códigos de la interfaz de "Alta masiva" de AFIP, específicos del convenio/modalidad. Se usan para generar el TXT. Dejalos en blanco si no aplican.
+              Códigos de la interfaz de "Alta masiva" de ARCA, específicos del convenio/modalidad. Se usan para generar el TXT. Dejalos en blanco si no aplican.
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">

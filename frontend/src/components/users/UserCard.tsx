@@ -281,7 +281,7 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
           ...(solicitudesPendientes.length > 0 ? [{ text: `⚠ ${solicitudesPendientes.length} solicitud${solicitudesPendientes.length > 1 ? "es" : ""} de alta`, variant: "warning" as const }] : []),
           { text: user.metadata?.activo ? "Activo" : "Inactivo", variant: user.metadata?.activo ? "green" : "destructive" },
           // Sin CUIT/CUIL argentino: sus contratos van por el circuito "Sin CUIT" (el trámite de
-          // AFIP queda pendiente). Mismo criterio y mismo estilo que el badge de Contratos.
+          // ARCA queda pendiente). Mismo criterio y mismo estilo que el badge de Contratos.
           ...(noPoseeCuit(user.metadata?.cuit, user.metadata?.sinCuit)
             ? [
                 {

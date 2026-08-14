@@ -150,18 +150,18 @@ const InfoSinCuit: React.FC = () => {
                   Podés registrarte igual: destildá <strong>&quot;Tiene CUIT / CUIL argentino&quot;</strong> y seguí con el resto de los datos.
                 </p>
                 <p>
-                  Tu trámite de AFIP/ANSES <strong>no se descarta</strong>: queda <strong>pendiente</strong> hasta que cuentes con la documentación migratoria necesaria (DNI precario, residencia en trámite,
+                  Tu trámite de ARCA/ANSES <strong>no se descarta</strong>: queda <strong>pendiente</strong> hasta que cuentes con la documentación migratoria necesaria (DNI precario, residencia en trámite,
                   etc.).
                 </p>
                 <div>
                   <p className="font-semibold text-gray-200 mb-1">Mientras tanto, con tus contratos:</p>
                   <ul className="space-y-1.5 list-disc list-inside text-gray-300">
                     <li>
-                      Quedan en un circuito aparte llamado <strong>Sin CUIT</strong>, en vez de los trámites normales de AFIP.
+                      Quedan en un circuito aparte llamado <strong>Sin CUIT</strong>, en vez de los trámites normales de ARCA.
                     </li>
                     <li>Se te va a pedir documentación de respaldo (pasaporte, DNI precario, constancia de residencia en trámite o CUIL provisorio).</li>
                     <li>Una vez validada esa documentación, el contrato avanza igual y se generan tu Contrato y tu Release para firmar.</li>
-                    <li>Cuando obtengas el CUIL, se carga en tu ficha y pasás al circuito normal de AFIP.</li>
+                    <li>Cuando obtengas el CUIL, se carga en tu ficha y pasás al circuito normal de ARCA.</li>
                   </ul>
                 </div>
                 <p className="text-[11px] text-gray-500">Si ya tenés CUIT/CUIL, dejá el check tildado y cargalo: es lo que agiliza el alta.</p>

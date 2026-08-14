@@ -20,7 +20,7 @@ const sanitizeRnos = (v: string): string => v.replace(/\D/g, "");
 export const ObrasSocialesPage: React.FC = () => (
   <SimpleCatalogManager
     title="Obras Sociales"
-    subtitle="Catálogo de obras sociales y prepagas. Cargá registros manualmente o importá un Excel."
+    subtitle="Catálogo de obras sociales de ARCA. Cargá registros manualmente o importá un Excel cuando se actualicen en ARCA."
     icon={faBriefcaseMedical}
     entityLabel="obra social"
     api={obrasSocialesApi}

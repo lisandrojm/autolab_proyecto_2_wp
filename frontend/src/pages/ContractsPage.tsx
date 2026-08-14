@@ -44,8 +44,8 @@ const PAGE_SIZE = 25;
  *  (aparte del info general que explica el conjunto). */
 const SUB_TAB_INFO: Record<"alta_afip" | "constancia_cuit" | "sin_cuit" | "firma" | "para_firmar" | "enviado_firma" | "firmados", { title: string; text: string }> = {
   alta_afip: {
-    title: "Alta temprana de AFIP",
-    text: "Vive en la base de datos de la aplicación, no en Dropbox. Son los contratos registrados que todavía necesitan un Alta Temprana en AFIP/ARCA. No interviene Dropbox Sign.",
+    title: "Alta temprana de ARCA",
+    text: "Vive en la base de datos de la aplicación, no en Dropbox. Son los contratos registrados que todavía necesitan un Alta Temprana en ARCA. No interviene Dropbox Sign.",
   },
   constancia_cuit: {
     title: "Constancia de CUIT",
@@ -54,11 +54,11 @@ const SUB_TAB_INFO: Record<"alta_afip" | "constancia_cuit" | "sin_cuit" | "firma
   sin_cuit: {
     title: "Sin CUIT",
     text:
-      "Personas extranjeras que TODAVÍA no tienen CUIT/CUIL argentino: su trámite de AFIP/ANSES queda pendiente hasta que cuenten con la documentación migratoria (DNI precario, residencia en trámite, etc.), así que no aparecen en Alta temprana ni en Constancia de CUIT y se agrupan acá. Se carga la documentación de respaldo, se marca la validación y se las envía a Generar Documentos de forma excepcional: se archiva un comprobante en \"AFIP/Sin cuit\", el contrato avanza y desde ahí se le generan el Contrato y el Release.",
+      "Personas extranjeras que TODAVÍA no tienen CUIT/CUIL argentino: su trámite de ARCA/ANSES queda pendiente hasta que cuenten con la documentación migratoria (DNI precario, residencia en trámite, etc.), así que no aparecen en Alta temprana ni en Constancia de CUIT y se agrupan acá. Se carga la documentación de respaldo, se marca la validación y se las envía a Generar Documentos de forma excepcional: se archiva un comprobante en \"AFIP/Sin cuit\", el contrato avanza y desde ahí se le generan el Contrato y el Release.",
   },
   firma: {
     title: "Generar Documentos",
-    text: "Vive en la base de datos: lista contratos ya dados de alta en AFIP. Acá se generan los PDF de Contrato y Release, que se guardan en la carpeta Outbox de Dropbox. Todavía no interviene Dropbox Sign en esta pestaña.",
+    text: "Vive en la base de datos: lista contratos ya dados de alta en ARCA. Acá se generan los PDF de Contrato y Release, que se guardan en la carpeta Outbox de Dropbox. Todavía no interviene Dropbox Sign en esta pestaña.",
   },
   para_firmar: {
     title: "Para Firmar",
@@ -86,7 +86,7 @@ type MgmtTab = "alta_afip" | "constancia_cuit" | "sin_cuit" | "firma" | "para_fi
 const PASO_1_TABS: MgmtTab[] = ["alta_afip", "constancia_cuit", "sin_cuit"];
 
 const PASO_1_OPCIONES: { tab: MgmtTab; label: string; total: (c: { mgmtCounts: { alta: number; cuit: number; sinCuit: number } }) => number }[] = [
-  { tab: "alta_afip", label: "Alta temprana de AFIP", total: ({ mgmtCounts }) => mgmtCounts.alta },
+  { tab: "alta_afip", label: "Alta temprana de ARCA", total: ({ mgmtCounts }) => mgmtCounts.alta },
   { tab: "constancia_cuit", label: "Constancia de CUIT", total: ({ mgmtCounts }) => mgmtCounts.cuit },
   { tab: "sin_cuit", label: "Sin CUIT", total: ({ mgmtCounts }) => mgmtCounts.sinCuit },
 ];
@@ -100,7 +100,7 @@ const PASOS_GESTION: { numero: number; label: string; descripcion: string; tabs:
   {
     numero: 1,
     label: "Trámite impositivo",
-    descripcion: "El contrato está en UNA de las tres variantes: Alta temprana de AFIP, Constancia de CUIT o Sin CUIT.",
+    descripcion: "El contrato está en UNA de las tres variantes: Alta temprana de ARCA, Constancia de CUIT o Sin CUIT.",
     tabs: PASO_1_TABS,
     total: ({ mgmtCounts }) => mgmtCounts.alta + mgmtCounts.cuit + mgmtCounts.sinCuit,
   },
@@ -198,7 +198,7 @@ export const ContractsPage: React.FC = () => {
   const dropboxCounts = { para_firmar: paraFirmarCount, enviado_firma: pendienteFirmaCount, firmados: firmadosCount };
   // Al entrar a "Gestión de Contratos" se leen las 3 carpetas de Dropbox una sola vez, para que el
   // número aparezca en las 3 pestañas aunque el usuario no las haya abierto todavía (igual que las
-  // pestañas de AFIP/CUIT/Firma). Al abrir cada pestaña, ContractDropboxTab vuelve a leer su carpeta
+  // pestañas de ARCA/CUIT/Firma). Al abrir cada pestaña, ContractDropboxTab vuelve a leer su carpeta
   // y actualiza el número con datos frescos.
   const dropboxCountsFetchedRef = useRef(false);
   useEffect(() => {
@@ -434,7 +434,7 @@ export const ContractsPage: React.FC = () => {
             <button className={tabBtnClass(mainTab === "management")} onClick={() => setMainTab("management")}>
               Gestión de Contratos
             </button>
-            {/* Info general: qué es cada una de las pestañas de "Gestión de Contratos" (AFIP, Firma digital y Dropbox Sign). */}
+            {/* Info general: qué es cada una de las pestañas de "Gestión de Contratos" (ARCA, Firma digital y Dropbox Sign). */}
             <button type="button" onClick={() => setMgmtTabsInfoOpen(true)} title="Qué es cada pestaña de Gestión de Contratos" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0 -ml-2 mr-2">
               <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
             </button>
@@ -720,7 +720,7 @@ export const ContractsPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-4 py-3">{record.nombre_estado_empleado ? <EstadoBadge name={record.nombre_estado_empleado} className="text-[10px] whitespace-nowrap" /> : <span className="text-xs text-gray-400">—</span>}</td>
-                    {/* Estado impositivo (Alta AFIP / Alta Servicios): según el Tipo de Contrato, no el estado actual. */}
+                    {/* Estado impositivo (Alta ARCA / Alta Servicios): según el Tipo de Contrato, no el estado actual. */}
                     <td className="px-4 py-3">
                       {(() => {
                         const estadoImpositivo = estadoImpositivoDelContrato(record as unknown as Contract, contratoFrames, allEstados);
@@ -935,18 +935,18 @@ export const ContractsPage: React.FC = () => {
         <Modal isOpen={mgmtTabsInfoOpen} onClose={() => setMgmtTabsInfoOpen(false)} title="Qué es cada pestaña" size="md" zIndex={80}>
           <div className="space-y-4">
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              Estas pestañas son las etapas de un mismo circuito: primero el contrato se da de alta en <strong>AFIP/ARCA</strong> (o va por <strong>Sin CUIT</strong> si la persona no tiene CUIL argentino), después se genera su documento en <strong>Generar Documentos</strong> y, por último, se
+              Estas pestañas son las etapas de un mismo circuito: primero el contrato se da de alta en <strong>ARCA</strong> (o va por <strong>Sin CUIT</strong> si la persona no tiene CUIL argentino), después se genera su documento en <strong>Generar Documentos</strong> y, por último, se
               firma digitalmente en <strong>Dropbox Sign</strong> (las últimas tres pestañas). Las tres primeras leen la base de datos de la aplicación; las tres últimas leen directamente las carpetas de Dropbox
               donde trabaja Dropbox Sign.
             </p>
             <div>
-              <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Alta temprana de AFIP · Constancia de CUIT</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Alta temprana de ARCA · Constancia de CUIT</p>
               <p className="text-sm text-gray-600 dark:text-gray-300">
                 Son los contratos que ya se registraron en la aplicación pero todavía no se hizo nada en ARCA. No interviene Dropbox ni Dropbox Sign en esta etapa.
               </p>
               <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1.5 list-disc list-inside mt-2">
                 <li>
-                  <strong>Alta temprana de AFIP</strong>: contratos que necesitan un Alta.
+                  <strong>Alta temprana de ARCA</strong>: contratos que necesitan un Alta.
                 </li>
                 <li>
                   <strong>Constancia de CUIT</strong>: contratos a los que hay que verificarles si el CUIT está activo o no en ARCA.
@@ -956,7 +956,7 @@ export const ContractsPage: React.FC = () => {
             <div>
               <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Sin CUIT</p>
               <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-                Personas que todavía no tienen CUIT/CUIL argentino: su trámite de AFIP queda pendiente hasta que cuenten con la documentación migratoria, así que no figuran en las dos pestañas anteriores. Se carga la documentación de respaldo, se valida y se las envía a <strong>Generar Documentos</strong> de forma excepcional.
+                Personas que todavía no tienen CUIT/CUIL argentino: su trámite de ARCA queda pendiente hasta que cuenten con la documentación migratoria, así que no figuran en las dos pestañas anteriores. Se carga la documentación de respaldo, se valida y se las envía a <strong>Generar Documentos</strong> de forma excepcional.
               </p>
               <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Generar Documentos</p>
               <p className="text-sm text-gray-600 dark:text-gray-300">

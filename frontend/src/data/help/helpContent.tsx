@@ -232,8 +232,14 @@ const helpResources = {
 
       // Obras Sociales
       "obrasSociales.title": "Información de Obras Sociales",
-      "obrasSociales.description": "Catálogo de obras sociales para los datos del personal.",
-      "obrasSociales.items": ["**Obra social**: Cobertura de salud asociada al personal.", "**Uso**: Se selecciona al cargar los datos del empleado.", "**Gestión**: Crear, editar y eliminar obras sociales, o importarlas desde un Excel."],
+      "obrasSociales.description": "Catálogo de obras sociales de ARCA para los datos del personal.",
+      "obrasSociales.items": [
+        "**Obra social**: Cobertura de salud asociada al personal.",
+        "**Origen**: Son las obras sociales registradas en ARCA (ex AFIP), en Simplificación Registral → Registrar Obras Sociales. Cada una se identifica con su código **RNOS** (formato X-XXXX-X).",
+        "**Actualización**: Este catálogo es una copia local, NO se sincroniza solo con ARCA. Si en ARCA se dan de alta, se dan de baja o cambian obras sociales, hay que volver a importarlas acá con **Importar Excel** para que el listado quede al día.",
+        "**Uso**: Se selecciona al cargar los datos del empleado.",
+        "**Gestión**: Crear, editar y eliminar obras sociales, o importarlas desde un Excel (descargá la **Plantilla** para respetar el formato).",
+      ],
 
       // Pedidos (Configuración / tipos de pedido)
       "orderTypes.title": "Información de Pedidos",
@@ -459,7 +465,7 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
   funcionesFrame: { title: "Información de Funciones FRAME", size: "sm", content: buildHelpContent("funcionesFrame") },
   miPerfil: { title: "Información de Mi Perfil", size: "sm", content: buildHelpContent("miPerfil") },
   requestsConfig: { title: "Configuración de Novedades", size: "sm", content: buildHelpContent("requestsConfig") },
-  obrasSociales: { title: "Información de Obras Sociales", size: "sm", content: buildHelpContent("obrasSociales") },
+  obrasSociales: { title: "Información de Obras Sociales", size: "md", content: buildHelpContent("obrasSociales") },
   orderTypes: { title: "Información de Pedidos", size: "sm", content: buildHelpContent("orderTypes") },
   releases: { title: "Información de Releases", size: "sm", content: buildHelpContent("releases") },
   shifts: { title: "Información de Turnos", size: "sm", content: buildHelpContent("shifts") },

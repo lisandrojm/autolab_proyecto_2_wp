@@ -218,7 +218,7 @@ export const SedesPage: React.FC = () => {
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sede</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID Externo</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID Interno</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Cód. Sucursal (AFIP)</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Cód. Sucursal (ARCA)</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
                 </tr>
               </thead>
@@ -288,9 +288,9 @@ export const SedesPage: React.FC = () => {
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Código de sucursal (AFIP) · 5 díg.</label>
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Código de sucursal (ARCA) · 5 díg.</label>
             <input maxLength={5} inputMode="numeric" className="input-field w-full" value={form.codigoSucursal} onChange={(e) => setForm((p) => ({ ...p, codigoSucursal: e.target.value.replace(/\D/g, "") }))} placeholder="Ej: 00001" />
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Domicilio de desempeño. Se usa en la generación del TXT de Alta masiva de AFIP.</p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Domicilio de desempeño. Se usa en la generación del TXT de Alta masiva de ARCA.</p>
           </div>
         </div>
       </Modal>

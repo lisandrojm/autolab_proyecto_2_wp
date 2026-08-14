@@ -251,6 +251,9 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
       title={title}
       subtitle={subtitle}
       faIcon={{ icon }}
+      // Contador al lado del título. En el catálogo acompaña a la búsqueda (cuántos quedaron
+      // filtrados); en las otras pestañas no hay buscador, así que muestra el total cargado.
+      itemCount={loading ? undefined : enCatalogo ? filtered.length : items.length}
       headerActions={headerActions}
       shouldShowInfo={!!helpKey && hasHelp(helpKey)}
       infoModal={

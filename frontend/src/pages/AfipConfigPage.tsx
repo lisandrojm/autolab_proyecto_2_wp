@@ -6,11 +6,11 @@ import { Modal } from "../components/ui/Modal";
 import { afipAPI, AfipStatus, AfipLogEntry } from "../api/afip";
 import { sweetAlert } from "../utils/sweetAlert";
 
-const GUIA_AFIP = (
+const GUIA_ARCA = (
   <div className="space-y-5 text-gray-400">
     <p>
-      La app usa el certificado para autenticarse contra AFIP (WSAA) y consultar el <strong>Padrón</strong> (estado de CUIT/CUIL, servicio <code>ws_sr_padron_a13</code>). Hacen falta dos cosas de AFIP:
-      un <strong>certificado digital</strong> (par clave privada + certificado firmado por AFIP) y que ese certificado esté <strong>autorizado</strong> específicamente para el servicio de Padrón.
+      La app usa el certificado para autenticarse contra ARCA (WSAA) y consultar el <strong>Padrón</strong> (estado de CUIT/CUIL, servicio <code>ws_sr_padron_a13</code>). Hacen falta dos cosas de ARCA:
+      un <strong>certificado digital</strong> (par clave privada + certificado firmado por ARCA) y que ese certificado esté <strong>autorizado</strong> específicamente para el servicio de Padrón.
     </p>
 
     <div className="space-y-2">
@@ -23,28 +23,28 @@ openssl req -new -key MiClavePrivada.key \\
   -out MiPedido.csr`}
       </pre>
       <p className="text-sm">
-        <code>MiClavePrivada.key</code> nunca se comparte ni se sube a ningún lado (ni a git, ni por chat) — es lo único que demuestra que sos vos. <code>MiPedido.csr</code> sí se puede compartir, es el "pedido" que se lleva a AFIP.
+        <code>MiClavePrivada.key</code> nunca se comparte ni se sube a ningún lado (ni a git, ni por chat) — es lo único que demuestra que sos vos. <code>MiPedido.csr</code> sí se puede compartir, es el "pedido" que se lleva a ARCA.
       </p>
       <p className="text-sm">
-        Importante: el CSR (encabezado <code>-----BEGIN CERTIFICATE REQUEST-----</code>) no es lo mismo que el certificado firmado que te va a devolver AFIP más adelante (encabezado <code>-----BEGIN CERTIFICATE-----</code>). Son dos archivos distintos y solo el segundo sirve para conectar la app.
+        Importante: el CSR (encabezado <code>-----BEGIN CERTIFICATE REQUEST-----</code>) no es lo mismo que el certificado firmado que te va a devolver ARCA más adelante (encabezado <code>-----BEGIN CERTIFICATE-----</code>). Son dos archivos distintos y solo el segundo sirve para conectar la app.
       </p>
     </div>
 
     <div className="space-y-2">
-      <h4 className="text-white font-medium">2) Cargar el CSR en AFIP y generar el certificado</h4>
+      <h4 className="text-white font-medium">2) Cargar el CSR en ARCA y generar el certificado</h4>
       <ol className="text-sm list-decimal list-inside space-y-1">
         <li>
           Entrar a WSASS con Clave Fiscal — homologación: <code>wsass-homo.afip.gob.ar</code>. Producción: <code>auth.afip.gob.ar</code> → "Administrador de Certificados Digitales".
         </li>
         <li>Cargar el archivo <code>MiPedido.csr</code> y ponerle un alias corto (sin guiones ni espacios problemáticos).</li>
-        <li>AFIP devuelve el certificado firmado (.crt) — guardarlo junto a la clave privada.</li>
+        <li>ARCA devuelve el certificado firmado (.crt) — guardarlo junto a la clave privada.</li>
       </ol>
       <p className="text-sm">
-        Tené en cuenta: los alias son únicos por CUIT en todo AFIP, no por ambiente. Si ya usaste un alias en homologación (por ejemplo "miAlias"), no vas a poder reutilizarlo en producción — da error
+        Tené en cuenta: los alias son únicos por CUIT en todo ARCA, no por ambiente. Si ya usaste un alias en homologación (por ejemplo "miAlias"), no vas a poder reutilizarlo en producción — da error
         "El ALIAS ya existe. Debe utilizar otro nombre". Usá algo distinto y descriptivo, como "miAlias-prod".
       </p>
       <p className="text-sm">
-        También puede pasar que AFIP muestre una pantalla de error genérico ("Internal Server Error") justo al subir el CSR, aunque el certificado se haya generado igual del lado del servidor. Antes de
+        También puede pasar que ARCA muestre una pantalla de error genérico ("Internal Server Error") justo al subir el CSR, aunque el certificado se haya generado igual del lado del servidor. Antes de
         asumir que falló, volvé a la lista de certificados y fijate si el alias ya aparece con estado "VALIDO".
       </p>
     </div>
@@ -52,8 +52,8 @@ openssl req -new -key MiClavePrivada.key \\
     <div className="space-y-2">
       <h4 className="text-white font-medium">3) Autorizar el alias para "Consulta Padrón"</h4>
       <p className="text-sm">
-        Tener el certificado NO alcanza: además hay que autorizar ese alias para el servicio puntual. Esto se hace en una sección aparte de AFIP, distinta de donde generaste el certificado:
-        "Administrador de Relaciones" (accesible desde el portal principal de AFIP/ARCA, ícono "Administrador de relaciones").
+        Tener el certificado NO alcanza: además hay que autorizar ese alias para el servicio puntual. Esto se hace en una sección aparte de ARCA, distinta de donde generaste el certificado:
+        "Administrador de Relaciones" (accesible desde el portal principal de ARCA, ícono "Administrador de relaciones").
       </p>
       <p className="text-sm">
         Ahí el camino es: "Nueva Relación" → Representado: tu propio CUIT → "Buscar" servicio → categoría "ARCA" → "WebServices" → buscar y elegir "Servicio Consulta Padrón A13". El sistema te va a pedir
@@ -69,7 +69,7 @@ openssl req -new -key MiClavePrivada.key \\
       <h4 className="text-white font-medium">4) Conectar acá</h4>
       <p className="text-sm">
         Con el certificado y la clave privada ya autorizados, pegarlos en el formulario de esta página (contenido completo, incluyendo las líneas <code>-----BEGIN...-----</code>/<code>-----END...-----</code>),
-        elegir el ambiente correspondiente, y "Conectar" — valida en el momento pidiendo un ticket real a AFIP antes de guardar nada.
+        elegir el ambiente correspondiente, y "Conectar" — valida en el momento pidiendo un ticket real a ARCA antes de guardar nada.
       </p>
     </div>
 
@@ -78,12 +78,12 @@ openssl req -new -key MiClavePrivada.key \\
       <p className="text-sm">Es el mismo procedimiento (pasos 1 a 3), pero:</p>
       <ul className="text-sm list-disc list-inside space-y-1">
         <li>
-          Se hace en el portal de <strong>producción</strong> de AFIP (<code>auth.afip.gob.ar</code>), no en el de homologación — y con la Clave Fiscal real de la organización, no una de prueba.
+          Se hace en el portal de <strong>producción</strong> de ARCA (<code>auth.afip.gob.ar</code>), no en el de homologación — y con la Clave Fiscal real de la organización, no una de prueba.
         </li>
         <li>Hay que generar un certificado nuevo con un alias distinto al de homologación (no se puede reutilizar el mismo alias) — son ambientes separados con sus propias autorizaciones.</li>
         <li>Autorizar ese alias nuevo para <code>ws_sr_padron_a13</code> en el "Administrador de Relaciones" de producción (la autorización de homologación no se traslada).</li>
         <li>
-          Conectar acá con ese certificado/clave, eligiendo <strong>"Producción"</strong> como ambiente — ahí la app apunta a los servidores reales de AFIP en vez de a los de testing, y los datos que
+          Conectar acá con ese certificado/clave, eligiendo <strong>"Producción"</strong> como ambiente — ahí la app apunta a los servidores reales de ARCA en vez de a los de testing, y los datos que
           devuelva van a ser de contribuyentes reales.
         </li>
       </ul>
@@ -117,7 +117,7 @@ export function AfipConfigPage() {
     try {
       setStatus(await afipAPI.status());
     } catch (e: any) {
-      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo obtener el estado de AFIP.");
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo obtener el estado de ARCA.");
     } finally {
       setLoading(false);
     }
@@ -136,9 +136,9 @@ export function AfipConfigPage() {
     try {
       const resultado = await afipAPI.connect(form);
       if (resultado.servicioPadronOk) {
-        sweetAlert.success("AFIP conectado", "Las credenciales se validaron y el servicio Consulta Padrón A13 quedó verificado.");
+        sweetAlert.success("ARCA conectado", "Las credenciales se validaron y el servicio Consulta Padrón A13 quedó verificado.");
       } else {
-        sweetAlert.warning("Conectado a WSAA, pero el servicio no está autorizado", resultado.servicioPadronDetalle || "El certificado es válido, pero AFIP no autoriza el servicio Consulta Padrón A13 para él todavía.");
+        sweetAlert.warning("Conectado a WSAA, pero el servicio no está autorizado", resultado.servicioPadronDetalle || "El certificado es válido, pero ARCA no autoriza el servicio Consulta Padrón A13 para él todavía.");
       }
       setForm({ cuitRepresentada: "", certificadoPem: "", clavePrivadaPem: "", ambiente: "homologacion" });
       await cargar();
@@ -167,7 +167,7 @@ export function AfipConfigPage() {
   };
 
   const handleDisconnect = async () => {
-    const res = await sweetAlert.confirm("¿Desconectar AFIP?", "Se borrarán las credenciales de esta organización. Las consultas a AFIP dejarán de funcionar hasta reconectar.", "Sí, desconectar");
+    const res = await sweetAlert.confirm("¿Desconectar ARCA?", "Se borrarán las credenciales de esta organización. Las consultas a ARCA dejarán de funcionar hasta reconectar.", "Sí, desconectar");
     if (!res.isConfirmed) return;
     try {
       await afipAPI.disconnect();
@@ -183,7 +183,7 @@ export function AfipConfigPage() {
     try {
       setLogs(await afipAPI.logs());
     } catch (e: any) {
-      sweetAlert.error("Error", e?.response?.data?.error || "No se pudieron cargar los logs de AFIP.");
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudieron cargar los logs de ARCA.");
       setLogs([]);
     } finally {
       setLoadingLogs(false);
@@ -192,15 +192,15 @@ export function AfipConfigPage() {
 
   return (
     <PageLayout
-      title="AFIP"
-      subtitle="Conexión con AFIP/ARCA para consultar el Padrón (estado de CUIT/CUIL)"
+      title="ARCA | Conexión"
+      subtitle="Conexión con ARCA para consultar el Padrón (estado de CUIT/CUIL)"
       faIcon={{ icon: faLandmark }}
       infoModal={{
         isOpen: showInfoModal,
         onOpen: () => setShowInfoModal(true),
         onClose: () => setShowInfoModal(false),
-        title: "Cómo conectar AFIP",
-        content: GUIA_AFIP,
+        title: "Cómo conectar ARCA",
+        content: GUIA_ARCA,
       }}
     >
       {loading ? (
@@ -212,13 +212,13 @@ export function AfipConfigPage() {
           <div className="flex items-center gap-3">
             <FontAwesomeIcon icon={faLandmark} className="h-7 w-7 text-blue-600" />
             <div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">AFIP conectado</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">ARCA conectado</h3>
               <p className="text-xs text-gray-500">CUIT representada: {status.cuitRepresentada}</p>
             </div>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-300">
             Ambiente: <strong>{status.ambiente === "produccion" ? "Producción" : "Homologación (testing)"}</strong>
-            {status.ambiente === "homologacion" && <span className="block text-[11px] text-amber-600 dark:text-amber-400 mt-1">Los datos que devuelve AFIP en homologación son ficticios, no reales — sirve para probar el flujo, no para uso productivo.</span>}
+            {status.ambiente === "homologacion" && <span className="block text-[11px] text-amber-600 dark:text-amber-400 mt-1">Los datos que devuelve ARCA en homologación son ficticios, no reales — sirve para probar el flujo, no para uso productivo.</span>}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm border-t border-gray-100 dark:border-gray-700 pt-3">
             {status.certificadoAlias && (
@@ -244,7 +244,7 @@ export function AfipConfigPage() {
 
           {/* "Conectado" (arriba) solo prueba que el certificado/clave son válidos (login WSAA). Esto
               prueba, con una autoconsulta real, que el servicio Consulta Padrón A13 esté además
-              autorizado en AFIP para ese certificado — son cosas distintas. */}
+              autorizado en ARCA para ese certificado — son cosas distintas. */}
           {status.servicioPadronEstado === "ok" ? (
             <div className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200 dark:border-green-800">
               <FontAwesomeIcon icon={faCheck} className="w-3.5 shrink-0" />
@@ -294,15 +294,15 @@ export function AfipConfigPage() {
       ) : !status?.canManageConnection ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 text-center text-gray-500 max-w-xl">
           <FontAwesomeIcon icon={faLandmark} className="h-10 w-10 text-blue-500 mb-3" />
-          <p className="font-semibold text-gray-700 dark:text-gray-200">AFIP no está conectado</p>
-          <p className="text-sm mt-1">Pedile a un administrador que conecte el certificado de AFIP de la organización.</p>
+          <p className="font-semibold text-gray-700 dark:text-gray-200">ARCA no está conectado</p>
+          <p className="text-sm mt-1">Pedile a un administrador que conecte el certificado de ARCA de la organización.</p>
         </div>
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 max-w-xl">
           <div className="flex items-center gap-3 mb-4">
             <FontAwesomeIcon icon={faLandmark} className="h-7 w-7 text-blue-600" />
             <div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Conectar AFIP</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Conectar ARCA</h3>
               <p className="text-xs text-gray-500">Certificado digital (WSAA) de tu organización — se guarda cifrado.</p>
             </div>
           </div>
@@ -336,18 +336,18 @@ export function AfipConfigPage() {
             </div>
             <button type="button" onClick={handleConnect} disabled={connecting} className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50">
               {connecting ? <FontAwesomeIcon icon={faSpinner} spin /> : <FontAwesomeIcon icon={faPlug} />}
-              {connecting ? "Validando contra AFIP..." : "Conectar"}
+              {connecting ? "Validando contra ARCA..." : "Conectar"}
             </button>
             <p className="text-[11px] text-gray-400 flex items-start gap-1.5">
               <FontAwesomeIcon icon={faTriangleExclamation} className="mt-0.5" />
-              El certificado tiene que estar autorizado en AFIP (WSASS) para el servicio "Consulta Padrón" (ws_sr_padron_a13), además del CUIT que lo representa.
+              El certificado tiene que estar autorizado en ARCA (WSASS) para el servicio "Consulta Padrón" (ws_sr_padron_a13), además del CUIT que lo representa.
             </p>
           </div>
         </div>
       )}
 
       {showLogs && (
-        <Modal isOpen={showLogs} onClose={() => setShowLogs(false)} title="Logs de AFIP" subtitle="Últimos 50 llamados reales al webservice (Consulta Padrón / Revalidar servicio)" size="xl" zIndex={80}>
+        <Modal isOpen={showLogs} onClose={() => setShowLogs(false)} title="Logs de ARCA" subtitle="Últimos 50 llamados reales al webservice (Consulta Padrón / Revalidar servicio)" size="xl" zIndex={80}>
           {loadingLogs ? (
             <div className="flex justify-center py-10 text-gray-400">
               <FontAwesomeIcon icon={faSpinner} spin className="mr-2" /> Cargando...

@@ -27,16 +27,16 @@ const normalize = (s: string): string =>
 
 /**
  * Estilo (color de badge) y etiqueta por estado. La clave está normalizada (sin acentos/mayúsculas).
- * "Falta pedido de AFIP" se muestra como "Pedido de AFIP".
+ * "Falta pedido de ARCA" se muestra como "Pedido de ARCA".
  */
 const ESTADO_STYLES: Record<string, { label?: string; cls: string }> = {
   disponible: { cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
   "envio de documentacion": { cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
-  "falta pedido de afip": { label: "Pedido de AFIP", cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" },
+  "falta pedido de afip": { label: "Pedido de ARCA", cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" },
   "pedido de afip": { cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" },
   "firma pendiente": { cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
   // Nombre viejo guardado en algunos contratos: se muestra con la etiqueta del ABM ("Pedido de
-  // Servicios"), igual que "Falta pedido de AFIP". Sin el `label`, los filtros que deduplican por
+  // Servicios"), igual que "Falta pedido de ARCA". Sin el `label`, los filtros que deduplican por
   // etiqueta lo tratan como un estado aparte y aparece dos veces en la lista.
   "pedido servicios": { label: "Pedido de Servicios", cls: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300" },
 };
@@ -62,7 +62,7 @@ const COLOR_HEX_GENERICO = "#64748b";
 
 /**
  * Alias históricos: el mismo estado se guardó con más de un nombre en los contratos.
- * Sin esto, un contrato con "Falta pedido de AFIP" no encontraría al estado "Pedido de AFIP" del
+ * Sin esto, un contrato con "Falta pedido de ARCA" no encontraría al estado "Pedido de ARCA" del
  * ABM y seguiría pintándose con el color viejo en vez del configurado.
  */
 const ESTADO_ALIAS: Record<string, string> = { "falta pedido de afip": "pedido de afip", "pedido servicios": "pedido de servicios" };
@@ -76,7 +76,7 @@ export const claveEstado = (name: string): string => {
 /** Color con el que se muestra un estado que todavía no tiene color propio configurado. */
 export const estadoColorPorDefecto = (name: string): string => ESTADO_COLOR_HEX[normalize(name)] || COLOR_HEX_GENERICO;
 
-/** Etiqueta canónica del estado ("Falta pedido de AFIP" y "Pedido de AFIP" son el mismo estado). */
+/** Etiqueta canónica del estado ("Falta pedido de ARCA" y "Pedido de ARCA" son el mismo estado). */
 export const estadoLabel = (name: string): string => labelFor(name);
 
 /** #rrggbb → rgba con la transparencia pedida. El ABM solo elige el color del texto. */
@@ -160,7 +160,7 @@ export const EstadoBadge: React.FC<{ name: string; className?: string }> = ({ na
 
 /**
  * De la lista de Estados vinculados a una Plantilla/Contrato, devuelve el Estado impositivo
- * asignado (p. ej. "Pedido de AFIP" o "Pedido Servicios", mutuamente excluyentes por tipo de
+ * asignado (p. ej. "Pedido de ARCA" o "Pedido Servicios", mutuamente excluyentes por tipo de
  * contrato: ver `toggleEstadoImpositivo` en ContractTypesTab.tsx) o `null` si no tiene ninguno.
  */
 export const estadoImpositivoDe = <T extends { name: string; data?: { esImpositivo?: boolean } }>(estados: T[]): T | null => estados.find((e) => e.data?.esImpositivo) || null;
@@ -168,7 +168,7 @@ export const estadoImpositivoDe = <T extends { name: string; data?: { esImpositi
 /**
  * Badge secundario de un Estado impositivo: texto y color se eligen aparte (en el ABM de Estados,
  * solo cuando "Estado impositivo" está tildado) del nombre/color del badge principal del estado.
- * Se muestra en las tarjetas de Contrato para identificar si es "Servicios", "Alta de AFIP", etc.
+ * Se muestra en las tarjetas de Contrato para identificar si es "Servicios", "Alta de ARCA", etc.
  * Si el estado impositivo no tiene texto secundario configurado, no se muestra nada.
  */
 export const EstadoSecundarioBadge: React.FC<{ estado: { name: string; data?: { etiquetaSecundaria?: string; colorEtiquetaSecundaria?: string } } | null; className?: string }> = ({ estado, className = "" }) => {
@@ -199,20 +199,20 @@ const noPoseeCuitBadge = (cuit?: string, sinCuit?: boolean): boolean => {
 };
 
 const TIPO_IMPOSITIVO_LABEL: Record<string, string> = {
-  alta_temprana_afip: "Alta temprana de AFIP",
+  alta_temprana_afip: "Alta temprana de ARCA",
   constancia_cuit: "Constancia de CUIT",
 };
 
 /**
- * Badge del trámite impositivo de un estado impositivo (Alta temprana de AFIP / Constancia de CUIT).
- * Mismo violeta invertido que en el ABM de Estados: "Alta temprana de AFIP" relleno (positivo) y
+ * Badge del trámite impositivo de un estado impositivo (Alta temprana de ARCA / Constancia de CUIT).
+ * Mismo violeta invertido que en el ABM de Estados: "Alta temprana de ARCA" relleno (positivo) y
  * "Constancia de CUIT" contorno (negativo). No muestra nada si el estado no tiene trámite definido.
  */
 /**
  * Badge del trámite impositivo del estado.
  *
  * Si el estado tiene "Acepta sin CUIT" y la persona NO tiene CUIT/CUIL argentino, se muestra
- * "Sin CUIT" en lugar del trámite: su trámite de AFIP queda pendiente hasta que tenga la
+ * "Sin CUIT" en lugar del trámite: su trámite de ARCA queda pendiente hasta que tenga la
  * documentación migratoria. Así un mismo estado puede tener personas con y sin CUIT, cada una con
  * el badge que le corresponde. Los tres son violetas pero bien distinguibles entre sí:
  * Alta temprana = violeta sólido, Constancia = violeta claro, Sin CUIT = violeta con borde punteado.
@@ -235,7 +235,7 @@ export const TramiteImpositivoBadge: React.FC<{
       : "bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700";
   return (
     <span
-      title={sinCuit ? "La persona todavía no tiene CUIT/CUIL: el trámite de AFIP queda pendiente" : undefined}
+      title={sinCuit ? "La persona todavía no tiene CUIT/CUIL: el trámite de ARCA queda pendiente" : undefined}
       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap ${cls} ${className}`}
     >
       <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" />

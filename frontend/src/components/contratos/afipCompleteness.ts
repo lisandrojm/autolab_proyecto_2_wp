@@ -5,13 +5,13 @@ import { SimpleCatalogItem } from "../../api/simpleCatalog";
 import { InfoItem } from "../../api/info";
 
 /**
- * Chequeo de completitud de datos para la generación del TXT de Alta masiva de AFIP.
+ * Chequeo de completitud de datos para la generación del TXT de Alta masiva de ARCA.
  * Resuelve cada campo requerido contra los catálogos y marca si está presente o falta.
  * Reutilizable por la vista de completitud (Fase 1b) y por el generador del TXT (Fase 2).
  */
 export interface AfipCatalogs {
   categorias: CategoriaSatItem[]; // retribución (sueldoBruto) + categoría profesional (codigoAfip)
-  tipos: ContratoItem[]; // códigos AFIP por Tipo de Contrato
+  tipos: ContratoItem[]; // códigos ARCA por Tipo de Contrato
   obrasSociales: SimpleCatalogItem[]; // código RNOS
   sedes: InfoItem[]; // código de sucursal
   /** Empresas, para su obra social por defecto propia. Opcional: sin esto se cae directo a la global. */
@@ -34,13 +34,13 @@ export interface AfipRowResult {
 
 const soloDigitos = (s?: string | number | null): string => String(s ?? "").replace(/\D/g, "");
 
-/** Valores AFIP resueltos de un contrato (crudos, para construir el registro del TXT). */
+/** Valores ARCA resueltos de un contrato (crudos, para construir el registro del TXT). */
 export interface AfipValues {
   cuil: string;
   fechaInicio: string; // tal cual está guardada (se normaliza al armar el TXT)
   fechaFin: string;
   retribucion: number; // sueldo bruto de la categoría
-  categoriaProf: string; // código AFIP de la categoría
+  categoriaProf: string; // código ARCA de la categoría
   modalidadContrato: string;
   tipoServicio: string;
   actividad: string;
@@ -53,7 +53,7 @@ export interface AfipValues {
   sucursal: string;
 }
 
-/** Resuelve los valores AFIP de un contrato contra los catálogos (sin validar). */
+/** Resuelve los valores ARCA de un contrato contra los catálogos (sin validar). */
 export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): AfipValues {
   const categoria = row.categoria_sat_id != null ? cat.categorias.find((c) => c.data?.id === row.categoria_sat_id) : undefined;
   const tipo = cat.tipos.find((t) => t.name === row.nombre_contrato);
@@ -86,14 +86,14 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
   };
 }
 
-/** Resuelve y valida los datos AFIP de un contrato (fila del overview cross-proyecto). */
+/** Resuelve y valida los datos ARCA de un contrato (fila del overview cross-proyecto). */
 export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRowResult {
   const v = resolveAfipValues(row, cat);
   const checks: AfipFieldCheck[] = [
     { key: "cuil", label: "CUIL (11 díg.)", value: v.cuil, ok: v.cuil.length === 11 },
     { key: "fechaInicio", label: "Fecha de inicio", value: v.fechaInicio, ok: !!v.fechaInicio },
     { key: "retribucion", label: "Retribución (sueldo bruto de la categoría)", value: v.retribucion ? String(v.retribucion) : "", ok: v.retribucion > 0 },
-    { key: "categoriaProf", label: "Categoría profesional (cód. AFIP)", value: v.categoriaProf, ok: !!v.categoriaProf },
+    { key: "categoriaProf", label: "Categoría profesional (cód. ARCA)", value: v.categoriaProf, ok: !!v.categoriaProf },
     { key: "modalidadContrato", label: "Modalidad de contrato", value: v.modalidadContrato, ok: !!v.modalidadContrato },
     { key: "tipoServicio", label: "Tipo de servicio", value: v.tipoServicio, ok: !!v.tipoServicio },
     { key: "actividad", label: "Actividad del domicilio", value: v.actividad, ok: !!v.actividad },
@@ -101,7 +101,7 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
     { key: "rnos", label: v.rnosOrigen === "empresa" ? "Código RNOS (por defecto de la empresa)" : v.rnosOrigen === "global" ? "Código RNOS (por defecto global)" : "Código RNOS (obra social)", value: v.rnos, ok: !!v.rnos },
     { key: "sucursal", label: "Código de sucursal (sede)", value: v.sucursal, ok: !!v.sucursal },
   ];
-  // No es un campo del registro AFIP (el TXT no lleva el CUIT de la empleadora), pero se exige igual:
+  // No es un campo del registro ARCA (el TXT no lleva el CUIT de la empleadora), pero se exige igual:
   // un mismo TXT se sube a la sesión de UNA sola empresa en ARCA, así que hace falta saber a cuál
   // corresponde cada contrato antes de poder incluirlo.
   checks.push({ key: "empresa", label: "Empresa del Contrato", value: row.nombre_empresa_contrato || "", ok: !!row.empresaContratoId });

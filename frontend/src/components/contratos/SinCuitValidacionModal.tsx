@@ -10,7 +10,7 @@ import { getImageUrl } from "../../utils/imageHelpers";
 /**
  * Documentación de respaldo del flujo "Sin CUIT".
  *
- * Estas personas (extranjeras) todavía no tienen CUIT/CUIL argentino: el trámite de AFIP/ANSES NO
+ * Estas personas (extranjeras) todavía no tienen CUIT/CUIL argentino: el trámite de ARCA/ANSES NO
  * está descartado, queda PENDIENTE hasta que cuenten con la documentación migratoria necesaria
  * (DNI precario, residencia en trámite, etc.). Mientras tanto se avanza con el contrato de forma
  * excepcional, y lo que se carga acá es el respaldo de esa excepción.
@@ -19,7 +19,7 @@ import { getImageUrl } from "../../utils/imageHelpers";
  *  - Hace falta AL MENOS un documento cargado para poder marcar la validación.
  *  - Quien valida y la fecha/hora los completa el server (no se editan desde acá).
  *  - La fecha de seguimiento arranca a 90 días del primer respaldo, para revisar más adelante si la
- *    persona ya obtuvo el CUIL y puede pasar al flujo normal de AFIP.
+ *    persona ya obtuvo el CUIL y puede pasar al flujo normal de ARCA.
  */
 
 export const TIPOS_DOC_SIN_CUIT: { value: string; label: string }[] = [
@@ -132,7 +132,7 @@ export const SinCuitValidacionModal: React.FC<Props> = ({ row, isOpen, onClose, 
         <div className="flex items-start gap-2 rounded-lg border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-900/20 px-3 py-2.5">
           <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
           <p className="text-xs text-blue-800 dark:text-blue-200">
-            El trámite de AFIP/ANSES de esta persona queda <strong>pendiente</strong> hasta que cuente con la documentación migratoria necesaria. Mientras tanto, el contrato avanza de forma excepcional
+            El trámite de ARCA/ANSES de esta persona queda <strong>pendiente</strong> hasta que cuente con la documentación migratoria necesaria. Mientras tanto, el contrato avanza de forma excepcional
             respaldado por lo que se cargue acá. Hace falta al menos un documento para poder validar.
           </p>
         </div>
@@ -238,7 +238,7 @@ export const SinCuitValidacionModal: React.FC<Props> = ({ row, isOpen, onClose, 
           <div>
             <label className={labelClass}>Fecha de seguimiento</label>
             <input type="date" value={validacion.fechaSeguimiento || ""} onChange={(e) => cambiarSeguimiento(e.target.value)} className={`${inputClass} max-w-xs`} />
-            <p className="text-[11px] text-gray-400 mt-1">Cuándo volver a revisar si ya obtuvo el CUIL y puede pasar al flujo normal de AFIP. Por defecto, 90 días desde la primera carga.</p>
+            <p className="text-[11px] text-gray-400 mt-1">Cuándo volver a revisar si ya obtuvo el CUIL y puede pasar al flujo normal de ARCA. Por defecto, 90 días desde la primera carga.</p>
           </div>
         </div>
       </div>

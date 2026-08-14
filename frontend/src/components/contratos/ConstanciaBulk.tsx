@@ -51,12 +51,12 @@ export const cuitDisplay = (raw?: string, sinCuit?: boolean): string => {
   return fmtCuit(raw) || "—";
 };
 
-/** Prefijos que usa AFIP: 20/23/24/25/26/27 personas físicas, 30/33/34 jurídicas. */
+/** Prefijos que usa ARCA: 20/23/24/25/26/27 personas físicas, 30/33/34 jurídicas. */
 const PREFIJOS_CUIT = ["20", "23", "24", "25", "26", "27", "30", "33", "34"];
 
 /**
  * ¿El CUIT es realmente un CUIT? Tener 11 dígitos no alcanza: había personas cargadas con
- * `00000000000`, que pasaban como "completo" y se mandaban igual a consultar al Padrón, donde AFIP
+ * `00000000000`, que pasaban como "completo" y se mandaban igual a consultar al Padrón, donde ARCA
  * devolvía error. Se valida prefijo + dígito verificador (módulo 11), que además atrapa tipeos.
  */
 export const cuitEsValido = (raw?: string): boolean => {
@@ -90,15 +90,15 @@ const hoyIso = (): string => new Intl.DateTimeFormat("en-CA", { timeZone: "Ameri
 export type EstadoConstancia = "activo_afip" | "activo_sin_archivar" | "inactivo_afip" | "desconocido_afip" | "vigente" | "vencida" | "sin_fecha" | "faltante";
 
 /**
- * Estado de la constancia de una fila. La consulta al Padrón de AFIP es la fuente de verdad UNA VEZ
+ * Estado de la constancia de una fila. La consulta al Padrón de ARCA es la fuente de verdad UNA VEZ
  * que se hizo al menos una (activo/activo_sin_archivar/inactivo/desconocido) — recién si nunca se
  * consultó (`constanciaAfipEstado` vacío) cae al criterio viejo basado en el PDF cargado a mano
  * (`vigente`/`vencida`/`sin_fecha`/`faltante`), para no perder el historial de antes de tener esta
  * consulta. Importante: "desconocido" NO debe caer a ese criterio viejo (antes lo hacía, y mostraba
- * "Vigente hasta ..." con una fecha de un PDF viejo aunque la consulta a AFIP no haya podido leer el
+ * "Vigente hasta ..." con una fecha de un PDF viejo aunque la consulta a ARCA no haya podido leer el
  * estado — parecía validado sin estarlo).
  *
- * "Activo en AFIP" solo no alcanza: el trámite se da por terminado recién cuando ese resultado quedó
+ * "Activo en ARCA" solo no alcanza: el trámite se da por terminado recién cuando ese resultado quedó
  * archivado en Dropbox (constanciaAfipDropboxSubidaAt) — es lo que dispara, del otro lado, el avance
  * automático de estado a "Envío de documentación" (estadoDropboxCronService.ts vigila esa carpeta).
  */
@@ -111,7 +111,7 @@ export const estadoConstancia = (row: ContractOverviewRow, hoy: string = hoyIso(
   return row.constanciaVigenciaHasta >= hoy ? "vigente" : "vencida";
 };
 
-/** Una constancia hay que (re)pedirla cuando falta, ya venció, AFIP la dio como inactiva o como
+/** Una constancia hay que (re)pedirla cuando falta, ya venció, ARCA la dio como inactiva o como
  *  desconocida, o quedó activa pero sin poder archivarse en Dropbox (hay que reintentar "Validar CUIT"). */
 export const constanciaPendiente = (row: ContractOverviewRow, hoy: string = hoyIso()): boolean => {
   const e = estadoConstancia(row, hoy);
@@ -120,22 +120,22 @@ export const constanciaPendiente = (row: ContractOverviewRow, hoy: string = hoyI
 
 const BADGE: Record<EstadoConstancia, { texto: (row: ContractOverviewRow) => string; clase: string; icono: typeof faCheck }> = {
   activo_afip: {
-    texto: (r) => `Activo en AFIP${r.constanciaAfipConsultadaAt ? ` (${fmtFechaHora(r.constanciaAfipConsultadaAt)})` : ""}`,
+    texto: (r) => `Activo en ARCA${r.constanciaAfipConsultadaAt ? ` (${fmtFechaHora(r.constanciaAfipConsultadaAt)})` : ""}`,
     clase: "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800",
     icono: faCheck,
   },
   activo_sin_archivar: {
-    texto: () => "Activo en AFIP — falta archivar en Dropbox",
+    texto: () => "Activo en ARCA — falta archivar en Dropbox",
     clase: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800",
     icono: faTriangleExclamation,
   },
   inactivo_afip: {
-    texto: () => "Inactivo en AFIP",
+    texto: () => "Inactivo en ARCA",
     clase: "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 border-red-200 dark:border-red-800",
     icono: faTriangleExclamation,
   },
   desconocido_afip: {
-    texto: () => "AFIP no devolvió un estado reconocible",
+    texto: () => "ARCA no devolvió un estado reconocible",
     clase: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800",
     icono: faTriangleExclamation,
   },
@@ -173,7 +173,7 @@ export const ConstanciaBadge: React.FC<{ row: ContractOverviewRow }> = ({ row })
   );
 };
 
-/** Badge SOLO del estado en el Padrón de AFIP/ARCA (Activo/Inactivo/Desconocido/Sin consultar) —
+/** Badge SOLO del estado en el Padrón de ARCA (Activo/Inactivo/Desconocido/Sin consultar) —
  *  independiente de si ya quedó archivado en Dropbox (ver `DropboxBadge`). */
 export const ArcaBadge: React.FC<{ row: ContractOverviewRow }> = ({ row }) => {
   const estado = row.constanciaAfipEstado;
@@ -186,14 +186,14 @@ export const ArcaBadge: React.FC<{ row: ContractOverviewRow }> = ({ row }) => {
           ? { clase: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800", icono: faTriangleExclamation, texto: "Desconocido" }
           : { clase: "bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400 border-gray-200 dark:border-gray-700", icono: faTriangleExclamation, texto: "Sin consultar" };
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap ${cfg.clase}`} title={row.constanciaAfipConsultadaAt ? `Consultado ${fmtFechaHora(row.constanciaAfipConsultadaAt)}` : "Todavía no se consultó al Padrón de AFIP"}>
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap ${cfg.clase}`} title={row.constanciaAfipConsultadaAt ? `Consultado ${fmtFechaHora(row.constanciaAfipConsultadaAt)}` : "Todavía no se consultó al Padrón de ARCA"}>
       <FontAwesomeIcon icon={cfg.icono} className="h-2.5 w-2.5" />
       {cfg.texto}
     </span>
   );
 };
 
-/** Badge SOLO de si la constancia quedó archivada en Dropbox — independiente del estado en AFIP
+/** Badge SOLO de si la constancia quedó archivada en Dropbox — independiente del estado en ARCA
  *  (ver `ArcaBadge`). Recién con esto el trámite se considera terminado. */
 export const DropboxBadge: React.FC<{ row: ContractOverviewRow; onEliminado?: () => void }> = ({ row, onEliminado }) => {
   const guardado = !!row.constanciaAfipDropboxSubidaAt;
@@ -204,7 +204,7 @@ export const DropboxBadge: React.FC<{ row: ContractOverviewRow; onEliminado?: ()
     e.stopPropagation();
     const res = await sweetAlert.confirm(
       "¿Eliminar el archivo de Dropbox?",
-      "Se borra el JSON de la validación y el contrato deja de estar listo para avanzar en la próxima sincronización. La consulta a AFIP no se pierde: se puede volver a validar.",
+      "Se borra el JSON de la validación y el contrato deja de estar listo para avanzar en la próxima sincronización. La consulta a ARCA no se pierde: se puede volver a validar.",
       "Sí, eliminar",
     );
     if (!res.isConfirmed) return;
@@ -259,7 +259,7 @@ export const DropboxBadge: React.FC<{ row: ContractOverviewRow; onEliminado?: ()
         <Modal isOpen={infoOpen} onClose={() => setInfoOpen(false)} title="Qué pasa en la próxima sincronización" size="sm" zIndex={80}>
           <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
             <p>
-              El CUIT dio <strong>Activo en AFIP</strong> y el resultado quedó <strong>archivado en Dropbox</strong>. Eso es exactamente lo que vigila el escaneo automático.
+              El CUIT dio <strong>Activo en ARCA</strong> y el resultado quedó <strong>archivado en Dropbox</strong>. Eso es exactamente lo que vigila el escaneo automático.
             </p>
             <p>
               En la próxima sincronización el contrato va a avanzar solo a <strong>Envío de documentación</strong> y va a pasar a verse en la bandeja <strong>Firma digital</strong>. No es inmediato:
@@ -317,7 +317,7 @@ export const BotonArca: React.FC<{ cuit?: string; compacto?: boolean; label?: st
 };
 
 /**
- * Consulta masiva al Padrón de AFIP: reemplaza al flujo de "entrar a ARCA persona por persona". Un
+ * Consulta masiva al Padrón de ARCA: reemplaza al flujo de "entrar a ARCA persona por persona". Un
  * solo click consulta el CUIT de cada contrato pendiente (deduplicado por persona) y actualiza el
  * estado de la constancia directo, sin descargar ni subir ningún PDF.
  */
@@ -343,11 +343,11 @@ export const BotonConsultarAfipBulk: React.FC<{
       const sinArchivar = activos.filter((r) => !r.dropboxSubido).length;
       sweetAlert.success(
         "Consulta completa",
-        `${resp.consultados} CUIT(s) consultado(s) — ${activos.length} activo(s) en AFIP.${conError > 0 ? ` ${conError} con error.` : ""}${sinArchivar > 0 ? ` ${sinArchivar} activo(s) no se pudieron archivar en Dropbox — tocá "Validar" en cada fila para ver el motivo puntual.` : ""}`,
+        `${resp.consultados} CUIT(s) consultado(s) — ${activos.length} activo(s) en ARCA.${conError > 0 ? ` ${conError} con error.` : ""}${sinArchivar > 0 ? ` ${sinArchivar} activo(s) no se pudieron archivar en Dropbox — tocá "Validar" en cada fila para ver el motivo puntual.` : ""}`,
       );
       onConsultado();
     } catch (e: any) {
-      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo consultar AFIP.");
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo consultar ARCA.");
     } finally {
       setConsultando(false);
     }
@@ -358,7 +358,7 @@ export const BotonConsultarAfipBulk: React.FC<{
       type="button"
       onClick={handleClick}
       disabled={consultando || pendientes.length === 0}
-      title={pendientes.length === 0 ? "Tildá contratos con CUIT pendiente de validar" : "Valida contra el Padrón de AFIP el CUIT de cada contrato tildado, sin ir uno por uno"}
+      title={pendientes.length === 0 ? "Tildá contratos con CUIT pendiente de validar" : "Valida contra el Padrón de ARCA el CUIT de cada contrato tildado, sin ir uno por uno"}
       className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold border transition-colors bg-blue-600 text-white border-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <FontAwesomeIcon icon={consultando ? faSpinner : faLandmark} spin={consultando} className="h-3 w-3" />
@@ -368,7 +368,7 @@ export const BotonConsultarAfipBulk: React.FC<{
 };
 
 /**
- * Consulta el Padrón de AFIP para el CUIT de esta persona puntual — misma consulta que
+ * Consulta el Padrón de ARCA para el CUIT de esta persona puntual — misma consulta que
  * BotonConsultarAfipBulk pero de a una, para validar un CUIT en el momento sin esperar al lote.
  */
 export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado: () => void; compacto?: boolean }> = ({ row, onConsultado, compacto }) => {
@@ -385,7 +385,7 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
       sweetAlert.error("Sin CUIT", "Esta persona no tiene un CUIT/CUIL cargado.");
       return;
     }
-    // Consultar un CUIT que no es un CUIT solo devuelve un error de AFIP y ensucia los logs.
+    // Consultar un CUIT que no es un CUIT solo devuelve un error de ARCA y ensucia los logs.
     if (!cuitEsValido(row.cuit)) {
       sweetAlert.error("CUIT inválido", `${cuit} no es un CUIT/CUIL válido (no pasa el dígito verificador). Corregilo en los datos personales de la persona antes de consultar a ARCA.`);
       return;
@@ -398,29 +398,29 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
       if (resultado?.error) {
         sweetAlert.error("No se pudo validar", resultado.error);
       } else if (resultado?.estado === "activo" && resultado.dropboxSubido) {
-        sweetAlert.success("CUIT activo y archivado", `${cuit} figura activo en el Padrón de AFIP y quedó archivado en Dropbox — el trámite queda completo.`);
+        sweetAlert.success("CUIT activo y archivado", `${cuit} figura activo en el Padrón de ARCA y quedó archivado en Dropbox — el trámite queda completo.`);
       } else if (resultado?.estado === "activo") {
-        sweetAlert.warningAlert("Activo, pero falta archivar", `${cuit} figura activo en el Padrón de AFIP, pero no se pudo archivar el resultado en Dropbox. El trámite sigue pendiente.\n\nMotivo: ${resultado.dropboxError || "no se informó (revisá los Logs de AFIP)."}`);
+        sweetAlert.warningAlert("Activo, pero falta archivar", `${cuit} figura activo en el Padrón de ARCA, pero no se pudo archivar el resultado en Dropbox. El trámite sigue pendiente.\n\nMotivo: ${resultado.dropboxError || "no se informó (revisá los Logs de ARCA)."}`);
       } else if (resultado?.estado === "inactivo") {
-        sweetAlert.warning("CUIT inactivo", `${cuit} figura inactivo en el Padrón de AFIP.`);
+        sweetAlert.warning("CUIT inactivo", `${cuit} figura inactivo en el Padrón de ARCA.`);
       } else {
-        // "desconocido": AFIP no devolvió (o no se pudo leer) el estadoClave — no es lo mismo que
+        // "desconocido": ARCA no devolvió (o no se pudo leer) el estadoClave — no es lo mismo que
         // "inactivo". `encontrado: false` con un fault de "no existe persona" puede ser: el CUIT
         // realmente no existe, o el servicio Consulta Padrón A13 no está autorizado para este
-        // certificado en AFIP (una sola consulta a un tercero no permite distinguirlas — para eso
-        // existe la autoconsulta de "Revalidar servicio" en la página de AFIP, que si este CUIT es el
+        // certificado en ARCA (una sola consulta a un tercero no permite distinguirlas — para eso
+        // existe la autoconsulta de "Revalidar servicio" en la página de ARCA, que si este CUIT es el
         // de la propia organización, contesta esa pregunta con certeza).
         const explicacion =
           resultado?.encontrado === false
-            ? `AFIP dice que no existe una persona con el CUIT ${cuit} (o el servicio no está autorizado para consultarla — con una sola consulta no se puede distinguir). Si este CUIT es el de la propia organización, andá a la página de AFIP y usá "Revalidar servicio" para confirmarlo. Si es de un tercero, revisá que el CUIT esté bien cargado.`
-            : `AFIP encontró a la persona pero no devolvió un estado de CUIT reconocible (ni activo ni inactivo explícito) para ${cuit}. Es probable que sea un problema de mapeo de la respuesta, no del CUIT.`;
+            ? `ARCA dice que no existe una persona con el CUIT ${cuit} (o el servicio no está autorizado para consultarla — con una sola consulta no se puede distinguir). Si este CUIT es el de la propia organización, andá a la página de ARCA y usá "Revalidar servicio" para confirmarlo. Si es de un tercero, revisá que el CUIT esté bien cargado.`
+            : `ARCA encontró a la persona pero no devolvió un estado de CUIT reconocible (ni activo ni inactivo explícito) para ${cuit}. Es probable que sea un problema de mapeo de la respuesta, no del CUIT.`;
         const faultTxt = resultado?.faultCode || resultado?.faultString ? `\n\nfaultCode: ${resultado?.faultCode || "—"}\nfaultString: ${resultado?.faultString || "—"}` : "";
-        const rawTxt = resultado?.raw ? `\n\n--- Respuesta cruda de AFIP ---\ncuitRepresentada: ${resultado.cuitRepresentada || "?"} · ambiente: ${resultado.ambiente || "?"}\n${JSON.stringify(resultado.raw, null, 2)}` : "";
+        const rawTxt = resultado?.raw ? `\n\n--- Respuesta cruda de ARCA ---\ncuitRepresentada: ${resultado.cuitRepresentada || "?"} · ambiente: ${resultado.ambiente || "?"}\n${JSON.stringify(resultado.raw, null, 2)}` : "";
         sweetAlert.warningAlert("Estado no reconocido", explicacion + faultTxt + rawTxt);
       }
       onConsultado();
     } catch (e: any) {
-      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo consultar AFIP.");
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo consultar ARCA.");
     } finally {
       setConsultando(false);
     }
@@ -432,7 +432,7 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
         type="button"
         onClick={handleClick}
         disabled={consultando || !cuit}
-        title={cuit ? `Validar ${cuit} en el Padrón de AFIP` : "Falta el CUIT/CUIL de esta persona"}
+        title={cuit ? `Validar ${cuit} en el Padrón de ARCA` : "Falta el CUIT/CUIL de esta persona"}
         className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
       >
         <FontAwesomeIcon icon={consultando ? faSpinner : faLandmark} spin={consultando} className="h-3 w-3" />
@@ -445,14 +445,14 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
             e.stopPropagation();
             setVerDetalle(true);
           }}
-          title="Ver el CUIT enviado y la respuesta cruda de AFIP de la última consulta"
+          title="Ver el CUIT enviado y la respuesta cruda de ARCA de la última consulta"
           className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shrink-0"
         >
           <FontAwesomeIcon icon={faBug} className="h-3 w-3" />
         </button>
       )}
       {verDetalle && ultimoResultado && (
-        <Modal isOpen={verDetalle} onClose={() => setVerDetalle(false)} title="Detalle técnico — Consulta Padrón AFIP" subtitle={`CUIT consultado: ${ultimoResultado.cuit}`} size="lg" zIndex={80}>
+        <Modal isOpen={verDetalle} onClose={() => setVerDetalle(false)} title="Detalle técnico — Consulta Padrón ARCA" subtitle={`CUIT consultado: ${ultimoResultado.cuit}`} size="lg" zIndex={80}>
           <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
             <ul className="grid grid-cols-2 gap-2 text-xs">
               <li className="bg-gray-50 dark:bg-gray-900/40 rounded-lg px-3 py-2">
@@ -473,13 +473,13 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
               </li>
               {(ultimoResultado.faultCode || ultimoResultado.faultString) && (
                 <li className="bg-gray-50 dark:bg-gray-900/40 rounded-lg px-3 py-2 col-span-2">
-                  <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest">faultCode / faultString (SOAP Fault de AFIP)</span>
+                  <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest">faultCode / faultString (SOAP Fault de ARCA)</span>
                   <span className="font-mono text-gray-700 dark:text-gray-200 break-words">{ultimoResultado.faultCode || "—"} — {ultimoResultado.faultString || "—"}</span>
                 </li>
               )}
             </ul>
             <div>
-              <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Respuesta cruda de AFIP (raw / Fault)</span>
+              <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Respuesta cruda de ARCA (raw / Fault)</span>
               <pre className="text-[11px] bg-gray-900 text-gray-300 rounded-lg p-3 overflow-auto max-h-[50vh] whitespace-pre-wrap break-words">
                 {ultimoResultado.error ? ultimoResultado.error : JSON.stringify(ultimoResultado.raw, null, 2) || "(vacío)"}
               </pre>
