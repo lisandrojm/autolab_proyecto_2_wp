@@ -5,6 +5,7 @@ import { ContractOverviewRow } from "../../api/users";
 import { afipAPI, ResultadoConsultaPadron } from "../../api/afip";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { Modal } from "../ui/Modal";
+import { cuitEsValido } from "../../utils/cuit";
 
 /**
  * Constancia de CUIT (ARCA). El PDF se baja del portal público de ARCA, que pide un código de
@@ -51,25 +52,10 @@ export const cuitDisplay = (raw?: string, sinCuit?: boolean): string => {
   return fmtCuit(raw) || "—";
 };
 
-/** Prefijos que usa ARCA: 20/23/24/25/26/27 personas físicas, 30/33/34 jurídicas. */
-const PREFIJOS_CUIT = ["20", "23", "24", "25", "26", "27", "30", "33", "34"];
-
-/**
- * ¿El CUIT es realmente un CUIT? Tener 11 dígitos no alcanza: había personas cargadas con
- * `00000000000`, que pasaban como "completo" y se mandaban igual a consultar al Padrón, donde ARCA
- * devolvía error. Se valida prefijo + dígito verificador (módulo 11), que además atrapa tipeos.
- */
-export const cuitEsValido = (raw?: string): boolean => {
-  const d = String(raw || "").replace(/\D/g, "");
-  if (d.length !== 11) return false;
-  if (!PREFIJOS_CUIT.includes(d.slice(0, 2))) return false;
-  if (/^(\d)\1{10}$/.test(d)) return false; // 00000000000, 11111111111, etc.
-  const pesos = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
-  const suma = pesos.reduce((acc, p, i) => acc + p * Number(d[i]), 0);
-  const resto = suma % 11;
-  const verificador = resto === 0 ? 0 : resto === 1 ? 9 : 11 - resto;
-  return verificador === Number(d[10]);
-};
+// El validador de CUIT/CUIL vive en utils/cuit.ts: lo usan también el chequeo de completitud y el
+// generador del TXT, que no pueden importar un módulo con React. Se reexporta para no tocar los
+// imports que ya existen.
+export { cuitEsValido };
 
 /** "YYYY-MM-DD" → "DD/MM/YYYY". */
 const fmtIso = (s?: string): string => {

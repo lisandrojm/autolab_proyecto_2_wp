@@ -48,6 +48,42 @@ class ArcaSucursalesAPI {
   async remove(id: string): Promise<void> {
     await axios.delete(`/arca/sucursales/${id}`);
   }
+
+  /** Plantilla .xlsx con el formato que espera el importador. */
+  async downloadTemplate(): Promise<void> {
+    const { data } = await axios.get("/arca/sucursales/template", { responseType: "blob" });
+    const url = URL.createObjectURL(new Blob([data]));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "plantilla_arca_sucursales.xlsx";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Importa el archivo de "Exportar lista a archivo" de ARCA (Datos del Empleador → Domicilios de
+   * Explotación) o la plantilla. Sincroniza: las actividades se reemplazan por las del archivo.
+   */
+  async import(file: File): Promise<ImportSucursalesResult> {
+    const formData = new FormData();
+    formData.append("file", file);
+    // Sin headers explícitos: el interceptor pone Authorization y el browser el boundary multipart.
+    const { data } = await axios.post("/arca/sucursales/import", formData);
+    return data;
+  }
+}
+
+export interface ImportSucursalesResult {
+  creadas: number;
+  actualizadas: number;
+  iguales: number;
+  /** Códigos que están en WeProdu pero no en el archivo (no se borran: puede haber contratos usándolos). */
+  sobrantes: string[];
+  /** Códigos que venían sin domicilio y se saltearon. */
+  sinDomicilio: string[];
+  errores: string[];
 }
 
 export const arcaSucursalesAPI = new ArcaSucursalesAPI();

@@ -10,6 +10,7 @@ import { contratosAPI, ContratoItem } from '../../api/contratos';
 import { categoriaSatAPI, CategoriaSatItem } from '../../api/categoriasSat';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { arcaSucursalesAPI, ArcaSucursal } from '../../api/arcaSucursales';
+import { DatosArcaDetalle } from './DatosArcaDetalle';
 import { Release } from '../../api/release';
 import { firmaDigitalAPI, FirmaDigitalConfig } from '../../api/firmaDigital';
 import { afipAPI } from '../../api/afip';
@@ -1172,7 +1173,7 @@ export const ContractBulkAfipTab: React.FC<{
                   {filterTipo === 'alta_temprana_afip' && (
                     <button onClick={() => setDetalle({ row: r, result })} className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border transition-colors ${result.completo ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100'}`}>
                       <FontAwesomeIcon icon={result.completo ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
-                      ARCA: {result.completo ? 'Completo' : `Faltan ${result.faltantes}`}
+                      ARCA: {result.completo ? 'Completo' : result.errores > 0 ? `${result.errores} mal cargado(s)` : `Faltan ${result.configuracionesPendientes}`}
                     </button>
                   )}
                   <span className="ml-auto">
@@ -1365,7 +1366,7 @@ export const ContractBulkAfipTab: React.FC<{
                       <td className="px-4 py-3">
                         <button onClick={() => setDetalle({ row: r, result })} title="Ver detalle de los datos ARCA" className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap transition-colors ${result.completo ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100'}`}>
                           <FontAwesomeIcon icon={result.completo ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
-                          {result.completo ? 'Completo' : `Faltan ${result.faltantes}`}
+                          {result.completo ? 'Completo' : result.errores > 0 ? `${result.errores} mal cargado(s)` : `Faltan ${result.configuracionesPendientes}`}
                         </button>
                       </td>
                     )}
@@ -1425,11 +1426,11 @@ export const ContractBulkAfipTab: React.FC<{
           onClose={() => setDetalle(null)}
           title={`Datos ARCA — ${detalle.row.userName}`}
           subtitle={`${detalle.row.projectName} · ${detalle.row.nombre_contrato}`}
-          size="md"
+          size="lg"
           zIndex={70}
           footer={
             <div className="flex items-center justify-between gap-3 w-full">
-              <span className="text-[11px] text-gray-500 dark:text-gray-400">{detalle.result.completo ? 'Podés generar el alta de esta persona.' : 'Completá los faltantes para poder generar el TXT.'}</span>
+              <span className="text-[11px] text-gray-500 dark:text-gray-400">{detalle.result.completo ? 'Podés generar el alta de esta persona.' : 'Resolvé lo pendiente para poder generar el TXT.'}</span>
               <button onClick={() => generarTxt([detalle], `alta_afip_${detalle.row.userName.replace(/\s+/g, '_')}`)} disabled={!detalle.result.completo} className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0">
                 <FontAwesomeIcon icon={faFileLines} />
                 Descargar TXT de esta persona
@@ -1437,24 +1438,7 @@ export const ContractBulkAfipTab: React.FC<{
             </div>
           }
         >
-          <div className="space-y-3">
-            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold ${detalle.result.completo ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'}`}>
-              <FontAwesomeIcon icon={detalle.result.completo ? faCheck : faTriangleExclamation} />
-              {detalle.result.completo ? 'Listo para la carga masiva: todos los datos están cargados.' : `Faltan ${detalle.result.faltantes} dato(s) para poder generar el TXT.`}
-            </div>
-            <ul className="divide-y divide-gray-100 dark:divide-gray-700/60 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-              {detalle.result.checks.map((c) => (
-                <li key={c.key} className="flex items-center justify-between gap-3 px-3 py-2">
-                  <span className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 min-w-0">
-                    <FontAwesomeIcon icon={c.ok ? faCheck : faXmark} className={`h-3.5 w-3.5 shrink-0 ${c.ok ? 'text-green-500' : 'text-red-500'}`} />
-                    <span className="truncate">{c.label}</span>
-                  </span>
-                  {c.ok ? <span className="text-sm font-mono text-gray-600 dark:text-gray-300 shrink-0">{c.value}</span> : <span className="text-[11px] font-semibold text-red-600 dark:text-red-400 shrink-0">Falta</span>}
-                </li>
-              ))}
-            </ul>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400">Los códigos salen de: Tipo de Contrato (modalidad, tipo de servicio, actividad, liquidación), Categoría SAT (categoría profesional y sueldo bruto), Obra Social (RNOS), Sede (sucursal) y los datos personales (CUIL).</p>
-          </div>
+          <DatosArcaDetalle row={detalle.row} result={detalle.result} cat={afipCat} onNavegar={() => setDetalle(null)} />
         </Modal>
       )}
 

@@ -193,8 +193,6 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission('admin_orders:view')) base.push({ path: '/orders', icon: faShoppingCart, label: 'Pedidos', scope: 'global' });
       if (hasPermission('admin_vacations:view')) base.push({ path: '/vacations', icon: faUmbrellaBeach, label: 'Vacaciones', scope: 'global' });
       if (hasPermission('admin_hr_documents:view')) base.push({ path: '/documents', icon: faFileText, label: 'Dropbox | Documentos', scope: 'global' });
-      // Lo que ya se envió a firmar y espera la firma: es la carpeta Pendbox de Dropbox.
-      if (hasPermission('admin_hr_documents:view')) base.push({ path: '/firmas-pendientes', icon: faFileSignature, label: 'Dropbox | Firmas', scope: 'global' });
 
       // CONFIGURACION Items
       if (hasPermission('config_activity_logs:view')) base.push({ path: '/requests/config', icon: faFileText, label: 'Novedades', scope: 'global' });
@@ -293,7 +291,7 @@ export const MobileNavbar: React.FC = () => {
     // Partición de items: Admin Usuarios, Admin General, Configuración y GESTIÓN
     const userAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ['/users', '/roles', '/areas', '/positions', '/levels'].includes(item.path)) : adminItems.filter((item) => ['/roles', '/areas', '/positions', '/levels', '/users'].includes(item.path))).sort(byLabel);
 
-    const generalAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ['/tenants'].includes(item.path)) : adminItems.filter((item) => ['/admin/projects', '/admin/contracts', '/orders', '/vacations', '/requests', '/documents', '/firmas-pendientes'].includes(item.path))).sort(byLabel);
+    const generalAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ['/tenants'].includes(item.path)) : adminItems.filter((item) => ['/admin/projects', '/admin/contracts', '/orders', '/vacations', '/requests', '/documents'].includes(item.path))).sort(byLabel);
 
     // Ojo: los paths de CONFIG_GROUPS (Plantillas, ARCA) NO van acá, se agrupan aparte en su subgrupo.
     const configPaths = ['/requests/config', '/order-types', '/shifts', '/vacations-rules', '/holidays', '/clients', '/centros-costo', '/bancos', '/empresas', '/contratos', '/releases-tipos', '/admin/sedes', '/escaneo-dropbox', '/dropbox-sign'];

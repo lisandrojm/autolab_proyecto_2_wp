@@ -20,8 +20,23 @@ export interface IArcaSucursal extends Document {
   localidad?: string;
   codigoPostal?: string;
   /**
-   * Actividades declaradas para este domicilio (pos. 79-84 del TXT). ARCA admite más de una: con
+   * Actividades declaradas para ESTE domicilio (pos. 79-84 del TXT). ARCA admite más de una: con
    * una sola, el contrato la hereda; con varias, el contrato elige cuál declara.
+   *
+   * NO hacer un ABM global de Actividades. Son subentidad de la sucursal a propósito:
+   *
+   *  - ARCA solo acepta las actividades declaradas en el padrón para ese domicilio. Un código
+   *    válido en otra sucursal es rechazado acá.
+   *  - La propia pantalla de alta de ARCA no expone una lista global: el combo se arma con
+   *    `l_ActDom`, filtrado por el código de sucursal elegido.
+   *  - Un selector global dejaría elegir códigos que ARCA rechaza para esa sede — el mismo tipo de
+   *    error silencioso que motivó sacar la actividad del Tipo de Contrato.
+   *
+   * Se cargan por extracción desde ARCA, logueado con cada CUIT (ver el script de migración y el
+   * método de extracción por consola documentado con el CSV del padrón).
+   *
+   * Pendiente opcional y de baja prioridad: una tabla diccionario `codigo → descripcion`, SOLO para
+   * normalizar los textos (no para elegir).
    */
   actividades: Array<{
     /** Código de actividad (6 díg.). */

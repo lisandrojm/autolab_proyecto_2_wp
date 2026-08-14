@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLocationDot, faPlus, faEdit, faTrash, faXmark, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { faLocationDot, faPlus, faEdit, faTrash, faXmark, faTriangleExclamation, faDownload, faFileImport, faCircleInfo, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
@@ -28,6 +28,9 @@ export const ArcaSucursalesPage: React.FC = () => {
   const [editando, setEditando] = useState<ArcaSucursal | null>(null);
   const [form, setForm] = useState<ArcaSucursalInput>(FORM_VACIO);
   const [saving, setSaving] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
   const helpEntry = getHelp(HELP_KEY);
 
   const cargar = async () => {
@@ -101,6 +104,28 @@ export const ArcaSucursalesPage: React.FC = () => {
     }
   };
 
+  const importar = async () => {
+    if (!importFile) return;
+    try {
+      setImporting(true);
+      const r = await arcaSucursalesAPI.import(importFile);
+      const partes = [`${r.creadas} nueva(s)`, `${r.actualizadas} actualizada(s)`, `${r.iguales} sin cambios`];
+      const avisos: string[] = [];
+      if (r.sobrantes.length > 0) avisos.push(`${r.sobrantes.length} sucursal(es) de WeProdu no vienen en el archivo y NO se borraron (${r.sobrantes.join(", ")}): revisá si les dieron de baja en ARCA.`);
+      if (r.sinDomicilio.length > 0) avisos.push(`Se saltearon ${r.sinDomicilio.length} sin domicilio (${r.sinDomicilio.join(", ")}).`);
+      if (r.errores.length > 0) avisos.push(`${r.errores.length} fila(s) con problemas: ${r.errores.slice(0, 5).join("; ")}`);
+      if (avisos.length > 0) sweetAlert.info("Importación terminada", `${partes.join(" · ")}.\n\n${avisos.join("\n")}`);
+      else sweetAlert.success("Importación terminada", `${partes.join(" · ")}.`);
+      setShowImport(false);
+      setImportFile(null);
+      await cargar();
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo importar el archivo.");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const patchActividad = (i: number, cambio: Partial<{ codigo: string; descripcion: string }>) => setForm((p) => ({ ...p, actividades: p.actividades.map((a, j) => (j === i ? { ...a, ...cambio } : a)) }));
 
   return (
@@ -112,9 +137,25 @@ export const ArcaSucursalesPage: React.FC = () => {
       shouldShowInfo={hasHelp(HELP_KEY)}
       infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: helpEntry.title, size: helpEntry.size, content: helpEntry.content }}
       headerActions={
-        <button onClick={abrirCrear} title="Nueva sucursal" aria-label="Nueva sucursal" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
-          <FontAwesomeIcon icon={faPlus} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => arcaSucursalesAPI.downloadTemplate().catch(() => sweetAlert.error("Error", "No se pudo descargar la plantilla."))} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+            <FontAwesomeIcon icon={faDownload} className="h-3.5 w-3.5" /> Plantilla
+          </button>
+          <button onClick={() => setShowImport(true)} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30">
+            <FontAwesomeIcon icon={faFileImport} className="h-3.5 w-3.5" /> Importar de ARCA
+          </button>
+          <button onClick={abrirCrear} title="Nueva sucursal" aria-label="Nueva sucursal" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+            <FontAwesomeIcon icon={faPlus} />
+          </button>
+        </div>
+      }
+      preSearchContent={
+        <div className="rounded-lg border border-blue-200 dark:border-blue-900/50 bg-blue-50/60 dark:bg-blue-950/20 px-4 py-3 flex items-start gap-3">
+          <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+          <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+            Las sucursales y sus actividades <strong>se declaran en ARCA</strong>, en <em>Datos del Empleador → Domicilios de Explotación</em>. Acá solo se <strong>sincronizan</strong>: dar de alta o de baja un domicilio o una actividad en WeProdu no lo cambia en el padrón. Lo recomendable es usar <em>&quot;Exportar lista a archivo&quot;</em> desde esa pantalla e importarlo acá con <strong>Importar de ARCA</strong>. Ojo: el export es <strong>por CUIT</strong>, así que hay que repetirlo logueado con cada empleadora.
+          </p>
+        </div>
       }
       searchAndFilters={<SearchAndFilters searchTerm={search} onSearchChange={setSearch} searchPlaceholder="Buscar por código, domicilio o actividad..." />}
     >
@@ -243,6 +284,38 @@ export const ArcaSucursalesPage: React.FC = () => {
             )}
 
             {form.actividades.length > 1 && <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400 ml-1">Con más de una actividad, cada contrato de esta sucursal tiene que elegir cuál declara.</p>}
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showImport}
+        onClose={() => setShowImport(false)}
+        title="Importar sucursales de ARCA"
+        subtitle="Archivo de “Exportar lista a archivo” (Domicilios de Explotación) o la plantilla"
+        size="md"
+        footer={
+          <div className="flex items-center justify-end gap-3 w-full">
+            <button onClick={() => setShowImport(false)} className="btn-secondary" disabled={importing}>
+              Cancelar
+            </button>
+            <button onClick={importar} className="btn-primary" disabled={!importFile || importing}>
+              {importing ? "Importando..." : "Importar"}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <label className="flex items-center gap-3 px-4 py-6 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900/30">
+            <FontAwesomeIcon icon={importing ? faSpinner : faFileImport} spin={importing} className="h-5 w-5 text-gray-400" />
+            <span className="text-sm text-gray-600 dark:text-gray-300">{importFile ? importFile.name : "Elegí un archivo .xlsx, .xls o .csv"}</span>
+            <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => setImportFile(e.target.files?.[0] || null)} />
+          </label>
+
+          <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2.5">
+            <p className="text-[11px] text-gray-700 dark:text-gray-300 leading-relaxed">
+              Es una <strong>sincronización</strong>: las actividades de cada sucursal se reemplazan por las del archivo, así que una actividad dada de baja en ARCA desaparece acá. Las sucursales que estén en WeProdu y no en el archivo <strong>no se borran</strong> (puede haber contratos usándolas): se te avisa cuáles son para que las revises.
+            </p>
           </div>
         </div>
       </Modal>

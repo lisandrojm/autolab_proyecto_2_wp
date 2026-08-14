@@ -1,5 +1,5 @@
 import { ContractOverviewRow } from "../../api/users";
-import { AfipCatalogs, resolveAfipValues } from "./afipCompleteness";
+import { AfipCatalogs, AfipValues, resolveAfipValues, MODALIDADES_PLAZO_DETERMINADO, MODALIDADES_TIEMPO_INDETERMINADO } from "./afipCompleteness";
 
 /**
  * Generación del archivo TXT de "Alta masiva sin límite de registros" de ARCA.
@@ -9,7 +9,15 @@ import { AfipCatalogs, resolveAfipValues } from "./afipCompleteness";
  * Contrastado posición por posición contra el diseño de registro oficial que publica la pantalla
  * Relaciones Laborales → Carga Masiva (14/08/2026). Las 22 posiciones coinciden.
  *
+ * El layout está en UN solo lugar (`describirRegistro`): de ahí salen tanto el registro que se
+ * escribe en el archivo como la vista previa del modal "Datos ARCA". Si estuvieran duplicados,
+ * la vista previa terminaría mintiendo sobre lo que realmente se manda.
+ *
  * PENDIENTE de confirmar con un alta real hecha a mano en ARCA ("golden record"):
+ *  - Retribución (58-72): hoy se mandan CENTAVOS implícitos (importe × 100). El diseño de 130 no
+ *    aclara los decimales, pero el formato de 85 caracteres parte el importe en parte entera (8) +
+ *    parte decimal (2), así que ARCA lleva centavos en las altas. Si el golden record mostrara pesos
+ *    enteros, hay que sacar el × 100 de `describirRegistro`.
  *  - Situación de baja (46-47) y Nro. Formulario Agropecuario (120-129): el diseño los declara
  *    NUMERICO pero en un alta no aplican, y ninguno tiene un valor documentado que signifique "no
  *    aplica" (a diferencia del campo 130, donde el 0 sí lo significa). Rellenarlos con ceros
@@ -34,7 +42,7 @@ const txt = (v: string, len: number): string => (v || "").slice(0, len).padEnd(l
 const blank = (len: number): string => " ".repeat(len);
 
 /** Fecha en formato AAAA/MM/DD que pide ARCA. Acepta "YYYY-MM-DD" o "DD/MM/YYYY". */
-const fechaAfip = (s: string): string => {
+export const fechaAfip = (s: string): string => {
   if (!s) return "";
   let m = /^(\d{4})[-/](\d{2})[-/](\d{2})/.exec(s);
   if (m) return `${m[1]}/${m[2]}/${m[3]}`;
@@ -43,66 +51,107 @@ const fechaAfip = (s: string): string => {
   return "";
 };
 
+/** De dónde sale el contenido de un campo del registro. */
+export type ClaseCampo =
+  /** Constante del formato (tipo de registro, movimiento, rectificación…). */
+  | "constante"
+  /** Dato del contrato/persona que hay que resolver. */
+  | "dato"
+  /** No aplica a un alta: va en blanco a propósito. */
+  | "no_aplica";
+
+export interface CampoRegistro {
+  desde: number;
+  hasta: number;
+  nombre: string;
+  clase: ClaseCampo;
+  /** Contenido formateado listo para el archivo, o `null` si el dato falta / está mal. */
+  contenido: string | null;
+  /** Con qué se muestra en la vista previa cuando `contenido` es null. */
+  placeholder: string;
+  /** `key` del check de completitud que lo resuelve, para poder cruzarlos en la UI. */
+  checkKey?: string;
+}
+
+/**
+ * Describe el registro campo por campo. Es la fuente única del layout: `buildAltaRecord` lo
+ * concatena y el modal lo muestra. Los campos que no se pudieron resolver vienen con
+ * `contenido: null`, así la vista previa puede marcarlos en su posición exacta.
+ */
+export function describirRegistro(row: ContractOverviewRow, cat: AfipCatalogs): { campos: CampoRegistro[]; valores: AfipValues } {
+  const v = resolveAfipValues(row, cat);
+
+  // Las fechas se normalizan ANTES de decidir si están: `fechaAfip` devuelve "" si la fecha guardada
+  // no matchea ninguno de los dos formatos que entiende. Sin este paso, una fecha con otro formato
+  // pasaba como "cargada" y terminaba escribiendo espacios en un campo obligatorio, generando un
+  // registro que ARCA rechaza sin explicar por qué.
+  const fechaInicio = fechaAfip(v.fechaInicio);
+  const fechaFin = fechaAfip(v.fechaFin);
+  const fechaFinInvalida = !!v.fechaFin && !fechaFin;
+  // La fecha de fin es obligatoria en las modalidades a plazo determinado y tiene que ir en blanco
+  // en las de tiempo indeterminado: en un caso falta y en el otro sobra, y las dos cambian el
+  // sentido del alta (ver MODALIDADES_* en afipCompleteness).
+  const exigeFechaFin = MODALIDADES_PLAZO_DETERMINADO.includes(v.modalidadContrato);
+  const prohibeFechaFin = MODALIDADES_TIEMPO_INDETERMINADO.includes(v.modalidadContrato);
+  const fechaFinOk = !fechaFinInvalida && !(exigeFechaFin && !fechaFin) && !(prohibeFechaFin && !!fechaFin);
+
+  const dato = (desde: number, hasta: number, nombre: string, contenido: string | null, checkKey?: string): CampoRegistro => ({
+    desde,
+    hasta,
+    nombre,
+    clase: "dato",
+    contenido,
+    placeholder: "·".repeat(hasta - desde + 1),
+    checkKey,
+  });
+  const cte = (desde: number, hasta: number, nombre: string, contenido: string): CampoRegistro => ({ desde, hasta, nombre, clase: "constante", contenido, placeholder: contenido });
+  const na = (desde: number, hasta: number, nombre: string): CampoRegistro => ({ desde, hasta, nombre, clase: "no_aplica", contenido: blank(hasta - desde + 1), placeholder: blank(hasta - desde + 1) });
+
+  const campos: CampoRegistro[] = [
+    cte(1, 2, "Tipo de registro", "01"),
+    cte(3, 4, "Código de movimiento (alta)", "AT"),
+    dato(5, 15, "CUIL", v.cuilValido ? num(v.cuil, 11) : null, "cuil"),
+    cte(16, 16, "Marca trabajador agropecuario", "N"),
+    dato(17, 19, "Modalidad de contrato", v.modalidadContrato ? num(v.modalidadContrato, 3) : null, "modalidadContrato"),
+    dato(20, 29, "Fecha inicio relación laboral", fechaInicio ? txt(fechaInicio, 10) : null, "fechaInicio"),
+    // Único campo que puede estar legítimamente vacío: en las relaciones por tiempo indeterminado
+    // el blanco ES el valor correcto, no un faltante.
+    dato(30, 39, "Fecha fin relación laboral", fechaFinOk ? (fechaFin ? txt(fechaFin, 10) : blank(10)) : null, "fechaFin"),
+    dato(40, 45, "Código de obra social (RNOS)", v.rnos ? num(v.rnos, 6) : null, "rnos"),
+    na(46, 47, "Código situación de baja"),
+    na(48, 57, "Fecha telegrama renuncia"),
+    // Retribución con 2 decimales IMPLÍCITOS (13 enteros + 2 decimales). Ver el PENDIENTE de arriba.
+    dato(58, 72, "Retribución pactada", v.retribucionOk ? num(Math.round(v.retribucion * 100), 15) : null, "retribucion"),
+    dato(73, 73, "Modalidad de liquidación", v.modalidadLiq ? num(v.modalidadLiq, 1) : null, "modalidadLiq"),
+    dato(74, 78, "Sucursal (domicilio de desempeño)", v.sucursal ? num(v.sucursal, 5) : null, "sucursal"),
+    dato(79, 84, "Actividad del domicilio", v.actividad ? num(v.actividad, 6) : null, "actividad"),
+    na(85, 88, "Puesto desempeñado"),
+    cte(89, 90, "Rectificación", "00"),
+    na(91, 100, "Código Convenio Colectivo"),
+    dato(101, 106, "Categoría profesional", v.categoriaProf ? num(v.categoriaProf, 6) : null, "categoriaProf"),
+    dato(107, 109, "Tipo de servicio", v.tipoServicio ? num(v.tipoServicio, 3) : null, "tipoServicio"),
+    na(110, 119, "Fecha suspensión servicios temporarios"),
+    na(120, 129, "N° Formulario Agropecuario"),
+    // El diseño oficial declara este campo NUMERICO y enumera sus valores (0 a 9): el blanco no es
+    // uno de ellos. 0 = sin Lic. COVID y no asociado a un CCG.
+    cte(130, 130, "Marca COVID / tipo de contrato CCG", "0"),
+  ];
+
+  return { campos, valores: v };
+}
+
 /**
  * Arma el registro de 130 caracteres de un contrato. Devuelve null si le faltan datos obligatorios
  * (no se puede generar una línea válida sin ellos).
  */
 export function buildAltaRecord(row: ContractOverviewRow, cat: AfipCatalogs): string | null {
-  const v = resolveAfipValues(row, cat);
-  // Las fechas se normalizan ANTES de validar: `fechaAfip` devuelve "" si la fecha guardada no
-  // matchea ninguno de los dos formatos que entiende. Sin este paso, una fecha con otro formato
-  // pasaba el chequeo de "está cargada" y terminaba escribiendo 10 espacios en un campo obligatorio,
-  // generando un registro que ARCA rechaza sin explicar por qué.
-  const fechaInicio = fechaAfip(v.fechaInicio);
-  const fechaFin = fechaAfip(v.fechaFin);
-  // La fecha de fin es opcional (relación por tiempo indeterminado), pero si está cargada y no se
-  // pudo interpretar, mandarla en blanco cambiaría el sentido del alta: hay que corregir el dato.
-  const fechaFinInvalida = !!v.fechaFin && !fechaFin;
+  const { campos } = describirRegistro(row, cat);
+  // Un mismo TXT se sube a la sesión de UNA sola empresa: sin saber cuál, el contrato no puede
+  // entrar. No es un campo del registro, por eso se chequea aparte del layout.
+  if (!row.empresaContratoId) return null;
+  if (campos.some((c) => c.contenido === null)) return null;
 
-  const faltaObligatorio =
-    v.cuil.length !== 11 ||
-    !fechaInicio ||
-    fechaFinInvalida ||
-    v.retribucion <= 0 ||
-    !v.categoriaProf ||
-    !v.modalidadContrato ||
-    !v.tipoServicio ||
-    !v.actividad ||
-    !v.modalidadLiq ||
-    !v.rnos ||
-    !v.sucursal ||
-    // No es un campo del registro en sí (ver resolveAfip): un mismo TXT es para una sola empresa.
-    !row.empresaContratoId;
-  if (faltaObligatorio) return null;
-
-  const record =
-    "01" + // 1-2   Tipo de registro
-    "AT" + // 3-4   Código de movimiento (alta)
-    num(v.cuil, 11) + // 5-15  CUIL
-    "N" + // 16     Marca trabajador agropecuario
-    num(v.modalidadContrato, 3) + // 17-19 Modalidad de contrato
-    txt(fechaInicio, 10) + // 20-29 Fecha inicio relación laboral
-    (fechaFin ? txt(fechaFin, 10) : blank(10)) + // 30-39 Fecha fin (blanco si indeterminado)
-    num(v.rnos, 6) + // 40-45 Código de obra social (RNOS)
-    blank(2) + // 46-47 Código situación de baja (opcional)
-    blank(10) + // 48-57 Fecha telegrama renuncia (opcional)
-    // 58-72 Retribución pactada, con 2 decimales IMPLÍCITOS (13 enteros + 2 decimales).
-    // El diseño de 130 no aclara los decimales, pero el de 85 caracteres parte el importe en
-    // parte entera (8) + parte decimal (2), así que ARCA lleva centavos en las altas.
-    num(Math.round(v.retribucion * 100), 15) +
-    num(v.modalidadLiq, 1) + // 73    Modalidad de liquidación
-    num(v.sucursal, 5) + // 74-78 Sucursal (domicilio de desempeño)
-    num(v.actividad, 6) + // 79-84 Actividad del domicilio
-    blank(4) + // 85-88 Puesto desempeñado (opcional)
-    "00" + // 89-90 Rectificación (normal)
-    blank(10) + // 91-100 Código Convenio Colectivo (opcional)
-    num(v.categoriaProf, 6) + // 101-106 Categoría profesional
-    num(v.tipoServicio, 3) + // 107-109 Tipo de servicio
-    blank(10) + // 110-119 Fecha suspensión (opcional)
-    blank(10) + // 120-129 N° Formulario Agropecuario (opcional)
-    // 130 Marca COVID / tipo de contrato CCG. El diseño oficial lo declara NUMERICO y enumera sus
-    // valores (0 a 9): el blanco no es uno de ellos. 0 = sin Lic. COVID y no asociado a un CCG.
-    "0";
+  const record = campos.map((c) => c.contenido).join("");
 
   // Invariante: todos los campos son de ancho fijo, así que un largo distinto de 130 solo puede
   // venir de un error al armar el registro (nunca de los datos). Se corta acá y no en ARCA.
