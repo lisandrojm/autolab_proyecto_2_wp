@@ -8,16 +8,12 @@ import { InfoItem } from "../../api/info";
 import { Release, releasesAPI } from "../../api/release";
 import { projectsAPI } from "../../api/projects";
 import { afipAPI } from "../../api/afip";
-import { estadoImpositivoDelContrato, findTemplate, templateHasContent, buildDownloadFileName, DownloadMenu } from "../team/ContractCard";
+import { estadoImpositivoDelContrato, findTemplate, templateHasContent, DownloadMenu } from "../team/ContractCard";
 import { getImageUrl, downloadFileFromUrl } from "../../utils/imageHelpers";
 import { sweetAlert } from "../../utils/sweetAlert";
 
 /* --------- Handlers de descarga/subida compartidos (tabla Contratos + Gestión de Contratos) --------- */
 
-// La fila (ContractOverviewRow) no trae proyecto/persona con la forma que espera buildDownloadFileName,
-// así que se arma un contrato/usuario "shim" con los campos que ese util usa para el nombre del archivo.
-const downloadContractShim = (record: ContractOverviewRow) => ({ nombre_proyecto: record.projectName, nombre_contrato: record.nombre_contrato }) as unknown as Contract;
-const userShim = (record: ContractOverviewRow) => ({ firstName: record.userName, lastName: "" }) as any;
 
 export const downloadContractRow = async (record: ContractOverviewRow, contratoFrames: ContratoFrameItem[], empresaId?: string) => {
   const template = findTemplate(record as unknown as Contract, contratoFrames);
@@ -26,7 +22,7 @@ export const downloadContractRow = async (record: ContractOverviewRow, contratoF
     return;
   }
   try {
-    await contratoFrameAPI.downloadFilled(template as ContratoFrameItem, { userId: record.userId, projectId: record.projectId, contractIndex: record.contractIndex, empresaId }, buildDownloadFileName("Contrato", userShim(record), downloadContractShim(record)));
+    await contratoFrameAPI.downloadFilled(template as ContratoFrameItem, { userId: record.userId, projectId: record.projectId, contractIndex: record.contractIndex, empresaId });
   } catch {
     sweetAlert.error("Error", "No se pudo descargar el contrato.");
   }
@@ -34,7 +30,7 @@ export const downloadContractRow = async (record: ContractOverviewRow, contratoF
 
 export const downloadReleaseRow = async (record: ContractOverviewRow, release: Release, empresaId?: string) => {
   try {
-    await releasesAPI.downloadFilled(release, { userId: record.userId, projectId: record.projectId, contractIndex: record.contractIndex, empresaId }, buildDownloadFileName("Release", userShim(record), downloadContractShim(record), release.name));
+    await releasesAPI.downloadFilled(release, { userId: record.userId, projectId: record.projectId, contractIndex: record.contractIndex, empresaId });
   } catch {
     sweetAlert.error("Error", "No se pudo descargar el release.");
   }

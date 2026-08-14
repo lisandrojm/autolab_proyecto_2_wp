@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload, faEdit, faTrash, faArrowUpRightFromSquare, faCircleInfo, faFilePdf, faFileSignature, faUpload, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { InfoModal } from "../ui/InfoModal";
-import { User, Contract } from "../../api/users";
+import { Contract } from "../../api/users";
 import { ContratoFrameItem } from "../../api/contratosFrame";
 import { Release } from "../../api/release";
 import { InfoItem } from "../../api/info";
@@ -188,23 +188,6 @@ export const estadoImpositivoDelContrato = (contract: Contract, contratoFrames: 
 export const templateHasContent = (cf: ContratoFrameItem | null): boolean =>
   !!cf?.content && cf.content.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim().length > 0;
 
-/**
- * Nomenclatura de descargas de contratos y releases:
- *   [proyecto]_[Contrato|Release]_[nombreDoc]_[YYYY_MM_DD]_[apellido]_[nombres].pdf
- * `docName` es opcional (para releases es el nombre del release). La fecha es la de la descarga.
- * Ambos (contratos y releases) se redactan en la plataforma y se generan en PDF.
- */
-export const buildDownloadFileName = (tipo: "Contrato" | "Release", user: User | null, contract: Contract | undefined, docName?: string): string => {
-  const proyecto = (contract as any)?.proyecto_id ?? contract?.nombre_proyecto ?? "";
-  const nombres = (user?.firstName || "").trim();
-  const apellido = (user?.lastName || "").trim();
-  const persona = [apellido, nombres].filter(Boolean).join("_");
-  const d = new Date();
-  const fecha = `${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, "0")}_${String(d.getDate()).padStart(2, "0")}`;
-  const parts = [String(proyecto).trim(), tipo, (docName || "").trim(), fecha, persona].filter((p) => p && p.trim() !== "");
-  const ext = "pdf";
-  return `${parts.join("_").replace(/[\\/:*?"<>|]/g, "_")}.${ext}`;
-};
 
 type CategoriaAltaDocumento = "afip" | "servicios" | null;
 

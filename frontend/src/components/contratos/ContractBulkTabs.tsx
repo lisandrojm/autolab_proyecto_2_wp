@@ -30,6 +30,8 @@ import { sweetAlert } from '../../utils/sweetAlert';
 import { cachedFetch, invalidateRefCache, updateRefCache } from '../../utils/refCache';
 
 const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
+// Solo para traducir los convenioIds de la empresa a códigos de CCT y validar la Categoría SAT.
+const conveniosApi = createSimpleCatalogApi('/convenios');
 
 /**
  * Prefijo de caché del listado de contratos que comparten las pestañas de Gestión. Cada una monta y
@@ -601,6 +603,7 @@ export const ContractBulkAfipTab: React.FC<{
   const [companies, setCompanies] = useState<Company[]>([]);
   // Catálogo de Sucursales de ARCA: de acá salen el código de sucursal y las actividades del alta.
   const [arcaSucursales, setArcaSucursales] = useState<ArcaSucursal[]>([]);
+  const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
   // Detalle de completitud de una fila (modal).
   const [detalle, setDetalle] = useState<{ row: ImpositivoRow; result: AfipRowResult } | null>(null);
   // Detalle de los datos para la Constancia de CUIT/CUIL (único requisito: el CUIT/CUIL).
@@ -643,10 +646,14 @@ export const ContractBulkAfipTab: React.FC<{
       .list()
       .then(setArcaSucursales)
       .catch(() => setArcaSucursales([]));
+    conveniosApi
+      .list()
+      .then(setConvenios)
+      .catch(() => setConvenios([]));
   }, []);
 
   // Las empresas entran al catálogo por su obra social por defecto (ver la cascada en resolveAfipValues).
-  const afipCat = useMemo(() => ({ categorias, tipos, obrasSociales, sedes, empresas: companies, sucursales: arcaSucursales }), [categorias, tipos, obrasSociales, sedes, companies, arcaSucursales]);
+  const afipCat = useMemo(() => ({ categorias, tipos, obrasSociales, sedes, empresas: companies, sucursales: arcaSucursales, convenios }), [categorias, tipos, obrasSociales, sedes, companies, arcaSucursales, convenios]);
 
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
 

@@ -188,6 +188,7 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res) => {
       neto,
       sueldoNetoLetras,
       codigoAfip,
+      convenio,
       fechaActualizacion,
     } = req.body;
 
@@ -213,6 +214,7 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res) => {
         neto: Number(neto || 0),
         sueldoNetoLetras: String(sueldoNetoLetras || "").trim(),
         codigoAfip: Number(codigoAfip || 0),
+        convenio: String(convenio || "").trim(),
         fechaActualizacion: fechaActualizacion || new Date().toISOString().split("T")[0],
       },
     });
@@ -295,6 +297,7 @@ router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res) => 
       neto,
       sueldoNetoLetras,
       codigoAfip,
+      convenio,
       fechaActualizacion,
     } = req.body;
 
@@ -322,6 +325,7 @@ router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res) => 
       item.data.codigoAfip = Number(codigoAfip);
       item.externalId = String(codigoAfip || item.data.numeroCategoria);
     }
+    if (convenio !== undefined) item.data.convenio = String(convenio || "").trim();
     if (fechaActualizacion !== undefined) item.data.fechaActualizacion = fechaActualizacion;
 
     await item.save();

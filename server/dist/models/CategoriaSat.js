@@ -11,6 +11,7 @@ const categoriaSatSchema = new Schema({
         sueldoNetoLetras: { type: String },
         fechaActualizacion: { type: Schema.Types.Mixed },
         codigoAfip: { type: Number },
+        convenio: { type: String },
         presentismo: { type: Number },
         sueldoBasico: { type: Number },
         sueldoAdicional: { type: Number },

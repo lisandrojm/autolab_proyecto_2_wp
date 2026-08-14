@@ -34,6 +34,13 @@ const PLANTILLAS_PATHS = [MEMBRETE_PATH, '/pdfs', '/pdfs-vacaciones', '/contrato
  * Subgrupo "ARCA" (dentro de Configuración): todo lo que depende del organismo (ex AFIP).
  * El orden del array es el que se muestra en el menú (NO se reordena alfabéticamente):
  * la Conexión va primera porque es el prerrequisito de lo demás.
+ *
+ * Empresas NO va acá, aunque tenga datos de ARCA adentro (sucursales y obra social por defecto):
+ * es una entidad transversal —de sus ~18 campos solo 3 son del organismo, y además alimenta
+ * contratos, releases, membretes, pedidos y vacaciones—, y su pantalla hermana de membretes
+ * ("Plantillas | Empresa/s | Membrete/s y firma") es la MISMA `Company` pero vive en el subgrupo
+ * Plantillas. Meterla acá diría que es configuración del organismo y partiría la misma entidad en
+ * dos grupos del menú. Para llegar desde ARCA, el ABM de Sucursales ya remite a Empresas.
  */
 const ARCA_PATHS = ['/afip', '/arca/sucursales', '/categorias-sat', '/convenios', '/obras-sociales', '/arca/modalidades-contratacion', '/arca/tipos-servicio', '/arca/modalidades-liquidacion'];
 

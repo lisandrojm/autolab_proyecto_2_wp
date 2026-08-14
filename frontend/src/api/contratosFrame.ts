@@ -84,9 +84,25 @@ const downloadBlob = (data: BlobPart, fileName: string) => {
   window.URL.revokeObjectURL(url);
 };
 
+/**
+ * Nombre de archivo que manda el backend, que es el ÚNICO que decide cómo se llama un documento
+ * (`buildDocFileName` en server/src/utils/employeeDocData.ts).
+ *
+ * Se prioriza `filename*=UTF-8''…` (RFC 5987) sobre `filename="…"`: los nombres llevan acentos y la
+ * versión ASCII es solo un respaldo degradado.
+ */
 const fileNameFromDisposition = (disposition: string, fallback: string): string => {
-  const match = /filename="?([^"]+)"?/.exec(disposition || "");
-  return match?.[1] || fallback;
+  const d = disposition || "";
+  const utf8 = /filename\*=UTF-8''([^;]+)/i.exec(d);
+  if (utf8?.[1]) {
+    try {
+      return decodeURIComponent(utf8[1].trim());
+    } catch {
+      /* si viene mal codificado se cae al filename simple */
+    }
+  }
+  const simple = /filename="?([^";]+)"?/.exec(d);
+  return simple?.[1]?.trim() || fallback;
 };
 
 class ContratoFrameAPI {
@@ -123,10 +139,11 @@ class ContratoFrameAPI {
   }
 
   /** Descarga el PDF con las variables reemplazadas por los datos del empleado/contrato. */
-  async downloadFilled(item: ContratoFrameItem, ctx: { userId: string; projectId: string; contractIndex: number; empresaId?: string }, fileNameOverride?: string): Promise<void> {
+  async downloadFilled(item: ContratoFrameItem, ctx: { userId: string; projectId: string; contractIndex: number; empresaId?: string }): Promise<void> {
     const response = await axios.get(`/contratos-frame/${item._id}/download-filled`, { params: ctx, responseType: "blob" });
-    const fileName = fileNameOverride || fileNameFromDisposition(response.headers?.["content-disposition"], `${item.name}.pdf`);
-    downloadBlob(response.data, fileName);
+    // Sin override: el nombre lo decide el backend, que es el único que tiene todos los datos
+    // (email, CUIL/DNI, período del contrato) y el mismo que se sube a Dropbox Sign.
+    downloadBlob(response.data, fileNameFromDisposition(response.headers?.["content-disposition"], `${item.name}.pdf`));
   }
 }
 

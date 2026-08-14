@@ -144,7 +144,7 @@ router.post("/import", authenticateToken, upload.single("file"), async (req, res
  */
 router.post("/", authenticateToken, async (req, res) => {
     try {
-        const { numeroCategoria, nombre, sueldoBasico, sueldoAdicional, sueldoBruto, sueldoBrutoLetras, presentismo, neto, sueldoNetoLetras, codigoAfip, fechaActualizacion, } = req.body;
+        const { numeroCategoria, nombre, sueldoBasico, sueldoAdicional, sueldoBruto, sueldoBrutoLetras, presentismo, neto, sueldoNetoLetras, codigoAfip, convenio, fechaActualizacion, } = req.body;
         if (numeroCategoria === undefined || numeroCategoria === null) {
             return res.status(400).json({ error: "El Nº de categoría es obligatorio" });
         }
@@ -166,6 +166,7 @@ router.post("/", authenticateToken, async (req, res) => {
                 neto: Number(neto || 0),
                 sueldoNetoLetras: String(sueldoNetoLetras || "").trim(),
                 codigoAfip: Number(codigoAfip || 0),
+                convenio: String(convenio || "").trim(),
                 fechaActualizacion: fechaActualizacion || new Date().toISOString().split("T")[0],
             },
         });
@@ -227,7 +228,7 @@ router.put("/global/:numeroCategoria", authenticateToken, async (req, res) => {
 router.put("/:id", authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
-        const { numeroCategoria, nombre, sueldoBasico, sueldoAdicional, sueldoBruto, sueldoBrutoLetras, presentismo, neto, sueldoNetoLetras, codigoAfip, fechaActualizacion, } = req.body;
+        const { numeroCategoria, nombre, sueldoBasico, sueldoAdicional, sueldoBruto, sueldoBrutoLetras, presentismo, neto, sueldoNetoLetras, codigoAfip, convenio, fechaActualizacion, } = req.body;
         const item = await CategoriaSat.findById(id);
         if (!item) {
             return res.status(404).json({ error: "Categoría no encontrada" });
@@ -258,6 +259,8 @@ router.put("/:id", authenticateToken, async (req, res) => {
             item.data.codigoAfip = Number(codigoAfip);
             item.externalId = String(codigoAfip || item.data.numeroCategoria);
         }
+        if (convenio !== undefined)
+            item.data.convenio = String(convenio || "").trim();
         if (fechaActualizacion !== undefined)
             item.data.fechaActualizacion = fechaActualizacion;
         await item.save();

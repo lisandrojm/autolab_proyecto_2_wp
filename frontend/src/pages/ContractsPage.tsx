@@ -631,7 +631,7 @@ export const ContractsPage: React.FC = () => {
         <>
       {initialLoading || isFetching || !hasLoaded ? (
         <div className="flex items-center justify-center py-20">
-          <LoadingSpinner message={initialLoading ? "Cargando contratos..." : "Cargando contratos..."} />
+          <LoadingSpinner message={initialLoading ? "Cargando contratos..." : "Actualizando contratos..."} />
         </div>
       ) : rows.length === 0 ? (
         <EmptyState title="No se encontraron contratos" description={searchTerm ? "Intenta con otros términos de búsqueda." : "No hay registros de contratos en el sistema."} icon={faFileContract} />

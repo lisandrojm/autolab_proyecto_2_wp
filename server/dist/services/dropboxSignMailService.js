@@ -56,8 +56,12 @@ export function extraerArchivoDeAsunto(asunto) {
  * buscan los tokens etiquetados en lugar de intentar reconstruir el nombre completo.
  */
 export function extraerIdentidadDeArchivo(nombreArchivo) {
-    const cuil = /CUIL-(\d{11})/i.exec(nombreArchivo);
-    const doc = /(DNI|CI|LE|LC|PAS|DOC)-([A-Za-z0-9]+)/i.exec(nombreArchivo);
+    const cuil = /(?:^|_)CUIL-(\d{11})/i.exec(nombreArchivo);
+    // El "_" delante de la etiqueta es obligatorio y NO se admite el inicio de cadena: desde que los
+    // campos usan "-" para sus espacios internos, un apellido como "LE ROY" queda "LE-ROY", y como la
+    // persona va PRIMERA en el nombre, sin este anclaje se leería como tipo LE + número ROY. El bloque
+    // de identidad siempre viene precedido por al menos el apellido, así que el "_" está garantizado.
+    const doc = /_(DNI|CI|LE|LC|PAS|DOC)-([A-Za-z0-9]+)/i.exec(nombreArchivo);
     // Respaldo para los archivos viejos, anteriores a las etiquetas: un CUIT suelto de 11 dígitos.
     const suelto = !cuil ? /(?<!\d)(\d{2}-?\d{8}-?\d)(?!\d)/.exec(nombreArchivo) : null;
     return {

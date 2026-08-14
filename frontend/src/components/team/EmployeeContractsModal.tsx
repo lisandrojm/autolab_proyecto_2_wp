@@ -7,7 +7,7 @@ import { contratoFrameAPI, ContratoFrameItem } from "../../api/contratosFrame";
 import { releasesAPI, Release } from "../../api/release";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { getContratoActivo } from "../../utils/contratoVigencia";
-import { ContractCard, EmpresaOption, findTemplate, templateHasContent, buildDownloadFileName } from "./ContractCard";
+import { ContractCard, EmpresaOption, findTemplate, templateHasContent } from "./ContractCard";
 import { ContractFiltersBar, ContractFilterState, emptyContractFilters, matchesContractFilters } from "./ContractFilters";
 
 // La UI de la tarjeta y sus helpers viven en ContractCard (compartidos con MemberContractsManagerModal).
@@ -21,7 +21,6 @@ export {
   isContractVigente,
   findTemplate,
   templateHasContent,
-  buildDownloadFileName,
 } from "./ContractCard";
 
 interface EmployeeContractsModalProps {
@@ -93,9 +92,8 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
     if (!user) return;
     // `contracts` está invertido para mostrar el más reciente primero → índice original en BD
     const originalIndex = contracts.length - 1 - displayIndex;
-    const fileName = buildDownloadFileName("Contrato", user, contracts[displayIndex]);
     try {
-      await contratoFrameAPI.downloadFilled(template as ContratoFrameItem, { userId: user._id, projectId, contractIndex: originalIndex, empresaId }, fileName);
+      await contratoFrameAPI.downloadFilled(template as ContratoFrameItem, { userId: user._id, projectId, contractIndex: originalIndex, empresaId });
     } catch {
       sweetAlert.error("Error", "No se pudo descargar el contrato.");
     }
@@ -105,9 +103,8 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
     if (!user) return;
     // `contracts` está invertido para mostrar el más reciente primero → índice original en BD
     const originalIndex = contracts.length - 1 - displayIndex;
-    const fileName = buildDownloadFileName("Release", user, contracts[displayIndex], release.name);
     try {
-      await releasesAPI.downloadFilled(release, { userId: user._id, projectId, contractIndex: originalIndex, empresaId }, fileName);
+      await releasesAPI.downloadFilled(release, { userId: user._id, projectId, contractIndex: originalIndex, empresaId });
     } catch {
       sweetAlert.error("Error", "No se pudo descargar el release.");
     }

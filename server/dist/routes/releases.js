@@ -28,9 +28,25 @@ const ReleaseSchema = z.object({
         .optional()
         .transform((v) => (typeof v === "string" ? v === "true" : v)),
 });
+/**
+ * Cabecera de descarga con el nombre canónico del archivo (`buildDocFileName`).
+ *
+ * Se emiten las DOS formas del nombre a propósito:
+ *  - `filename*=UTF-8''…` (RFC 5987) es la que vale: los nombres llevan acentos y las cabeceras HTTP
+ *    no son UTF-8, así que sin esto un apellido con tilde llega mal.
+ *  - `filename="…"` queda como respaldo ASCII para cualquier cliente que no entienda `filename*`.
+ *
+ * El frontend NO arma el nombre por su cuenta: lo lee de acá (ver `fileNameFromDisposition`). Es el
+ * único lugar donde se decide cómo se llama un documento.
+ */
+const contentDisposition = (baseName) => {
+    const conExtension = `${baseName}.pdf`;
+    const ascii = conExtension.replace(/[^\x20-\x7E]/g, "_").replace(/"/g, "'");
+    return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(conExtension)}`;
+};
 const sendPdf = (res, buffer, baseName) => {
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${baseName}.pdf"`);
+    res.setHeader("Content-Disposition", contentDisposition(baseName));
     res.send(buffer);
 };
 router.get("/", authenticateToken, requireTenant, async (req, res) => {

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBuilding, faPlus, faEdit, faTrash, faSearch, faFilePdf } from '@fortawesome/free-solid-svg-icons';
+import { faBuilding, faPlus, faEdit, faTrash, faSearch, faFilePdf, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { PageLayout } from '../components/ui/PageLayout';
 import { Modal } from '../components/ui/Modal';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -155,6 +155,27 @@ export const EmpresasPage: React.FC = () => {
     if (ids.length === 0) return [];
     return convenios.filter((cv) => ids.includes(cv._id));
   };
+
+  /** Sucursales de ARCA de la empresa, resueltas contra el catálogo ya cargado (se guardan como refs). */
+  const sucursalesDe = (c: Company): ArcaSucursal[] => {
+    const ids = (c.sucursalIds || []).map((x) => String(x));
+    if (ids.length === 0) return [];
+    // Ordenadas por código para que el mismo listado se lea igual en todas las empresas.
+    return sucursales.filter((s) => ids.includes(s._id)).sort((a, b) => a.codigo.localeCompare(b.codigo));
+  };
+
+  /** Badge de una sucursal: el código es lo que importa (va en el TXT); el domicilio ubica al lector. */
+  const SucursalBadge: React.FC<{ s: ArcaSucursal; maxW: string }> = ({ s, maxW }) => (
+    <span
+      title={`${s.codigo} — ${s.domicilio}${s.actividades.length ? `\nActividades: ${s.actividades.map((a) => a.codigo).join(', ')}` : '\nSin actividades cargadas'}`}
+      className={`inline-flex items-center gap-1 px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-[10px] font-medium rounded border border-indigo-200 dark:border-indigo-800 ${maxW}`}
+    >
+      <span className="font-mono opacity-70 shrink-0">{s.codigo}</span>
+      <span className="truncate">{s.domicilio}</span>
+      {/* Sin actividades la sucursal no sirve para el alta: se avisa acá y no recién en el TXT. */}
+      {s.actividades.length === 0 && <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5 text-amber-500 shrink-0" title="Sin actividades cargadas" />}
+    </span>
+  );
 
   const setField = (key: keyof CompanyInput, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -327,6 +348,16 @@ export const EmpresasPage: React.FC = () => {
                     </div>
                   </div>
                 )}
+                {(c.sucursalIds || []).length > 0 && (
+                  <div>
+                    <span className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Sucursales de ARCA</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {sucursalesDe(c).map((s) => (
+                        <SucursalBadge key={s._id} s={s} maxW="max-w-[180px]" />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </Card>
           ))}
@@ -343,6 +374,7 @@ export const EmpresasPage: React.FC = () => {
                 <th className="px-4 py-3">Firmante</th>
                 <th className="px-4 py-3">Representante Legal</th>
                 <th className="px-4 py-3">Convenios</th>
+                <th className="px-4 py-3">Sucursales ARCA</th>
                 <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
             </thead>
@@ -390,6 +422,19 @@ export const EmpresasPage: React.FC = () => {
                             {cv.externalId && <span className="font-mono opacity-70 shrink-0">{cv.externalId}</span>}
                             <span className="truncate">{cv.name}</span>
                           </span>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {(c.sucursalIds || []).length === 0 ? (
+                      <span className="text-gray-400 dark:text-gray-600">—</span>
+                    ) : cargandoSucursales ? (
+                      <span className="text-xs text-gray-400 italic">cargando…</span>
+                    ) : (
+                      <div className="flex items-center gap-1.5 flex-wrap max-w-[320px]">
+                        {sucursalesDe(c).map((s) => (
+                          <SucursalBadge key={s._id} s={s} maxW="max-w-[170px]" />
                         ))}
                       </div>
                     )}

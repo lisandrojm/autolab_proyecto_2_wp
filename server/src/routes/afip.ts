@@ -779,7 +779,9 @@ router.post("/sin-cuit/documento", uploadSinCuitDoc, async (req: AuthenticatedRe
       const dir = path.join(__afipDirname, "../../storage", tenantId, String(userId), "sin-cuit");
       await fs.mkdir(dir, { recursive: true });
       // El nombre en disco lleva un sufijo único: si se recarga el mismo correlativo no se pisa el anterior.
-      const enDisco = `${base}__${new mongoose.Types.ObjectId()}.pdf`.replace(/\s+/g, "_");
+      // `buildDocFileName` ya no deja espacios (el "_" es el único separador de campos), así que el
+    // nombre en disco y el lógico coinciden salvo por el sufijo único.
+    const enDisco = `${base}__${new mongoose.Types.ObjectId()}.pdf`;
       await fs.writeFile(path.join(dir, enDisco), pdfBuffer);
       archivoUrl = `/storage/${tenantId}/${userId}/sin-cuit/${enDisco}`;
       archivoNombre = `${base}.pdf`;

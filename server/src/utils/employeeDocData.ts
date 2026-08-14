@@ -54,45 +54,64 @@ export function buildIdentidadTag(user: any): string {
   return partes.join("_");
 }
 
+/** Espacios y separadores sueltos dentro de UN campo pasan a "-", para que el "_" quede como único
+ *  separador de campos. Así el nombre se puede partir por "_" sin ambigüedad. */
+const campo = (v: unknown): string =>
+  String(v ?? "")
+    .trim()
+    .replace(/[\\/:*?"<>|]/g, "-")
+    .replace(/[\s_]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
 /**
- * Nomenclatura de archivos descargados (contratos y releases):
- *   [proyecto]_[Contrato|Release]_[nombreDoc]_[apellido]_[nombres]_[email]_[identidad]_Desde_[fechaAlta][_Hasta_[fechaBaja]]_[extra]
+ * Nomenclatura de archivos generados por la plataforma (contratos, releases, altas, constancias).
+ * Se lee de izquierda a derecha como una frase: QUIÉN · DÓNDE · QUÉ · CUÁNDO · IDENTIFICADORES.
  *
- * - `proyecto`: número/ID externo del proyecto (ej. 426).
- * - `nombreDoc`: opcional; para releases es el nombre del release.
- * - `email`: el de la persona, para identificarla sin ambigüedad de un vistazo (dos personas pueden
- *   compartir apellido y nombre). El "@" va como "-" (lisandrojm-gmail.com): Dropbox Sign no admite
- *   arroba en el título de la solicitud de firma.
- * - `extra`: opcional; texto libre adicional (p. ej. "Constancia de Cuit" para identificar el trámite
- *   de origen en Firma Digital).
- * - `Desde`/`Hasta`: fecha de alta/baja del contrato, para que se entienda de un vistazo el período —
- *   se omite "Hasta" si el contrato no tiene fecha de baja. Los valores en sí son tokens compactos
- *   `YYYYMMDD` (sin separadores): `estadoDropboxCronService.ts` los usa como desempate cuando el CUIT
- *   solo no alcanza para identificar el contrato al ver volver este archivo desde Dropbox Sign (que
- *   preserva el nombre) — cambiar ese formato rompería ese matching, por eso NO se usan separadores
- *   dentro de la fecha aunque sí alrededor (mantiene el token de 8 dígitos aislado y detectable).
+ *   [apellido]_[nombres]_[proyecto]_[Contrato|Release|…]_[nombreDoc]_Alta_[YYYYMMDD]_Baja_[YYYYMMDD|-]_
+ *   [CUIL-…]_[DNI-…]_[email]_[extra]
+ *
+ * ej. `gonzalez-rotstein_juan-manuel_748_Contrato_Alta_20260810_Baja_-_CUIL-20331501027_DNI-33150102_
+ *      juanmanuel.gonzalezrotstein-gmail.com_Constancia-de-Cuit`
+ *
+ * Decisiones y por qué:
+ *
+ * - La PERSONA va primera: es el dato por el que se busca al mirar una carpeta de Dropbox.
+ * - El "_" es el ÚNICO separador de campos; los espacios internos de cada campo van como "-"
+ *   (ver `campo()`). Antes convivían los dos, y el nombre en disco (que reemplazaba espacios) no
+ *   coincidía con el nombre lógico guardado en la base.
+ * - `Alta`/`Baja` van SIEMPRE, aunque el contrato no tenga baja: en ese caso la baja es "-". Omitir
+ *   el bloque hacía ambiguo si el contrato era por tiempo indeterminado o si faltaba cargar el dato.
+ * - El "@" del email va como "-": Dropbox Sign no lo admite en el título de la solicitud de firma, y
+ *   ese título es lo que después se lee del asunto del aviso para detectar el envío.
  * - `identidad`: bloque `CUIL-...[_DNI-...]` de `buildIdentidadTag()`, común a los PDF de Pedidos y
- *   Vacaciones. El CUIT sigue siendo un token de 11 dígitos aislado, así que el matching por CUIT de
- *   `estadoDropboxCronService.ts` sigue funcionando igual que cuando iba suelto.
+ *   Vacaciones.
+ *
+ * ⚠ El nombre se PARSEA de vuelta cuando el archivo regresa de Dropbox Sign. No cambiar sin mirar:
+ *   - `dropboxSignMailService.extraerIdentidadDeArchivo()` → /_CUIL-(\d{11})/ y /_(DNI|CI|…)-(\w+)/,
+ *     que exigen el "_" delante justamente porque los campos ya no llevan espacios (un apellido
+ *     "LE ROY" quedaría como "LE-ROY" y sin el "_" se leería como tipo LE + número ROY).
+ *   - `estadoDropboxCronService.extraerFechasDeNombre()` → tokens de 8 dígitos aislados: por eso las
+ *     fechas van compactas `YYYYMMDD`, sin separadores internos.
+ *
  * Devuelve el nombre SIN extensión (el caller agrega la extensión correspondiente).
  */
 export function buildDocFileName(opts: { tipo: "Contrato" | "Release" | "ConstanciaCUIT" | "AltaAFIP" | "Documentacion"; user: any; up: any; contract: any; docName?: string; extra?: string }): string {
   const { tipo, user, up, contract, docName, extra } = opts;
   const proyecto = up?.externalProjectId ?? contract?.proyecto_id ?? up?.nombre_proyecto ?? contract?.nombre_proyecto ?? "";
-  const nombre = (user?.firstName || "").trim();
-  const apellido = (user?.lastName || "").trim();
-  const persona = [apellido, nombre].filter(Boolean).join("_");
-  // El "@" se reemplaza por "-": Dropbox Sign no lo acepta en el título de la solicitud de firma, y
-  // ese título es lo que después se lee del asunto del aviso para detectar el envío.
-  const email = (user?.email || "").trim().replace(/@/g, "-");
-  const identidad = buildIdentidadTag(user);
+  const apellido = campo(user?.lastName);
+  const nombres = campo(user?.firstName);
+  const email = campo(String(user?.email || "").replace(/@/g, "-"));
+  const identidad = buildIdentidadTag(user); // ya viene como CUIL-…_DNI-…, con "_" entre bloques
   const fechaAlta = fechaCompacta(contract?.fecha_alta_contrato);
   const fechaBaja = fechaCompacta(contract?.fecha_baja_contrato);
-  const rango = fechaAlta ? `Desde_${fechaAlta}${fechaBaja ? `_Hasta_${fechaBaja}` : ""}` : "";
+  // El período va SIEMPRE, con "-" en lo que falte: sin baja significa contrato vigente / sin fin, y
+  // sin alta significa dato sin cargar. Omitir el bloque hacía indistinguibles esos dos casos de un
+  // contrato con las fechas completas.
+  const rango = `Alta_${fechaAlta || "-"}_Baja_${fechaBaja || "-"}`;
 
-  const parts = [String(proyecto).trim(), tipo, (docName || "").trim(), persona, email, identidad, rango, (extra || "").trim()].filter((p) => p && String(p).trim() !== "");
-  // Eliminar caracteres inválidos para nombres de archivo (se conservan espacios y acentos).
-  return parts.join("_").replace(/[\\/:*?"<>|]/g, "_");
+  const parts = [apellido, nombres, campo(proyecto), campo(tipo), campo(docName), rango, identidad, email, campo(extra)];
+  return parts.filter((p) => p !== "").join("_");
 }
 
 /**

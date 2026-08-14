@@ -13,6 +13,11 @@ export interface CategoriaSatItem {
     sueldoNetoLetras: string;
     fechaActualizacion: string;
     codigoAfip: number;
+    /**
+     * Código de CCT al que pertenece la categoría ("0131/75"). NO va al TXT: se usa para validar
+     * que la categoría sea de un convenio habilitado para la empleadora del contrato.
+     */
+    convenio?: string;
     presentismo: number;
     sueldoBasico: number;
     sueldoAdicional: number;

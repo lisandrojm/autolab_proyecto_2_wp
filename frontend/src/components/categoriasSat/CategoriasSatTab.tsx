@@ -74,6 +74,7 @@ export const CategoriasSatTab: React.FC = () => {
     neto: '',
     sueldoNetoLetras: '',
     codigoAfip: '',
+    convenio: '',
     fechaActualizacion: '',
   });
 
@@ -187,6 +188,7 @@ export const CategoriasSatTab: React.FC = () => {
       neto: '',
       sueldoNetoLetras: '',
       codigoAfip: '',
+      convenio: '',
       fechaActualizacion: new Date().toISOString().split('T')[0],
     });
     setShowModal(true);
@@ -205,6 +207,7 @@ export const CategoriasSatTab: React.FC = () => {
       neto: String(cat.data?.neto ?? ''),
       sueldoNetoLetras: cat.data?.sueldoNetoLetras || '',
       codigoAfip: String(cat.data?.codigoAfip ?? ''),
+      convenio: String(cat.data?.convenio ?? ''),
       fechaActualizacion: cat.data?.fechaActualizacion ? new Date(cat.data.fechaActualizacion).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
     });
     setShowModal(true);
@@ -229,6 +232,7 @@ export const CategoriasSatTab: React.FC = () => {
         neto: Number(formData.neto || 0),
         sueldoNetoLetras: formData.sueldoNetoLetras.trim(),
         codigoAfip: Number(formData.codigoAfip || 0),
+        convenio: formData.convenio.trim(),
         fechaActualizacion: formData.fechaActualizacion,
       };
 
@@ -839,6 +843,14 @@ export const CategoriasSatTab: React.FC = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Código ARCA</label>
               <input type="number" value={formData.codigoAfip} onChange={(e) => setFormData((prev) => ({ ...prev, codigoAfip: e.target.value }))} className="input-field" placeholder="Ej: 35283" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Convenio (CCT)</label>
+              <input value={formData.convenio} onChange={(e) => setFormData((prev) => ({ ...prev, convenio: e.target.value }))} className="input-field" placeholder="Ej: 0131/75" />
+              {/* No va al TXT (pos. 91-100 en blanco): sirve para validar que la categoría sea de un
+                  convenio habilitado para la empleadora del contrato. */}
+              <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">A qué convenio pertenece la categoría en ARCA. No se manda en el alta: se usa para verificar que la empresa del contrato tenga ese convenio habilitado.</p>
             </div>
 
             <div>

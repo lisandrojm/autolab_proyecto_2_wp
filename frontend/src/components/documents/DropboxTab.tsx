@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { faFolder, faFileLines, faDownload, faTrash, faPen, faUpload, faFolderPlus, faRotate, faChevronRight, faSpinner, faTriangleExclamation, faPlug, faFileZipper } from "@fortawesome/free-solid-svg-icons";
 import { faDropbox } from "@fortawesome/free-brands-svg-icons";
 import { dropboxAPI, DropboxEntry, DropboxStatus } from "../../api/dropbox";
@@ -268,11 +269,10 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
   useEffect(() => () => onCountChange?.(undefined), [onCountChange]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64 text-gray-500">
-        <FontAwesomeIcon icon={faSpinner} spin className="mr-2" /> Cargando Dropbox...
-      </div>
-    );
+    // Mismo spinner que el resto de la app (Novedades, Contratos): este componente lo renderizan
+    // tanto "Dropbox | Documentos" como las pestañas de Contratos, así que la carga se ve igual
+    // en las dos.
+    return <LoadingSpinner message="Cargando Dropbox..." />;
   }
 
   // ── No conectado ──
@@ -413,7 +413,11 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {busy && filtered.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400"><FontAwesomeIcon icon={faSpinner} spin /> Cargando...</td></tr>
+                <tr>
+                  <td colSpan={5} className="px-4 py-6">
+                    <LoadingSpinner size="sm" message="Cargando archivos..." />
+                  </td>
+                </tr>
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">{search ? "No hay resultados para el filtro." : "Carpeta vacía."}</td></tr>
               ) : (

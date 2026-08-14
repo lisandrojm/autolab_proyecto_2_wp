@@ -17,10 +17,15 @@ export interface AfipCatalogs {
   tipos: ContratoItem[]; // códigos ARCA por Tipo de Contrato
   obrasSociales: SimpleCatalogItem[]; // código RNOS
   sedes: InfoItem[]; // catálogo de Sedes (lugar de trabajo; NO tiene relación con ARCA)
-  /** Empresas empleadoras: obra social por defecto y qué sucursales tienen asignadas. */
-  empresas?: Array<{ _id: string; obraSocialId?: number | null; sucursalIds?: string[] }>;
+  /** Empresas empleadoras: obra social por defecto, sucursales y convenios habilitados. */
+  empresas?: Array<{ _id: string; obraSocialId?: number | null; sucursalIds?: string[]; convenioIds?: string[] }>;
   /** Catálogo de Sucursales de ARCA: de acá salen el código de sucursal y las actividades. */
   sucursales?: ArcaSucursal[];
+  /**
+   * Catálogo de Convenios: solo para traducir los `convenioIds` de la empresa (que son refs) al
+   * código de CCT ("0131/75") con el que se compara el convenio de la categoría.
+   */
+  convenios?: SimpleCatalogItem[];
 }
 
 /**
@@ -153,6 +158,10 @@ export interface AfipValues {
   nombreSucursal: string;
   /** Sucursales que el contrato puede elegir: las asignadas a su empresa empleadora. */
   sucursalesDisponibles: ArcaSucursal[];
+  /** Código de CCT de la categoría del contrato ("" si la categoría no lo tiene cargado). */
+  convenioCategoria: string;
+  /** Códigos de CCT habilitados para la empleadora del contrato. */
+  conveniosEmpresa: string[];
 }
 
 /** Resuelve los valores ARCA de un contrato contra los catálogos (sin validar). */
@@ -172,6 +181,13 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
   // Sucursal y actividad salen del catálogo de Sucursales de ARCA, filtrado por las que tiene
   // asignadas la empresa empleadora. Nada de esto cuelga de la Sede: son entidades distintas.
   const sucursalesEmpresa = (cat.sucursales || []).filter((s) => (empresa?.sucursalIds || []).map(String).includes(s._id));
+
+  // Convenios habilitados para la empleadora, traducidos de refs a códigos de CCT. ARCA solo ofrece
+  // las categorías de esos convenios (l_CatCCT viene filtrado por CCT), así que son el conjunto
+  // válido contra el que se valida la categoría del contrato.
+  const idsConvenio = (empresa?.convenioIds || []).map(String);
+  const conveniosEmpresa = (cat.convenios || []).filter((c) => idsConvenio.includes(c._id)).map((c) => String(c.externalId || "").trim()).filter(Boolean);
+  const convenioCategoria = String(categoria?.data?.convenio || "").trim();
   const sucursal = row.sucursalArcaId ? sucursalesEmpresa.find((s) => s._id === row.sucursalArcaId) : undefined;
   const actividades = sucursal?.actividades?.filter((a) => !!a.codigo) || [];
   const elegida = row.actividadArca ? actividades.find((a) => a.codigo === row.actividadArca) : undefined;
@@ -218,6 +234,8 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
     actividadesDisponibles: actividades,
     nombreSucursal: sucursal ? `${sucursal.codigo} — ${sucursal.domicilio}` : "",
     sucursalesDisponibles: sucursalesEmpresa,
+    convenioCategoria,
+    conveniosEmpresa,
     modalidadLiq: tipo?.data?.afipModalidadLiquidacion || "",
     // El "ID Externo" de la Obra Social siempre fue el código RNOS (ver ObrasSocialesPage.tsx).
     rnos: soloDigitos(obraSocial?.externalId),
@@ -303,6 +321,28 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
   // --- Categoría SAT
   checks.push(v.retribucion <= 0 ? mk("retribucion", "Retribución (sueldo bruto)", "categoria_sat", "", "falta", "La categoría no tiene sueldo bruto cargado.") : !v.retribucionOk ? mk("retribucion", "Retribución (sueldo bruto)", "categoria_sat", String(v.retribucion), "error", "El importe no entra en las 15 posiciones del campo.") : mk("retribucion", "Retribución (sueldo bruto)", "categoria_sat", String(v.retribucion), "ok"));
   checks.push(presencia("categoriaProf", "Categoría profesional (cód. ARCA)", "categoria_sat", v.categoriaProf, "La categoría no tiene cargado su código de ARCA."));
+
+  // Categoría ∈ convenios de la empresa. ARCA no tiene un catálogo global de categorías: el combo
+  // `l_CatCCT` viene filtrado por convenio y solo ofrece los de los CCT que la empleadora tiene
+  // habilitados. Una categoría de otro convenio es un dato MAL CARGADO — hoy pasa todos los
+  // controles y llega mal, porque el convenio no viaja en el TXT (ARCA lo infiere de la categoría).
+  //
+  // El operador no elige el convenio: lo determina la categoría. Por eso esto es una validación y
+  // no un selector.
+  if (v.categoriaProf) {
+    if (!hayEmpresa) {
+      checks.push(mk("convenioCategoria", "Convenio de la categoría", "categoria_sat", v.convenioCategoria, "bloqueado", "Se valida contra los convenios habilitados para la empleadora.", "empresa"));
+    } else if (!v.convenioCategoria) {
+      // Sin convenio en la categoría no se puede validar. No se inventa: se pide cargarlo.
+      checks.push(mk("convenioCategoria", "Convenio de la categoría", "categoria_sat", "", "falta", "La categoría no tiene cargado a qué convenio pertenece, así que no se puede verificar que sea elegible para esta empresa."));
+    } else if (v.conveniosEmpresa.length === 0) {
+      checks.push(mk("convenioCategoria", "Convenio de la categoría", "categoria_sat", v.convenioCategoria, "falta", "La empresa no tiene convenios habilitados: cargáselos en Configuración → Empresas."));
+    } else if (!v.conveniosEmpresa.includes(v.convenioCategoria)) {
+      checks.push(mk("convenioCategoria", "Convenio de la categoría", "categoria_sat", v.convenioCategoria, "error", `La categoría pertenece al convenio ${v.convenioCategoria}, que no está habilitado para esta empresa (tiene ${v.conveniosEmpresa.join(", ")}). ARCA no la va a aceptar.`));
+    } else {
+      checks.push(mk("convenioCategoria", "Convenio de la categoría", "categoria_sat", v.convenioCategoria, "ok", "Habilitado para esta empresa."));
+    }
+  }
 
   // --- Tipo de Contrato: los tres códigos salen del mismo lugar, por eso comparten origen.
   checks.push(presencia("modalidadContrato", "Modalidad de contrato", "tipo_contrato", v.modalidadContrato, "El tipo de contrato no tiene cargado su código de modalidad."));
