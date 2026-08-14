@@ -15,6 +15,15 @@
  */
 export declare function buildIdentidadTag(user: any): string;
 /**
+ * Etiqueta del trámite impositivo para el final del nombre de archivo, para poder distinguir de un
+ * vistazo con qué trámite se generó el documento sin abrirlo.
+ *
+ * Van con "-" adentro porque el "_" es el separador de CAMPOS del nombre (ver `buildDocFileName`).
+ * Nadie las parsea: son descriptivas, así que se pueden cambiar sin romper el matching de vuelta
+ * desde Dropbox Sign.
+ */
+export declare const ETIQUETA_TRAMITE: Record<"alta_temprana_afip" | "constancia_cuit", string>;
+/**
  * Nomenclatura de archivos generados por la plataforma (contratos, releases, altas, constancias).
  * Se lee de izquierda a derecha como una frase: QUIÉN · DÓNDE · QUÉ · CUÁNDO · IDENTIFICADORES.
  *

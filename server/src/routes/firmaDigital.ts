@@ -12,7 +12,7 @@ import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { getTenantDropboxConfig, uploadFile } from "../services/dropboxService.js";
 import { resolverCarpetaPorPatron, resolverEstadoPorCarpetas } from "../utils/estadoCarpetas.js";
-import { buildDocFileName } from "../utils/employeeDocData.js";
+import { buildDocFileName, ETIQUETA_TRAMITE } from "../utils/employeeDocData.js";
 import { generarContratoPdf } from "./contratosFrame.js";
 import { generarReleasePdf } from "./releases.js";
 
@@ -77,7 +77,9 @@ router.post("/generar-contrato", async (req: AuthenticatedRequest & TenantReques
     }
     const { projectId, userId, contractIndex, contratoTemplateId, empresaContratoId, tramite } = parsed.data;
     const tenantId = String(req.tenantObjectId);
-    const sufijoTramite = tramite === "constancia_cuit" ? "_Constancia_de_Cuit" : "";
+    // Los DOS trámites se etiquetan: antes solo la constancia llevaba sufijo y las altas tempranas
+    // quedaban sin nada, así que no se distinguían de un contrato generado fuera de un trámite.
+    const sufijoTramite = tramite ? `_${ETIQUETA_TRAMITE[tramite]}` : "";
 
     const up = await UserProject.findOne({ projectId, userId });
     if (!up || contractIndex < 0 || contractIndex >= up.contracts.length) {
@@ -132,7 +134,9 @@ router.post("/generar-release", async (req: AuthenticatedRequest & TenantRequest
     }
     const { projectId, userId, contractIndex, releaseIds, empresaReleaseId, tramite } = parsed.data;
     const tenantId = String(req.tenantObjectId);
-    const sufijoTramite = tramite === "constancia_cuit" ? "_Constancia_de_Cuit" : "";
+    // Los DOS trámites se etiquetan: antes solo la constancia llevaba sufijo y las altas tempranas
+    // quedaban sin nada, así que no se distinguían de un contrato generado fuera de un trámite.
+    const sufijoTramite = tramite ? `_${ETIQUETA_TRAMITE[tramite]}` : "";
 
     const up = await UserProject.findOne({ projectId, userId });
     if (!up || contractIndex < 0 || contractIndex >= up.contracts.length) {
