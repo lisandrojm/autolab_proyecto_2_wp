@@ -47,7 +47,7 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
     label: 'Configuración',
     icon: faCog,
     description: 'Configuración de módulos y plantillas',
-    permissions: ['config_orders:view', 'config_shifts:view', 'config_vacations:view', 'config_activity_logs:view', 'config_holidays:view', 'config_pdf_templates:view', 'config_releases:view', 'config_frame_functions:view', 'config_categorias_sat:view', 'config_bancos:view', 'config_obras_sociales:view', 'config_convenios:view', 'config_centros_costo:view', 'config_contratos:view', 'config_contratos_frame:view', 'config_estados:view', 'config_empresas:view', 'config_membretes:view', 'config_profile:view', 'config_escaneo_dropbox:view', 'config_afip:view'],
+    permissions: ['config_orders:view', 'config_shifts:view', 'config_vacations:view', 'config_activity_logs:view', 'config_holidays:view', 'config_pdf_templates:view', 'config_releases:view', 'config_frame_functions:view', 'config_categorias_sat:view', 'config_bancos:view', 'config_obras_sociales:view', 'config_convenios:view', 'config_centros_costo:view', 'config_contratos:view', 'config_contratos_frame:view', 'config_estados:view', 'config_empresas:view', 'config_membretes:view', 'config_profile:view', 'config_escaneo_dropbox:view', 'config_afip:view', 'config_arca_sucursales:view', 'config_arca_tablas:view'],
   },
   mobile: {
     label: 'Mobile',
@@ -107,6 +107,8 @@ const MODULE_LABELS: Record<string, string> = {
   'config_profile:view': 'Mi Perfil',
   'config_escaneo_dropbox:view': 'Dropbox | Documentos',
   'config_afip:view': 'ARCA',
+  'config_arca_sucursales:view': 'ARCA | Sucursales',
+  'config_arca_tablas:view': 'ARCA | Tablas oficiales',
 
   'mobile_collaborator:view': 'Colaborador',
   'mobile_coordinator:view': 'Coordinador',

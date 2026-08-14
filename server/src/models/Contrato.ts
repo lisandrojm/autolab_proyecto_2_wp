@@ -23,7 +23,17 @@ export interface IContrato extends Document {
      */
     afipModalidadContrato?: string; // pos. 17-19 (3 díg.)
     afipTipoServicio?: string; // pos. 107-109 (3 díg.)
-    afipActividad?: string; // pos. 79-84 (6 díg.) — actividad del domicilio de desempeño
+    /**
+     * @deprecated NO se usa más para generar el TXT y ya no se edita desde el ABM.
+     *
+     * La actividad (pos. 79-84) es la del DOMICILIO de desempeño, no la del tipo de contrato: en el
+     * padrón de ARCA cuelga de cada sucursal de cada CUIT. Mientras vivió acá, dos personas del mismo
+     * tipo de contrato en sedes distintas salían con la misma actividad — un alta válida para ARCA
+     * pero mal declarada, y sin ningún control que lo frenara. Ahora sale de `companies.sedes[]`.
+     *
+     * El campo se conserva para no perder lo ya cargado; se puede borrar en una limpieza posterior.
+     */
+    afipActividad?: string;
     afipModalidadLiquidacion?: string; // pos. 73 (1 díg.) — 1 = mensual, etc.
   };
   isActive: boolean;

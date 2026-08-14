@@ -142,6 +142,16 @@ export interface ContractOverviewRow {
   categoria_sat_id?: number | null;
   sede_id?: number | null;
   tipo_contrato_id?: number | null;
+  /**
+   * Sucursal del padrón de ARCA (domicilio de desempeño) con la que se declara este contrato. Se
+   * elige entre las asignadas a su empresa empleadora. No tiene relación con `sede_id`.
+   */
+  sucursalArcaId?: string | null;
+  /**
+   * Actividad del domicilio elegida para ESTE contrato. Solo hace falta cuando la sucursal tiene más
+   * de una actividad declarada; con una sola, el contrato la hereda y este campo queda vacío.
+   */
+  actividadArca?: string | null;
 }
 
 export interface UserProjectMetadata {

@@ -45,6 +45,8 @@ const contractSchema = new Schema({
     empresaReleaseId: { type: Schema.Types.ObjectId, ref: "Company" },
     nombre_empresa_contrato: { type: String },
     nombre_empresa_release: { type: String },
+    sucursalArcaId: { type: Schema.Types.ObjectId, ref: "ArcaSucursal" },
+    actividadArca: { type: String },
     altaDocumentoUrl: { type: String },
     altaDocumentoNombre: { type: String },
     constanciaVigenciaDesde: { type: String },

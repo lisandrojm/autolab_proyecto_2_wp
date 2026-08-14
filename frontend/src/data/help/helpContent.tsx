@@ -1,6 +1,6 @@
 import React from "react";
 
-export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels" | "pdfTemplates" | "vacations" | "vacationsRules" | "activityLogs" | "projectTeam" | "projects" | "sedes" | "contracts" | "categoriasSat" | "centrosCosto" | "contratosFrame" | "empresas" | "membretes" | "bancos" | "holidays" | "funcionesFrame" | "miPerfil" | "requestsConfig" | "obrasSociales" | "orderTypes" | "releases" | "shifts" | "importUsersWp";
+export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels" | "pdfTemplates" | "vacations" | "vacationsRules" | "activityLogs" | "projectTeam" | "projects" | "sedes" | "contracts" | "categoriasSat" | "centrosCosto" | "contratosFrame" | "empresas" | "membretes" | "bancos" | "holidays" | "funcionesFrame" | "miPerfil" | "requestsConfig" | "obrasSociales" | "orderTypes" | "releases" | "shifts" | "importUsersWp" | "arcaSucursales" | "arcaModalidadContratacion" | "arcaTipoServicio" | "arcaModalidadLiquidacion";
 
 export type HelpEntry = {
   title: string;
@@ -241,6 +241,47 @@ const helpResources = {
         "**Gestión**: Crear, editar y eliminar obras sociales, o importarlas desde un Excel (descargá la **Plantilla** para respetar el formato).",
       ],
 
+      // Sucursales de ARCA
+      "arcaSucursales.title": "Información de Sucursales",
+      "arcaSucursales.description": "Domicilios de desempeño del padrón de ARCA (Simplificación Registral).",
+      "arcaSucursales.items": [
+        "**Qué es**: El domicilio donde la persona presta servicios, tal como está declarado en el padrón de ARCA. Su **código** de 5 dígitos va en las posiciones 74-78 del TXT de alta.",
+        "**No es una Sede**: las Sedes son los lugares de trabajo con los que opera el sistema (proyectos, personas, contratos). Las Sucursales son entidades del padrón de ARCA. Son cosas distintas y se cargan por separado.",
+        "**Actividades**: cada sucursal declara una o más actividades (pos. 79-84). Con una sola, el contrato la hereda; con varias, el contrato elige cuál declara.",
+        "**Por CUIT**: el código sale del padrón de cada empleadora, así que el mismo domicilio declarado por dos empresas se carga como dos sucursales distintas.",
+        "**Uso**: se asignan a cada empresa en Configuración → Empresas, y después cada contrato elige una de las de su empleadora.",
+      ],
+
+      // Tablas oficiales de ARCA (Simplificación Registral)
+      "arcaModalidadContratacion.title": "Información de Modalidades de Contratación",
+      "arcaModalidadContratacion.description": "Tabla oficial de ARCA: con qué modalidad se declara la relación laboral en el alta.",
+      "arcaModalidadContratacion.items": [
+        "**Qué es**: El código de 3 dígitos que va en las posiciones 17-19 del TXT de alta masiva. Ej.: *008* tiempo completo indeterminado, *022* plazo fijo a tiempo completo.",
+        "**Dónde se usa**: Se asigna por Tipo de Contrato, en Configuración → Contratos. Un \"Plazo fijo 5x7\" se declara con la modalidad 022.",
+        "**Ojo con la fecha de fin**: Las modalidades a plazo determinado (021, 022, 012) exigen fecha de fin en el alta. Sin ella, ARCA rechaza el registro.",
+        "**Origen**: Se siembra desde el nomenclador de ARCA y solo hace falta tocarla si el organismo la actualiza.",
+      ],
+
+      // Tipos de servicio (ARCA)
+      "arcaTipoServicio.title": "Información de Tipos de Servicio",
+      "arcaTipoServicio.description": "Tabla oficial de ARCA: clasificación del servicio prestado por la persona.",
+      "arcaTipoServicio.items": [
+        "**Qué es**: El código de 3 dígitos que va en las posiciones 107-109 del TXT de alta masiva.",
+        "**Valor habitual**: *000 — Servicios comunes continuos*. El resto son regímenes especiales (tareas insalubres, aeronavegantes, docentes, etc.) con cómputo jubilatorio distinto.",
+        "**Dónde se usa**: Se asigna por Tipo de Contrato, en Configuración → Contratos.",
+        "**Origen**: Se siembra desde el nomenclador de ARCA y solo hace falta tocarla si el organismo la actualiza.",
+      ],
+
+      // Modalidades de liquidación (ARCA)
+      "arcaModalidadLiquidacion.title": "Información de Modalidades de Liquidación",
+      "arcaModalidadLiquidacion.description": "Tabla oficial de ARCA: cada cuánto se liquida la retribución pactada.",
+      "arcaModalidadLiquidacion.items": [
+        "**Qué es**: El código de 1 dígito que va en la posición 73 del TXT de alta masiva.",
+        "**Son ocho**: 1 mes · 2 quincena · 3 semana · 4 día · 5 hora · 6 pieza · 7 a comisión · 8 jornal.",
+        "**Dónde se usa**: Se asigna por Tipo de Contrato, en Configuración → Contratos.",
+        "**Origen**: Se siembra desde el nomenclador de ARCA y solo hace falta tocarla si el organismo la actualiza.",
+      ],
+
       // Pedidos (Configuración / tipos de pedido)
       "orderTypes.title": "Información de Pedidos",
       "orderTypes.description": "Configuración de los tipos de pedido disponibles en el sistema.",
@@ -466,6 +507,10 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
   miPerfil: { title: "Información de Mi Perfil", size: "sm", content: buildHelpContent("miPerfil") },
   requestsConfig: { title: "Configuración de Novedades", size: "sm", content: buildHelpContent("requestsConfig") },
   obrasSociales: { title: "Información de Obras Sociales", size: "md", content: buildHelpContent("obrasSociales") },
+  arcaSucursales: { title: "Sucursales de ARCA", size: "md", content: buildHelpContent("arcaSucursales") },
+  arcaModalidadContratacion: { title: "Modalidades de Contratación (ARCA)", size: "md", content: buildHelpContent("arcaModalidadContratacion") },
+  arcaTipoServicio: { title: "Tipos de Servicio (ARCA)", size: "md", content: buildHelpContent("arcaTipoServicio") },
+  arcaModalidadLiquidacion: { title: "Modalidades de Liquidación (ARCA)", size: "md", content: buildHelpContent("arcaModalidadLiquidacion") },
   orderTypes: { title: "Información de Pedidos", size: "sm", content: buildHelpContent("orderTypes") },
   releases: { title: "Información de Releases", size: "sm", content: buildHelpContent("releases") },
   shifts: { title: "Información de Turnos", size: "sm", content: buildHelpContent("shifts") },

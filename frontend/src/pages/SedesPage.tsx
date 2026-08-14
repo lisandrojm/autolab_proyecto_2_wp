@@ -13,9 +13,8 @@ import { getHelp, hasHelp } from "../data/help/helpContent";
 interface SedeForm {
   nombre: string;
   externalId: string;
-  codigoSucursal: string;
 }
-const FORM_VACIO: SedeForm = { nombre: "", externalId: "", codigoSucursal: "" };
+const FORM_VACIO: SedeForm = { nombre: "", externalId: "" };
 
 export const SedesPage: React.FC = () => {
   const [sedes, setSedes] = useState<InfoItem[]>([]);
@@ -88,7 +87,7 @@ export const SedesPage: React.FC = () => {
 
   const abrirEditar = (sede: InfoItem) => {
     setEditando(sede);
-    setForm({ nombre: sede.name || "", externalId: sede.externalId || "", codigoSucursal: sede.data?.codigoSucursal || "" });
+    setForm({ nombre: sede.name || "", externalId: sede.externalId || "" });
     setShowModal(true);
   };
 
@@ -98,7 +97,7 @@ export const SedesPage: React.FC = () => {
       sweetAlert.error("Falta el nombre", "La sede necesita un nombre.");
       return;
     }
-    const payload = { nombre, externalId: form.externalId.trim(), codigoSucursal: form.codigoSucursal.trim() };
+    const payload = { nombre, externalId: form.externalId.trim() };
     try {
       setSaving(true);
       if (editando) {
@@ -128,13 +127,6 @@ export const SedesPage: React.FC = () => {
       sweetAlert.error("Error", e?.response?.data?.error || "No se pudo eliminar la sede.");
     }
   };
-
-  const CodigoBadge: React.FC<{ sede: InfoItem }> = ({ sede }) =>
-    sede.data?.codigoSucursal ? (
-      <span className="text-sm font-mono text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-800/50">{sede.data.codigoSucursal}</span>
-    ) : (
-      <span className="text-xs text-amber-600 dark:text-amber-400">Sin cargar</span>
-    );
 
   return (
     <PageLayout
@@ -195,7 +187,6 @@ export const SedesPage: React.FC = () => {
               <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100 dark:border-gray-700/60">
                 <div className="flex flex-col gap-0.5">
                   <span className="text-[11px] text-gray-500 dark:text-gray-400">ID Interno: {sede.data?.id ?? "N/A"}</span>
-                  <span className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5">Cód. sucursal: <CodigoBadge sede={sede} /></span>
                 </div>
                 <div className="flex items-center gap-1">
                   <button onClick={() => abrirEditar(sede)} title="Editar sede" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
@@ -218,7 +209,6 @@ export const SedesPage: React.FC = () => {
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sede</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID Externo</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID Interno</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Cód. Sucursal (ARCA)</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
                 </tr>
               </thead>
@@ -236,9 +226,6 @@ export const SedesPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-sm text-gray-600 dark:text-gray-400">{sede.data?.id ?? "-"}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <CodigoBadge sede={sede} />
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-1">
@@ -287,10 +274,10 @@ export const SedesPage: React.FC = () => {
             <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Las sedes que llegan por la sincronización de FRAME traen su propio ID Externo. Para una sede manual podés dejarlo en blanco.</p>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Código de sucursal (ARCA) · 5 díg.</label>
-            <input maxLength={5} inputMode="numeric" className="input-field w-full" value={form.codigoSucursal} onChange={(e) => setForm((p) => ({ ...p, codigoSucursal: e.target.value.replace(/\D/g, "") }))} placeholder="Ej: 00001" />
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Domicilio de desempeño. Se usa en la generación del TXT de Alta masiva de ARCA.</p>
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-3 py-2.5">
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              Las Sedes son los lugares de trabajo con los que opera el sistema (proyectos, personas, contratos) y <strong>no</strong> tienen relación con las Sucursales de ARCA. El domicilio de desempeño que se declara en el alta es una entidad aparte, con su propio código y actividades, y se carga en <strong>Configuración → ARCA → Sucursales</strong>.
+            </p>
           </div>
         </div>
       </Modal>

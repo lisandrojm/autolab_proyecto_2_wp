@@ -30,6 +30,12 @@ export interface ICompany extends Document {
   obraSocialId?: number;
   /** Convenios Colectivos (CCT) que aplican a esta empresa. Referencias al catálogo de Convenios. */
   convenioIds?: mongoose.Types.ObjectId[];
+  /**
+   * Sucursales del padrón de ARCA que le corresponden a esta empresa. Son referencias al catálogo
+   * de Sucursales (ARCA → Sucursales), donde vive TODO el dato: código, domicilio y actividades.
+   * Acá solo se elige cuáles aplican, igual que con los convenios.
+   */
+  sucursalIds?: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -53,6 +59,7 @@ const companySchema = new Schema<ICompany>(
     signatureUrl: { type: String },
     obraSocialId: { type: Number },
     convenioIds: [{ type: Schema.Types.ObjectId, ref: "Convenio" }],
+    sucursalIds: [{ type: Schema.Types.ObjectId, ref: "ArcaSucursal" }],
   },
   {
     timestamps: true,

@@ -5,7 +5,7 @@ import { ClientSelector } from './ClientSelector';
 import { ClientContextMenu } from './ClientContextMenu';
 import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faArrowsRotate, faLandmark, faFileSignature } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faArrowsRotate, faLandmark, faFileSignature, faLocationDot } from '@fortawesome/free-solid-svg-icons';
 import { Logo } from '../components/ui/Logo';
 import axios from '../api/axiosConfig';
 import { SettingsModal } from './SettingsModal';
@@ -35,7 +35,7 @@ const PLANTILLAS_PATHS = [MEMBRETE_PATH, '/pdfs', '/pdfs-vacaciones', '/contrato
  * El orden del array es el que se muestra en el menú (NO se reordena alfabéticamente):
  * la Conexión va primera porque es el prerrequisito de lo demás.
  */
-const ARCA_PATHS = ['/afip', '/categorias-sat', '/convenios', '/obras-sociales'];
+const ARCA_PATHS = ['/afip', '/arca/sucursales', '/categorias-sat', '/convenios', '/obras-sociales', '/arca/modalidades-contratacion', '/arca/tipos-servicio', '/arca/modalidades-liquidacion'];
 
 /**
  * Subgrupos colapsables de Configuración. `storageKey` persiste el abierto/cerrado y
@@ -225,6 +225,14 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission('config_escaneo_dropbox:view')) base.push({ path: '/dropbox-sign', icon: faFileSignature, label: 'DropboxSign | Firmas', scope: 'global' });
       // Dentro del subgrupo "ARCA" se muestra como "Conexión" (el organismo ya lo nombra el grupo).
       if (hasPermission('config_afip:view')) base.push({ path: '/afip', icon: faLandmark, label: 'Conexión', scope: 'global' });
+      // Tablas oficiales del organismo: comparten un solo permiso porque son el mismo tipo de
+      // nomenclador (se siembran desde ARCA y casi no se editan), no tres módulos distintos.
+      if (hasPermission('config_arca_sucursales:view')) base.push({ path: '/arca/sucursales', icon: faLocationDot, label: 'Sucursales', scope: 'global' });
+      if (hasPermission('config_arca_tablas:view')) {
+        base.push({ path: '/arca/modalidades-contratacion', icon: faFileContract, label: 'Modalidades de Contratación', scope: 'global' });
+        base.push({ path: '/arca/tipos-servicio', icon: faListCheck, label: 'Tipos de Servicio', scope: 'global' });
+        base.push({ path: '/arca/modalidades-liquidacion', icon: faClock, label: 'Modalidades de Liquidación', scope: 'global' });
+      }
     }
 
     return base;

@@ -13,6 +13,8 @@ import { fuzzyMatch } from '../utils/searchHelpers';
 import { companiesAPI, Company, CompanyInput } from '../api/companies';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
 import { ConvenioSelector } from '../components/empresas/ConvenioSelector';
+import { SucursalSelector } from '../components/empresas/SucursalSelector';
+import { arcaSucursalesAPI, ArcaSucursal } from '../api/arcaSucursales';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 
 const HELP_KEY = 'empresas' as const;
@@ -35,6 +37,7 @@ const EMPTY_FORM: CompanyInput = {
   representanteLegalNombre: '',
   representanteLegalEmail: '',
   convenioIds: [],
+  sucursalIds: [],
 };
 
 export const EmpresasPage: React.FC = () => {
@@ -42,6 +45,9 @@ export const EmpresasPage: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
   const [cargandoConvenios, setCargandoConvenios] = useState(true);
+  // Catálogo de Sucursales de ARCA: la empresa solo elige cuáles le corresponden.
+  const [sucursales, setSucursales] = useState<ArcaSucursal[]>([]);
+  const [cargandoSucursales, setCargandoSucursales] = useState(true);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
@@ -81,6 +87,14 @@ export const EmpresasPage: React.FC = () => {
       .then(setConvenios)
       .catch(() => sweetAlert.error('Error', 'No se pudieron cargar los convenios.'))
       .finally(() => setCargandoConvenios(false));
+  }, []);
+
+  useEffect(() => {
+    arcaSucursalesAPI
+      .list()
+      .then(setSucursales)
+      .catch(() => sweetAlert.error('Error', 'No se pudieron cargar las sucursales de ARCA.'))
+      .finally(() => setCargandoSucursales(false));
   }, []);
 
   const effectiveViewMode: ViewMode = isLarge ? viewMode : 'cards';
@@ -130,6 +144,7 @@ export const EmpresasPage: React.FC = () => {
       representanteLegalNombre: c.representanteLegalNombre || '',
       representanteLegalEmail: c.representanteLegalEmail || '',
       convenioIds: (c.convenioIds || []).map((x) => String(x)),
+      sucursalIds: (c.sucursalIds || []).map((x) => String(x)),
     });
     setShowModal(true);
   };
@@ -149,13 +164,14 @@ export const EmpresasPage: React.FC = () => {
       sweetAlert.error('Datos incompletos', 'La razón social es obligatoria');
       return;
     }
+    const payload: CompanyInput = form;
     try {
       setSaving(true);
       if (editing) {
-        await companiesAPI.update(editing._id, form);
+        await companiesAPI.update(editing._id, payload);
         sweetAlert.success('Empresa actualizada', 'Los cambios se guardaron correctamente');
       } else {
-        await companiesAPI.create(form);
+        await companiesAPI.create(payload);
         sweetAlert.success('Empresa creada', 'La empresa se creó correctamente');
       }
       setShowModal(false);
@@ -449,6 +465,15 @@ export const EmpresasPage: React.FC = () => {
           <div className="pt-4 border-t border-gray-100 dark:border-gray-700/50">
             <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Convenios colectivos</h4>
             <ConvenioSelector convenios={convenios} cargando={cargandoConvenios} value={form.convenioIds || []} onChange={(ids) => setForm((prev) => ({ ...prev, convenioIds: ids }))} />
+          </div>
+
+          {/* Sucursales de ARCA asignadas */}
+          <div className="pt-4 border-t border-gray-100 dark:border-gray-700/50">
+            <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Sucursales de ARCA</h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              Cuáles de las sucursales del padrón le corresponden a esta empresa. Los datos de cada una (código, domicilio, actividades) se cargan en Configuración → ARCA → Sucursales.
+            </p>
+            <SucursalSelector sucursales={sucursales} cargando={cargandoSucursales} value={form.sucursalIds || []} onChange={(ids) => setForm((prev) => ({ ...prev, sucursalIds: ids }))} />
           </div>
 
           {/* Representante legal */}

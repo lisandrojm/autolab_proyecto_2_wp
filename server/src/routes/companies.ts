@@ -27,6 +27,8 @@ const companySchema = z.object({
   obraSocialId: z.number().nullable().optional(),
   /** Ids del catálogo de Convenios. Se manda la lista completa: reemplaza la anterior. */
   convenioIds: z.array(z.string()).optional(),
+  /** Ids del catálogo de Sucursales de ARCA. Se manda la lista completa: reemplaza la anterior. */
+  sucursalIds: z.array(z.string()).optional(),
 });
 
 // GET /companies

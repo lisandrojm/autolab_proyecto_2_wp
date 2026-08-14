@@ -22,9 +22,15 @@ export interface Company {
   obraSocialId?: number | null;
   /** Ids de los Convenios Colectivos asociados a la empresa. */
   convenioIds?: string[];
+  /**
+   * Sucursales del padrón de ARCA asignadas a esta empresa. Son referencias al catálogo de
+   * Sucursales, donde vive todo el dato (código, domicilio, actividades). Acá solo se eligen.
+   */
+  sucursalIds?: string[];
   createdAt?: string;
   updatedAt?: string;
 }
+
 
 export type CompanyInput = Omit<Company, "_id" | "createdAt" | "updatedAt">;
 

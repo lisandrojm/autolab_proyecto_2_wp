@@ -800,6 +800,10 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 categoria_sat_id: c.categoria_sat_id ?? null,
                 sede_id: c.sede_id ?? null,
                 tipo_contrato_id: c.tipo_contrato_id ?? null,
+                // Sucursal del padrón de ARCA (independiente de sede_id) y, si tiene varias actividades
+                // declaradas, con cuál se declara este contrato.
+                sucursalArcaId: c.sucursalArcaId ? String(c.sucursalArcaId) : "",
+                actividadArca: c.actividadArca || "",
                 // Flujo "Sin CUIT": documentación de respaldo + OK manual (pestaña Sin CUIT de Contratos).
                 sinCuitValidacion: c.sinCuitValidacion || null,
             };

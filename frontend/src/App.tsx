@@ -52,6 +52,10 @@ import { HolidaysPage } from "./pages/HolidaysPage";
 import { CategoriasSatPage } from "./pages/CategoriasSatPage";
 import { BancosPage } from "./pages/BancosPage";
 import { ObrasSocialesPage } from "./pages/ObrasSocialesPage";
+import { ArcaSucursalesPage } from "./pages/ArcaSucursalesPage";
+import { ArcaModalidadesContratacionPage } from "./pages/ArcaModalidadesContratacionPage";
+import { ArcaTiposServicioPage } from "./pages/ArcaTiposServicioPage";
+import { ArcaModalidadesLiquidacionPage } from "./pages/ArcaModalidadesLiquidacionPage";
 import { ConveniosPage } from "./pages/ConveniosPage";
 import { CentrosCostoPage } from "./pages/CentrosCostoPage";
 import { ContratosPage } from "./pages/ContratosPage";
@@ -531,6 +535,38 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ObrasSocialesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/arca/sucursales"
+                element={
+                  <ProtectedRoute>
+                    <ArcaSucursalesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/arca/modalidades-contratacion"
+                element={
+                  <ProtectedRoute>
+                    <ArcaModalidadesContratacionPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/arca/tipos-servicio"
+                element={
+                  <ProtectedRoute>
+                    <ArcaTiposServicioPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/arca/modalidades-liquidacion"
+                element={
+                  <ProtectedRoute>
+                    <ArcaModalidadesLiquidacionPage />
                   </ProtectedRoute>
                 }
               />

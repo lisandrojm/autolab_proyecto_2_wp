@@ -49,6 +49,22 @@ interface IContract {
   empresaReleaseId?: Types.ObjectId | string | null;
   nombre_empresa_contrato?: string;
   nombre_empresa_release?: string;
+  /**
+   * Sucursal del padrón de ARCA con la que se declara este contrato (pos. 74-78 del TXT de alta).
+   *
+   * Es independiente de `sede_id`: la Sede es el lugar de trabajo con el que opera el sistema y la
+   * Sucursal es una entidad del padrón de ARCA. Se elige entre las sucursales asignadas a la empresa
+   * empleadora del contrato (`companies.sucursalIds`).
+   */
+  sucursalArcaId?: Types.ObjectId | string | null;
+  /**
+   * Actividad del domicilio de desempeño (pos. 79-84 del TXT de alta de ARCA).
+   *
+   * Las actividades se declaran por sucursal en el catálogo de Sucursales. Cuando la sucursal tiene
+   * UNA sola, el contrato la hereda y esto queda vacío. Cuando tiene varias — ARCA lo permite — hay
+   * que elegir cuál declara este contrato, y esa elección va acá.
+   */
+  actividadArca?: string;
   // Documento de "Alta" (AFIP o Servicios, según el Estado impositivo vinculado a la Plantilla).
   altaDocumentoUrl?: string;
   altaDocumentoNombre?: string;
@@ -180,6 +196,8 @@ const contractSchema = new Schema<IContract>(
     empresaReleaseId: { type: Schema.Types.ObjectId, ref: "Company" },
     nombre_empresa_contrato: { type: String },
     nombre_empresa_release: { type: String },
+    sucursalArcaId: { type: Schema.Types.ObjectId, ref: "ArcaSucursal" },
+    actividadArca: { type: String },
     altaDocumentoUrl: { type: String },
     altaDocumentoNombre: { type: String },
     constanciaVigenciaDesde: { type: String },

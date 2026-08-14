@@ -22,6 +22,16 @@ export interface IContrato extends Document {
          */
         afipModalidadContrato?: string;
         afipTipoServicio?: string;
+        /**
+         * @deprecated NO se usa más para generar el TXT y ya no se edita desde el ABM.
+         *
+         * La actividad (pos. 79-84) es la del DOMICILIO de desempeño, no la del tipo de contrato: en el
+         * padrón de ARCA cuelga de cada sucursal de cada CUIT. Mientras vivió acá, dos personas del mismo
+         * tipo de contrato en sedes distintas salían con la misma actividad — un alta válida para ARCA
+         * pero mal declarada, y sin ningún control que lo frenara. Ahora sale de `companies.sedes[]`.
+         *
+         * El campo se conserva para no perder lo ya cargado; se puede borrar en una limpieza posterior.
+         */
         afipActividad?: string;
         afipModalidadLiquidacion?: string;
     };

@@ -9,6 +9,7 @@ import { ContratoFrameItem } from '../../api/contratosFrame';
 import { contratosAPI, ContratoItem } from '../../api/contratos';
 import { categoriaSatAPI, CategoriaSatItem } from '../../api/categoriasSat';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
+import { arcaSucursalesAPI, ArcaSucursal } from '../../api/arcaSucursales';
 import { Release } from '../../api/release';
 import { firmaDigitalAPI, FirmaDigitalConfig } from '../../api/firmaDigital';
 import { afipAPI } from '../../api/afip';
@@ -21,7 +22,7 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { EmptyState } from '../ui/EmptyState';
 import { Modal } from '../ui/Modal';
 import { ContractDocsColumns, ContractDocsHeaders, ContractActionsButtons, ContractActionsCell, ContractActionsHeader, downloadContractRow, downloadReleaseRow, uploadAltaRow } from './ContractRowDocs';
-import { resolveAfip, AfipRowResult } from './afipCompleteness';
+import { resolveAfip, resolveAfipValues, AfipRowResult, AfipValues } from './afipCompleteness';
 import { buildAltaRecord, buildAltaTxt, downloadTxt } from './afipTxt';
 import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, cuitEsValido, fmtCuit, cuitDisplay, noPoseeCuit } from './ConstanciaBulk';
 import { sweetAlert } from '../../utils/sweetAlert';
@@ -325,6 +326,129 @@ const EmpresaSelectCell: React.FC<{ record: ContractOverviewRow; campo: 'contrat
 };
 
 /**
+ * Celda "Sucursal": con qué domicilio de desempeño del padrón de ARCA se declara este contrato.
+ *
+ * Las opciones son las sucursales asignadas a la empresa empleadora (Configuración → Empresas). No
+ * tiene relación con la Sede del contrato: son entidades distintas.
+ */
+const SucursalSelectCell: React.FC<{ record: ContractOverviewRow; valores: AfipValues; onGuardado: (patch?: Partial<ContractOverviewRow>) => void }> = ({ record, valores, onGuardado }) => {
+  const [guardando, setGuardando] = useState(false);
+
+  const guardar = async (id: string) => {
+    setGuardando(true);
+    try {
+      const res = await projectsAPI.updateSucursalArca(record.projectId, record.userId, record.contractIndex, id);
+      // El server limpia la actividad al cambiar de sucursal (las actividades son de la sucursal).
+      onGuardado({ sucursalArcaId: res.sucursalArcaId || '', actividadArca: res.actividadArca || '' });
+    } catch (e: any) {
+      sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo guardar la sucursal.');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  if (!record.empresaContratoId) {
+    return (
+      <span className="text-xs text-gray-400" title="Elegí primero la Empresa del Contrato: las sucursales salen de su padrón">
+        —
+      </span>
+    );
+  }
+
+  if (valores.sucursalesDisponibles.length === 0) {
+    return (
+      <span className="text-xs text-amber-600 dark:text-amber-400" title="La empresa no tiene sucursales asignadas. Asignáselas en Configuración → Empresas.">
+        Sin sucursales
+      </span>
+    );
+  }
+
+  return (
+    <div className="relative inline-block">
+      <select
+        value={record.sucursalArcaId || ''}
+        disabled={guardando}
+        onChange={(e) => guardar(e.target.value)}
+        onClick={(e) => e.stopPropagation()}
+        title="Domicilio de desempeño con el que se declara el alta"
+        className={`text-xs rounded-md border py-1.5 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/40 disabled:opacity-50 disabled:cursor-wait ${guardando ? 'pl-6 pr-2' : 'px-2'} ${valores.sucursal ? 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200' : 'border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-400 font-semibold'}`}
+      >
+        <option value="">Elegir sucursal...</option>
+        {valores.sucursalesDisponibles.map((s) => (
+          <option key={s._id} value={s._id}>
+            {s.codigo} — {s.domicilio}
+          </option>
+        ))}
+      </select>
+      {guardando && <FontAwesomeIcon icon={faSpinner} spin className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-blue-500 pointer-events-none" title="Guardando..." />}
+    </div>
+  );
+};
+
+/**
+ * Celda "Actividad": con qué actividad del domicilio se declara este contrato.
+ *
+ * Solo pide decidir cuando la sucursal tiene MÁS DE UNA actividad declarada (ARCA lo permite). Con
+ * una sola, el contrato la hereda y no hay nada que elegir; si todavía no se puede resolver, el
+ * motivo ya lo explica el checklist de Datos ARCA.
+ */
+const ActividadSelectCell: React.FC<{ record: ContractOverviewRow; valores: AfipValues; onGuardado: (patch?: Partial<ContractOverviewRow>) => void }> = ({ record, valores, onGuardado }) => {
+  const [guardando, setGuardando] = useState(false);
+
+  const guardar = async (codigo: string) => {
+    setGuardando(true);
+    try {
+      await projectsAPI.updateActividadArca(record.projectId, record.userId, record.contractIndex, codigo);
+      onGuardado({ actividadArca: codigo });
+    } catch (e: any) {
+      sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo guardar la actividad.');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  // Heredada de la sede: no hay decisión que tomar, se muestra el código y ya.
+  if (valores.actividadOrigen === 'unica') {
+    return (
+      <span className="text-xs font-mono text-gray-600 dark:text-gray-300" title="Única actividad declarada para esta sucursal">
+        {valores.actividad}
+      </span>
+    );
+  }
+
+  // Todavía no se puede resolver (falta empresa, sede sin registrar, sin actividades cargadas).
+  if (valores.actividadesDisponibles.length === 0) {
+    return (
+      <span className="text-xs text-amber-600 dark:text-amber-400" title="Ver el detalle en la columna «Datos ARCA»">
+        —
+      </span>
+    );
+  }
+
+  return (
+    <div className="relative inline-block">
+      <select
+        value={valores.actividadOrigen === 'elegida' ? valores.actividad : ''}
+        disabled={guardando}
+        onChange={(e) => guardar(e.target.value)}
+        onClick={(e) => e.stopPropagation()}
+        title={`La sucursal ${valores.nombreSucursal} tiene ${valores.actividadesDisponibles.length} actividades declaradas: elegí con cuál se da de alta este contrato`}
+        className={`text-xs rounded-md border py-1.5 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/40 disabled:opacity-50 disabled:cursor-wait ${guardando ? 'pl-6 pr-2' : 'px-2'} ${valores.actividad ? 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200' : 'border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-400 font-semibold'}`}
+      >
+        <option value="">Elegir actividad...</option>
+        {valores.actividadesDisponibles.map((a) => (
+          <option key={a.codigo} value={a.codigo}>
+            {a.codigo}
+            {a.descripcion ? ` — ${a.descripcion}` : ''}
+          </option>
+        ))}
+      </select>
+      {guardando && <FontAwesomeIcon icon={faSpinner} spin className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-blue-500 pointer-events-none" title="Guardando..." />}
+    </div>
+  );
+};
+
+/**
  * Asignación MASIVA de la empresa (Contrato o Release) a los contratos tildados.
  *
  * Las empresas disponibles salen de cada PROYECTO (`contratoEmpresas`/`releaseEmpresas`), así que al
@@ -474,6 +598,8 @@ export const ContractBulkAfipTab: React.FC<{
   const [obrasSociales, setObrasSociales] = useState<SimpleCatalogItem[]>([]);
   const [sedes, setSedes] = useState<InfoItem[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  // Catálogo de Sucursales de ARCA: de acá salen el código de sucursal y las actividades del alta.
+  const [arcaSucursales, setArcaSucursales] = useState<ArcaSucursal[]>([]);
   // Detalle de completitud de una fila (modal).
   const [detalle, setDetalle] = useState<{ row: ImpositivoRow; result: AfipRowResult } | null>(null);
   // Detalle de los datos para la Constancia de CUIT/CUIL (único requisito: el CUIT/CUIL).
@@ -512,10 +638,14 @@ export const ContractBulkAfipTab: React.FC<{
       .list()
       .then(setCompanies)
       .catch(() => setCompanies([]));
+    arcaSucursalesAPI
+      .list()
+      .then(setArcaSucursales)
+      .catch(() => setArcaSucursales([]));
   }, []);
 
   // Las empresas entran al catálogo por su obra social por defecto (ver la cascada en resolveAfipValues).
-  const afipCat = useMemo(() => ({ categorias, tipos, obrasSociales, sedes, empresas: companies }), [categorias, tipos, obrasSociales, sedes, companies]);
+  const afipCat = useMemo(() => ({ categorias, tipos, obrasSociales, sedes, empresas: companies, sucursales: arcaSucursales }), [categorias, tipos, obrasSociales, sedes, companies, arcaSucursales]);
 
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
 
@@ -620,7 +750,7 @@ export const ContractBulkAfipTab: React.FC<{
     const omitidos = items.length - registros.length;
     downloadTxt(buildAltaTxt(registros), `${filenameBase}_${hoyStamp()}.txt`);
     if (omitidos > 0) {
-      sweetAlert.info('TXT generado', `Se incluyeron ${registros.length} alta(s). Se omitieron ${omitidos} contrato(s) por datos ARCA incompletos.`);
+      sweetAlert.info('TXT generado', `Se incluyeron ${registros.length} alta(s). Se omitieron ${omitidos} contrato(s) por datos ARCA incompletos o mal cargados (por ejemplo, una fecha con un formato inesperado).`);
     } else {
       sweetAlert.success('TXT generado', `Se incluyeron ${registros.length} alta(s) en el archivo.`);
     }
@@ -1127,6 +1257,16 @@ export const ContractBulkAfipTab: React.FC<{
                       )}
                     </span>
                   </th>
+                  {filterTipo !== 'sin_cuit' && (
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Sucursal del padrón de ARCA (domicilio de desempeño) con la que se declara el alta">
+                      Sucursal
+                    </th>
+                  )}
+                  {filterTipo !== 'sin_cuit' && (
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Actividad declarada para esa sucursal">
+                      Actividad
+                    </th>
+                  )}
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Empresa Release</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Cliente</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto</th>
@@ -1238,6 +1378,16 @@ export const ContractBulkAfipTab: React.FC<{
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <EmpresaSelectCell record={r} campo="contrato" requerido={filterTipo === 'alta_temprana_afip'} onGuardado={(patch) => aplicarCambio(r, patch)} />
                     </td>
+                    {filterTipo !== 'sin_cuit' && (
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <SucursalSelectCell record={r} valores={resolveAfipValues(r, afipCat)} onGuardado={(patch) => aplicarCambio(r, patch)} />
+                      </td>
+                    )}
+                    {filterTipo !== 'sin_cuit' && (
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <ActividadSelectCell record={r} valores={resolveAfipValues(r, afipCat)} onGuardado={(patch) => aplicarCambio(r, patch)} />
+                      </td>
+                    )}
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <EmpresaSelectCell record={r} campo="release" requerido={false} onGuardado={(patch) => aplicarCambio(r, patch)} />
                     </td>

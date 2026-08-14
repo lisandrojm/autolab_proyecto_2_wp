@@ -32,11 +32,10 @@ interface FormState {
   /** Códigos ARCA para el TXT de Alta masiva (específicos de convenio/modalidad de este contrato). */
   afipModalidadContrato: string;
   afipTipoServicio: string;
-  afipActividad: string;
   afipModalidadLiquidacion: string;
 }
 
-const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDiario: '', esTiempoIndeterminado: false, requiereFirma: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipActividad: '', afipModalidadLiquidacion: '' };
+const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDiario: '', esTiempoIndeterminado: false, requiereFirma: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '' };
 
 const BadgeTiempoIndeterminado: React.FC = () => (
   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
@@ -217,7 +216,6 @@ export const ContractTypesTab: React.FC = () => {
       estadoIds: seleccionActual,
       afipModalidadContrato: contrato.data?.afipModalidadContrato || '',
       afipTipoServicio: contrato.data?.afipTipoServicio || '',
-      afipActividad: contrato.data?.afipActividad || '',
       afipModalidadLiquidacion: contrato.data?.afipModalidadLiquidacion || '',
     });
     setEstadoIdsOriginal(seleccionActual);
@@ -292,7 +290,6 @@ export const ContractTypesTab: React.FC = () => {
       isActive: form.isActive,
       afipModalidadContrato: form.afipModalidadContrato.trim(),
       afipTipoServicio: form.afipTipoServicio.trim(),
-      afipActividad: form.afipActividad.trim(),
       afipModalidadLiquidacion: form.afipModalidadLiquidacion.trim(),
     };
 
@@ -590,7 +587,7 @@ export const ContractTypesTab: React.FC = () => {
               <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">Códigos ARCA (Alta masiva)</p>
             </div>
             <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-0.5">
-              Códigos de la interfaz de "Alta masiva" de ARCA, específicos del convenio/modalidad. Se usan para generar el TXT. Dejalos en blanco si no aplican.
+              Códigos de la interfaz de "Alta masiva" de ARCA, específicos del convenio/modalidad. Se usan para generar el TXT. Dejalos en blanco si no aplican. La <strong>actividad del domicilio</strong> no va acá: depende de la sede y de la empleadora, así que se carga en Configuración → Empresas, sección "Sedes en ARCA".
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -600,10 +597,6 @@ export const ContractTypesTab: React.FC = () => {
               <div className="space-y-1.5">
                 <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">Tipo de servicio <span className="normal-case tracking-normal text-gray-400">(3 díg.)</span></label>
                 <input maxLength={3} inputMode="numeric" className="input-field w-full" value={form.afipTipoServicio} onChange={(e) => setForm((p) => ({ ...p, afipTipoServicio: e.target.value.replace(/\D/g, '') }))} placeholder="Ej: 001" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">Actividad del domicilio <span className="normal-case tracking-normal text-gray-400">(6 díg.)</span></label>
-                <input maxLength={6} inputMode="numeric" className="input-field w-full" value={form.afipActividad} onChange={(e) => setForm((p) => ({ ...p, afipActividad: e.target.value.replace(/\D/g, '') }))} placeholder="Ej: 620100" />
               </div>
               <div className="space-y-1.5">
                 <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">Modalidad de liquidación <span className="normal-case tracking-normal text-gray-400">(1 díg.)</span></label>

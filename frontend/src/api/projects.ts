@@ -480,6 +480,25 @@ class ProjectsAPI {
     return data;
   }
 
+  /**
+   * Elige la Sucursal de ARCA (domicilio de desempeño) de un contrato puntual. El server valida que
+   * esté asignada a la empresa del contrato. Al cambiarla se limpia la actividad elegida, porque las
+   * actividades son de la sucursal. Pasar "" para desasignarla.
+   */
+  async updateSucursalArca(projectId: string, userId: string, contractIndex: number, sucursalArcaId: string): Promise<{ sucursalArcaId: string | null; actividadArca: string }> {
+    const { data } = await axios.patch(`/projects/${projectId}/members/${userId}/contracts/${contractIndex}/sucursal-arca`, { sucursalArcaId }, { headers: this.getHeaders() });
+    return data;
+  }
+
+  /**
+   * Elige la actividad del domicilio de desempeño de un contrato puntual. Solo hace falta cuando la
+   * sucursal tiene más de una actividad declarada; con una sola se hereda. Pasar "" para desasignarla.
+   */
+  async updateActividadArca(projectId: string, userId: string, contractIndex: number, actividadArca: string): Promise<{ actividadArca: string }> {
+    const { data } = await axios.patch(`/projects/${projectId}/members/${userId}/contracts/${contractIndex}/actividad-arca`, { actividadArca }, { headers: this.getHeaders() });
+    return data;
+  }
+
   /** Igual que `updateContratoEmpresa`, pero para la Empresa del Release (no es obligatoria). */
   async updateReleaseEmpresa(projectId: string, userId: string, contractIndex: number, empresaReleaseId: string): Promise<{ empresaReleaseId: string | null; nombre_empresa_release: string }> {
     const { data } = await axios.patch(`/projects/${projectId}/members/${userId}/contracts/${contractIndex}/empresa-release`, { empresaReleaseId }, { headers: this.getHeaders() });

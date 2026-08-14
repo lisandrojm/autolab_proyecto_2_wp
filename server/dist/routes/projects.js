@@ -20,6 +20,7 @@ import { Position } from "../models/Position.js";
 import { Level } from "../models/Level.js";
 import { Shift } from "../models/Shift.js";
 import { Company } from "../models/Company.js";
+import { ArcaSucursal } from "../models/ArcaSucursal.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
 import { esContratoVigente, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
@@ -1391,6 +1392,105 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/empresa-cont
     }
     catch (error) {
         console.error("Update contract empresa-contrato error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// PATCH /projects/:projectId/members/:userId/contracts/:index/sucursal-arca - Elige la sucursal del
+// padrón de ARCA (domicilio de desempeño) de un contrato puntual, igual que empresa-contrato.
+//
+// Solo se admiten sucursales asignadas a la empresa empleadora del contrato: el código sale del
+// padrón de ESE CUIT, así que una sucursal de otra empresa daría un alta válida para ARCA pero mal
+// declarada. Al cambiar de sucursal se limpia `actividadArca`, porque las actividades son de la
+// sucursal y la elegida antes puede no existir en la nueva.
+router.patch("/projects/:projectId/members/:userId/contracts/:index/sucursal-arca", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
+    try {
+        const { projectId, userId, index } = req.params;
+        const sucursalArcaId = req.body?.sucursalArcaId ? String(req.body.sucursalArcaId) : "";
+        const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("_id").lean();
+        if (!project) {
+            res.status(404).json({ error: "Project not found" });
+            return;
+        }
+        const up = await UserProject.findOne({ projectId, userId });
+        const idx = Number(index);
+        if (!up || !Number.isInteger(idx) || idx < 0 || idx >= up.contracts.length) {
+            res.status(404).json({ error: "Contrato no encontrado" });
+            return;
+        }
+        const contrato = up.contracts[idx];
+        if (sucursalArcaId) {
+            if (!contrato.empresaContratoId) {
+                res.status(400).json({ error: "Primero hay que elegir la Empresa del Contrato: la sucursal sale de su padrón de ARCA" });
+                return;
+            }
+            const empresa = await Company.findById(contrato.empresaContratoId).select("sucursalIds razonSocial").lean();
+            const asignada = (empresa?.sucursalIds || []).some((id) => String(id) === sucursalArcaId);
+            if (!asignada) {
+                res.status(400).json({ error: "Esa sucursal no está asignada a la empresa del contrato. Asignásela en Configuración → Empresas." });
+                return;
+            }
+        }
+        const cambioDeSucursal = String(contrato.sucursalArcaId || "") !== sucursalArcaId;
+        up.contracts[idx] = {
+            ...contrato.toObject(),
+            sucursalArcaId: sucursalArcaId || null,
+            actividadArca: cambioDeSucursal ? "" : contrato.actividadArca || "",
+        };
+        up.markModified("contracts");
+        await up.save();
+        res.json({ sucursalArcaId: sucursalArcaId || null, actividadArca: cambioDeSucursal ? "" : contrato.actividadArca || "" });
+    }
+    catch (error) {
+        console.error("Update contract sucursal-arca error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// PATCH /projects/:projectId/members/:userId/contracts/:index/actividad-arca - Elige la actividad
+// del domicilio de desempeño de un contrato puntual.
+//
+// Solo hace falta cuando la sucursal del contrato tiene MÁS DE UNA actividad declarada (ARCA lo
+// permite). Con una sola, el contrato la hereda y este campo queda vacío. Se valida contra las
+// actividades realmente declaradas para esa sucursal: sin esto se podría guardar un código de otro
+// domicilio, que es exactamente el bug que este cambio vino a arreglar.
+router.patch("/projects/:projectId/members/:userId/contracts/:index/actividad-arca", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
+    try {
+        const { projectId, userId, index } = req.params;
+        const actividadArca = req.body?.actividadArca ? String(req.body.actividadArca).replace(/\D/g, "") : "";
+        const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("_id").lean();
+        if (!project) {
+            res.status(404).json({ error: "Project not found" });
+            return;
+        }
+        const up = await UserProject.findOne({ projectId, userId });
+        const idx = Number(index);
+        if (!up || !Number.isInteger(idx) || idx < 0 || idx >= up.contracts.length) {
+            res.status(404).json({ error: "Contrato no encontrado" });
+            return;
+        }
+        const contrato = up.contracts[idx];
+        if (actividadArca) {
+            if (!contrato.sucursalArcaId) {
+                res.status(400).json({ error: "Primero hay que elegir la Sucursal: las actividades son del domicilio de desempeño" });
+                return;
+            }
+            const sucursal = await ArcaSucursal.findById(contrato.sucursalArcaId).select("actividades codigo").lean();
+            if (!sucursal) {
+                res.status(400).json({ error: "La sucursal del contrato ya no existe en el catálogo" });
+                return;
+            }
+            const declarada = (sucursal.actividades || []).some((a) => String(a.codigo) === actividadArca);
+            if (!declarada) {
+                res.status(400).json({ error: `Esa actividad no está declarada para la sucursal ${sucursal.codigo}` });
+                return;
+            }
+        }
+        up.contracts[idx] = { ...contrato.toObject(), actividadArca };
+        up.markModified("contracts");
+        await up.save();
+        res.json({ actividadArca });
+    }
+    catch (error) {
+        console.error("Update contract actividad-arca error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });

@@ -17,6 +17,7 @@ const companySchema = new Schema({
     signatureUrl: { type: String },
     obraSocialId: { type: Number },
     convenioIds: [{ type: Schema.Types.ObjectId, ref: "Convenio" }],
+    sucursalIds: [{ type: Schema.Types.ObjectId, ref: "ArcaSucursal" }],
 }, {
     timestamps: true,
     collection: "companies",
