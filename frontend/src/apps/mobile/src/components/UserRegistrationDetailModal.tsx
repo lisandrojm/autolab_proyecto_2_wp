@@ -237,7 +237,7 @@ export const UserRegistrationDetailModal: React.FC<UserRegistrationDetailModalPr
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
               <FontAwesomeIcon icon={faIdCard} className="text-blue-500 text-[10px]" />
-              Categoría SAT
+              Categoría
             </label>
             <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm min-h-[46px] flex items-center">
               <p className="text-sm font-medium text-slate-900 dark:text-slate-100">

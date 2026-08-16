@@ -29,6 +29,8 @@ interface AuthState {
   login: (email: string, password: string, tenantSlug?: string, clientId?: string) => Promise<{ requiresTenantSelection?: boolean; tenants?: Tenant[]; redirectTo?: string; user?: User }>;
   checkTenants: (email: string) => Promise<Tenant[]>;
   logout: () => void;
+  /** Re-lee el usuario (y sobre todo sus permisos) desde el server. Ver la implementación. */
+  refreshSession: () => Promise<void>;
   setTenantId: (tenantId: string) => void;
   hasPermission: (permission: string) => boolean;
   getPrimaryRole: () => string | null;
@@ -205,6 +207,41 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.removeItem("user");
     localStorage.removeItem("tenantSlug");
     set({ user: null, token: null, isAuthenticated: false });
+  },
+
+  /**
+   * Vuelve a pedir el usuario al server y pisa el que está cacheado en localStorage.
+   *
+   * Hace falta porque `user.permissions` se guardaba SOLO en el login y no se refrescaba nunca: si a
+   * un rol se le agregaba un permiso (o lo agregaba solo `ensureRole` al levantar el backend), quien
+   * ya tenía la sesión abierta seguía sin ver el ítem del navbar hasta desloguearse y volver a
+   * entrar. Pasó con Convenios / Sucursales / las tablas de ARCA.
+   */
+  async refreshSession() {
+    const { token, user } = get();
+    if (!token || !user) return;
+
+    const base = normalizeBaseUrl(import.meta.env.VITE_API_URL);
+    try {
+      const res = await fetch(`${base}/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "X-Tenant-Id": localStorage.getItem("tenantId") || user.tenantId || "",
+        },
+      });
+      if (!res.ok) return; // 401/403 ya los maneja la validación de token del arranque.
+
+      const data = await parseResponseSafely(res);
+      const fresco = data?.user as User | undefined;
+      if (!fresco?.id) return;
+
+      // `/auth/me` no devuelve `clientId` (lo arma el login según con qué cliente se entró): se conserva.
+      const actualizado: User = { ...user, ...fresco, ...(user.clientId && !fresco.clientId ? { clientId: user.clientId } : {}) };
+      localStorage.setItem("user", JSON.stringify(actualizado));
+      set({ user: actualizado });
+    } catch {
+      // Server caído o sin red: se sigue con lo cacheado, que es mejor que romper la sesión.
+    }
   },
 
   setTenantId(tenantId: string) {

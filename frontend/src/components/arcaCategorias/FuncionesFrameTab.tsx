@@ -1,19 +1,35 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { roleFrameAPI, RoleFrameItem } from '../../api/roleFrames';
-import { categoriaSatAPI, CategoriaSatItem } from '../../api/categoriasSat';
+import { categoriaSatAPI, CategoriaSatItem, esElegible } from '../../api/categoriasSat';
 import { Card } from '../ui/Card';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { SearchAndFilters } from '../ui/SearchAndFilters';
-import { faUserShield, faLayerGroup, faTable, faGrip, faPlus, faEdit, faTrash, faSearch, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faUserShield, faLayerGroup, faTable, faGrip, faPlus, faEdit, faTrash, faSearch, faTimes, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Modal } from '../ui/Modal';
 import { sweetAlert } from '../../utils/sweetAlert';
 
-/** Badge azul "Cat. {número} - {nombre}" para mostrar categorías SAT. */
-const CategoriaSatBadge: React.FC<{ label: string }> = ({ label }) => (
+/** Badge de categoría: código de ARCA + nombre, con el convenio del que cuelga. */
+const CategoriaSatBadge: React.FC<{ label: string; convenio?: string }> = ({ label, convenio }) => (
   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
     <FontAwesomeIcon icon={faLayerGroup} className="h-2.5 w-2.5" />
+    {convenio && <span className="font-mono opacity-70">{convenio}</span>}
     {label}
+  </span>
+);
+
+/**
+ * Aviso de función que mezcla convenios.
+ *
+ * Una función FRAME mapea a categorías: si esas categorías son de CCT distintos, el contrato puede
+ * terminar con una que la empleadora no tiene habilitada, y ARCA rechaza el alta. No es un detalle de
+ * catálogo — el convenio no viaja en el TXT, ARCA lo infiere del código de categoría, así que el
+ * error no se ve hasta que el organismo devuelve el archivo.
+ */
+const AvisoConveniosMezclados: React.FC<{ convenios: string[] }> = ({ convenios }) => (
+  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400 border border-red-200 dark:border-red-800" title={`Esta función apunta a categorías de ${convenios.join(' y ')}. Una empleadora tiene que tener habilitado el convenio de la categoría que se elija: si no lo tiene, ARCA rechaza el alta.`}>
+    <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5" />
+    {convenios.length} convenios
   </span>
 );
 
@@ -93,8 +109,26 @@ export const FuncionesFrameTab: React.FC = () => {
     return roles.filter((r) => r.name.toLowerCase().includes(lowerSearch) || r.externalId.toLowerCase().includes(lowerSearch));
   }, [roles, searchTerm]);
 
-  /** "Cat. {número} - {nombre}" por cada categoría asociada, mismo formato que el checklist del modal. */
-  const categoriasSatLabels = (role: RoleFrameItem): string[] => (role.data?.categoriasSat || []).map((c: any) => `Cat. ${c.numeroCategoria ?? '?'} - ${c.nombre || c.name || 'Sin nombre'}`);
+  /** Índice del catálogo por el id numérico legacy, para resolver convenio y código de cada asociada. */
+  const catalogoPorId = useMemo(() => new Map(allCategories.map((c) => [String(c.data?.id), c])), [allCategories]);
+
+  /**
+   * Las categorías asociadas a una función, resueltas contra el catálogo vigente.
+   *
+   * La copia denormalizada que guarda la función no tiene el convenio, y el número que sí tiene
+   * (`numeroCategoria`) es el del GRUPO salarial — lo compartían decenas de categorías distintas, así
+   * que como etiqueta no identificaba nada. Lo que identifica es el código de ARCA de 6 dígitos.
+   */
+  const categoriasDe = (role: RoleFrameItem): Array<{ key: string; label: string; convenio: string }> =>
+    (role.data?.categoriasSat || []).map((c: any, i: number) => {
+      const vigente = catalogoPorId.get(String(c.id));
+      const codigo = String(vigente?.data?.codigoArca || '').trim();
+      const nombre = vigente?.data?.nombre || vigente?.name || c.nombre || c.name || 'Sin nombre';
+      return { key: `${c.id ?? i}`, label: codigo ? `${codigo} · ${nombre}` : nombre, convenio: String(vigente?.data?.convenio || '').trim() };
+    });
+
+  /** Los CCT distintos a los que apunta la función. Más de uno es el problema que hay que ver. */
+  const conveniosDe = (role: RoleFrameItem): string[] => [...new Set(categoriasDe(role).map((c) => c.convenio || 'sin convenio'))];
 
   const openCreate = () => {
     setEditingRole(null);
@@ -172,15 +206,44 @@ export const FuncionesFrameTab: React.FC = () => {
     }
   };
 
-  const filteredCatsForSelect = useMemo(() => {
+  /**
+   * Las categorías que se pueden asociar, AGRUPADAS POR CONVENIO.
+   *
+   * Antes era una lista corrida de 109 ítems etiquetados "Cat. N - nombre", donde N era el grupo
+   * salarial: nada indicaba de qué CCT era cada una, y así se armaron funciones que mezclan
+   * convenios. Con el convenio como encabezado, elegir dos de CCT distintos deja de ser algo que se
+   * pueda hacer sin darse cuenta.
+   */
+  const gruposParaSelect = useMemo(() => {
+    // Solo las elegibles: los alias existen para que resuelvan contratos históricos, no para
+    // asociarlos a una función nueva (ver `esElegible`). Las ya asociadas se resuelven aparte, en
+    // `openEdit`, que busca sobre `allCategories` sin filtrar.
     const q = catSearch.trim().toLowerCase();
-    if (!q) return allCategories;
-    return allCategories.filter((cat) => {
-      const catName = cat.data?.nombre || cat.name || '';
-      const catNum = String(cat.data?.numeroCategoria || '');
-      return catName.toLowerCase().includes(q) || catNum.includes(q);
+    const elegibles = allCategories.filter(esElegible).filter((cat) => {
+      if (!q) return true;
+      const nombre = (cat.data?.nombre || cat.name || '').toLowerCase();
+      return nombre.includes(q) || String(cat.data?.codigoArca || '').includes(q) || String(cat.data?.convenio || '').toLowerCase().includes(q);
     });
+
+    const porConvenio = new Map<string, CategoriaSatItem[]>();
+    for (const cat of elegibles) {
+      const cct = String(cat.data?.convenio || '').trim() || 'Sin convenio';
+      if (!porConvenio.has(cct)) porConvenio.set(cct, []);
+      porConvenio.get(cct)!.push(cat);
+    }
+    return [...porConvenio.entries()]
+      // "Sin convenio" al final: no es un convenio más, es un dato roto.
+      .sort((a, b) => (a[0] === 'Sin convenio' ? 1 : b[0] === 'Sin convenio' ? -1 : a[0].localeCompare(b[0])))
+      .map(([convenio, cats]) => ({ convenio, cats: cats.sort((x, y) => String(x.data?.codigoArca || '').localeCompare(String(y.data?.codigoArca || ''))) }));
   }, [allCategories, catSearch]);
+
+  const totalParaSelect = useMemo(() => gruposParaSelect.reduce((acc, g) => acc + g.cats.length, 0), [gruposParaSelect]);
+
+  /** Los CCT de lo que está tildado ahora mismo: avisa antes de guardar, no después. */
+  const conveniosSeleccionados = useMemo(() => {
+    const porMongoId = new Map(allCategories.map((c) => [c._id, String(c.data?.convenio || '').trim() || 'sin convenio']));
+    return [...new Set(selectedCategoryIds.map((id) => porMongoId.get(id)).filter(Boolean) as string[])];
+  }, [allCategories, selectedCategoryIds]);
 
   return (
     <div className="space-y-4">
@@ -227,7 +290,7 @@ export const FuncionesFrameTab: React.FC = () => {
                 leftContent: (
                   <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-500">
                     <FontAwesomeIcon icon={faLayerGroup} />
-                    <span>{role.data?.categoriasSat?.length || 0} Categorías SAT</span>
+                    <span>{role.data?.categoriasSat?.length || 0} Categorías</span>
                   </div>
                 ),
                 actions: [
@@ -253,7 +316,16 @@ export const FuncionesFrameTab: React.FC = () => {
               }}
             >
               <div className="flex flex-wrap gap-1.5">
-                {categoriasSatLabels(role).length === 0 ? <span className="text-xs text-gray-400">Sin categorías</span> : categoriasSatLabels(role).map((label, i) => <CategoriaSatBadge key={i} label={label} />)}
+                {categoriasDe(role).length === 0 ? (
+                  <span className="text-xs text-gray-400">Sin categorías</span>
+                ) : (
+                  <>
+                    {conveniosDe(role).length > 1 && <AvisoConveniosMezclados convenios={conveniosDe(role)} />}
+                    {categoriasDe(role).map((c) => (
+                      <CategoriaSatBadge key={c.key} label={c.label} convenio={c.convenio} />
+                    ))}
+                  </>
+                )}
               </div>
             </Card>
           ))}
@@ -266,7 +338,7 @@ export const FuncionesFrameTab: React.FC = () => {
                 <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID Externo</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Categorías SAT</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Categorías</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
                 </tr>
               </thead>
@@ -286,7 +358,16 @@ export const FuncionesFrameTab: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1.5 max-w-md">
-                        {categoriasSatLabels(role).length === 0 ? <span className="text-sm text-gray-400">Ninguna</span> : categoriasSatLabels(role).map((label, i) => <CategoriaSatBadge key={i} label={label} />)}
+                        {categoriasDe(role).length === 0 ? (
+                          <span className="text-sm text-gray-400">Ninguna</span>
+                        ) : (
+                          <>
+                            {conveniosDe(role).length > 1 && <AvisoConveniosMezclados convenios={conveniosDe(role)} />}
+                            {categoriasDe(role).map((c) => (
+                              <CategoriaSatBadge key={c.key} label={c.label} convenio={c.convenio} />
+                            ))}
+                          </>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
@@ -325,25 +406,35 @@ export const FuncionesFrameTab: React.FC = () => {
               <div>
                 <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                   <FontAwesomeIcon icon={faLayerGroup} className="text-primary-500" />
-                  Categorías SAT Asociadas
+                  Categorías Asociadas
                 </h4>
                 <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
                   <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead className="bg-gray-50 dark:bg-gray-800">
                       <tr>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Convenio</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Cód. ARCA</th>
                         <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Nombre</th>
                         <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500 uppercase">Bruto</th>
                         <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500 uppercase">Neto</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {selectedRole.data.categoriasSat.map((cat: any) => (
-                        <tr key={cat.id || cat.numeroCategoria} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                          <td className="px-4 py-2 text-xs text-gray-700 dark:text-gray-300 font-medium">{cat.nombre}</td>
-                          <td className="px-4 py-2 text-xs text-right text-gray-700 dark:text-gray-300 font-mono">${cat.sueldoBruto?.toLocaleString()}</td>
-                          <td className="px-4 py-2 text-xs text-right text-gray-700 dark:text-gray-300 font-mono">${cat.neto?.toLocaleString()}</td>
-                        </tr>
-                      ))}
+                      {/* Se resuelve contra el catálogo vigente: la copia guardada en la función no
+                          tiene el convenio y su escala puede ser de una paritaria anterior. */}
+                      {selectedRole.data.categoriasSat.map((cat: any, i: number) => {
+                        const vigente = catalogoPorId.get(String(cat.id));
+                        const convenio = String(vigente?.data?.convenio || '').trim();
+                        return (
+                          <tr key={cat.id ?? i} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                            <td className="px-4 py-2 text-xs font-mono text-gray-600 dark:text-gray-400">{convenio || <span className="text-red-600 dark:text-red-400 font-sans font-semibold">sin convenio</span>}</td>
+                            <td className="px-4 py-2 text-xs font-mono text-gray-600 dark:text-gray-400">{vigente?.data?.codigoArca || <span className="text-red-600 dark:text-red-400 font-sans font-semibold">sin código</span>}</td>
+                            <td className="px-4 py-2 text-xs text-gray-700 dark:text-gray-300 font-medium">{vigente?.data?.nombre || vigente?.name || cat.nombre}</td>
+                            <td className="px-4 py-2 text-xs text-right text-gray-700 dark:text-gray-300 font-mono">${(vigente?.data?.sueldoBruto ?? cat.sueldoBruto)?.toLocaleString()}</td>
+                            <td className="px-4 py-2 text-xs text-right text-gray-700 dark:text-gray-300 font-mono">${(vigente?.data?.neto ?? cat.neto)?.toLocaleString()}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -358,7 +449,7 @@ export const FuncionesFrameTab: React.FC = () => {
           isOpen={showModal}
           onClose={() => setShowModal(false)}
           title={editingRole ? 'Editar Función FRAME' : 'Nueva Función FRAME'}
-          subtitle={editingRole ? 'Modifica los datos de la función' : 'Agrega una nueva función y asocia categorías SAT'}
+          subtitle={editingRole ? 'Modifica los datos de la función' : 'Agrega una nueva función y asocia categorías'}
           size="lg"
           footer={
             <div className="flex items-center justify-end gap-3 w-full">
@@ -387,7 +478,7 @@ export const FuncionesFrameTab: React.FC = () => {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Categorías SAT * {selectedCategoryIds.length > 0 ? <span className="font-normal text-gray-500 dark:text-gray-400">({selectedCategoryIds.length})</span> : null}
+                  Categorías * {selectedCategoryIds.length > 0 ? <span className="font-normal text-gray-500 dark:text-gray-400">({selectedCategoryIds.length})</span> : null}
                 </label>
                 <button
                   type="button"
@@ -399,8 +490,8 @@ export const FuncionesFrameTab: React.FC = () => {
                 </button>
               </div>
               <div className="relative mb-2">
-                <input type="text" value={catSearch} onChange={(e) => setCatSearch(e.target.value)} className="input-field w-full pl-9 pr-8 py-2 border rounded bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100" placeholder="Buscar categorías por nombre o número..." />
-                <div className="absolute inset-y-0 left-0 left-3 pl-3 flex items-center pointer-events-none text-gray-400">
+                <input type="text" value={catSearch} onChange={(e) => setCatSearch(e.target.value)} className="input-field w-full pl-9 pr-8 py-2 border rounded bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100" placeholder="Buscar por nombre, código ARCA o convenio..." />
+                <div className="absolute inset-y-0 left-3 pl-3 flex items-center pointer-events-none text-gray-400">
                   <FontAwesomeIcon icon={faSearch} className="h-4 w-4" />
                 </div>
                 {catSearch && (
@@ -410,32 +501,50 @@ export const FuncionesFrameTab: React.FC = () => {
                 )}
               </div>
 
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 max-h-60 overflow-y-auto space-y-2 bg-gray-50 dark:bg-gray-900/50">
-                {filteredCatsForSelect.length === 0 ? (
+              {conveniosSeleccionados.length > 1 && (
+                <div className="mb-2 flex items-start gap-2 text-xs text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-2.5">
+                  <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  <span>
+                    Estás mezclando categorías de <strong>{conveniosSeleccionados.join(' y ')}</strong>. Una empleadora solo puede dar de alta categorías de los convenios que tiene habilitados: si se elige la del convenio equivocado, ARCA rechaza el alta y el error no se ve hasta que devuelve el archivo.
+                  </span>
+                </div>
+              )}
+
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 max-h-60 overflow-y-auto space-y-3 bg-gray-50 dark:bg-gray-900/50">
+                {totalParaSelect === 0 ? (
                   <p className="text-sm text-gray-500 italic p-2">No se encontraron categorías</p>
                 ) : (
-                  filteredCatsForSelect.map((cat) => {
-                    const isChecked = selectedCategoryIds.includes(cat._id);
-                    return (
-                      <label key={cat._id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1.5 rounded transition-colors select-none">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => {
-                            if (isChecked) {
-                              setSelectedCategoryIds(selectedCategoryIds.filter((id) => id !== cat._id));
-                            } else {
-                              setSelectedCategoryIds([...selectedCategoryIds, cat._id]);
-                            }
-                          }}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Cat. {cat.data?.numeroCategoria} - {cat.data?.nombre || cat.name}
-                        </span>
-                      </label>
-                    );
-                  })
+                  gruposParaSelect.map((grupo) => (
+                    <div key={grupo.convenio}>
+                      {/* El convenio como encabezado: es el nivel del que cuelga la categoría, no una etiqueta más. */}
+                      <div className="sticky top-0 flex items-center gap-2 px-1.5 py-1 mb-1 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                        <span className="font-mono text-[11px] font-bold text-blue-700 dark:text-blue-400">{grupo.convenio}</span>
+                        <span className="text-[10px] text-gray-400">{grupo.cats.length} categoría(s)</span>
+                      </div>
+                      {grupo.cats.map((cat) => {
+                        const isChecked = selectedCategoryIds.includes(cat._id);
+                        return (
+                          <label key={cat._id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1.5 rounded transition-colors select-none">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {
+                                if (isChecked) {
+                                  setSelectedCategoryIds(selectedCategoryIds.filter((id) => id !== cat._id));
+                                } else {
+                                  setSelectedCategoryIds([...selectedCategoryIds, cat._id]);
+                                }
+                              }}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              <span className="font-mono text-xs text-gray-500 dark:text-gray-400">{cat.data?.codigoArca || '——————'}</span> · {cat.data?.nombre || cat.name}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  ))
                 )}
               </div>
             </div>

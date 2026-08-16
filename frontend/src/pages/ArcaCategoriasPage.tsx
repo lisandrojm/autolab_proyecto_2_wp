@@ -2,12 +2,17 @@ import React, { useState } from 'react';
 import { PageLayout } from '../components/ui/PageLayout';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { faListCheck } from '@fortawesome/free-solid-svg-icons';
-import { CategoriasSatTab } from '../components/categoriasSat/CategoriasSatTab';
-import { FuncionesFrameTab } from '../components/categoriasSat/FuncionesFrameTab';
+import { CategoriasArcaTab } from '../components/arcaCategorias/CategoriasArcaTab';
+import { FuncionesFrameTab } from '../components/arcaCategorias/FuncionesFrameTab';
 
 type TabKey = 'categorias' | 'funciones';
 
-export const CategoriasSatPage: React.FC = () => {
+/**
+ * ARCA → Categorías. Vive en `/arca/categorias` junto al resto de los catálogos del organismo
+ * (Sucursales, Tipos de Servicio, Modalidades). La ruta vieja `/categorias-sat` redirige acá: el
+ * "SAT" describía un caso particular —las 106 categorías del convenio 0634/11— como si fuera la regla.
+ */
+export const ArcaCategoriasPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('categorias');
   const [showInfo, setShowInfo] = useState(false);
 
@@ -42,7 +47,7 @@ export const CategoriasSatPage: React.FC = () => {
 
           {/* Tab Content */}
           <div className="animate-in fade-in duration-300">
-            {activeTab === 'categorias' && <CategoriasSatTab />}
+            {activeTab === 'categorias' && <CategoriasArcaTab />}
             {activeTab === 'funciones' && <FuncionesFrameTab />}
           </div>
         </div>
@@ -52,4 +57,4 @@ export const CategoriasSatPage: React.FC = () => {
   );
 };
 
-export default CategoriasSatPage;
+export default ArcaCategoriasPage;

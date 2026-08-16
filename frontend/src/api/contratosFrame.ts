@@ -59,7 +59,7 @@ export const contratoVariables: { grupo: string; vars: string[] }[] = [
     vars: ["{{sueldoJornada}}", "{{sueldoJornadaLetras}}", "{{sueldoMano}}", "{{sueldoManoLetras}}", "{{sueldoNeto}}", "{{sueldoBruto}}", "{{sueldoDiarioNeto}}"],
   },
   {
-    grupo: "Categoría SAT",
+    grupo: "Categoría",
     vars: ["{{catSatNumero}}", "{{categoriaSat}}"],
   },
   {

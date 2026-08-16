@@ -278,7 +278,7 @@ const ContractDetailModal: React.FC<{
                           <ContractField icon={faHourglassHalf} label="Jornadas Lab." value={contract.cantidad_jornadas_laborales?.toString() || "-"} />
                           <ContractField icon={faLocationDot} label="Sede" value={contract.nombre_sede || "-"} />
                           <ContractField icon={faIdBadge} label="Rol" value={contract.nombre_rol_frame || "-"} />
-                          <ContractField icon={faStar} label="Categoría SAT" value={contract.nombre_categoria_sat || "-"} />
+                          <ContractField icon={faStar} label="Categoría" value={contract.nombre_categoria_sat || "-"} />
                           <ContractField icon={faClock} label="Hora Inicio" value={contract.hora_inicio || "-"} />
                           <ContractField icon={faClock} label="Hora Fin" value={contract.hora_fin || "-"} />
                         </div>

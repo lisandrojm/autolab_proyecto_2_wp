@@ -32,12 +32,12 @@ export interface ICompany extends Document {
    * Convenios Colectivos (CCT) habilitados para esta empleadora. Referencias al catálogo de Convenios.
    *
    * NO se manda al TXT: el campo Convenio del registro de 130 (pos. 91-100) va en blanco a propósito.
-   * Su función es ser el CONJUNTO VÁLIDO contra el que se valida la Categoría SAT del contrato: ARCA
+   * Su función es ser el CONJUNTO VÁLIDO contra el que se valida la categoría del contrato: ARCA
    * solo ofrece las categorías de los convenios que la empresa tiene habilitados (l_CatCCT viene
    * filtrado por CCT), así que una categoría de otro convenio es un dato mal cargado.
    *
    * No borrar por "no se usa": es el único lugar donde vive la relación empresa → convenios, y sin
-   * él la validación de `categorias-sat.data.convenio` se queda sin padre.
+   * él la validación de `categorias.convenio` se queda sin padre.
    *
    * Ojo: "9999/99 — EXCLUIDO DE CONVENIO" es un convenio más de la lista, no la ausencia de convenio.
    */

@@ -250,7 +250,9 @@ const ORIGENES: Record<OrigenDato, { titulo: string; accion: string; link?: { to
   persona: { titulo: "Datos de la persona", accion: "Corregí el CUIT/CUIL en la ficha de la persona.", link: { to: "/users", label: "Ir a Usuarios" } },
   contrato: { titulo: "Fechas del contrato", accion: "Revisá las fechas de alta y baja del contrato.", link: { enFila: "Se edita en el contrato del miembro" } },
   tipo_contrato: { titulo: "Códigos ARCA del Tipo de Contrato", accion: "Cargá los códigos ARCA de este tipo de contrato (modalidad, tipo de servicio y modalidad de liquidación).", link: { to: "/contratos", label: "Ir a Contratos" } },
-  categoria_sat: { titulo: "Categoría SAT", accion: "Cargá el código ARCA y el sueldo bruto de la categoría.", link: { to: "/categorias-sat", label: "Ir a Categorías SAT" } },
+  // El sueldo bruto NO se carga en la categoría: vive en el grupo salarial del convenio, que es
+  // adonde lleva el link. Decir "cargalo en la categoría" mandaba a buscar un campo que ya no existe.
+  categoria_sat: { titulo: "Categoría", accion: "Revisá el código ARCA de la categoría y el sueldo bruto del grupo salarial de su convenio.", link: { to: "/arca/categorias", label: "Ir a Categorías" } },
   obra_social: { titulo: "Obra social", accion: "Asignale una obra social a la persona, o definí una por defecto en la empresa o en el catálogo.", link: { to: "/obras-sociales", label: "Ir a Obras Sociales" } },
   empresa: { titulo: "Empresa del Contrato", accion: "Elegí con qué empleadora se da de alta a esta persona.", link: { enFila: "Se elige en la columna «Empresa Contrato»" } },
   sucursal: { titulo: "Sucursal y actividad", accion: "Elegí el domicilio de desempeño con el que se declara el alta.", link: { enFila: "Se elige en las columnas «Sucursal» y «Actividad»" } },
@@ -318,8 +320,10 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
     checks.push(mk("fechaFin", "Fecha de fin", "contrato", v.fechaFin || "(en blanco, correcto)", "ok"));
   }
 
-  // --- Categoría SAT
-  checks.push(v.retribucion <= 0 ? mk("retribucion", "Retribución (sueldo bruto)", "categoria_sat", "", "falta", "La categoría no tiene sueldo bruto cargado.") : !v.retribucionOk ? mk("retribucion", "Retribución (sueldo bruto)", "categoria_sat", String(v.retribucion), "error", "El importe no entra en las 15 posiciones del campo.") : mk("retribucion", "Retribución (sueldo bruto)", "categoria_sat", String(v.retribucion), "ok"));
+  // --- Categoría
+  // La retribución sale de la ESCALA, que vive en el grupo salarial del convenio: la categoría solo
+  // aporta el código. Nombrar el grupo evita mandar a buscar un campo de sueldo en la categoría.
+  checks.push(v.retribucion <= 0 ? mk("retribucion", "Retribución (sueldo bruto)", "categoria_sat", "", "falta", "El grupo salarial de esta categoría no tiene cargado el sueldo bruto.") : !v.retribucionOk ? mk("retribucion", "Retribución (sueldo bruto)", "categoria_sat", String(v.retribucion), "error", "El importe no entra en las 15 posiciones del campo.") : mk("retribucion", "Retribución (sueldo bruto)", "categoria_sat", String(v.retribucion), "ok"));
   checks.push(presencia("categoriaProf", "Categoría profesional (cód. ARCA)", "categoria_sat", v.categoriaProf, "La categoría no tiene cargado su código de ARCA."));
 
   // Categoría ∈ convenios de la empresa. ARCA no tiene un catálogo global de categorías: el combo

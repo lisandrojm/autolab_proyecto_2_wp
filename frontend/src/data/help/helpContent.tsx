@@ -185,10 +185,16 @@ const helpResources = {
       "contracts.description": "Historial completo de contrataciones y vinculaciones laborales.",
       "contracts.items": ["**Registros**: Detalle de cada contrato asociado a un usuario y proyecto.", "**Datos clave**: Incluye fechas de alta/baja, duración en días, sueldo y rol desempeñado.", "**Estado**: Visualiza si el contrato está vigente o finalizado.", "**Sede y Rol**: Ubicación y función específica que desempeña el usuario.", "**Filtros**: Busca por nombre de usuario, proyecto o contrato.", "**Vistas**: Alterna entre vista de tabla (detalle) y tarjetas (resumen)."],
 
-      // Categorías SAT
-      "categoriasSat.title": "Información de Categorías SAT",
-      "categoriasSat.description": "Catálogo de categorías del sistema (SAT) para clasificar al personal.",
-      "categoriasSat.items": ["**Categoría SAT**: Clasificación del personal según convenio (CCT SATSAID), usada en contratos y liquidaciones.", "**Origen**: Se sincroniza desde FRAME o se carga manualmente; cada categoría tiene nombre e ID externo.", "**Gestión**: Crear, editar y eliminar categorías, o importarlas masivamente desde un Excel."],
+      // Categorías
+      "categoriasSat.title": "Información de Categorías",
+      "categoriasSat.description": "Categorías profesionales del nomenclador de ARCA, ordenadas como el organismo las modela: Convenio → Grupo → Categoría.",
+      "categoriasSat.items": [
+        "**Convenio (CCT)**: El primer nivel, y es obligatorio. ARCA no tiene un catálogo global de categorías: solo ofrece las de los convenios que la empleadora tiene habilitados. Una categoría sin convenio no se puede dar de alta.",
+        "**Grupo salarial**: Acá vive la ESCALA (básico, adicional, presentismo, bruto y neto). Todas las categorías del grupo comparten esos importes, así que una paritaria se aplica editando el grupo — no las decenas de categorías que cuelgan de él.",
+        "**Categoría**: Solo su código de ARCA de 6 dígitos (035283, con los ceros) y su nombre. Los importes los hereda del grupo.",
+        "**Retribución del alta**: El sueldo bruto del grupo es lo que viaja al TXT de ARCA. En 0, el alta no se puede generar.",
+        "**Carga masiva**: Bajá la plantilla del convenio —sale con sus grupos reales y la escala vigente—, pisá los importes y subila. Actualiza escalas: no crea ni borra grupos ni categorías.",
+      ],
 
       // Centros de Costos
       "centrosCosto.title": "Información de Centros de Costos",
@@ -498,7 +504,7 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
     content: buildHelpContent("projectTeam"),
   },
 
-  categoriasSat: { title: "Información de Categorías SAT", size: "sm", content: buildHelpContent("categoriasSat") },
+  categoriasSat: { title: "Información de Categorías", size: "sm", content: buildHelpContent("categoriasSat") },
   centrosCosto: { title: "Información de Centros de Costos", size: "sm", content: buildHelpContent("centrosCosto") },
   contratosFrame: { title: "Información de Contratos", size: "sm", content: buildHelpContent("contratosFrame") },
   empresas: { title: "Información de Empresas", size: "sm", content: buildHelpContent("empresas") },

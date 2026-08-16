@@ -1,13 +1,75 @@
 import { Router } from "express";
 import { RoleFrame } from "../models/RoleFrame.js";
-import { CategoriaSat } from "../models/CategoriaSat.js";
+import { listarCategoriasCompat, resolverCategoriasCompatPorId } from "../utils/categoriaCompat.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 const router = Router();
+/**
+ * Copia denormalizada de la escala salarial que se guarda dentro de la función FRAME.
+ *
+ * Los ids llegan de `GET /categorias-sat`, que desde la migración devuelve los `_id` de la colección
+ * `categorias`. Buscarlos en `CategoriaSat` —como se hacía— no encontraba ninguno y guardaba la
+ * función con la lista VACÍA, borrando en silencio las categorías asociadas en cada edición.
+ * `resolverCategoriasCompatPorId` mira las dos colecciones, así que sirve tanto para los ids nuevos
+ * como para los que hayan quedado guardados de antes.
+ */
+const armarCategoriasSatData = async (categoryIds) => {
+    const categories = await resolverCategoriasCompatPorId(categoryIds || []);
+    return categories.map((cat) => ({
+        id: cat.data?.id || cat.data?.numeroCategoria,
+        numeroCategoria: cat.data?.numeroCategoria,
+        sueldoBruto: cat.data?.sueldoBruto,
+        sueldoBrutoLetras: cat.data?.sueldoBrutoLetras,
+        neto: cat.data?.neto,
+        sueldoNetoLetras: cat.data?.sueldoNetoLetras,
+        fechaActualizacion: cat.data?.fechaActualizacion,
+        codigoAfip: cat.data?.codigoAfip,
+        presentismo: cat.data?.presentismo,
+        sueldoBasico: cat.data?.sueldoBasico,
+        sueldoAdicional: cat.data?.sueldoAdicional,
+        nombre: cat.data?.nombre || cat.name,
+    }));
+};
 router.get("/", requireTenant, authenticateToken, async (req, res) => {
     try {
-        const roles = await RoleFrame.find().sort({ name: 1 }).lean();
-        res.json(roles);
+        const [roles, categorias] = await Promise.all([RoleFrame.find().sort({ name: 1 }).lean(), listarCategoriasCompat()]);
+        // La escala salarial guardada dentro de la función es una copia del momento en que se asoció la
+        // categoría, y ninguna paritaria la actualiza: en producción había funciones sirviendo sueldos de
+        // una escala que ya no existe. Se re-resuelve al leer, contra el catálogo vigente.
+        // Se resuelve al leer y no con un script porque un script volvería a quedar viejo en la próxima
+        // paritaria; lo guardado queda solo como respaldo para ids que ya no resuelven.
+        const porLegacyId = new Map(categorias.filter((c) => c.data?.id != null).map((c) => [Number(c.data.id), c]));
+        const frescos = roles.map((rol) => {
+            const guardadas = rol.data?.categoriasSat;
+            if (!Array.isArray(guardadas) || guardadas.length === 0)
+                return rol;
+            return {
+                ...rol,
+                data: {
+                    ...rol.data,
+                    categoriasSat: guardadas.map((guardada) => {
+                        const vigente = porLegacyId.get(Number(guardada?.id));
+                        if (!vigente)
+                            return guardada;
+                        return {
+                            ...guardada,
+                            numeroCategoria: vigente.data.numeroCategoria,
+                            sueldoBasico: vigente.data.sueldoBasico,
+                            sueldoAdicional: vigente.data.sueldoAdicional,
+                            presentismo: vigente.data.presentismo,
+                            sueldoBruto: vigente.data.sueldoBruto,
+                            sueldoBrutoLetras: vigente.data.sueldoBrutoLetras,
+                            neto: vigente.data.neto,
+                            sueldoNetoLetras: vigente.data.sueldoNetoLetras,
+                            fechaActualizacion: vigente.data.fechaActualizacion,
+                            codigoAfip: vigente.data.codigoAfip,
+                            nombre: vigente.data.nombre || vigente.name,
+                        };
+                    }),
+                },
+            };
+        });
+        res.json(frescos);
     }
     catch (error) {
         console.error("Get role frames error:", error);
@@ -20,22 +82,7 @@ router.post("/", requireTenant, authenticateToken, async (req, res) => {
         if (!name || !name.trim()) {
             return res.status(400).json({ error: "El nombre es obligatorio" });
         }
-        // Resolve categories Sat data from MongoDB
-        const categories = await CategoriaSat.find({ _id: { $in: categoryIds || [] } }).lean();
-        const categoriasSatData = categories.map(cat => ({
-            id: cat.data?.id || cat.data?.numeroCategoria,
-            numeroCategoria: cat.data?.numeroCategoria,
-            sueldoBruto: cat.data?.sueldoBruto,
-            sueldoBrutoLetras: cat.data?.sueldoBrutoLetras,
-            neto: cat.data?.neto,
-            sueldoNetoLetras: cat.data?.sueldoNetoLetras,
-            fechaActualizacion: cat.data?.fechaActualizacion,
-            codigoAfip: cat.data?.codigoAfip,
-            presentismo: cat.data?.presentismo,
-            sueldoBasico: cat.data?.sueldoBasico,
-            sueldoAdicional: cat.data?.sueldoAdicional,
-            nombre: cat.data?.nombre || cat.name
-        }));
+        const categoriasSatData = await armarCategoriasSatData(categoryIds);
         const externalId = Date.now().toString();
         const newRole = new RoleFrame({
             name: name.trim(),
@@ -82,21 +129,7 @@ router.put("/:id", requireTenant, authenticateToken, async (req, res) => {
             }
         }
         if (categoryIds !== undefined) {
-            const categories = await CategoriaSat.find({ _id: { $in: categoryIds || [] } }).lean();
-            const categoriasSatData = categories.map(cat => ({
-                id: cat.data?.id || cat.data?.numeroCategoria,
-                numeroCategoria: cat.data?.numeroCategoria,
-                sueldoBruto: cat.data?.sueldoBruto,
-                sueldoBrutoLetras: cat.data?.sueldoBrutoLetras,
-                neto: cat.data?.neto,
-                sueldoNetoLetras: cat.data?.sueldoNetoLetras,
-                fechaActualizacion: cat.data?.fechaActualizacion,
-                codigoAfip: cat.data?.codigoAfip,
-                presentismo: cat.data?.presentismo,
-                sueldoBasico: cat.data?.sueldoBasico,
-                sueldoAdicional: cat.data?.sueldoAdicional,
-                nombre: cat.data?.nombre || cat.name
-            }));
+            const categoriasSatData = await armarCategoriasSatData(categoryIds);
             if (!role.data) {
                 role.data = { rol: { id: Date.now(), nombre: role.name }, categoriasSat: categoriasSatData };
             }

@@ -1,0 +1,14 @@
+{
+  // Los tests corren en Node (`tsx --test`), no en el browser, así que necesitan los tipos de
+  // `node:test` / `node:assert`. Van en un tsconfig aparte a propósito: sumar "node" a los `types`
+  // del tsconfig principal metería `process`, `Buffer` y compañía como globals de TODA la app, y
+  // código que usa eso typechequea pero explota en el browser.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // "vite/client" también, porque los tests alcanzan módulos de la app que usan `import.meta.env`.
+    "types": ["node", "vite/client"]
+  },
+  // `exclude` se hereda del base (que descarta los tests): hay que pisarlo o no queda ningún input.
+  "include": ["src/**/*.test.ts"],
+  "exclude": []
+}

@@ -19,7 +19,11 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface ICategoria extends Document {
   /** Código del CCT al que pertenece, formato ARCA ("0634/11"). Redundante con el grupo, pero
    *  explícito a propósito: no se depende de que el código de categoría sea único entre convenios
-   *  (lo es en los 5 convenios relevados, pero eso no está garantizado en general). */
+   *  (lo es en los 5 convenios relevados, pero eso no está garantizado en general).
+   *
+   *  OBLIGATORIO: una categoría sin convenio no es un dato válido en ARCA — el combo `l_CatCCT` no
+   *  tiene un nivel "sin convenio", siempre viene filtrado por CCT. Las que quedaron así ("Actor",
+   *  "Musico") son datos rotos heredados de FRAME, no un caso legítimo con el que se pueda convivir. */
   convenio: string;
   /** Grupo salarial al que pertenece. */
   grupoId: mongoose.Types.ObjectId;
@@ -27,6 +31,10 @@ export interface ICategoria extends Document {
    * Código de categoría de ARCA, SIEMPRE con 6 dígitos y ceros a la izquierda ("035283", no "35283").
    * Se guarda canónico —como lo escribe ARCA— para que comparar contra un export del organismo sea
    * directo. El TXT lo usa tal cual.
+   *
+   * OBLIGATORIO y validado: "0" y "" no son códigos, son la marca de una fila que FRAME inventó.
+   * Un contrato con una categoría así no puede generar el alta (`categoriaProf` queda vacío y
+   * `buildAltaRecord` devuelve null), así que dejar entrar el dato solo posterga el error.
    */
   codigoArca: string;
   /** Nombre de la categoría, sin el sufijo "- GRUPO N" que ARCA le agrega en la descripción. */
@@ -42,10 +50,19 @@ export interface ICategoria extends Document {
 
 const categoriaSchema = new Schema<ICategoria>(
   {
-    convenio: { type: String, default: "" },
-    grupoId: { type: Schema.Types.ObjectId, ref: "ConvenioGrupo" },
-    codigoArca: { type: String, default: "" },
-    nombre: { type: String, required: true },
+    // `required` + validadores: la regla vive acá y no solo en la ruta, así ningún camino de
+    // escritura (ABM, carga masiva, script) puede dejar una categoría a medio cargar. Los documentos
+    // que YA están mal (Actor / Musico) se siguen leyendo —Mongoose no valida al leer—, pero no se
+    // pueden volver a guardar sin completarlos, que es exactamente lo que se busca.
+    convenio: { type: String, required: [true, "La categoría tiene que pertenecer a un convenio"], trim: true },
+    grupoId: { type: Schema.Types.ObjectId, ref: "ConvenioGrupo", required: true },
+    codigoArca: {
+      type: String,
+      required: [true, "La categoría tiene que tener su código de ARCA"],
+      // 6 dígitos exactos y no todo ceros: "0" y "000000" son la ausencia de código disfrazada.
+      validate: { validator: (v: string) => /^\d{6}$/.test(v) && v !== "000000", message: (p: any) => `"${p.value}" no es un código de ARCA: son 6 dígitos, con ceros a la izquierda (ej. "035283")` },
+    },
+    nombre: { type: String, required: true, trim: true },
     descripcionArca: { type: String, default: "" },
     legacyId: { type: Number },
     isActive: { type: Boolean, default: true },

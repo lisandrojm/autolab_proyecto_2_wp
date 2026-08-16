@@ -94,7 +94,7 @@ const MODULE_LABELS: Record<string, string> = {
   'config_releases:view': 'Releases',
   'config_holidays:view': 'Feriados',
   'config_frame_functions:view': 'Funciones FRAME',
-  'config_categorias_sat:view': 'Categorías SAT',
+  'config_categorias_sat:view': 'Categorías',
   'config_bancos:view': 'Bancos',
   'config_obras_sociales:view': 'Obras Sociales',
   'config_convenios:view': 'Convenios',

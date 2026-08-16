@@ -482,7 +482,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
               <FontAwesomeIcon icon={faBriefcase} className="text-blue-500 text-[10px]" />
-              Categoría SAT*
+              Categoría*
             </label>
             <select name="categoriaSatId" value={formData.categoriaSatId} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white">
               <option value="">Selecciona categoría</option>

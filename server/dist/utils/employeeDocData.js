@@ -1,4 +1,4 @@
-import { CategoriaSat } from "../models/CategoriaSat.js";
+import { buscarCategoriaCompatPorLegacyId } from "./categoriaCompat.js";
 import { numeroALetras } from "./numeroALetras.js";
 import { formatDateAr } from "./releaseFiller.js";
 import { normalizarCuit } from "./constanciaPdf.js";
@@ -171,7 +171,10 @@ export async function buildEmployeeDocData(user, up, contract, empresa) {
     let catSatNombre = c.nombre_categoria_sat || "";
     if (c.categoria_sat_id != null) {
         try {
-            const cat = await CategoriaSat.findOne({ "data.id": Number(c.categoria_sat_id) }).lean();
+            // Resuelve contra el modelo nuevo (Categoria + su grupo) con fallback a la tabla vieja.
+            // Buscar directo en `CategoriaSat`, como hacía antes, dejaba los PDFs con el nombre y el
+            // número congelados en el estado previo a la migración.
+            const cat = await buscarCategoriaCompatPorLegacyId(Number(c.categoria_sat_id));
             if (cat) {
                 catSatNumero = String(cat.data?.numeroCategoria ?? cat.data?.id ?? "");
                 catSatNombre = catSatNombre || cat.name || cat.data?.nombre || "";

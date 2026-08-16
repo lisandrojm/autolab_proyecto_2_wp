@@ -41,6 +41,7 @@ import { profileRoutes } from "./routes/profile.js";
 import { infoRoutes } from "./routes/info.js";
 import { roleFrameRoutes } from "./routes/roleFrames.js";
 import { categoriasSatRoutes } from "./routes/categoriasSat.js";
+import { arcaCategoriasRoutes } from "./routes/arcaCategorias.js";
 import { bancoRoutes } from "./routes/bancos.js";
 import { obraSocialRoutes } from "./routes/obrasSociales.js";
 // Tablas oficiales de ARCA (Simplificación Registral) usadas para armar el TXT de alta masiva.
@@ -167,9 +168,12 @@ app.use("/api/v1", envRoutes);
 app.use("/api/v1/profile", profileRoutes);
 app.use("/api/v1/info", infoRoutes);
 app.use("/api/v1/role-frames", roleFrameRoutes);
+// Lectura plana para los consumidores viejos (TXT, completitud, Funciones FRAME, PDFs).
 app.use("/api/v1/categorias-sat", categoriasSatRoutes);
 app.use("/api/v1/bancos", bancoRoutes);
 app.use("/api/v1/obras-sociales", obraSocialRoutes);
+// ABM de categorías en la forma de ARCA: convenio → grupo (escala) → categoría. Toda la escritura.
+app.use("/api/v1/arca/categorias", arcaCategoriasRoutes);
 app.use("/api/v1/arca/sucursales", arcaSucursalRoutes);
 app.use("/api/v1/arca/modalidades-contratacion", arcaModalidadContratacionRoutes);
 app.use("/api/v1/arca/tipos-servicio", arcaTipoServicioRoutes);

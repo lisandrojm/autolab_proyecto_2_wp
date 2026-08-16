@@ -48,7 +48,7 @@ import { PdfTemplatesPage } from "./pages/PdfTemplatesPage";
 import { ReleasesPage } from "./pages/ReleasesPage";
 import { ReleaseTiposPage } from "./pages/ReleaseTiposPage";
 import { HolidaysPage } from "./pages/HolidaysPage";
-import { CategoriasSatPage } from "./pages/CategoriasSatPage";
+import { ArcaCategoriasPage } from "./pages/ArcaCategoriasPage";
 import { BancosPage } from "./pages/BancosPage";
 import { ObrasSocialesPage } from "./pages/ObrasSocialesPage";
 import { ArcaSucursalesPage } from "./pages/ArcaSucursalesPage";
@@ -152,7 +152,11 @@ function App() {
               console.warn(`Server responded with HTTP ${response.status} during token validation. Keeping session.`);
             }
           } else {
-            // Token válido. Si faltaba el usuario, intentamos recuperarlo de localStorage o parsearlo.
+            // Token válido: refrescamos el usuario contra /auth/me. Los permisos se guardaban solo en
+            // el login, así que un permiso agregado después no llegaba nunca a una sesión ya abierta.
+            useAuthStore.getState().refreshSession();
+
+            // Si faltaba el usuario, intentamos recuperarlo de localStorage o parsearlo.
             // Si ya lo teníamos, todo bien.
             if (!user) {
               const savedUser = localStorage.getItem("user");
@@ -316,9 +320,9 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              {/* Funciones FRAME ahora es un tab dentro de Categorías SAT, no una página propia. */}
-              <Route path="/funciones-frame" element={<Navigate to="/categorias-sat" replace />} />
-              <Route path="/admin/roles-frame" element={<Navigate to="/categorias-sat" replace />} />
+              {/* Funciones FRAME ahora es un tab dentro de Categorías, no una página propia. */}
+              <Route path="/funciones-frame" element={<Navigate to="/arca/categorias" replace />} />
+              <Route path="/admin/roles-frame" element={<Navigate to="/arca/categorias" replace />} />
               <Route
                 path="/positions"
                 element={
@@ -505,11 +509,15 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              {/* Las categorías son un catálogo de ARCA como Sucursales o Tipos de Servicio, y viven
+                  con ellos. "categorias-sat" nombraba un caso particular —las 106 del convenio
+                  0634/11— como si fuera la regla; se conserva como redirect por los links guardados. */}
+              <Route path="/categorias-sat" element={<Navigate to="/arca/categorias" replace />} />
               <Route
-                path="/categorias-sat"
+                path="/arca/categorias"
                 element={
                   <ProtectedRoute>
-                    <CategoriasSatPage />
+                    <ArcaCategoriasPage />
                   </ProtectedRoute>
                 }
               />

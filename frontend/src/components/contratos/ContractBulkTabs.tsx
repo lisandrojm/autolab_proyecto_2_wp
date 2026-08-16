@@ -30,7 +30,7 @@ import { sweetAlert } from '../../utils/sweetAlert';
 import { cachedFetch, invalidateRefCache, updateRefCache } from '../../utils/refCache';
 
 const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
-// Solo para traducir los convenioIds de la empresa a códigos de CCT y validar la Categoría SAT.
+// Solo para traducir los convenioIds de la empresa a códigos de CCT y validar la Categoría.
 const conveniosApi = createSimpleCatalogApi('/convenios');
 
 /**
@@ -1581,7 +1581,7 @@ export const ContractBulkAfipTab: React.FC<{
                 <strong>Tipo de Contrato</strong>: modalidad, tipo de servicio, actividad y modalidad de liquidación.
               </li>
               <li>
-                <strong>Categoría SAT</strong>: categoría profesional y sueldo bruto.
+                <strong>Categoría</strong>: categoría profesional y sueldo bruto.
               </li>
               <li>
                 <strong>Obra Social</strong>: código RNOS.

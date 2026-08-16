@@ -29,6 +29,7 @@ import { contratoFrameAPI, ContratoFrameItem } from '../api/contratosFrame';
 import { contratosAPI, ContratoItem } from '../api/contratos';
 import { releasesAPI, Release } from '../api/release';
 import { companiesAPI, Company } from '../api/companies';
+import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
 import { Area, areasAPI } from '../api/areas';
 import { positionsAPI, Position } from '../api/positions';
 import { levelsAPI, Level } from '../api/levels';
@@ -36,7 +37,7 @@ import { userProjectsAPI } from '../api/userProjects';
 import { shiftsAPI, Shift } from '../api/shifts';
 import { clientsAPI } from '../api/clients';
 import { infoAPI, InfoItem } from '../api/info';
-import { categoriaSatAPI, CategoriaSatItem } from '../api/categoriasSat';
+import { categoriaSatAPI, CategoriaSatItem, esElegible } from '../api/categoriasSat';
 import { roleFrameAPI, RoleFrameItem } from '../api/roleFrames';
 import { cachedFetch } from '../utils/refCache';
 
@@ -261,9 +262,12 @@ export const ProjectTeamPage: React.FC = () => {
   const [allClients, setAllClients] = useState<any[]>([]);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allSedes, setAllSedes] = useState<InfoItem[]>([]);
-  // Catálogo REAL de Categorías SAT (colección `categorias-sat`, el mismo que muestra la ABM).
-  // OJO: NO usar infoAPI.listByType("categoria-sat") → esa colección está vacía.
+  // Catálogo REAL de Categorías (aplanado desde `categorias` + `convenio-grupos`, el mismo que
+  // consume el TXT de ARCA). OJO: NO usar infoAPI.listByType("categoria-sat") → esa colección está vacía.
   const [allCategoriasSat, setAllCategoriasSat] = useState<CategoriaSatItem[]>([]);
+  // Catálogo de Convenios: solo para traducir los `convenioIds` de la empresa (que son refs) al
+  // código de CCT ("0634/11") con el que se filtra qué categorías puede elegir el contrato.
+  const [allConvenios, setAllConvenios] = useState<SimpleCatalogItem[]>([]);
   const [allEstados, setAllEstados] = useState<InfoItem[]>([]);
   const [allTiposContrato, setAllTiposContrato] = useState<InfoItem[]>([]);
   const [allRoleFrames, setAllRoleFrames] = useState<RoleFrameItem[]>([]);
@@ -395,7 +399,7 @@ export const ProjectTeamPage: React.FC = () => {
   const effectiveViewMode = isLg ? viewMode : 'cards';
 
   /* -------------------------- Auto-Calculations ---------------------------
-   * El Sueldo NETO y BRUTO salen de la Categoría SAT seleccionada (ya vienen
+   * El Sueldo NETO y BRUTO salen de la Categoría seleccionada (ya vienen
    * calculados en el catálogo: bruto = básico + adicional + presentismo; neto = bruto × 0.81).
    * De ahí se derivan el diario neto (neto / 30) y la diferencia diaria contra
    * lo que efectivamente se paga por jornada. Sin categoría → todo en 0.
@@ -900,7 +904,31 @@ export const ProjectTeamPage: React.FC = () => {
     );
   }, [teamMembers]);
 
-  const availableCategoriasSat = useMemo(() => {
+  /**
+   * Códigos de CCT habilitados para la empleadora elegida en el contrato.
+   *
+   * ARCA no tiene un catálogo global de categorías: el combo `l_CatCCT` viene filtrado por convenio y
+   * solo ofrece los de los CCT que la empleadora tiene habilitados. Una categoría de otro convenio
+   * pasa todos los controles y llega mal, porque el convenio no viaja en el TXT (ARCA lo infiere del
+   * código de categoría).
+   *
+   * `null` = no filtrar. Pasa cuando todavía no se eligió empresa, cuando la empresa no tiene
+   * convenios cargados, o cuando el catálogo de Convenios no se pudo leer: en los tres casos, filtrar
+   * dejaría el select vacío sin que el operador pueda hacer nada al respecto desde acá. El checklist
+   * de Datos ARCA ya marca esos casos por su cuenta.
+   */
+  const conveniosDeLaEmpleadora = useMemo(() => {
+    const empresa = companies.find((c) => c._id === wizardData.empresaContratoId);
+    if (!empresa) return null;
+    const ids = (empresa.convenioIds || []).map(String);
+    const codigos = allConvenios
+      .filter((c) => ids.includes(c._id))
+      .map((c) => String(c.externalId || '').trim())
+      .filter(Boolean);
+    return codigos.length > 0 ? codigos : null;
+  }, [companies, allConvenios, wizardData.empresaContratoId]);
+
+  const { categorias: availableCategoriasSat, ocultasPorConvenio: categoriasOcultasPorConvenio } = useMemo(() => {
     let list: any[] = [];
     if (wizardData.rol_frame_id) {
       const selectedRF = allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id));
@@ -909,16 +937,34 @@ export const ProjectTeamPage: React.FC = () => {
       }
     }
 
-    // Fallback: If list is empty but we have allCategoriasSat, use allCategoriasSat as options
+    // Fallback: If list is empty but we have allCategoriasSat, use allCategoriasSat as options.
+    // Se filtran las no elegibles (alias que existen solo para que resuelvan contratos históricos):
+    // acá se ELIGE una categoría para un contrato nuevo, no se resuelve una ya cargada.
     if (list.length === 0 && allCategoriasSat.length > 0) {
-      list = allCategoriasSat.map((c) => ({
+      list = allCategoriasSat.filter(esElegible).map((c) => ({
         id: c.data?.id,
         nombre: c.name,
         numeroCategoria: c.data?.numeroCategoria || c.data?.id,
       }));
     }
 
-    // Ensure the currently selected category is in the list
+    // Solo las categorías de los convenios de la empleadora. Las funciones FRAME no guardan el
+    // convenio en su copia denormalizada, así que se resuelve contra el catálogo por `data.id`.
+    let ocultasPorConvenio = 0;
+    if (conveniosDeLaEmpleadora) {
+      const convenioPorId = new Map(allCategoriasSat.map((c) => [String(c.data?.id), String(c.data?.convenio || '').trim()]));
+      const antes = list.length;
+      // Una categoría SIN convenio tampoco se ofrece: no se puede verificar que ARCA la acepte, y su
+      // alta va a salir sin categoría profesional. Se cuenta aparte para poder decirlo.
+      list = list.filter((c) => {
+        const cct = convenioPorId.get(String(c.id));
+        return !!cct && conveniosDeLaEmpleadora.includes(cct);
+      });
+      ocultasPorConvenio = antes - list.length;
+    }
+
+    // La categoría ya elegida se muestra siempre, aunque el filtro la haya sacado: esconderla
+    // convertiría un contrato mal cargado en un select vacío, sin decir qué tenía.
     if (wizardData.categoria_sat_id) {
       const alreadyInList = list.some((c) => String(c.id) === String(wizardData.categoria_sat_id));
       if (!alreadyInList) {
@@ -934,8 +980,15 @@ export const ProjectTeamPage: React.FC = () => {
       }
     }
 
-    return list;
-  }, [allRoleFrames, allCategoriasSat, wizardData.rol_frame_id, wizardData.categoria_sat_id]);
+    // Lo que identifica a una categoría es su código de ARCA de 6 dígitos, no el "Nº Cat." — que era
+    // el número del GRUPO salarial, compartido por decenas de categorías distintas. La copia
+    // denormalizada de las funciones FRAME guarda el código como número, así que se re-resuelve
+    // contra el catálogo, donde está canónico con sus ceros.
+    const codigoPorId = new Map(allCategoriasSat.map((c) => [String(c.data?.id), String(c.data?.codigoArca || '').trim()]));
+    const conCodigo = list.map((c) => ({ ...c, codigoArca: codigoPorId.get(String(c.id)) || '' }));
+
+    return { categorias: conCodigo, ocultasPorConvenio };
+  }, [allRoleFrames, allCategoriasSat, wizardData.rol_frame_id, wizardData.categoria_sat_id, conveniosDeLaEmpleadora]);
 
   const userAssignedRoleFrames = useMemo(() => {
     if (!selectedUserForWizard) return [];
@@ -1408,6 +1461,15 @@ export const ProjectTeamPage: React.FC = () => {
         .then(setCompanies)
         .catch(() => {});
     }
+    // El catálogo de Convenios traduce los `convenioIds` de la empresa a códigos de CCT: es lo que
+    // permite ofrecer solo las categorías que ARCA le va a aceptar a esa empleadora. Si falla, la
+    // lista queda vacía y no se filtra nada — mejor ofrecer de más que dejar al operador sin opciones.
+    if (allConvenios.length === 0) {
+      createSimpleCatalogApi('/convenios')
+        .list()
+        .then(setAllConvenios)
+        .catch(() => {});
+    }
 
     // Helper for date formatting
     const formatDate = (dateStr: any) => {
@@ -1485,7 +1547,7 @@ export const ProjectTeamPage: React.FC = () => {
   const faltantesPaso1 = (): string[] => {
     const faltan: string[] = [];
     if (!wizardData.rol_frame_id) faltan.push('Role Frame a Desempeñar');
-    if (!wizardData.categoria_sat_id) faltan.push('Categoría SAT');
+    if (!wizardData.categoria_sat_id) faltan.push('Categoría');
     if (!wizardData.contrato_id) faltan.push('Tipo de contrato');
     // La Plantilla solo se elige a mano cuando el contrato tiene más de una (si hay una sola se
     // asigna sola, y si no hay ninguna se puede guardar igual: solo no se podrá generar el PDF).
@@ -3171,15 +3233,24 @@ export const ProjectTeamPage: React.FC = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Categoria SAT <span className="text-red-500">*</span></label>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Categoría <span className="text-red-500">*</span></label>
                       <select className="input-field w-full" value={wizardData.categoria_sat_id} onChange={(e) => setWizardData((prev) => ({ ...prev, categoria_sat_id: e.target.value }))} required>
                         <option value="">Selecciona categoria...</option>
                         {availableCategoriasSat.map((c: any) => (
                           <option key={c.id} value={c.id}>
-                            Cat {c.numeroCategoria || c.id} - {c.nombre}
+                            {c.codigoArca ? `${c.codigoArca} — ` : ''}
+                            {c.nombre}
                           </option>
                         ))}
                       </select>
+                      {/* El filtro por convenio se dice, no se aplica en silencio: si una categoría que
+                          el operador esperaba ver no está, tiene que saber por qué y qué destraba. */}
+                      {conveniosDeLaEmpleadora && (
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
+                          Solo las de los convenios de la empleadora ({conveniosDeLaEmpleadora.join(', ')}).
+                          {categoriasOcultasPorConvenio > 0 ? ` Se ocultaron ${categoriasOcultasPorConvenio} de otro convenio: ARCA no las acepta para esta empresa.` : ''}
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-1.5">

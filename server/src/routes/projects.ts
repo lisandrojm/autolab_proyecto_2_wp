@@ -10,6 +10,7 @@ import { Project } from "../models/Project.js";
 import { Client } from "../models/Client.js";
 import { User } from "../models/User.js";
 import { Info } from "../models/Info.js";
+import { buscarCategoriaCompatPorLegacyId } from "../utils/categoriaCompat.js";
 import UserProject from "../models/UserProject.js";
 
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
@@ -1231,7 +1232,10 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
 
     const [sede, cat, estado, tipo, area, pos, level, shift] = await Promise.all([
       Info.findOne({ type: "sede", "data.id": Number(contract.sede_id) }).lean(),
-      Info.findOne({ type: "categoria-sat", "data.id": Number(contract.categoria_sat_id) }).lean(),
+      // La categoría NO vive en `Info`: nunca hubo un solo documento de tipo "categoria-sat" ahí, así
+      // que este lookup siempre devolvía null y todo contrato creado desde el wizard quedaba guardado
+      // con `nombre_categoria_sat: "Sin categoria"`. Va contra el catálogo real.
+      buscarCategoriaCompatPorLegacyId(Number(contract.categoria_sat_id)),
       Info.findOne({ type: "estado-empleado", "data.id": Number(contract.estado_id) }).lean(),
       Info.findOne({ type: "contrato", "data.id": Number(contract.tipo_contrato_id) }).lean(),
       isValidId(contract.areaId) ? Area.findById(contract.areaId).lean() : Promise.resolve(null),
