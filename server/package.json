@@ -25,6 +25,8 @@
     "backfill:roles-frame": "dotenv -e .env.production -- tsx src/scripts/backfillUserRolesFrame.ts",
     "fix:reemplazo-areas:dry": "dotenv -e .env.production -v DRY=true -- tsx src/scripts/backfillReplacementAreaShifts.ts",
     "fix:reemplazo-areas": "dotenv -e .env.production -- tsx src/scripts/backfillReplacementAreaShifts.ts",
+    "empresas:obras-sociales:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/migrarObrasSocialesPorEmpresa.ts",
+    "empresas:obras-sociales": "dotenv -e .env.production -- tsx src/scripts/migrarObrasSocialesPorEmpresa.ts",
     "categorias:auditar": "dotenv -e .env.production -- tsx src/scripts/auditarCategorias.ts",
     "categorias:importar:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/importarCategoriasArca.ts",
     "categorias:importar": "dotenv -e .env.production -- tsx src/scripts/importarCategoriasArca.ts",

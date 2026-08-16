@@ -15,9 +15,14 @@ const companySchema = new Schema({
     representanteLegalEmail: { type: String },
     logoUrl: { type: String },
     signatureUrl: { type: String },
-    obraSocialId: { type: Number },
+    obrasSocialesIds: [{ type: Schema.Types.ObjectId, ref: "ObraSocial" }],
+    obraSocialDefaultId: { type: Number },
     convenioIds: [{ type: Schema.Types.ObjectId, ref: "Convenio" }],
     sucursalIds: [{ type: Schema.Types.ObjectId, ref: "ArcaSucursal" }],
+    defaultsArca: {
+        tipoServicio: { type: String, default: "" },
+        modalidadLiquidacion: { type: String, default: "" },
+    },
 }, {
     timestamps: true,
     collection: "companies",

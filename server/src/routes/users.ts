@@ -651,10 +651,14 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
     const necesitaNombreContrato = !!req.query.tipoContrato || !!req.query.search;
     const necesitaEstado = !!req.query.estadoContrato || !!req.query.estados;
     const necesitaReemplazo = !!req.query.reemplazo;
+    // La empleadora solo se trae si se está filtrando por ella (contexto Empresa): sin filtro, pedirla
+    // sería payload de la fase 1 para nada, que es justamente lo que esta fase evita.
+    const necesitaEmpresa = !!req.query.empresaContratoId;
     const camposContrato: any = { a: "$$x.fecha_alta_contrato", b: "$$x.fecha_baja_contrato", g: "$$x.fecha_carga" };
     if (necesitaNombreContrato) camposContrato.n = "$$x.nombre_contrato";
     if (necesitaEstado) camposContrato.e = "$$x.nombre_estado_empleado";
     if (necesitaReemplazo) camposContrato.m = "$$x.reemplazo";
+    if (necesitaEmpresa) camposContrato.q = "$$x.empresaContratoId";
 
     const membershipsRaw: any[] = await UserProject.aggregate([
       { $match: { projectId: { $in: projectIds } } },
@@ -672,7 +676,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
       projectId: d.p,
       userId: d.u,
       nombre_rol_frame: d.r,
-      contracts: (d.c || []).map((c: any) => ({ fecha_alta_contrato: c.a, fecha_baja_contrato: c.b, fecha_carga: c.g, nombre_contrato: c.n, nombre_estado_empleado: c.e, reemplazo: c.m })),
+      contracts: (d.c || []).map((c: any) => ({ fecha_alta_contrato: c.a, fecha_baja_contrato: c.b, fecha_carga: c.g, nombre_contrato: c.n, nombre_estado_empleado: c.e, reemplazo: c.m, empresaContratoId: c.q })),
     }));
     const msFase1 = Date.now() - tFase1;
 
@@ -703,6 +707,12 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
     const tipoContrato = req.query.tipoContrato ? String(req.query.tipoContrato) : undefined;
     const estadoContrato = req.query.estadoContrato ? String(req.query.estadoContrato) : undefined;
     const reemplazo = req.query.reemplazo ? String(req.query.reemplazo) : undefined;
+    /**
+     * Empleadora del contrato (contexto Empresa). Filtra por el valor FIJADO en el contrato, no por
+     * las candidatas del proyecto: para ARCA, la empleadora de un alta es la que efectivamente se
+     * eligió, y las candidatas son solo las opciones que ofrece el proyecto.
+     */
+    const empresaContratoId = req.query.empresaContratoId ? String(req.query.empresaContratoId) : undefined;
     const roleNameParts = req.query.roleName
       ? String(req.query.roleName)
           .toLowerCase()
@@ -750,6 +760,8 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         const esReemplazo = !!contratoActivo.reemplazo;
         if (reemplazo === "con" ? !esReemplazo : esReemplazo) continue;
       }
+
+      if (empresaContratoId && String(contratoActivo.empresaContratoId ?? "") !== empresaContratoId) continue;
 
       if (roleFilterRegex && !(user.roles || []).some((r: any) => roleFilterRegex.test(String(r?.name || "")))) continue;
 

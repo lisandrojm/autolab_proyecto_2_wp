@@ -16,11 +16,26 @@ export interface ICompany extends Document {
     logoUrl?: string;
     signatureUrl?: string;
     /**
-     * Obra social a usar para los contratos de esta empresa cuando la persona no tiene ninguna
-     * asignada. Guarda el `data.id` del catálogo (el RNOS numérico), igual que `osId` en el contrato.
-     * Si queda vacío, se usa la marcada como global en el catálogo de Obras Sociales.
+     * Obras Sociales REGISTRADAS ante ARCA para esta empleadora ("obras sociales relacionadas a su
+     * actividad", en Datos del Empleador). Referencias al catálogo global de Obras Sociales.
+     *
+     * Es un CONJUNTO, no una sola: ARCA lleva ~400 registradas por CUIT sobre un universo de 494, cada
+     * una con su fecha de alta, y solo acepta altas con una de ellas. Hasta acá el modelo solo tenía la
+     * default, así que una empleadora no podía declarar más de una obra social — y una obra social de
+     * otro CUIT pasaba todos los controles y llegaba mal.
+     *
+     * Se registra por empleadora y hay que repetir la extracción logueado con cada CUIT.
      */
-    obraSocialId?: number;
+    obrasSocialesIds?: mongoose.Types.ObjectId[];
+    /**
+     * Cuál de las registradas se usa cuando la persona no tiene obra social propia. Guarda el
+     * `data.id` del catálogo (el RNOS numérico), igual que `osId` en el contrato. Vacío = se usa la
+     * marcada como global en el catálogo.
+     *
+     * Se llamaba `obraSocialId`, que sugería "la obra social de la empresa" cuando siempre fue solo el
+     * valor por defecto. Ver `scripts/migrarObrasSocialesPorEmpresa.ts` para el renombre.
+     */
+    obraSocialDefaultId?: number;
     /**
      * Convenios Colectivos (CCT) habilitados para esta empleadora. Referencias al catálogo de Convenios.
      *
@@ -41,6 +56,19 @@ export interface ICompany extends Document {
      * Acá solo se elige cuáles aplican, igual que con los convenios.
      */
     sucursalIds?: mongoose.Types.ObjectId[];
+    /**
+     * Valores por defecto de ARCA para los contratos de esta empleadora.
+     *
+     * No son nomencladores (esos son universales) ni datos del contrato: son la elección habitual de
+     * ESTA empleadora dentro del nomenclador, que hoy se repite a mano en cada alta. Guardan el código
+     * de ARCA tal cual viaja al TXT.
+     */
+    defaultsArca?: {
+        /** Código de Tipo de Servicio (pos. 107-109 del TXT). */
+        tipoServicio?: string;
+        /** Código de Modalidad de Liquidación (pos. 73 del TXT). */
+        modalidadLiquidacion?: string;
+    };
     createdAt: Date;
     updatedAt: Date;
 }
