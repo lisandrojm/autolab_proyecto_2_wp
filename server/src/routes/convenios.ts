@@ -18,6 +18,9 @@ const router = createSimpleCatalogRouter(Convenio, {
   nombreExcelHeader: "Actividad",
   nombreExcelAliases: ["actividad", "Descripción Actividad", "DESCRIPCIÓN ACTIVIDAD"],
   extraStringFields: [{ key: "signatario", excelHeader: "Signatario", aliases: ["signatario", "Descripción Signatario", "DESCRIPCIÓN SIGNATARIO"] }],
+  // La obra social del convenio NO viene en el nomenclador de ARCA: es un dato propio, que se carga a
+  // mano. Por eso va como campo numérico extra y no participa del import.
+  extraNumberFields: [{ key: "obraSocialDefaultId" }],
   // El código CCT es "NNNN/AA": conserva la barra y los ceros a la izquierda, así que solo se
   // limpian espacios. Sacarle los no-dígitos (como en el RNOS) perdería el año del convenio.
   sanitizeExternalId: (v) => v.trim(),

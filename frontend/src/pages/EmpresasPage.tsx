@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBuilding, faPlus, faEdit, faTrash, faSearch, faFilePdf, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
+import { faBuilding, faPlus, faEdit, faTrash, faSearch, faFilePdf, faTriangleExclamation, faCircleInfo, faStar, faCheck } from '@fortawesome/free-solid-svg-icons';
 import { PageLayout } from '../components/ui/PageLayout';
 import { Modal } from '../components/ui/Modal';
+import { InfoModal } from '../components/ui/InfoModal';
+import { formatRnos } from '../utils/rnos';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Card } from '../components/ui/Card';
@@ -51,20 +53,42 @@ const EMPTY_FORM: CompanyInput = {
  * de resolver por configuración y no por persona, aplicada al listado: se ve de un vistazo cuál de
  * las empleadoras va a frenar a todos sus contratos.
  */
-const EstadoArca: React.FC<{ c: Company }> = ({ c }) => {
-  const faltan = [
-    ...((c.convenioIds || []).length === 0 ? ['convenios'] : []),
-    ...((c.sucursalIds || []).length === 0 ? ['domicilios'] : []),
-    ...((c.obrasSocialesIds || []).length === 0 ? ['obras sociales'] : []),
-  ];
+/** Qué le falta registrar a la empleadora ante ARCA, con qué desbloquea cada cosa. */
+const REQUISITOS_ARCA = [
+  { clave: 'convenios' as const, titulo: 'Convenios colectivos', desbloquea: 'Definen qué categorías profesionales se le pueden dar de alta: ARCA solo ofrece las de los convenios que el CUIT tiene registrados. Sin convenio no hay categoría posible.' },
+  { clave: 'domicilios' as const, titulo: 'Domicilios de explotación', desbloquea: 'El alta declara UN domicilio y UNA de sus actividades. Sin domicilios no hay dónde declarar el trabajo.' },
+  { clave: 'obras sociales' as const, titulo: 'Obras sociales', desbloquea: 'ARCA solo acepta altas con una de las obras sociales que el CUIT tiene declaradas. Sin ninguna registrada no se puede verificar que la del contrato sea válida, y el organismo la rechaza al subir el archivo.' },
+];
+
+const faltantesArca = (c: Company) =>
+  REQUISITOS_ARCA.filter((r) => (r.clave === 'convenios' ? (c.convenioIds || []).length === 0 : r.clave === 'domicilios' ? (c.sucursalIds || []).length === 0 : (c.obrasSocialesIds || []).length === 0));
+
+/**
+ * Marca que la empleadora todavía no puede dar altas en ARCA.
+ *
+ * El ⓘ no es decorativo: "Sin configurar para ARCA" no dice qué falta ni qué consecuencia tiene, y
+ * antes eso vivía en un `title` que en la práctica nadie lee. El modal lo explica y nombra los tres
+ * requisitos con lo que desbloquea cada uno.
+ */
+const EstadoArca: React.FC<{ c: Company; onInfo: (c: Company) => void }> = ({ c, onInfo }) => {
+  const faltan = faltantesArca(c);
   if (faltan.length === 0) return null;
   return (
-    <span
-      title={`Le falta registrar: ${faltan.join(', ')}. Hasta entonces, ninguno de sus contratos puede generar el alta de ARCA.`}
-      className="mt-1 inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
-    >
-      <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5" />
-      Sin configurar para ARCA
+    <span className="mt-1 inline-flex items-center gap-1 rounded bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 pl-1.5 pr-1 py-0.5">
+      <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5 text-amber-800 dark:text-amber-300" />
+      <span className="text-[10px] font-bold text-amber-800 dark:text-amber-300">Sin configurar para ARCA</span>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onInfo(c);
+        }}
+        title="Qué significa"
+        aria-label="Qué significa «Sin configurar para ARCA»"
+        className="text-amber-700/70 hover:text-amber-900 dark:text-amber-400/70 dark:hover:text-amber-200 transition-colors"
+      >
+        <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+      </button>
     </span>
   );
 };
@@ -88,6 +112,9 @@ export const EmpresasPage: React.FC = () => {
   const [form, setForm] = useState<CompanyInput>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  // Empresa cuyo aviso "Sin configurar para ARCA" se está explicando. El modal es UNO para toda la
+  // página y no uno por fila: el contenido es el mismo y solo cambia qué le falta a esta empleadora.
+  const [infoArca, setInfoArca] = useState<Company | null>(null);
   const helpEntry = getHelp(HELP_KEY);
 
   // Vista tabla/tarjetas, como el resto de los ABM: la tabla solo en pantallas grandes.
@@ -197,6 +224,33 @@ export const EmpresasPage: React.FC = () => {
     if (ids.length === 0) return [];
     return convenios.filter((cv) => ids.includes(cv._id));
   };
+
+  /** Obras sociales REGISTRADAS ante ARCA para el CUIT, resueltas contra el catálogo ya cargado. */
+  const obrasSocialesDe = (c: Company): SimpleCatalogItem[] => {
+    const ids = (c.obrasSocialesIds || []).map((x) => String(x));
+    if (ids.length === 0) return [];
+    return obrasSociales.filter((o) => ids.includes(o._id)).sort((a, b) => String(a.externalId || '').localeCompare(String(b.externalId || '')));
+  };
+
+  /** Cuál de las registradas se usa cuando la persona no tiene obra social propia (`data.id` = RNOS). */
+  const obraSocialPorDefectoDe = (c: Company): SimpleCatalogItem | undefined => {
+    const id = c.obraSocialDefaultId ?? c.obraSocialId;
+    return id == null ? undefined : obrasSociales.find((o) => Number((o.data as { id?: number } | undefined)?.id) === id);
+  };
+
+  /** Badge de obra social: el RNOS es el dato que viaja al TXT; el nombre ubica al lector. */
+  const ObraSocialBadge: React.FC<{ o: SimpleCatalogItem; maxW: string; esPorDefecto: boolean }> = ({ o, maxW, esPorDefecto }) => (
+    <span
+      title={`${formatRnos(o.externalId)} — ${o.name}${esPorDefecto ? '\nEs la que se usa por defecto cuando la persona no tiene obra social propia.' : ''}`}
+      className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded border ${maxW} ${
+        esPorDefecto ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+      }`}
+    >
+      {esPorDefecto && <FontAwesomeIcon icon={faStar} className="h-2 w-2 shrink-0" />}
+      <span className="font-mono opacity-70 shrink-0">{formatRnos(o.externalId)}</span>
+      <span className="truncate">{o.name}</span>
+    </span>
+  );
 
   /** Sucursales de ARCA de la empresa, resueltas contra el catálogo ya cargado (se guardan como refs). */
   const sucursalesDe = (c: Company): ArcaSucursal[] => {
@@ -354,6 +408,7 @@ export const EmpresasPage: React.FC = () => {
               }}
             >
               <div className="text-xs text-gray-600 dark:text-gray-400 space-y-2">
+                <EstadoArca c={c} onInfo={setInfoArca} />
                 {domicilioResumen(c) && (
                   <p className="truncate" title={domicilioResumen(c)}>
                     {domicilioResumen(c)}
@@ -390,6 +445,16 @@ export const EmpresasPage: React.FC = () => {
                     </div>
                   </div>
                 )}
+                {(c.obrasSocialesIds || []).length > 0 && (
+                  <div>
+                    <span className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Obras sociales</span>
+                    <div className="flex items-center gap-1.5 flex-wrap max-h-24 overflow-y-auto">
+                      {obrasSocialesDe(c).map((o) => (
+                        <ObraSocialBadge key={o._id} o={o} maxW="max-w-[180px]" esPorDefecto={obraSocialPorDefectoDe(c)?._id === o._id} />
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {(c.sucursalIds || []).length > 0 && (
                   <div>
                     <span className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Sucursales de ARCA</span>
@@ -416,6 +481,7 @@ export const EmpresasPage: React.FC = () => {
                 <th className="px-4 py-3">Firmante</th>
                 <th className="px-4 py-3">Representante Legal</th>
                 <th className="px-4 py-3">Convenios</th>
+                <th className="px-4 py-3">Obras Sociales</th>
                 <th className="px-4 py-3">Sucursales ARCA</th>
                 <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
@@ -425,7 +491,7 @@ export const EmpresasPage: React.FC = () => {
                 <tr key={c._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                   <td className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">
                     <span className="block">{c.razonSocial}</span>
-                    <EstadoArca c={c} />
+                    <EstadoArca c={c} onInfo={setInfoArca} />
                   </td>
                   <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{c.cuit || '—'}</td>
                   <td className="px-4 py-3 text-gray-600 dark:text-gray-400 max-w-[280px] truncate" title={domicilioResumen(c)}>
@@ -467,6 +533,19 @@ export const EmpresasPage: React.FC = () => {
                             {cv.externalId && <span className="font-mono opacity-70 shrink-0">{cv.externalId}</span>}
                             <span className="truncate">{cv.name}</span>
                           </span>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {(c.obrasSocialesIds || []).length === 0 ? (
+                      <span className="text-gray-400 dark:text-gray-600">—</span>
+                    ) : cargandoObrasSociales ? (
+                      <span className="text-xs text-gray-400 italic">cargando…</span>
+                    ) : (
+                      <div className="flex items-center gap-1.5 flex-wrap max-w-[320px] max-h-24 overflow-y-auto">
+                        {obrasSocialesDe(c).map((o) => (
+                          <ObraSocialBadge key={o._id} o={o} maxW="max-w-[170px]" esPorDefecto={obraSocialPorDefectoDe(c)?._id === o._id} />
                         ))}
                       </div>
                     )}
@@ -585,6 +664,47 @@ export const EmpresasPage: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Qué significa "Sin configurar para ARCA", con lo que le falta a ESTA empleadora. */}
+      <InfoModal
+        isOpen={!!infoArca}
+        onClose={() => setInfoArca(null)}
+        title="Sin configurar para ARCA"
+        subtitle={infoArca?.razonSocial}
+        size="md"
+        actions={[{ label: 'Entendido', onClick: () => setInfoArca(null), variant: 'primary' }]}
+      >
+        {infoArca && (
+          <div className="space-y-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            <p>
+              Esta empleadora todavía no tiene registrado ante ARCA todo lo que el organismo exige para dar un alta. Mientras falte algo, <strong>ninguno de sus contratos puede generar el TXT</strong>: el chequeo de Datos ARCA los va a marcar incompletos, o —peor— el archivo sale y el organismo lo rechaza.
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              No es un dato que se complete por contrato: se resuelve una vez para la empresa y vale para todos.
+            </p>
+
+            <div className="space-y-2">
+              {REQUISITOS_ARCA.map((r) => {
+                const falta = faltantesArca(infoArca).some((f) => f.clave === r.clave);
+                return (
+                  <div key={r.clave} className={`rounded-lg border p-3 ${falta ? 'border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20' : 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20'}`}>
+                    <div className="flex items-center gap-2">
+                      <FontAwesomeIcon icon={falta ? faTriangleExclamation : faCheck} className={`h-3.5 w-3.5 shrink-0 ${falta ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`} />
+                      <span className={`text-sm font-semibold ${falta ? 'text-amber-800 dark:text-amber-300' : 'text-emerald-800 dark:text-emerald-300'}`}>{r.titulo}</span>
+                      <span className="ml-auto text-[11px] font-bold uppercase tracking-wider text-gray-400">{falta ? 'falta' : 'listo'}</span>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1.5">{r.desbloquea}</p>
+                  </div>
+                );
+              })}
+            </div>
+
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Se cargan editando la empresa (el lápiz de esta fila) o desde su ficha, en <strong>ARCA</strong>. El dato real sale del padrón del organismo, logueado con este CUIT: en Datos del Empleador están las obras sociales, los convenios y los domicilios que tiene declarados.
+            </p>
+          </div>
+        )}
+      </InfoModal>
     </PageLayout>
   );
 };

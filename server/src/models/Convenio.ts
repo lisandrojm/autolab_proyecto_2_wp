@@ -14,6 +14,18 @@ export interface IConvenio extends Document {
   externalId: string;
   name: string;
   signatario?: string;
+  /**
+   * Obra social que le corresponde a quien trabaja bajo este convenio. Guarda el `data.id` del
+   * catálogo de Obras Sociales (el RNOS numérico), igual que `osId` en el contrato.
+   *
+   * **Cuelga del convenio y no de la empleadora porque así funciona en la Argentina**: la obra social
+   * la define el sindicato, y al sindicato lo define el CCT. Quien está bajo el convenio de
+   * televisión aporta a la O.S. del Personal de Televisión, sin importar qué productora lo contrate.
+   *
+   * Vacío = el convenio no tiene obra social sindical. El caso real es "9999/99 — EXCLUIDO DE
+   * CONVENIO", que por definición no tiene sindicato: ahí manda la default de la empleadora.
+   */
+  obraSocialDefaultId?: number;
   data: {
     id?: number;
     nombre: string;
@@ -27,6 +39,7 @@ const convenioSchema = new Schema<IConvenio>(
     externalId: { type: String },
     name: { type: String, required: true },
     signatario: { type: String },
+    obraSocialDefaultId: { type: Number },
     data: {
       id: { type: Number },
       nombre: { type: String },

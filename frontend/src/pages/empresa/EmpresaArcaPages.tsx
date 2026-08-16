@@ -196,10 +196,78 @@ const ObrasSocialesBody: React.FC<{ empresa: Company; recargar: () => Promise<vo
           </div>
         )}
         <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
-          La jerarquía al resolver el RNOS del contrato es: <strong>obra social de la persona</strong> &gt; <strong>la por defecto de esta empresa</strong> &gt; la global del catálogo.
+          La jerarquía al resolver el RNOS del contrato es: <strong>obra social de la persona</strong> &gt; <strong>la del convenio de su categoría</strong> &gt; la por defecto de esta empresa &gt; la global del catálogo.
         </p>
       </div>
+
+      <ObraSocialPorConvenio empresa={empresa} catalogo={catalogo} registradas={ids} />
     </SeccionEmpleador>
+  );
+};
+
+/**
+ * Qué obra social le toca a cada convenio registrado por esta empleadora.
+ *
+ * Es lo que realmente decide el RNOS de la mayoría de los contratos, y no se configura acá: la obra
+ * social la define el sindicato, y al sindicato lo define el CCT. Esta tabla es de solo lectura y
+ * existe para poder ver de un vistazo dos cosas que rompen el alta:
+ *
+ *  - un convenio **sin** obra social cargada (salvo 9999/99, que no tiene sindicato);
+ *  - una obra social que el convenio asigna pero que la empleadora **no tiene registrada** — ARCA
+ *    rechaza esas altas, y el error alcanza a todos los contratos de ese CCT.
+ */
+const ObraSocialPorConvenio: React.FC<{ empresa: Company; catalogo: SimpleCatalogItem[]; registradas: string[] }> = ({ empresa, catalogo, registradas }) => {
+  const [convenios, setConvenios] = useState<Array<SimpleCatalogItem & { obraSocialDefaultId?: number | null }>>([]);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    conveniosApi
+      .list()
+      .then((cs) => setConvenios(cs as Array<SimpleCatalogItem & { obraSocialDefaultId?: number | null }>))
+      .catch(() => setConvenios([]))
+      .finally(() => setCargando(false));
+  }, []);
+
+  const delaEmpresa = useMemo(() => convenios.filter((c) => (empresa.convenioIds || []).map(String).includes(c._id)).sort((a, b) => String(a.externalId || '').localeCompare(String(b.externalId || ''))), [convenios, empresa]);
+
+  if (cargando) return <LoadingSpinner message="Resolviendo la obra social de cada convenio..." />;
+  if (delaEmpresa.length === 0) return null;
+
+  const porDataId = (id?: number | null) => (id == null ? undefined : catalogo.find((o) => Number((o.data as { id?: number } | undefined)?.id) === id));
+
+  return (
+    <div>
+      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Obra social por convenio</p>
+      <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-100 dark:divide-gray-700/60">
+        {delaEmpresa.map((cv) => {
+          const os = porDataId(cv.obraSocialDefaultId);
+          const sinSindicato = String(cv.externalId || '').trim() === '9999/99';
+          const noRegistrada = !!os && !registradas.map(String).includes(os._id);
+          return (
+            <div key={cv._id} className="px-3 py-2.5 flex items-start gap-3 flex-wrap">
+              <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-400 shrink-0 whitespace-nowrap">{cv.externalId}</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300 truncate max-w-[14rem]">{cv.name}</span>
+              <span className="ml-auto text-right min-w-0">
+                {os ? (
+                  <>
+                    <span className={`block text-sm ${noRegistrada ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-gray-900 dark:text-gray-100'}`}>
+                      <span className="font-mono text-xs opacity-70 mr-1.5">{formatRnos(os.externalId)}</span>
+                      {os.name}
+                    </span>
+                    {noRegistrada && <span className="block text-[11px] text-red-600 dark:text-red-400">No está entre las registradas: ARCA va a rechazar estas altas.</span>}
+                  </>
+                ) : sinSindicato ? (
+                  <span className="block text-xs text-gray-500 dark:text-gray-400 italic">Sin sindicato: manda la por defecto de esta empresa.</span>
+                ) : (
+                  <span className="block text-xs text-amber-700 dark:text-amber-400">Sin obra social cargada. Asignásela en Configuración → ARCA → Convenios.</span>
+                )}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Solo lectura: la obra social es del convenio, no de la empresa. Se carga en Configuración → ARCA → Convenios.</p>
+    </div>
   );
 };
 

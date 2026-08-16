@@ -25,6 +25,19 @@ export interface SimpleCatalogConfig {
         aliases?: string[];
     }>;
     /**
+     * Campos numéricos extra a persistir en create/update (ej. Convenios → `obraSocialDefaultId`).
+     *
+     * Van aparte de `extraStringFields` porque el cliente los manda como string —el formulario genérico
+     * serializa todo a texto— y guardarlos así rompería las comparaciones con `data.id`, que es número.
+     * El vacío se guarda como `null` y no como `0`: "sin elegir" no es el RNOS 0.
+     *
+     * NO participan del import de Excel: estos catálogos se siembran desde el nomenclador de ARCA, que
+     * no trae este dato.
+     */
+    extraNumberFields?: Array<{
+        key: string;
+    }>;
+    /**
      * Encabezado de columna del Excel (plantilla + import) para "ID Externo", por si en este catálogo
      * ese id tiene otro nombre de dominio (ej. Obras Sociales → "RNOS"). Default: "ID Externo (opcional)".
      * Los alias de import siempre incluyen además "ID Externo (opcional)"/"ID Externo"/"externalId"/"Id"/"ID".

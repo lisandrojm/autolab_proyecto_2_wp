@@ -25,6 +25,17 @@ export interface SimpleCatalogConfig {
    */
   extraStringFields?: Array<{ key: string; excelHeader?: string; aliases?: string[] }>;
   /**
+   * Campos numéricos extra a persistir en create/update (ej. Convenios → `obraSocialDefaultId`).
+   *
+   * Van aparte de `extraStringFields` porque el cliente los manda como string —el formulario genérico
+   * serializa todo a texto— y guardarlos así rompería las comparaciones con `data.id`, que es número.
+   * El vacío se guarda como `null` y no como `0`: "sin elegir" no es el RNOS 0.
+   *
+   * NO participan del import de Excel: estos catálogos se siembran desde el nomenclador de ARCA, que
+   * no trae este dato.
+   */
+  extraNumberFields?: Array<{ key: string }>;
+  /**
    * Encabezado de columna del Excel (plantilla + import) para "ID Externo", por si en este catálogo
    * ese id tiene otro nombre de dominio (ej. Obras Sociales → "RNOS"). Default: "ID Externo (opcional)".
    * Los alias de import siempre incluyen además "ID Externo (opcional)"/"ID Externo"/"externalId"/"Id"/"ID".
@@ -47,6 +58,17 @@ export interface SimpleCatalogConfig {
    */
   sanitizeExternalId?: (value: string) => string;
 }
+
+/**
+ * Convierte a número lo que llega de un formulario. Devuelve `undefined` para "sin valor" —vacío,
+ * null o no numérico—, que NO es lo mismo que 0: el RNOS 0 no existe, pero 0 es un número válido y
+ * un `Number("")` lo produciría en silencio.
+ */
+const aNumeroOpcional = (v: unknown): number | undefined => {
+  if (v === undefined || v === null || String(v).trim() === "") return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+};
 
 interface SimpleCatalogDoc {
   externalId?: string;
@@ -222,6 +244,10 @@ export function createSimpleCatalogRouter(
         const v = (req.body as Record<string, unknown>)[f.key];
         if (v !== undefined && v !== null) newItem[f.key] = String(v).trim();
       }
+      for (const f of config.extraNumberFields || []) {
+        const n = aNumeroOpcional((req.body as Record<string, unknown>)[f.key]);
+        if (n !== undefined) newItem[f.key] = n;
+      }
       const created = await model.create(newItem);
       res.status(201).json(created);
     } catch (error) {
@@ -257,6 +283,11 @@ export function createSimpleCatalogRouter(
       for (const f of config.extraStringFields || []) {
         const v = (req.body as Record<string, unknown>)[f.key];
         if (v !== undefined) item[f.key] = v === null ? "" : String(v).trim();
+      }
+      for (const f of config.extraNumberFields || []) {
+        const bruto = (req.body as Record<string, unknown>)[f.key];
+        // `undefined` = el cliente no lo mandó (no se toca). Vacío/null = se limpia a `null`.
+        if (bruto !== undefined) item[f.key] = aNumeroOpcional(bruto) ?? null;
       }
 
       await item.save();

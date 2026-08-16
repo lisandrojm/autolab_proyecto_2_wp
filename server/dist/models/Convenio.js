@@ -3,6 +3,7 @@ const convenioSchema = new Schema({
     externalId: { type: String },
     name: { type: String, required: true },
     signatario: { type: String },
+    obraSocialDefaultId: { type: Number },
     data: {
         id: { type: Number },
         nombre: { type: String },

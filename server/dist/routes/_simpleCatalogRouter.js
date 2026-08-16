@@ -2,6 +2,17 @@ import { Router } from "express";
 import multer from "multer";
 import xlsx from "xlsx";
 import { authenticateToken } from "../middleware/auth.js";
+/**
+ * Convierte a número lo que llega de un formulario. Devuelve `undefined` para "sin valor" —vacío,
+ * null o no numérico—, que NO es lo mismo que 0: el RNOS 0 no existe, pero 0 es un número válido y
+ * un `Number("")` lo produciría en silencio.
+ */
+const aNumeroOpcional = (v) => {
+    if (v === undefined || v === null || String(v).trim() === "")
+        return undefined;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : undefined;
+};
 export function createSimpleCatalogRouter(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 model, config) {
@@ -155,6 +166,11 @@ model, config) {
                 if (v !== undefined && v !== null)
                     newItem[f.key] = String(v).trim();
             }
+            for (const f of config.extraNumberFields || []) {
+                const n = aNumeroOpcional(req.body[f.key]);
+                if (n !== undefined)
+                    newItem[f.key] = n;
+            }
             const created = await model.create(newItem);
             res.status(201).json(created);
         }
@@ -189,6 +205,12 @@ model, config) {
                 const v = req.body[f.key];
                 if (v !== undefined)
                     item[f.key] = v === null ? "" : String(v).trim();
+            }
+            for (const f of config.extraNumberFields || []) {
+                const bruto = req.body[f.key];
+                // `undefined` = el cliente no lo mandó (no se toca). Vacío/null = se limpia a `null`.
+                if (bruto !== undefined)
+                    item[f.key] = aNumeroOpcional(bruto) ?? null;
             }
             await item.save();
             res.json(item);

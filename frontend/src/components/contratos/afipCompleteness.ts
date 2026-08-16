@@ -38,7 +38,7 @@ export interface AfipCatalogs {
    * Catálogo de Convenios: solo para traducir los `convenioIds` de la empresa (que son refs) al
    * código de CCT ("0131/75") con el que se compara el convenio de la categoría.
    */
-  convenios?: SimpleCatalogItem[];
+  convenios?: Array<SimpleCatalogItem & { obraSocialDefaultId?: number | null }>;
 }
 
 /**
@@ -161,7 +161,7 @@ export interface AfipValues {
   /** El RNOS no es de la persona: sale de una obra social por defecto. */
   rnosPorDefecto: boolean;
   /** De dónde salió el RNOS, para poder aclararlo en la vista de completitud. */
-  rnosOrigen: "persona" | "empresa" | "global" | "ninguno";
+  rnosOrigen: "persona" | "convenio" | "empresa" | "global" | "ninguno";
   sucursal: string;
   /** Cómo se resolvió la actividad (o por qué no se pudo). */
   actividadOrigen: ActividadOrigen;
@@ -187,16 +187,35 @@ export interface AfipValues {
 export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): AfipValues {
   const categoria = row.categoria_sat_id != null ? cat.categorias.find((c) => c.data?.id === row.categoria_sat_id) : undefined;
   const tipo = cat.tipos.find((t) => t.name === row.nombre_contrato);
-  // Cascada de obra social: la de la persona manda; si no tiene, la de la empresa del contrato; y
-  // si esa tampoco, la global del catálogo. Sin ninguna, el contrato queda sin código RNOS y no
-  // puede entrar en el TXT de alta masiva.
   const porDataId = (id?: number | null) => (id == null ? undefined : cat.obrasSociales.find((o) => Number((o.data as { id?: number } | undefined)?.id) === id));
-  const obraSocialPropia = porDataId(row.osId);
   const empresa = row.empresaContratoId ? cat.empresas?.find((e) => e._id === row.empresaContratoId) : undefined;
+
+  // Convenio al que pertenece la categoría del contrato. Se resuelve ACÁ ARRIBA porque de él sale la
+  // obra social, que es lo primero que se calcula.
+  const convenioCategoria = String(categoria?.data?.convenio || "").trim();
+  const convenioDeLaCategoria = convenioCategoria ? cat.convenios?.find((c) => String(c.externalId || "").trim() === convenioCategoria) : undefined;
+
+  /**
+   * Cascada de obra social:
+   *
+   *   persona  >  CONVENIO de su categoría  >  default de la empresa  >  global del catálogo
+   *
+   * El nivel del convenio es el que manda en la práctica: en la Argentina la obra social la define el
+   * sindicato, y al sindicato lo define el CCT. Quien trabaja bajo el convenio de televisión aporta a
+   * la O.S. del Personal de Televisión, no a la que elija la productora.
+   *
+   * El nivel de empresa NO se eliminó: queda como respaldo para "9999/99 — EXCLUIDO DE CONVENIO",
+   * que por definición no tiene sindicato y por lo tanto tampoco obra social sindical. Ese es el
+   * único caso donde la empleadora decide.
+   *
+   * Sin ninguna, el contrato queda sin código RNOS y no puede entrar en el TXT de alta masiva.
+   */
+  const obraSocialPropia = porDataId(row.osId);
+  const obraSocialConvenio = porDataId(convenioDeLaCategoria?.obraSocialDefaultId);
   // `obraSocialDefaultId` es el nombre nuevo; se lee el viejo mientras queden documentos sin migrar.
   const obraSocialEmpresa = porDataId(empresa?.obraSocialDefaultId ?? empresa?.obraSocialId);
   const obraSocialGlobal = cat.obrasSociales.find((o) => (o.data as { porDefecto?: boolean } | undefined)?.porDefecto);
-  const obraSocial = obraSocialPropia || obraSocialEmpresa || obraSocialGlobal;
+  const obraSocial = obraSocialPropia || obraSocialConvenio || obraSocialEmpresa || obraSocialGlobal;
 
   // Sucursal y actividad salen del catálogo de Sucursales de ARCA, filtrado por las que tiene
   // asignadas la empresa empleadora. Nada de esto cuelga de la Sede: son entidades distintas.
@@ -207,7 +226,6 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
   // válido contra el que se valida la categoría del contrato.
   const idsConvenio = (empresa?.convenioIds || []).map(String);
   const conveniosEmpresa = (cat.convenios || []).filter((c) => idsConvenio.includes(c._id)).map((c) => String(c.externalId || "").trim()).filter(Boolean);
-  const convenioCategoria = String(categoria?.data?.convenio || "").trim();
   const sucursal = row.sucursalArcaId ? sucursalesEmpresa.find((s) => s._id === row.sucursalArcaId) : undefined;
   const actividades = sucursal?.actividades?.filter((a) => !!a.codigo) || [];
   const elegida = row.actividadArca ? actividades.find((a) => a.codigo === row.actividadArca) : undefined;
@@ -269,7 +287,7 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
     // El "ID Externo" de la Obra Social siempre fue el código RNOS (ver ObrasSocialesPage.tsx).
     rnos: soloDigitos(obraSocial?.externalId),
     rnosPorDefecto: !obraSocialPropia && !!obraSocial,
-    rnosOrigen: obraSocialPropia ? "persona" : obraSocialEmpresa ? "empresa" : obraSocialGlobal ? "global" : "ninguno",
+    rnosOrigen: obraSocialPropia ? "persona" : obraSocialConvenio ? "convenio" : obraSocialEmpresa ? "empresa" : obraSocialGlobal ? "global" : "ninguno",
     sucursal: sucursal?.codigo ? String(sucursal.codigo) : "",
   };
 }
@@ -282,9 +300,10 @@ const ORIGENES: Record<OrigenDato, { titulo: string; accion: string; link?: { to
   // El sueldo bruto NO se carga en la categoría: vive en el grupo salarial del convenio, que es
   // adonde lleva el link. Decir "cargalo en la categoría" mandaba a buscar un campo que ya no existe.
   categoria_sat: { titulo: "Categoría", accion: "Revisá el código ARCA de la categoría y el sueldo bruto del grupo salarial de su convenio.", link: { to: "/arca/categorias", label: "Ir a Categorías" } },
-  // El catálogo es el UNIVERSO (494 obras sociales); lo que ARCA acepta es el subconjunto que cada
-  // CUIT registró. Por eso la acción nombra los dos lugares: el nomenclador y el padrón de la empresa.
-  obra_social: { titulo: "Obra social", accion: "Asignale una obra social a la persona, o definí la por defecto. Tiene que estar entre las registradas por la empleadora (Empresa → ARCA → Obras Sociales).", link: { to: "/obras-sociales", label: "Ir a Obras Sociales" } },
+  // La obra social la define el SINDICATO, y al sindicato lo define el convenio: por eso lo primero
+  // que hay que revisar es la del CCT de la categoría, no la de la empresa. El catálogo es el
+  // universo; lo que ARCA acepta es el subconjunto que ese CUIT registró.
+  obra_social: { titulo: "Obra social", accion: "Cargá la obra social del convenio de la categoría (Configuración → ARCA → Convenios), o asignásela a la persona. Tiene que estar entre las registradas por la empleadora.", link: { to: "/convenios", label: "Ir a Convenios" } },
   empresa: { titulo: "Empresa del Contrato", accion: "Elegí con qué empleadora se da de alta a esta persona.", link: { enFila: "Se elige en la columna «Empresa Contrato»" } },
   sucursal: { titulo: "Sucursal y actividad", accion: "Elegí el domicilio de desempeño con el que se declara el alta.", link: { enFila: "Se elige en las columnas «Sucursal» y «Actividad»" } },
 };
@@ -384,16 +403,32 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
   checks.push(presencia("tipoServicio", "Tipo de servicio", "tipo_contrato", v.tipoServicio, "El tipo de contrato no tiene cargado su tipo de servicio."));
   checks.push(presencia("modalidadLiq", "Modalidad de liquidación", "tipo_contrato", v.modalidadLiq, "El tipo de contrato no tiene cargada su modalidad de liquidación."));
 
-  // --- Obra social (cascada persona → empresa → global)
-  const etiquetaRnos = v.rnosOrigen === "empresa" ? "Código RNOS (por defecto de la empresa)" : v.rnosOrigen === "global" ? "Código RNOS (por defecto global)" : "Código RNOS (obra social)";
-  checks.push(presencia("rnos", etiquetaRnos, "obra_social", v.rnos, "Ni la persona, ni su empresa, ni el catálogo tienen una obra social definida."));
+  // --- Obra social (cascada persona → convenio → empresa → global). Decir de DÓNDE salió no es un
+  // detalle: si salió del convenio, corregirla es cambiar el convenio y afecta a todos sus contratos;
+  // si salió de la empresa o de la global, es un respaldo y probablemente falte cargar el sindical.
+  const etiquetaRnos =
+    v.rnosOrigen === "convenio"
+      ? "Código RNOS (obra social del convenio)"
+      : v.rnosOrigen === "empresa"
+        ? "Código RNOS (por defecto de la empresa)"
+        : v.rnosOrigen === "global"
+          ? "Código RNOS (por defecto global)"
+          : "Código RNOS (obra social)";
+  checks.push(presencia("rnos", etiquetaRnos, "obra_social", v.rnos, "Ni la persona, ni el convenio de su categoría, ni su empresa, ni el catálogo tienen una obra social definida."));
 
   // Obra social ∈ registradas por la empleadora. Mismo tipo de regla que el convenio de la categoría:
   // el nomenclador es universal, pero ARCA solo acepta las que ESE CUIT declaró en Datos del Empleador.
   // `null` = no se puede saber (falta el padrón de la empresa), y entonces no se dice nada: inventar
   // un "ok" ahí sería peor que no validar.
   if (v.rnos && v.obraSocialRegistrada === false) {
-    checks.push(mk("obraSocialRegistrada", "Obra social registrada en ARCA", "obra_social", v.rnos, "error", "Esta obra social no está entre las registradas para la empleadora del contrato. ARCA solo acepta las que el CUIT declaró en Datos del Empleador: cargala en Empresa → ARCA → Obras Sociales."));
+    // El origen cambia dónde está el error: si la obra social vino del CONVENIO, el dato del contrato
+    // está bien y lo que está mal es la configuración —el convenio apunta a una obra social que esta
+    // empleadora no tiene registrada—, y arreglarlo alcanza a todos los contratos de ese CCT.
+    const detalle =
+      v.rnosOrigen === "convenio"
+        ? `El convenio ${v.convenioCategoria} tiene asignada esta obra social, pero la empleadora no la tiene registrada ante ARCA. Es un error de configuración y alcanza a TODOS los contratos de ese convenio: registrala en Empresa → ARCA → Obras Sociales, o corregí la del convenio en Configuración → ARCA → Convenios.`
+        : "Esta obra social no está entre las registradas para la empleadora del contrato. ARCA solo acepta las que el CUIT declaró en Datos del Empleador: cargala en Empresa → ARCA → Obras Sociales.";
+    checks.push(mk("obraSocialRegistrada", "Obra social registrada en ARCA", "obra_social", v.rnos, "error", detalle));
   }
 
   // --- Sucursal y actividad. Toda esta rama depende de la empresa: sin ella no se sabe qué

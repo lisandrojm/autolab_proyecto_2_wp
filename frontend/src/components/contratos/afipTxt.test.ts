@@ -215,6 +215,49 @@ describe("actividad del domicilio", () => {
   });
 });
 
+/**
+ * El RNOS (pos. 40-45) sale de una cascada, y el orden importa: en la Argentina la obra social la
+ * define el SINDICATO, y al sindicato lo define el convenio. Si el nivel del convenio se cae o se
+ * ordena mal, el alta entra con la obra social equivocada — ARCA la acepta y el aporte va a parar a
+ * otro lado, que es exactamente el tipo de error que no se ve hasta que es tarde.
+ */
+describe("obra social — cascada persona → convenio → empresa → global", () => {
+  /** Catálogo con tres obras sociales y el convenio 0634/11 apuntando a la del sindicato de TV. */
+  const conCascada = (over: Partial<AfipCatalogs> = {}) =>
+    catalogos({
+      obrasSociales: [
+        { _id: "os1", externalId: "126205", name: "OSPIA (global)", data: { id: 7, porDefecto: true } },
+        { _id: "os2", externalId: "010902", name: "OS PERSONAL DE TELEVISIÓN", data: { id: 22 } },
+        { _id: "os3", externalId: "999999", name: "OS DE LA PERSONA", data: { id: 33 } },
+      ],
+      convenios: [{ _id: "cv1", externalId: "0634/11", name: "TELEVISIÓN", obraSocialDefaultId: 22 }],
+      ...over,
+    } as any);
+
+  const rnosDe = (record: string) => tramo(record, 40, 45);
+
+  it("sin obra social propia, manda la del convenio de la categoría", () => {
+    const record = buildAltaRecord(fila(), conCascada())!;
+    assert.equal(rnosDe(record), "010902");
+  });
+
+  it("la obra social de la persona le gana al convenio", () => {
+    const record = buildAltaRecord(fila({ osId: 33 } as any), conCascada())!;
+    assert.equal(rnosDe(record), "999999");
+  });
+
+  it("el convenio le gana a la default de la empresa", () => {
+    // La empleadora tiene la 7 por defecto y el convenio la 22: tiene que salir la del convenio.
+    const cat = conCascada({ empresas: [{ _id: EMPRESA_ID, obraSocialDefaultId: 7, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"] }] } as any);
+    assert.equal(rnosDe(buildAltaRecord(fila(), cat)!), "010902");
+  });
+
+  it("si el convenio no tiene obra social, cae a la de la empresa — el caso de 9999/99", () => {
+    const cat = conCascada({ convenios: [{ _id: "cv1", externalId: "0634/11", name: "TELEVISIÓN" }] } as any);
+    assert.equal(rnosDe(buildAltaRecord(fila(), cat)!), "126205");
+  });
+});
+
 describe("describirRegistro — la vista previa no puede mentir", () => {
   it("los campos cubren las 130 posiciones sin huecos ni solapamientos", () => {
     const { campos } = describirRegistro(fila(), catalogos());
