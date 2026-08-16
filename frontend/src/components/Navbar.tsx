@@ -1,15 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
-import { useThemeStore } from '../stores/themeStore';
 import { ClientSelector } from './ClientSelector';
 import { ClientContextMenu } from './ClientContextMenu';
+import { EmpresaSelector } from './EmpresaSelector';
+import { EmpresaContextMenu } from './EmpresaContextMenu';
+import { FichasHeader } from './context/FichasHeader';
 import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faArrowsRotate, faLandmark, faFileSignature, faLocationDot } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faFileSignature, faPlug, faLocationDot } from '@fortawesome/free-solid-svg-icons';
 import { Logo } from '../components/ui/Logo';
 import axios from '../api/axiosConfig';
 import { SettingsModal } from './SettingsModal';
 import { useClientContextStore } from '../stores/clientContextStore';
+import { useEmpresaContextStore } from '../stores/empresaContextStore';
 
 interface AdminCounts {
   clients: number;
@@ -43,16 +46,40 @@ const PLANTILLAS_PATHS = [MEMBRETE_PATH, '/pdfs', '/pdfs-vacaciones', '/contrato
  * dos grupos del menú. Para llegar desde ARCA, el ABM de Sucursales ya remite a Empresas.
  */
 /*
- * El orden NO es alfabético: replica el de los campos de "Registrar nuevas altas" en Simplificación
- * Registral de ARCA (Obra Social, Sucursal, Convenio, Categoría, Tipo de Servicio, Modalidad de
- * Contrato, Modalidad de Liquidación), para que cargar los catálogos acá se recorra igual que el
- * formulario del organismo. Conexión va primero porque es el prerrequisito de todo lo demás.
+ * Configuración → ARCA queda SOLO con lo universal.
  *
- * Los campos del formulario que no tienen ABM propio no aparecen: Actividad se administra dentro de
- * cada Sucursal, Puesto Desempeñado son las Funciones FRAME (segunda tab de Categorías), y Grupo
- * Tipo de Servicio y Situación de Revista salen de tablas fijas, no de un catálogo editable.
+ * ARCA parte sus datos en dos: "Datos del Empleador" (por CUIT) y los nomencladores del organismo
+ * (iguales para todos). Lo primero se mudó al contexto Empresa —obras sociales registradas,
+ * convenios registrados, domicilios de explotación— porque son un SUBCONJUNTO por empleadora y
+ * mezclarlos con el universo hacía creer que "la" lista era una sola.
+ *
+ * Lo que queda acá se importa una vez y casi no se toca. El encabezado "Nomencladores de ARCA"
+ * separa eso de Convenios, que además de nomenclador tiene sus grupos y escalas salariales (las
+ * escalas SON del convenio: la misma para todas las empleadoras que lo tengan registrado).
+ *
+ * Sigue sin haber ABM de Puesto Desempeñado ni Situación de Revista: no son campos del registro de
+ * 130. Actividad tampoco: ARCA solo acepta las declaradas para el domicilio, así que se administran
+ * dentro de cada Sucursal.
  */
-const ARCA_PATHS = ['/afip', '/obras-sociales', '/arca/sucursales', '/convenios', '/arca/categorias', '/arca/tipos-servicio', '/arca/modalidades-contratacion', '/arca/modalidades-liquidacion'];
+const ARCA_NOMENCLADOR_PATHS = ['/obras-sociales', '/arca/sucursales', '/arca/tipos-servicio', '/arca/modalidades-contratacion', '/arca/modalidades-liquidacion'];
+const ARCA_PATHS = ['/afip', ...ARCA_NOMENCLADOR_PATHS, '/convenios', '/arca/categorias'];
+
+/** ABM de Empresas ("Empresas | Global"). La ficha de cada una vive aparte, en el bloque FICHAS. */
+const EMPRESAS_PATH = '/empresas';
+
+/**
+ * Subgrupo "Usuarios" (dentro de Configuración).
+ *
+ * Era una sección de primer nivel, "Admin USUARIOS", y no se sostenía: no es un módulo de trabajo
+ * como Admin GENERAL —donde se opera todos los días con contratos, pedidos y vacaciones—, son los
+ * catálogos con los que se clasifica a una persona. Es exactamente el mismo tipo de cosa que ARCA:
+ * se configura y casi no se toca.
+ *
+ * `/users` va PRIMERO porque es la entidad; Áreas, Cargos, Niveles y Roles son los atributos con los
+ * que se la describe, y van alfabéticos detrás. Mismo criterio que el membrete en "Plantillas".
+ */
+const USUARIOS_PATH = '/users';
+const USUARIOS_PATHS = [USUARIOS_PATH, '/areas', '/positions', '/levels', '/roles'];
 
 /**
  * Subgrupos colapsables de Configuración. `storageKey` persiste el abierto/cerrado y
@@ -61,12 +88,16 @@ const ARCA_PATHS = ['/afip', '/obras-sociales', '/arca/sucursales', '/convenios'
 const CONFIG_GROUPS = [
   { key: 'plantillas', storageKey: 'configPlantillasOpen', paths: PLANTILLAS_PATHS },
   { key: 'arca', storageKey: 'configArcaOpen', paths: ARCA_PATHS },
+  { key: 'usuarios', storageKey: 'configUsuariosOpen', paths: USUARIOS_PATHS },
 ] as const;
+
+/** El subgrupo al que pertenece una ruta (o `undefined` si no está en ninguno). */
+const grupoDeRuta = (pathname: string) => CONFIG_GROUPS.find((g) => (g.paths as readonly string[]).includes(pathname));
 
 export const MobileNavbar: React.FC = () => {
   const { user, logout, hasPermission } = useAuthStore();
-  const { theme, toggleTheme } = useThemeStore();
   const { selectedClient } = useClientContextStore();
+  const { selectedEmpresa } = useEmpresaContextStore();
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -77,12 +108,15 @@ export const MobileNavbar: React.FC = () => {
     return null;
   }
 
-  // Estado del acordeón persistente: "users" | "general" | null
+  // Estado del acordeón persistente: "general" | "config" | null.
+  // Un valor guardado de "users" (la sección que se eliminó) ya no matchea ninguna sección y dejaría
+  // las dos colapsadas al entrar: se traduce a "general", que es el default.
   const [openAdminSection, setOpenAdminSection] = useState<string | null>(() => {
-    return localStorage.getItem('adminOpenSection') || 'general';
+    const guardado = localStorage.getItem('adminOpenSection');
+    return guardado === 'config' ? 'config' : 'general';
   });
 
-  const toggleAdminSection = (section: 'users' | 'general' | 'config' | 'management') => {
+  const toggleAdminSection = (section: 'general' | 'config') => {
     const newVal = openAdminSection === section ? null : section;
     setOpenAdminSection(newVal);
     if (newVal) localStorage.setItem('adminOpenSection', newVal);
@@ -92,7 +126,7 @@ export const MobileNavbar: React.FC = () => {
   // Subgrupos colapsables dentro de Configuración ("Plantillas", "ARCA"). Su estado vive acá
   // (y no en NavMenu) porque NavMenu se redefine en cada render del padre y perdería el estado interno.
   // Cada uno arranca abierto si lo dejaste abierto, o si entrás directo a una de sus páginas.
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => Object.fromEntries(CONFIG_GROUPS.map((g) => [g.key, localStorage.getItem(g.storageKey) === 'true' || (g.paths as readonly string[]).includes(location.pathname)])));
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => Object.fromEntries(CONFIG_GROUPS.map((g) => [g.key, localStorage.getItem(g.storageKey) === 'true' || grupoDeRuta(location.pathname)?.key === g.key])));
   const toggleGroup = (key: string) => {
     const group = CONFIG_GROUPS.find((g) => g.key === key);
     if (!group) return;
@@ -110,7 +144,7 @@ export const MobileNavbar: React.FC = () => {
       groupsMounted.current = true;
       return;
     }
-    const group = CONFIG_GROUPS.find((g) => (g.paths as readonly string[]).includes(location.pathname));
+    const group = grupoDeRuta(location.pathname);
     if (group) setOpenGroups((prev) => ({ ...prev, [group.key]: true }));
   }, [location.pathname]);
   const [adminCounts, setAdminCounts] = useState<AdminCounts>({ clients: 0, tenants: 0, roles: 0, users: 0, areas: 0, positions: 0, levels: 0, projects: 0 });
@@ -203,9 +237,17 @@ export const MobileNavbar: React.FC = () => {
 
       // Admin GENERAL Items
       if (hasPermission('admin_clients:view')) base.push({ path: '/clients', icon: faUsers, label: 'Clientes', scope: 'global', count: adminCounts.clients });
-      if (hasPermission('admin_projects:view')) base.push({ path: '/admin/projects', icon: faBriefcase, label: 'Proyectos', scope: 'global', count: adminCounts.projects });
+      // Sufijo "| Global" en los que tienen una versión acotada dentro de una ficha: "Proyectos"
+      // aparece en la ficha del cliente y "Contratos" en la de la empresa, y sin marca nada decía
+      // cuál era cuál. Se califica el GLOBAL, no el de la ficha, porque estando adentro de una ficha
+      // lo acotado es lo que el usuario espera.
+      //
+      // "| Global" y no "Todos los…": deja el sustantivo adelante —así el ítem se busca y se ordena
+      // por lo que es, no por el calificador— y sigue la convención que ya usa el menú
+      // ("Dropbox | Documentos", "Empresa/s | Membrete/s y firma").
+      if (hasPermission('admin_projects:view')) base.push({ path: '/admin/projects', icon: faBriefcase, label: 'Proyectos | Global', scope: 'global', count: adminCounts.projects });
       if (hasPermission('admin_sedes:view')) base.push({ path: '/admin/sedes', icon: faBuilding, label: 'Sedes', scope: 'global' });
-      if (hasPermission('admin_contracts:view')) base.push({ path: '/admin/contracts', icon: faFileContract, label: 'Contratos', scope: 'global' });
+      if (hasPermission('admin_contracts:view')) base.push({ path: '/admin/contracts', icon: faFileContract, label: 'Contratos | Global', scope: 'global' });
       if (hasPermission('admin_activity_logs:view')) base.push({ path: '/requests', icon: faFileText, label: 'Novedades', scope: 'global', dividerTop: true });
       if (hasPermission('admin_orders:view')) base.push({ path: '/orders', icon: faShoppingCart, label: 'Pedidos', scope: 'global' });
       if (hasPermission('admin_vacations:view')) base.push({ path: '/vacations', icon: faUmbrellaBeach, label: 'Vacaciones', scope: 'global' });
@@ -233,13 +275,20 @@ export const MobileNavbar: React.FC = () => {
       // se muestran a quien ya administra los tipos de contrato (Contratos FRAME).
       // Contratos y Estados viven en un solo ítem con dos tabs: alcanza con cualquiera de los tres permisos.
       if (hasPermission('config_contratos:view') || hasPermission('config_estados:view') || hasPermission('config_contratos_frame:view')) base.push({ path: '/contratos', icon: faFileContract, label: 'Contratos', scope: 'global' });
-      if (hasPermission('config_empresas:view')) base.push({ path: '/empresas', icon: faBuilding, label: 'Empresas', scope: 'global' });
+      if (hasPermission('config_empresas:view')) base.push({ path: '/empresas', icon: faBuilding, label: 'Empresas | Global', scope: 'global' });
       if (hasPermission('config_membretes:view')) base.push({ path: '/empresas-membretes', icon: faFilePdf, label: 'Empresa/s | Membrete/s y firma', scope: 'global' });
-      if (hasPermission('config_escaneo_dropbox:view')) base.push({ path: '/escaneo-dropbox', icon: faArrowsRotate, label: 'Dropbox | Documentos', scope: 'global' });
+      // Las dos son CONFIGURACIÓN de la integración, y se nombran por lo que se configura en cada una:
+      // acá la conexión con Dropbox, y en la de abajo la casilla desde la que se detectan los avisos
+      // de Dropbox Sign. "Documentos" y "Firmas" describían el módulo, no la pantalla, y chocaban con
+      // "Dropbox | Documentos" de Admin GENERAL, que sí es el módulo.
+      if (hasPermission('config_escaneo_dropbox:view')) base.push({ path: '/escaneo-dropbox', icon: faPlug, label: 'Dropbox | Conexión', scope: 'global' });
       // Comparte permiso con el escaneo de Dropbox: las dos configuran la misma integración.
-      if (hasPermission('config_escaneo_dropbox:view')) base.push({ path: '/dropbox-sign', icon: faFileSignature, label: 'DropboxSign | Firmas', scope: 'global' });
+      if (hasPermission('config_escaneo_dropbox:view')) base.push({ path: '/dropbox-sign', icon: faFileSignature, label: 'DropboxSign | Email', scope: 'global' });
       // Dentro del subgrupo "ARCA" se muestra como "Conexión" (el organismo ya lo nombra el grupo).
-      if (hasPermission('config_afip:view')) base.push({ path: '/afip', icon: faLandmark, label: 'Conexión', scope: 'global' });
+      // El ícono es el de conexión y NO el del organismo: `faLandmark` ya lo lleva el encabezado del
+      // grupo, así que repetirlo dejaba dos íconos idénticos uno debajo del otro y no distinguía la
+      // pantalla. Es el mismo `faPlug` que la conexión de Dropbox: misma clase de cosa, mismo ícono.
+      if (hasPermission('config_afip:view')) base.push({ path: '/afip', icon: faPlug, label: 'Conexión', scope: 'global' });
       // Tablas oficiales del organismo: comparten un solo permiso porque son el mismo tipo de
       // nomenclador (se siembran desde ARCA y casi no se editan), no tres módulos distintos.
       if (hasPermission('config_arca_sucursales:view')) base.push({ path: '/arca/sucursales', icon: faLocationDot, label: 'Sucursales', scope: 'global' });
@@ -305,14 +354,14 @@ export const MobileNavbar: React.FC = () => {
     // Orden alfabético (respeta español: ignora acentos y mayúsculas)
     const byLabel = (a: { label: string }, b: { label: string }) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' });
 
-    // Partición de items: Admin Usuarios, Admin General, Configuración y GESTIÓN
-    const userAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ['/users', '/roles', '/areas', '/positions', '/levels'].includes(item.path)) : adminItems.filter((item) => ['/roles', '/areas', '/positions', '/levels', '/users'].includes(item.path))).sort(byLabel);
-
+    // Partición de items: Admin General y Configuración. Lo que era "Admin Usuarios" pasó a ser un
+    // subgrupo de Configuración (ver `usuariosGroup`), así arriba queda solo el módulo de trabajo.
     const generalAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ['/tenants'].includes(item.path)) : adminItems.filter((item) => ['/admin/projects', '/admin/contracts', '/orders', '/vacations', '/requests', '/documents'].includes(item.path))).sort(byLabel);
 
     // Ojo: los paths de CONFIG_GROUPS (Plantillas, ARCA) NO van acá, se agrupan aparte en su subgrupo.
-    const configPaths = ['/requests/config', '/order-types', '/shifts', '/vacations-rules', '/holidays', '/clients', '/centros-costo', '/bancos', '/empresas', '/contratos', '/releases-tipos', '/admin/sedes', '/escaneo-dropbox', '/dropbox-sign'];
-    // "Mi Perfil" se incluye como un item más para que entre en el orden alfabético
+    const configPaths = ['/requests/config', '/order-types', '/shifts', '/vacations-rules', '/holidays', '/clients', '/centros-costo', '/bancos', '/contratos', '/releases-tipos', '/admin/sedes', '/escaneo-dropbox', '/dropbox-sign'];
+    // "Mi Perfil" está en los DOS lados a propósito: como atajo en la barra de arriba (junto al
+    // usuario) y acá, para quien lo busca recorriendo el menú. Entra en el orden alfabético.
     const profileItem = { path: '/mi-perfil', icon: faIdCard, label: 'Mi Perfil', scope: 'global' as const };
 
     // Subgrupo "Plantillas": el membrete va primero (prerrequisito) y el resto alfabético.
@@ -323,23 +372,57 @@ export const MobileNavbar: React.FC = () => {
     ];
     const plantillasGroup = { path: '#plantillas', groupKey: 'plantillas', icon: faFilePdf, label: 'Plantillas', scope: 'global' as const, children: plantillasChildren };
 
-    // Subgrupo "ARCA": respeta el orden de ARCA_PATHS (el del formulario de altas del organismo, ver
-    // el comentario de esa constante). A diferencia de los demás, NO se ordena alfabéticamente.
-    const arcaChildren = ARCA_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems;
+    // Subgrupo "ARCA": respeta el orden de ARCA_PATHS (ver el comentario de esa constante). A
+    // diferencia de los demás, NO se ordena alfabéticamente. El encabezado se inserta antes del
+    // primer nomenclador presente, para que no quede colgado si el usuario no tiene ese permiso.
+    const arcaChildren: any[] = [];
+    for (const p of ARCA_PATHS) {
+      const item = adminItems.find((i) => i.path === p);
+      if (!item) continue;
+      if (ARCA_NOMENCLADOR_PATHS.includes(p) && !arcaChildren.some((c) => c.sectionKey === 'nomencladores')) {
+        arcaChildren.push({ path: '#arca-nomencladores', sectionKey: 'nomencladores', section: 'Nomencladores de ARCA', hint: 'Universales: se importan una vez y valen para todos los CUIT.' });
+      }
+      arcaChildren.push(item);
+    }
     const arcaGroup = { path: '#arca', groupKey: 'arca', icon: faLandmark, label: 'ARCA', scope: 'global' as const, children: arcaChildren };
+
+    // Subgrupo "Usuarios": la entidad primero y sus catálogos detrás, en el orden de USUARIOS_PATHS.
+    const usuariosChildren = USUARIOS_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems;
+    const usuariosGroup = { path: '#usuarios', groupKey: 'usuarios', icon: faUserGear, label: 'Usuarios', scope: 'global' as const, children: usuariosChildren };
+
+    /**
+     * En Configuración queda solo el LISTADO de empresas, calificado como "| Global".
+     *
+     * Abrir la ficha de una empleadora subió al bloque FICHAS: es la operación de todos los días, no
+     * configuración. Lo que queda acá es el ABM, y lleva el mismo sufijo que Proyectos y Contratos
+     * para que no se confunda con la ficha abierta.
+     */
+    const empresasItem = adminItems.find((item) => item.path === EMPRESAS_PATH);
 
     const configItems = [
       ...adminItems.filter((item) => configPaths.includes(item.path)),
       ...(hasPermission('config_profile:view') ? [profileItem] : []),
       ...(plantillasChildren.length > 0 ? [plantillasGroup] : []),
       ...(arcaChildren.length > 0 ? [arcaGroup] : []),
+      ...(usuariosChildren.length > 0 ? [usuariosGroup] : []),
+      ...(empresasItem ? [empresasItem] : []),
     ].sort(byLabel) as any[];
     // "Import WP" es un módulo temporal → va al FINAL de Configuración (después del orden alfabético).
     const importItem = adminItems.find((item) => item.path === '/users/import-wp');
     if (importItem) configItems.push(importItem);
 
     const renderMenuItem = (item: any, isChild = false) => {
-      // Subgrupo colapsable (ej: "Plantillas", "ARCA"). Debe ir primero: no es un link navegable.
+      // Encabezado de sección dentro de un subgrupo (ej: "Nomencladores de ARCA"). No es navegable:
+      // separa lo universal de lo que no lo es, que es la distinción que el menú venía escondiendo.
+      if (item.section) {
+        return (
+          <div key={item.path} className="px-2 pt-3 pb-1 select-none" title={item.hint}>
+            <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">{item.section}</span>
+          </div>
+        );
+      }
+
+      // Subgrupo colapsable (ej: "Plantillas", "ARCA"). No es un link navegable.
       if (item.children) {
         const isOpen = !!openGroups[item.groupKey];
         return (
@@ -455,20 +538,8 @@ export const MobileNavbar: React.FC = () => {
           </div>
         )}
 
-        {/* ADMIN USUARIOS */}
-        {userAdminItems.length > 0 && (
-          <div className="px-2 mb-2">
-            <button onClick={() => toggleAdminSection('users')} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors pb-2 pt-2">
-              <span>
-                <FontAwesomeIcon icon={faUsersGear} className="mr-2 h-4 w-4" />
-                Admin <span className="uppercase">Usuarios</span>
-              </span>
-              <FontAwesomeIcon icon={openAdminSection === 'users' ? faChevronDown : faChevronRight} className="h-3 w-3" />
-            </button>
-
-            {openAdminSection === 'users' && <nav className="space-y-1 pb-2">{userAdminItems.map((item) => renderMenuItem(item))}</nav>}
-          </div>
-        )}
+        {/* "Admin USUARIOS" ya no es una sección de primer nivel: Áreas, Cargos, Niveles, Roles y
+            Usuarios son catálogos, no un módulo de trabajo, y viven en Configuración → Usuarios. */}
 
         {/* CONFIGURACIÓN */}
         {configItems.length > 0 && (
@@ -493,6 +564,46 @@ export const MobileNavbar: React.FC = () => {
     const hasClientsPermission = hasPermission('client:view');
     return !isSuperAdminTenant && hasClientsPermission;
   }, [user?.tenantSlug, hasPermission]);
+
+  /** Empresa comparte permiso con su ABM: es la misma entidad, vista como eje de trabajo. */
+  const showEmpresaContext = useMemo(() => {
+    const isSuperAdminTenant = user?.tenantSlug === 'superadmin';
+    return !isSuperAdminTenant && hasPermission('config_empresas:view');
+  }, [user?.tenantSlug, hasPermission]);
+
+  /**
+   * Bloque FICHAS: abrir la ficha de una empleadora o de un cliente.
+   *
+   * Se llamaba "Contexto" y era una promesa incumplida: NINGUNO de los dos filtra nada fuera de sus
+   * propias subpáginas, que además resuelven a quién muestran desde la URL y no desde el store.
+   * Admin GENERAL y Configuración muestran todo igual. Ver `FichasHeader` para el detalle.
+   *
+   * Empresa va PRIMERO: de ella cuelga la operación de ARCA, que es el trabajo de todos los días.
+   *
+   * Es un VALOR JSX, no un componente definido acá adentro. Un `const X: React.FC` dentro del cuerpo
+   * es un tipo de componente nuevo en cada render del padre, así que React desmonta y vuelve a montar
+   * el subárbol y los selectores perderían su estado (el desplegable se cerraría solo). Es el mismo
+   * motivo por el que el estado de los subgrupos de `NavMenu` vive en el padre.
+   */
+  const contextBlocks = (showClientContext || showEmpresaContext) && (
+    <div>
+      <FichasHeader />
+      <div className="space-y-1">
+        {showEmpresaContext && (
+          <div>
+            <EmpresaSelector />
+            {selectedEmpresa && <EmpresaContextMenu />}
+          </div>
+        )}
+        {showClientContext && (
+          <div>
+            <ClientSelector />
+            {selectedClient && <ClientContextMenu />}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   const LogoutButton: React.FC<{ onClick?: () => void; className?: string }> = ({ onClick, className = '' }) => (
     <button
@@ -563,9 +674,15 @@ export const MobileNavbar: React.FC = () => {
                 </button>
               )} */}
 
-              <button onClick={toggleTheme} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                {theme === 'light' ? <FontAwesomeIcon icon={faMoon} className="h-5 w-5 text-gray-600" /> : <FontAwesomeIcon icon={faSun} className="h-5 w-5 text-gray-300" />}
-              </button>
+              {/* Acceso rápido a "Mi Perfil". Lleva el texto al lado porque la credencial sola no se
+                  entendía: en una fila de íconos sueltos no hay nada que diga qué abre. También está
+                  en Configuración, para quien lo busca por el menú. */}
+              {hasPermission('config_profile:view') && (
+                <Link to="/mi-perfil" title="Mi Perfil" className={`inline-flex items-center gap-2 px-2.5 py-2 rounded text-sm font-medium transition-colors ${isActive('/mi-perfil') ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                  <FontAwesomeIcon icon={faIdCard} className="h-5 w-5" />
+                  <span className="hidden sm:inline">Mi Perfil</span>
+                </Link>
+              )}
               <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-gray-800 py-2 border-t border-gray-200 lg:border-hidden dark:border-gray-700 px-4 hidden lg:block">
                 <LogoutButton onClick={() => setOpen(false)} />
               </div>
@@ -588,15 +705,7 @@ export const MobileNavbar: React.FC = () => {
 
           <div className="flex flex-col h-full">
             <div className="flex-1 overflow-y-auto p-4 pt-1 space-y-3">
-              {showClientContext && (
-                <div className="bg-white dark:bg-gray-800 mb-4">
-                  <div>
-                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Cliente</div>
-                    <ClientSelector />
-                  </div>
-                  <div>{selectedClient && <ClientContextMenu />}</div>
-                </div>
-              )}
+              {contextBlocks && <div className="bg-white dark:bg-gray-800 mb-4">{contextBlocks}</div>}
               <div>
                 <NavMenu onItemClick={() => setOpen(false)} />
               </div>
@@ -614,16 +723,14 @@ export const MobileNavbar: React.FC = () => {
         </div>
       </nav>
 
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:bg-white lg:dark:bg-gray-800 lg:border-r lg:border-gray-200 lg:dark:border-gray-700">
+      {/* `lg:w-sidebar` es un token de Tailwind: el contenido usa `lg:pl-sidebar` y los dos tienen
+          que moverse juntos (ver `tailwind.config.js`). */}
+      <aside className="hidden lg:flex lg:flex-col lg:w-sidebar lg:fixed lg:inset-y-0 lg:bg-white lg:dark:bg-gray-800 lg:border-r lg:border-gray-200 lg:dark:border-gray-700">
         <div className="flex flex-col flex-1 min-h-0">
           <div className="flex flex-col pt-5 pb-4 overflow-y-auto mt-12">
-            {showClientContext && (
+            {contextBlocks && (
               <div className="px-3">
-                <div className="bg-white dark:bg-gray-800 dark:border-gray-700 pt-4">
-                  <div className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider px-2 pb-2">Cliente</div>
-                  <ClientSelector />
-                  {selectedClient && <ClientContextMenu />}
-                </div>
+                <div className="bg-white dark:bg-gray-800 dark:border-gray-700 pt-4">{contextBlocks}</div>
               </div>
             )}
             <div className="px-3 mb-4">

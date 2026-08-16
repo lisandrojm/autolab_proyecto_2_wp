@@ -3,17 +3,11 @@ import { faBriefcaseMedical, faStar } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
 import { ObraSocialDefaultsTab } from "../components/catalog/ObraSocialDefaultsTab";
 import { createSimpleCatalogApi } from "../api/simpleCatalog";
+// El "ID Externo" de Obras Sociales siempre fue el código RNOS. El formato oficial vive en un solo
+// lugar porque lo comparten este catálogo, la ficha de la empresa y el ABM de Empresas.
+import { formatRnos } from "../utils/rnos";
 
 const obrasSocialesApi = createSimpleCatalogApi("/obras-sociales");
-
-/** El "ID Externo" de Obras Sociales siempre fue el código RNOS: se muestra con los guiones del
- *  formato oficial (X-XXXX-X), rellenando con ceros a la izquierda hasta 6 dígitos. */
-const formatRnos = (raw: string): string => {
-  const digits = raw.replace(/\D/g, "");
-  if (!digits) return "";
-  const padded = digits.padStart(6, "0").slice(-6);
-  return `${padded[0]}-${padded.slice(1, 5)}-${padded[5]}`;
-};
 
 const sanitizeRnos = (v: string): string => v.replace(/\D/g, "");
 

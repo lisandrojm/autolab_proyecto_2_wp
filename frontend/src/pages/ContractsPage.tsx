@@ -29,6 +29,8 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { ContractBulkAfipTab, ContractBulkFirmaTab } from "../components/contratos/ContractBulkTabs";
 import { ContractDropboxTab, fetchDropboxCounts, InstructivoParaFirmar } from "../components/contratos/ContractDropboxTabs";
+import { AlcanceBanner } from "../components/context/AlcanceBanner";
+import { useEmpresaContextStore } from "../stores/empresaContextStore";
 import { firmaDigitalAPI, FirmaDigitalConfig } from "../api/firmaDigital";
 
 /** Mismas opciones que usa el filtro "Rol/es" del tab Equipo de Gestionar Equipo. */
@@ -120,6 +122,7 @@ const tabBtnClass = (active: boolean): string =>
 
 export const ContractsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { selectedEmpresa } = useEmpresaContextStore();
   // "Gestión de Contratos" es la pestaña de trabajo (y la primera), así que es la que abre por
   // defecto. Con ?tab=contracts se entra al listado, y desde Gestionar Equipo se sigue llegando con
   // ?tab=management&projectId=... para caer filtrado por ese proyecto.
@@ -427,6 +430,10 @@ export const ContractsPage: React.FC = () => {
         content: helpEntry?.content,
       }}
       shouldShowInfo={hasHelp(HELP_KEY)}
+      // Lista los contratos de TODAS las empleadoras. Es el alcance correcto para esta pantalla —acá
+      // se asigna la empresa a los que todavía no la tienen—, pero con una empresa activa en el
+      // contexto hay que decirlo: es la misma pantalla que su "Contratos", sin el corte.
+      preSearchContent={<AlcanceBanner eje="empresa" modo="global" irAlFiltrado={selectedEmpresa ? `/empresas/${selectedEmpresa._id}/contratos` : undefined} />}
       searchAndFilters={
         <div className="space-y-4">
           {/* Pestañas principales de la página */}

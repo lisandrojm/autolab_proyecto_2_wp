@@ -6,9 +6,8 @@ import { z } from "zod";
 import { useTranslation } from "react-i18next";
 import { Logo } from "../components/ui/Logo";
 import { useAuthStore } from "../stores/authStore";
-import { useThemeStore } from "../stores/themeStore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMoon, faSun, faMagicWandSparkles, faCheckCircle, faTimesCircle, faEye, faEyeSlash, faBuilding, faLayerGroup, faMobileScreen, faLaptop } from "@fortawesome/free-solid-svg-icons";
+import { faMagicWandSparkles, faCheckCircle, faTimesCircle, faEye, faEyeSlash, faBuilding, faLayerGroup, faMobileScreen, faLaptop } from "@fortawesome/free-solid-svg-icons";
 
 // ===== Validación =====
 const loginWithClientSchema = z.object({
@@ -59,7 +58,6 @@ export const LoginPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { login } = useAuthStore();
-  const { theme, toggleTheme } = useThemeStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [lastErrorObj, setLastErrorObj] = useState<any>(null);
@@ -317,9 +315,7 @@ export const LoginPage: React.FC = () => {
           {/* <button onClick={handleLanguageToggle} className="p-2 rounded bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-all duration-200" title="Toggle Language">
             <FontAwesomeIcon icon={faGlobe} className="h-5 w-5 text-gray-600 dark:text-gray-300" />
           </button> */}
-          <button onClick={toggleTheme} className="p-2 rounded bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-all duration-200" title="Toggle Theme">
-            {theme === "light" ? <FontAwesomeIcon icon={faMoon} className="h-5 w-5 text-gray-600" /> : <FontAwesomeIcon icon={faSun} className="h-5 w-5 text-gray-300" />}
-          </button>
+          {/* El cambio de tema se sacó: la app es siempre oscura (ver `stores/themeStore.ts`). */}
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 import React from "react";
 
-export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels" | "pdfTemplates" | "vacations" | "vacationsRules" | "activityLogs" | "projectTeam" | "projects" | "sedes" | "contracts" | "categoriasSat" | "centrosCosto" | "contratosFrame" | "empresas" | "membretes" | "bancos" | "holidays" | "funcionesFrame" | "miPerfil" | "requestsConfig" | "obrasSociales" | "orderTypes" | "releases" | "shifts" | "importUsersWp" | "arcaSucursales" | "arcaModalidadContratacion" | "arcaTipoServicio" | "arcaModalidadLiquidacion";
+export type HelpKey = "fichas" | "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels" | "pdfTemplates" | "vacations" | "vacationsRules" | "activityLogs" | "projectTeam" | "projects" | "sedes" | "contracts" | "categoriasSat" | "centrosCosto" | "contratosFrame" | "empresas" | "membretes" | "bancos" | "holidays" | "funcionesFrame" | "miPerfil" | "requestsConfig" | "obrasSociales" | "orderTypes" | "releases" | "shifts" | "importUsersWp" | "arcaSucursales" | "arcaModalidadContratacion" | "arcaTipoServicio" | "arcaModalidadLiquidacion";
 
 export type HelpEntry = {
   title: string;
@@ -12,6 +12,16 @@ export type HelpEntry = {
 const helpResources = {
   es: {
     help: {
+      // Fichas (bloque de arriba del menú lateral)
+      "fichas.title": "Fichas",
+      "fichas.description": "Abrí la ficha de una empresa o de un cliente para trabajar en sus secciones.",
+      "fichas.items": [
+        "**No filtran el resto de la app**: Admin GENERAL y Configuración siguen mostrando todo. Cuando una pantalla sí está acotada, te lo dice arriba del título.",
+        "**Se abre una por vez**: activar una cierra la otra. Son entidades distintas y no se cruzan — un proyecto de un cliente puede tener contratos de dos empleadoras a la vez.",
+        "**Empresa**: la empleadora. De su ficha cuelgan los datos que ARCA lleva por CUIT (obras sociales, convenios, domicilios) y sus contratos.",
+        "**Cliente**: para quién es el trabajo. De su ficha cuelgan sus proyectos y sus usuarios.",
+      ],
+
       // Clients
       "clients.title": "Información de Clientes",
       "clients.description": "Gestión completa de clientes y su información",
@@ -420,6 +430,7 @@ const buildHelpContent = (key: HelpKey): React.ReactNode => {
 
 // Contenido compilado
 const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
+  fichas: { title: "Fichas", size: "sm", content: buildHelpContent("fichas") },
   clients: { title: "Información de Clientes", size: "sm", content: buildHelpContent("clients") },
   dashboard: { title: "Información del Dashboard", size: "sm", content: buildHelpContent("dashboard") },
   platform_dashboard: { title: "Dashboard de Plataforma", size: "sm", content: buildHelpContent("platform_dashboard") },

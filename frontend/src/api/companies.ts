@@ -18,7 +18,15 @@ export interface Company {
   // Membrete: logo y firma (imágenes). La aclaración/cargo reutilizan firmanteNombre/firmanteCargo.
   logoUrl?: string;
   signatureUrl?: string;
-  /** Obra social por defecto de la empresa (data.id del catálogo). Vacío = usa la global. */
+  /**
+   * Obras Sociales REGISTRADAS ante ARCA para este CUIT (Datos del Empleador → Obras Sociales).
+   * Referencias al catálogo global. Es un conjunto: ARCA lleva ~400 registradas por empleadora sobre
+   * un universo de 494, y solo acepta altas con una de ellas.
+   */
+  obrasSocialesIds?: string[];
+  /** Cuál de las registradas se usa si la persona no tiene una propia. Vacío = la global. */
+  obraSocialDefaultId?: number | null;
+  /** @deprecated Nombre viejo de `obraSocialDefaultId`. El server sirve los dos; usar el nuevo. */
   obraSocialId?: number | null;
   /** Ids de los Convenios Colectivos asociados a la empresa. */
   convenioIds?: string[];
@@ -27,6 +35,14 @@ export interface Company {
    * Sucursales, donde vive todo el dato (código, domicilio, actividades). Acá solo se eligen.
    */
   sucursalIds?: string[];
+  /**
+   * Elección habitual de esta empleadora dentro del nomenclador de ARCA, para no repetirla en cada
+   * alta. Guarda el código tal cual viaja al TXT.
+   */
+  defaultsArca?: {
+    tipoServicio?: string;
+    modalidadLiquidacion?: string;
+  };
   createdAt?: string;
   updatedAt?: string;
 }

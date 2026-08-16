@@ -133,7 +133,7 @@ export const MiPerfilPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="lg:pl-64 min-h-screen flex items-center justify-center">
+      <div className="lg:pl-sidebar min-h-screen flex items-center justify-center">
         <LoadingSpinner message="Cargando tu perfil..." />
       </div>
     );
@@ -141,7 +141,7 @@ export const MiPerfilPage: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="lg:pl-64 min-h-screen flex items-center justify-center">
+      <div className="lg:pl-sidebar min-h-screen flex items-center justify-center">
         <p className="text-gray-500">No se pudo cargar tu perfil.</p>
       </div>
     );

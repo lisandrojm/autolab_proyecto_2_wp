@@ -1,6 +1,5 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBell, faSun, faMoon, faSignOutAlt } from "@fortawesome/free-solid-svg-icons";
-import { useThemeStore } from "../../../../stores/themeStore";
+import { faBell, faSignOutAlt } from "@fortawesome/free-solid-svg-icons";
 import { useAuthStore } from "../../../../stores/authStore";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
@@ -14,7 +13,6 @@ interface TopBarProps {
 }
 
 export default function TopBar({ title, hasNotifications = false, onNotificationClick, userRole, userName }: TopBarProps) {
-  const { theme, toggleTheme } = useThemeStore();
   const { logout, user, tenantId } = useAuthStore();
   const navigate = useNavigate();
 
@@ -72,9 +70,7 @@ export default function TopBar({ title, hasNotifications = false, onNotification
           </div>
         )}
         <div className="flex items-center gap-1">
-          <button onClick={toggleTheme} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded bg-transparent text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Cambiar tema">
-            <FontAwesomeIcon icon={theme === "dark" ? faSun : faMoon} className="w-5 h-5" />
-          </button>
+          {/* El cambio de tema se sacó: la app es siempre oscura (ver `stores/themeStore.ts`). */}
           <button onClick={handleLogout} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded bg-transparent text-red-600 dark:text-red-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors" aria-label="Cerrar sesión">
             <FontAwesomeIcon icon={faSignOutAlt} className="w-5 h-5" />
           </button>

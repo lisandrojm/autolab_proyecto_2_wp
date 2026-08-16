@@ -6,10 +6,9 @@ import { z } from "zod";
 import { useTranslation } from "react-i18next";
 
 import { useAuthStore } from "../stores/authStore";
-import { useThemeStore } from "../stores/themeStore";
 import { useClientContextStore } from "../stores/clientContextStore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBuilding, faGlobe, faMoon, faSun, faEye, faEyeSlash, faUser, faEnvelope, faLock, faPhone } from "@fortawesome/free-solid-svg-icons";
+import { faBuilding, faGlobe, faEye, faEyeSlash, faUser, faEnvelope, faLock, faPhone } from "@fortawesome/free-solid-svg-icons";
 
 const DEMO_TENANT = "demo-tenant";
 
@@ -32,7 +31,6 @@ type RegisterClientForm = z.infer<typeof registerClientSchema>;
 export const RegisterClientPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { theme, toggleTheme } = useThemeStore();
   const { clearSelectedClient } = useClientContextStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -124,9 +122,7 @@ export const RegisterClientPage: React.FC = () => {
           <button onClick={handleLanguageToggle} className="p-2 rounded bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-all duration-200" title="Toggle Language">
             <FontAwesomeIcon icon={faGlobe} className="h-5 w-5 text-gray-600 dark:text-gray-300" />
           </button>
-          <button onClick={toggleTheme} className="p-2 rounded bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-all duration-200" title="Toggle Theme">
-            {theme === "light" ? <FontAwesomeIcon icon={faMoon} className="h-5 w-5 text-gray-600" /> : <FontAwesomeIcon icon={faSun} className="h-5 w-5 text-gray-300" />}
-          </button>
+          {/* El cambio de tema se sacó: la app es siempre oscura (ver `stores/themeStore.ts`). */}
         </div>
       </div>
 

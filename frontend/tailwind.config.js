@@ -58,9 +58,19 @@ export default {
           900: "#701a75",
         },
       },
+      // OJO: este es el ÚNICO `spacing` de `extend`. Si se agrega otro más arriba, la clave
+      // duplicada del literal pisa a esta en silencio y los tokens de acá dejan de generarse.
       spacing: {
         18: "4.5rem",
         88: "22rem",
+        /**
+         * Ancho del menú lateral fijo en desktop (17.25rem = 276px).
+         *
+         * Es un token y no un `w-64` suelto porque el mismo número va en el `<aside>` y en el padding
+         * izquierdo del contenido (`PageLayout`, `MiPerfilPage`): si se tocan por separado, el
+         * contenido se solapa con el menú. Eran 16rem (256px) y los ítems quedaban amontonados.
+         */
+        sidebar: "17.25rem",
       },
       animation: {
         "fade-in": "fadeIn 0.5s ease-in-out",

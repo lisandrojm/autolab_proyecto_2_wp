@@ -13,6 +13,7 @@ import { fuzzyMatch } from '../utils/searchHelpers';
 import { companiesAPI, Company, CompanyInput } from '../api/companies';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
 import { ConvenioSelector } from '../components/empresas/ConvenioSelector';
+import { ObraSocialSelector } from '../components/empresas/ObraSocialSelector';
 import { SucursalSelector } from '../components/empresas/SucursalSelector';
 import { arcaSucursalesAPI, ArcaSucursal } from '../api/arcaSucursales';
 import { getHelp, hasHelp } from '../data/help/helpContent';
@@ -21,6 +22,7 @@ const HELP_KEY = 'empresas' as const;
 
 /** Catálogo de convenios: se carga una vez para toda la página y se reusa en cada apertura del modal. */
 const conveniosApi = createSimpleCatalogApi('/convenios');
+const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
 
 const EMPTY_FORM: CompanyInput = {
   razonSocial: '',
@@ -38,6 +40,33 @@ const EMPTY_FORM: CompanyInput = {
   representanteLegalEmail: '',
   convenioIds: [],
   sucursalIds: [],
+  obrasSocialesIds: [],
+};
+
+/**
+ * Qué le falta a la empleadora para poder dar altas en ARCA.
+ *
+ * Convierte un `—` en una acción: sin convenios no hay categorías posibles y sin domicilios no hay
+ * dónde declarar el alta, así que la fila no está "incompleta" — está inhabilitada. Es la misma idea
+ * de resolver por configuración y no por persona, aplicada al listado: se ve de un vistazo cuál de
+ * las empleadoras va a frenar a todos sus contratos.
+ */
+const EstadoArca: React.FC<{ c: Company }> = ({ c }) => {
+  const faltan = [
+    ...((c.convenioIds || []).length === 0 ? ['convenios'] : []),
+    ...((c.sucursalIds || []).length === 0 ? ['domicilios'] : []),
+    ...((c.obrasSocialesIds || []).length === 0 ? ['obras sociales'] : []),
+  ];
+  if (faltan.length === 0) return null;
+  return (
+    <span
+      title={`Le falta registrar: ${faltan.join(', ')}. Hasta entonces, ninguno de sus contratos puede generar el alta de ARCA.`}
+      className="mt-1 inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+    >
+      <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5" />
+      Sin configurar para ARCA
+    </span>
+  );
 };
 
 export const EmpresasPage: React.FC = () => {
@@ -45,6 +74,9 @@ export const EmpresasPage: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
   const [cargandoConvenios, setCargandoConvenios] = useState(true);
+  // Catálogo global de Obras Sociales: la empresa registra cuáles tiene declaradas ante ARCA.
+  const [obrasSociales, setObrasSociales] = useState<SimpleCatalogItem[]>([]);
+  const [cargandoObrasSociales, setCargandoObrasSociales] = useState(true);
   // Catálogo de Sucursales de ARCA: la empresa solo elige cuáles le corresponden.
   const [sucursales, setSucursales] = useState<ArcaSucursal[]>([]);
   const [cargandoSucursales, setCargandoSucursales] = useState(true);
@@ -97,6 +129,15 @@ export const EmpresasPage: React.FC = () => {
       .finally(() => setCargandoSucursales(false));
   }, []);
 
+  // Mismo criterio que los convenios: son ~500 y el modal se abre muchas veces.
+  useEffect(() => {
+    obrasSocialesApi
+      .list()
+      .then(setObrasSociales)
+      .catch(() => sweetAlert.error('Error', 'No se pudieron cargar las obras sociales.'))
+      .finally(() => setCargandoObrasSociales(false));
+  }, []);
+
   const effectiveViewMode: ViewMode = isLarge ? viewMode : 'cards';
 
   const fetchCompanies = async () => {
@@ -145,6 +186,7 @@ export const EmpresasPage: React.FC = () => {
       representanteLegalEmail: c.representanteLegalEmail || '',
       convenioIds: (c.convenioIds || []).map((x) => String(x)),
       sucursalIds: (c.sucursalIds || []).map((x) => String(x)),
+      obrasSocialesIds: (c.obrasSocialesIds || []).map((x) => String(x)),
     });
     setShowModal(true);
   };
@@ -381,7 +423,10 @@ export const EmpresasPage: React.FC = () => {
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
               {filtered.map((c) => (
                 <tr key={c._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                  <td className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">{c.razonSocial}</td>
+                  <td className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">
+                    <span className="block">{c.razonSocial}</span>
+                    <EstadoArca c={c} />
+                  </td>
                   <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{c.cuit || '—'}</td>
                   <td className="px-4 py-3 text-gray-600 dark:text-gray-400 max-w-[280px] truncate" title={domicilioResumen(c)}>
                     {domicilioResumen(c) || '—'}
@@ -510,6 +555,15 @@ export const EmpresasPage: React.FC = () => {
           <div className="pt-4 border-t border-gray-100 dark:border-gray-700/50">
             <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Convenios colectivos</h4>
             <ConvenioSelector convenios={convenios} cargando={cargandoConvenios} value={form.convenioIds || []} onChange={(ids) => setForm((prev) => ({ ...prev, convenioIds: ids }))} />
+          </div>
+
+          {/* Obras sociales registradas ante ARCA para este CUIT */}
+          <div className="pt-4 border-t border-gray-100 dark:border-gray-700/50">
+            <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Obras sociales</h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              Las que este CUIT tiene registradas ante ARCA (&laquo;obras sociales relacionadas a su actividad&raquo;). El organismo solo acepta altas con una de ellas. Cuál se usa por defecto se elige en la ficha de la empresa, en ARCA &rarr; Obras Sociales.
+            </p>
+            <ObraSocialSelector obrasSociales={obrasSociales} cargando={cargandoObrasSociales} value={form.obrasSocialesIds || []} onChange={(ids) => setForm((prev) => ({ ...prev, obrasSocialesIds: ids }))} />
           </div>
 
           {/* Sucursales de ARCA asignadas */}

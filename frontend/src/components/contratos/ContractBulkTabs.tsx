@@ -750,6 +750,20 @@ export const ContractBulkAfipTab: React.FC<{
   // Genera el TXT de Alta masiva de ARCA para los contratos con datos completos del conjunto dado;
   // omite los incompletos (no se puede armar una línea válida) e informa cuántos quedaron afuera.
   const generarTxt = (items: { row: ImpositivoRow; result: AfipRowResult }[], filenameBase: string) => {
+    // Un TXT es de UNA empleadora: se sube logueado con su CUIT. Mezclar produce un archivo
+    // rechazado o, peor, altas cargadas bajo la empresa equivocada — que ARCA acepta sin chistar y
+    // recién se descubre después. Se corta ANTES de bajar el archivo.
+    //
+    // Se miran solo las filas que realmente entran: `buildAltaRecord` ya descarta las que no tienen
+    // empleadora fija, así que contar las candidatas de un contrato sin decidir daría un falso error.
+    const incluidas = items.filter((x) => buildAltaRecord(x.row, afipCat) !== null);
+    const empresasDelLote = [...new Set(incluidas.map((x) => String(x.row.empresaContratoId)))];
+    if (empresasDelLote.length > 1) {
+      const nombres = empresasDelLote.map((id) => companies.find((c) => c._id === id)?.razonSocial || id);
+      sweetAlert.error('El TXT sería de más de una empleadora', `El conjunto mezcla altas de ${nombres.join(' y ')}. El archivo se sube logueado con un solo CUIT: elegí una empresa en «Empresa Contrato» —o entrá desde el contexto de esa empresa— y generá un TXT por cada una.`);
+      return;
+    }
+
     const registros = items.map((x) => buildAltaRecord(x.row, afipCat)).filter((r): r is string => r !== null);
     if (registros.length === 0) {
       sweetAlert.error('Sin datos completos', 'Ningún contrato del conjunto tiene todos los datos ARCA cargados. Completá los faltantes (columna «Datos ARCA») antes de generar el TXT.');
@@ -1018,7 +1032,9 @@ export const ContractBulkAfipTab: React.FC<{
         )}
       </div>
 
-      {/* Filtro de Empresa Contrato como tabs — solo en Alta temprana de ARCA (en Constancia de CUIT no aplica). */}
+      {/* Filtro de Empresa Contrato como tabs — solo en Alta temprana de ARCA (en Constancia de CUIT
+          no aplica). Es el corte que decide de qué empleadora sale el TXT: el archivo se sube
+          logueado con UN CUIT, así que "Todas" sirve para mirar, no para generar (ver `generarTxt`). */}
       {filterTipo === 'alta_temprana_afip' && empresaOptions.length > 0 && (
         <div className="flex items-center border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
           <span className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap shrink-0">Empresa Contrato | </span>

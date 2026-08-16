@@ -1,7 +1,15 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { clientsAPI, type Client } from "../api/clients";
+import { type Client } from "../api/clients";
 
+/**
+ * Cuál es la ficha de cliente abierta.
+ *
+ * OJO con el nombre del archivo: NO es un contexto en el sentido de filtro global. Nada en la app
+ * lee esto para acotar una consulta — las pantallas del cliente (`/clients/:clientId/...`) resuelven
+ * de quién son desde la URL con `useParams`, y las globales listan todo. Acá solo vive qué ficha
+ * está abierta, para el chip del menú y sus links. Ver `components/context/FichasHeader.tsx`.
+ */
 interface Project {
   _id: string;
   name: string;
@@ -18,12 +26,11 @@ interface ClientContextState {
   clearSelectedClient: () => void;
   clearSelectedProject: () => void;
   clearAll: () => void;
-  ensureSelectedClient: () => Promise<Client | null>;
 }
 
 export const useClientContextStore = create<ClientContextState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       selectedClient: null,
       selectedProject: null,
 
@@ -36,28 +43,6 @@ export const useClientContextStore = create<ClientContextState>()(
       clearSelectedProject: () => set({ selectedProject: null }),
 
       clearAll: () => set({ selectedClient: null, selectedProject: null }),
-
-      ensureSelectedClient: async () => {
-        const { selectedClient } = get();
-
-        if (selectedClient) {
-          return selectedClient;
-        }
-
-        try {
-          // Intentar cargar cliente propio (para usuarios cliente)
-          const response = await clientsAPI.list({ limit: 1 });
-          if (response.clients.length > 0) {
-            const client = response.clients[0];
-            set({ selectedClient: client });
-            return client;
-          }
-        } catch (error) {
-          console.error("Error ensuring selected client:", error);
-        }
-
-        return null;
-      },
     }),
     {
       name: "client-context",

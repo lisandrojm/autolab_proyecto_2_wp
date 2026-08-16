@@ -11,6 +11,7 @@ import { PageLayout } from '../components/ui/PageLayout';
 import { Modal } from '../components/ui/Modal';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { getHelp } from '../data/help/helpContent';
+import { empresaAssetUrl } from '../utils/empresaAssets';
 
 /**
  * ABM "Empresa/s | Membrete/s": se crea un membrete (logo + firma + aclaración/cargo) y se le asigna
@@ -19,11 +20,9 @@ import { getHelp } from '../data/help/helpContent';
  * Modelo 1:1 con Company: un "membrete" es una empresa con logo/firma cargados.
  */
 
-const getImageUrl = (url?: string) => {
-  if (!url) return '';
-  if (url.startsWith('blob:') || url.startsWith('http')) return url;
-  return `${import.meta.env.VITE_API_URL}${url}`;
-};
+// Vive en `utils/empresaAssets` desde que el contexto Empresa también muestra el membrete: una sola
+// implementación, para que las dos pantallas no puedan divergir.
+const getImageUrl = empresaAssetUrl;
 
 const domicilioResumen = (c: Company): string => [[c.domicilioCalle, c.domicilioNumero].filter(Boolean).join(' '), c.domicilioPisoDepto, c.localidad, c.provincia].filter(Boolean).join(', ');
 

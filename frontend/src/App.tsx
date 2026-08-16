@@ -59,6 +59,10 @@ import { ConveniosPage } from "./pages/ConveniosPage";
 import { CentrosCostoPage } from "./pages/CentrosCostoPage";
 import { ContratosPage } from "./pages/ContratosPage";
 import { EmpresasPage } from "./pages/EmpresasPage";
+// Contexto Empresa (la empleadora como eje, igual que Cliente).
+import { EmpresaInfoPage } from "./pages/empresa/EmpresaInfoPage";
+import { EmpresaObrasSocialesPage, EmpresaConveniosPage, EmpresaDomiciliosPage, EmpresaCategoriasPage, EmpresaDefaultsPage } from "./pages/empresa/EmpresaArcaPages";
+import { EmpresaContratosPage } from "./pages/empresa/EmpresaContratosPage";
 import { MembretesPage } from "./pages/MembretesPage";
 import { ContratosFramePage } from "./pages/ContratosFramePage";
 
@@ -72,14 +76,6 @@ const DashboardRouter: React.FC = () => {
   // Para cualquier otro rol, ir a Users
   return <UsersPage />;
 };
-
-// --- Wrapper para rutas de cliente con Outlet ---
-const ClientContextWrapper: React.FC = () => (
-  <>
-    {/* Aquí podés poner header o sidebar si querés */}
-    <Outlet />
-  </>
-);
 
 // --- Layout público (sin Navbar) ---
 const PublicLayout: React.FC = () => {
@@ -603,6 +599,67 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              {/* Contexto Empresa: la empleadora como eje, igual que Cliente. Adentro vive todo lo que
+                  ARCA lleva por CUIT ("Datos del Empleador"), sus contratos y su alta masiva. Los
+                  NOMENCLADORES universales quedan en Configuración → ARCA. */}
+              <Route
+                path="/empresas/:empresaId"
+                element={
+                  <ProtectedRoute>
+                    <EmpresaInfoPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/empresas/:empresaId/arca/obras-sociales"
+                element={
+                  <ProtectedRoute>
+                    <EmpresaObrasSocialesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/empresas/:empresaId/arca/convenios"
+                element={
+                  <ProtectedRoute>
+                    <EmpresaConveniosPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/empresas/:empresaId/arca/domicilios"
+                element={
+                  <ProtectedRoute>
+                    <EmpresaDomiciliosPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/empresas/:empresaId/arca/categorias"
+                element={
+                  <ProtectedRoute>
+                    <EmpresaCategoriasPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/empresas/:empresaId/arca/defaults"
+                element={
+                  <ProtectedRoute>
+                    <EmpresaDefaultsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/empresas/:empresaId/contratos"
+                element={
+                  <ProtectedRoute>
+                    <EmpresaContratosPage />
+                  </ProtectedRoute>
+                }
+              />
+              {/* No hay ruta de alta masiva por empresa: es la misma pantalla que
+                  Admin GENERAL → Contratos → Gestión de Contratos, que ya filtra por Empresa Contrato. */}
               <Route
                 path="/empresas-membretes"
                 element={
@@ -620,15 +677,9 @@ function App() {
                 }
               />
 
-              {/* Client Context Routes */}
-              <Route
-                path="/cliente/:id"
-                element={
-                  <ProtectedRoute>
-                    <ClientContextWrapper />
-                  </ProtectedRoute>
-                }
-              ></Route>
+              {/* Las pantallas del cliente son `/clients/:clientId/...` (ver más arriba). Acá hubo
+                  una `/cliente/:id` que renderizaba un `<Outlet />` sin rutas hijas: resto de un
+                  intento anterior de contexto, que no llevaba a ningún lado. */}
             </Route>
 
             {/* Mobile App Route SIN MobileNavbar (no está dentro de AppLayout) */}

@@ -152,7 +152,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, 
 
   return (
     <div className="bg-gray-100 dark:bg-gray-900">
-      <div className="lg:pl-64">
+      <div className="lg:pl-sidebar">
         <div className="px-4 sm:px-6 lg:px-8 pb-6">
           {/* Header sticky */}
           <div className="sticky top-16 z-20 mb-4 bg-gray-100 dark:bg-gray-900 border-b dark:border-slate-700">

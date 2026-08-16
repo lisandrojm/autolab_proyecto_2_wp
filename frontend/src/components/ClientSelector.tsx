@@ -4,8 +4,9 @@ import { clientsAPI, Client } from "../api/clients";
 import { useClientContextStore } from "../stores/clientContextStore";
 import { useAuthStore } from "../stores/authStore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faChevronRight, faSearch, faUsers, faXmark, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faSearch, faUsers, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { LoadingSpinner } from "./ui/LoadingSpinner";
+import { ContextChip } from "./context/ContextChip";
 
 export const ClientSelector: React.FC = () => {
   const { selectedClient, setSelectedClient, clearSelectedClient } = useClientContextStore();
@@ -99,27 +100,8 @@ export const ClientSelector: React.FC = () => {
 
   return (
     <div className="relative" ref={rootRef}>
-      <button onClick={() => setIsOpen((v) => !v)} className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white dark:bg-blue-900/30 rounded hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-colors">
-        <div className="flex items-center space-x-2 min-w-0 flex-1">
-          {selectedClient ? (
-            <>
-              <div className="w-5 h-5 rounded bg-primary-600 flex items-center justify-center flex-shrink-0">
-                <span className="text-white text-xs font-bold">{selectedClient.name.charAt(0).toUpperCase()}</span>
-              </div>
-              <span className="text-gray-900 dark:text-white truncate">{selectedClient.name}</span>
-              <span onClick={handleClearClient} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-500 flex-shrink-0 cursor-pointer" title="Limpiar selección">
-                <FontAwesomeIcon icon={faXmark} className="h-3 w-3 text-gray-500" />
-              </span>
-            </>
-          ) : (
-            <>
-              <FontAwesomeIcon icon={faUsers} className="h-4 w-4 text-gray-400" />
-              <span className="text-gray-500 dark:text-gray-400">Seleccionar...</span>
-            </>
-          )}
-        </div>
-        <FontAwesomeIcon icon={isOpen ? faChevronDown : faChevronRight} className="h-3 w-3 text-gray-400" />
-      </button>
+      {/* Mismo componente que el selector de Empresa: son dos ejes en paralelo, no una jerarquía. */}
+      <ContextChip eje="Cliente" icono={faUsers} valor={selectedClient?.name} detalle={selectedClient?.company || undefined} placeholder="Elegir cliente" abierto={isOpen} onToggle={() => setIsOpen((v) => !v)} onLimpiar={handleClearClient} />
 
       {isOpen && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-lg z-50 max-h-80 overflow-hidden">

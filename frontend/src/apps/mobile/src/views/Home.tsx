@@ -1,9 +1,8 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faShoppingCart, faUmbrellaBeach, faFileAlt, faReceipt, faUsers, faChartBar, faBell, faSun, faMoon, faSignOutAlt, faUserPlus } from "@fortawesome/free-solid-svg-icons";
+import { faShoppingCart, faUmbrellaBeach, faFileAlt, faReceipt, faUsers, faChartBar, faBell, faSignOutAlt, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useAuthStore } from "../../../../stores/authStore";
 import { useNotifications } from "../hooks/useNotifications";
-import { useThemeStore } from "../../../../stores/themeStore";
 import UserHeader from "../components/UserHeader";
 import { useProfile } from "../hooks/useProfile";
 import { ProfileData } from "../../../../api/personnel";
@@ -15,7 +14,6 @@ interface HomeProps {
 export default function Home({ onNavigate }: HomeProps) {
   const { user, logout } = useAuthStore();
   const { notifications, unreadCount, loading: notifLoading } = useNotifications();
-  const { theme, toggleTheme } = useThemeStore();
   const { profile } = useProfile();
 
   // FIX: Check permissions directly to avoid Admin global override
@@ -172,10 +170,7 @@ export default function Home({ onNavigate }: HomeProps) {
         <UserHeader user={user} />
 
         <div className="flex items-center gap-1">
-          <button onClick={toggleTheme} className="flex h-10 w-10 items-center justify-center rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-            <FontAwesomeIcon icon={theme === "dark" ? faSun : faMoon} className="w-5 h-5" />
-          </button>
-
+          {/* El cambio de tema se sacó: la app es siempre oscura (ver `stores/themeStore.ts`). */}
           <button onClick={handleLogout} className="flex h-10 w-10 items-center justify-center rounded text-red-600 dark:text-red-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors">
             <FontAwesomeIcon icon={faSignOutAlt} className="w-5 h-5" />
           </button>

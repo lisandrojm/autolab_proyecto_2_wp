@@ -8,6 +8,7 @@ import { shiftsAPI, Shift } from '../api/shifts';
 import { areasAPI, Area } from '../api/areas';
 import { useAuthStore } from '../stores/authStore';
 import { useClientContextStore } from '../stores/clientContextStore';
+import { AlcanceBanner } from '../components/context/AlcanceBanner';
 import { PageLayout } from '../components/ui/PageLayout';
 import { Card } from '../components/ui/Card';
 import { Modal } from '../components/ui/Modal';
@@ -24,7 +25,7 @@ import { getHelp, hasHelp } from '../data/help/helpContent';
 
 export const ProjectsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { setSelectedClient } = useClientContextStore();
+  const { setSelectedClient, selectedClient } = useClientContextStore();
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -307,6 +308,10 @@ export const ProjectsPage: React.FC = () => {
         content: helpEntry?.content,
       }}
       shouldShowInfo={hasHelp(HELP_KEY)}
+      // Esta pantalla NO respeta el contexto Cliente: lista los proyectos de todos. Con un cliente
+      // activo eso es indistinguible de una lista filtrada, así que se dice y se ofrece el atajo a la
+      // versión acotada.
+      preSearchContent={<AlcanceBanner eje="cliente" modo="global" irAlFiltrado={selectedClient ? `/clients/${selectedClient._id}/projects` : undefined} />}
       searchAndFilters={
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
           <div className="flex-1 w-full">

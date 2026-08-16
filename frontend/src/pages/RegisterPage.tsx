@@ -6,11 +6,10 @@ import { useTranslation } from "react-i18next";
 import { Logo } from "../components/ui/Logo";
 import { SuccessModal } from "../components/ui/SuccessModal";
 import { useAuthStore } from "../stores/authStore";
-import { useThemeStore } from "../stores/themeStore";
 import { registerTenantSchema, RegisterTenantForm } from "../validation/registerSchema";
 import { apiRegisterTenant } from "../api/auth";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserPlus, faMoon, faSun, faUser, faEnvelope, faBuilding, faPhone, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import { faUserPlus, faUser, faEnvelope, faBuilding, faPhone, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 
 function slugify(input: string): string {
   return (input || "")
@@ -31,7 +30,6 @@ export const RegisterPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { login } = useAuthStore();
-  const { theme, toggleTheme } = useThemeStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPwd, setShowPwd] = useState(false);
@@ -129,9 +127,7 @@ export const RegisterPage: React.FC = () => {
 
       <div className="absolute top-4 right-4 flex flex-col items-end gap-2">
         <div className="flex gap-2">
-          <button onClick={toggleTheme} className="p-2 rounded bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-all duration-200" title="Toggle Theme">
-            {theme === "light" ? <FontAwesomeIcon icon={faMoon} className="h-5 w-5 text-gray-600" /> : <FontAwesomeIcon icon={faSun} className="h-5 w-5 text-gray-300" />}
-          </button>
+          {/* El cambio de tema se sacó: la app es siempre oscura (ver `stores/themeStore.ts`). */}
         </div>
       </div>
 

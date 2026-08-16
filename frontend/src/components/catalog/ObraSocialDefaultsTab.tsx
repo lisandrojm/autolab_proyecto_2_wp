@@ -66,12 +66,12 @@ export const ObraSocialDefaultsTab: React.FC<Props> = ({ obrasSociales, api, for
     }
   };
 
-  const cambiarEmpresa = async (empresa: Company, obraSocialId: number | null) => {
+  const cambiarEmpresa = async (empresa: Company, obraSocialDefaultId: number | null) => {
     const previas = companies;
-    setCompanies((prev) => prev.map((c) => (c._id === empresa._id ? { ...c, obraSocialId } : c)));
+    setCompanies((prev) => prev.map((c) => (c._id === empresa._id ? { ...c, obraSocialDefaultId } : c)));
     setGuardando(empresa._id);
     try {
-      await companiesAPI.update(empresa._id, { obraSocialId });
+      await companiesAPI.update(empresa._id, { obraSocialDefaultId });
     } catch {
       sweetAlert.error("Error", "No se pudo guardar la obra social de la empresa.");
       setCompanies(previas);
@@ -131,8 +131,8 @@ export const ObraSocialDefaultsTab: React.FC<Props> = ({ obrasSociales, api, for
       ) : (
         <div className="space-y-2">
           {companies.map((c) => {
-            const usaGlobal = c.obraSocialId == null;
-            const propia = porDataId(c.obraSocialId);
+            const usaGlobal = c.obraSocialDefaultId == null;
+            const propia = porDataId(c.obraSocialDefaultId);
             const efectiva = usaGlobal ? global : propia;
             return (
               <div key={c._id} className="border border-gray-200 dark:border-gray-700 rounded p-3 flex flex-col lg:flex-row lg:items-center gap-3 justify-between">
@@ -158,7 +158,7 @@ export const ObraSocialDefaultsTab: React.FC<Props> = ({ obrasSociales, api, for
 
                   {!usaGlobal && (
                     <select
-                      value={c.obraSocialId ?? ""}
+                      value={c.obraSocialDefaultId ?? ""}
                       onChange={(e) => cambiarEmpresa(c, e.target.value ? Number(e.target.value) : null)}
                       disabled={guardando === c._id}
                       className={selectClass}

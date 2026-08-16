@@ -496,6 +496,11 @@ class UsersAPI {
       tipoContrato?: string;
       estadoContrato?: string;
       reemplazo?: string;
+      /**
+       * Empleadora FIJADA en el contrato. Lo usa el contexto Empresa: un alta de ARCA pertenece a la
+       * empleadora que se eligió, no a las candidatas que ofrece el proyecto.
+       */
+      empresaContratoId?: string;
       /** Varios estados a la vez (nombres). Lo usa Gestión de Contratos para pedirle al server solo
        *  los contratos con estado impositivo en vez de traerse el padrón entero. */
       estados?: string[];
@@ -508,6 +513,7 @@ class UsersAPI {
     if (params.clientId) searchParams.append("clientId", params.clientId);
     if (params.projectId) searchParams.append("projectId", params.projectId);
     if (params.metadataActivo) searchParams.append("metadataActivo", params.metadataActivo);
+    if (params.empresaContratoId) searchParams.append("empresaContratoId", params.empresaContratoId);
     if (params.roleName) searchParams.append("roleName", params.roleName);
     if (params.vigencia) searchParams.append("vigencia", params.vigencia);
     if (params.tipoContrato) searchParams.append("tipoContrato", params.tipoContrato);

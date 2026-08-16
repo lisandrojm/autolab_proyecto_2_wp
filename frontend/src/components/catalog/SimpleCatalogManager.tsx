@@ -352,7 +352,10 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                       {f.columnLabel || f.label}
                     </th>
                   ))}
-                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{externalIdLabel}</th>
+                {/* `w-px` + `whitespace-nowrap`: la columna se encoge a lo que mide el código y no
+                    lo parte. Un RNOS cortado en dos renglones ("9-0500-" / "8") deja de leerse como
+                    un código y no se puede cotejar de un vistazo contra un padrón de ARCA. */}
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">{externalIdLabel}</th>
                 <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
@@ -378,7 +381,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                         {extraDisplay(f, item[f.key])}
                       </td>
                     ))}
-                  <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono">{item.externalId ? (formatExternalId ? formatExternalId(item.externalId) : item.externalId) : '—'}</td>
+                  <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono whitespace-nowrap w-px">{item.externalId ? (formatExternalId ? formatExternalId(item.externalId) : item.externalId) : '—'}</td>
                   <td className="px-5 py-3 text-sm text-right">
                     <button onClick={() => openEdit(item)} className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 mr-3" title="Editar">
                       <FontAwesomeIcon icon={faEdit} />
