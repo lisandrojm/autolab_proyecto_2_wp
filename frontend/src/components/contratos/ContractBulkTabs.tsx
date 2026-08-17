@@ -54,6 +54,9 @@ const hoyStamp = (): string => {
 };
 
 /** Mismo estilo que las pestañas principales (ContractsPage.tsx) — para el filtro de Empresa como tabs. */
+/** Valor de la pestaña "Sin asignar": no es un id de empresa, es la ausencia de una. */
+const SIN_EMPRESA = '__sin_asignar__';
+
 const empresaTabClass = (active: boolean): string => `px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${active ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`;
 
 type TipoImpositivo = 'alta_temprana_afip' | 'constancia_cuit';
@@ -770,7 +773,11 @@ export const ContractBulkAfipTab: React.FC<{
       return;
     }
     const omitidos = items.length - registros.length;
-    downloadTxt(buildAltaTxt(registros), `${filenameBase}_${hoyStamp()}.txt`);
+    // El nombre lleva el CUIT de la empleadora, no su razón social: el archivo se sube logueado con
+    // ese CUIT y es el dato con el que se coteja. Además dos razones sociales parecidas dan nombres
+    // parecidos, y un TXT subido a la sesión equivocada ARCA lo acepta sin chistar.
+    const cuitLote = String(companies.find((c) => c._id === empresasDelLote[0])?.cuit ?? '').replace(/\D/g, '');
+    downloadTxt(buildAltaTxt(registros), `${filenameBase}${cuitLote ? `_${cuitLote}` : ''}_${hoyStamp()}.txt`);
     if (omitidos > 0) {
       sweetAlert.info('TXT generado', `Se incluyeron ${registros.length} alta(s). Se omitieron ${omitidos} contrato(s) por datos ARCA incompletos o mal cargados (por ejemplo, una fecha con un formato inesperado).`);
     } else {
@@ -791,11 +798,6 @@ export const ContractBulkAfipTab: React.FC<{
     return out;
   }, [rows, impositivoPorClave, afipCat]);
 
-  // Empresa(s) a las que se le puede atribuir el contrato: la fija guardada si ya se descargó/eligió
-  // una, o si no, todas las candidatas del proyecto (mismo criterio que el menú "Descargar con:" de
-  // ContractRowDocs) — así el filtro no deja afuera contratos que todavía no fijaron una empresa.
-  const empresasDelContrato = (r: ImpositivoRow): string[] => (r.empresaContratoId ? [r.empresaContratoId] : (r.contratoEmpresas || []).map((e) => e.id));
-
   // Filtros de la barra superior (búsqueda + filtro avanzado), sin el trámite ni los toggles propios
   // de cada pestaña: se usa tanto para la tabla como para los contadores de las pestañas, que deben
   // reflejar los filtros activos (p. ej. "Contratos: Vigentes") aunque pertenezcan al otro trámite.
@@ -813,17 +815,33 @@ export const ContractBulkAfipTab: React.FC<{
       if (filterReemplazo && (filterReemplazo === 'con' ? !r.reemplazo : r.reemplazo)) return false;
       if (filterClientId && r.clientId !== filterClientId) return false;
       if (filterProjectId && r.projectId !== filterProjectId) return false;
-      if (filterEmpresaId && !empresasDelContrato(r).includes(filterEmpresaId)) return false;
       if (q) {
         const hay = [r.userName, r.userEmail, r.clientName, r.projectName, r.nombre_contrato].some((v) => (v || '').toLowerCase().includes(q));
         if (!hay) return false;
       }
       return true;
     },
-    [search, filterUserStatus, filterVigencia, filterRolMobile, filterTipoContrato, filterEstadoContrato, filterReemplazo, filterClientId, filterProjectId, filterEmpresaId],
+    [search, filterUserStatus, filterVigencia, filterRolMobile, filterTipoContrato, filterEstadoContrato, filterReemplazo, filterClientId, filterProjectId],
   );
 
-  const rowsPorFiltrosComunes = useMemo(() => impositivoRows.filter((x) => matchesCommonFilters(x.row)), [impositivoRows, matchesCommonFilters]);
+  /**
+   * La pestaña de empresa muestra SOLO lo de esa empleadora.
+   *
+   * Antes matcheaba contra las empresas CANDIDATAS del proyecto, así que la pestaña "FZERO" mostraba
+   * 24 contratos sin asignar que no eran de FZERO: el número de la pestaña no significaba nada y el
+   * TXT "de FZERO" salía vacío. Los que todavía no eligieron empleadora tienen su propia pestaña,
+   * que es donde se asignan.
+   */
+  const matchesEmpresa = useCallback(
+    (r: ImpositivoRow) => {
+      if (!filterEmpresaId) return true;
+      if (filterEmpresaId === SIN_EMPRESA) return !r.empresaContratoId;
+      return String(r.empresaContratoId || '') === filterEmpresaId;
+    },
+    [filterEmpresaId],
+  );
+
+  const rowsPorFiltrosComunes = useMemo(() => impositivoRows.filter((x) => matchesCommonFilters(x.row) && matchesEmpresa(x.row)), [impositivoRows, matchesCommonFilters, matchesEmpresa]);
 
   // Los contadores siguen el mismo corte que la tabla: la gente sin CUIT se cuenta aparte y no
   // infla los trámites de ARCA, que no le aplican.
@@ -854,8 +872,9 @@ export const ContractBulkAfipTab: React.FC<{
   const countConstPendientes = constanciaRows.filter((x) => constanciaPendiente(x.row)).length;
   const countConstVigentes = constanciaRows.length - countConstPendientes;
 
-  const filtered = useMemo(() => {
-    return rowsPorFiltrosComunes.filter(({ row: r, result }) => {
+  /** Filtro de la pestaña de trámite. Separado para poder contar las pestañas de empresa con él. */
+  const pasaFiltroTramite = useCallback(
+    ({ row: r, result }: { row: ImpositivoRow; result: AfipRowResult }) => {
       // "Sin CUIT" agrupa a la gente sin CUIT/CUIL de CUALQUIERA de los dos trámites; las pestañas
       // de ARCA, al revés, la excluyen (esos trámites no le aplican y quedaría trabada ahí).
       if (filterTipo === 'sin_cuit') {
@@ -867,8 +886,28 @@ export const ContractBulkAfipTab: React.FC<{
       if (soloIncompletos && result.completo) return false;
       if (soloPendientes && filterTipo === 'constancia_cuit' && !constanciaPendiente(r)) return false;
       return true;
-    });
-  }, [rowsPorFiltrosComunes, filterTipo, soloIncompletos, soloPendientes]);
+    },
+    [filterTipo, soloIncompletos, soloPendientes],
+  );
+
+  const filtered = useMemo(() => rowsPorFiltrosComunes.filter(pasaFiltroTramite), [rowsPorFiltrosComunes, pasaFiltroTramite]);
+
+  /**
+   * Cuántos contratos hay detrás de cada pestaña de empresa.
+   *
+   * Se cuenta SIN el filtro de empresa —si no, cada pestaña mostraría el total de la que está
+   * seleccionada— pero CON el resto: el número tiene que coincidir con lo que se ve al entrar.
+   */
+  const conteoPorEmpresa = useMemo(() => {
+    const base = impositivoRows.filter((x) => matchesCommonFilters(x.row) && pasaFiltroTramite(x));
+    const porId = new Map<string, number>();
+    let sinAsignar = 0;
+    for (const { row: r } of base) {
+      if (!r.empresaContratoId) sinAsignar++;
+      else porId.set(String(r.empresaContratoId), (porId.get(String(r.empresaContratoId)) || 0) + 1);
+    }
+    return { porId, sinAsignar, total: base.length };
+  }, [impositivoRows, matchesCommonFilters, pasaFiltroTramite]);
 
   // Opciones de los selects del filtro avanzado. Salen de `impositivoRows` y no de `rows` porque en
   // la consulta también vienen los contratos en "Envío de documentación" (para el contador de Firma):
@@ -951,9 +990,8 @@ export const ContractBulkAfipTab: React.FC<{
   );
   // El TXT se arma con lo seleccionado; si no hay selección, con todo lo filtrado (comodidad).
   const fuenteTxt = seleccionados.length > 0 ? seleccionados : filtered;
-  // Con el filtro de Empresa puesto, el nombre del archivo lo deja claro (cada empresa presenta su TXT por separado).
-  const empresaSeleccionada = companies.find((c) => c._id === filterEmpresaId);
-  const nombreArchivoTxt = `altas_afip${empresaSeleccionada ? `_${empresaSeleccionada.razonSocial.replace(/[^a-zA-Z0-9]+/g, '_')}` : ''}`;
+  // `generarTxt` le agrega el CUIT de la empleadora y la fecha: queda `altas_30710295839_20260817.txt`.
+  const nombreArchivoTxt = 'altas';
 
   /**
    * Asignación masiva de Empresa (Contrato/Release). Es el mismo bloque en las tres pestañas del
@@ -1039,11 +1077,16 @@ export const ContractBulkAfipTab: React.FC<{
         <div className="flex items-center border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
           <span className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap shrink-0">Empresa Contrato | </span>
           <button onClick={() => setFilterEmpresaId('')} className={empresaTabClass(filterEmpresaId === '')}>
-            Todas
+            Todas ({conteoPorEmpresa.total})
+          </button>
+          {/* Los que todavía no eligieron empleadora tienen pestaña propia: no son de ninguna empresa
+              y son, justamente, el trabajo pendiente. Desde acá se los asigna en lote. */}
+          <button onClick={() => setFilterEmpresaId(SIN_EMPRESA)} className={empresaTabClass(filterEmpresaId === SIN_EMPRESA)} title="Contratos que todavía no tienen elegida su empleadora">
+            Sin asignar ({conteoPorEmpresa.sinAsignar})
           </button>
           {empresaOptions.map((e) => (
             <button key={e.value} onClick={() => setFilterEmpresaId(e.value)} className={empresaTabClass(filterEmpresaId === e.value)}>
-              {e.label}
+              {e.label} ({conteoPorEmpresa.porId.get(e.value) || 0})
             </button>
           ))}
         </div>
@@ -1311,7 +1354,7 @@ export const ContractBulkAfipTab: React.FC<{
                       {noPoseeCuit(r.cuit, r.sinCuit) ? (
                         <BotonHabilitarFirma row={r} tramite={r._tipo || 'constancia_cuit'} validado={!!r.sinCuitValidacion?.validado} onHabilitado={() => load(true)} />
                       ) : filterTipo === 'alta_temprana_afip' ? (
-                        <button type="button" onClick={() => generarTxt([{ row: r, result }], `alta_afip_${r.userName.replace(/\s+/g, '_')}`)} disabled={!result.completo} title={result.completo ? 'Generar el TXT de ARCA de esta persona' : !r.empresaContratoId ? 'Elegí la Empresa del contrato para poder generar el TXT' : 'Faltan datos ARCA para generar el TXT de esta persona'} className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold transition-colors whitespace-nowrap ${result.completo ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>
+                        <button type="button" onClick={() => generarTxt([{ row: r, result }], `alta_${r.userName.replace(/\s+/g, '_')}`)} disabled={!result.completo} title={result.completo ? 'Generar el TXT de ARCA de esta persona' : !r.empresaContratoId ? 'Elegí la Empresa del contrato para poder generar el TXT' : 'Faltan datos ARCA para generar el TXT de esta persona'} className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold transition-colors whitespace-nowrap ${result.completo ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>
                           <FontAwesomeIcon icon={faFileLines} className="h-3 w-3" />
                           Generar TXT
                         </button>
@@ -1454,7 +1497,7 @@ export const ContractBulkAfipTab: React.FC<{
           footer={
             <div className="flex items-center justify-between gap-3 w-full">
               <span className="text-[11px] text-gray-500 dark:text-gray-400">{detalle.result.completo ? 'Podés generar el alta de esta persona.' : 'Resolvé lo pendiente para poder generar el TXT.'}</span>
-              <button onClick={() => generarTxt([detalle], `alta_afip_${detalle.row.userName.replace(/\s+/g, '_')}`)} disabled={!detalle.result.completo} className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0">
+              <button onClick={() => generarTxt([detalle], `alta_${detalle.row.userName.replace(/\s+/g, '_')}`)} disabled={!detalle.result.completo} className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0">
                 <FontAwesomeIcon icon={faFileLines} />
                 Descargar TXT de esta persona
               </button>

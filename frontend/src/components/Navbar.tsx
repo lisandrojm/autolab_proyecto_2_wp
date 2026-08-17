@@ -7,7 +7,7 @@ import { EmpresaContextMenu } from './EmpresaContextMenu';
 import { FichasHeader } from './context/FichasHeader';
 import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry } from '@fortawesome/free-solid-svg-icons';
 import { faDropbox } from '@fortawesome/free-brands-svg-icons';
 import { Logo } from '../components/ui/Logo';
 import axios from '../api/axiosConfig';
@@ -59,10 +59,14 @@ const PLANTILLAS_PATHS = [MEMBRETE_PATH, '/pdfs', '/pdfs-vacaciones', '/contrato
  * escalas SON del convenio: la misma para todas las empleadoras que lo tengan registrado).
  *
  * Sigue sin haber ABM de Puesto Desempeñado ni Situación de Revista: no son campos del registro de
- * 130. Actividad tampoco: ARCA solo acepta las declaradas para el domicilio, así que se administran
- * dentro de cada Sucursal.
+ * 130.
+ *
+ * "Actividades" sí está, pero es un DICCIONARIO y no un nomenclador del que se elija: lo que un
+ * contrato puede declarar sale, y solo, de las actividades del domicilio. El catálogo existe para
+ * autocompletar el código y normalizar la descripción al cargarlas ahí. Por eso va pegado a
+ * Domicilios de Explotación y comparte su permiso.
  */
-const ARCA_NOMENCLADOR_PATHS = ['/obras-sociales', '/arca/sucursales', '/arca/tipos-servicio', '/arca/modalidades-contratacion', '/arca/modalidades-liquidacion'];
+const ARCA_NOMENCLADOR_PATHS = ['/obras-sociales', '/arca/sucursales', '/arca/actividades', '/arca/tipos-servicio', '/arca/modalidades-contratacion', '/arca/modalidades-liquidacion'];
 /**
  * La Conexión va ÚLTIMA y separada por una raya.
  *
@@ -72,7 +76,15 @@ const ARCA_NOMENCLADOR_PATHS = ['/obras-sociales', '/arca/sucursales', '/arca/ti
  * un nomenclador y no debería leerse como uno más de la lista.
  */
 const ARCA_CONEXION_PATH = '/afip';
-const ARCA_PATHS = [...ARCA_NOMENCLADOR_PATHS, '/convenios', '/arca/categorias', ARCA_CONEXION_PATH];
+/**
+ * "Cómo funciona" va DESPUÉS de la Conexión, al final de todo.
+ *
+ * No es un nomenclador ni una configuración: no se toca nada ahí. Es la explicación de la cadena
+ * —qué depende de qué y en qué orden hay que cargarlo—, que no se deduce de ninguna de las pantallas
+ * de arriba porque cada una muestra solo su pedazo.
+ */
+const ARCA_COMO_FUNCIONA_PATH = '/arca/como-funciona';
+const ARCA_PATHS = [...ARCA_NOMENCLADOR_PATHS, '/convenios', '/arca/categorias', ARCA_CONEXION_PATH, ARCA_COMO_FUNCIONA_PATH];
 
 /** ABM de Empresas. La ficha de cada una vive aparte, en el bloque FICHAS. */
 const EMPRESAS_PATH = '/empresas';
@@ -296,9 +308,15 @@ export const MobileNavbar: React.FC = () => {
       // grupo, así que repetirlo dejaba dos íconos idénticos uno debajo del otro y no distinguía la
       // pantalla. Es el mismo `faPlug` que la conexión de Dropbox: misma clase de cosa, mismo ícono.
       if (hasPermission('config_afip:view')) base.push({ path: '/afip', icon: faPlug, label: 'Conexión', scope: 'global' });
+      // Comparte permiso con la Conexión: quien puede ver cómo se conecta el módulo puede leer cómo
+      // funciona. No expone ningún dato — es la explicación del circuito.
+      if (hasPermission('config_afip:view')) base.push({ path: ARCA_COMO_FUNCIONA_PATH, icon: faSitemap, label: 'Cómo funciona', scope: 'global' });
       // Tablas oficiales del organismo: comparten un solo permiso porque son el mismo tipo de
       // nomenclador (se siembran desde ARCA y casi no se editan), no tres módulos distintos.
-      if (hasPermission('config_arca_sucursales:view')) base.push({ path: '/arca/sucursales', icon: faLocationDot, label: 'Sucursales', scope: 'global' });
+      if (hasPermission('config_arca_sucursales:view')) base.push({ path: '/arca/sucursales', icon: faLocationDot, label: 'Domicilios de Explotación', scope: 'global' });
+      // Va PEGADO a Domicilios y comparte su permiso: es su diccionario, no un catálogo autónomo. Lo
+      // que un contrato puede declarar sigue saliendo del domicilio; acá solo viven código y texto.
+      if (hasPermission('config_arca_sucursales:view')) base.push({ path: '/arca/actividades', icon: faIndustry, label: 'Actividades', scope: 'global' });
       if (hasPermission('config_arca_tablas:view')) {
         base.push({ path: '/arca/modalidades-contratacion', icon: faFileContract, label: 'Modalidades de Contratación', scope: 'global' });
         base.push({ path: '/arca/tipos-servicio', icon: faListCheck, label: 'Tipos de Servicio', scope: 'global' });

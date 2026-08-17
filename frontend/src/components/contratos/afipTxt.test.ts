@@ -18,7 +18,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { buildAltaRecord, buildAltaTxt, describirRegistro, fechaAfip } from "./afipTxt";
+import { buildAltaRecord, buildAltaTxt, describirRegistro, fechaAfip, LAYOUT_ALTA } from "./afipTxt";
 import type { AfipCatalogs } from "./afipCompleteness";
 import type { ContractOverviewRow } from "../../api/users";
 
@@ -347,5 +347,40 @@ describe("buildAltaTxt", () => {
     const lineas = buildAltaTxt(registros).split("\r\n");
     assert.equal(lineas.length, 2);
     lineas.forEach((l) => assert.equal(l.length, 130));
+  });
+});
+
+describe("LAYOUT_ALTA (la tabla de la pantalla «Cómo funciona»)", () => {
+  // La pantalla explicativa lee LAYOUT_ALTA en vez de una tabla escrita a mano. Si el generador
+  // cambia una posición y la doc no, la pantalla miente con total confianza: esto lo impide.
+  it("describe exactamente el mismo registro que arma el generador", () => {
+    const { campos } = describirRegistro(fila(), catalogos());
+
+    assert.equal(LAYOUT_ALTA.length, campos.length, "sobra o falta un campo en la documentación");
+    LAYOUT_ALTA.forEach((doc, i) => {
+      assert.equal(doc.desde, campos[i].desde, `campo ${i + 1} (${doc.nombre}): posición inicial distinta`);
+      assert.equal(doc.hasta, campos[i].hasta, `campo ${i + 1} (${doc.nombre}): posición final distinta`);
+      assert.equal(doc.nombre, campos[i].nombre, `campo ${i + 1}: el nombre no coincide con el del generador`);
+    });
+  });
+
+  it("cubre las 130 posiciones sin huecos ni superposiciones", () => {
+    let esperado = 1;
+    for (const c of LAYOUT_ALTA) {
+      assert.equal(c.desde, esperado, `${c.nombre} debería empezar en ${esperado}`);
+      assert.ok(c.hasta >= c.desde, `${c.nombre} termina antes de empezar`);
+      esperado = c.hasta + 1;
+    }
+    assert.equal(esperado - 1, 130);
+  });
+
+  it("marca como constante o en blanco todo lo que no se pide al operador", () => {
+    // Es la respuesta a "¿hay que cargar el agropecuario?" y "¿y la situación de revista?".
+    const porNombre = (n: string) => LAYOUT_ALTA.find((c) => c.nombre.includes(n))!;
+    assert.equal(porNombre("agropecuario").tipo, "constante");
+    assert.equal(porNombre("COVID").tipo, "constante");
+    assert.equal(porNombre("Puesto desempeñado").tipo, "en_blanco");
+    assert.equal(porNombre("Convenio Colectivo").tipo, "en_blanco");
+    assert.equal(porNombre("Fecha fin").tipo, "condicional");
   });
 });

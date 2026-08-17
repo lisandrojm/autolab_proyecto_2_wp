@@ -408,7 +408,7 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
       // Sin convenio en la categoría no se puede validar. No se inventa: se pide cargarlo.
       checks.push(mk("convenioCategoria", "Convenio de la categoría", "categoria_sat", "", "falta", "La categoría no tiene cargado a qué convenio pertenece, así que no se puede verificar que sea elegible para esta empresa."));
     } else if (v.conveniosEmpresa.length === 0) {
-      checks.push(mk("convenioCategoria", "Convenio de la categoría", "categoria_sat", v.convenioCategoria, "falta", "La empresa no tiene convenios habilitados: cargáselos en Configuración → Empresas."));
+      checks.push(mk("convenioCategoria", "Convenio de la categoría", "categoria_sat", v.convenioCategoria, "falta", "La empresa no tiene convenios registrados ante ARCA: cargáselos en su ficha, en ARCA → Convenios."));
     } else if (!v.conveniosEmpresa.includes(v.convenioCategoria)) {
       checks.push(mk("convenioCategoria", "Convenio de la categoría", "categoria_sat", v.convenioCategoria, "error", `La categoría pertenece al convenio ${v.convenioCategoria}, que no está habilitado para esta empresa (tiene ${v.conveniosEmpresa.join(", ")}). ARCA no la va a aceptar.`));
     } else {
@@ -469,7 +469,7 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
   } else {
     switch (v.actividadOrigen) {
       case "sin_sucursal":
-        checks.push(mk("sucursal", "Sucursal de ARCA", "sucursal", "", "falta", v.sucursalesDisponibles.length === 0 ? "La empresa no tiene sucursales asignadas: asignáselas en Configuración → Empresas." : "Elegí el domicilio de desempeño en la columna «Sucursal»."));
+        checks.push(mk("sucursal", "Sucursal de ARCA", "sucursal", "", "falta", v.sucursalesDisponibles.length === 0 ? "La empresa no tiene domicilios de explotación registrados: cargáselos en su ficha, en ARCA → Domicilios." : "Elegí el domicilio de desempeño en la columna «Sucursal»."));
         checks.push(mk("actividad", "Actividad del domicilio", "sucursal", "", "bloqueado", "Las actividades son las declaradas para la sucursal.", "sucursal"));
         break;
       case "sucursal_invalida":
@@ -502,6 +502,27 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
 
   // --- Agrupado por origen: es lo que el operador tiene que ir a resolver.
   const conProblema = checks.filter((c) => c.estado !== "ok");
+  /**
+   * A dónde manda el link del grupo.
+   *
+   * Los datos que ARCA lleva POR CUIT —convenios, domicilios y obras sociales registradas— dejaron de
+   * vivir en un listado global: se configuran en la ficha de cada empleadora. Un link a
+   * "Configuración → Empresas" deja al operador en una pantalla donde eso ya no se toca, así que
+   * cuando el contrato tiene empleadora decidida el link apunta a la ficha de ESA empresa.
+   *
+   * Solo se redirige cuando el problema ES la configuración de la empleadora. Si el convenio existe
+   * pero le falta la obra social, el lugar sigue siendo el nomenclador: ese dato es del CCT y lo
+   * comparten todas las empresas.
+   */
+  const fichaArca = row.empresaContratoId ? `/empresas/${row.empresaContratoId}/arca` : null;
+  const linkDelGrupo = (origen: OrigenDato): GrupoFaltante["link"] => {
+    if (!fichaArca) return ORIGENES[origen].link;
+    if (origen === "sucursal" && v.sucursalesDisponibles.length === 0) return { to: `${fichaArca}/domicilios`, label: "Ir a los domicilios de la empresa" };
+    if (origen === "categoria_sat" && v.conveniosEmpresa.length === 0) return { to: `${fichaArca}/convenios`, label: "Ir a los convenios de la empresa" };
+    if (origen === "obra_social" && v.obraSocialRegistrada === false) return { to: `${fichaArca}/obras-sociales`, label: "Ir a las obras sociales de la empresa" };
+    return ORIGENES[origen].link;
+  };
+
   const grupos: GrupoFaltante[] = ORDEN_ORIGENES.flatMap((origen) => {
     const propios = conProblema.filter((c) => c.origen === origen);
     if (propios.length === 0) return [];
@@ -513,7 +534,7 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
         origen,
         titulo: ORIGENES[origen].titulo,
         accion: ORIGENES[origen].accion,
-        link: ORIGENES[origen].link,
+        link: linkDelGrupo(origen),
         checks: propios,
         bloqueadoPor,
         tieneErrores: propios.some((c) => c.estado === "error"),

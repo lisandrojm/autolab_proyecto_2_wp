@@ -78,6 +78,53 @@ export interface CampoRegistro {
  * concatena y el modal lo muestra. Los campos que no se pudieron resolver vienen con
  * `contenido: null`, así la vista previa puede marcarlos en su posición exacta.
  */
+/**
+ * El registro de 130, descripto para DOCUMENTACIÓN: qué hay en cada posición y de dónde sale.
+ *
+ * Es el mismo layout que arma `describirRegistro`, pero sin necesitar un contrato. La pantalla
+ * "Cómo funciona ARCA" lo lee de acá y no de una tabla escrita a mano: una tabla explicativa que se
+ * desfasa del generador es peor que no tenerla, porque se le cree. Hay un test que compara las dos
+ * listas posición por posición.
+ *
+ * `tipo` es la única información que agrega sobre el generador, y es lo que contesta las preguntas
+ * que se repiten: si un campo hay que pedirlo o si ya está resuelto.
+ */
+export type TipoCampoAlta = "obligatorio" | "condicional" | "constante" | "en_blanco";
+
+export interface CampoAltaDoc {
+  desde: number;
+  hasta: number;
+  nombre: string;
+  /** De dónde sale el dato, en el lenguaje de la app. */
+  origen: string;
+  tipo: TipoCampoAlta;
+}
+
+export const LAYOUT_ALTA: CampoAltaDoc[] = [
+  { desde: 1, hasta: 2, nombre: "Tipo de registro", origen: "01 — fijo", tipo: "constante" },
+  { desde: 3, hasta: 4, nombre: "Código de movimiento (alta)", origen: "AT — alta", tipo: "constante" },
+  { desde: 5, hasta: 15, nombre: "CUIL", origen: "Persona", tipo: "obligatorio" },
+  { desde: 16, hasta: 16, nombre: "Marca trabajador agropecuario", origen: "N — fijo", tipo: "constante" },
+  { desde: 17, hasta: 19, nombre: "Modalidad de contrato", origen: "Tipo de contrato", tipo: "obligatorio" },
+  { desde: 20, hasta: 29, nombre: "Fecha inicio relación laboral", origen: "Contrato · AAAA/MM/DD", tipo: "obligatorio" },
+  { desde: 30, hasta: 39, nombre: "Fecha fin relación laboral", origen: "Contrato · solo si la modalidad es a plazo determinado", tipo: "condicional" },
+  { desde: 40, hasta: 45, nombre: "Código de obra social (RNOS)", origen: "Persona → convenio → excluidos de convenio → global", tipo: "obligatorio" },
+  { desde: 46, hasta: 47, nombre: "Código situación de baja", origen: "No aplica a un alta", tipo: "en_blanco" },
+  { desde: 48, hasta: 57, nombre: "Fecha telegrama renuncia", origen: "No aplica a un alta", tipo: "en_blanco" },
+  { desde: 58, hasta: 72, nombre: "Retribución pactada", origen: "Grupo salarial del convenio de la categoría", tipo: "obligatorio" },
+  { desde: 73, hasta: 73, nombre: "Modalidad de liquidación", origen: "Tipo de contrato (o el default de la empleadora)", tipo: "obligatorio" },
+  { desde: 74, hasta: 78, nombre: "Sucursal (domicilio de desempeño)", origen: "Domicilio de explotación de la empleadora", tipo: "obligatorio" },
+  { desde: 79, hasta: 84, nombre: "Actividad del domicilio", origen: "Actividad declarada en ese domicilio", tipo: "obligatorio" },
+  { desde: 85, hasta: 88, nombre: "Puesto desempeñado", origen: "Opcional en este formato", tipo: "en_blanco" },
+  { desde: 89, hasta: 90, nombre: "Rectificación", origen: "00 — normal", tipo: "constante" },
+  { desde: 91, hasta: 100, nombre: "Código Convenio Colectivo", origen: "Opcional: ARCA lo infiere de la categoría", tipo: "en_blanco" },
+  { desde: 101, hasta: 106, nombre: "Categoría profesional", origen: "Categoría del contrato", tipo: "obligatorio" },
+  { desde: 107, hasta: 109, nombre: "Tipo de servicio", origen: "Tipo de contrato (o el default de la empleadora)", tipo: "obligatorio" },
+  { desde: 110, hasta: 119, nombre: "Fecha suspensión servicios temporarios", origen: "No aplica a un alta", tipo: "en_blanco" },
+  { desde: 120, hasta: 129, nombre: "N° Formulario Agropecuario", origen: "No aplica", tipo: "en_blanco" },
+  { desde: 130, hasta: 130, nombre: "Marca COVID / tipo de contrato CCG", origen: "0 — sin CCG", tipo: "constante" },
+];
+
 export function describirRegistro(row: ContractOverviewRow, cat: AfipCatalogs): { campos: CampoRegistro[]; valores: AfipValues } {
   const v = resolveAfipValues(row, cat);
 

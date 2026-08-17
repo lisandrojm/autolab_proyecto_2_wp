@@ -131,14 +131,14 @@ const MODULE_LABELS: Record<string, string> = {
 
   // Configuración → ARCA
   'config_obras_sociales:view': 'ARCA | Obras Sociales',
-  'config_arca_sucursales:view': 'ARCA | Sucursales',
+  'config_arca_sucursales:view': 'ARCA | Domicilios de Explotación y Actividades',
   // Un permiso, tres pantallas: son el mismo tipo de nomenclador y se siembran juntas.
   'config_arca_tablas:view': 'ARCA | Tipos de Servicio y Modalidades',
   'config_convenios:view': 'ARCA | Convenios',
   'config_categorias_sat:view': 'ARCA | Categorías',
   // Categorías tiene dos pestañas y cada una su permiso: con este solo se ve la de Funciones.
   'config_frame_functions:view': 'ARCA | Categorías → Funciones FRAME',
-  'config_afip:view': 'ARCA | Conexión',
+  'config_afip:view': 'ARCA | Conexión y Cómo funciona',
 
   // Configuración
   'config_centros_costo:view': 'Centros de Costos',

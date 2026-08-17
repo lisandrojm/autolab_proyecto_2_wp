@@ -54,6 +54,7 @@ export type HelpKey =
   | "releases"
   | "importUsersWp"
   | "arcaSucursales"
+  | "arcaActividades"
   | "arcaModalidadContratacion"
   | "arcaTipoServicio"
   | "arcaModalidadLiquidacion";
@@ -362,8 +363,19 @@ const helpResources = {
         "**El filtro de arriba**: el nomenclador tiene 2.669 convenios y solo se trabaja con los que alguna empresa registró ante ARCA. La columna **Empresas** dice cuántas: hacé click en el número para ver cuáles.",
       ],
 
+      // Actividades (diccionario, NO la lista de lo que se puede declarar)
+      "arcaActividades.title": "Actividades",
+      "arcaActividades.description": "Diccionario de actividades económicas del nomenclador de ARCA.",
+      "arcaActividades.items": [
+        "**Para qué sirve**: para no tipear el código a mano al cargar una actividad en un domicilio, y para que la descripción salga siempre idéntica. Es lo que evita tener la misma actividad escrita de dos formas distintas en dos sucursales.",
+        "**Para qué NO sirve**: no define lo que un contrato puede declarar. Eso lo define, y solamente, lo que ARCA tiene declarado para ese domicilio de explotación: un código válido en otra sucursal es rechazado por el organismo.",
+        "**Se llena solo**: cada vez que se importa el padrón en Domicilios de Explotación, los códigos que no existían se dan de alta acá. Así el diccionario termina teniendo exactamente las actividades en uso, y todas correctas, porque vienen del export de ARCA.",
+        "**Sembrar el nomenclador completo es opcional**: se puede importar el listado entero (~2.350 códigos) con **Importar Excel**, pero no hace falta para operar.",
+        "**El código son 6 dígitos** con ceros a la izquierda: es lo que va en las posiciones 79-84 del TXT de alta.",
+      ],
+
       // Sucursales de ARCA
-      "arcaSucursales.title": "Información de Sucursales",
+      "arcaSucursales.title": "Domicilios de Explotación",
       "arcaSucursales.description": "Domicilios de desempeño del padrón de ARCA (Simplificación Registral).",
       "arcaSucursales.items": [
         "**Qué es**: El domicilio donde la persona presta servicios, tal como está declarado en el padrón de ARCA. Su **código** de 5 dígitos va en las posiciones 74-78 del TXT de alta.",
@@ -602,7 +614,8 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
   empresaCategorias: { title: "Categorías disponibles", size: "md", content: buildHelpContent("empresaCategorias") },
   empresaDefaults: { title: "Valores por defecto de ARCA", size: "md", content: buildHelpContent("empresaDefaults") },
   empresaContratos: { title: "Contratos de esta empleadora", size: "md", content: buildHelpContent("empresaContratos") },
-  arcaSucursales: { title: "Sucursales de ARCA", size: "md", content: buildHelpContent("arcaSucursales") },
+  arcaSucursales: { title: "Domicilios de Explotación", size: "md", content: buildHelpContent("arcaSucursales") },
+  arcaActividades: { title: "Actividades", size: "md", content: buildHelpContent("arcaActividades") },
   arcaModalidadContratacion: { title: "Modalidades de Contratación (ARCA)", size: "md", content: buildHelpContent("arcaModalidadContratacion") },
   arcaTipoServicio: { title: "Tipos de Servicio (ARCA)", size: "md", content: buildHelpContent("arcaTipoServicio") },
   arcaModalidadLiquidacion: { title: "Modalidades de Liquidación (ARCA)", size: "md", content: buildHelpContent("arcaModalidadLiquidacion") },

@@ -84,6 +84,13 @@ export interface ImportSucursalesResult {
   /** Códigos que venían sin domicilio y se saltearon. */
   sinDomicilio: string[];
   errores: string[];
+  /**
+   * Cuántas actividades del padrón se agregaron al diccionario de Actividades.
+   *
+   * El import las da de alta solas: así el diccionario termina con exactamente las que están en uso,
+   * y todas correctas, porque salen del export de ARCA y no de alguien tipeando.
+   */
+  actividadesNuevas?: number;
 }
 
 export const arcaSucursalesAPI = new ArcaSucursalesAPI();

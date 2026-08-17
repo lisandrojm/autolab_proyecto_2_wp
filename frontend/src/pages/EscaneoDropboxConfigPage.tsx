@@ -142,7 +142,10 @@ export function EscaneoDropboxConfigPage() {
 
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
             <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Frecuencia del escaneo</p>
-            <div className="flex flex-wrap items-end gap-3">
+            {/* Uno abajo del otro, no al lado: se editan el intervalo y se guarda, y recién ahí el
+                próximo escaneo dice algo distinto. En fila parecían dos campos del mismo formulario,
+                cuando el de la derecha no se edita — es la consecuencia del de arriba. */}
+            <div className="space-y-4">
               <div className="space-y-1">
                 <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400">Revisar cada (minutos)</label>
                 <div className="flex items-center gap-2">
@@ -168,7 +171,7 @@ export function EscaneoDropboxConfigPage() {
                 <p className="text-[11px] text-gray-400">Entre 5 y 1440 minutos (1 día).</p>
               </div>
 
-              <div className="flex-1 min-w-[220px] space-y-1">
+              <div className="space-y-1">
                 <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400">Próximo escaneo automático</label>
                 <div className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 dark:border-gray-700 text-sm font-mono text-gray-700 dark:text-gray-200">
                   <FontAwesomeIcon icon={faStopwatch} className="h-3.5 w-3.5 text-blue-500" />
