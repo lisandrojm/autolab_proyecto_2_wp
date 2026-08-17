@@ -1,33 +1,25 @@
 import { Router } from "express";
 import { ObraSocial } from "../models/ObraSocial.js";
 import { createSimpleCatalogRouter } from "./_simpleCatalogRouter.js";
-import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 
 const router = Router();
 
 /**
- * PATCH /:id/por-defecto - marca (o desmarca) la obra social que se usa cuando la persona no tiene
- * ninguna asignada. Solo una puede estar marcada, así que primero se limpian todas: si quedaran dos,
- * cuál se aplica dependería del orden del listado.
+ * Obras Sociales: catálogo y nada más.
+ *
+ * Tenía un `PATCH /:id/por-defecto` para marcar una obra social GLOBAL, que se aplicaba cuando la
+ * cascada no resolvía ninguna. Se eliminó junto con ese nivel: solo se usaba cuando faltaba
+ * configurar algo aguas arriba —casi siempre un convenio sin obra social— y lo único que lograba era
+ * rellenar el campo con un valor sin fundamento. ARCA lo acepta igual, así que el error recién se
+ * descubría con el alta ya presentada. Ahora ese caso se marca como faltante y no se genera el TXT.
+ *
+ * La obra social se decide en tres lugares, y ninguno es este: la persona (desregulación), el
+ * convenio de su categoría (con la excepción por empleadora), y la empleadora solo para los
+ * excluidos de convenio (9999/99).
+ *
+ * `data.porDefecto` queda en los documentos que lo tengan: ya no lo lee nadie y borrarlo pediría una
+ * migración para no ganar nada.
  */
-router.patch("/:id/por-defecto", authenticateToken, async (req: AuthenticatedRequest, res) => {
-  try {
-    const marcar = req.body?.porDefecto !== false;
-    await ObraSocial.updateMany({ "data.porDefecto": true }, { $set: { "data.porDefecto": false } });
-    if (marcar) {
-      const actualizada = await ObraSocial.findByIdAndUpdate(req.params.id, { $set: { "data.porDefecto": true } }, { new: true }).lean();
-      if (!actualizada) {
-        res.status(404).json({ error: "Obra Social no encontrada" });
-        return;
-      }
-    }
-    res.json({ ok: true, porDefecto: marcar });
-  } catch (error) {
-    console.error("Obra Social por-defecto error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
 router.use(
   createSimpleCatalogRouter(ObraSocial, {
     entityLabel: "Obra Social",

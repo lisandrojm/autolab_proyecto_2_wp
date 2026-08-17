@@ -65,6 +65,45 @@ interface IContract {
    * que elegir cuál declara este contrato, y esa elección va acá.
    */
   actividadArca?: string;
+  /**
+   * Obra social de ESTE contrato (RNOS, pos. 40-45 del TXT de alta). Guarda el `data.id` del catálogo.
+   *
+   * Vive en el contrato y no en la persona porque es un dato de la RELACIÓN LABORAL: ARCA lo declara
+   * por alta, no por CUIL. Si la misma persona tiene dos contratos en dos empleadoras, salen dos
+   * registros y cada uno lleva el suyo. Además caduca solo —por desregulación alguien cambia de obra
+   * social sin que la empleadora se entere—, así que un valor guardado en la ficha de la persona se
+   * propaga en silencio a todos sus contratos futuros.
+   *
+   * Vacío es lo normal: significa que no se constató ninguna y que se aplica la del convenio.
+   */
+  obraSocialId?: number | null;
+  /**
+   * De dónde salió `obraSocialId`. Es lo que decide si el dato se puede creer:
+   *
+   *  - `constatada`        se verificó contra el padrón (ver `obraSocialConstatadaEn`). Gana siempre.
+   *  - `manual`            la cargó alguien a mano como excepción.
+   *  - `heredada-usuario`  viene del campo viejo de la persona, sin fecha ni verificación. Es el
+   *                        origen que deja la migración, y el que hay que ir limpiando.
+   *
+   * Cuando está vacío, la obra social no está fijada en el contrato y se resuelve por la cascada
+   * (convenio → excepción de la empresa → excluidos de convenio). Esos orígenes NO se persisten:
+   * son el resultado de una configuración que puede cambiar, y congelarlos sería volver a tener dos
+   * fuentes para el mismo dato.
+   */
+  obraSocialOrigen?: "constatada" | "manual" | "heredada-usuario";
+  /**
+   * Dónde se constató. La FUENTE es el Padrón de Beneficiarios de la Superintendencia de Servicios
+   * de Salud (SSS): lo actualiza cada obra social con carácter de declaración jurada, la consulta es
+   * de solo lectura y no exige estar logueado con el CUIT de la empleadora.
+   *
+   * ARCA queda como DESEMPATE, no como fuente: lo que precompleta en su pantalla de altas es lo que
+   * ÉL tiene registrado para ese CUIL —viene de relaciones laborales anteriores— y puede estar
+   * atrasado respecto de una opción de cambio. Además esa pantalla es un formulario de alta: se
+   * entra a mirar y se queda a un click de registrar algo.
+   */
+  obraSocialConstatadaEn?: "sss" | "arca";
+  /** Cuándo se constató. Solo con `obraSocialOrigen: "constatada"`. */
+  obraSocialConstatadaEl?: Date | null;
   // Documento de "Alta" (AFIP o Servicios, según el Estado impositivo vinculado a la Plantilla).
   altaDocumentoUrl?: string;
   altaDocumentoNombre?: string;
@@ -198,6 +237,11 @@ const contractSchema = new Schema<IContract>(
     nombre_empresa_release: { type: String },
     sucursalArcaId: { type: Schema.Types.ObjectId, ref: "ArcaSucursal" },
     actividadArca: { type: String },
+    // Obra social del contrato: ver el comentario del campo en `IContract`.
+    obraSocialId: { type: Number, default: null },
+    obraSocialOrigen: { type: String, enum: ["constatada", "manual", "heredada-usuario"] },
+    obraSocialConstatadaEn: { type: String, enum: ["sss", "arca"] },
+    obraSocialConstatadaEl: { type: Date, default: null },
     altaDocumentoUrl: { type: String },
     altaDocumentoNombre: { type: String },
     constanciaVigenciaDesde: { type: String },

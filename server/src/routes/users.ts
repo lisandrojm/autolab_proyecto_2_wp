@@ -687,7 +687,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
     const userIds = [...new Set(memberships.map((m: any) => String(m.userId || "")))].filter((id) => Types.ObjectId.isValid(id));
     const [usersList, clientsList] = await Promise.all([
       User.find({ _id: { $in: userIds } })
-        .select("firstName lastName email roles metadata.activo metadata.id metadata.cuit metadata.sinCuit metadata.osId")
+        .select("firstName lastName email roles metadata.activo metadata.id metadata.cuit metadata.sinCuit")
         .populate({ path: "roles", select: "name", model: Role })
         .lean(),
       Client.find({ _id: { $in: [...new Set(projectsList.map((p: any) => String(p.clientId?._id || p.clientId || "")))].filter((id) => Types.ObjectId.isValid(id)) } })
@@ -795,7 +795,6 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         // Declaración explícita de "no tiene CUIT/CUIL argentino" (extranjeros): la usa la
         // pestaña "Sin CUIT" de Gestión de Contratos para separarlos de los trámites de AFIP.
         sinCuit: user.metadata?.sinCuit === true,
-        osId: user.metadata?.osId ?? null,
       });
     }
 
@@ -878,6 +877,20 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         // declaradas, con cuál se declara este contrato.
         sucursalArcaId: c.sucursalArcaId ? String(c.sucursalArcaId) : "",
         actividadArca: c.actividadArca || "",
+        /**
+         * Obra social del CONTRATO, no de la persona.
+         *
+         * Antes salía de `user.metadata.osId`: un dato guardado al dar de alta a la persona, sin
+         * fecha ni verificación, que se propagaba a todos sus contratos. ARCA la declara por alta
+         * (pos. 40-45) y caduca sola por desregulación, así que vive acá.
+         *
+         * Vacío NO es un faltante: significa que no se constató ninguna y que se aplica la del
+         * convenio, que es el caso normal.
+         */
+        osId: c.obraSocialId ?? null,
+        obraSocialOrigen: c.obraSocialOrigen || "",
+        obraSocialConstatadaEn: c.obraSocialConstatadaEn || "",
+        obraSocialConstatadaEl: c.obraSocialConstatadaEl || "",
         // Flujo "Sin CUIT": documentación de respaldo + OK manual (pestaña Sin CUIT de Contratos).
         sinCuitValidacion: c.sinCuitValidacion || null,
       };

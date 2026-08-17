@@ -22,6 +22,7 @@ import { Position } from "../models/Position.js";
 import { Level } from "../models/Level.js";
 import { Shift } from "../models/Shift.js";
 import { Company } from "../models/Company.js";
+import { ObraSocial } from "../models/ObraSocial.js";
 import { ArcaSucursal } from "../models/ArcaSucursal.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
@@ -1549,6 +1550,99 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/empresa-cont
     res.json({ empresaContratoId: empresaContratoId || null, nombre_empresa_contrato: nombreEmpresaContrato });
   } catch (error) {
     console.error("Update contract empresa-contrato error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * PATCH /projects/:projectId/members/:userId/contracts/:index/obra-social
+ *
+ * Fija la obra social de ESTE contrato (RNOS, pos. 40-45 del TXT). Body:
+ *   { obraSocialId: number|null, origen: "constatada"|"manual", constatadaEn?: "sss"|"arca" }
+ *
+ * Vive en el contrato y no en la persona: ARCA declara el RNOS en cada alta, y el dato caduca solo
+ * por desregulación. Mandar `obraSocialId: null` la desfija y vuelve a resolver por la cascada
+ * (convenio → excepción de la empresa → excluidos), que es el caso normal.
+ *
+ * VALIDACIÓN que no puede faltar: el RNOS tiene que estar entre las obras sociales que esa
+ * empleadora tiene registradas ante ARCA. La SSS no sabe nada de la empleadora y puede devolver
+ * perfectamente una que la empresa no declaró — ARCA rechaza esa alta. Se avisa con 400 y el motivo,
+ * en vez de dejar pasar un dato que falla recién contra el organismo.
+ */
+router.patch("/projects/:projectId/members/:userId/contracts/:index/obra-social", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { projectId, userId, index } = req.params;
+    const obraSocialId = req.body?.obraSocialId === null || req.body?.obraSocialId === "" ? null : Number(req.body?.obraSocialId);
+    const origen = String(req.body?.origen || "manual") as "constatada" | "manual";
+    const constatadaEn = req.body?.constatadaEn ? (String(req.body.constatadaEn) as "sss" | "arca") : undefined;
+
+    if (obraSocialId !== null && !Number.isFinite(obraSocialId)) {
+      res.status(400).json({ error: "Obra social inválida" });
+      return;
+    }
+    if (!["constatada", "manual"].includes(origen)) {
+      res.status(400).json({ error: "Origen inválido" });
+      return;
+    }
+    if (origen === "constatada" && !constatadaEn) {
+      res.status(400).json({ error: "Falta indicar dónde se constató (sss / arca)" });
+      return;
+    }
+
+    const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("_id").lean();
+    if (!project) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+    const up = await UserProject.findOne({ projectId, userId });
+    const idx = Number(index);
+    if (!up || !Number.isInteger(idx) || idx < 0 || idx >= up.contracts.length) {
+      res.status(404).json({ error: "Contrato no encontrado" });
+      return;
+    }
+    const contrato = up.contracts[idx] as any;
+
+    if (obraSocialId !== null) {
+      const os = await ObraSocial.findOne({ "data.id": obraSocialId }).select("_id name externalId").lean();
+      if (!os) {
+        res.status(400).json({ error: "Esa obra social no está en el catálogo. Cargala en Configuración → ARCA → Obras Sociales." });
+        return;
+      }
+      // Solo se puede verificar si el contrato ya tiene empleadora. Sin ella no se sabe contra qué
+      // padrón comparar, y no se inventa: se guarda igual y el checklist lo marca cuando se elija.
+      if (contrato.empresaContratoId) {
+        const empresa = await Company.findById(contrato.empresaContratoId).select("obrasSocialesIds razonSocial").lean();
+        const registradas = ((empresa as any)?.obrasSocialesIds || []).map((id: any) => String(id));
+        // Vacío = todavía no se extrajo el padrón de esa empleadora. No se bloquea por algo que no se sabe.
+        if (registradas.length > 0 && !registradas.includes(String((os as any)._id))) {
+          res.status(400).json({
+            error: `${(os as any).name} no está entre las obras sociales que ${(empresa as any)?.razonSocial || "esta empleadora"} tiene registradas ante ARCA, así que el organismo va a rechazar el alta. Registrala en la ficha de la empresa (ARCA → Obras Sociales) y volvé a intentar.`,
+          });
+          return;
+        }
+      }
+    }
+
+    up.contracts[idx] = {
+      ...contrato.toObject(),
+      obraSocialId,
+      // Desfijarla borra también el rastro: dejar el origen de un valor que ya no está solo confunde.
+      obraSocialOrigen: obraSocialId === null ? undefined : origen,
+      obraSocialConstatadaEn: obraSocialId === null || origen !== "constatada" ? undefined : constatadaEn,
+      obraSocialConstatadaEl: obraSocialId === null || origen !== "constatada" ? null : new Date(),
+    } as any;
+    up.markModified("contracts");
+    await up.save();
+
+    const guardado = up.contracts[idx] as any;
+    res.json({
+      obraSocialId: guardado.obraSocialId ?? null,
+      obraSocialOrigen: guardado.obraSocialOrigen || "",
+      obraSocialConstatadaEn: guardado.obraSocialConstatadaEn || "",
+      obraSocialConstatadaEl: guardado.obraSocialConstatadaEl || "",
+    });
+  } catch (error) {
+    console.error("Update contract obra-social error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -47,6 +47,11 @@ const contractSchema = new Schema({
     nombre_empresa_release: { type: String },
     sucursalArcaId: { type: Schema.Types.ObjectId, ref: "ArcaSucursal" },
     actividadArca: { type: String },
+    // Obra social del contrato: ver el comentario del campo en `IContract`.
+    obraSocialId: { type: Number, default: null },
+    obraSocialOrigen: { type: String, enum: ["constatada", "manual", "heredada-usuario"] },
+    obraSocialConstatadaEn: { type: String, enum: ["sss", "arca"] },
+    obraSocialConstatadaEl: { type: Date, default: null },
     altaDocumentoUrl: { type: String },
     altaDocumentoNombre: { type: String },
     constanciaVigenciaDesde: { type: String },
