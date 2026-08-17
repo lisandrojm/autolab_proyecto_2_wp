@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowsRotate, faBolt, faFolder, faSpinner, faCheck, faStopwatch, faSitemap } from "@fortawesome/free-solid-svg-icons";
+import { faDropbox } from "@fortawesome/free-brands-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { infoAPI, InfoItem } from "../api/info";
 import { dropboxAPI, DropboxStatus, EscaneoConfig } from "../api/dropbox";
@@ -97,17 +98,25 @@ export function EscaneoDropboxConfigPage() {
 
   return (
     <PageLayout
-      title="Dropbox | Documentos"
-      subtitle="Configuración del escaneo automático por Dropbox (transición de estados)"
-      faIcon={{ icon: faArrowsRotate }}
+      // El menú dice "Dropbox" a secas: el calificador que antes llevaba el ítem ("| Conexión") vive
+      // acá, en el subtítulo y en el ⓘ, que es donde se puede explicar de verdad.
+      title="Dropbox"
+      subtitle="La conexión con la cuenta y el escaneo automático que hace avanzar los contratos de estado"
+      faIcon={{ icon: faDropbox }}
       shouldShowInfo
       infoModal={{
         isOpen: showInfo,
         onOpen: () => setShowInfo(true),
         onClose: () => setShowInfo(false),
-        title: "Escaneo automático por Dropbox",
+        title: "Dropbox: conexión y escaneo",
         content: (
           <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+            {/* Lo primero es dónde estás parado: hay tres pantallas de Dropbox en el menú y sin el
+                sufijo "| Conexión" del ítem hay que decirlo en algún lado. */}
+            <p className="p-2.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300">
+              Esta es la pantalla de <strong>configuración</strong>: con qué cuenta de Dropbox se trabaja, cada cuánto se revisa y qué carpetas se miran. Los documentos que el escaneo encuentra se ven
+              en <strong>Admin GENERAL → Documentos</strong>, y los avisos de firma se configuran aparte, en <strong>DropboxSign</strong>.
+            </p>
             <p>
               Cuando un <strong>Estado</strong> tiene una <strong>transición automática</strong> configurada, el sistema revisa solo la carpeta de Dropbox indicada: si aparece un archivo nuevo y se puede
               identificar sin ambigüedad a qué contrato pertenece, lo avanza a ese Estado.

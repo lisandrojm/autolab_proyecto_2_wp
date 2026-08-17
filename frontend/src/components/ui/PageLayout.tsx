@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleInfo, faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
@@ -79,7 +80,14 @@ interface PageLayoutProps {
   children: React.ReactNode;
   headerActions?: React.ReactNode;
   headerBack?: React.ReactNode;
+  /**
+   * Qué hace la flecha de volver. Sin esto la flecha SIGUE APARECIENDO y vuelve en el historial:
+   * era opt-in y solo 5 de las 40 pantallas del menú la pasaban, así que la mayoría no tenía cómo
+   * volver salvo yendo al menú lateral.
+   */
   onBack?: () => void;
+  /** Oculta la flecha. Para pantallas que son un destino final y no tienen "atrás" que ofrecer. */
+  sinVolver?: boolean;
   avatar?: AvatarProps;
   faIcon?: FaIconProps;
   faIconSecondary?: FaIconSecondaryProps;
@@ -105,15 +113,32 @@ const BADGE_CLASSES: Record<BadgeVariant, string> = {
   info: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
 };
 
-export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, badgeSecondary, badgeTertiary, badgeState, infoModal, showInfoIcon = false, shouldShowInfo, children, headerActions, headerBack, onBack, avatar, faIcon, faIconSecondary, clientMiniAvatar, preSearchContent, preSearchTitle, preSearchActions, searchAndFilters, postFaIconSecondary, postSearchTitle, postSearchActions, postSearchAndFilters, modal, viewModal, itemCount }) => {
+export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, badgeSecondary, badgeTertiary, badgeState, infoModal, showInfoIcon = false, shouldShowInfo, children, headerActions, headerBack, onBack, sinVolver = false, avatar, faIcon, faIconSecondary, clientMiniAvatar, preSearchContent, preSearchTitle, preSearchActions, searchAndFilters, postFaIconSecondary, postSearchTitle, postSearchActions, postSearchAndFilters, modal, viewModal, itemCount }) => {
   const shouldShowInfoButton = shouldShowInfo ?? (!!infoModal || showInfoIcon || !!subtitle);
+  const navigate = useNavigate();
 
+  /**
+   * La flecha de volver, en TODAS las pantallas.
+   *
+   * Antes cada página decidía si la ponía —solo 5 de las 40 del menú pasaban `onBack`—, así que la
+   * misma acción existía o no según dónde estuvieras parado. Ahora el header la pone siempre y cada
+   * página solo la personaliza si tiene un destino propio.
+   *
+   * `navigate(-1)` respeta de dónde venís, que casi nunca es "el padre en el árbol de rutas": a
+   * Convenios se llega desde el menú, desde la ficha de una empresa o desde el modal de un contrato,
+   * y volver a un padre fijo mandaría a cualquier lado en dos de los tres casos.
+   *
+   * El `idx` del history dice si hay algo atrás DENTRO de la app. Sin eso —entrar por URL directa o
+   * recargar— `navigate(-1)` saldría del sitio, así que en ese caso cae al dashboard.
+   */
   const renderBack = () => {
     if (headerBack) return headerBack;
-    if (!onBack) return null;
+    if (sinVolver) return null;
+    const hayHistorial = ((window.history.state as { idx?: number } | null)?.idx ?? 0) > 0;
+    const volver = onBack ?? (() => (hayHistorial ? navigate(-1) : navigate("/")));
     return (
       <div className="flex items-center gap-2">
-        <button onClick={onBack} className="btn-ghost" aria-label="Volver">
+        <button onClick={volver} className="btn-ghost" aria-label="Volver" title="Volver">
           <FontAwesomeIcon icon={faArrowLeft} className="h-4 w-4" />
         </button>
       </div>

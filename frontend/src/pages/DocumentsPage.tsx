@@ -1,24 +1,29 @@
 import { useCallback, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileText, faLandmark } from "@fortawesome/free-solid-svg-icons";
+import { faLandmark } from "@fortawesome/free-solid-svg-icons";
 import { faDropbox } from "@fortawesome/free-brands-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { DropboxTab } from "../components/documents/DropboxTab";
+import { getHelp, hasHelp } from "../data/help/helpContent";
 
 type TabKey = "dropbox" | "afip";
 
 export function DocumentsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("dropbox");
   const [itemCount, setItemCount] = useState<number | undefined>(undefined);
+  const [showInfo, setShowInfo] = useState(false);
+  const helpEntry = getHelp("documents");
 
   const handleCountChange = useCallback((count: number | undefined) => setItemCount(count), []);
 
   return (
     <PageLayout
-      title="Dropbox | Documentos"
-      faIcon={{ icon: faFileText }}
+      // "Documentos" a secas, igual que en el menú: el ícono ya dice que vienen de Dropbox.
+      title="Documentos"
+      faIcon={{ icon: faDropbox }}
       itemCount={itemCount}
-      shouldShowInfo={false}
+      shouldShowInfo={hasHelp("documents")}
+      infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: helpEntry.title, size: helpEntry.size, content: helpEntry.content }}
       searchAndFilters={
         <div className="mx-auto">
           {/* Tabs Header */}

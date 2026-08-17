@@ -24,42 +24,89 @@ interface PermissionModule {
   permissions: string[];
 }
 
+/**
+ * Los permisos, agrupados y ordenados COMO EL MENÚ LATERAL.
+ *
+ * Cada permiso destapa un ítem del menú, así que esta pantalla es el menú visto desde el otro lado:
+ * si acá se llaman distinto o están en otro grupo, quien arma un rol no puede saber qué está
+ * habilitando. Se había desfasado —"Admin USUARIOS" ya no existe (pasó a ser el subgrupo Usuarios de
+ * Configuración), Clientes y Sedes figuraban en Admin GENERAL cuando viven en Configuración, y varias
+ * etiquetas eran las de antes de los renombres.
+ *
+ * Reglas para mantenerlo alineado:
+ *   - El orden dentro de cada grupo es el del menú (alfabético, y los subgrupos en su orden propio).
+ *   - La etiqueta es la del ítem del menú. Si el permiso destapa un subgrupo, se escribe
+ *     "Subgrupo | Ítem", igual que el menú los muestra anidados.
+ *   - Si un permiso destapa MÁS de un ítem, la etiqueta los nombra a todos: es la única forma de que
+ *     no parezca que falta un permiso.
+ */
 const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
   client: {
-    label: 'Cliente',
+    label: 'Fichas',
     icon: faUsers,
-    description: 'Ver o no Cliente y select de cliente',
+    description: 'El bloque de arriba del menú. La ficha de Empresa no tiene permiso propio: la habilita "Empresas", en Configuración.',
     permissions: ['client:view'],
   },
   admin_general: {
     label: 'Admin GENERAL',
     icon: faUsersGear,
-    description: 'Gestión general de RRHH y administración',
-    permissions: ['admin_clients:view', 'admin_projects:view', 'admin_sedes:view', 'admin_contracts:view', 'admin_orders:view', 'admin_vacations:view', 'admin_activity_logs:view', 'admin_hr_documents:view'],
-  },
-  admin_users: {
-    label: 'Admin USUARIOS',
-    icon: faUserGear,
-    description: 'Gestión de usuarios, roles y estructura organizacional',
-    permissions: ['admin_areas:view', 'admin_positions:view', 'admin_levels:view', 'admin_users:view', 'admin_users_import:view', 'admin_roles:view'],
+    description: 'Lo que se opera todos los días',
+    permissions: ['admin_contracts:view', 'admin_hr_documents:view', 'admin_activity_logs:view', 'admin_orders:view', 'admin_projects:view', 'admin_vacations:view'],
   },
   config: {
     label: 'Configuración',
     icon: faCog,
-    description: 'Configuración de módulos y plantillas',
-    permissions: ['config_orders:view', 'config_shifts:view', 'config_vacations:view', 'config_activity_logs:view', 'config_holidays:view', 'config_pdf_templates:view', 'config_releases:view', 'config_frame_functions:view', 'config_categorias_sat:view', 'config_bancos:view', 'config_obras_sociales:view', 'config_convenios:view', 'config_centros_costo:view', 'config_contratos:view', 'config_contratos_frame:view', 'config_estados:view', 'config_empresas:view', 'config_membretes:view', 'config_profile:view', 'config_escaneo_dropbox:view', 'config_afip:view', 'config_arca_sucursales:view', 'config_arca_tablas:view'],
-  },
-  mobile: {
-    label: 'Mobile',
-    icon: faMobileAlt,
-    description: 'Acceso a la aplicación móvil',
-    permissions: ['mobile_collaborator:view', 'mobile_coordinator:view'],
+    description: 'Catálogos y ajustes. Incluye los subgrupos ARCA, Plantillas y Usuarios.',
+    permissions: [
+      // ARCA (subgrupo), en el orden en que el menú los muestra
+      'config_obras_sociales:view',
+      'config_arca_sucursales:view',
+      'config_arca_tablas:view',
+      'config_convenios:view',
+      'config_categorias_sat:view',
+      'config_frame_functions:view',
+      'config_afip:view',
+      // Resto de Configuración, alfabético como el menú
+      'config_centros_costo:view',
+      'admin_clients:view',
+      'config_contratos:view',
+      'config_estados:view',
+      'config_escaneo_dropbox:view',
+      'config_empresas:view',
+      'config_bancos:view',
+      'config_holidays:view',
+      'config_profile:view',
+      'config_activity_logs:view',
+      'config_orders:view',
+      // Plantillas (subgrupo): el membrete va primero, igual que en el menú
+      'config_membretes:view',
+      'config_contratos_frame:view',
+      'config_pdf_templates:view',
+      'config_releases:view',
+      'admin_sedes:view',
+      'config_shifts:view',
+      // Usuarios (subgrupo): la entidad primero y sus catálogos detrás
+      'admin_users:view',
+      'admin_areas:view',
+      'admin_positions:view',
+      'admin_levels:view',
+      'admin_roles:view',
+      'config_vacations:view',
+      // Import WP va último en el menú por ser temporal
+      'admin_users_import:view',
+    ],
   },
   project_responsible: {
     label: 'Proyectos',
     icon: faBriefcase,
     description: 'Capacidades relacionadas con la gestión de proyectos',
     permissions: ['project_responsible:eligible'],
+  },
+  mobile: {
+    label: 'Mobile',
+    icon: faMobileAlt,
+    description: 'Acceso a la aplicación móvil',
+    permissions: ['mobile_collaborator:view', 'mobile_coordinator:view'],
   },
 };
 
@@ -69,47 +116,64 @@ const ALL_SELECTABLE_PERMISSIONS: string[] = Object.entries(AVAILABLE_PERMISSION
   .filter(([module]) => module !== 'mobile')
   .flatMap(([, mod]) => mod.permissions);
 
+/** El nombre de cada permiso es el del ítem del menú que destapa. Ver el comentario de arriba. */
 const MODULE_LABELS: Record<string, string> = {
-  'client:view': 'Cliente (Ver/Select)',
-  'admin_clients:view': 'Clientes',
-  'admin_projects:view': 'Proyectos',
-  'admin_sedes:view': 'Sedes',
-  'admin_contracts:view': 'Contratos',
-  'admin_orders:view': 'Pedidos',
-  'admin_vacations:view': 'Vacaciones',
-  'admin_activity_logs:view': 'Novedades',
-  'admin_hr_documents:view': 'Dropbox | Documentos',
-  'project_responsible:eligible': 'Responsable de Proyecto',
-  'admin_areas:view': 'Areas',
-  'admin_positions:view': 'Cargos',
-  'admin_levels:view': 'Niveles',
-  'admin_users:view': 'Usuarios',
-  'admin_users_import:view': 'Import WP',
-  'admin_roles:view': 'Roles',
-  'config_orders:view': 'Pedidos',
-  'config_shifts:view': 'Turnos',
-  'config_vacations:view': 'Vacaciones',
-  'config_activity_logs:view': 'Novedades',
-  'config_pdf_templates:view': 'Plantillas | Pedidos | Vacaciones',
-  'config_releases:view': 'Releases',
-  'config_holidays:view': 'Feriados',
-  'config_frame_functions:view': 'Funciones FRAME',
-  'config_categorias_sat:view': 'Categorías',
-  'config_bancos:view': 'Bancos',
-  'config_obras_sociales:view': 'Obras Sociales',
-  'config_convenios:view': 'Convenios',
-  'config_centros_costo:view': 'Centros de Costos',
-  'config_contratos:view': 'Contratos',
-  'config_contratos_frame:view': 'Contratos FRAME',
-  'config_estados:view': 'Estados',
-  'config_empresas:view': 'Empresas',
-  'config_membretes:view': 'Empresa/s | Membrete/s y firma',
-  'config_profile:view': 'Mi Perfil',
-  'config_escaneo_dropbox:view': 'Dropbox | Documentos',
-  'config_afip:view': 'ARCA',
-  'config_arca_sucursales:view': 'ARCA | Sucursales',
-  'config_arca_tablas:view': 'ARCA | Tablas oficiales',
+  // Fichas
+  'client:view': 'Cliente',
 
+  // Admin GENERAL
+  'admin_contracts:view': 'Contratos',
+  'admin_hr_documents:view': 'Documentos',
+  'admin_activity_logs:view': 'Novedades',
+  'admin_orders:view': 'Pedidos',
+  'admin_projects:view': 'Proyectos',
+  'admin_vacations:view': 'Vacaciones',
+
+  // Configuración → ARCA
+  'config_obras_sociales:view': 'ARCA | Obras Sociales',
+  'config_arca_sucursales:view': 'ARCA | Sucursales',
+  // Un permiso, tres pantallas: son el mismo tipo de nomenclador y se siembran juntas.
+  'config_arca_tablas:view': 'ARCA | Tipos de Servicio y Modalidades',
+  'config_convenios:view': 'ARCA | Convenios',
+  'config_categorias_sat:view': 'ARCA | Categorías',
+  // Categorías tiene dos pestañas y cada una su permiso: con este solo se ve la de Funciones.
+  'config_frame_functions:view': 'ARCA | Categorías → Funciones FRAME',
+  'config_afip:view': 'ARCA | Conexión',
+
+  // Configuración
+  'config_centros_costo:view': 'Centros de Costos',
+  'admin_clients:view': 'Clientes',
+  'config_contratos:view': 'Contratos',
+  'config_estados:view': 'Contratos → Estados',
+  'config_escaneo_dropbox:view': 'Dropbox y DropboxSign',
+  'config_empresas:view': 'Empresas (y la ficha de Empresa)',
+  'config_bancos:view': 'Entidades Financieras',
+  'config_holidays:view': 'Feriados',
+  'config_profile:view': 'Mi Perfil',
+  'config_activity_logs:view': 'Novedades',
+  'config_orders:view': 'Pedidos',
+
+  // Configuración → Plantillas
+  'config_membretes:view': 'Plantillas | Empresa/s | Membrete/s y firma',
+  'config_contratos_frame:view': 'Plantillas | Contratos',
+  'config_pdf_templates:view': 'Plantillas | Pedidos y Vacaciones',
+  'config_releases:view': 'Plantillas | Releases (y Configuración → Releases)',
+
+  'admin_sedes:view': 'Sedes',
+  'config_shifts:view': 'Turnos',
+
+  // Configuración → Usuarios
+  'admin_users:view': 'Usuarios | Usuarios',
+  'admin_areas:view': 'Usuarios | Áreas',
+  'admin_positions:view': 'Usuarios | Cargos',
+  'admin_levels:view': 'Usuarios | Niveles',
+  'admin_roles:view': 'Usuarios | Roles',
+
+  'config_vacations:view': 'Vacaciones',
+  'admin_users_import:view': 'Import WP',
+
+  // Fuera del menú
+  'project_responsible:eligible': 'Responsable de Proyecto',
   'mobile_collaborator:view': 'Colaborador',
   'mobile_coordinator:view': 'Coordinador',
 };

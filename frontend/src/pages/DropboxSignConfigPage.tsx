@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileSignature, faSpinner, faCheck, faTriangleExclamation, faEnvelope, faInbox, faListUl, faCircleCheck, faCircleMinus, faFolderOpen, faBan, faCircleXmark } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faCheck, faTriangleExclamation, faEnvelope, faInbox, faListUl, faCircleCheck, faCircleMinus, faFolderOpen, faBan, faCircleXmark } from "@fortawesome/free-solid-svg-icons";
+import { faDropbox } from "@fortawesome/free-brands-svg-icons";
 import { dropboxSignAPI, DropboxSignConfig, LineaLog, CorridaLog } from "../api/dropboxSign";
 import { InfoModal } from "../components/ui/InfoModal";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -13,7 +14,7 @@ const fmtFechaHora = (iso?: string | null): string => {
 };
 
 /**
- * "DropboxSign | Firmas": casilla de correo que recibe las copias de "documento enviado" de Dropbox
+ * "DropboxSign": casilla de correo que recibe las copias de "documento enviado" de Dropbox
  * Sign. Es lo que permite detectar qué contratos ya se mandaron a firmar y moverlos de "Outbox" a
  * "Pendbox" — o sea, lo que separa la bandeja "Para Firmar" de "Enviado a la firma".
  */
@@ -77,17 +78,23 @@ export const DropboxSignConfigPage: React.FC = () => {
 
   return (
     <PageLayout
-      title="DropboxSign | Firmas"
-      subtitle="Casilla que recibe los avisos de envío a firmar de Dropbox Sign"
-      faIcon={{ icon: faFileSignature }}
+      // Igual que en Dropbox: el menú dice "DropboxSign" y el "| Email" que llevaba el ítem se
+      // explica acá, donde hay lugar para decir qué casilla es y por qué hace falta.
+      title="DropboxSign"
+      subtitle="La casilla de correo que recibe los avisos de envío a firmar"
+      faIcon={{ icon: faDropbox }}
       shouldShowInfo
       infoModal={{
         isOpen: showInfo,
         onOpen: () => setShowInfo(true),
         onClose: () => setShowInfo(false),
-        title: "Para qué sirve esta casilla",
+        title: "DropboxSign: la casilla de avisos",
         content: (
           <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+            <p className="p-2.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300">
+              Esta pantalla configura un <strong>correo</strong>, no la cuenta de Dropbox: la conexión con Dropbox y el escaneo de carpetas se configuran en <strong>Dropbox</strong>. Acá se define la
+              casilla donde llegan los avisos de Dropbox Sign, que es lo que marca un contrato como enviado a firmar.
+            </p>
             <p>
               Dropbox Sign no avisa por API qué contratos ya se enviaron a firmar, pero sí manda una <strong>copia por correo de cada envío</strong> (se activa en Dropbox Sign → Configuración → Perfil →
               Notificaciones, sin costo).

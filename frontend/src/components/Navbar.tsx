@@ -7,7 +7,8 @@ import { EmpresaContextMenu } from './EmpresaContextMenu';
 import { FichasHeader } from './context/FichasHeader';
 import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faFileSignature, faPlug, faLocationDot } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot } from '@fortawesome/free-solid-svg-icons';
+import { faDropbox } from '@fortawesome/free-brands-svg-icons';
 import { Logo } from '../components/ui/Logo';
 import axios from '../api/axiosConfig';
 import { SettingsModal } from './SettingsModal';
@@ -62,9 +63,18 @@ const PLANTILLAS_PATHS = [MEMBRETE_PATH, '/pdfs', '/pdfs-vacaciones', '/contrato
  * dentro de cada Sucursal.
  */
 const ARCA_NOMENCLADOR_PATHS = ['/obras-sociales', '/arca/sucursales', '/arca/tipos-servicio', '/arca/modalidades-contratacion', '/arca/modalidades-liquidacion'];
-const ARCA_PATHS = ['/afip', ...ARCA_NOMENCLADOR_PATHS, '/convenios', '/arca/categorias'];
+/**
+ * La Conexión va ÚLTIMA y separada por una raya.
+ *
+ * Estaba primera "porque es el prerrequisito de todo lo demás", y en el orden de lectura eso es
+ * cierto pero irrelevante: se configura una vez y no se vuelve a tocar. Los nomencladores son lo
+ * que se trabaja, así que van arriba, y la Conexión queda abajo del todo — separada, porque no es
+ * un nomenclador y no debería leerse como uno más de la lista.
+ */
+const ARCA_CONEXION_PATH = '/afip';
+const ARCA_PATHS = [...ARCA_NOMENCLADOR_PATHS, '/convenios', '/arca/categorias', ARCA_CONEXION_PATH];
 
-/** ABM de Empresas ("Empresas | Global"). La ficha de cada una vive aparte, en el bloque FICHAS. */
+/** ABM de Empresas. La ficha de cada una vive aparte, en el bloque FICHAS. */
 const EMPRESAS_PATH = '/empresas';
 
 /**
@@ -237,21 +247,18 @@ export const MobileNavbar: React.FC = () => {
 
       // Admin GENERAL Items
       if (hasPermission('admin_clients:view')) base.push({ path: '/clients', icon: faUsers, label: 'Clientes', scope: 'global', count: adminCounts.clients });
-      // Sufijo "| Global" en los que tienen una versión acotada dentro de una ficha: "Proyectos"
-      // aparece en la ficha del cliente y "Contratos" en la de la empresa, y sin marca nada decía
-      // cuál era cuál. Se califica el GLOBAL, no el de la ficha, porque estando adentro de una ficha
-      // lo acotado es lo que el usuario espera.
-      //
-      // "| Global" y no "Todos los…": deja el sustantivo adelante —así el ítem se busca y se ordena
-      // por lo que es, no por el calificador— y sigue la convención que ya usa el menú
-      // ("Dropbox | Documentos", "Empresa/s | Membrete/s y firma").
-      if (hasPermission('admin_projects:view')) base.push({ path: '/admin/projects', icon: faBriefcase, label: 'Proyectos | Global', scope: 'global', count: adminCounts.projects });
+      // Sin sufijo "| Global": el grupo ya se llama Admin GENERAL, así que dentro de él el calificador
+      // repetía lo que dice el título. Las versiones acotadas se distinguen por dónde están —cuelgan
+      // de la ficha de un cliente o de una empresa, con el nombre a la vista— y no por su etiqueta.
+      if (hasPermission('admin_projects:view')) base.push({ path: '/admin/projects', icon: faBriefcase, label: 'Proyectos', scope: 'global', count: adminCounts.projects });
       if (hasPermission('admin_sedes:view')) base.push({ path: '/admin/sedes', icon: faBuilding, label: 'Sedes', scope: 'global' });
-      if (hasPermission('admin_contracts:view')) base.push({ path: '/admin/contracts', icon: faFileContract, label: 'Contratos | Global', scope: 'global' });
+      if (hasPermission('admin_contracts:view')) base.push({ path: '/admin/contracts', icon: faFileContract, label: 'Contratos', scope: 'global' });
       if (hasPermission('admin_activity_logs:view')) base.push({ path: '/requests', icon: faFileText, label: 'Novedades', scope: 'global', dividerTop: true });
       if (hasPermission('admin_orders:view')) base.push({ path: '/orders', icon: faShoppingCart, label: 'Pedidos', scope: 'global' });
       if (hasPermission('admin_vacations:view')) base.push({ path: '/vacations', icon: faUmbrellaBeach, label: 'Vacaciones', scope: 'global' });
-      if (hasPermission('admin_hr_documents:view')) base.push({ path: '/documents', icon: faFileText, label: 'Dropbox | Documentos', scope: 'global' });
+      // El ícono de Dropbox dice de dónde salen los documentos, así que el nombre no tiene que
+      // repetirlo: la marca queda en la imagen y la etiqueta nombra la pantalla.
+      if (hasPermission('admin_hr_documents:view')) base.push({ path: '/documents', icon: faDropbox, label: 'Documentos', scope: 'global' });
 
       // CONFIGURACION Items
       if (hasPermission('config_activity_logs:view')) base.push({ path: '/requests/config', icon: faFileText, label: 'Novedades', scope: 'global' });
@@ -275,15 +282,15 @@ export const MobileNavbar: React.FC = () => {
       // se muestran a quien ya administra los tipos de contrato (Contratos FRAME).
       // Contratos y Estados viven en un solo ítem con dos tabs: alcanza con cualquiera de los tres permisos.
       if (hasPermission('config_contratos:view') || hasPermission('config_estados:view') || hasPermission('config_contratos_frame:view')) base.push({ path: '/contratos', icon: faFileContract, label: 'Contratos', scope: 'global' });
-      if (hasPermission('config_empresas:view')) base.push({ path: '/empresas', icon: faBuilding, label: 'Empresas | Global', scope: 'global' });
+      if (hasPermission('config_empresas:view')) base.push({ path: '/empresas', icon: faBuilding, label: 'Empresas', scope: 'global' });
       if (hasPermission('config_membretes:view')) base.push({ path: '/empresas-membretes', icon: faFilePdf, label: 'Empresa/s | Membrete/s y firma', scope: 'global' });
-      // Las dos son CONFIGURACIÓN de la integración, y se nombran por lo que se configura en cada una:
-      // acá la conexión con Dropbox, y en la de abajo la casilla desde la que se detectan los avisos
-      // de Dropbox Sign. "Documentos" y "Firmas" describían el módulo, no la pantalla, y chocaban con
-      // "Dropbox | Documentos" de Admin GENERAL, que sí es el módulo.
-      if (hasPermission('config_escaneo_dropbox:view')) base.push({ path: '/escaneo-dropbox', icon: faPlug, label: 'Dropbox | Conexión', scope: 'global' });
+      // Las dos configuran la integración con Dropbox y se nombran por el servicio, a secas: qué
+      // configura cada una —la conexión y el escaneo de carpetas acá, la casilla de avisos de firma
+      // en la de abajo— lo dice el subtítulo de su pantalla, que es donde hay lugar para explicarlo.
+      // El ícono de la marca hace el resto: se ve de un vistazo que son la misma integración.
+      if (hasPermission('config_escaneo_dropbox:view')) base.push({ path: '/escaneo-dropbox', icon: faDropbox, label: 'Dropbox', scope: 'global' });
       // Comparte permiso con el escaneo de Dropbox: las dos configuran la misma integración.
-      if (hasPermission('config_escaneo_dropbox:view')) base.push({ path: '/dropbox-sign', icon: faFileSignature, label: 'DropboxSign | Email', scope: 'global' });
+      if (hasPermission('config_escaneo_dropbox:view')) base.push({ path: '/dropbox-sign', icon: faDropbox, label: 'DropboxSign', scope: 'global' });
       // Dentro del subgrupo "ARCA" se muestra como "Conexión" (el organismo ya lo nombra el grupo).
       // El ícono es el de conexión y NO el del organismo: `faLandmark` ya lo lleva el encabezado del
       // grupo, así que repetirlo dejaba dos íconos idénticos uno debajo del otro y no distinguía la
@@ -382,6 +389,9 @@ export const MobileNavbar: React.FC = () => {
       if (ARCA_NOMENCLADOR_PATHS.includes(p) && !arcaChildren.some((c) => c.sectionKey === 'nomencladores')) {
         arcaChildren.push({ path: '#arca-nomencladores', sectionKey: 'nomencladores', section: 'Nomencladores de ARCA', hint: 'Universales: se importan una vez y valen para todos los CUIT.' });
       }
+      // Raya antes de la Conexión: no es un nomenclador y no tiene que leerse como uno más. Solo se
+      // dibuja si arriba quedó algo — si no, sería una raya colgada al principio del grupo.
+      if (p === ARCA_CONEXION_PATH && arcaChildren.length > 0) arcaChildren.push({ path: '#arca-separador', separador: true });
       arcaChildren.push(item);
     }
     const arcaGroup = { path: '#arca', groupKey: 'arca', icon: faLandmark, label: 'ARCA', scope: 'global' as const, children: arcaChildren };
@@ -391,11 +401,11 @@ export const MobileNavbar: React.FC = () => {
     const usuariosGroup = { path: '#usuarios', groupKey: 'usuarios', icon: faUserGear, label: 'Usuarios', scope: 'global' as const, children: usuariosChildren };
 
     /**
-     * En Configuración queda solo el LISTADO de empresas, calificado como "| Global".
+     * En Configuración queda solo el LISTADO de empresas.
      *
      * Abrir la ficha de una empleadora subió al bloque FICHAS: es la operación de todos los días, no
-     * configuración. Lo que queda acá es el ABM, y lleva el mismo sufijo que Proyectos y Contratos
-     * para que no se confunda con la ficha abierta.
+     * configuración. Lo que queda acá es el ABM, y no necesita calificador: lo distingue estar en
+     * otro bloque del menú, y la ficha abierta muestra el nombre de la empresa.
      */
     const empresasItem = adminItems.find((item) => item.path === EMPRESAS_PATH);
 
@@ -412,6 +422,11 @@ export const MobileNavbar: React.FC = () => {
     if (importItem) configItems.push(importItem);
 
     const renderMenuItem = (item: any, isChild = false) => {
+      // Raya divisoria dentro de un subgrupo. No es navegable ni tiene texto.
+      if (item.separador) {
+        return <div key={item.path} className="my-2 border-t border-gray-200 dark:border-gray-700" role="separator" />;
+      }
+
       // Encabezado de sección dentro de un subgrupo (ej: "Nomencladores de ARCA"). No es navegable:
       // separa lo universal de lo que no lo es, que es la distinción que el menú venía escondiendo.
       if (item.section) {
@@ -588,7 +603,11 @@ export const MobileNavbar: React.FC = () => {
   const contextBlocks = (showClientContext || showEmpresaContext) && (
     <div>
       <FichasHeader />
-      <div className="space-y-1">
+      {/* Los dos ejes se separan con AIRE, no con una línea: con la ficha de empresa abierta, sus
+          secciones (Información, ARCA, Contratos) quedaban pegadas al chip de CLIENTE y se leían como
+          si CLIENTE colgara de la empresa. La línea alcanzaba para eso pero cortaba el sidebar en dos
+          con los dos chips cerrados, que es el estado más frecuente. */}
+      <div className="space-y-3">
         {showEmpresaContext && (
           <div>
             <EmpresaSelector />

@@ -44,11 +44,17 @@ interface Props {
   renderEmpresas?: (c: ConvenioFila) => React.ReactNode;
   /** Acciones de la fila. Es lo único que cambia entre el nomenclador y la ficha. */
   renderAcciones?: (c: ConvenioFila) => React.ReactNode;
-  /** Dónde mandar a cargar la obra social cuando falta (el dato es del CCT, no de la empresa). */
+  /**
+   * Qué decir cuando el convenio no tiene obra social. Sin esto va un guion, a secas.
+   *
+   * Solo la FICHA lo pasa: ahí la falta es accionable —ese convenio le afecta los contratos a esta
+   * empleadora— y vale el aviso en ámbar. En el nomenclador es ruido: con "Ver todos" serían 2.664
+   * advertencias sobre convenios que nadie usa.
+   */
   ayudaSinObraSocial?: string;
 }
 
-export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, renderEmpresas, renderAcciones, ayudaSinObraSocial = 'Asignásela al convenio en Configuración → ARCA → Convenios.' }) => (
+export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, renderEmpresas, renderAcciones, ayudaSinObraSocial }) => (
   <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-xl">
     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
       <thead className="bg-gray-50 dark:bg-gray-900/50">
@@ -87,8 +93,10 @@ export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, rende
                     </span>
                     {r.noRegistrada && <span className="block text-[11px] text-red-700 dark:text-red-400 mt-0.5">No está entre las registradas por esta empleadora: ARCA va a rechazar estas altas.</span>}
                   </>
-                ) : (
+                ) : ayudaSinObraSocial ? (
                   <span className="text-xs text-amber-700 dark:text-amber-400">Sin obra social cargada. {ayudaSinObraSocial}</span>
+                ) : (
+                  <span className="text-gray-400 dark:text-gray-600">—</span>
                 )}
               </td>
               {renderEmpresas && <td className="px-4 py-3 align-top text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{renderEmpresas(c)}</td>}

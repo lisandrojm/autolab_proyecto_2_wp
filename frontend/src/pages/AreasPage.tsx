@@ -8,6 +8,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Card } from '../components/ui/Card';
 import { sweetAlert } from '../utils/sweetAlert';
+import { getHelp, hasHelp } from '../data/help/helpContent';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faTrash, faPlus, faShieldHalved, faLayerGroup, faUserTie, faUserGraduate, faUserGear, faTable, faGrip, faClock, faUserShield, faLock } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router-dom';
@@ -23,6 +24,8 @@ export const AreasPage: React.FC = () => {
   const navigate = useNavigate();
   const { hasPermission } = useAuthStore();
 
+  const helpEntry = getHelp('areas');
+  const [showInfo, setShowInfo] = useState(false);
   const [areas, setAreas] = useState<Area[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -183,7 +186,8 @@ export const AreasPage: React.FC = () => {
       itemCount={filteredAreas.length}
       subtitle="Gestiona las áreas de la organización"
       faIcon={{ icon: faLayerGroup }}
-      shouldShowInfo={false}
+      shouldShowInfo={hasHelp('areas')}
+      infoModal={{ isOpen: showInfo, onOpen: () => setShowInfo(true), onClose: () => setShowInfo(false), title: helpEntry.title, size: helpEntry.size, content: helpEntry.content }}
       headerActions={
         <div className="flex items-center gap-3">
           {canManage && (

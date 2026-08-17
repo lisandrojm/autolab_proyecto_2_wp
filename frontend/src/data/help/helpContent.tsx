@@ -1,6 +1,62 @@
 import React from "react";
 
-export type HelpKey = "fichas" | "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels" | "pdfTemplates" | "vacations" | "vacationsRules" | "activityLogs" | "projectTeam" | "projects" | "sedes" | "contracts" | "categoriasSat" | "centrosCosto" | "contratosFrame" | "empresas" | "membretes" | "bancos" | "holidays" | "funcionesFrame" | "miPerfil" | "requestsConfig" | "obrasSociales" | "orderTypes" | "releases" | "shifts" | "importUsersWp" | "arcaSucursales" | "arcaModalidadContratacion" | "arcaTipoServicio" | "arcaModalidadLiquidacion";
+/**
+ * Las pantallas que tienen ⓘ. Una clave por pantalla, y todas tienen que existir en `HELP_CONTENT`
+ * y en los textos de `helpResources.es` — si falta una de las dos puntas, el modal abre vacío.
+ *
+ * Se borraron las de la etapa de redes sociales (campañas, posts, brand kit, analytics, los
+ * dashboards y los `clientContext*`): describían pantallas que ya no existen y nadie las
+ * referenciaba. La comprobación es que ningún archivo las nombre — TypeScript no avisa de una clave
+ * de más, solo de una que falte.
+ */
+export type HelpKey =
+  | "fichas"
+  | "clients"
+  | "users"
+  | "roles"
+  | "tenants"
+  | "clientDetail"
+  | "clientProjects"
+  | "orders"
+  | "orderCategories"
+  | "positions"
+  | "levels"
+  | "pdfTemplates"
+  | "vacations"
+  | "vacationsRules"
+  | "activityLogs"
+  | "projectTeam"
+  | "projects"
+  | "sedes"
+  | "contracts"
+  | "categoriasSat"
+  | "centrosCosto"
+  | "contratosFrame"
+  | "empresas"
+  | "membretes"
+  | "bancos"
+  | "holidays"
+  | "funcionesFrame"
+  | "miPerfil"
+  | "requestsConfig"
+  | "obrasSociales"
+  | "convenios"
+  | "areas"
+  | "documents"
+  | "empresaFicha"
+  | "empresaObrasSociales"
+  | "empresaConvenios"
+  | "empresaDomicilios"
+  | "empresaCategorias"
+  | "empresaDefaults"
+  | "empresaContratos"
+  | "orderTypes"
+  | "releases"
+  | "importUsersWp"
+  | "arcaSucursales"
+  | "arcaModalidadContratacion"
+  | "arcaTipoServicio"
+  | "arcaModalidadLiquidacion";
 
 export type HelpEntry = {
   title: string;
@@ -27,35 +83,10 @@ const helpResources = {
       "clients.description": "Gestión completa de clientes y su información",
       "clients.items": ["**Cliente**: Contiene datos de contacto, empresa e información adicional como redes sociales", "**Estado**: Puede ser *Activo*, *Inactivo* u *Onboarding* para reflejar su ciclo de vida", "**Gestión**: Crear, editar, clonar y eliminar clientes desde la vista principal"],
 
-      // Dashboard
-      "dashboard.title": "Información del Dashboard",
-      "dashboard.description": "Panel principal con métricas y accesos rápidos",
-      "dashboard.items": ["**Resumen**: Muestra métricas clave, accesos rápidos y estado general de campañas y clientes", "**Navegación**: Acceso directo a todas las secciones del sistema", "**Estado del sistema**: Monitoreo de salud del servidor y conexiones", "**Métricas**: Vista general de rendimiento y KPIs principales"],
-
-      // Platform Dashboard (SUPERADMIN)
-      "platform_dashboard.title": "Dashboard de Plataforma",
-      "platform_dashboard.description": "Vista de superadmin con métricas globales y estado del sistema",
-      "platform_dashboard.items": ["**Tenants**: Total, activos, suspendidos y nuevos (últimos 30 días)", "**Recursos**: Usuarios y clientes totales en toda la plataforma", "**Almacenamiento**: Porcentaje usado, MB utilizados y límite asignado", "**Alertas**: Incidentes por tenant con severidad y tipo", "**Planes**: Distribución por plan (Free, Basic, Pro, Enterprise)", "**Top consumidores**: Tenants con mayor uso de almacenamiento"],
-
       // Tenants
       "tenants.title": "Información de Tenants",
       "tenants.description": "Gestión de tenants en arquitectura multi-tenant",
       "tenants.items": ["**Tenant**: Entidad aislada que representa una organización con sus propios usuarios, clientes y datos", "**Aislamiento**: Cada tenant tiene su espacio separado, sin acceso a datos de otros tenants", "**Empresa**: Información legal incluyendo razón social, Tax ID, industria y descripción", "**Contacto**: Usuario administrador del tenant con acceso completo a la configuración", "**Configuración**: Zona horaria, moneda e idioma predeterminado para el tenant", "**Suscripción**: Plan activo (Free, Basic, Pro, Enterprise) y estado de la cuenta", "**Uso de recursos**: Límites y consumo actual de usuarios, clientes, campañas y almacenamiento", "**Gestión**: Crear, editar, ver detalles y eliminar tenants desde la vista principal"],
-
-      // Tasks
-      "tasks.title": "Información de Tareas",
-      "tasks.description": "Sistema Kanban para gestión de flujo de trabajo",
-      "tasks.items": ["**Tablero Kanban**: Organización en estados: Por Hacer, En Progreso, Revisión y Completado", "**Tipos**: Diseño, copy, aprobación, publicación, análisis y otros", "**Prioridad**: Baja, media, alta y urgente para organizar el trabajo", "**Asignación**: Asignar tareas a usuarios específicos del equipo", "**Seguimiento**: Fechas de vencimiento y horas estimadas vs reales"],
-
-      // Posts
-      "posts.title": "Información de Posts",
-      "posts.description": "Gestión de contenido para redes sociales",
-      "posts.items": ["**Contenido**: Copy, hashtags, menciones y medios adjuntos para cada post", "**Plataformas**: Publicación en Facebook, Instagram, Twitter, LinkedIn, TikTok y YouTube", "**Estados**: Borrador, pendiente aprobación, aprobado, rechazado, programado y publicado", "**Programación**: Fechas y horarios específicos para publicación automática", "**Analytics**: Métricas de impresiones, engagement, clicks y shares"],
-
-      // Analytics
-      "analytics.title": "Información de Analytics",
-      "analytics.description": "Métricas y reportes de rendimiento",
-      "analytics.items": ["**Métricas**: Impresiones, engagement, clicks y ROI por campaña y plataforma", "**Filtros temporales**: Comparar períodos para identificar tendencias", "**Rendimiento**: CTR, CPM y otras métricas clave de performance", "**Reportes**: Análisis detallado por cliente, campaña y plataforma"],
 
       // Users
       "users.title": "Información de Usuarios",
@@ -87,46 +118,6 @@ const helpResources = {
       "clientProjects.description": "Gestión de proyectos por cliente",
       "clientProjects.items": ["**Proyectos**: Agrupan objetivos para un mismo cliente", "**Gestión**: Crear, buscar, editar y eliminar proyectos"],
 
-      // Campaign Detail
-      "campaignDetail.title": "Sobre esta campaña",
-      "campaignDetail.description": "Vista detallada de campaña",
-      "campaignDetail.items": ["**Timeline**: Fechas de inicio, fin y duración de la campaña", "**Presupuesto**: Total, asignado y gastado con control de costos", "**Objetivos**: Metas específicas y KPIs de la campaña", "**Plataformas**: Canales donde se ejecuta la campaña", "**Tablero de lanzamientos**: Entregables con estados o devoluciones"],
-
-      // Post Detail
-      "postDetail.title": "Sobre este post",
-      "postDetail.description": "Vista detallada de post",
-      "postDetail.items": ["**Contenido**: Copy completo, hashtags y menciones organizadas", "**Plataformas**: Canales donde se publicará el post", "**Programación**: Fecha, hora y zona horaria de publicación", "**Estado**: Borrador, pendiente, aprobado, rechazado, programado o publicado", "**Analíticas**: Métricas posteriores a la publicación", "**Media**: Imágenes, videos o carruseles asociados"],
-
-      // Client Context Info
-      "clientContextInfo.title": "Información del Cliente",
-      "clientContextInfo.description": "Datos de contacto y empresa",
-      "clientContextInfo.items": ["**Contacto**: Email obligatorio y teléfono opcional", "**Empresa**: Nombre, industria y sitio web", "**Estado**: Ciclo del cliente: *Activo*, *Onboarding*, *Inactivo*", "**Redes sociales**: Enlaces a perfiles", "**Edición**: Actualizar con *Editar → Guardar*"],
-
-      // Client Context Brand Kit
-      "clientContextBrandKit.title": "Brand Kit",
-      "clientContextBrandKit.description": "Elementos visuales del cliente",
-      "clientContextBrandKit.items": ["**Logo**: Formatos recomendados: SVG o PNG", "**Colores**: Tonos principales y secundarios", "**Fuentes**: Fuentes oficiales separadas por coma", "**Guías**: Indicaciones de estilo y uso", "**Consistencia**: Afecta todas las vistas dependientes"],
-
-      // Client Context Campaigns
-      "clientContextCampaigns.title": "Campañas del Cliente",
-      "clientContextCampaigns.description": "Campañas organizadas por proyecto",
-      "clientContextCampaigns.items": ["**Vista unificada**: Todas las campañas en un solo lugar", "**Organización**: Cada campaña muestra su proyecto de origen", "**Búsqueda**: Por nombre, descripción o proyecto", "**Filtros**: Por estado"],
-
-      // Client Context Posts
-      "clientContextPosts.title": "Posts del Cliente",
-      "clientContextPosts.description": "Posts organizados por campaña y proyecto",
-      "clientContextPosts.items": ["**Vista jerárquica**: Posts agrupados por campaña", "**Breadcrumbs**: Muestra proyecto y campaña", "**Búsqueda**: Título, copy, campaña o proyecto", "**Estados**: Filtro por estado de publicación"],
-
-      // Client Context Users
-      "clientContextUsers.title": "Usuarios del Cliente",
-      "clientContextUsers.description": "Gestión de usuarios vinculados al cliente",
-      "clientContextUsers.items": ["**Tipos**: Usuario Cliente", "**Filtros**: Búsqueda por nombre/email", "**Crear usuario**: Email, contraseña y roles", "**Edición**: Datos, estado y roles", "**Contraseña**: Solo para usuarios cliente", "**Permisos**: Nivel de acceso interno", "**Eliminar**: Remueve el usuario definitivamente"],
-
-      // Client Dashboard
-      "clientDashboard.title": "Dashboard Cliente",
-      "clientDashboard.description": "Vista general con KPIs y accesos rápidos",
-      "clientDashboard.items": ["**KPIs**: Campañas activas, aprobaciones, posts programados", "**Acciones rápidas**: Crear solicitud y navegar campañas", "**Actividad reciente**: Últimos elementos actualizados", "**Estado visual**: Indicadores por color"],
-
       //
       // ---------------------------------------------------------
       // NUEVO: Gestión de Pedidos (Orders)
@@ -135,15 +126,6 @@ const helpResources = {
       "orders.title": "Gestión de Pedidos",
       "orders.description": "Módulo para administrar las solicitudes realizadas por los Coordinadores y Colaboradores. Aquí el área administrativa puede aprobar, rechazar y monitorear el estado de cada pedido.",
       "orders.items": ["**Pedidos**: Cada solicitud contiene título, descripción, categoría y fotografía adjunta opcional.", "**Flujo de estados**: Los pedidos avanzan por etapas: *Pendiente*, *Aprobado*, *Rechazado*, *Entregado*, *Cancelado*.", "**Acciones disponibles**: Aprobar, rechazar y marcar como entregado según la política interna.", "**Categorías de pedidos**: Permite crear grupos organizados (Ej: Equipamiento, Uniformes, Herramientas, Tecnología).", "**Filtros y búsqueda**: Buscar por texto, filtrar por estado o categoría para agilizar la gestión.", "**Estadísticas superiores**: Indicadores por estado para visualizar rápidamente la carga del equipo."],
-
-      //
-      // ---------------------------------------------------------
-      // NUEVO: Pedidos dentro del contexto del Cliente
-      // ---------------------------------------------------------
-      //
-      "clientContextOrders.title": "Pedidos del Cliente",
-      "clientContextOrders.description": "Vista filtrada que muestra únicamente los pedidos asociados al cliente actual.",
-      "clientContextOrders.items": ["**Contexto**: Solo muestra las solicitudes generadas dentro del cliente en curso.", "**Filtros**: Búsqueda y filtrado por estado o categoría.", "**Acciones**: Según permisos: visualizar, aprobar, rechazar o marcar como entregado.", "**Orden cronológico**: Incluye fecha de solicitud y el estado actual.", "**Evidencia visual**: Previsualización de imágenes adjuntas."],
 
       //
       // ---------------------------------------------------------
@@ -193,7 +175,16 @@ const helpResources = {
 
       "contracts.title": "Gestión de Contratos",
       "contracts.description": "Historial completo de contrataciones y vinculaciones laborales.",
-      "contracts.items": ["**Registros**: Detalle de cada contrato asociado a un usuario y proyecto.", "**Datos clave**: Incluye fechas de alta/baja, duración en días, sueldo y rol desempeñado.", "**Estado**: Visualiza si el contrato está vigente o finalizado.", "**Sede y Rol**: Ubicación y función específica que desempeña el usuario.", "**Filtros**: Busca por nombre de usuario, proyecto o contrato.", "**Vistas**: Alterna entre vista de tabla (detalle) y tarjetas (resumen)."],
+      "contracts.items": [
+        "**Registros**: Detalle de cada contrato asociado a un usuario y proyecto.",
+        "**Datos clave**: Incluye fechas de alta/baja, duración en días, sueldo y rol desempeñado.",
+        "**Estado**: Visualiza si el contrato está vigente o finalizado.",
+        "**Sede y Rol**: Ubicación y función específica que desempeña el usuario.",
+        "**Datos ARCA**: para generar el alta, cada contrato necesita categoría, domicilio, actividad y obra social. Lo que falta se marca en la fila, pero casi siempre se resuelve UNA vez en la ficha de la empleadora —no contrato por contrato—: si la empresa no tiene convenios o domicilios registrados, ninguno de sus contratos puede generar el archivo.",
+        "**El TXT es por CUIT**: ARCA rechaza un archivo que mezcle contratos de dos empleadoras, así que hay que filtrar por empresa antes de generarlo. Desde la ficha de cada empleadora ya viene acotado.",
+        "**Filtros**: Busca por nombre de usuario, proyecto o contrato.",
+        "**Vistas**: Alterna entre vista de tabla (detalle) y tarjetas (resumen).",
+      ],
 
       // Categorías
       "categoriasSat.title": "Información de Categorías",
@@ -219,7 +210,16 @@ const helpResources = {
       // Empresas
       "empresas.title": "Información de Empresas",
       "empresas.description": "Empresas / productoras con sus datos legales para armar los contratos.",
-      "empresas.items": ["**Empresa**: Razón social y CUIT de la productora que figura como 'La Empleadora' en los contratos.", "**Domicilio legal**: Calle, número, localidad, provincia y código postal de la empresa.", "**Firmante**: Persona que representa a la empresa al firmar (nombre, DNI y cargo, ej. Socio Gerente).", "**Representante legal**: Apoderado legal con su nombre y email de contacto.", "**Gestión**: Crear, editar y eliminar empresas para usarlas al generar los contratos."],
+      "empresas.items": [
+        "**Empresa**: Razón social y CUIT de la productora que figura como 'La Empleadora' en los contratos.",
+        "**Domicilio legal**: Calle, número, localidad, provincia y código postal de la empresa.",
+        "**Firmante**: Persona que representa a la empresa al firmar (nombre, DNI y cargo, ej. Socio Gerente).",
+        "**Representante legal**: Apoderado legal con su nombre y email de contacto.",
+        "**Columna ARCA**: dice si esa empleadora puede dar altas hoy. Son cuatro requisitos —convenios, domicilios, obras sociales y CUIT—; el badge los cuenta y, clickeado, muestra cuáles faltan y lleva a resolverlos. Mientras falte uno, NINGUNO de sus contratos puede generar el TXT.",
+        "**Convenios / Obras sociales / Sucursales**: lo que ese CUIT tiene registrado en el padrón de ARCA. El número abre el detalle. Se lleva por empleadora: lo que declaró una no sirve para otra.",
+        "**Ficha de la empresa**: desde el bloque FICHAS del menú se abre cada empleadora para trabajar en esos datos, ver sus contratos y cargar sus excepciones de obra social.",
+        "**Gestión**: Crear, editar y eliminar empresas para usarlas al generar los contratos.",
+      ],
 
       // Entidades Financieras (Bancos)
       "bancos.title": "Información de Entidades Financieras",
@@ -253,8 +253,113 @@ const helpResources = {
         "**Obra social**: Cobertura de salud asociada al personal.",
         "**Origen**: Son las obras sociales registradas en ARCA (ex AFIP), en Simplificación Registral → Registrar Obras Sociales. Cada una se identifica con su código **RNOS** (formato X-XXXX-X).",
         "**Actualización**: Este catálogo es una copia local, NO se sincroniza solo con ARCA. Si en ARCA se dan de alta, se dan de baja o cambian obras sociales, hay que volver a importarlas acá con **Importar Excel** para que el listado quede al día.",
-        "**Uso**: Se selecciona al cargar los datos del empleado.",
+        "**Este es el catálogo universal**: las 494 que existen. Cada empleadora declara aparte cuáles tiene registradas ante ARCA, en su ficha → Obras Sociales, y el organismo solo acepta altas con esas.",
+        "**La obra social de cada persona no se elige acá**: se resuelve en cascada — la propia de la persona → la excepción que su empleadora haya puesto para ese convenio → **la del convenio**, que es el caso normal → la de excluidos de convenio (9999/99) de la empleadora → la global de la pestaña *Por defecto*.",
+        "**Por defecto (global)**: la última red. Si un alta termina usándola, es señal de que falta cargar la obra social del convenio: la pestaña muestra cuántos contratos están en esa situación.",
         "**Gestión**: Crear, editar y eliminar obras sociales, o importarlas desde un Excel (descargá la **Plantilla** para respetar el formato).",
+      ],
+
+      // Áreas
+      "areas.title": "Información de Áreas",
+      "areas.description": "Áreas de la organización a las que pertenece cada persona.",
+      "areas.items": [
+        "**Área**: La división interna donde trabaja la persona (ej. Producción, Administración, Post).",
+        "**Uso**: Se asigna en el perfil de cada usuario y sirve para agrupar y filtrar equipos, novedades y reportes.",
+        "**No es una Sede ni un Centro de Costos**: la Sede es dónde se trabaja y el Centro de Costos a qué se imputa la plata. El Área es a qué parte de la organización pertenece la persona.",
+        "**Gestión**: Crear, editar y eliminar áreas, con su nombre y descripción.",
+      ],
+
+      // Documentos (Dropbox)
+      "documents.title": "Información de Documentos",
+      "documents.description": "Los documentos del personal que se detectan automáticamente en Dropbox.",
+      "documents.items": [
+        "**De dónde salen**: un escaneo recorre las carpetas vigiladas de Dropbox y trae lo que encuentra. Los archivos no se suben desde acá.",
+        "**Dos pestañas**: *HelloSign* muestra los documentos del Dropbox general; *ARCA* los de la carpeta `/AFIP`, que es donde van los del organismo.",
+        "**Configuración**: qué carpetas se vigilan y cada cuánto corre el escaneo se define en Configuración → **Dropbox** (también se llega con *Configurar transición automática*). Si acá no aparece nada, lo primero para revisar es que la conexión esté activa.",
+        "**Firmas**: los avisos de envío a firmar llegan por correo y se configuran aparte, en Configuración → **DropboxSign**.",
+      ],
+
+      // Ficha de empresa — Información
+      "empresaFicha.title": "Ficha de la empleadora",
+      "empresaFicha.description": "Los datos de esta empresa como EMPLEADORA: lo que va en sus contratos y lo que ARCA exige para darle altas.",
+      "empresaFicha.items": [
+        "**ARCA**: dice si esta empleadora puede dar altas hoy. Son cuatro requisitos —convenios, domicilios, obras sociales y CUIT— y el badge los cuenta; clickealo para ver cuáles faltan e ir a resolverlos.",
+        "**Todo se lleva por CUIT**: las obras sociales, los convenios y los domicilios que ARCA acepta son los que ESTE CUIT tiene registrados en su padrón. Lo que declaró otra empresa no sirve acá.",
+        "**Los datos se editan en el ABM**: razón social, domicilio, firmante y representante se cambian en Configuración → Empresas, con el botón de arriba. Acá se consultan.",
+        "**Membrete**: el logo y la firma que encabezan los contratos generados con esta empleadora.",
+      ],
+
+      // Ficha de empresa — Obras Sociales
+      "empresaObrasSociales.title": "Obras sociales de esta empleadora",
+      "empresaObrasSociales.description": "Las que este CUIT tiene registradas ante ARCA. El organismo solo acepta altas con una de ellas.",
+      "empresaObrasSociales.items": [
+        "**Es un subconjunto**: el catálogo tiene 494 obras sociales y cada empleadora declara las suyas. Una que no esté acá hace que ARCA rechace el alta.",
+        "**El listado real sale del padrón**: en ARCA, logueado con este CUIT, Datos del Empleador → Obras Sociales. Acá se refleja cuáles son; hay que repetirlo con cada empleadora.",
+        "**La obra social de cada persona NO se elige acá**: la define su convenio. Lo único que se decide en esta pantalla es la de los **excluidos de convenio (9999/99)**, que no tienen sindicato del que heredarla.",
+        "**Orden en que se resuelve**: la propia de la persona → la excepción que esta empleadora haya puesto para ese convenio → la del convenio → la de excluidos → la global del catálogo.",
+        "**Se guarda en lote**: los cambios se aplican con **Guardar cambios**, a diferencia del nomenclador de Configuración → ARCA, donde cada registro se guarda al instante.",
+      ],
+
+      // Ficha de empresa — Convenios
+      "empresaConvenios.title": "Convenios de esta empleadora",
+      "empresaConvenios.description": "Los Convenios Colectivos que este CUIT registró ante ARCA.",
+      "empresaConvenios.items": [
+        "**Definen qué categorías se pueden dar de alta**: ARCA solo ofrece las de los convenios registrados por este CUIT. Sin convenio no hay categoría posible y el alta no se puede generar.",
+        "**La obra social viene del convenio**: la define el sindicato, y al sindicato lo define el CCT. Se carga una sola vez en Configuración → ARCA → Convenios y vale para todas las empresas.",
+        "**Excepción por empleadora**: con el ✎ de la fila se puede usar OTRA obra social para ese convenio, solo en esta empresa. La tabla la marca como *pisada por esta empresa*.",
+        "**El 🗑 no borra el convenio**: lo quita de esta empleadora. El registro maestro sigue en el nomenclador.",
+        "**Se guarda en lote**: nada se aplica hasta apretar **Guardar cambios**, ni siquiera la excepción cargada en el modal (queda marcada como *sin guardar*).",
+      ],
+
+      // Ficha de empresa — Domicilios
+      "empresaDomicilios.title": "Domicilios de explotación",
+      "empresaDomicilios.description": "Los domicilios donde esta empleadora declara que se presta el servicio.",
+      "empresaDomicilios.items": [
+        "**El alta declara UNO**: cada contrato informa un domicilio y UNA de sus actividades. Sin domicilios registrados no hay dónde declarar el trabajo.",
+        "**El código es por CUIT**: el mismo domicilio declarado por dos empleadoras son dos sucursales distintas, con códigos distintos. Salen del padrón de cada una.",
+        "**Actividades**: si la sucursal declara una sola, el contrato la hereda; con varias, el contrato elige cuál informa. Una sucursal sin actividades no puede generar altas.",
+        "**No son las Sedes**: las Sedes son los lugares de trabajo con los que opera el sistema. Estas son entidades del padrón de ARCA y se cargan por separado, en Configuración → ARCA → Sucursales.",
+      ],
+
+      // Ficha de empresa — Categorías
+      "empresaCategorias.title": "Categorías disponibles",
+      "empresaCategorias.description": "Las categorías profesionales que esta empleadora le puede dar de alta a alguien.",
+      "empresaCategorias.items": [
+        "**No se configuran acá, se calculan**: son las de los convenios que esta empleadora registró. Se elige el convenio y las categorías vienen con él.",
+        "**Para cambiar esta lista**: registrá o quitá convenios en la pantalla de Convenios de esta misma ficha.",
+        "**Para editar las escalas**: Configuración → ARCA → Categorías. La escala salarial es del CCT y la comparten todas las empresas, no es de esta empleadora.",
+        "**Estructura**: Convenio → Grupo (la escala) → Categoría, con su código de 6 dígitos, que es el que viaja al TXT.",
+      ],
+
+      // Ficha de empresa — Defaults
+      "empresaDefaults.title": "Valores por defecto de ARCA",
+      "empresaDefaults.description": "La elección habitual de esta empleadora dentro del nomenclador, para no repetirla en cada alta.",
+      "empresaDefaults.items": [
+        "**Tipo de servicio** y **Modalidad de liquidación**: dos códigos del nomenclador de ARCA que en la práctica son siempre los mismos por CUIT.",
+        "**No pisan al contrato**: si el Tipo de Contrato trae su propio código, manda el del contrato. Estos son el valor de arranque, no una regla.",
+        "**Los códigos son universales**: se administran en Configuración → ARCA. Acá solo se elige cuál usa esta empleadora.",
+      ],
+
+      // Ficha de empresa — Contratos
+      "empresaContratos.title": "Contratos de esta empleadora",
+      "empresaContratos.description": "Los contratos firmados por esta empresa, en cualquier proyecto y de cualquier cliente.",
+      "empresaContratos.items": [
+        "**El corte es por empleadora**: un mismo proyecto puede tener contratos de dos empresas distintas, así que acá aparecen solo los de esta.",
+        "**Datos ARCA**: cada contrato necesita su categoría, domicilio, actividad y obra social para poder generar el TXT de alta. Lo que falta se marca en la fila.",
+        "**El TXT es por CUIT**: un archivo mezcla contratos de dos empleadoras es rechazado por el organismo, así que la generación se hace desde acá o filtrando por empresa.",
+        "**La versión global**: en Admin GENERAL → Contratos están los de todas las empleadoras juntos.",
+      ],
+
+      // Convenios (y de dónde sale la obra social de cada persona)
+      "convenios.title": "Convenios y obras sociales",
+      "convenios.description": "El convenio define el sindicato, y el sindicato define la obra social de quien trabaja bajo él. Por eso la obra social se carga acá y no en cada empresa.",
+      "convenios.items": [
+        "**La obra social la define el convenio, no la empleadora**: quien trabaja bajo el CCT de televisión aporta a la O.S. del Personal de Televisión, la contrate la productora que la contrate. Se carga en la columna **Obra social**, con el ✎ de la fila.",
+        "**Este dato no viene de ARCA**: el nomenclador oficial trae el código y la actividad, nada más. El sindicato signatario y su obra social se cargan a mano, una sola vez, y valen para todas las empresas.",
+        "**Qué obra social termina en el TXT de alta**: se toma la primera de esta lista que exista — (1) la propia de la persona; (2) la excepción que una empleadora haya puesto para ese convenio; (3) **la del convenio**, que es el caso normal; (4) solo para *9999/99*, la obra social de excluidos de esa empleadora; (5) la global de Obras Sociales → Por defecto, que es la red de contención y avisa cada vez que se usa.",
+        "**9999/99 — EXCLUIDO DE CONVENIO no tiene sindicato**: es el único caso en que la obra social la elige la empresa, en su ficha → Obras Sociales. Su celda vacía acá no es un dato faltante.",
+        "**Las excepciones no se cargan acá**: viven en la ficha de cada empleadora (Empresa → Convenios), porque son de esa empresa y no del convenio. Cuando existe, la tabla la marca como *pisada por esta empresa*.",
+        "**El filtro de arriba**: el nomenclador tiene 2.669 convenios y solo se trabaja con los que alguna empresa registró ante ARCA. La columna **Empresas** dice cuántas: hacé click en el número para ver cuáles.",
       ],
 
       // Sucursales de ARCA
@@ -314,11 +419,6 @@ const helpResources = {
       "membretes.description": "El membrete es el logo y la firma de una empresa que encabezan y firman los documentos (contratos, releases y pedidos/vacaciones).",
       "membretes.items": ["**Qué es**: El membrete de una empresa = su logo + su firma (más la aclaración y el cargo del firmante). Es lo que aparece como encabezado y pie de firma en los PDF.", "**Empresa**: Se elige del ABM de Empresas; sus datos (razón social, CUIT, domicilio) se editan ahí. Acá se le cargan el logo y la firma.", "**Uso en las plantillas**: En cada plantilla (Contratos, Releases, Pedidos/Vacaciones) el check 'Membrete con datos de la empresa y firma' solo se puede activar si existe al menos un membrete cargado.", "**Contratos y Releases**: La empresa del membrete se elige al descargar el documento, entre las asignadas al proyecto.", "**Pedidos/Vacaciones**: Como esos PDF no están atados a un proyecto, usan la primera empresa que tenga membrete cargado.", "**Gestión**: Crear, editar y eliminar el membrete de cada empresa (eliminar solo quita el logo/firma; la empresa sigue en el ABM)."],
 
-      // Turnos
-      "shifts.title": "Información de Turnos",
-      "shifts.description": "Catálogo de turnos horarios asignables a las áreas de los proyectos.",
-      "shifts.items": ["**Turno**: Franja horaria con hora de inicio, fin y días de la semana (ej. Mañana 6 a 12).", "**Uso**: Se habilita por área en cada proyecto y se asigna a los miembros del equipo.", "**Gestión**: Crear, editar y eliminar turnos."],
-
       // Importación de Usuarios WP
       "importUsersWp.title": "Información de Importación de Usuarios WP",
       "importUsersWp.description": "Herramienta para importar usuarios desde WeProdu (WP).",
@@ -359,21 +459,9 @@ const helpResources = {
       ),
     },
   },
-
-  // --------------------------------------------------------------------
-  // INGLÉS: Solo como espejo de los textos nuevos
-  // --------------------------------------------------------------------
-  en: {
-    help: {
-      "orders.title": "Order Management",
-      "orders.description": "Module for managing requests created by Coordinators and Collaborators. Admins can approve, reject and track each order.",
-      "orders.items": ["**Orders**: Each request includes title, description, category, optional amount and attached photo.", "**Workflow**: States include *Pending*, *Approved*, *Rejected*, *Delivered* and *Cancelled*.", "**Actions**: Approve, reject or mark as delivered depending on policies.", "**Order categories**: Helps organize requests by type (e.g. Equipment, Uniforms, Tools, Technology).", "**Filters & search**: Filter by state or category, or use free-text search.", "**Top statistics**: Quick visual indicators for each order state.", "**Photo viewer**: Zoom modal for attached images."],
-
-      "clientContextOrders.title": "Client Orders",
-      "clientContextOrders.description": "Filtered view showing only the orders associated with the current client.",
-      "clientContextOrders.items": ["**Contextual view**: Displays orders created under this client only.", "**Filters**: Search and state/category filtering.", "**Actions**: Depending on permissions: view, approve, reject or deliver.", "**Timeline**: Each order shows request date and state.", "**Evidence viewer**: Enlarged photo preview."],
-    },
-  },
+  // Había un bloque `en` con UNA sola pantalla traducida (Pedidos). Nunca se leyó: `buildHelpContent`
+  // tiene el idioma fijo en "es". No era un andamio de i18n, era un resto — cuando haga falta
+  // traducir, el trabajo es el mismo empezando de cero.
 };
 
 // Función para procesar markdown simple
@@ -401,12 +489,11 @@ const processMarkdown = (text: string): React.ReactNode => {
 
 // Construct help content
 const buildHelpContent = (key: HelpKey): React.ReactNode => {
-  const currentLang = "es";
-  const help = (helpResources as any)[currentLang].help;
+  const help = helpResources.es.help as Record<string, unknown>;
 
-  const title = help[`${key}.title`];
-  const description = help[`${key}.description`];
-  const items = help[`${key}.items`];
+  const title = help[`${key}.title`] as string | undefined;
+  const description = help[`${key}.description`] as string | undefined;
+  const items = help[`${key}.items`] as string[] | undefined;
 
   if (!title || !items) {
     return <div className="text-sm text-gray-500">Información no disponible</div>;
@@ -432,24 +519,11 @@ const buildHelpContent = (key: HelpKey): React.ReactNode => {
 const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
   fichas: { title: "Fichas", size: "sm", content: buildHelpContent("fichas") },
   clients: { title: "Información de Clientes", size: "sm", content: buildHelpContent("clients") },
-  dashboard: { title: "Información del Dashboard", size: "sm", content: buildHelpContent("dashboard") },
-  platform_dashboard: { title: "Dashboard de Plataforma", size: "sm", content: buildHelpContent("platform_dashboard") },
   tenants: { title: "Información de Tenants", size: "sm", content: buildHelpContent("tenants") },
-  tasks: { title: "Información de Tareas", size: "sm", content: buildHelpContent("tasks") },
-  posts: { title: "Información de Posts", size: "sm", content: buildHelpContent("posts") },
-  analytics: { title: "Información de Analytics", size: "sm", content: buildHelpContent("analytics") },
   users: { title: "Información de Usuarios", size: "sm", content: buildHelpContent("users") },
   roles: { title: "Información de Roles", size: "sm", content: buildHelpContent("roles") },
   clientDetail: { title: "Información de Cliente", size: "sm", content: buildHelpContent("clientDetail") },
   clientProjects: { title: "Proyectos del Cliente", size: "sm", content: buildHelpContent("clientProjects") },
-  campaignDetail: { title: "Sobre esta campaña", size: "sm", content: buildHelpContent("campaignDetail") },
-  postDetail: { title: "Sobre este post", size: "sm", content: buildHelpContent("postDetail") },
-  clientContextInfo: { title: "Información", size: "sm", content: buildHelpContent("clientContextInfo") },
-  clientContextBrandKit: { title: "Brand Kit", size: "sm", content: buildHelpContent("clientContextBrandKit") },
-  clientContextCampaigns: { title: "Campañas del Cliente", size: "sm", content: buildHelpContent("clientContextCampaigns") },
-  clientContextPosts: { title: "Publicaciones del Cliente", size: "sm", content: buildHelpContent("clientContextPosts") },
-  clientContextUsers: { title: "Usuarios del Cliente", size: "sm", content: buildHelpContent("clientContextUsers") },
-  clientDashboard: { title: "Dashboard Cliente", size: "sm", content: buildHelpContent("clientDashboard") },
 
   // Nuevas entradas para Proyectos, Sedes y Contratos
   projects: { title: "Gestión de Proyectos", size: "sm", content: buildHelpContent("projects") },
@@ -457,19 +531,10 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
   contracts: { title: "Gestión de Contratos", size: "sm", content: buildHelpContent("contracts") },
   membretes: { title: "Información de Membrete/s y firma", size: "sm", content: buildHelpContent("membretes") },
 
-  //
-  // FINAL — CORRECTO
-  //
   orders: {
     title: "Gestión de Pedidos",
     size: "sm",
     content: buildHelpContent("orders"),
-  },
-
-  clientContextOrders: {
-    title: "Pedidos del Cliente",
-    size: "sm",
-    content: buildHelpContent("clientContextOrders"),
   },
 
   orderCategories: {
@@ -525,13 +590,24 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
   miPerfil: { title: "Información de Mi Perfil", size: "sm", content: buildHelpContent("miPerfil") },
   requestsConfig: { title: "Configuración de Novedades", size: "sm", content: buildHelpContent("requestsConfig") },
   obrasSociales: { title: "Información de Obras Sociales", size: "md", content: buildHelpContent("obrasSociales") },
+  convenios: { title: "Convenios y obras sociales", size: "lg", content: buildHelpContent("convenios") },
+  areas: { title: "Información de Áreas", size: "sm", content: buildHelpContent("areas") },
+  documents: { title: "Información de Documentos", size: "md", content: buildHelpContent("documents") },
+  // Ficha de empresa: una entrada por pantalla. Todas hablan del mismo CUIT, pero lo que se decide
+  // en cada una es distinto y mezclarlas fue justamente lo que hizo falta desarmar.
+  empresaFicha: { title: "Ficha de la empleadora", size: "md", content: buildHelpContent("empresaFicha") },
+  empresaObrasSociales: { title: "Obras sociales de esta empleadora", size: "lg", content: buildHelpContent("empresaObrasSociales") },
+  empresaConvenios: { title: "Convenios de esta empleadora", size: "lg", content: buildHelpContent("empresaConvenios") },
+  empresaDomicilios: { title: "Domicilios de explotación", size: "md", content: buildHelpContent("empresaDomicilios") },
+  empresaCategorias: { title: "Categorías disponibles", size: "md", content: buildHelpContent("empresaCategorias") },
+  empresaDefaults: { title: "Valores por defecto de ARCA", size: "md", content: buildHelpContent("empresaDefaults") },
+  empresaContratos: { title: "Contratos de esta empleadora", size: "md", content: buildHelpContent("empresaContratos") },
   arcaSucursales: { title: "Sucursales de ARCA", size: "md", content: buildHelpContent("arcaSucursales") },
   arcaModalidadContratacion: { title: "Modalidades de Contratación (ARCA)", size: "md", content: buildHelpContent("arcaModalidadContratacion") },
   arcaTipoServicio: { title: "Tipos de Servicio (ARCA)", size: "md", content: buildHelpContent("arcaTipoServicio") },
   arcaModalidadLiquidacion: { title: "Modalidades de Liquidación (ARCA)", size: "md", content: buildHelpContent("arcaModalidadLiquidacion") },
   orderTypes: { title: "Información de Pedidos", size: "sm", content: buildHelpContent("orderTypes") },
   releases: { title: "Información de Releases", size: "sm", content: buildHelpContent("releases") },
-  shifts: { title: "Información de Turnos", size: "sm", content: buildHelpContent("shifts") },
   importUsersWp: { title: "Importación de Usuarios WP", size: "sm", content: buildHelpContent("importUsersWp") },
 };
 

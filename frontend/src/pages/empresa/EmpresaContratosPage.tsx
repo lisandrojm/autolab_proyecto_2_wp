@@ -22,7 +22,7 @@ const PAGE_SIZE = 25;
  * la fijó no es de nadie y no aparece acá — aparece en la grilla global, que es donde se asigna.
  */
 export const EmpresaContratosPage: React.FC = () => (
-  <EmpresaContextLayout titulo="Contratos" icono={faFileContract}>
+  <EmpresaContextLayout titulo="Contratos" icono={faFileContract} ayuda="empresaContratos">
     {(empresa) => <ContratosBody empresa={empresa} />}
   </EmpresaContextLayout>
 );

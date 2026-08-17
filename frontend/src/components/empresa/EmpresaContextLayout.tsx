@@ -8,6 +8,7 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { companiesAPI, Company } from '../../api/companies';
 import { useEmpresaContextStore } from '../../stores/empresaContextStore';
 import { AlcanceBanner } from '../context/AlcanceBanner';
+import { getHelp, hasHelp, HelpKey } from '../../data/help/helpContent';
 
 /**
  * Shell de todas las pantallas del contexto Empresa.
@@ -48,11 +49,21 @@ interface Props {
   icono?: IconDefinition;
   /** Acciones de la barra superior (botones de guardar, importar, etc.). */
   acciones?: React.ReactNode;
+  /**
+   * Contenido del ⓘ del encabezado.
+   *
+   * Es obligatorio en la práctica: `PageLayout` muestra el botón cuando hay subtítulo, y acá SIEMPRE
+   * hay uno (la razón social). Sin esta prop el botón se dibujaba igual y no abría nada —un ⓘ muerto
+   * en las siete pantallas de la ficha—, así que si no se pasa, ahora directamente no se muestra.
+   */
+  ayuda?: HelpKey;
   children: (empresa: Company, recargar: () => Promise<void>) => React.ReactNode;
 }
 
-export const EmpresaContextLayout: React.FC<Props> = ({ titulo, subtitulo, icono = faBuilding, acciones, children }) => {
+export const EmpresaContextLayout: React.FC<Props> = ({ titulo, subtitulo, icono = faBuilding, acciones, ayuda, children }) => {
   const { empresa, cargando, recargar } = useEmpresaDelContexto();
+  const [verAyuda, setVerAyuda] = useState(false);
+  const help = ayuda && hasHelp(ayuda) ? getHelp(ayuda) : null;
 
   return (
     <PageLayout
@@ -60,6 +71,8 @@ export const EmpresaContextLayout: React.FC<Props> = ({ titulo, subtitulo, icono
       subtitle={empresa ? `${empresa.razonSocial}${empresa.cuit ? ` · CUIT ${empresa.cuit}` : ''}${subtitulo ? ` — ${subtitulo}` : ''}` : subtitulo}
       faIcon={{ icon: icono }}
       headerActions={acciones}
+      shouldShowInfo={!!help}
+      infoModal={help ? { isOpen: verAyuda, onOpen: () => setVerAyuda(true), onClose: () => setVerAyuda(false), title: help.title, size: help.size, content: help.content } : undefined}
     >
       {/* Todas las pantallas del contexto están acotadas a esta empleadora: el chip lo dice y además
           es por dónde se sale. Sin esto, "Contratos" acá y "Todos los contratos" en el menú se ven

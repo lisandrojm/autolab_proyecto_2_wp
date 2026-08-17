@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBriefcaseMedical, faFileContract, faLocationDot, faListCheck, faSliders, faSearch, faXmark, faStar, faTriangleExclamation, faArrowUpRightFromSquare, faSpinner, faPlus, faChevronDown, faChevronRight, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { faBriefcaseMedical, faFileContract, faLocationDot, faListCheck, faSliders, faSearch, faXmark, faStar, faTriangleExclamation, faArrowUpRightFromSquare, faSpinner, faPlus, faChevronDown, faChevronRight, faCheck, faEdit, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { EmpresaContextLayout, SeccionEmpleador } from '../../components/empresa/EmpresaContextLayout';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { ConvenioSelector } from '../../components/empresas/ConvenioSelector';
@@ -81,7 +81,7 @@ const useGuardarEmpresa = (empresa: Company, recargar: () => Promise<void>) => {
  * únicamente tenía la default, así que una empleadora no podía declarar más de una.
  */
 export const EmpresaObrasSocialesPage: React.FC = () => (
-  <EmpresaContextLayout titulo="Obras Sociales" icono={faBriefcaseMedical}>
+  <EmpresaContextLayout titulo="Obras Sociales" icono={faBriefcaseMedical} ayuda="empresaObrasSociales">
     {(empresa, recargar) => <ObrasSocialesBody empresa={empresa} recargar={recargar} />}
   </EmpresaContextLayout>
 );
@@ -330,7 +330,7 @@ const ObraSocialPorConvenio: React.FC<{ empresa: Company; catalogo: SimpleCatalo
 // ───────────────────────────────────────────────────────────── Convenios
 
 export const EmpresaConveniosPage: React.FC = () => (
-  <EmpresaContextLayout titulo="Convenios Colectivos" icono={faFileContract}>
+  <EmpresaContextLayout titulo="Convenios Colectivos" icono={faFileContract} ayuda="empresaConvenios">
     {(empresa, recargar) => <ConveniosBody empresa={empresa} recargar={recargar} />}
   </EmpresaContextLayout>
 );
@@ -397,6 +397,9 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
         // MISMA tabla que el nomenclador: solo cambian las acciones y la columna "Empresas".
         <ConveniosTable
           convenios={registrados}
+          // Acá la falta SÍ es accionable: ese convenio le afecta los contratos a esta empleadora.
+          // En el nomenclador va un guion, porque serían 2.664 avisos sobre convenios que nadie usa.
+          ayudaSinObraSocial="Asignásela al convenio en Configuración → ARCA → Convenios."
           obraSocialDe={(cv) => {
             const override = overrides.find((o) => String(o.convenioId) === cv._id);
             const guardado = (empresa.convenioObraSocialOverrides || []).find((o) => String(o.convenioId) === cv._id);
@@ -412,12 +415,19 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
             };
           }}
           renderAcciones={(cv) => (
+            // Mismos íconos que el resto de los listados de la app (✎ / 🗑): el verbo cambia según
+            // dónde estés parado —acá se edita la excepción y se quita el convenio de la empleadora,
+            // no se toca el registro maestro—, pero el gesto tiene que ser el mismo en todas.
             <>
-              <button onClick={() => setEditandoOverride(cv)} className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-                {overrides.some((o) => String(o.convenioId) === cv._id) ? 'Cambiar excepción' : 'Usar otra'}
+              <button
+                onClick={() => setEditandoOverride(cv)}
+                title={overrides.some((o) => String(o.convenioId) === cv._id) ? 'Cambiar la excepción de obra social' : 'Usar otra obra social para este convenio'}
+                className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 mr-3"
+              >
+                <FontAwesomeIcon icon={faEdit} />
               </button>
-              <button onClick={() => setIds((prev) => prev.filter((x) => x !== cv._id))} title="Quitar el convenio de esta empleadora" className="ml-3 text-gray-400 hover:text-red-600 dark:hover:text-red-400">
-                <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
+              <button onClick={() => setIds((prev) => prev.filter((x) => x !== cv._id))} title="Quitar el convenio de esta empleadora" className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300">
+                <FontAwesomeIcon icon={faTrash} />
               </button>
             </>
           )}
@@ -498,7 +508,7 @@ const OverrideModal: React.FC<{
 // ───────────────────────────────────────────────────────────── Domicilios
 
 export const EmpresaDomiciliosPage: React.FC = () => (
-  <EmpresaContextLayout titulo="Domicilios de Explotación" icono={faLocationDot}>
+  <EmpresaContextLayout titulo="Domicilios de Explotación" icono={faLocationDot} ayuda="empresaDomicilios">
     {(empresa, recargar) => <DomiciliosBody empresa={empresa} recargar={recargar} />}
   </EmpresaContextLayout>
 );
@@ -573,7 +583,7 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
  * pueden elegir de a una, y no es así: se elige el convenio, y las categorías vienen con él.
  */
 export const EmpresaCategoriasPage: React.FC = () => (
-  <EmpresaContextLayout titulo="Categorías" icono={faListCheck}>
+  <EmpresaContextLayout titulo="Categorías" icono={faListCheck} ayuda="empresaCategorias">
     {(empresa) => <CategoriasBody empresa={empresa} />}
   </EmpresaContextLayout>
 );
@@ -672,7 +682,7 @@ const CategoriasBody: React.FC<{ empresa: Company }> = ({ empresa }) => {
  * cada alta lo que en la práctica es siempre lo mismo por CUIT.
  */
 export const EmpresaDefaultsPage: React.FC = () => (
-  <EmpresaContextLayout titulo="Defaults de ARCA" icono={faSliders}>
+  <EmpresaContextLayout titulo="Defaults de ARCA" icono={faSliders} ayuda="empresaDefaults">
     {(empresa, recargar) => <DefaultsBody empresa={empresa} recargar={recargar} />}
   </EmpresaContextLayout>
 );

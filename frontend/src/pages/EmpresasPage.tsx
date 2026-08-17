@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBuilding, faPlus, faEdit, faTrash, faSearch, faFilePdf, faTriangleExclamation, faCircleInfo, faStar, faCheck, faEye } from '@fortawesome/free-solid-svg-icons';
+import { faBuilding, faPlus, faEdit, faTrash, faSearch, faFilePdf, faStar } from '@fortawesome/free-solid-svg-icons';
 import { PageLayout } from '../components/ui/PageLayout';
 import { Modal } from '../components/ui/Modal';
 import { InfoModal } from '../components/ui/InfoModal';
+import { EstadoArcaBadge, ArcaRequisitosModal } from '../components/empresas/ArcaEstado';
 import { formatRnos } from '../utils/rnos';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -53,45 +54,8 @@ const EMPTY_FORM: CompanyInput = {
  * de resolver por configuración y no por persona, aplicada al listado: se ve de un vistazo cuál de
  * las empleadoras va a frenar a todos sus contratos.
  */
-/** Qué le falta registrar a la empleadora ante ARCA, con qué desbloquea cada cosa. */
-const REQUISITOS_ARCA = [
-  { clave: 'convenios' as const, titulo: 'Convenios colectivos', desbloquea: 'Definen qué categorías profesionales se le pueden dar de alta: ARCA solo ofrece las de los convenios que el CUIT tiene registrados. Sin convenio no hay categoría posible.' },
-  { clave: 'domicilios' as const, titulo: 'Domicilios de explotación', desbloquea: 'El alta declara UN domicilio y UNA de sus actividades. Sin domicilios no hay dónde declarar el trabajo.' },
-  { clave: 'obras sociales' as const, titulo: 'Obras sociales', desbloquea: 'ARCA solo acepta altas con una de las obras sociales que el CUIT tiene declaradas. Sin ninguna registrada no se puede verificar que la del contrato sea válida, y el organismo la rechaza al subir el archivo.' },
-];
-
-const faltantesArca = (c: Company) =>
-  REQUISITOS_ARCA.filter((r) => (r.clave === 'convenios' ? (c.convenioIds || []).length === 0 : r.clave === 'domicilios' ? (c.sucursalIds || []).length === 0 : (c.obrasSocialesIds || []).length === 0));
-
-/**
- * Marca que la empleadora todavía no puede dar altas en ARCA.
- *
- * El ⓘ no es decorativo: "Sin configurar para ARCA" no dice qué falta ni qué consecuencia tiene, y
- * antes eso vivía en un `title` que en la práctica nadie lee. El modal lo explica y nombra los tres
- * requisitos con lo que desbloquea cada uno.
- */
-const EstadoArca: React.FC<{ c: Company; onInfo: (c: Company) => void }> = ({ c, onInfo }) => {
-  const faltan = faltantesArca(c);
-  if (faltan.length === 0) return null;
-  return (
-    <span className="mt-1 inline-flex items-center gap-1 rounded bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 pl-1.5 pr-1 py-0.5">
-      <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5 text-amber-800 dark:text-amber-300" />
-      <span className="text-[10px] font-bold text-amber-800 dark:text-amber-300">Sin configurar para ARCA</span>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onInfo(c);
-        }}
-        title="Qué significa"
-        aria-label="Qué significa «Sin configurar para ARCA»"
-        className="text-amber-700/70 hover:text-amber-900 dark:text-amber-400/70 dark:hover:text-amber-200 transition-colors"
-      >
-        <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-      </button>
-    </span>
-  );
-};
+// El estado de ARCA —los cuatro requisitos, el badge y el modal— vive en `components/empresas/
+// ArcaEstado`: lo comparten este listado y la ficha de cada empresa, que antes contaban distinto.
 
 /**
  * Detalle de una de las listas de la empresa.
@@ -379,11 +343,10 @@ export const EmpresasPage: React.FC = () => {
         // El tooltip conserva el nombre aunque no se muestre: es lo que hace legible el botón pelado.
         title={`Ver ${total} ${nombre} de ${empresa.razonSocial}`}
         aria-label={`Ver ${total} ${nombre} de ${empresa.razonSocial}`}
-        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
+        className="inline-flex items-center justify-center gap-1.5 min-w-[2rem] px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
       >
         <span className="text-sm font-bold tabular-nums">{total}</span>
         {conEtiqueta && <span className="text-[11px] text-gray-500 dark:text-gray-400">{nombre}</span>}
-        <FontAwesomeIcon icon={faEye} className="h-3 w-3 text-gray-400" />
       </button>
     );
   };
@@ -531,7 +494,7 @@ export const EmpresasPage: React.FC = () => {
               }}
             >
               <div className="text-xs text-gray-600 dark:text-gray-400 space-y-2">
-                <EstadoArca c={c} onInfo={setInfoArca} />
+                <EstadoArcaBadge empresa={c} onClick={setInfoArca} />
                 {domicilioResumen(c) && (
                   <p className="truncate" title={domicilioResumen(c)}>
                     {domicilioResumen(c)}
@@ -569,10 +532,15 @@ export const EmpresasPage: React.FC = () => {
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 <th className="px-4 py-3">Razón Social</th>
-                <th className="px-4 py-3">CUIT</th>
+                {/* `w-px` + `nowrap`: el CUIT es un identificador y se cotea de un vistazo contra
+                    ARCA. Partido en dos renglones ("30-" / "71706837-4") deja de leerse como uno. */}
+                <th className="px-4 py-3 whitespace-nowrap w-px">CUIT</th>
                 <th className="px-4 py-3">Domicilio Legal</th>
                 <th className="px-4 py-3">Firmante</th>
                 <th className="px-4 py-3">Representante Legal</th>
+                {/* El estado va JUNTO a los tres números que lo componen: la columna dice si puede
+                    dar altas, y las tres de al lado, con qué cuenta para hacerlo. */}
+                <th className="px-4 py-3 whitespace-nowrap w-px">ARCA</th>
                 <th className="px-4 py-3">Convenios</th>
                 <th className="px-4 py-3">Obras Sociales</th>
                 <th className="px-4 py-3">Sucursales ARCA</th>
@@ -582,11 +550,8 @@ export const EmpresasPage: React.FC = () => {
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
               {filtered.map((c) => (
                 <tr key={c._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                  <td className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">
-                    <span className="block">{c.razonSocial}</span>
-                    <EstadoArca c={c} onInfo={setInfoArca} />
-                  </td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{c.cuit || '—'}</td>
+                  <td className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">{c.razonSocial}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap w-px">{c.cuit || '—'}</td>
                   <td className="px-4 py-3 text-gray-600 dark:text-gray-400 max-w-[280px] truncate" title={domicilioResumen(c)}>
                     {domicilioResumen(c) || '—'}
                   </td>
@@ -609,6 +574,9 @@ export const EmpresasPage: React.FC = () => {
                     ) : (
                       '—'
                     )}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap w-px">
+                    <EstadoArcaBadge empresa={c} onClick={setInfoArca} />
                   </td>
                   <td className="px-4 py-3">
                     <ContadorLista empresa={c} tipo="convenios" total={(c.convenioIds || []).length} cargando={cargandoConvenios} singular="convenio" plural="convenios" />
@@ -731,46 +699,9 @@ export const EmpresasPage: React.FC = () => {
         obraSocialPorDefectoId={detalleLista ? obraSocialPorDefectoDe(detalleLista.empresa)?._id : undefined}
       />
 
-      {/* Qué significa "Sin configurar para ARCA", con lo que le falta a ESTA empleadora. */}
-      <InfoModal
-        isOpen={!!infoArca}
-        onClose={() => setInfoArca(null)}
-        title="Sin configurar para ARCA"
-        subtitle={infoArca?.razonSocial}
-        size="md"
-        actions={[{ label: 'Entendido', onClick: () => setInfoArca(null), variant: 'primary' }]}
-      >
-        {infoArca && (
-          <div className="space-y-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            <p>
-              Esta empleadora todavía no tiene registrado ante ARCA todo lo que el organismo exige para dar un alta. Mientras falte algo, <strong>ninguno de sus contratos puede generar el TXT</strong>: el chequeo de Datos ARCA los va a marcar incompletos, o —peor— el archivo sale y el organismo lo rechaza.
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              No es un dato que se complete por contrato: se resuelve una vez para la empresa y vale para todos.
-            </p>
-
-            <div className="space-y-2">
-              {REQUISITOS_ARCA.map((r) => {
-                const falta = faltantesArca(infoArca).some((f) => f.clave === r.clave);
-                return (
-                  <div key={r.clave} className={`rounded-lg border p-3 ${falta ? 'border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20' : 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20'}`}>
-                    <div className="flex items-center gap-2">
-                      <FontAwesomeIcon icon={falta ? faTriangleExclamation : faCheck} className={`h-3.5 w-3.5 shrink-0 ${falta ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`} />
-                      <span className={`text-sm font-semibold ${falta ? 'text-amber-800 dark:text-amber-300' : 'text-emerald-800 dark:text-emerald-300'}`}>{r.titulo}</span>
-                      <span className="ml-auto text-[11px] font-bold uppercase tracking-wider text-gray-400">{falta ? 'falta' : 'listo'}</span>
-                    </div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1.5">{r.desbloquea}</p>
-                  </div>
-                );
-              })}
-            </div>
-
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Se cargan editando la empresa (el lápiz de esta fila) o desde su ficha, en <strong>ARCA</strong>. El dato real sale del padrón del organismo, logueado con este CUIT: en Datos del Empleador están las obras sociales, los convenios y los domicilios que tiene declarados.
-            </p>
-          </div>
-        )}
-      </InfoModal>
+      {/* Los cuatro requisitos de ARCA para ESTA empleadora. Es el MISMO modal que abre su ficha:
+          una sola definición de qué hace falta, mostrada en las dos pantallas. */}
+      <ArcaRequisitosModal empresa={infoArca} onClose={() => setInfoArca(null)} />
     </PageLayout>
   );
 };
