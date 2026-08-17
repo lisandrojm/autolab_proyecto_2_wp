@@ -37,6 +37,33 @@ interface SimpleCatalogManagerProps {
   templateBaseName: string;
   /** Campos extra propios del catálogo (ej. Bancos → "Tipo de Entidad"). */
   extraFields?: CatalogExtraField[];
+  /**
+   * Columnas de solo lectura CALCULADAS, que no son campos del registro (ej. Convenios → "en cuántas
+   * empresas está registrado"). Se distinguen de `extraFields` porque no se editan ni se guardan.
+   */
+  columnasCalculadas?: Array<{ label: string; render: (item: SimpleCatalogItem) => React.ReactNode }>;
+  /**
+   * Filtro destacado de dos estados, para catálogos donde el universo no es lo que se trabaja.
+   *
+   * El caso real son los Convenios: el nomenclador de ARCA tiene 2.669 y solo importan los 5 que
+   * alguna empresa registró. Sin esto, la columna "Obra Social" muestra 2.664 guiones y parece que
+   * faltan 2.664 configuraciones.
+   */
+  filtroDestacado?: {
+    /** Texto del estado acotado, ej. "Registrados por alguna empresa". */
+    etiqueta: string;
+    /** `true` si el item pasa el filtro acotado. */
+    aplica: (item: SimpleCatalogItem) => boolean;
+  };
+  /**
+   * Reemplaza la tabla genérica por una propia del dominio, conservando el resto del manager
+   * (buscador, filtro, import, plantilla y el ABM en modal).
+   *
+   * Existe para que Convenios use LA MISMA tabla que la ficha de empresa: eran dos tablas de la
+   * misma entidad con encabezados distintos, y habían divergido. Recibe las acciones ya armadas
+   * (editar / eliminar), que es lo único que el manager sabe y la tabla del dominio no.
+   */
+  tablaPropia?: (props: { items: SimpleCatalogItem[]; renderAcciones: (item: SimpleCatalogItem) => React.ReactNode }) => React.ReactNode;
   /** Clave de ayuda para el modal de info (i). */
   helpKey?: HelpKey;
   /** Etiqueta de "ID Externo" (columna, campo del form, badge de tarjeta), por si en este catálogo
@@ -69,7 +96,7 @@ interface SimpleCatalogManagerProps {
   pestanas?: Array<{ id: string; label: string; icon?: IconDefinition; render: (items: SimpleCatalogItem[], recargar: () => Promise<void>) => React.ReactNode }>;
 }
 
-export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], helpKey, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, porDefecto, pestanas }) => {
+export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], helpKey, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, porDefecto, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia }) => {
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
   const [tabActiva, setTabActiva] = useState<string>('catalogo');
   const [loading, setLoading] = useState(true);
@@ -140,7 +167,11 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const filtered = items.filter((it) => !search.trim() || fuzzyMatch(it.name || '', search));
+  // Arranca ACOTADO cuando el catálogo trae filtro destacado: el universo es referencia, no trabajo.
+  const [soloDestacados, setSoloDestacados] = useState(true);
+  const destacados = filtroDestacado ? items.filter(filtroDestacado.aplica) : items;
+  const base = filtroDestacado && soloDestacados ? destacados : items;
+  const filtered = base.filter((it) => !search.trim() || fuzzyMatch(it.name || '', search));
 
   const openCreate = () => {
     setEditing(null);
@@ -294,7 +325,21 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
         <>
       <div className="mb-4 flex flex-col md:flex-row gap-4 items-center justify-between">
         <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Buscar ${entityLabel}...`} className="w-full max-w-md px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white" />
-        {isLarge && <ViewToggle value={viewMode} onChange={setViewMode} />}
+        <div className="flex items-center gap-3 shrink-0">
+          {/* Dos estados, no un checkbox suelto: el contador de cada uno dice cuánto es "el universo"
+              y cuánto "lo que se usa", que es la diferencia que hace útil el filtro. */}
+          {filtroDestacado && (
+            <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden text-xs font-semibold">
+              <button type="button" onClick={() => setSoloDestacados(true)} className={`px-3 py-2 transition-colors ${soloDestacados ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+                {filtroDestacado.etiqueta} ({destacados.length})
+              </button>
+              <button type="button" onClick={() => setSoloDestacados(false)} className={`px-3 py-2 border-l border-gray-300 dark:border-gray-600 transition-colors ${!soloDestacados ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+                Ver todos ({items.length})
+              </button>
+            </div>
+          )}
+          {isLarge && <ViewToggle value={viewMode} onChange={setViewMode} />}
+        </div>
       </div>
 
       {loading ? (
@@ -340,6 +385,23 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
           <Card variant="create" onClick={openCreate} header={{ title: `Nuevo`, subtitle: `Agregar ${entityLabel}`, icon }} />
         </div>
       ) : (
+        tablaPropia ? (
+          // El catálogo trae su propia tabla (ej. Convenios, que la comparte con la ficha de empresa).
+          // El manager solo aporta las acciones, que son lo único que la tabla del dominio no sabe.
+          tablaPropia({
+            items: filtered,
+            renderAcciones: (item) => (
+              <>
+                <button onClick={() => openEdit(item)} className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 mr-3" title="Editar">
+                  <FontAwesomeIcon icon={faEdit} />
+                </button>
+                <button onClick={() => handleDelete(item)} className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300" title="Eliminar">
+                  <FontAwesomeIcon icon={faTrash} />
+                </button>
+              </>
+            ),
+          })
+        ) : (
         <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-900/50">
@@ -352,6 +414,11 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                       {f.columnLabel || f.label}
                     </th>
                   ))}
+                {columnasCalculadas.map((c) => (
+                  <th key={c.label} className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                    {c.label}
+                  </th>
+                ))}
                 {/* `w-px` + `whitespace-nowrap`: la columna se encoge a lo que mide el código y no
                     lo parte. Un RNOS cortado en dos renglones ("9-0500-" / "8") deja de leerse como
                     un código y no se puede cotejar de un vistazo contra un padrón de ARCA. */}
@@ -381,6 +448,11 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                         {extraDisplay(f, item[f.key])}
                       </td>
                     ))}
+                  {columnasCalculadas.map((c) => (
+                    <td key={c.label} className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">
+                      {c.render(item)}
+                    </td>
+                  ))}
                   <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono whitespace-nowrap w-px">{item.externalId ? (formatExternalId ? formatExternalId(item.externalId) : item.externalId) : '—'}</td>
                   <td className="px-5 py-3 text-sm text-right">
                     <button onClick={() => openEdit(item)} className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 mr-3" title="Editar">
@@ -395,6 +467,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
             </tbody>
           </table>
         </div>
+        )
       )}
         </>
       )}

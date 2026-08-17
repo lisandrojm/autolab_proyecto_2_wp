@@ -24,8 +24,14 @@ export interface Company {
    * un universo de 494, y solo acepta altas con una de ellas.
    */
   obrasSocialesIds?: string[];
-  /** Cuál de las registradas se usa si la persona no tiene una propia. Vacío = la global. */
+  /**
+   * Obra social de los trabajadores EXCLUIDOS DE CONVENIO (9999/99). NO es "la obra social de la
+   * empresa": quien está bajo un convenio hereda la de su sindicato. Es el único lugar donde la
+   * empleadora decide, porque los excluidos no tienen sindicato del que heredar.
+   */
   obraSocialDefaultId?: number | null;
+  /** Excepciones: para ESE convenio, esta empleadora usa otra obra social que la sindical del CCT. */
+  convenioObraSocialOverrides?: Array<{ convenioId: string; obraSocialId: number }>;
   /** @deprecated Nombre viejo de `obraSocialDefaultId`. El server sirve los dos; usar el nuevo. */
   obraSocialId?: number | null;
   /** Ids de los Convenios Colectivos asociados a la empresa. */

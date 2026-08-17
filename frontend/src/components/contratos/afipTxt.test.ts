@@ -252,9 +252,42 @@ describe("obra social — cascada persona → convenio → empresa → global", 
     assert.equal(rnosDe(buildAltaRecord(fila(), cat)!), "010902");
   });
 
-  it("si el convenio no tiene obra social, cae a la de la empresa — el caso de 9999/99", () => {
-    const cat = conCascada({ convenios: [{ _id: "cv1", externalId: "0634/11", name: "TELEVISIÓN" }] } as any);
+  it("la excepción de la empresa para ese convenio le gana a la sindical del CCT", () => {
+    const cat = conCascada({
+      empresas: [{ _id: EMPRESA_ID, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"], convenioObraSocialOverrides: [{ convenioId: "cv1", obraSocialId: 33 }] }],
+    } as any);
+    assert.equal(rnosDe(buildAltaRecord(fila(), cat)!), "999999");
+  });
+
+  it("la excepción de OTRO convenio no aplica a este contrato", () => {
+    const cat = conCascada({
+      empresas: [{ _id: EMPRESA_ID, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"], convenioObraSocialOverrides: [{ convenioId: "cv-otro", obraSocialId: 33 }] }],
+    } as any);
+    assert.equal(rnosDe(buildAltaRecord(fila(), cat)!), "010902");
+  });
+
+  /**
+   * El caso que motivó separar el paso 3 del paso 4: un convenio SIN obra social cargada no puede
+   * caer al default de la empresa. Ese default es de los EXCLUIDOS DE CONVENIO, y usarlo acá haría
+   * que el alta salga con una obra social plausible pero equivocada — el error más caro de todos,
+   * porque ARCA lo acepta.
+   */
+  it("un convenio sin obra social NO usa la default de la empresa: cae a la global", () => {
+    const cat = conCascada({
+      convenios: [{ _id: "cv1", externalId: "0634/11", name: "TELEVISIÓN" }],
+      empresas: [{ _id: EMPRESA_ID, obraSocialDefaultId: 33, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"] }],
+    } as any);
+    // 126205 es la marcada `porDefecto` en el catálogo, no la 999999 de la empresa.
     assert.equal(rnosDe(buildAltaRecord(fila(), cat)!), "126205");
+  });
+
+  it("los EXCLUIDOS de convenio (9999/99) sí usan la default de la empresa", () => {
+    const cat = conCascada({
+      categorias: [{ _id: "cx", externalId: "999999", name: "SIN CATEGORIAS", data: { id: 1, numeroCategoria: 15, nombre: "SIN CATEGORIAS", codigoAfip: 999999, convenio: "9999/99", sueldoBruto: SUELDO_BRUTO_CAT_1 } }],
+      convenios: [{ _id: "cv9", externalId: "9999/99", name: "EXCLUIDO DE CONVENIO" }],
+      empresas: [{ _id: EMPRESA_ID, obraSocialDefaultId: 33, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv9"] }],
+    } as any);
+    assert.equal(rnosDe(buildAltaRecord(fila(), cat)!), "999999");
   });
 });
 

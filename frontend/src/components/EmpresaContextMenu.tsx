@@ -31,11 +31,14 @@ export const EmpresaContextMenu: React.FC = () => {
 
   const base = `/empresas/${selectedEmpresa._id}`;
 
+  // El orden sigue la CADENA DE DECISIÓN, no el alfabeto: Convenios va primero porque de él cuelgan
+  // las categorías posibles Y la obra social. Obras Sociales va después porque su rol principal pasó
+  // a ser VALIDAR lo que el convenio ya resolvió, más el caso de los excluidos de convenio.
   const arcaChildren = [
-    { path: `${base}/arca/obras-sociales`, icon: faBriefcaseMedical, label: 'Obras Sociales' },
     { path: `${base}/arca/convenios`, icon: faFileContract, label: 'Convenios' },
-    { path: `${base}/arca/domicilios`, icon: faLocationDot, label: 'Domicilios de Explotación' },
     { path: `${base}/arca/categorias`, icon: faListCheck, label: 'Categorías' },
+    { path: `${base}/arca/domicilios`, icon: faLocationDot, label: 'Domicilios de Explotación' },
+    { path: `${base}/arca/obras-sociales`, icon: faBriefcaseMedical, label: 'Obras Sociales' },
     { path: `${base}/arca/defaults`, icon: faSliders, label: 'Defaults' },
   ];
 

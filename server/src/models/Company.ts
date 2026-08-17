@@ -35,14 +35,31 @@ export interface ICompany extends Document {
    */
   obrasSocialesIds?: mongoose.Types.ObjectId[];
   /**
-   * Cuál de las registradas se usa cuando la persona no tiene obra social propia. Guarda el
-   * `data.id` del catálogo (el RNOS numérico), igual que `osId` en el contrato. Vacío = se usa la
-   * marcada como global en el catálogo.
+   * Obra social de los trabajadores **EXCLUIDOS DE CONVENIO** (CCT 9999/99) de esta empleadora.
+   * Guarda el `data.id` del catálogo (el RNOS numérico), igual que `osId` en el contrato.
    *
-   * Se llamaba `obraSocialId`, que sugería "la obra social de la empresa" cuando siempre fue solo el
-   * valor por defecto. Ver `scripts/migrarObrasSocialesPorEmpresa.ts` para el renombre.
+   * OJO con el alcance: NO es "la obra social de la empresa". Quien está bajo un convenio hereda la
+   * de su sindicato (`Convenio.obraSocialDefaultId`), y la empleadora a lo sumo la pisa con un
+   * override puntual. Este campo es el ÚNICO lugar donde la empresa decide de verdad, y solo para
+   * quienes por definición no tienen sindicato.
+   *
+   * Se llamaba `obraSocialId`; ver `scripts/migrarObrasSocialesPorEmpresa.ts` para el renombre.
    */
   obraSocialDefaultId?: number;
+  /**
+   * Excepciones: para ESTE convenio, esta empleadora usa otra obra social que la sindical del CCT.
+   *
+   * Va en una lista aparte y no dentro de `convenioIds` para no migrar lo que ya funciona. Es una
+   * EXCEPCIÓN y no una configuración habitual: lo normal es que el convenio resuelva solo.
+   *
+   * Un override cuyo `convenioId` no esté en `convenioIds` es dato huérfano — la empresa dejó de
+   * tener ese convenio registrado pero la excepción quedó. Se reporta, no se aplica.
+   */
+  convenioObraSocialOverrides?: Array<{
+    convenioId: mongoose.Types.ObjectId;
+    /** `data.id` del catálogo de Obras Sociales (RNOS numérico). */
+    obraSocialId: number;
+  }>;
   /**
    * Convenios Colectivos (CCT) habilitados para esta empleadora. Referencias al catálogo de Convenios.
    *
@@ -99,6 +116,13 @@ const companySchema = new Schema<ICompany>(
     signatureUrl: { type: String },
     obrasSocialesIds: [{ type: Schema.Types.ObjectId, ref: "ObraSocial" }],
     obraSocialDefaultId: { type: Number },
+    convenioObraSocialOverrides: [
+      {
+        _id: false,
+        convenioId: { type: Schema.Types.ObjectId, ref: "Convenio", required: true },
+        obraSocialId: { type: Number, required: true },
+      },
+    ],
     convenioIds: [{ type: Schema.Types.ObjectId, ref: "Convenio" }],
     sucursalIds: [{ type: Schema.Types.ObjectId, ref: "ArcaSucursal" }],
     defaultsArca: {

@@ -100,6 +100,20 @@ export const SeccionEmpleador: React.FC<{ titulo: string; descripcion: string; n
       <h3 className="text-sm font-bold text-blue-900 dark:text-blue-200">{titulo}</h3>
       <p className="text-xs text-blue-800 dark:text-blue-300 mt-1">{descripcion}</p>
       {nota && <p className="text-xs text-blue-700/80 dark:text-blue-400/80 mt-1.5">{nota}</p>}
+      {/*
+       * REGLA DE GUARDADO, explícita para que la diferencia con el nomenclador deje de leerse como
+       * inconsistencia y pase a ser una señal:
+       *
+       *   Nomenclador (Configuración → ARCA)  → edición inmediata, por registro.
+       *   Ficha de empresa                    → edición en lote, con "Guardar cambios".
+       *
+       * Es coherente con lo que se edita en cada lado: allá un registro maestro que ven todas las
+       * empresas; acá un CONJUNTO de asociaciones de esta empleadora, donde marcar varias y guardar
+       * una vez es lo natural. Si hay botón de guardar, estás tocando lo de esta empresa.
+       */}
+      <p className="text-[11px] text-blue-700/70 dark:text-blue-400/70 mt-2 pt-2 border-t border-blue-200/60 dark:border-blue-800/60">
+        Los cambios de esta pantalla se aplican al apretar <strong>Guardar cambios</strong>. Es lo que la distingue del nomenclador de Configuración → ARCA, donde cada registro se guarda al instante.
+      </p>
     </div>
     {children}
   </div>

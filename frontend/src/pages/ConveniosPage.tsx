@@ -2,7 +2,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import { faFileContract } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
 import { createSimpleCatalogApi, SimpleCatalogItem } from "../api/simpleCatalog";
+import { companiesAPI } from "../api/companies";
 import { formatRnos } from "../utils/rnos";
+import { ConveniosTable } from "../components/convenios/ConveniosTable";
+import type { ConvenioFila } from "../components/convenios/ConveniosTable";
 
 const conveniosApi = createSimpleCatalogApi("/convenios");
 const obrasSocialesApi = createSimpleCatalogApi("/obras-sociales");
@@ -20,12 +23,27 @@ const obrasSocialesApi = createSimpleCatalogApi("/obras-sociales");
  */
 export const ConveniosPage: React.FC = () => {
   const [obrasSociales, setObrasSociales] = useState<SimpleCatalogItem[]>([]);
+  /** En cuántas empresas está registrado cada convenio, por `_id`. */
+  const [empresasPorConvenio, setEmpresasPorConvenio] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     obrasSocialesApi
       .list()
       .then(setObrasSociales)
       .catch(() => setObrasSociales([]));
+  }, []);
+
+  useEffect(() => {
+    companiesAPI
+      .list()
+      .then((empresas) => {
+        const conteo = new Map<string, number>();
+        // SIEMPRE por `_id`, nunca por `externalId`: 1.555 de los 2.669 convenios llevan sufijo " E"
+        // y "0131/75" y "0131/75 E" son registros distintos y legítimos del nomenclador.
+        for (const e of empresas) for (const id of e.convenioIds || []) conteo.set(String(id), (conteo.get(String(id)) || 0) + 1);
+        setEmpresasPorConvenio(conteo);
+      })
+      .catch(() => setEmpresasPorConvenio(new Map()));
   }, []);
 
   const opcionesObraSocial = useMemo(() => {
@@ -40,6 +58,9 @@ export const ConveniosPage: React.FC = () => {
     return [vacio, ...items];
   }, [obrasSociales]);
 
+  /** La obra social sindical del convenio, resuelta contra el catálogo por `data.id`. */
+  const porDataId = (id?: number | null) => (id == null ? undefined : obrasSociales.find((o) => Number((o.data as { id?: number } | undefined)?.id) === id));
+
   return (
     <SimpleCatalogManager
       title="Convenios"
@@ -50,17 +71,30 @@ export const ConveniosPage: React.FC = () => {
       templateBaseName="convenios"
       externalIdLabel="Código"
       externalIdPlaceholder="Formato NNNN/AA, ej: 0130/75"
+      // El nomenclador tiene 2.669 convenios y solo importan los que alguna empresa registró:
+      // cargarle la obra social a uno que nadie usa es trabajo perdido, y los 2.664 restantes
+      // llenaban la columna de guiones como si faltaran 2.664 configuraciones.
+      filtroDestacado={{ etiqueta: 'Registrados por alguna empresa', aplica: (c) => (empresasPorConvenio.get(c._id) || 0) > 0 }}
+      // LA MISMA tabla que usa la ficha de empresa: eran dos, con encabezados distintos para los
+      // mismos datos ("Nombre" vs "Actividad", el código al final vs primero) y ya habían divergido.
+      // Acá se le suma la columna "Empresas" y las acciones de ABM que aporta el manager.
+      tablaPropia={({ items, renderAcciones }) => (
+        <ConveniosTable
+          convenios={items as ConvenioFila[]}
+          obraSocialDe={(c) => ({ os: porDataId(c.obraSocialDefaultId) })}
+          renderEmpresas={(c) => {
+            const n = empresasPorConvenio.get(c._id) || 0;
+            return n === 0 ? <span className="text-gray-400 dark:text-gray-600">—</span> : <span className="font-bold tabular-nums">{n}</span>;
+          }}
+          renderAcciones={renderAcciones}
+          ayudaSinObraSocial="Se carga con el lápiz de esta fila."
+        />
+      )}
+      // Sin `showColumn`: las columnas las dibuja `ConveniosTable`. Estos descriptores quedan solo
+      // para el formulario de alta/edición, que sigue siendo el genérico del manager.
       extraFields={[
-        { key: "signatario", label: "Signatario", showColumn: true, placeholder: "Ej: FAECYS" },
-        {
-          key: "obraSocialDefaultId",
-          label: "Obra social del convenio",
-          columnLabel: "Obra Social",
-          type: "select",
-          // La columna muestra el label del option (lo resuelve `extraDisplay` del manager).
-          options: opcionesObraSocial,
-          showColumn: true,
-        },
+        { key: "signatario", label: "Signatario", placeholder: "Ej: FAECYS" },
+        { key: "obraSocialDefaultId", label: "Obra social del convenio", type: "select", options: opcionesObraSocial },
       ]}
     />
   );

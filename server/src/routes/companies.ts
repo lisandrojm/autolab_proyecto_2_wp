@@ -32,6 +32,8 @@ const companySchema = z.object({
   obraSocialId: z.number().nullable().optional(),
   /** Ids del catálogo de Obras Sociales registradas ante ARCA para este CUIT. Reemplaza la lista. */
   obrasSocialesIds: z.array(z.string()).optional(),
+  /** Excepciones por convenio: para ese CCT, esta empleadora usa otra obra social. Reemplaza la lista. */
+  convenioObraSocialOverrides: z.array(z.object({ convenioId: z.string(), obraSocialId: z.number() })).optional(),
   /** Ids del catálogo de Convenios. Se manda la lista completa: reemplaza la anterior. */
   convenioIds: z.array(z.string()).optional(),
   /** Ids del catálogo de Sucursales de ARCA. Se manda la lista completa: reemplaza la anterior. */

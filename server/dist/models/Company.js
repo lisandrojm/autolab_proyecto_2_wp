@@ -17,6 +17,13 @@ const companySchema = new Schema({
     signatureUrl: { type: String },
     obrasSocialesIds: [{ type: Schema.Types.ObjectId, ref: "ObraSocial" }],
     obraSocialDefaultId: { type: Number },
+    convenioObraSocialOverrides: [
+        {
+            _id: false,
+            convenioId: { type: Schema.Types.ObjectId, ref: "Convenio", required: true },
+            obraSocialId: { type: Number, required: true },
+        },
+    ],
     convenioIds: [{ type: Schema.Types.ObjectId, ref: "Convenio" }],
     sucursalIds: [{ type: Schema.Types.ObjectId, ref: "ArcaSucursal" }],
     defaultsArca: {

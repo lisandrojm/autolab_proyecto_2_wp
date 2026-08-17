@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBuilding, faPlus, faEdit, faTrash, faSearch, faFilePdf, faTriangleExclamation, faCircleInfo, faStar, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { faBuilding, faPlus, faEdit, faTrash, faSearch, faFilePdf, faTriangleExclamation, faCircleInfo, faStar, faCheck, faEye } from '@fortawesome/free-solid-svg-icons';
 import { PageLayout } from '../components/ui/PageLayout';
 import { Modal } from '../components/ui/Modal';
 import { InfoModal } from '../components/ui/InfoModal';
@@ -93,6 +93,111 @@ const EstadoArca: React.FC<{ c: Company; onInfo: (c: Company) => void }> = ({ c,
   );
 };
 
+/**
+ * Detalle de una de las listas de la empresa.
+ *
+ * Lleva buscador porque el caso real es de 494 obras sociales registradas: sin filtro, "ver el
+ * detalle" es scrollear a ciegas. Con 12 o menos no aparece — sería ruido.
+ */
+const DetalleListaModal: React.FC<{
+  detalle: { empresa: Company; tipo: 'convenios' | 'obrasSociales' | 'sucursales' } | null;
+  onClose: () => void;
+  convenios: SimpleCatalogItem[];
+  obrasSociales: SimpleCatalogItem[];
+  sucursales: ArcaSucursal[];
+  obraSocialPorDefectoId?: string;
+}> = ({ detalle, onClose, convenios, obrasSociales, sucursales, obraSocialPorDefectoId }) => {
+  const [q, setQ] = useState('');
+  // El filtro se limpia al cambiar de lista: si no, se abre otra y aparece vacía sin motivo visible.
+  useEffect(() => setQ(''), [detalle?.empresa._id, detalle?.tipo]);
+
+  if (!detalle) return null;
+
+  const { empresa, tipo } = detalle;
+  const meta = {
+    convenios: { titulo: 'Convenios colectivos', ayuda: 'Definen qué categorías profesionales se le pueden dar de alta.' },
+    obrasSociales: { titulo: 'Obras sociales registradas', ayuda: 'ARCA solo acepta altas con una de estas. La ⭐ es la que se usa por defecto cuando la persona no tiene una propia y su convenio tampoco.' },
+    sucursales: { titulo: 'Sucursales de ARCA', ayuda: 'Domicilios de explotación declarados. El alta usa uno de ellos y una de sus actividades.' },
+  }[tipo];
+
+  const coincide = (texto: string) => texto.toLowerCase().includes(q.trim().toLowerCase());
+  const cv = convenios.filter((c) => !q.trim() || coincide(`${c.externalId || ''} ${c.name}`));
+  const os = obrasSociales.filter((o) => !q.trim() || coincide(`${formatRnos(o.externalId)} ${o.externalId || ''} ${o.name}`));
+  const su = sucursales.filter((s) => !q.trim() || coincide(`${s.codigo} ${s.domicilio}`));
+  const total = tipo === 'convenios' ? cv.length : tipo === 'obrasSociales' ? os.length : su.length;
+  const totalSinFiltrar = tipo === 'convenios' ? convenios.length : tipo === 'obrasSociales' ? obrasSociales.length : sucursales.length;
+
+  return (
+    <InfoModal isOpen onClose={onClose} title={meta.titulo} subtitle={empresa.razonSocial} size="lg" actions={[{ label: 'Cerrar', onClick: onClose, variant: 'primary' }]}>
+      <div className="space-y-3">
+        <p className="text-xs text-gray-500 dark:text-gray-400">{meta.ayuda}</p>
+
+        {totalSinFiltrar > 12 && (
+          <div className="relative">
+            <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+            <input type="text" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filtrar…" className="w-full pl-9 pr-3 py-2 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500/30" />
+          </div>
+        )}
+
+        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+          {total} de {totalSinFiltrar}
+        </p>
+
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-100 dark:divide-gray-700/60 max-h-[55vh] overflow-y-auto">
+          {total === 0 && <p className="px-3 py-4 text-xs text-gray-400 italic">Sin resultados.</p>}
+
+          {tipo === 'convenios' &&
+            cv.map((c) => (
+              <div key={c._id} className="px-3 py-2 flex items-baseline gap-3">
+                <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-400 shrink-0 whitespace-nowrap">{c.externalId}</span>
+                <span className="text-sm text-gray-900 dark:text-gray-100 min-w-0">
+                  {c.name}
+                  {(c as { signatario?: string }).signatario && <span className="block text-xs text-gray-500 dark:text-gray-400">{(c as { signatario?: string }).signatario}</span>}
+                </span>
+              </div>
+            ))}
+
+          {tipo === 'obrasSociales' &&
+            os.map((o) => (
+              <div key={o._id} className="px-3 py-2 flex items-center gap-3">
+                <span className="font-mono text-xs text-gray-500 dark:text-gray-400 shrink-0 whitespace-nowrap">{formatRnos(o.externalId)}</span>
+                <span className="text-sm text-gray-900 dark:text-gray-100 truncate flex-1">{o.name}</span>
+                {o._id === obraSocialPorDefectoId && (
+                  <span title="Se usa por defecto cuando ni la persona ni su convenio definen una" className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                    <FontAwesomeIcon icon={faStar} className="h-2.5 w-2.5" />
+                    Por defecto
+                  </span>
+                )}
+              </div>
+            ))}
+
+          {tipo === 'sucursales' &&
+            su.map((s) => (
+              <div key={s._id} className="px-3 py-2">
+                <div className="flex items-baseline gap-3">
+                  <span className="font-mono text-xs font-bold text-indigo-700 dark:text-indigo-400 shrink-0">{s.codigo}</span>
+                  <span className="text-sm text-gray-900 dark:text-gray-100">{s.domicilio}</span>
+                </div>
+                {s.actividades.length === 0 ? (
+                  <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">Sin actividades declaradas: los contratos de este domicilio no pueden generar el alta.</p>
+                ) : (
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {s.actividades.map((a) => (
+                      <span key={a.codigo} className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300">
+                        <span className="font-mono">{a.codigo}</span>
+                        <span className="truncate max-w-[18rem]">{a.descripcion}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+        </div>
+      </div>
+    </InfoModal>
+  );
+};
+
 export const EmpresasPage: React.FC = () => {
   const navigate = useNavigate();
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -115,6 +220,12 @@ export const EmpresasPage: React.FC = () => {
   // Empresa cuyo aviso "Sin configurar para ARCA" se está explicando. El modal es UNO para toda la
   // página y no uno por fila: el contenido es el mismo y solo cambia qué le falta a esta empleadora.
   const [infoArca, setInfoArca] = useState<Company | null>(null);
+  /**
+   * Qué lista se está viendo en detalle. Las columnas muestran un CONTADOR y no los ítems: FZERO
+   * tiene 494 obras sociales registradas, y volcarlas en la celda hacía una fila de pantalla y media
+   * en la que no se podía comparar nada entre empresas. El número sí se compara de un vistazo.
+   */
+  const [detalleLista, setDetalleLista] = useState<{ empresa: Company; tipo: 'convenios' | 'obrasSociales' | 'sucursales' } | null>(null);
   const helpEntry = getHelp(HELP_KEY);
 
   // Vista tabla/tarjetas, como el resto de los ABM: la tabla solo en pantallas grandes.
@@ -238,19 +349,44 @@ export const EmpresasPage: React.FC = () => {
     return id == null ? undefined : obrasSociales.find((o) => Number((o.data as { id?: number } | undefined)?.id) === id);
   };
 
-  /** Badge de obra social: el RNOS es el dato que viaja al TXT; el nombre ubica al lector. */
-  const ObraSocialBadge: React.FC<{ o: SimpleCatalogItem; maxW: string; esPorDefecto: boolean }> = ({ o, maxW, esPorDefecto }) => (
-    <span
-      title={`${formatRnos(o.externalId)} — ${o.name}${esPorDefecto ? '\nEs la que se usa por defecto cuando la persona no tiene obra social propia.' : ''}`}
-      className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded border ${maxW} ${
-        esPorDefecto ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-      }`}
-    >
-      {esPorDefecto && <FontAwesomeIcon icon={faStar} className="h-2 w-2 shrink-0" />}
-      <span className="font-mono opacity-70 shrink-0">{formatRnos(o.externalId)}</span>
-      <span className="truncate">{o.name}</span>
-    </span>
-  );
+
+  /**
+   * Celda de una lista larga: el CONTADOR es el dato, y abre el detalle.
+   *
+   * Con 0 no es un botón — no hay nada que abrir, y un botón muerto invita a clickear en vano.
+   */
+  const ContadorLista: React.FC<{
+    empresa: Company;
+    tipo: 'convenios' | 'obrasSociales' | 'sucursales';
+    total: number;
+    cargando: boolean;
+    singular: string;
+    plural: string;
+    /**
+     * En la TABLA va solo el número: el encabezado de la columna ya dice de qué es, y repetirlo
+     * ensancha la celda y parte el texto en dos renglones. En las TARJETAS no hay encabezado, así
+     * que sin la etiqueta serían tres números sueltos sin significado.
+     */
+    conEtiqueta?: boolean;
+  }> = ({ empresa, tipo, total, cargando, singular, plural, conEtiqueta = false }) => {
+    if (total === 0) return <span className="text-gray-400 dark:text-gray-600">—</span>;
+    if (cargando) return <span className="text-xs text-gray-400 italic">cargando…</span>;
+    const nombre = total === 1 ? singular : plural;
+    return (
+      <button
+        type="button"
+        onClick={() => setDetalleLista({ empresa, tipo })}
+        // El tooltip conserva el nombre aunque no se muestre: es lo que hace legible el botón pelado.
+        title={`Ver ${total} ${nombre} de ${empresa.razonSocial}`}
+        aria-label={`Ver ${total} ${nombre} de ${empresa.razonSocial}`}
+        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
+      >
+        <span className="text-sm font-bold tabular-nums">{total}</span>
+        {conEtiqueta && <span className="text-[11px] text-gray-500 dark:text-gray-400">{nombre}</span>}
+        <FontAwesomeIcon icon={faEye} className="h-3 w-3 text-gray-400" />
+      </button>
+    );
+  };
 
   /** Sucursales de ARCA de la empresa, resueltas contra el catálogo ya cargado (se guardan como refs). */
   const sucursalesDe = (c: Company): ArcaSucursal[] => {
@@ -259,19 +395,6 @@ export const EmpresasPage: React.FC = () => {
     // Ordenadas por código para que el mismo listado se lea igual en todas las empresas.
     return sucursales.filter((s) => ids.includes(s._id)).sort((a, b) => a.codigo.localeCompare(b.codigo));
   };
-
-  /** Badge de una sucursal: el código es lo que importa (va en el TXT); el domicilio ubica al lector. */
-  const SucursalBadge: React.FC<{ s: ArcaSucursal; maxW: string }> = ({ s, maxW }) => (
-    <span
-      title={`${s.codigo} — ${s.domicilio}${s.actividades.length ? `\nActividades: ${s.actividades.map((a) => a.codigo).join(', ')}` : '\nSin actividades cargadas'}`}
-      className={`inline-flex items-center gap-1 px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-[10px] font-medium rounded border border-indigo-200 dark:border-indigo-800 ${maxW}`}
-    >
-      <span className="font-mono opacity-70 shrink-0">{s.codigo}</span>
-      <span className="truncate">{s.domicilio}</span>
-      {/* Sin actividades la sucursal no sirve para el alta: se avisa acá y no recién en el TXT. */}
-      {s.actividades.length === 0 && <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5 text-amber-500 shrink-0" title="Sin actividades cargadas" />}
-    </span>
-  );
 
   const setField = (key: keyof CompanyInput, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -428,43 +551,13 @@ export const EmpresasPage: React.FC = () => {
                     {c.representanteLegalEmail && <span className="block text-[11px] text-gray-400">{c.representanteLegalEmail}</span>}
                   </div>
                 )}
-                {(c.convenioIds || []).length > 0 && (
-                  <div>
-                    <span className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Convenios</span>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {conveniosDe(c).map((cv) => (
-                        <span
-                          key={cv._id}
-                          title={`${cv.externalId ? `${cv.externalId} — ` : ''}${cv.name}`}
-                          className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-[10px] font-medium rounded border border-primary-200 dark:border-primary-800 max-w-[180px]"
-                        >
-                          {cv.externalId && <span className="font-mono opacity-70 shrink-0">{cv.externalId}</span>}
-                          <span className="truncate">{cv.name}</span>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {(c.obrasSocialesIds || []).length > 0 && (
-                  <div>
-                    <span className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Obras sociales</span>
-                    <div className="flex items-center gap-1.5 flex-wrap max-h-24 overflow-y-auto">
-                      {obrasSocialesDe(c).map((o) => (
-                        <ObraSocialBadge key={o._id} o={o} maxW="max-w-[180px]" esPorDefecto={obraSocialPorDefectoDe(c)?._id === o._id} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {(c.sucursalIds || []).length > 0 && (
-                  <div>
-                    <span className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Sucursales de ARCA</span>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {sucursalesDe(c).map((s) => (
-                        <SucursalBadge key={s._id} s={s} maxW="max-w-[180px]" />
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {/* Mismos contadores que la tabla, pero CON etiqueta: acá no hay encabezado de columna
+                    que diga de qué es cada número. */}
+                <div className="flex items-center gap-2 flex-wrap pt-1">
+                  <ContadorLista conEtiqueta empresa={c} tipo="convenios" total={(c.convenioIds || []).length} cargando={cargandoConvenios} singular="convenio" plural="convenios" />
+                  <ContadorLista conEtiqueta empresa={c} tipo="obrasSociales" total={(c.obrasSocialesIds || []).length} cargando={cargandoObrasSociales} singular="obra social" plural="obras sociales" />
+                  <ContadorLista conEtiqueta empresa={c} tipo="sucursales" total={(c.sucursalIds || []).length} cargando={cargandoSucursales} singular="sucursal" plural="sucursales" />
+                </div>
               </div>
             </Card>
           ))}
@@ -518,50 +611,13 @@ export const EmpresasPage: React.FC = () => {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    {(c.convenioIds || []).length === 0 ? (
-                      <span className="text-gray-400 dark:text-gray-600">—</span>
-                    ) : cargandoConvenios ? (
-                      <span className="text-xs text-gray-400 italic">cargando…</span>
-                    ) : (
-                      <div className="flex items-center gap-1.5 flex-wrap max-w-[320px]">
-                        {conveniosDe(c).map((cv) => (
-                          <span
-                            key={cv._id}
-                            title={`${cv.externalId ? `${cv.externalId} — ` : ''}${cv.name}${(cv as { signatario?: string }).signatario ? ` (${(cv as { signatario?: string }).signatario})` : ''}`}
-                            className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-[10px] font-medium rounded border border-primary-200 dark:border-primary-800 max-w-[150px]"
-                          >
-                            {cv.externalId && <span className="font-mono opacity-70 shrink-0">{cv.externalId}</span>}
-                            <span className="truncate">{cv.name}</span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <ContadorLista empresa={c} tipo="convenios" total={(c.convenioIds || []).length} cargando={cargandoConvenios} singular="convenio" plural="convenios" />
                   </td>
                   <td className="px-4 py-3">
-                    {(c.obrasSocialesIds || []).length === 0 ? (
-                      <span className="text-gray-400 dark:text-gray-600">—</span>
-                    ) : cargandoObrasSociales ? (
-                      <span className="text-xs text-gray-400 italic">cargando…</span>
-                    ) : (
-                      <div className="flex items-center gap-1.5 flex-wrap max-w-[320px] max-h-24 overflow-y-auto">
-                        {obrasSocialesDe(c).map((o) => (
-                          <ObraSocialBadge key={o._id} o={o} maxW="max-w-[170px]" esPorDefecto={obraSocialPorDefectoDe(c)?._id === o._id} />
-                        ))}
-                      </div>
-                    )}
+                    <ContadorLista empresa={c} tipo="obrasSociales" total={(c.obrasSocialesIds || []).length} cargando={cargandoObrasSociales} singular="obra social" plural="obras sociales" />
                   </td>
                   <td className="px-4 py-3">
-                    {(c.sucursalIds || []).length === 0 ? (
-                      <span className="text-gray-400 dark:text-gray-600">—</span>
-                    ) : cargandoSucursales ? (
-                      <span className="text-xs text-gray-400 italic">cargando…</span>
-                    ) : (
-                      <div className="flex items-center gap-1.5 flex-wrap max-w-[320px]">
-                        {sucursalesDe(c).map((s) => (
-                          <SucursalBadge key={s._id} s={s} maxW="max-w-[170px]" />
-                        ))}
-                      </div>
-                    )}
+                    <ContadorLista empresa={c} tipo="sucursales" total={(c.sucursalIds || []).length} cargando={cargandoSucursales} singular="sucursal" plural="sucursales" />
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
@@ -664,6 +720,16 @@ export const EmpresasPage: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Detalle de una lista (convenios / obras sociales / sucursales) de UNA empresa. */}
+      <DetalleListaModal
+        detalle={detalleLista}
+        onClose={() => setDetalleLista(null)}
+        convenios={detalleLista ? conveniosDe(detalleLista.empresa) : []}
+        obrasSociales={detalleLista ? obrasSocialesDe(detalleLista.empresa) : []}
+        sucursales={detalleLista ? sucursalesDe(detalleLista.empresa) : []}
+        obraSocialPorDefectoId={detalleLista ? obraSocialPorDefectoDe(detalleLista.empresa)?._id : undefined}
+      />
 
       {/* Qué significa "Sin configurar para ARCA", con lo que le falta a ESTA empleadora. */}
       <InfoModal
