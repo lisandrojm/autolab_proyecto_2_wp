@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { useSearchParams, Link } from 'react-router-dom';
 import { CuitInput, isValidCuit } from '../components/ui/CuitInput';
-import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido } from '../utils/nacionalidadDocumento';
+import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina } from '../utils/nacionalidadDocumento';
 
 type Tab = 'general' | 'domicilio' | 'bancarios';
 
@@ -293,7 +293,13 @@ export const RegistroPage: React.FC = () => {
         setGeneros(data.generos || []);
         setTiposDocumento(data.tiposDocumento || []);
         setNivelesEstudio(data.nivelesEstudio || []);
-        setNacionalidades(data.nacionalidades || []);
+        const nacs: InfoOption[] = data.nacionalidades || [];
+        setNacionalidades(nacs);
+        // Argentina viene preseleccionada: es la nacionalidad de casi todas las altas, y hasta que se
+        // elegía una, los campos que dependen de ella —documento y CUIL— quedaban apagados. Sigue
+        // siendo un default: cambiarla reajusta los tipos de documento y muestra el switch del CUIL.
+        const argentina = opcionArgentina(nacs);
+        if (argentina) setForm((prev) => (prev.nacionalidadId ? prev : { ...prev, nacionalidadId: String(argentina.id) }));
         setObrasSociales(data.obrasSociales || []);
         setBancos(data.bancos || []);
         setRolesFrame(data.rolesFrame || []);
@@ -333,9 +339,18 @@ export const RegistroPage: React.FC = () => {
   const esArgentino = useMemo(() => esNacionalidadArgentina(nacionalidades, form.nacionalidadId), [nacionalidades, form.nacionalidadId]);
   // Argentino/a: sin Pasaporte. Otra nacionalidad: con Pasaporte (puede estar nacionalizado/a).
   const tiposDocumentoDisponibles = useMemo(() => tiposDocumentoParaNacionalidad(tiposDocumento, esArgentino), [tiposDocumento, esArgentino]);
-  // El CUIL es obligatorio para argentinos; para extranjeros solo si declararon tenerlo.
+  /**
+   * El CUIL se pide cuando la persona DICE TENERLO, y no según la nacionalidad.
+   *
+   * Un argentino siempre lo tiene (el switch ni se muestra, `tieneCuil` queda en true). Un extranjero
+   * que lo declara está diciendo que lo tiene, así que cargarlo a medias no sirve: o va completo y
+   * válido, o se destilda el switch y el alta sigue por el circuito "Sin CUIT". Un CUIL a medias es
+   * peor que ninguno — pasa los controles de la pantalla y falla recién contra ARCA.
+   *
+   * Habilitado y obligatorio son, por eso, la misma condición.
+   */
   const cuilVisible = esArgentino || tieneCuil;
-  const cuilObligatorio = esArgentino;
+  const cuilObligatorio = cuilVisible;
 
   /** Al cambiar la nacionalidad hay que revisar lo que dependía de ella para no dejar datos inválidos. */
   const onNacionalidadChange = (nuevoId: string) => {
@@ -617,60 +632,71 @@ export const RegistroPage: React.FC = () => {
                     {!nacionalidadElegida && <p className="text-[11px] text-gray-400 mt-1">Elegila para completar documento y CUIL.</p>}
                   </div>
                 </div>
-                {/* Documento y CUIL recién aparecen con la nacionalidad elegida. */}
-                {nacionalidadElegida && (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div>
-                        <label className={labelClass}>Tipo documento</label>
-                        <select className={fieldClass} value={form.tipoDocumentoId} onChange={(e) => set('tipoDocumentoId', e.target.value)}>
-                          <option value="">Seleccionar...</option>
-                          {tiposDocumentoDisponibles.map((o) => (
-                            <option key={o.id} value={o.id}>
-                              {o.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className={labelClass}>Documento <span className="text-red-500">*</span></label>
-                        <input className={inputClass('documento')} autoComplete="off" placeholder={esArgentino ? 'Nº de documento' : 'DNI / Pasaporte'} value={form.documento} onChange={(e) => set('documento', e.target.value)} />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div>
-                        <label className={labelClass}>
-                          CUIT / CUIL {cuilObligatorio && <span className="text-red-500">*</span>}
-                          <InfoSinCuit />
-                        </label>
-                        {/* Los extranjeros pueden no tener CUIL: se declara antes de pedirlo. */}
-                        {!esArgentino && (
-                          <button
-                            type="button"
-                            role="switch"
-                            aria-checked={tieneCuil}
-                            onClick={() => {
-                              const nuevo = !tieneCuil;
-                              setTieneCuil(nuevo);
-                              if (!nuevo) set('cuit', '');
-                            }}
-                            className="flex items-center gap-2 mb-2 text-xs text-gray-300"
-                          >
-                            <span className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${tieneCuil ? 'bg-blue-600' : 'bg-gray-600'}`}>
-                              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${tieneCuil ? 'translate-x-[1.15rem]' : 'translate-x-0.5'}`} />
-                            </span>
-                            Tiene CUIT / CUIL argentino
-                          </button>
-                        )}
-                        {cuilVisible ? (
-                          <CuitInput className={fieldClass} invalid={!!fieldErrors.cuit} value={form.cuit} onChange={(v) => set('cuit', v)} placeholder="20-XXXXXXXX-X" />
-                        ) : (
-                          <p className="text-[11px] text-gray-400">Te registrás sin CUIT/CUIL. Se puede cargar más adelante.</p>
-                        )}
-                      </div>
-                    </div>
-                  </>
-                )}
+                {/*
+                 * ORDEN: nacionalidad → CUIT/CUIL → tipo y número de documento.
+                 *
+                 * El CUIL va pegado a la nacionalidad porque es lo que depende de ella (si es
+                 * obligatorio, y si aparece el switch de "no tengo"). Antes iba después del
+                 * documento y la dependencia no se leía.
+                 *
+                 * El campo NO se monta y desmonta: siempre está, y cuando no aplica queda
+                 * DESHABILITADO. Un campo que desaparece hace saltar todo lo de abajo y deja la duda
+                 * de si se perdió el dato; apagado se ve que existe y por qué no se puede completar.
+                 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className={labelClass}>
+                      CUIT / CUIL {cuilObligatorio && <span className="text-red-500">*</span>}
+                      <InfoSinCuit />
+                    </label>
+                    {/* El switch solo tiene sentido para extranjeros: un argentino siempre tiene CUIL. */}
+                    {nacionalidadElegida && !esArgentino && (
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={tieneCuil}
+                        onClick={() => {
+                          const nuevo = !tieneCuil;
+                          setTieneCuil(nuevo);
+                          if (!nuevo) set('cuit', '');
+                        }}
+                        className="flex items-center gap-2 mb-2 text-xs text-gray-300"
+                      >
+                        <span className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${tieneCuil ? 'bg-blue-600' : 'bg-gray-600'}`}>
+                          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${tieneCuil ? 'translate-x-[1.15rem]' : 'translate-x-0.5'}`} />
+                        </span>
+                        Tiene CUIT / CUIL argentino
+                      </button>
+                    )}
+                    <CuitInput
+                      className={`${fieldClass} ${cuilVisible ? '' : 'opacity-50 cursor-not-allowed'}`}
+                      invalid={!!fieldErrors.cuit}
+                      value={cuilVisible ? form.cuit : ''}
+                      onChange={(v) => set('cuit', v)}
+                      placeholder="20-XXXXXXXX-X"
+                      disabled={!cuilVisible}
+                    />
+                    {!nacionalidadElegida && <p className="text-[11px] text-gray-400 mt-1">Elegí la nacionalidad para completarlo.</p>}
+                    {nacionalidadElegida && !cuilVisible && <p className="text-[11px] text-gray-400 mt-1">Te registrás sin CUIT/CUIL. Se puede cargar más adelante.</p>}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className={labelClass}>Tipo documento</label>
+                    <select className={fieldClass} value={form.tipoDocumentoId} onChange={(e) => set('tipoDocumentoId', e.target.value)} disabled={!nacionalidadElegida}>
+                      <option value="">Seleccionar...</option>
+                      {tiposDocumentoDisponibles.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Documento <span className="text-red-500">*</span></label>
+                    <input className={inputClass('documento')} autoComplete="off" placeholder={esArgentino ? 'Nº de documento' : 'DNI / Pasaporte'} value={form.documento} onChange={(e) => set('documento', e.target.value)} disabled={!nacionalidadElegida} />
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
                     <label className={labelClass}>Fecha nacimiento <span className="text-red-500">*</span></label>

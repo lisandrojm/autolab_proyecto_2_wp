@@ -108,7 +108,7 @@ export const LAYOUT_ALTA: CampoAltaDoc[] = [
   { desde: 17, hasta: 19, nombre: "Modalidad de contrato", origen: "Tipo de contrato", tipo: "obligatorio" },
   { desde: 20, hasta: 29, nombre: "Fecha inicio relación laboral", origen: "Contrato · AAAA/MM/DD", tipo: "obligatorio" },
   { desde: 30, hasta: 39, nombre: "Fecha fin relación laboral", origen: "Contrato · solo si la modalidad es a plazo determinado", tipo: "condicional" },
-  { desde: 40, hasta: 45, nombre: "Código de obra social (RNOS)", origen: "Persona → convenio → excluidos de convenio → global", tipo: "obligatorio" },
+  { desde: 40, hasta: 45, nombre: "Código de obra social (RNOS)", origen: "Persona → convenio (o su excepción) → excluidos de convenio", tipo: "obligatorio" },
   { desde: 46, hasta: 47, nombre: "Código situación de baja", origen: "No aplica a un alta", tipo: "en_blanco" },
   { desde: 48, hasta: 57, nombre: "Fecha telegrama renuncia", origen: "No aplica a un alta", tipo: "en_blanco" },
   { desde: 58, hasta: 72, nombre: "Retribución pactada", origen: "Grupo salarial del convenio de la categoría", tipo: "obligatorio" },

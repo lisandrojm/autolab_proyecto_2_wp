@@ -491,6 +491,23 @@ class ProjectsAPI {
   }
 
   /**
+   * Fija la obra social de UN contrato (RNOS, pos. 40-45 del TXT).
+   *
+   * `obraSocialId: null` la desfija y vuelve a resolver por la cascada (convenio → excepción de la
+   * empresa → excluidos), que es el caso normal. El server valida que esté entre las registradas por
+   * la empleadora: la SSS no sabe nada de la empresa y puede devolver una que ARCA le rechace.
+   */
+  async updateObraSocialContrato(
+    projectId: string,
+    userId: string,
+    contractIndex: number,
+    payload: { obraSocialId: number | null; origen: "constatada" | "manual"; constatadaEn?: "sss" | "arca" },
+  ): Promise<{ obraSocialId: number | null; obraSocialOrigen: string; obraSocialConstatadaEn: string; obraSocialConstatadaEl: string }> {
+    const { data } = await axios.patch(`/projects/${projectId}/members/${userId}/contracts/${contractIndex}/obra-social`, payload, { headers: this.getHeaders() });
+    return data;
+  }
+
+  /**
    * Elige la actividad del domicilio de desempeño de un contrato puntual. Solo hace falta cuando la
    * sucursal tiene más de una actividad declarada; con una sola se hereda. Pasar "" para desasignarla.
    */

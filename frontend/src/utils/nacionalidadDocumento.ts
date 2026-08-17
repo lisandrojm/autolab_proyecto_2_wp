@@ -58,3 +58,15 @@ export function tipoDocumentoSigueValido(tiposDisponibles: OpcionCatalogo[], tip
   if (tipoDocumentoId === undefined || tipoDocumentoId === null || tipoDocumentoId === "") return true;
   return tiposDisponibles.some((t) => String(t.id) === String(tipoDocumentoId));
 }
+
+/**
+ * La opción "Argentina" del catálogo, para preseleccionarla.
+ *
+ * Se ofrece como default porque es la nacionalidad de casi todas las altas: arrancar en "Seleccionar…"
+ * obligaba a elegirla a mano cada vez y, hasta que se elegía, los campos que dependen de ella
+ * —documento y CUIL— no se podían completar. Sigue siendo un default, no una imposición: cambiarla
+ * reajusta los tipos de documento y habilita el switch de "no tiene CUIL".
+ */
+export function opcionArgentina<T extends { name?: string }>(opciones: T[]): T | undefined {
+  return opciones.find((o) => esOpcionArgentina(o));
+}

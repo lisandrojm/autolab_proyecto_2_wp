@@ -255,8 +255,8 @@ const helpResources = {
         "**Origen**: Son las obras sociales registradas en ARCA (ex AFIP), en Simplificación Registral → Registrar Obras Sociales. Cada una se identifica con su código **RNOS** (formato X-XXXX-X).",
         "**Actualización**: Este catálogo es una copia local, NO se sincroniza solo con ARCA. Si en ARCA se dan de alta, se dan de baja o cambian obras sociales, hay que volver a importarlas acá con **Importar Excel** para que el listado quede al día.",
         "**Este es el catálogo universal**: las 494 que existen. Cada empleadora declara aparte cuáles tiene registradas ante ARCA, en su ficha → Obras Sociales, y el organismo solo acepta altas con esas.",
-        "**La obra social de cada persona no se elige acá**: se resuelve en cascada — la propia de la persona → la excepción que su empleadora haya puesto para ese convenio → **la del convenio**, que es el caso normal → la de excluidos de convenio (9999/99) de la empleadora → la global de la pestaña *Por defecto*.",
-        "**Por defecto (global)**: la última red. Si un alta termina usándola, es señal de que falta cargar la obra social del convenio: la pestaña muestra cuántos contratos están en esa situación.",
+        "**La obra social de cada persona no se elige acá**: se resuelve en cascada — la propia de la persona (desregulación) → la excepción que su empleadora haya puesto para ese convenio → **la del convenio**, que es el caso normal → y solo para los excluidos de convenio (9999/99), la de la empleadora.",
+        "**Si nada de eso resuelve, el campo FALTA**: no hay una obra social por defecto que rellene el hueco. Había una y se eliminó: solo entraba cuando faltaba configurar algo aguas arriba, y lo único que hacía era mandar el alta con una obra social sin fundamento, que ARCA acepta igual.",
         "**Gestión**: Crear, editar y eliminar obras sociales, o importarlas desde un Excel (descargá la **Plantilla** para respetar el formato).",
       ],
 
@@ -357,7 +357,7 @@ const helpResources = {
       "convenios.items": [
         "**La obra social la define el convenio, no la empleadora**: quien trabaja bajo el CCT de televisión aporta a la O.S. del Personal de Televisión, la contrate la productora que la contrate. Se carga en la columna **Obra social**, con el ✎ de la fila.",
         "**Este dato no viene de ARCA**: el nomenclador oficial trae el código y la actividad, nada más. El sindicato signatario y su obra social se cargan a mano, una sola vez, y valen para todas las empresas.",
-        "**Qué obra social termina en el TXT de alta**: se toma la primera de esta lista que exista — (1) la propia de la persona; (2) la excepción que una empleadora haya puesto para ese convenio; (3) **la del convenio**, que es el caso normal; (4) solo para *9999/99*, la obra social de excluidos de esa empleadora; (5) la global de Obras Sociales → Por defecto, que es la red de contención y avisa cada vez que se usa.",
+        "**Qué obra social termina en el TXT de alta**: se toma la primera de esta lista que exista — (1) la propia de la persona; (2) la excepción que una empleadora haya puesto para ese convenio; (3) **la del convenio**, que es el caso normal; (4) solo para *9999/99*, la obra social de excluidos de esa empleadora. Si ninguna resuelve, el dato FALTA y el contrato no entra en el TXT.",
         "**9999/99 — EXCLUIDO DE CONVENIO no tiene sindicato**: es el único caso en que la obra social la elige la empresa, en su ficha → Obras Sociales. Su celda vacía acá no es un dato faltante.",
         "**Las excepciones no se cargan acá**: viven en la ficha de cada empleadora (Empresa → Convenios), porque son de esa empresa y no del convenio. Cuando existe, la tabla la marca como *pisada por esta empresa*.",
         "**El filtro de arriba**: el nomenclador tiene 2.669 convenios y solo se trabaja con los que alguna empresa registró ante ARCA. La columna **Empresas** dice cuántas: hacé click en el número para ver cuáles.",

@@ -8,9 +8,15 @@ import { CuitInput, isValidCuit } from "../ui/CuitInput";
 import { Modal } from "../ui/Modal";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { fuzzyMatch } from "../../utils/searchHelpers";
-import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido } from "../../utils/nacionalidadDocumento";
+import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina } from "../../utils/nacionalidadDocumento";
+import { createSimpleCatalogApi, SimpleCatalogItem } from "../../api/simpleCatalog";
+// El RNOS se formatea igual que en el nomenclador y en la ficha de empresa: un solo lugar.
+import { formatRnos } from "../../utils/rnos";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faUserShield, faEye, faEyeSlash, faToggleOn, faToggleOff, faMapMarkerAlt, faUniversity, faSearch, faTimes, faMobileAlt, faKey, faCheck, faXmark, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
+
+/** Las obras sociales salen del catálogo de ARCA: ver el comentario de `insuranceCompanies`. */
+const obrasSocialesApi = createSimpleCatalogApi("/obras-sociales");
 
 type ModalTab = "general" | "domicilio" | "bancarios";
 
@@ -99,7 +105,14 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   const [nationalities, setNationalities] = useState<InfoItem[]>([]);
   const [educationLevels, setEducationLevels] = useState<InfoItem[]>([]);
   const [banks, setBanks] = useState<InfoItem[]>([]);
-  const [insuranceCompanies, setInsuranceCompanies] = useState<InfoItem[]>([]);
+  /**
+   * Obras sociales del catálogo de ARCA (496), NO del catálogo viejo de `infos`.
+   *
+   * Es la misma lista contra la que se resuelve el RNOS del TXT de alta —`resolveAfipValues` busca
+   * por `data.id`—, así que tomarla de otro lado es arriesgarse a guardar un id que después no
+   * resuelve. Los `data.id` son los mismos: la colección se migró copiando `externalId` y `data`.
+   */
+  const [insuranceCompanies, setInsuranceCompanies] = useState<SimpleCatalogItem[]>([]);
   const [catalogsLoaded, setCatalogsLoaded] = useState(false);
 
   // Estado del formulario
@@ -142,7 +155,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           infoAPI.listByType("nacionalidad"),
           infoAPI.listByType("nivel-estudio"),
           infoAPI.listByType("banco"),
-          infoAPI.listByType("obra-social"),
+          obrasSocialesApi.list(),
         ]);
         if (cancelled) return;
         setRoles(rolesRes.roles);
@@ -272,9 +285,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
       if (defaultRole) defaultRolesSet.add(defaultRole._id);
       if (mobileCollabRole) defaultRolesSet.add(mobileCollabRole._id);
 
+      // Argentina viene preseleccionada en el ALTA: es la nacionalidad de casi todas, y hasta que se
+      // elegía una, documento y CUIL quedaban apagados. En la edición no se toca: manda lo cargado.
+      const argentina = opcionArgentina(nationalityOptions);
       setFormData({
         ...emptyForm(),
         roles: Array.from(defaultRolesSet),
+        nacionalidadId: argentina ? Number(argentina.data?.id) : undefined,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -290,8 +307,14 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
       setModalActiveTab("general");
       return;
     }
-    if (esArgentino && !formData.cuit) {
-      sweetAlert.error("Falta el CUIT/CUIL", "Para una persona argentina el CUIT/CUIL es obligatorio.");
+    // Se exige cuando la persona DICE TENERLO, no según la nacionalidad: el switch prendido es la
+    // declaración de que tiene CUIL, y entonces hay que cargarlo. Si no lo tiene, se destilda y el
+    // alta sigue por el circuito "Sin CUIT" — lo que no sirve es un CUIL a medias.
+    if (cuilVisible && !formData.cuit) {
+      sweetAlert.error(
+        "Falta el CUIT/CUIL",
+        esArgentino ? "Para una persona argentina el CUIT/CUIL es obligatorio." : 'Está tildado "Tiene CUIT / CUIL argentino": cargalo, o destildá el switch para seguir sin CUIT.',
+      );
       setModalActiveTab("general");
       return;
     }
@@ -433,7 +456,14 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   const esArgentino = esNacionalidadArgentina(opcionesNacionalidad, formData.nacionalidadId);
   // Argentino/a: sin Pasaporte. Otra nacionalidad: con Pasaporte (puede estar nacionalizado/a).
   const tiposDocumentoDisponibles = tiposDocumentoParaNacionalidad(documentTypes, esArgentino);
-  // El CUIL es obligatorio para argentinos; para extranjeros solo si declararon tenerlo.
+  /**
+   * El CUIL se pide cuando la persona DICE TENERLO, no según la nacionalidad.
+   *
+   * Un argentino siempre lo tiene (el switch ni se muestra y `tieneCuil` queda en true). Un extranjero
+   * que lo declara está diciendo que lo tiene, así que habilitado y obligatorio son la misma
+   * condición: o va completo y válido, o se destilda el switch y el alta sigue por el circuito
+   * "Sin CUIT". Un CUIL a medias pasa los controles de la pantalla y falla recién contra ARCA.
+   */
   const cuilVisible = esArgentino || tieneCuil;
 
   /** Al cambiar la nacionalidad hay que revisar lo que dependía de ella para no dejar datos inválidos. */
@@ -579,65 +609,73 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                   </div>
                 </div>
 
-                {/* Documento y CUIL recién aparecen con la nacionalidad elegida. */}
-                {nacionalidadElegida && (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tipo de Documento</label>
-                        <select value={formData.tipoDocumentoId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, tipoDocumentoId: parseInt(e.target.value) || undefined }))} className="input-field">
-                          <option value="">Seleccionar...</option>
-                          {tiposDocumentoDisponibles.map((it) => (
-                            <option key={it._id} value={it.data.id}>
-                              {it.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Documento <span className="text-red-500">*</span></label>
-                        <input type="text" required value={formData.documento || ""} onChange={(e) => setFormData((prev) => ({ ...prev, documento: e.target.value }))} className="input-field" placeholder={esArgentino ? "Nº de documento" : "DNI / Pasaporte"} />
-                      </div>
-                    </div>
+                {/*
+                 * ORDEN: nacionalidad → CUIT/CUIL → tipo y número de documento. El CUIL va pegado a
+                 * la nacionalidad porque es lo que depende de ella; el documento, después.
+                 *
+                 * Ninguno de los dos se monta y desmonta: siempre están, y cuando no aplican quedan
+                 * DESHABILITADOS. Un campo que aparece y desaparece hace saltar el formulario entero
+                 * y deja la duda de si se perdió lo cargado.
+                 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      <span className="inline-flex items-center gap-1.5">
+                        {/* El asterisco sigue al switch: si dice tenerlo, hay que cargarlo. */}
+                        CUIT / CUIL {cuilVisible && <span className="text-red-500">*</span>}
+                        <button type="button" onClick={() => setSinCuitInfoOpen(true)} title="¿Qué pasa si no tiene CUIT/CUIL?" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
+                          <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+                        </button>
+                      </span>
+                    </label>
+                    {/* El switch solo tiene sentido para extranjeros: un argentino siempre tiene CUIL. */}
+                    {nacionalidadElegida && !esArgentino && (
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={tieneCuil}
+                        onClick={() => {
+                          const nuevo = !tieneCuil;
+                          setTieneCuil(nuevo);
+                          if (!nuevo) setFormData((prev) => ({ ...prev, cuit: "" }));
+                        }}
+                        className="flex items-center gap-2 mb-2 text-xs text-gray-600 dark:text-gray-300"
+                      >
+                        <span className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${tieneCuil ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}>
+                          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${tieneCuil ? "translate-x-[1.15rem]" : "translate-x-0.5"}`} />
+                        </span>
+                        Tiene CUIT / CUIL argentino
+                      </button>
+                    )}
+                    <CuitInput
+                      value={cuilVisible ? formData.cuit || "" : ""}
+                      onChange={(v) => setFormData((prev) => ({ ...prev, cuit: v }))}
+                      className={`input-field ${cuilVisible ? "" : "opacity-50 cursor-not-allowed"}`}
+                      placeholder="XX-XXXXXXXX-X"
+                      disabled={!cuilVisible}
+                    />
+                    {!nacionalidadElegida && <p className="text-[11px] text-gray-400 mt-1">Elegí la nacionalidad para completarlo.</p>}
+                    {nacionalidadElegida && !cuilVisible && <p className="text-[11px] text-gray-400 mt-1">Se registra sin CUIT/CUIL. Se puede cargar más adelante.</p>}
+                  </div>
+                </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                          <span className="inline-flex items-center gap-1.5">
-                            CUIT / CUIL {esArgentino && <span className="text-red-500">*</span>}
-                            <button type="button" onClick={() => setSinCuitInfoOpen(true)} title="¿Qué pasa si no tiene CUIT/CUIL?" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
-                              <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
-                            </button>
-                          </span>
-                        </label>
-                        {/* Los extranjeros pueden no tener CUIL: se declara antes de pedirlo. */}
-                        {!esArgentino && (
-                          <button
-                            type="button"
-                            role="switch"
-                            aria-checked={tieneCuil}
-                            onClick={() => {
-                              const nuevo = !tieneCuil;
-                              setTieneCuil(nuevo);
-                              if (!nuevo) setFormData((prev) => ({ ...prev, cuit: "" }));
-                            }}
-                            className="flex items-center gap-2 mb-2 text-xs text-gray-600 dark:text-gray-300"
-                          >
-                            <span className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${tieneCuil ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}>
-                              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${tieneCuil ? "translate-x-[1.15rem]" : "translate-x-0.5"}`} />
-                            </span>
-                            Tiene CUIT / CUIL argentino
-                          </button>
-                        )}
-                        {cuilVisible ? (
-                          <CuitInput value={formData.cuit || ""} onChange={(v) => setFormData((prev) => ({ ...prev, cuit: v }))} className="input-field" placeholder="XX-XXXXXXXX-X" />
-                        ) : (
-                          <p className="text-[11px] text-gray-400">Se registra sin CUIT/CUIL. Se puede cargar más adelante.</p>
-                        )}
-                      </div>
-                    </div>
-                  </>
-                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tipo de Documento</label>
+                    <select value={formData.tipoDocumentoId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, tipoDocumentoId: parseInt(e.target.value) || undefined }))} className="input-field" disabled={!nacionalidadElegida}>
+                      <option value="">Seleccionar...</option>
+                      {tiposDocumentoDisponibles.map((it) => (
+                        <option key={it._id} value={it.data.id}>
+                          {it.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Documento <span className="text-red-500">*</span></label>
+                    <input type="text" required value={formData.documento || ""} onChange={(e) => setFormData((prev) => ({ ...prev, documento: e.target.value }))} className="input-field" placeholder={esArgentino ? "Nº de documento" : "DNI / Pasaporte"} disabled={!nacionalidadElegida} />
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -705,9 +743,12 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Obra Social</label>
                     <select value={formData.osId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, osId: parseInt(e.target.value) || undefined }))} className="input-field">
                       <option value="">Seleccionar...</option>
+                      {/* Con 496 obras sociales y nombres que se parecen ("ADOS BARILOCHE", "ADOS
+                          BELLA VISTA", varias "ASOCIACION DE OBRAS SOCIALES DE…"), el RNOS es lo
+                          único que identifica sin ambigüedad, y es además lo que viaja al TXT. */}
                       {insuranceCompanies.map((it) => (
-                        <option key={it._id} value={it.data.id}>
-                          {it.name}
+                        <option key={it._id} value={Number(it.data?.id)}>
+                          {it.externalId ? `${formatRnos(it.externalId)} — ${it.name}` : it.name}
                         </option>
                       ))}
                     </select>

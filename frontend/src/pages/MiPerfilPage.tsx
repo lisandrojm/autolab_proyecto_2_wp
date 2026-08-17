@@ -3,6 +3,8 @@ import { useAuthStore } from "../stores/authStore";
 import { usersAPI, User } from "../api/users";
 import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
 import { infoAPI, InfoItem } from "../api/info";
+import { createSimpleCatalogApi, SimpleCatalogItem } from "../api/simpleCatalog";
+import { formatRnos } from "../utils/rnos";
 import { PageLayout } from "../components/ui/PageLayout";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
@@ -38,6 +40,9 @@ const formatDate = (value?: string) => {
   return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
 };
 
+/** Obras sociales del catálogo de ARCA (el mismo que usa el formulario de usuario). */
+const obrasSocialesApi = createSimpleCatalogApi("/obras-sociales");
+
 export const MiPerfilPage: React.FC = () => {
   const authUser = useAuthStore((s) => s.user);
 
@@ -56,7 +61,9 @@ export const MiPerfilPage: React.FC = () => {
   const [nationalities, setNationalities] = useState<InfoItem[]>([]);
   const [educationLevels, setEducationLevels] = useState<InfoItem[]>([]);
   const [banks, setBanks] = useState<InfoItem[]>([]);
-  const [insuranceCompanies, setInsuranceCompanies] = useState<InfoItem[]>([]);
+  // Del catálogo de ARCA, igual que el formulario de usuario: es la lista con la que se resuelve
+  // el RNOS del TXT, y hay que mostrar el mismo dato que se eligió.
+  const [insuranceCompanies, setInsuranceCompanies] = useState<SimpleCatalogItem[]>([]);
 
   useEffect(() => {
     if (!authUser?.id) {
@@ -77,7 +84,7 @@ export const MiPerfilPage: React.FC = () => {
           infoAPI.listByType("nacionalidad"),
           infoAPI.listByType("nivel-estudio"),
           infoAPI.listByType("banco"),
-          infoAPI.listByType("obra-social"),
+          obrasSocialesApi.list(),
         ]);
         if (cancelled) return;
         setUser(u);
@@ -108,6 +115,14 @@ export const MiPerfilPage: React.FC = () => {
   const nameFromInfo = (list: InfoItem[], id?: number) => {
     if (id === undefined || id === null) return "";
     return list.find((it) => it.data?.id === id)?.name || "";
+  };
+
+  /** La obra social se muestra CON su RNOS: es lo que la identifica y lo que viaja al TXT de ARCA. */
+  const obraSocialConRnos = (id?: number) => {
+    if (id === undefined || id === null) return "";
+    const os = insuranceCompanies.find((it) => Number(it.data?.id) === id);
+    if (!os) return "";
+    return os.externalId ? `${formatRnos(os.externalId)} — ${os.name}` : os.name;
   };
 
   const md = user?.metadata;
@@ -201,7 +216,7 @@ export const MiPerfilPage: React.FC = () => {
                 <Field label="Nacionalidad" value={nameFromInfo(nationalities.length > 0 ? nationalities : countries, md?.nacionalidadId)} />
                 <Field label="Género" value={nameFromInfo(genders, md?.generoId)} />
                 <Field label="Estado Civil" value={md?.estadoCivil} />
-                <Field label="Obra Social" value={nameFromInfo(insuranceCompanies, md?.osId)} />
+                <Field label="Obra Social" value={obraSocialConRnos(md?.osId)} />
                 <Field label="Fecha de Ingreso" value={formatDate(user.hireDate)} />
                 <Field label="Vacaciones (Días Extra)" value={user.extraVacationDays ?? 0} />
                 <Field label="Legajo Tango" value={(md as any)?.numeroLegajoTango} />

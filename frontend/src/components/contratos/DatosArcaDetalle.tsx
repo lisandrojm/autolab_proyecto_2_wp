@@ -24,6 +24,9 @@ const ICONO: Record<AfipFieldCheck["estado"], { icon: typeof faCheck; clase: str
   falta: { icon: faXmark, clase: "text-amber-500" },
   error: { icon: faTriangleExclamation, clase: "text-red-500" },
   bloqueado: { icon: faLock, clase: "text-gray-400" },
+  // El aviso NO es un faltante: el dato está y el alta sale. Se marca en ámbar porque conviene
+  // mirarlo —una obra social heredada de la ficha vieja puede estar vencida—, no porque falte algo.
+  aviso: { icon: faTriangleExclamation, clase: "text-amber-500" },
 };
 
 const FilaCheck: React.FC<{ c: AfipFieldCheck }> = ({ c }) => {
@@ -44,6 +47,7 @@ const FilaCheck: React.FC<{ c: AfipFieldCheck }> = ({ c }) => {
           {c.estado === "falta" && <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">Falta</span>}
           {c.estado === "error" && <span className="text-[11px] font-semibold text-red-600 dark:text-red-400">Mal cargado</span>}
           {c.estado === "bloqueado" && <span className="text-[11px] font-semibold text-gray-500">En espera</span>}
+          {c.estado === "aviso" && <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">Sin constatar</span>}
         </span>
       </div>
     </li>
@@ -184,6 +188,19 @@ export const DatosArcaDetalle: React.FC<{ row: ContractOverviewRow; result: Afip
             <Grupo key={g.origen} g={g} onNavegar={onNavegar} />
           ))}
         </div>
+      )}
+
+      {/* Los avisos van VISIBLES aunque el contrato esté completo: no bloquean el alta, pero si
+          quedaran colapsados con los campos resueltos nadie se enteraría de que hay una obra social
+          sin constatar, que es justo lo que hay que ir limpiando. */}
+      {result.checks.some((c) => c.estado === "aviso") && (
+        <ul className="rounded-lg border border-amber-300 dark:border-amber-800/70 bg-amber-50/70 dark:bg-amber-950/20 divide-y divide-amber-200/60 dark:divide-amber-800/40">
+          {result.checks
+            .filter((c) => c.estado === "aviso")
+            .map((c) => (
+              <FilaCheck key={c.key} c={c} />
+            ))}
+        </ul>
       )}
 
       {/* Los campos ya resueltos van al final y colapsados: lo que importa es lo que falta. */}

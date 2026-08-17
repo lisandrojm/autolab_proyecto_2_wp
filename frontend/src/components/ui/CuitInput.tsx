@@ -55,6 +55,14 @@ interface CuitInputProps {
   id?: string;
   placeholder?: string;
   autoComplete?: string;
+  /**
+   * Apaga el campo sin sacarlo del formulario.
+   *
+   * Se usa cuando el CUIL todavía no aplica (falta elegir la nacionalidad) o no corresponde (un
+   * extranjero que declaró no tenerlo). Un campo que desaparece hace saltar todo lo de abajo y deja
+   * la duda de si se perdió el dato; apagado se ve que existe y por qué no se puede completar.
+   */
+  disabled?: boolean;
 }
 
 /**
@@ -73,6 +81,7 @@ export const CuitInput: React.FC<CuitInputProps> = ({
   id,
   placeholder = "XX-XXXXXXXX-X",
   autoComplete = "off",
+  disabled = false,
 }) => {
   const ref = useRef<HTMLInputElement>(null);
   const caretRef = useRef<number | null>(null);
@@ -164,6 +173,7 @@ export const CuitInput: React.FC<CuitInputProps> = ({
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
+        disabled={disabled}
         className={`${className}${showError ? " !border-red-500 ring-2 ring-red-500/40" : ""}`}
       />
       {formatError && <p className="mt-2 text-xs text-red-400">El CUIT/CUIL no es válido. Revisá los 11 dígitos.</p>}

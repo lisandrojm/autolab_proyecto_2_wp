@@ -78,8 +78,11 @@ export type OrigenDato = "persona" | "contrato" | "tipo_contrato" | "categoria_s
  *                 desapercibido y llega mal a ARCA.
  *  - `bloqueado`  no se puede resolver todavía porque depende de otro origen sin resolver. No se
  *                 cuenta como problema propio: contarlo es lo que inflaba el "Faltan 6".
+ *  - `aviso`      el dato ESTÁ y el alta se puede generar, pero hay algo que conviene mirar. No
+ *                 bloquea ni cuenta como pendiente: es el caso de una obra social heredada de la
+ *                 ficha de la persona, que puede estar vencida pero es mejor que nada.
  */
-export type EstadoCheck = "ok" | "falta" | "error" | "bloqueado";
+export type EstadoCheck = "ok" | "falta" | "error" | "bloqueado" | "aviso";
 
 export interface AfipFieldCheck {
   key: string;
@@ -122,6 +125,8 @@ export interface AfipRowResult {
   configuracionesPendientes: number;
   /** Cuántos campos están cargados MAL (no faltantes). */
   errores: number;
+  /** Cuántos avisos hay: no bloquean el alta, pero conviene mirarlos. */
+  avisos: number;
 }
 
 /**
@@ -169,10 +174,13 @@ export interface AfipValues {
   actividad: string;
   modalidadLiq: string;
   rnos: string;
-  /** El RNOS no es de la persona: sale de una obra social por defecto. */
+  /** El RNOS no es de la persona: se heredó del convenio o de la empleadora. */
   rnosPorDefecto: boolean;
-  /** De dónde salió el RNOS, para poder aclararlo en la vista de completitud. */
-  rnosOrigen: "persona" | "override" | "convenio" | "empresa" | "global" | "ninguno";
+  /**
+   * De dónde salió el RNOS. `ninguno` = no se pudo resolver y el campo FALTA (ya no hay una obra
+   * social global que lo rellene: ver la cascada en `resolveAfipValues`).
+   */
+  rnosOrigen: "constatada" | "manual" | "heredada-usuario" | "override" | "convenio" | "empresa" | "ninguno";
   sucursal: string;
   /** Cómo se resolvió la actividad (o por qué no se pudo). */
   actividadOrigen: ActividadOrigen;
@@ -207,22 +215,29 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
   const convenioDeLaCategoria = convenioCategoria ? cat.convenios?.find((c) => String(c.externalId || "").trim() === convenioCategoria) : undefined;
 
   /**
-   * Cascada de obra social, en cuatro pasos:
+   * Cascada de obra social, en TRES pasos. Si ninguno resuelve, el campo FALTA.
    *
-   *   1. ¿La persona tiene obra social propia?           → esa
+   *   1. ¿El CONTRATO tiene una fijada?                  → esa (constatada en ARCA, o manual)
    *   2. ¿Su categoría pertenece a un convenio?          → la del convenio
    *        ├─ ¿la empresa lo pisó para ese convenio?     → el override de la empresa
    *        └─ si no                                       → la sindical del CCT
-   *   3. ¿Está EXCLUIDA de convenio (9999/99)?           → la por defecto de la empresa
-   *   4. Nada de lo anterior                              → la global, y falta configurar algo
+   *   3. ¿Está EXCLUIDA de convenio (9999/99)?           → la de la empleadora
+   *   ─  Nada de lo anterior                              → FALTA: no se genera el TXT
+   *
+   * El paso 1 GANA SIEMPRE: si ARCA dice que esa persona está en 901402, no importa qué diga el
+   * convenio. Y es del CONTRATO, no de la persona: ARCA declara el RNOS en cada alta (pos. 40-45),
+   * dos contratos de la misma persona en dos empleadoras llevan cada uno el suyo, y el dato caduca
+   * solo —por desregulación alguien cambia de obra social sin que su empleadora se entere—.
    *
    * En la Argentina la obra social la define el sindicato y al sindicato lo define el CCT: por eso el
    * paso 2 es el que resuelve casi todo. La empleadora **corrige una excepción** ahí (el override),
    * pero **decide** solo en el paso 3 — quien está excluido de convenio no tiene sindicato.
    *
-   * Ojo con el paso 4: un convenio SIN obra social cargada NO cae al default de la empresa. Cae a la
-   * global y se avisa, porque es una configuración que falta, no un caso legítimo. Taparlo con el
-   * default de la empresa haría que el alta salga con una obra social plausible pero equivocada.
+   * HABÍA un cuarto paso, una obra social "global" del catálogo, y se eliminó. Solo entraba cuando
+   * faltaba configurar algo aguas arriba —típicamente el convenio sin obra social—, así que lo único
+   * que hacía era rellenar el campo con un valor sin fundamento. ARCA lo acepta igual: el alta sale
+   * con la obra social equivocada y el error se descubre cuando ya está presentado. Es preferible que
+   * el checklist lo marque como faltante y no se genere el TXT.
    */
   const obraSocialPropia = porDataId(row.osId);
   const overrideEmpresa = convenioDeLaCategoria ? (empresa?.convenioObraSocialOverrides || []).find((o) => String(o.convenioId) === String(convenioDeLaCategoria._id)) : undefined;
@@ -232,8 +247,7 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
   // Solo aplica a los excluidos de convenio: ver el paso 3.
   const esExcluidoDeConvenio = convenioCategoria === CONVENIO_EXCLUIDO;
   const obraSocialEmpresa = esExcluidoDeConvenio ? porDataId(empresa?.obraSocialDefaultId ?? empresa?.obraSocialId) : undefined;
-  const obraSocialGlobal = cat.obrasSociales.find((o) => (o.data as { porDefecto?: boolean } | undefined)?.porDefecto);
-  const obraSocial = obraSocialPropia || obraSocialOverride || obraSocialConvenio || obraSocialEmpresa || obraSocialGlobal;
+  const obraSocial = obraSocialPropia || obraSocialOverride || obraSocialConvenio || obraSocialEmpresa;
 
   // Sucursal y actividad salen del catálogo de Sucursales de ARCA, filtrado por las que tiene
   // asignadas la empresa empleadora. Nada de esto cuelga de la Sede: son entidades distintas.
@@ -305,7 +319,9 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
     // El "ID Externo" de la Obra Social siempre fue el código RNOS (ver ObrasSocialesPage.tsx).
     rnos: soloDigitos(obraSocial?.externalId),
     rnosPorDefecto: !obraSocialPropia && !!obraSocial,
-    rnosOrigen: obraSocialPropia ? "persona" : obraSocialOverride ? "override" : obraSocialConvenio ? "convenio" : obraSocialEmpresa ? "empresa" : obraSocialGlobal ? "global" : "ninguno",
+    // Un `osId` sin origen registrado se trata como heredado: no se sabe de dónde salió, y esa es
+    // justamente la situación que hay que marcar en amarillo.
+    rnosOrigen: obraSocialPropia ? ((row.obraSocialOrigen || "heredada-usuario") as "constatada" | "manual" | "heredada-usuario") : obraSocialOverride ? "override" : obraSocialConvenio ? "convenio" : obraSocialEmpresa ? "empresa" : "ninguno",
     sucursal: sucursal?.codigo ? String(sucursal.codigo) : "",
   };
 }
@@ -421,27 +437,50 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
   checks.push(presencia("tipoServicio", "Tipo de servicio", "tipo_contrato", v.tipoServicio, "El tipo de contrato no tiene cargado su tipo de servicio."));
   checks.push(presencia("modalidadLiq", "Modalidad de liquidación", "tipo_contrato", v.modalidadLiq, "El tipo de contrato no tiene cargada su modalidad de liquidación."));
 
-  // --- Obra social (cascada persona → convenio → empresa → global). Decir de DÓNDE salió no es un
-  // detalle: si salió del convenio, corregirla es cambiar el convenio y afecta a todos sus contratos;
-  // si salió de la empresa o de la global, es un respaldo y probablemente falte cargar el sindical.
+  // --- Obra social. Decir de DÓNDE salió no es un detalle: si salió del convenio, corregirla es
+  // cambiar el convenio y alcanza a todos sus contratos; si salió de la persona, es solo de ella.
+  const fechaConstatada = row.obraSocialConstatadaEl ? new Date(row.obraSocialConstatadaEl).toLocaleDateString("es-AR") : "";
+  // La fuente va en la etiqueta junto con la fecha: no es lo mismo constatarla en el padrón de la SSS
+  // —declaración jurada de la obra social— que en ARCA, que refleja relaciones laborales anteriores.
+  const fuenteConstatada = row.obraSocialConstatadaEn === "arca" ? "ARCA" : row.obraSocialConstatadaEn === "sss" ? "SSS" : "";
   const etiquetaRnos = {
-    persona: "Código RNOS (obra social de la persona)",
-    override: "Código RNOS (excepción de la empresa para este convenio)",
-    convenio: "Código RNOS (obra social del convenio)",
-    empresa: "Código RNOS (excluido de convenio: la define la empresa)",
-    global: "Código RNOS (último recurso: la global del catálogo)",
-    ninguno: "Código RNOS (obra social)",
+    constatada: `Código RNOS — constatada${fuenteConstatada ? ` · ${fuenteConstatada}` : ""}${fechaConstatada ? ` · ${fechaConstatada}` : ""}`,
+    manual: "Código RNOS — cargada a mano en este contrato",
+    "heredada-usuario": "Código RNOS — viene de la ficha de la persona",
+    override: `Código RNOS — del convenio ${v.convenioCategoria || ""} (excepción de esta empresa)`.trim(),
+    convenio: `Código RNOS — del convenio ${v.convenioCategoria || ""}`.trim(),
+    empresa: "Código RNOS — excluido de convenio: de la empleadora",
+    ninguno: "Código RNOS — obra social",
   }[v.rnosOrigen];
-  checks.push(presencia("rnos", etiquetaRnos, "obra_social", v.rnos, "Ni la persona, ni el convenio de su categoría, ni el catálogo tienen una obra social definida."));
 
-  // Caer en la GLOBAL no es un final feliz: significa que falta configurar algo aguas arriba. Con el
-  // convenio cargado, el paso 2 tendría que haber resuelto. Se avisa sin bloquear —el alta se puede
-  // generar— porque el RNOS que sale es plausible pero probablemente no sea el que corresponde.
-  if (v.rnos && v.rnosOrigen === "global") {
-    const detalle = v.convenioCategoria
-      ? `Se está usando la obra social global porque el convenio ${v.convenioCategoria} no tiene ninguna cargada. La obra social la define el sindicato: asignásela al convenio en Configuración → ARCA → Convenios.`
-      : "Se está usando la obra social global porque no se pudo resolver ninguna aguas arriba. Revisá que la categoría del contrato tenga convenio.";
-    checks.push(mk("rnosGlobal", "Obra social sin resolver por convenio", "obra_social", v.rnos, "error", detalle));
+  // El detalle del faltante dice QUÉ falta cargar, que depende de por dónde se cortó la cascada.
+  // Antes acá había una obra social global que rellenaba el campo: se eliminó porque solo tapaba
+  // esta misma situación con un valor sin fundamento, que ARCA acepta igual.
+  const faltaRnos = !v.convenioCategoria
+    ? "La categoría del contrato no tiene cargado a qué convenio pertenece, así que no se puede saber qué obra social corresponde. Cargásela en Configuración → ARCA → Categorías, o constatá la obra social de la persona en el padrón de la SSS y cargala en este contrato."
+    : v.convenioCategoria === CONVENIO_EXCLUIDO
+      ? "Es un excluido de convenio (9999/99): no hay sindicato del que heredar la obra social, así que la define la empleadora. Cargala en su ficha, en ARCA → Obras Sociales."
+      : `El convenio ${v.convenioCategoria} no tiene obra social cargada. La define el sindicato: asignásela en Configuración → ARCA → Convenios, o constatá la de la persona en el padrón de la SSS y cargala en este contrato.`;
+  checks.push(presencia("rnos", etiquetaRnos, "obra_social", v.rnos, faltaRnos));
+
+  /**
+   * Heredada de la ficha de la persona: sirve, pero nadie la verificó.
+   *
+   * Es `aviso` y no `falta`: el dato está y el alta se puede generar. Lo que se marca es que viene
+   * del campo viejo del usuario —sin fecha ni constatación— y que por desregulación puede estar
+   * vencida. Es el origen que deja la migración y el que hay que ir limpiando.
+   */
+  if (v.rnos && v.rnosOrigen === "heredada-usuario") {
+    checks.push(
+      mk(
+        "rnosSinConstatar",
+        "Obra social sin constatar",
+        "obra_social",
+        v.rnos,
+        "aviso",
+        "Viene de la ficha de la persona, de antes de que la obra social se declarara por contrato. Puede estar vencida: constatala en el padrón de la SSS (Base de Datos → Padrón de Beneficiarios → Acceso Público, con el CUIL) y cargala acá.",
+      ),
+    );
   }
 
   // Obra social ∈ registradas por la empleadora. Mismo tipo de regla que el convenio de la categoría:
@@ -501,7 +540,13 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
   }
 
   // --- Agrupado por origen: es lo que el operador tiene que ir a resolver.
-  const conProblema = checks.filter((c) => c.estado !== "ok");
+  /**
+   * Lo que impide (o traba) generar el alta. Los `aviso` NO entran: el dato está, el TXT sale, y
+   * contarlos como pendientes haría que un contrato listo se muestre incompleto para siempre —
+   * "constatar la obra social" es una mejora, no un requisito.
+   */
+  const conProblema = checks.filter((c) => c.estado !== "ok" && c.estado !== "aviso");
+  const avisos = checks.filter((c) => c.estado === "aviso");
   /**
    * A dónde manda el link del grupo.
    *
@@ -551,5 +596,6 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
     // destrabar el origen del que dependen.
     configuracionesPendientes: grupos.filter((g) => !g.bloqueadoPor).length,
     errores: checks.filter((c) => c.estado === "error").length,
+    avisos: avisos.length,
   };
 }

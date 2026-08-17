@@ -245,7 +245,7 @@ const ObrasSocialesBody: React.FC<{ empresa: Company; recargar: () => Promise<vo
       </details>
 
       <p className="text-[11px] text-gray-500 dark:text-gray-400">
-        Cascada al resolver el RNOS: <strong>obra social de la persona</strong> &gt; <strong>la del convenio de su categoría</strong> (o la excepción que ponga esta empresa) &gt; para los excluidos de convenio, la de arriba &gt; la global del catálogo.
+        Cascada al resolver el RNOS: <strong>obra social de la persona</strong> &gt; <strong>la del convenio de su categoría</strong> (o la excepción que ponga esta empresa) &gt; para los excluidos de convenio, la de arriba. Si ninguna resuelve, el dato falta y el contrato no entra en el TXT: no hay una obra social por defecto que lo tape.
       </p>
     </SeccionEmpleador>
   );
@@ -288,7 +288,7 @@ const ObraSocialPorConvenio: React.FC<{ empresa: Company; catalogo: SimpleCatalo
     const os = porDataId(overrides.find((o) => String(o.convenioId) === cv._id)?.obraSocialId ?? cv.obraSocialDefaultId);
     return !!os && !registradas.map(String).includes(os._id);
   });
-  /** Convenios sin ninguna obra social: sus contratos caen a la global, que casi seguro no es la que va. */
+  /** Convenios sin obra social: sus contratos NO pueden generar el alta — el RNOS queda sin resolver. */
   const sinCargar = delaEmpresa.filter((cv) => String(cv.externalId || '').trim() !== CONVENIO_EXCLUIDO && !overrides.some((o) => String(o.convenioId) === cv._id) && cv.obraSocialDefaultId == null);
 
   const Chequeo: React.FC<{ mal: boolean; texto: string; detalle?: string }> = ({ mal, texto, detalle }) => (
@@ -314,7 +314,7 @@ const ObraSocialPorConvenio: React.FC<{ empresa: Company; catalogo: SimpleCatalo
       <Chequeo
         mal={sinCargar.length > 0}
         texto={sinCargar.length === 0 ? 'Todos los convenios tienen su obra social cargada' : `${sinCargar.length} convenio(s) no tienen obra social cargada`}
-        detalle={sinCargar.length === 0 ? undefined : `${sinCargar.map((c) => c.externalId).join(', ')} — sus contratos van a caer a la obra social global, que probablemente no sea la que corresponde. Se carga en Configuración → ARCA → Convenios.`}
+        detalle={sinCargar.length === 0 ? undefined : `${sinCargar.map((c) => c.externalId).join(', ')} — sus contratos no van a poder generar el alta: el RNOS queda sin resolver. Se carga en Configuración → ARCA → Convenios.`}
       />
       <p className="text-[11px] text-gray-500 dark:text-gray-400">
         El detalle de qué obra social resuelve cada convenio está en{' '}

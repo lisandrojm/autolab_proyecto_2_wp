@@ -19,6 +19,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 import { buildAltaRecord, buildAltaTxt, describirRegistro, fechaAfip, LAYOUT_ALTA } from "./afipTxt";
+import { resolveAfip } from "./afipCompleteness";
 import type { AfipCatalogs } from "./afipCompleteness";
 import type { ContractOverviewRow } from "../../api/users";
 
@@ -46,11 +47,15 @@ const catalogos = (over: Partial<AfipCatalogs> = {}): AfipCatalogs =>
       { _id: "t1", name: "Plazo fijo 6x6 2030 SRL", data: { afipModalidadContrato: "021", afipTipoServicio: "001", afipModalidadLiquidacion: "1" } },
       { _id: "t2", name: "Tiempo Indeterminado - 2030 SRL", data: { afipModalidadContrato: "008", afipTipoServicio: "001", afipModalidadLiquidacion: "1" } },
     ],
-    obrasSociales: [{ _id: "os1", externalId: "126205", name: "OSPIA", data: { id: 7, porDefecto: true } }],
+    obrasSociales: [{ _id: "os1", externalId: "126205", name: "OSPIA", data: { id: 7 } }],
     sedes: [],
     empresas: [{ _id: EMPRESA_ID, obraSocialId: 7, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"] }],
     sucursales: [{ _id: SUCURSAL_ID, codigo: "00001", domicilio: "ZAPIOLA 392", actividades: [{ codigo: "921430", descripcion: "SERVICIOS CONEXOS" }] }],
-    convenios: [{ _id: "cv1", externalId: "0634/11", name: "TELEVISIÓN" }],
+    // El convenio trae SU obra social: es de donde sale el RNOS en el caso normal. Antes el fixture
+    // no la tenía y el registro se completaba igual, porque existía una obra social global que
+    // rellenaba el hueco. Al eliminarse ese nivel, un convenio sin obra social deja el alta incompleta
+    // —que es justamente lo que se quiere— y el contrato "completo" de base tiene que tenerla.
+    convenios: [{ _id: "cv1", externalId: "0634/11", name: "TELEVISIÓN", obraSocialDefaultId: 7 }],
     ...over,
   }) as unknown as AfipCatalogs;
 
@@ -221,12 +226,12 @@ describe("actividad del domicilio", () => {
  * ordena mal, el alta entra con la obra social equivocada — ARCA la acepta y el aporte va a parar a
  * otro lado, que es exactamente el tipo de error que no se ve hasta que es tarde.
  */
-describe("obra social — cascada persona → convenio → empresa → global", () => {
+describe("obra social — cascada persona → convenio → excluidos", () => {
   /** Catálogo con tres obras sociales y el convenio 0634/11 apuntando a la del sindicato de TV. */
   const conCascada = (over: Partial<AfipCatalogs> = {}) =>
     catalogos({
       obrasSociales: [
-        { _id: "os1", externalId: "126205", name: "OSPIA (global)", data: { id: 7, porDefecto: true } },
+        { _id: "os1", externalId: "126205", name: "OSPIA", data: { id: 7 } },
         { _id: "os2", externalId: "010902", name: "OS PERSONAL DE TELEVISIÓN", data: { id: 22 } },
         { _id: "os3", externalId: "999999", name: "OS DE LA PERSONA", data: { id: 33 } },
       ],
@@ -267,18 +272,22 @@ describe("obra social — cascada persona → convenio → empresa → global", 
   });
 
   /**
-   * El caso que motivó separar el paso 3 del paso 4: un convenio SIN obra social cargada no puede
-   * caer al default de la empresa. Ese default es de los EXCLUIDOS DE CONVENIO, y usarlo acá haría
-   * que el alta salga con una obra social plausible pero equivocada — el error más caro de todos,
-   * porque ARCA lo acepta.
+   * El caso que motivó separar los niveles: un convenio SIN obra social cargada no puede caer al
+   * default de la empresa —ese es de los EXCLUIDOS DE CONVENIO— ni a una global. Cualquiera de las
+   * dos cosas haría que el alta salga con una obra social plausible pero equivocada, que es el error
+   * más caro de todos porque ARCA lo acepta sin chistar.
    */
-  it("un convenio sin obra social NO usa la default de la empresa: cae a la global", () => {
+  it("un convenio sin obra social NO usa la de la empresa ni ninguna otra: el alta no se genera", () => {
     const cat = conCascada({
       convenios: [{ _id: "cv1", externalId: "0634/11", name: "TELEVISIÓN" }],
       empresas: [{ _id: EMPRESA_ID, obraSocialDefaultId: 33, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"] }],
     } as any);
-    // 126205 es la marcada `porDefecto` en el catálogo, no la 999999 de la empresa.
-    assert.equal(rnosDe(buildAltaRecord(fila(), cat)!), "126205");
+    assert.equal(buildAltaRecord(fila(), cat), null, "sin obra social resuelta no puede haber registro");
+
+    const { checks } = resolveAfip(fila(), cat);
+    const rnos = checks.find((c) => c.key === "rnos")!;
+    assert.equal(rnos.estado, "falta");
+    assert.ok((rnos.detalle || "").includes("0634/11"), "el detalle tiene que nombrar el convenio que hay que configurar");
   });
 
   it("los EXCLUIDOS de convenio (9999/99) sí usan la default de la empresa", () => {
@@ -382,5 +391,46 @@ describe("LAYOUT_ALTA (la tabla de la pantalla «Cómo funciona»)", () => {
     assert.equal(porNombre("Puesto desempeñado").tipo, "en_blanco");
     assert.equal(porNombre("Convenio Colectivo").tipo, "en_blanco");
     assert.equal(porNombre("Fecha fin").tipo, "condicional");
+  });
+});
+
+describe("obra social — vive en el CONTRATO, no en la persona", () => {
+  const conCascada = () =>
+    catalogos({
+      obrasSociales: [
+        { _id: "os1", externalId: "126205", name: "OSPIA", data: { id: 7 } },
+        { _id: "os2", externalId: "901402", name: "OS CONSTATADA EN ARCA", data: { id: 44 } },
+      ],
+      convenios: [{ _id: "cv1", externalId: "0634/11", name: "TELEVISIÓN", obraSocialDefaultId: 7 }],
+    } as any);
+
+  it("la obra social del contrato le gana a la del convenio", () => {
+    // Es la regla central: si ARCA dice que esa persona está en 901402, no importa qué diga el CCT.
+    const record = buildAltaRecord(fila({ osId: 44, obraSocialOrigen: "constatada" } as any), conCascada())!;
+    assert.equal(tramo(record, 40, 45), "901402");
+  });
+
+  it("sin obra social en el contrato, resuelve el convenio", () => {
+    // Vacío NO es un faltante: es el caso normal de quien no tiene ninguna declarada en ARCA.
+    const record = buildAltaRecord(fila(), conCascada())!;
+    assert.equal(tramo(record, 40, 45), "126205");
+  });
+
+  it("la heredada de la ficha vieja avisa, pero no bloquea el alta", () => {
+    const cat = conCascada();
+    const row = fila({ osId: 44, obraSocialOrigen: "heredada-usuario" } as any);
+
+    assert.equal(tramo(buildAltaRecord(row, cat)!, 40, 45), "901402", "el TXT sale igual");
+
+    const res = resolveAfip(row, cat);
+    assert.equal(res.completo, true, "un aviso no puede dejar el contrato incompleto");
+    assert.equal(res.avisos, 1);
+    assert.equal(res.checks.find((c) => c.key === "rnosSinConstatar")?.estado, "aviso");
+  });
+
+  it("el RNOS nunca sale en 000000: sin obra social no hay registro", () => {
+    // ARCA rechaza un alta con ceros en 40-45, así que la línea no se arma.
+    const cat = catalogos({ convenios: [{ _id: "cv1", externalId: "0634/11", name: "TELEVISIÓN" }] } as any);
+    assert.equal(buildAltaRecord(fila(), cat), null);
   });
 });

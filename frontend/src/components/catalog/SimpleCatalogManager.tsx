@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { faDownload, faUpload, faPlus, faEdit, faTrash, faTimes, faFileExcel, faStar, faCircleInfo, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
+import { faDownload, faUpload, faPlus, faEdit, faTrash, faTimes, faFileExcel, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { PageLayout } from '../ui/PageLayout';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Card } from '../ui/Card';
@@ -76,19 +76,6 @@ interface SimpleCatalogManagerProps {
   /** Normaliza lo que se escribió (ej. sacar los guiones que puso `formatExternalId`) antes de guardar. */
   sanitizeExternalId?: (value: string) => string;
   /**
-   * Señala en el listado cuál es el registro marcado como valor por defecto. Es SOLO INFORMATIVO:
-   * la marca se configura en otra pestaña, no acá, para no mezclar el ABM del catálogo con la
-   * configuración de qué se aplica cuando falta el dato.
-   */
-  porDefecto?: {
-    /** Texto del badge, ej. "Por defecto (global)". */
-    etiqueta: string;
-    /** Dónde se configura — se muestra en el ⓘ al lado del badge. */
-    ayuda: string;
-    /** Devuelve true si este item es el marcado. */
-    esPorDefecto: (item: SimpleCatalogItem) => boolean;
-  };
-  /**
    * Pestañas extra junto al listado (ej. "Por defecto" en Obras Sociales). El catálogo es siempre
    * la primera. Al pararse en otra se ocultan el buscador y las acciones de ABM: pertenecen al
    * listado, no a la configuración.
@@ -96,7 +83,7 @@ interface SimpleCatalogManagerProps {
   pestanas?: Array<{ id: string; label: string; icon?: IconDefinition; render: (items: SimpleCatalogItem[], recargar: () => Promise<void>) => React.ReactNode }>;
 }
 
-export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], helpKey, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, porDefecto, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia }) => {
+export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], helpKey, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia }) => {
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
   const [tabActiva, setTabActiva] = useState<string>('catalogo');
   const [loading, setLoading] = useState(true);
@@ -385,7 +372,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
               header={{
                 title: item.name,
                 icon,
-                badges: [...(porDefecto && porDefecto.esPorDefecto(item) ? [{ text: porDefecto.etiqueta, variant: 'warning' as const, icon: faStar }] : []), ...extraFields.filter((f) => f.showColumn && item[f.key]).map((f) => ({ text: extraDisplay(f, item[f.key]), variant: 'cyan' as const })), ...(item.externalId ? [{ text: `${externalIdLabel} ${formatExternalId ? formatExternalId(item.externalId) : item.externalId}`, variant: 'blue' as const }] : [])],
+                badges: [...extraFields.filter((f) => f.showColumn && item[f.key]).map((f) => ({ text: extraDisplay(f, item[f.key]), variant: 'cyan' as const })), ...(item.externalId ? [{ text: `${externalIdLabel} ${formatExternalId ? formatExternalId(item.externalId) : item.externalId}`, variant: 'blue' as const }] : [])],
               }}
               footer={{
                 actions: [
@@ -458,18 +445,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
               {filtered.map((item) => (
                 <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
-                  <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">
-                    <span className="inline-flex items-center gap-2 flex-wrap">
-                      {item.name}
-                      {porDefecto && porDefecto.esPorDefecto(item) && (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
-                          <FontAwesomeIcon icon={faStar} className="h-3 w-3" />
-                          {porDefecto.etiqueta}
-                          <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3 opacity-70 cursor-help" title={porDefecto.ayuda} />
-                        </span>
-                      )}
-                    </span>
-                  </td>
+                  <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">{item.name}</td>
                   {extraFields
                     .filter((f) => f.showColumn)
                     .map((f) => (

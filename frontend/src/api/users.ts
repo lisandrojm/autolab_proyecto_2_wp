@@ -138,7 +138,21 @@ export interface ContractOverviewRow {
   sinCuit?: boolean;
   /** Flujo "Sin CUIT": documentación de respaldo cargada + OK manual de quien revisa. */
   sinCuitValidacion?: SinCuitValidacion | null;
+  /**
+   * Obra social de ESTE contrato (RNOS), no de la persona: ARCA la declara por alta (pos. 40-45) y
+   * caduca sola por desregulación. Vacío no es un faltante — significa que se aplica la del convenio.
+   */
   osId?: number | null;
+  /** De dónde salió `osId`. Vacío = no está fijada en el contrato y la resuelve la cascada. */
+  obraSocialOrigen?: "constatada" | "manual" | "heredada-usuario" | "";
+  /**
+   * Dónde se constató. La FUENTE es el padrón de beneficiarios de la SSS (declaración jurada de cada
+   * obra social, consulta de solo lectura); ARCA queda como desempate, porque lo que precompleta
+   * viene de relaciones laborales anteriores y puede estar atrasado.
+   */
+  obraSocialConstatadaEn?: "sss" | "arca" | "";
+  /** Cuándo se constató (solo con origen `constatada`). */
+  obraSocialConstatadaEl?: string;
   categoria_sat_id?: number | null;
   sede_id?: number | null;
   tipo_contrato_id?: number | null;
