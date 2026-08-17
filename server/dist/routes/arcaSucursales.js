@@ -3,6 +3,7 @@ import { z } from "zod";
 import multer from "multer";
 import xlsx from "xlsx";
 import { ArcaSucursal } from "../models/ArcaSucursal.js";
+import { ArcaActividad } from "../models/ArcaActividad.js";
 import { Company } from "../models/Company.js";
 import { authenticateToken } from "../middleware/auth.js";
 /**
@@ -334,6 +335,44 @@ export function parsearExportSucursales(buffer) {
     return { sucursales: Array.from(porCodigo.values()), errores };
 }
 // POST /arca/sucursales/import - importa el export de ARCA (o la plantilla)
+/**
+ * Da de alta en el diccionario de Actividades los códigos que trajo el padrón y todavía no existen.
+ *
+ * El diccionario se llena SOLO con esto: quedan exactamente las actividades en uso, y todas
+ * garantizadas correctas porque salen del export de ARCA, no de alguien tipeando. Es lo que evita
+ * que la misma actividad termine escrita de dos formas distintas.
+ *
+ * No pisa las descripciones existentes: si el nomenclador completo ya está sembrado, su texto es el
+ * oficial y manda. Y no borra nada — el diccionario es acumulativo, las bajas del padrón se reflejan
+ * en las actividades de cada domicilio, que sí se reemplazan.
+ *
+ * Nunca falla el import: es un efecto secundario útil, no el trabajo pedido.
+ */
+async function alimentarDiccionarioActividades(sucursales) {
+    try {
+        const porCodigo = new Map();
+        for (const s of sucursales) {
+            for (const a of s.actividades) {
+                if (!a.codigo)
+                    continue;
+                if (!porCodigo.get(a.codigo))
+                    porCodigo.set(a.codigo, (a.descripcion || "").trim());
+            }
+        }
+        if (porCodigo.size === 0)
+            return 0;
+        const existentes = new Set((await ArcaActividad.find({ externalId: { $in: [...porCodigo.keys()] } }).select("externalId").lean()).map((a) => String(a.externalId)));
+        const nuevas = [...porCodigo.entries()].filter(([codigo]) => !existentes.has(codigo));
+        if (nuevas.length === 0)
+            return 0;
+        await ArcaActividad.insertMany(nuevas.map(([codigo, descripcion]) => ({ externalId: codigo, name: descripcion || codigo, data: { id: Number(codigo) || 0, nombre: descripcion || codigo } })));
+        return nuevas.length;
+    }
+    catch (error) {
+        console.error("No se pudo alimentar el diccionario de actividades:", error);
+        return 0;
+    }
+}
 router.post("/import", authenticateToken, upload.single("file"), async (req, res) => {
     try {
         if (!req.file)
@@ -376,7 +415,8 @@ router.post("/import", authenticateToken, upload.single("file"), async (req, res
         // Las que están en la base y no en el archivo NO se borran: puede haber contratos usándolas.
         const codigosArchivo = new Set(sucursales.map((s) => s.codigo));
         const sobrantes = (await ArcaSucursal.find().select("codigo").lean()).map((s) => String(s.codigo)).filter((c) => !codigosArchivo.has(c));
-        res.json({ creadas, actualizadas, iguales, sobrantes, sinDomicilio, errores });
+        const actividadesNuevas = await alimentarDiccionarioActividades(sucursales);
+        res.json({ creadas, actualizadas, iguales, sobrantes, sinDomicilio, errores, actividadesNuevas });
     }
     catch (error) {
         console.error("Import arca sucursales error:", error);

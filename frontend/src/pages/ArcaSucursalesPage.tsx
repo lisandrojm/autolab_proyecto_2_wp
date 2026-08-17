@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLocationDot, faPlus, faEdit, faTrash, faXmark, faTriangleExclamation, faDownload, faFileImport, faCircleInfo, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faLocationDot, faPlus, faEdit, faTrash, faTriangleExclamation, faDownload, faFileImport, faCircleInfo, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
@@ -9,13 +9,11 @@ import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { sweetAlert } from "../utils/sweetAlert";
 import { fuzzyMatch } from "../utils/searchHelpers";
 import { arcaSucursalesAPI, ArcaSucursal, ArcaSucursalInput } from "../api/arcaSucursales";
-import { createSimpleCatalogApi } from "../api/simpleCatalog";
 import { getHelp, hasHelp } from "../data/help/helpContent";
+import { ActividadesDelDomicilio } from "../components/arca/ActividadesDelDomicilio";
 
 const HELP_KEY = "arcaSucursales" as const;
 
-/** Diccionario de actividades: se usa para autocompletar, NUNCA para decidir qué puede declarar un contrato. */
-const actividadesApi = createSimpleCatalogApi("/arca/actividades");
 
 const FORM_VACIO: ArcaSucursalInput = { codigo: "", domicilio: "", localidad: "", codigoPostal: "", actividades: [], isActive: true };
 
@@ -37,20 +35,6 @@ export const ArcaSucursalesPage: React.FC = () => {
   const [importing, setImporting] = useState(false);
   const helpEntry = getHelp(HELP_KEY);
 
-  /**
-   * Diccionario de actividades (código → descripción), para autocompletar y normalizar.
-   *
-   * No restringe nada: lo que este domicilio puede declarar sigue siendo lo que ARCA le tiene
-   * declarado, y eso se carga acá. El diccionario solo evita tipear el código y que la misma
-   * actividad quede escrita distinto en dos sucursales. Se llena solo con cada importación.
-   */
-  const [diccionario, setDiccionario] = useState<Map<string, string>>(new Map());
-  useEffect(() => {
-    actividadesApi
-      .list()
-      .then((as) => setDiccionario(new Map(as.map((a) => [String(a.externalId || ""), a.name]))))
-      .catch(() => setDiccionario(new Map()));
-  }, []);
 
   const cargar = async () => {
     try {
@@ -141,16 +125,6 @@ export const ArcaSucursalesPage: React.FC = () => {
       setShowImport(false);
       setImportFile(null);
       await cargar();
-      // El diccionario acaba de crecer con lo que trajo el padrón: recargarlo deja el autocompletado
-      // listo sin tener que salir y volver a entrar.
-      if (r.actividadesNuevas) {
-        try {
-          const as = await actividadesApi.list();
-          setDiccionario(new Map(as.map((a) => [String(a.externalId || ""), a.name])));
-        } catch {
-          /* El autocompletado se recupera solo en la próxima carga de la pantalla. */
-        }
-      }
     } catch (e: any) {
       sweetAlert.error("Error", e?.response?.data?.error || "No se pudo importar el archivo.");
     } finally {
@@ -158,7 +132,6 @@ export const ArcaSucursalesPage: React.FC = () => {
     }
   };
 
-  const patchActividad = (i: number, cambio: Partial<{ codigo: string; descripcion: string }>) => setForm((p) => ({ ...p, actividades: p.actividades.map((a, j) => (j === i ? { ...a, ...cambio } : a)) }));
 
   return (
     <PageLayout
@@ -292,67 +265,9 @@ export const ArcaSucursalesPage: React.FC = () => {
           </div>
 
           <div className="pt-4 border-t border-gray-100 dark:border-gray-700/50">
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Actividades del domicilio ({form.actividades.length})</label>
-              <button type="button" onClick={() => setForm((p) => ({ ...p, actividades: [...p.actividades, { codigo: "", descripcion: "" }] }))} className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                <FontAwesomeIcon icon={faPlus} className="h-3 w-3" /> Agregar actividad
-              </button>
-            </div>
-
-            {form.actividades.length === 0 ? (
-              <p className="text-xs text-gray-400 dark:text-gray-500 italic ml-1">Sin actividades cargadas. Los contratos de esta sucursal no van a poder generar el alta.</p>
-            ) : (
-              <div className="space-y-2">
-                {form.actividades.map((a, i) => {
-                  const delDiccionario = diccionario.get(a.codigo);
-                  const descripcionDistinta = !!delDiccionario && !!a.descripcion && delDiccionario !== a.descripcion;
-                  return (
-                    <div key={i}>
-                      <div className="flex items-start gap-2">
-                        {/* Al tipear el código se completa la descripción desde el diccionario: es
-                            justamente lo que evita que la misma actividad quede escrita de dos formas
-                            distintas en dos sucursales. Se puede editar igual — el padrón manda. */}
-                        <input
-                          maxLength={6}
-                          inputMode="numeric"
-                          list="arca-actividades"
-                          className="input-field w-28 shrink-0 font-mono"
-                          value={a.codigo}
-                          onChange={(e) => {
-                            const codigo = e.target.value.replace(/\D/g, "");
-                            const conocida = diccionario.get(codigo);
-                            patchActividad(i, conocida && !a.descripcion ? { codigo, descripcion: conocida } : { codigo });
-                          }}
-                          placeholder="591110"
-                        />
-                        <input className="input-field flex-1 min-w-0" value={a.descripcion || ""} onChange={(e) => patchActividad(i, { descripcion: e.target.value })} placeholder="PRODUCCIÓN DE FILMES Y VIDEOCINTAS" />
-                        <button type="button" onClick={() => setForm((p) => ({ ...p, actividades: p.actividades.filter((_, j) => j !== i) }))} title="Quitar actividad" className="text-gray-400 hover:text-red-500 transition-colors shrink-0 mt-2">
-                          <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      {descripcionDistinta && (
-                        <button type="button" onClick={() => patchActividad(i, { descripcion: delDiccionario })} className="ml-[7.5rem] mt-1 text-[11px] text-amber-600 dark:text-amber-400 hover:underline text-left">
-                          En el diccionario figura como «{delDiccionario}» — usar esa
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Sugerencias del diccionario para el campo del código. Es autocompletado, no un
-                selector: el operador puede escribir un código que no esté, porque la verdad es el
-                padrón de ARCA y el diccionario solo va detrás. */}
-            <datalist id="arca-actividades">
-              {[...diccionario.entries()].map(([codigo, descripcion]) => (
-                <option key={codigo} value={codigo}>
-                  {descripcion}
-                </option>
-              ))}
-            </datalist>
-
-            {form.actividades.length > 1 && <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400 ml-1">Con más de una actividad, cada contrato de esta sucursal tiene que elegir cuál declara.</p>}
+            {/* Las actividades se ELIGEN del catálogo, no se tipean: es lo que garantiza que la misma
+                actividad no termine escrita de dos formas distintas en dos domicilios. */}
+            <ActividadesDelDomicilio actividades={form.actividades} onChange={(actividades) => setForm((p) => ({ ...p, actividades }))} />
           </div>
         </div>
       </Modal>

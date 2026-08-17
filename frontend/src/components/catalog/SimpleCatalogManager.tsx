@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { faDownload, faUpload, faPlus, faEdit, faTrash, faTimes, faFileExcel, faStar, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
+import { faDownload, faUpload, faPlus, faEdit, faTrash, faTimes, faFileExcel, faStar, faCircleInfo, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { PageLayout } from '../ui/PageLayout';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Card } from '../ui/Card';
@@ -150,13 +150,31 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
 
+  /**
+   * Error de LECTURA, en la página y no en un modal.
+   *
+   * Un catálogo vacío no es un error —tiene su propio estado, "Todavía no hay registros"— y un
+   * catálogo que no cargó tampoco es algo que el operador pueda contestar: un modal que hay que
+   * cerrar para ver una pantalla vacía interrumpe sin aportar nada. Acá se dice qué pasó, en el lugar
+   * donde iba la lista, y con un botón para reintentar.
+   *
+   * Los modales quedan para la ESCRITURA (guardar, borrar, importar), donde sí hubo una acción del
+   * usuario que salió mal.
+   */
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const load = async () => {
     setLoading(true);
     try {
       const data = await api.list();
       setItems(data);
-    } catch {
-      sweetAlert.error('Error', `No se pudieron cargar los registros de ${entityLabel}.`);
+      setLoadError(null);
+    } catch (err: any) {
+      // El detalle importa: un 404 acá casi siempre es el server sin levantar la ruta nueva, y sin
+      // el código uno se queda mirando una pantalla vacía sin saber si falta cargar datos o algo
+      // está roto.
+      const status = err?.response?.status;
+      setLoadError(status ? `No se pudieron cargar los registros de ${entityLabel} (HTTP ${status}).` : `No se pudieron cargar los registros de ${entityLabel}: no hubo respuesta del servidor.`);
     } finally {
       setLoading(false);
     }
@@ -344,6 +362,17 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
 
       {loading ? (
         <LoadingSpinner />
+      ) : loadError ? (
+        <div className="rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-6 flex items-start gap-3">
+          <FontAwesomeIcon icon={faTriangleExclamation} className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">{loadError}</p>
+            <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">No es que el catálogo esté vacío: la consulta no llegó a responder. Si el problema sigue, revisá que el servidor esté levantado.</p>
+            <button type="button" onClick={load} className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-400 dark:border-amber-700 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors">
+              Reintentar
+            </button>
+          </div>
+        </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-gray-500 dark:text-gray-400 text-sm">{items.length === 0 ? `Todavía no hay registros de ${entityLabel}. Cargá uno con "Nuevo" o importá un Excel.` : 'No hay resultados para la búsqueda.'}</div>
       ) : effectiveViewMode === 'cards' ? (
