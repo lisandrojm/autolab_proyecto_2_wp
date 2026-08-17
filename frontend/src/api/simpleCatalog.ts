@@ -15,6 +15,14 @@ export interface SimpleCatalogApi {
   list(): Promise<SimpleCatalogItem[]>;
   downloadTemplate(): Promise<Blob>;
   importExcel(file: File): Promise<{ message: string; count: number }>;
+  /**
+   * Carga masiva en UN request, sin Excel. Upsert por `externalId`, idempotente.
+   *
+   * Es lo que hay que usar para sembrar un catálogo entero: hacerlo de a un `create()` son miles de
+   * requests contra un límite de 200/minuto, así que la carga se corta por 429 a mitad de camino.
+   * Acepta `{ nombre, externalId }` o el vocabulario de ARCA (`{ descripcion, codigo }`).
+   */
+  importBulk(items: Array<Record<string, unknown>>): Promise<{ message: string; count: number; creados: number; actualizados: number; sinCambios: number }>;
   create(data: { nombre: string; externalId?: string } & Record<string, unknown>): Promise<SimpleCatalogItem>;
   update(id: string, data: { nombre?: string; externalId?: string } & Record<string, unknown>): Promise<SimpleCatalogItem>;
   remove(id: string): Promise<{ message: string }>;
@@ -42,6 +50,10 @@ export function createSimpleCatalogApi(basePath: string): SimpleCatalogApi {
       const { data } = await axios.post(`${basePath}/import`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+      return data;
+    },
+    async importBulk(items) {
+      const { data } = await axios.post(`${basePath}/bulk`, { items });
       return data;
     },
     async create(payload) {

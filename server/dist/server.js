@@ -107,17 +107,14 @@ app.use((req, res, next) => {
     if (req.path.includes("/upload") && req.method === "POST") {
         return next();
     }
-    express.json({ limit: "1mb" })(req, res, next);
+    // Las cargas masivas de catálogo (`/bulk`) mandan el nomenclador entero en un request: 2.350
+    // actividades son ~250 KB, pero un catálogo más grande no tiene por qué chocar contra el tope y
+    // volver a empujar a cargar de a un registro, que es el problema que `/bulk` viene a resolver.
+    const limite = req.path.endsWith("/bulk") && req.method === "POST" ? "10mb" : "1mb";
+    express.json({ limit: limite })(req, res, next);
 });
 app.use(cookieParser());
 app.use(morgan(env.NODE_ENV === "development" ? "dev" : "combined"));
-// Rate limiter
-app.use(rateLimit({
-    windowMs: 60_000,
-    max: env.NODE_ENV === "development" ? 500 : 200,
-    standardHeaders: true,
-    legacyHeaders: false,
-}));
 // ───────────────── CORS ─────────────────
 const ENV_ALLOWED = (env.CORS_ORIGIN || "")
     .split(",")
@@ -144,6 +141,23 @@ app.use(cors({
 }));
 // Preflight
 app.options("*", cors());
+/**
+ * Rate limiter — DESPUÉS de CORS, y no antes.
+ *
+ * Estaba montado arriba de todo, así que su 429 salía SIN los headers de CORS. El navegador entonces
+ * bloqueaba la respuesta, axios la veía como "sin respuesta" (`!error.response`) y el interceptor la
+ * trataba como caída del servidor: borraba el token y mandaba a /login. Por eso una carga masiva se
+ * sentía como "se cortó la sesión" cada ~150 requests, en vez de como lo que era: un límite de tasa.
+ *
+ * El síntoma engañaba al punto de parecer un problema de autenticación. Con el limiter acá abajo el
+ * 429 llega con sus headers, el front lo lee y puede reintentar.
+ */
+app.use(rateLimit({
+    windowMs: 60_000,
+    max: env.NODE_ENV === "development" ? 500 : 200,
+    standardHeaders: true,
+    legacyHeaders: false,
+}));
 // ───────────────── Archivos estáticos ─────────────────
 const storagePath = path.join(process.cwd(), "storage");
 console.log("[SERVER] Storage path configured:", storagePath);

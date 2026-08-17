@@ -85,6 +85,34 @@ export function createSimpleCatalogRouter(
   const router = Router();
   const upload = multer({ storage: multer.memoryStorage() });
 
+  /**
+   * Las operaciones de upsert de una carga masiva. La usan el import de Excel y el de lote JSON: son
+   * la misma semántica y separarlas es garantizar que en algún momento se comporten distinto.
+   *
+   * Se setean las claves de `data` una por una en lugar de reemplazar el objeto: si se pisara entero,
+   * reimportar borraría los campos que no vienen en la carga (ej. la marca de obra social por defecto).
+   */
+  const construirUpserts = (parsed: Array<{ externalId: string; nombre: string; extras: Record<string, string> }>) =>
+    parsed.map((item) => {
+      const idNum = item.externalId ? Number(item.externalId) : undefined;
+      const set: Record<string, unknown> = {
+        name: item.nombre,
+        externalId: item.externalId,
+        "data.nombre": item.nombre,
+        ...item.extras,
+      };
+      if (idNum !== undefined && !isNaN(idNum)) set["data.id"] = idNum;
+      return {
+        updateOne: {
+          // Por `externalId` cuando lo hay: es la identidad del registro en el nomenclador y lo que
+          // hace que reimportar sea idempotente en vez de duplicar todo.
+          filter: item.externalId ? { externalId: item.externalId } : { name: item.nombre },
+          update: { $set: set },
+          upsert: true,
+        },
+      };
+    });
+
   // GET / - listar
   router.get("/", authenticateToken, async (_req: AuthenticatedRequest, res: Response) => {
     try {
@@ -191,26 +219,7 @@ export function createSimpleCatalogRouter(
         return;
       }
 
-      const bulkOps = parsed.map((item) => {
-        const idNum = item.externalId ? Number(item.externalId) : undefined;
-        // Se setean las claves de `data` una por una en lugar de reemplazar el objeto: si se pisara
-        // entero, reimportar el Excel borraría los campos que no vienen en la planilla (ej. la marca
-        // de obra social por defecto).
-        const set: Record<string, unknown> = {
-          name: item.nombre,
-          externalId: item.externalId,
-          "data.nombre": item.nombre,
-          ...item.extras,
-        };
-        if (idNum !== undefined && !isNaN(idNum)) set["data.id"] = idNum;
-        return {
-          updateOne: {
-            filter: item.externalId ? { externalId: item.externalId } : { name: item.nombre },
-            update: { $set: set },
-            upsert: true,
-          },
-        };
-      });
+      const bulkOps = construirUpserts(parsed);
 
       let processed = 0;
       if (bulkOps.length > 0) {
@@ -222,6 +231,78 @@ export function createSimpleCatalogRouter(
     } catch (error) {
       console.error(`Import ${config.sheetName} error:`, error);
       res.status(500).json({ error: "Error interno al procesar el archivo Excel" });
+    }
+  });
+
+  /**
+   * POST /bulk — carga masiva en UN request, sin Excel.
+   *
+   * Existe porque cargar un catálogo entero de a un POST no es viable: son 2.350 requests contra un
+   * rate limiter de 200/minuto, así que la carga se corta a mitad de camino con un 429 y queda a
+   * medias. Con un solo request no hay ventana que agotar, la operación es atómica desde el punto de
+   * vista del operador y se puede repetir sin pensar.
+   *
+   * IDEMPOTENTE: upsert por `externalId` (o por nombre si no lo hay), igual que el import de Excel —
+   * comparten el mismo armado de operaciones para que no puedan divergir. Correrlo dos veces deja el
+   * mismo estado, que es lo que hace falta cuando se siembra el nomenclador y además el padrón lo
+   * autoalimenta.
+   *
+   * Body: `{ items: [{ nombre, externalId?, ...extras }] }`.
+   */
+  router.post("/bulk", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { items } = req.body as { items?: Array<Record<string, unknown>> };
+      if (!Array.isArray(items)) {
+        res.status(400).json({ error: "Se espera { items: [...] }" });
+        return;
+      }
+      if (items.length === 0) {
+        res.status(400).json({ error: "No hay registros para cargar" });
+        return;
+      }
+      // Tope defensivo: el límite del body ya corta antes, pero un número explícito da un error que
+      // se entiende, en vez de un 413 sin contexto.
+      if (items.length > 20000) {
+        res.status(400).json({ error: `Demasiados registros (${items.length}). Partilo en lotes de hasta 20.000.` });
+        return;
+      }
+
+      const errores: string[] = [];
+      const parsed: Array<{ externalId: string; nombre: string; extras: Record<string, string> }> = [];
+
+      items.forEach((item, i) => {
+        // Se aceptan los dos vocabularios: el del catálogo (`nombre`/`externalId`) y el del dominio
+        // de ARCA (`descripcion`/`codigo`), que es como vienen los CSV extraídos del organismo.
+        const nombre = String(item.nombre ?? item.name ?? item.descripcion ?? "").trim();
+        const rawExternalId = String(item.externalId ?? item.codigo ?? "").trim();
+        if (!nombre) {
+          errores.push(`Registro ${i + 1}: falta el nombre.`);
+          return;
+        }
+        const extras: Record<string, string> = {};
+        for (const f of config.extraStringFields || []) {
+          const val = item[f.key];
+          if (val !== undefined && val !== null && String(val).trim() !== "") extras[f.key] = String(val).trim();
+        }
+        parsed.push({ externalId: config.sanitizeExternalId ? config.sanitizeExternalId(rawExternalId) : rawExternalId, nombre, extras });
+      });
+
+      if (errores.length > 0) {
+        res.status(400).json({ error: "Errores de validación", details: errores.slice(0, 20) });
+        return;
+      }
+
+      const result = await model.bulkWrite(construirUpserts(parsed));
+      res.json({
+        message: "Carga masiva completada",
+        count: (result.upsertedCount || 0) + (result.modifiedCount || 0) + (result.matchedCount || 0),
+        creados: result.upsertedCount || 0,
+        actualizados: result.modifiedCount || 0,
+        sinCambios: (result.matchedCount || 0) - (result.modifiedCount || 0),
+      });
+    } catch (error) {
+      console.error(`Bulk ${config.sheetName} error:`, error);
+      res.status(500).json({ error: "Error interno al procesar la carga masiva" });
     }
   });
 
