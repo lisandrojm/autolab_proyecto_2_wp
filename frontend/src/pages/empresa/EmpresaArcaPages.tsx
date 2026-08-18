@@ -107,6 +107,16 @@ const ObrasSocialesBody: React.FC<{ empresa: Company; recargar: () => Promise<vo
     setDefaultId(empresa.obraSocialDefaultId ?? empresa.obraSocialId ?? null);
   }, [empresa]);
 
+  /** A quién alcanza cada obra social de esta empleadora, para poder avisar antes de quitarla. */
+  const [enUso, setEnUso] = useState<{ contratos: Record<string, number>; convenios: Record<string, string[]> }>({ contratos: {}, convenios: {} });
+  useEffect(() => {
+    companiesAPI
+      .obrasSocialesEnUso(empresa._id)
+      // Si falla, se puede seguir trabajando: lo que se pierde es el aviso, no la operación.
+      .then(setEnUso)
+      .catch(() => setEnUso({ contratos: {}, convenios: {} }));
+  }, [empresa._id]);
+
   const registradas = useMemo(() => catalogo.filter((o) => ids.includes(o._id)), [catalogo, ids]);
   const dataId = (o: SimpleCatalogItem) => Number((o.data as { id?: number } | undefined)?.id);
 
@@ -118,11 +128,33 @@ const ObrasSocialesBody: React.FC<{ empresa: Company; recargar: () => Promise<vo
 
   const sucio = JSON.stringify([...ids].sort()) !== JSON.stringify([...(empresa.obrasSocialesIds || [])].sort()) || defaultId !== (empresa.obraSocialDefaultId ?? empresa.obraSocialId ?? null);
 
-  const quitar = (id: string) => {
+  /**
+   * Quitar una obra social del padrón de la empleadora, avisando a quién alcanza.
+   *
+   * Sacarla no rompe nada en el momento: rompe DESPUÉS, cuando esos contratos generen el TXT y ARCA
+   * los rechace por declarar una obra social que el CUIT no tiene registrada. Por eso el número va
+   * antes de la confirmación y no en un error posterior.
+   */
+  const quitar = async (id: string) => {
     const os = catalogo.find((o) => o._id === id);
+    const osId = os ? dataId(os) : NaN;
+
+    if (os && Number.isFinite(osId)) {
+      const contratos = enUso.contratos[String(osId)] || 0;
+      const convenios = enUso.convenios[String(osId)] || [];
+      if (contratos > 0 || convenios.length > 0) {
+        const partes = [
+          contratos > 0 ? `${contratos} contrato(s) la tienen cargada` : "",
+          convenios.length > 0 ? `${convenios.length === 1 ? "el convenio" : "los convenios"} ${convenios.join(", ")} la usa${convenios.length === 1 ? "" : "n"}` : "",
+        ].filter(Boolean);
+        const r = await sweetAlert.confirm(`¿Quitar ${os.name}?`, `${partes.join(" y ")}. Al quitarla, esas altas van a ser rechazadas por ARCA.`, "Sí, quitar");
+        if (!r.isConfirmed) return;
+      }
+    }
+
     setIds((prev) => prev.filter((x) => x !== id));
-    // Sacar la default del conjunto la dejaría apuntando a algo que ARCA no acepta: se limpia.
-    if (os && dataId(os) === defaultId) setDefaultId(null);
+    // Sacar la de excluidos del conjunto la dejaría apuntando a algo que ARCA no acepta: se limpia.
+    if (os && osId === defaultId) setDefaultId(null);
   };
 
   if (cargando) return <LoadingSpinner message="Cargando el catálogo de obras sociales..." />;

@@ -62,6 +62,16 @@ class CompaniesAPI {
     return Array.isArray(data) ? data : [];
   }
 
+  /**
+   * A cuántos contratos alcanza cada obra social de esta empleadora, para poder avisar ANTES de
+   * sacarla de su lista de registradas. Devuelve `contratos` (la tienen fijada) y `convenios` (los
+   * CCT registrados que la heredan), indexados por el `data.id` de la obra social.
+   */
+  async obrasSocialesEnUso(id: string): Promise<{ contratos: Record<string, number>; convenios: Record<string, string[]> }> {
+    const { data } = await axios.get(`/companies/${id}/obras-sociales-en-uso`);
+    return data;
+  }
+
   async create(payload: Partial<CompanyInput>): Promise<Company> {
     const { data } = await axios.post("/companies", payload);
     return data;

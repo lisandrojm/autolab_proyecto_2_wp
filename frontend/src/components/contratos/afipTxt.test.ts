@@ -424,8 +424,11 @@ describe("obra social — vive en el CONTRATO, no en la persona", () => {
 
     const res = resolveAfip(row, cat);
     assert.equal(res.completo, true, "un aviso no puede dejar el contrato incompleto");
-    assert.equal(res.avisos, 1);
     assert.equal(res.checks.find((c) => c.key === "rnosSinConstatar")?.estado, "aviso");
+    // La empresa del fixture no tiene cargadas sus obras sociales registradas, así que además avisa
+    // que NO se pudo verificar contra el padrón de ARCA. Sin ese aviso la fila se vería validada.
+    assert.equal(res.checks.find((c) => c.key === "obraSocialSinVerificar")?.estado, "aviso");
+    assert.equal(res.avisos, 2);
   });
 
   it("el RNOS nunca sale en 000000: sin obra social no hay registro", () => {

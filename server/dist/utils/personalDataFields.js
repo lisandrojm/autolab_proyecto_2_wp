@@ -17,7 +17,8 @@ export const PERSONAL_DATA_FIELD_META = [
     { key: "estadoCivil", label: "Estado civil", section: "General", type: "text" },
     { key: "nivelEstudioId", label: "Nivel de estudio", section: "General", type: "catalog", catalogType: "nivel-estudio" },
     { key: "nacionalidadId", label: "Nacionalidad", section: "General", type: "catalog", catalogType: "nacionalidad" },
-    { key: "osId", label: "Obra social", section: "General", type: "catalog", catalogType: "obra-social" },
+    // Sin "osId": la obra social se declara en el contrato, no en la persona (ver `UserProject`). Un
+    // pedido viejo que la traiga se filtra solo, acá y en `PERSONAL_DATA_FIELD_KEYS`.
     { key: "osPrepaga", label: "Prepaga", section: "General", type: "text" },
     { key: "rolesFrameIds", label: "Rol Frame", section: "General", type: "catalog", catalogType: "__roleFrame" },
     { key: "paisId", label: "País", section: "Domicilio", type: "catalog", catalogType: "pais" },
@@ -106,7 +107,8 @@ export const PERSONAL_DATA_FIELD_KEYS = [
     "estadoCivil",
     "nivelEstudioId",
     "nacionalidadId",
-    "osId",
+    // Sin "osId": es el allowlist con el que se arma el `$set` al aprobar el pedido. Sacarlo de acá es
+    // lo que impide que un pedido de "datos personales" vuelva a escribir la obra social en la persona.
     "osPrepaga",
     "rolesFrameIds",
     // Domicilio

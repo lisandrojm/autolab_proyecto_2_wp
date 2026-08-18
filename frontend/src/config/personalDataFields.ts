@@ -40,7 +40,8 @@ export const PERSONAL_DATA_FIELDS: PersonalDataField[] = [
   { key: "estadoCivil", label: "Estado civil", section: "general", type: "catalog", catalog: "estadosCiviles" },
   { key: "nivelEstudioId", label: "Nivel de estudio", section: "general", type: "catalog", catalog: "nivelesEstudio" },
   { key: "nacionalidadId", label: "Nacionalidad", section: "general", type: "catalog", catalog: "nacionalidades" },
-  { key: "osId", label: "Obra social", section: "general", type: "catalog", catalog: "obrasSociales" },
+  // Sin "osId": la obra social se declara en el CONTRATO y se constata contra el padrón de la SSS,
+  // así que no es un dato que la persona pueda pedir que le cambien en su legajo.
   { key: "osPrepaga", label: "Prepaga", section: "general", type: "text" },
   { key: "rolesFrameIds", label: "Rol Frame", section: "general", type: "catalog", catalog: "rolesFrame" },
   // Domicilio

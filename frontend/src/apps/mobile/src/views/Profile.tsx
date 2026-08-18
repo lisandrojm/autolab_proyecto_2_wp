@@ -39,13 +39,12 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
   const [nationalities, setNationalities] = useState<InfoItem[]>([]);
   const [countries, setCountries] = useState<InfoItem[]>([]);
   const [banks, setBanks] = useState<InfoItem[]>([]);
-  const [insuranceCompanies, setInsuranceCompanies] = useState<InfoItem[]>([]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [dt, g, el, n, c, b, ic] = await Promise.all([infoAPI.listByType('tipo-documento'), infoAPI.listByType('genero'), infoAPI.listByType('nivel-estudio'), infoAPI.listByType('nacionalidad'), infoAPI.listByType('pais'), infoAPI.listByType('banco'), infoAPI.listByType('obra-social')]);
+        const [dt, g, el, n, c, b] = await Promise.all([infoAPI.listByType('tipo-documento'), infoAPI.listByType('genero'), infoAPI.listByType('nivel-estudio'), infoAPI.listByType('nacionalidad'), infoAPI.listByType('pais'), infoAPI.listByType('banco')]);
         if (cancelled) return;
         setDocumentTypes(dt);
         setGenders(g);
@@ -53,7 +52,6 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
         setNationalities(n);
         setCountries(c);
         setBanks(b);
-        setInsuranceCompanies(ic);
       } catch {
         /* catálogos opcionales: si fallan, se muestran los valores crudos o "—" */
       }
@@ -561,7 +559,8 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
               <InfoRow label="Estado civil" value={md.estadoCivil} />
               <InfoRow label="Nivel de estudio" value={nameFromInfo(educationLevels, md.nivelEstudioId)} />
               <InfoRow label="Nacionalidad" value={nameFromInfo(nationalities.length ? nationalities : countries, md.nacionalidadId)} />
-              <InfoRow label="Obra social" value={nameFromInfo(insuranceCompanies, md.osId)} />
+              {/* Sin "Obra social": se declara en el CONTRATO y se constata contra el padrón de la
+                  SSS, no es un dato del legajo de la persona. */}
             </div>
           )}
 

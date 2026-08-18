@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { z } from "zod";
 import { Company } from "../models/Company.js";
+import { Types } from "mongoose";
+import UserProject from "../models/UserProject.js";
+import { Convenio } from "../models/Convenio.js";
 import { authenticateToken } from "../middleware/auth.js";
 // ABM de Empresas / Productoras (datos para armar contratos).
 // Catálogo global (sin tenantId), igual que el resto de config: solo authenticateToken.
@@ -100,6 +103,53 @@ router.put("/:id", authenticateToken, async (req, res) => {
             return res.status(400).json({ error: error.errors?.[0]?.message || "Datos inválidos" });
         }
         console.error("Update company error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+/**
+ * GET /companies/:id/obras-sociales-en-uso
+ *
+ * Por cada obra social, a cuántos contratos de ESTA empleadora alcanza. Es lo que hay que saber antes
+ * de sacar una de su lista de registradas: quitarla deja esas altas con un RNOS que ARCA va a
+ * rechazar, y hoy eso pasaba en silencio.
+ *
+ * Cuenta las dos formas en que un contrato termina usándola:
+ *  - `contratos`: la tiene FIJADA en el contrato (constatada o manual).
+ *  - `convenios`: la hereda de un CCT que esta empleadora registró — sea la sindical del convenio o
+ *    una excepción que ella misma puso. Acá se devuelven los códigos de esos CCT, porque el número de
+ *    contratos afectados depende de qué categoría tenga cada uno y eso se resuelve en el cliente.
+ */
+router.get("/:id/obras-sociales-en-uso", authenticateToken, async (req, res) => {
+    try {
+        const empresa = await Company.findById(req.params.id).select("convenioIds convenioObraSocialOverrides").lean();
+        if (!empresa)
+            return res.status(404).json({ error: "Empresa no encontrada" });
+        const filas = await UserProject.aggregate([
+            { $unwind: "$contracts" },
+            { $match: { "contracts.empresaContratoId": new Types.ObjectId(req.params.id), "contracts.obraSocialId": { $ne: null } } },
+            { $group: { _id: "$contracts.obraSocialId", total: { $sum: 1 } } },
+        ]);
+        const contratos = {};
+        for (const f of filas)
+            if (f._id != null)
+                contratos[String(f._id)] = f.total;
+        // Convenios registrados por la empleadora que apuntan a cada obra social (la sindical o su excepción).
+        const convenios = await Convenio.find({ _id: { $in: empresa.convenioIds || [] } })
+            .select("externalId obraSocialDefaultId")
+            .lean();
+        const overrides = new Map((empresa.convenioObraSocialOverrides || []).map((o) => [String(o.convenioId), Number(o.obraSocialId)]));
+        const porConvenio = {};
+        for (const cv of convenios) {
+            const osId = overrides.has(String(cv._id)) ? overrides.get(String(cv._id)) : cv.obraSocialDefaultId;
+            if (osId == null)
+                continue;
+            const k = String(osId);
+            porConvenio[k] = [...(porConvenio[k] || []), String(cv.externalId || "")];
+        }
+        res.json({ contratos, convenios: porConvenio });
+    }
+    catch (error) {
+        console.error("Obras sociales en uso error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });

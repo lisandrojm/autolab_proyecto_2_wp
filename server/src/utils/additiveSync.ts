@@ -236,7 +236,9 @@ export const USER_FRAME_WHITELIST: readonly string[] = [
   "metadata.paisId",
   "metadata.nacionalidadId",
   "metadata.nivelEstudioId",
-  "metadata.osId",
+  // "metadata.osId" NO está, a propósito: la obra social vive en el contrato y se constata contra el
+  // padrón de la SSS. Agregarlo acá haría que el próximo import de FRAME reviva el campo que la
+  // migración `obra-social:drop-usuario` vació. Ver `services/externalApiService.ts`.
   "metadata.osPrepaga",
   "metadata.fechaNac",
   "metadata.fechaAlta",

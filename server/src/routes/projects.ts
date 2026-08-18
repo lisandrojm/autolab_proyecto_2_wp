@@ -1484,9 +1484,10 @@ router.delete("/projects/:projectId/members/:userId/contracts/:index", requireTe
       res.status(404).json({ error: "No hay contratos para esta persona en el proyecto" });
       return;
     }
-    const idx = Number(index);
-    if (!Number.isInteger(idx) || idx < 0 || idx >= up.contracts.length) {
-      res.status(400).json({ error: "Índice de contrato inválido" });
+    // Por `_id` cuando el cliente lo manda: el índice es una posición y puede haber cambiado.
+    const idx = resolverIndiceContrato(up, index);
+    if (idx < 0) {
+      res.status(400).json({ error: "Contrato no encontrado" });
       return;
     }
 
@@ -1523,20 +1524,43 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/empresa-cont
       return;
     }
     const up = await UserProject.findOne({ projectId, userId });
-    const idx = Number(index);
-    if (!up || !Number.isInteger(idx) || idx < 0 || idx >= up.contracts.length) {
+    // Por `_id` cuando el cliente lo manda: el índice es una posición y puede haber cambiado.
+    const idx = up ? resolverIndiceContrato(up, index) : -1;
+    if (!up || idx < 0) {
       res.status(404).json({ error: "Contrato no encontrado" });
       return;
     }
 
     let nombreEmpresaContrato = "";
+    /**
+     * Aviso, no bloqueo: la obra social ya cargada puede no estar registrada por la empresa NUEVA.
+     *
+     * La regla "el RNOS tiene que estar entre las registradas por esa empleadora" es sobre el PAR
+     * (obra social, empresa), así que también hay que mirarla cuando cambia la empresa — si no, se
+     * evade cargando la obra social primero y eligiendo la empleadora después.
+     *
+     * Acá se avisa en vez de rechazar: el operador está eligiendo la EMPRESA, y negarle esa acción
+     * por un dato cargado antes lo deja sin salida obvia. El bloqueo real está donde duele y no se
+     * puede saltear: al generar el TXT.
+     */
+    let avisoObraSocial = "";
     if (empresaContratoId) {
-      const empresa = await Company.findById(empresaContratoId).select("razonSocial").lean();
+      const empresa = await Company.findById(empresaContratoId).select("razonSocial obrasSocialesIds").lean();
       if (!empresa) {
         res.status(400).json({ error: "La empresa elegida no existe" });
         return;
       }
       nombreEmpresaContrato = (empresa as any).razonSocial || "";
+
+      const osIdContrato = (up.contracts[idx] as any).obraSocialId;
+      const registradas = ((empresa as any).obrasSocialesIds || []).map((id: any) => String(id));
+      // Lista vacía = no se extrajo el padrón de esa empleadora. No se afirma nada sobre algo que no se sabe.
+      if (osIdContrato && registradas.length > 0) {
+        const os = await ObraSocial.findOne({ "data.id": Number(osIdContrato) }).select("_id name").lean();
+        if (os && !registradas.includes(String((os as any)._id))) {
+          avisoObraSocial = `La obra social de este contrato (${(os as any).name}) no está entre las que ${nombreEmpresaContrato} tiene registradas ante ARCA. El alta se va a rechazar: registrala en la ficha de la empresa o constatá otra para este contrato.`;
+        }
+      }
     }
 
     up.contracts[idx] = {
@@ -1547,12 +1571,35 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/empresa-cont
     up.markModified("contracts");
     await up.save();
 
-    res.json({ empresaContratoId: empresaContratoId || null, nombre_empresa_contrato: nombreEmpresaContrato });
+    res.json({ empresaContratoId: empresaContratoId || null, nombre_empresa_contrato: nombreEmpresaContrato, avisoObraSocial });
   } catch (error) {
     console.error("Update contract empresa-contrato error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+/**
+ * Resuelve QUÉ contrato del member se está tocando, aceptando su `_id` o su índice.
+ *
+ * El índice es una POSICIÓN, no una identidad: cambia sola. El escenario real es que alguien abra el
+ * contrato en posición 2, se vaya a constatar la obra social en la SSS (hay captcha, tarda), y
+ * mientras tanto se elimine el contrato en posición 0. Al volver y guardar, el índice 2 ya apunta a
+ * otro contrato: el dato se escribe en el alta equivocada, sin error y sin aviso.
+ *
+ * Por eso se prefiere el `_id` del subdocumento, que Mongoose genera para cada elemento del array.
+ * Se sigue aceptando el índice para no romper a los clientes que todavía lo mandan, pero es el camino
+ * viejo: el que manda un id no puede escribir en el contrato equivocado.
+ *
+ * Devuelve el índice resuelto, porque el resto del código escribe con `up.contracts[idx] = ...`.
+ */
+function resolverIndiceContrato(up: any, param: string): number {
+  const esObjectId = /^[a-f\d]{24}$/i.test(String(param || ""));
+  if (esObjectId) {
+    return (up.contracts as any[]).findIndex((c: any) => String(c?._id || "") === String(param));
+  }
+  const idx = Number(param);
+  return Number.isInteger(idx) && idx >= 0 && idx < up.contracts.length ? idx : -1;
+}
 
 /**
  * PATCH /projects/:projectId/members/:userId/contracts/:index/obra-social
@@ -1584,8 +1631,12 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/obra-social"
       res.status(400).json({ error: "Origen inválido" });
       return;
     }
-    if (origen === "constatada" && !constatadaEn) {
-      res.status(400).json({ error: "Falta indicar dónde se constató (sss / arca)" });
+    // El enum se valida en el SERVER y no solo en el cliente: un `origen: "constatada"` mandado a
+    // mano pintaría de verde algo que nadie constató, y el verde es lo que hace que no se vuelva a
+    // mirar. Lo mismo con la fuente: "sss" y "arca" no son etiquetas libres, significan cosas
+    // distintas sobre cuánto se le puede creer al dato.
+    if (origen === "constatada" && (!constatadaEn || !["sss", "arca"].includes(constatadaEn))) {
+      res.status(400).json({ error: "Falta indicar dónde se constató: sss (padrón de beneficiarios) o arca" });
       return;
     }
 
@@ -1595,8 +1646,9 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/obra-social"
       return;
     }
     const up = await UserProject.findOne({ projectId, userId });
-    const idx = Number(index);
-    if (!up || !Number.isInteger(idx) || idx < 0 || idx >= up.contracts.length) {
+    // Por `_id` cuando el cliente lo manda: el índice puede haber cambiado mientras se constataba.
+    const idx = up ? resolverIndiceContrato(up, index) : -1;
+    if (!up || idx < 0) {
       res.status(404).json({ error: "Contrato no encontrado" });
       return;
     }
@@ -1664,8 +1716,9 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/sucursal-arc
       return;
     }
     const up = await UserProject.findOne({ projectId, userId });
-    const idx = Number(index);
-    if (!up || !Number.isInteger(idx) || idx < 0 || idx >= up.contracts.length) {
+    // Por `_id` cuando el cliente lo manda: el índice es una posición y puede haber cambiado.
+    const idx = up ? resolverIndiceContrato(up, index) : -1;
+    if (!up || idx < 0) {
       res.status(404).json({ error: "Contrato no encontrado" });
       return;
     }
@@ -1717,8 +1770,9 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/actividad-ar
       return;
     }
     const up = await UserProject.findOne({ projectId, userId });
-    const idx = Number(index);
-    if (!up || !Number.isInteger(idx) || idx < 0 || idx >= up.contracts.length) {
+    // Por `_id` cuando el cliente lo manda: el índice es una posición y puede haber cambiado.
+    const idx = up ? resolverIndiceContrato(up, index) : -1;
+    if (!up || idx < 0) {
       res.status(404).json({ error: "Contrato no encontrado" });
       return;
     }
@@ -1764,8 +1818,9 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/empresa-rele
       return;
     }
     const up = await UserProject.findOne({ projectId, userId });
-    const idx = Number(index);
-    if (!up || !Number.isInteger(idx) || idx < 0 || idx >= up.contracts.length) {
+    // Por `_id` cuando el cliente lo manda: el índice es una posición y puede haber cambiado.
+    const idx = up ? resolverIndiceContrato(up, index) : -1;
+    if (!up || idx < 0) {
       res.status(404).json({ error: "Contrato no encontrado" });
       return;
     }
@@ -1821,9 +1876,10 @@ router.patch(
         res.status(404).json({ error: "No hay contratos para esta persona en el proyecto" });
         return;
       }
-      const idx = Number(index);
-      if (!Number.isInteger(idx) || idx < 0 || idx >= up.contracts.length) {
-        res.status(400).json({ error: "Índice de contrato inválido" });
+      // Por `_id` cuando el cliente lo manda: el índice es una posición y puede haber cambiado.
+      const idx = resolverIndiceContrato(up, index);
+      if (idx < 0) {
+        res.status(400).json({ error: "Contrato no encontrado" });
         return;
       }
 

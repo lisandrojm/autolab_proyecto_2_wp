@@ -1,0 +1,289 @@
+[
+  {
+    "_id": "6a7f7ef5812e94259a9ec89b",
+    "nombre": "Peinador",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035352",
+    "codigoArcaNuevo": "035350"
+  },
+  {
+    "_id": "6a7f7ef6812e94259a9ec8a3",
+    "nombre": "Microfonista",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035348",
+    "codigoArcaNuevo": "035346"
+  },
+  {
+    "_id": "6a7f7ef6812e94259a9ec89d",
+    "nombre": "Asistente de cámara especializado / Grip",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035340",
+    "codigoArcaNuevo": "035358"
+  },
+  {
+    "_id": "6a7f7ef4812e94259a9ec877",
+    "nombre": "Asistente de Iluminación",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035313",
+    "codigoArcaNuevo": "035312"
+  },
+  {
+    "_id": "6a7f7ef6812e94259a9ec89f",
+    "nombre": "Auxiliar de Estudios",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035342",
+    "codigoArcaNuevo": "035340"
+  },
+  {
+    "_id": "6a7f7ef6812e94259a9ec8a4",
+    "nombre": "Modista Realizadora",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035349",
+    "codigoArcaNuevo": "035347"
+  },
+  {
+    "_id": "6a7f7ef2812e94259a9ec857",
+    "nombre": "Operador Realizador Cinematográfico",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035289",
+    "codigoArcaNuevo": "035288"
+  },
+  {
+    "_id": "6a7f7ef5812e94259a9ec893",
+    "nombre": "Utilero",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035358",
+    "codigoArcaNuevo": "035356"
+  },
+  {
+    "_id": "6a7f7ef5812e94259a9ec898",
+    "nombre": "Asistente de Arte",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035339",
+    "codigoArcaNuevo": "035359"
+  },
+  {
+    "_id": "6a7f7ef4812e94259a9ec872",
+    "nombre": "Ambientador General",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035312",
+    "codigoArcaNuevo": "035324"
+  },
+  {
+    "_id": "6a7f7ef4812e94259a9ec87b",
+    "nombre": "Fotógrafo",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035317",
+    "codigoArcaNuevo": "035315"
+  },
+  {
+    "_id": "6a7f7ef2812e94259a9ec856",
+    "nombre": "Iluminador",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035288",
+    "codigoArcaNuevo": "035287"
+  },
+  {
+    "_id": "6a7f7ef2812e94259a9ec855",
+    "nombre": "Escenógrafo",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035287",
+    "codigoArcaNuevo": "035286"
+  },
+  {
+    "_id": "6a7f7ef4812e94259a9ec878",
+    "nombre": "Continuista",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035314",
+    "codigoArcaNuevo": "035323"
+  },
+  {
+    "_id": "6a7f7ef5812e94259a9ec896",
+    "nombre": "Reflectorista",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035354",
+    "codigoArcaNuevo": "035352"
+  },
+  {
+    "_id": "6a7f7ef3812e94259a9ec85a",
+    "nombre": "Técnico de Mantenimiento Electónico",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035292",
+    "codigoArcaNuevo": "035291"
+  },
+  {
+    "_id": "6a7f7ef3812e94259a9ec85b",
+    "nombre": "Camarógrafo Realizador",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035286",
+    "codigoArcaNuevo": "035292"
+  },
+  {
+    "_id": "6a7f7ef4812e94259a9ec876",
+    "nombre": "Técnico Electricista",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035324",
+    "codigoArcaNuevo": "035322"
+  },
+  {
+    "_id": "6a7f7ef6812e94259a9ec89e",
+    "nombre": "Auxiliar Administrativo",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035341",
+    "codigoArcaNuevo": "035339"
+  },
+  {
+    "_id": "6a7f7ef2812e94259a9ec858",
+    "nombre": "Operador Técnico de Planta Trasmisora",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035290",
+    "codigoArcaNuevo": "035289"
+  },
+  {
+    "_id": "6a7f7ef2812e94259a9ec859",
+    "nombre": "Téc. de Mant. afectado a Planta Trasmisora",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035291",
+    "codigoArcaNuevo": "035290"
+  },
+  {
+    "_id": "6a7f7ef4812e94259a9ec873",
+    "nombre": "Proyectorista de Control Central",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035321",
+    "codigoArcaNuevo": "035319"
+  },
+  {
+    "_id": "6a7f7ef4812e94259a9ec874",
+    "nombre": "Secretaria Bilingüe",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035322",
+    "codigoArcaNuevo": "035320"
+  },
+  {
+    "_id": "6a7f7ef4812e94259a9ec875",
+    "nombre": "Técnico de Mantenimiento Mecánico",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035323",
+    "codigoArcaNuevo": "035321"
+  },
+  {
+    "_id": "6a7f7ef4812e94259a9ec879",
+    "nombre": "Dibujante de Arte Publicitario",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035315",
+    "codigoArcaNuevo": "035313"
+  },
+  {
+    "_id": "6a7f7ef4812e94259a9ec87a",
+    "nombre": "Dibujante Técnico",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035316",
+    "codigoArcaNuevo": "035314"
+  },
+  {
+    "_id": "6a7f7ef4812e94259a9ec87c",
+    "nombre": "Oficial Administrativo",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035318",
+    "codigoArcaNuevo": "035316"
+  },
+  {
+    "_id": "6a7f7ef4812e94259a9ec87d",
+    "nombre": "Operador de Máquinas Contables",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035319",
+    "codigoArcaNuevo": "035317"
+  },
+  {
+    "_id": "6a7f7ef4812e94259a9ec87e",
+    "nombre": "Promotor de Ventas",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035320",
+    "codigoArcaNuevo": "035318"
+  },
+  {
+    "_id": "6a7f7ef5812e94259a9ec88f",
+    "nombre": "Calderista",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035344",
+    "codigoArcaNuevo": "035342"
+  },
+  {
+    "_id": "6a7f7ef5812e94259a9ec890",
+    "nombre": "Secretaria",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035355",
+    "codigoArcaNuevo": "035353"
+  },
+  {
+    "_id": "6a7f7ef5812e94259a9ec891",
+    "nombre": "Sombrerero",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035356",
+    "codigoArcaNuevo": "035354"
+  },
+  {
+    "_id": "6a7f7ef5812e94259a9ec892",
+    "nombre": "Tablerista de Iluminación",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035357",
+    "codigoArcaNuevo": "035355"
+  },
+  {
+    "_id": "6a7f7ef5812e94259a9ec894",
+    "nombre": "Utilero Preparador",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035359",
+    "codigoArcaNuevo": "035357"
+  },
+  {
+    "_id": "6a7f7ef5812e94259a9ec895",
+    "nombre": "Chequeador",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035345",
+    "codigoArcaNuevo": "035343"
+  },
+  {
+    "_id": "6a7f7ef5812e94259a9ec899",
+    "nombre": "Montador de Escenografía",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035350",
+    "codigoArcaNuevo": "035348"
+  },
+  {
+    "_id": "6a7f7ef5812e94259a9ec89a",
+    "nombre": "Oficial de Mantenimiento de Edificio",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035351",
+    "codigoArcaNuevo": "035349"
+  },
+  {
+    "_id": "6a7f7ef6812e94259a9ec89c",
+    "nombre": "Pintor Corpóreo",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035353",
+    "codigoArcaNuevo": "035351"
+  },
+  {
+    "_id": "6a7f7ef6812e94259a9ec8a0",
+    "nombre": "Ayudante de Utilero de Calle",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035343",
+    "codigoArcaNuevo": "035341"
+  },
+  {
+    "_id": "6a7f7ef6812e94259a9ec8a1",
+    "nombre": "Compaginador de Filmoteca",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035346",
+    "codigoArcaNuevo": "035344"
+  },
+  {
+    "_id": "6a7f7ef6812e94259a9ec8a2",
+    "nombre": "Laborista Fotográfico",
+    "convenio": "0634/11",
+    "codigoArcaAnterior": "035347",
+    "codigoArcaNuevo": "035345"
+  }
+]

@@ -4,6 +4,7 @@ import xlsx from "xlsx";
 import { Categoria } from "../models/Categoria.js";
 import { ConvenioGrupo } from "../models/ConvenioGrupo.js";
 import { Convenio } from "../models/Convenio.js";
+import { Company } from "../models/Company.js";
 import UserProject from "../models/UserProject.js";
 import { authenticateToken } from "../middleware/auth.js";
 /**
@@ -68,18 +69,50 @@ const contratosPorLegacyId = async () => {
 /**
  * GET /api/v1/arca/categorias/convenios
  *
- * Nivel 1: los convenios que tienen categorías cargadas, con lo necesario para elegir uno sin entrar.
+ * Nivel 1: los convenios REGISTRADOS por las empleadoras, tengan o no categorías cargadas, con lo
+ * necesario para elegir uno sin entrar. Los que tienen categorías pero nadie registró también salen
+ * (con `registrado: false`): son un dato mal cargado que hay que ver, no esconder.
+ *
  * NO existe la opción "todos": una categoría se lee dentro de su convenio o no se lee.
  */
 router.get("/convenios", authenticateToken, async (_req, res) => {
     try {
-        const [cats, grupos, nombres] = await Promise.all([Categoria.find().lean(), ConvenioGrupo.find().lean(), nombresDeConvenio()]);
+        const [cats, grupos, nombres, empresas, conveniosCat] = await Promise.all([
+            Categoria.find().lean(),
+            ConvenioGrupo.find().lean(),
+            nombresDeConvenio(),
+            Company.find().select("convenioIds").lean(),
+            Convenio.find().select("externalId name").lean(),
+        ]);
         const acc = new Map();
         const tocar = (cct) => {
             if (!acc.has(cct))
-                acc.set(cct, { convenio: cct, nombre: nombres.get(cct) || "", grupos: 0, categorias: 0, ultimaActualizacion: null });
+                acc.set(cct, { convenio: cct, nombre: nombres.get(cct) || "", grupos: 0, categorias: 0, ultimaActualizacion: null, registrado: false });
             return acc.get(cct);
         };
+        /**
+         * La lista ARRANCA por los convenios que alguna empleadora tiene registrados ante ARCA, no por
+         * los que ya tienen categorías cargadas.
+         *
+         * Salía del lado equivocado de la relación: se acumulaba sobre `grupos`, así que un convenio
+         * registrado y sin categorías simplemente no existía en la pantalla. Es justo el caso que hay que
+         * ver — un CCT registrado sin categorías bloquea cualquier alta bajo ese convenio, y esconderlo
+         * es lo que dejó 143 contratos colgados de una categoría "Actor" inventada: las categorías de los
+         * convenios de ACTORES nunca se cargaron y la pantalla donde se cargarían no los mostraba.
+         */
+        const porId = new Map(conveniosCat.map((c) => [String(c._id), c]));
+        for (const e of empresas) {
+            for (const id of e.convenioIds || []) {
+                const cv = porId.get(String(id));
+                const cct = String(cv?.externalId || "").trim();
+                if (!cct)
+                    continue;
+                const item = tocar(cct);
+                item.registrado = true;
+                if (!item.nombre)
+                    item.nombre = String(cv?.name || "");
+            }
+        }
         for (const g of grupos) {
             const cct = String(g.convenio || "").trim();
             // Los grupos sin convenio no forman una solapa: sus categorías son huérfanas y se resuelven

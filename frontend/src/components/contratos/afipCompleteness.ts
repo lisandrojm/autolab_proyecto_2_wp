@@ -470,6 +470,29 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
    * del campo viejo del usuario —sin fecha ni constatación— y que por desregulación puede estar
    * vencida. Es el origen que deja la migración y el que hay que ir limpiando.
    */
+  /**
+   * NO se pudo verificar contra el padrón de la empleadora. No es lo mismo que estar bien.
+   *
+   * `obraSocialRegistrada === null` significa que falta el dato con el que se compara —la empleadora
+   * todavía no está elegida, o su padrón nunca se extrajo—, no que la obra social sea válida. Sin
+   * esto la fila se veía verde y quedaba con cara de validada: el operador no vuelve a mirar algo que
+   * ya está en verde, y el rechazo aparece recién cuando ARCA devuelve el archivo.
+   */
+  if (v.rnos && v.obraSocialRegistrada === null) {
+    checks.push(
+      mk(
+        "obraSocialSinVerificar",
+        "Obra social sin verificar contra ARCA",
+        "obra_social",
+        v.rnos,
+        "aviso",
+        hayEmpresa
+          ? "La empleadora no tiene cargadas sus obras sociales registradas, así que no se puede saber si ARCA va a aceptar esta. Extraé su padrón (Datos del Empleador → Obras Sociales) y cargalo en su ficha."
+          : "Todavía no se eligió la empleadora del contrato, así que no hay contra qué padrón verificarla. Se comprueba sola al elegirla.",
+      ),
+    );
+  }
+
   if (v.rnos && v.rnosOrigen === "heredada-usuario") {
     checks.push(
       mk(

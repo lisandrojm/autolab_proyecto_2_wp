@@ -358,7 +358,16 @@ export class ExternalApiService {
                         paisId: emp.paisId,
                         nacionalidadId: emp.nacionalidadId,
                         nivelEstudioId: emp.nivelEstudioId,
-                        osId: emp.osId,
+                        // `emp.osId` NO se mapea a propósito, aunque FRAME lo siga mandando.
+                        //
+                        // La obra social es un dato de la RELACIÓN LABORAL, no de la persona: vive en
+                        // el contrato (`UserProject.contracts[].obraSocialId`) y se constata contra el
+                        // padrón de la SSS. FRAME no puede saber cuál corresponde — no sabe con qué
+                        // empleadora se va a contratar, y ARCA declara el RNOS por alta, no por CUIL.
+                        //
+                        // Y no es solo redundante: la sincronización es ADITIVA (escribe cuando el
+                        // valor está vacío), así que mapearlo revive `metadata.osId` en el import
+                        // siguiente a la migración que lo vació. Ver `utils/additiveSync.ts`.
                         osPrepaga: emp.osPrepaga,
                         fechaNac: emp.fechaNac,
                         fechaAlta: emp.fechaAlta,

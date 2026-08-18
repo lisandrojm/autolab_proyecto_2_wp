@@ -767,19 +767,38 @@ export const ContractBulkAfipTab: React.FC<{
       return;
     }
 
-    const registros = items.map((x) => buildAltaRecord(x.row, afipCat)).filter((r): r is string => r !== null);
+    /**
+     * ÚLTIMA BARRERA: solo entran los contratos sin errores de completitud.
+     *
+     * `buildAltaRecord` arma la línea con lo que hay: le alcanza con que los campos tengan valor. No
+     * sabe, por ejemplo, que la obra social resuelta no está entre las registradas por esa empleadora
+     * —una validación sobre el PAR (obra social, empresa) que puede romperse después de haber
+     * guardado las dos cosas, sacando la obra social de la ficha de la empresa—. Un alta así se
+     * genera perfecta y ARCA la rechaza.
+     *
+     * Por eso se filtra por `result.completo`, que sí mira los errores cruzados, en vez de confiar en
+     * que la línea se haya podido armar.
+     */
+    const conProblemas = items.filter((x) => !x.result.completo);
+    const registros = items
+      .filter((x) => x.result.completo)
+      .map((x) => buildAltaRecord(x.row, afipCat))
+      .filter((r): r is string => r !== null);
     if (registros.length === 0) {
       sweetAlert.error('Sin datos completos', 'Ningún contrato del conjunto tiene todos los datos ARCA cargados. Completá los faltantes (columna «Datos ARCA») antes de generar el TXT.');
       return;
     }
     const omitidos = items.length - registros.length;
+    // Se nombra el motivo del primero: "se omitieron 3" sin decir por qué manda a abrir tres modales.
+    const primerProblema = conProblemas[0]?.result.checks.find((c) => c.estado === 'error' || c.estado === 'falta');
+    const detalleOmitidos = primerProblema ? ` El primero es ${conProblemas[0].row.userName}: ${primerProblema.detalle || primerProblema.label}.` : '';
     // El nombre lleva el CUIT de la empleadora, no su razón social: el archivo se sube logueado con
     // ese CUIT y es el dato con el que se coteja. Además dos razones sociales parecidas dan nombres
     // parecidos, y un TXT subido a la sesión equivocada ARCA lo acepta sin chistar.
     const cuitLote = String(companies.find((c) => c._id === empresasDelLote[0])?.cuit ?? '').replace(/\D/g, '');
     downloadTxt(buildAltaTxt(registros), `${filenameBase}${cuitLote ? `_${cuitLote}` : ''}_${hoyStamp()}.txt`);
     if (omitidos > 0) {
-      sweetAlert.info('TXT generado', `Se incluyeron ${registros.length} alta(s). Se omitieron ${omitidos} contrato(s) por datos ARCA incompletos o mal cargados (por ejemplo, una fecha con un formato inesperado).`);
+      sweetAlert.info('TXT generado', `Se incluyeron ${registros.length} alta(s). Se omitieron ${omitidos} contrato(s) por datos ARCA incompletos o mal cargados.${detalleOmitidos}`);
     } else {
       sweetAlert.success('TXT generado', `Se incluyeron ${registros.length} alta(s) en el archivo.`);
     }

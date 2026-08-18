@@ -665,7 +665,9 @@ router.get("/registro-info", async (req, res) => {
       tiposDocumento: pick("tipo-documento"),
       nivelesEstudio: pick("nivel-estudio"),
       nacionalidades,
-      obrasSociales: pick("obra-social"),
+      // Sin `obrasSociales`: el registro dejó de pedirla. Quien se registra no puede saber qué RNOS
+      // le corresponde ante ARCA —se constata en el padrón de la SSS al hacer el contrato—, y eran
+      // 496 registros viajando en un endpoint público sin que nadie los usara.
       bancos,
       rolesFrame,
     });
@@ -729,7 +731,8 @@ router.post("/registro", async (req, res) => {
       generoId: num(body.generoId),
       nivelEstudioId: num(body.nivelEstudioId),
       nacionalidadId: num(body.nacionalidadId),
-      osId: num(body.osId),
+      // Sin `osId`: la obra social se declara en el contrato, no en la persona. Aunque un cliente
+      // viejo la siga mandando en el body, acá se ignora.
       estadoCivil: body.estadoCivil || undefined,
       roles_frame: rolFrameId ? [rolFrameId] : [],
       rolesFrameIds: rolFrameId ? [rolFrameId] : [],

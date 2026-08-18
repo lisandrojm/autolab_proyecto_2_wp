@@ -9,14 +9,9 @@ import { Modal } from "../ui/Modal";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { fuzzyMatch } from "../../utils/searchHelpers";
 import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina } from "../../utils/nacionalidadDocumento";
-import { createSimpleCatalogApi, SimpleCatalogItem } from "../../api/simpleCatalog";
-// El RNOS se formatea igual que en el nomenclador y en la ficha de empresa: un solo lugar.
-import { formatRnos } from "../../utils/rnos";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faUserShield, faEye, faEyeSlash, faToggleOn, faToggleOff, faMapMarkerAlt, faUniversity, faSearch, faTimes, faMobileAlt, faKey, faCheck, faXmark, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 
-/** Las obras sociales salen del catálogo de ARCA: ver el comentario de `insuranceCompanies`. */
-const obrasSocialesApi = createSimpleCatalogApi("/obras-sociales");
 
 type ModalTab = "general" | "domicilio" | "bancarios";
 
@@ -45,8 +40,6 @@ interface UserFormData {
   paisId?: number;
   nacionalidadId?: number;
   nivelEstudioId?: number;
-  osId?: number;
-  osPrepaga?: boolean;
   fechaNac?: string;
   telefono?: string;
   telefono2?: string;
@@ -58,7 +51,6 @@ interface UserFormData {
   aliasBancario?: string;
   numeroLegajoTango?: string;
   afiliadoAlSindicato?: boolean;
-  inHouse?: boolean;
   rolesFrameIds?: string[];
 }
 
@@ -75,10 +67,8 @@ const emptyForm = (): UserFormData => ({
   hireDate: new Date().toISOString().split("T")[0],
   extraVacationDays: 0,
   clientIds: [],
-  osPrepaga: false,
   visa: false,
   afiliadoAlSindicato: false,
-  inHouse: false,
   rolesFrameIds: [],
 });
 
@@ -105,14 +95,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   const [nationalities, setNationalities] = useState<InfoItem[]>([]);
   const [educationLevels, setEducationLevels] = useState<InfoItem[]>([]);
   const [banks, setBanks] = useState<InfoItem[]>([]);
-  /**
-   * Obras sociales del catálogo de ARCA (496), NO del catálogo viejo de `infos`.
-   *
-   * Es la misma lista contra la que se resuelve el RNOS del TXT de alta —`resolveAfipValues` busca
-   * por `data.id`—, así que tomarla de otro lado es arriesgarse a guardar un id que después no
-   * resuelve. Los `data.id` son los mismos: la colección se migró copiando `externalId` y `data`.
-   */
-  const [insuranceCompanies, setInsuranceCompanies] = useState<SimpleCatalogItem[]>([]);
+  // El catálogo de obras sociales ya no se carga acá: el campo se mudó al contrato.
   const [catalogsLoaded, setCatalogsLoaded] = useState(false);
 
   // Estado del formulario
@@ -146,7 +129,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     let cancelled = false;
     (async () => {
       try {
-        const [rolesRes, rf, g, dt, c, n, el, b, ic] = await Promise.all([
+        const [rolesRes, rf, g, dt, c, n, el, b] = await Promise.all([
           rolesAPI.list({ limit: 100 }),
           roleFrameAPI.list(),
           infoAPI.listByType("genero"),
@@ -155,7 +138,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           infoAPI.listByType("nacionalidad"),
           infoAPI.listByType("nivel-estudio"),
           infoAPI.listByType("banco"),
-          obrasSocialesApi.list(),
         ]);
         if (cancelled) return;
         setRoles(rolesRes.roles);
@@ -167,7 +149,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         setNationalities(n);
         setEducationLevels(el);
         setBanks(b);
-        setInsuranceCompanies(ic);
         setCatalogsLoaded(true);
       } catch (error) {
         console.error("Error cargando catálogos del formulario de usuario:", error);
@@ -234,8 +215,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         paisId: user.metadata?.paisId,
         nacionalidadId: user.metadata?.nacionalidadId || user.metadata?.paisId,
         nivelEstudioId: user.metadata?.nivelEstudioId,
-        osId: user.metadata?.osId,
-        osPrepaga: user.metadata?.osPrepaga || false,
         fechaNac: user.metadata?.fechaNac ? new Date(user.metadata.fechaNac).toISOString().split("T")[0] : "",
         telefono: user.metadata?.telefono,
         telefono2: user.metadata?.telefono2 || "",
@@ -247,7 +226,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         aliasBancario: user.metadata?.aliasBancario || "",
         numeroLegajoTango: user.metadata?.numeroLegajoTango || "",
         afiliadoAlSindicato: user.metadata?.afiliadoAlSindicato || false,
-        inHouse: user.metadata?.inHouse || false,
         rolesFrameIds: (() => {
           const rawRf = user.metadata?.rolesFrameIds || (user.metadata as any)?.roles_frame || [];
           const rfArray = Array.isArray(rawRf) ? rawRf : [rawRf];
@@ -346,8 +324,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           paisId: formData.paisId,
           nacionalidadId: formData.nacionalidadId,
           nivelEstudioId: formData.nivelEstudioId,
-          osId: formData.osId,
-          osPrepaga: formData.osPrepaga,
           fechaNac: formData.fechaNac,
           telefono: formData.telefono,
           telefono2: formData.telefono2,
@@ -359,7 +335,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           aliasBancario: formData.aliasBancario,
           numeroLegajoTango: formData.numeroLegajoTango,
           afiliadoAlSindicato: formData.afiliadoAlSindicato,
-          inHouse: formData.inHouse,
           roles_frame: formData.rolesFrameIds,
           rolesFrameIds: formData.rolesFrameIds,
         },
@@ -722,38 +697,21 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center space-x-6 h-full pt-4">
-                    <label className="flex items-center space-x-3 cursor-pointer group">
-                      <div className={`w-10 h-6 flex items-center bg-gray-300 dark:bg-gray-700 rounded-full p-1 duration-300 ease-in-out ${formData.osPrepaga ? "bg-blue-500 dark:bg-blue-600" : ""}`}>
-                        <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${formData.osPrepaga ? "translate-x-4" : ""}`}></div>
-                      </div>
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">OS Prepaga</span>
-                      <input type="checkbox" className="hidden" checked={formData.osPrepaga} onChange={(e) => setFormData((prev) => ({ ...prev, osPrepaga: e.target.checked }))} />
-                    </label>
-                    <label className="flex items-center space-x-3 cursor-pointer group">
-                      <div className={`w-10 h-6 flex items-center bg-gray-300 dark:bg-gray-700 rounded-full p-1 duration-300 ease-in-out ${formData.inHouse ? "bg-blue-500 dark:bg-blue-600" : ""}`}>
-                        <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${formData.inHouse ? "translate-x-4" : ""}`}></div>
-                      </div>
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">In House</span>
-                      <input type="checkbox" className="hidden" checked={formData.inHouse} onChange={(e) => setFormData((prev) => ({ ...prev, inHouse: e.target.checked }))} />
-                    </label>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Obra Social</label>
-                    <select value={formData.osId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, osId: parseInt(e.target.value) || undefined }))} className="input-field">
-                      <option value="">Seleccionar...</option>
-                      {/* Con 496 obras sociales y nombres que se parecen ("ADOS BARILOCHE", "ADOS
-                          BELLA VISTA", varias "ASOCIACION DE OBRAS SOCIALES DE…"), el RNOS es lo
-                          único que identifica sin ambigüedad, y es además lo que viaja al TXT. */}
-                      {insuranceCompanies.map((it) => (
-                        <option key={it._id} value={Number(it.data?.id)}>
-                          {it.externalId ? `${formatRnos(it.externalId)} — ${it.name}` : it.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                {/*
+                 * Acá había un selector de Obra Social y los toggles OS Prepaga / In House.
+                 *
+                 * La obra social se fue porque es un dato de la RELACIÓN LABORAL, no de la persona:
+                 * ARCA la declara en cada alta (pos. 40-45 del TXT), dos contratos de la misma
+                 * persona en dos empleadoras llevan cada uno el suyo, y caduca sola —por
+                 * desregulación alguien cambia de obra social sin que su empleadora se entere—.
+                 * Guardarla acá la propagaba, sin fecha ni verificación, a todos los contratos
+                 * futuros. Ahora vive en el contrato y se constata contra el padrón de la SSS.
+                 *
+                 * Los dos toggles se fueron con ella: describían la cobertura de salud de la persona
+                 * y ya no se decide nada con eso acá. Los campos siguen existiendo porque los MANDA
+                 * FRAME en la sincronización (`utils/additiveSync.ts`), y se ven en Mi Perfil — pero
+                 * son un dato que llega, no uno que se carga a mano.
+                 */}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>

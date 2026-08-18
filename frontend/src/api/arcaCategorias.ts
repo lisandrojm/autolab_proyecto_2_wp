@@ -21,6 +21,15 @@ export interface ConvenioConCategorias {
   categorias: number;
   /** Escala más reciente entre sus grupos: cuándo se aplicó la última paritaria. */
   ultimaActualizacion: string | null;
+  /**
+   * `true` si alguna empleadora lo tiene registrado ante ARCA.
+   *
+   * Con `categorias: 0` es el caso a resolver: el CCT está registrado pero no se le cargaron las
+   * categorías, así que ningún alta bajo ese convenio se puede generar. `false` con categorías
+   * cargadas es el inverso — categorías de un convenio que ninguna empleadora registró, que ARCA va
+   * a rechazar.
+   */
+  registrado: boolean;
 }
 
 /** Nivel 3: la categoría no lleva importes — los hereda de su grupo. */
@@ -102,7 +111,13 @@ class ArcaCategoriasAPI {
     return data;
   }
 
-  /** Niveles 2 y 3 juntos: los grupos del convenio con sus categorías colgando. */
+  /**
+   * Niveles 2 y 3 juntos: los grupos del convenio con sus categorías colgando.
+   *
+   * OJO: `convenio` es el CÓDIGO DE CCT (`externalId`, "0634/11"), NO el `_id` del catálogo. Pasarle
+   * un `_id` no da 404: devuelve un detalle vacío con `nombre: ""` y cero grupos, que se lee igual
+   * que "este convenio no tiene categorías". Es un error que se disfraza de dato.
+   */
   async detalle(convenio: string): Promise<ConvenioDetalle> {
     const { data } = await axios.get(BASE, { params: { convenio } });
     return data;

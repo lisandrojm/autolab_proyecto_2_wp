@@ -828,6 +828,9 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                  */
                 osId: c.obraSocialId ?? null,
                 obraSocialOrigen: c.obraSocialOrigen || "",
+                // Identidad del contrato, para que el cliente NO tenga que direccionarlo por índice: la
+                // posición cambia sola si alguien borra otro contrato mientras esta pantalla está abierta.
+                contratoId: c._id ? String(c._id) : "",
                 obraSocialConstatadaEn: c.obraSocialConstatadaEn || "",
                 obraSocialConstatadaEl: c.obraSocialConstatadaEl || "",
                 // Flujo "Sin CUIT": documentación de respaldo + OK manual (pestaña Sin CUIT de Contratos).

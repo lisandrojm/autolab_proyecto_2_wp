@@ -197,6 +197,10 @@ export const CategoriasArcaTab: React.FC = () => {
 
   const totalCategorias = useMemo(() => (detalle ? detalle.grupos.reduce((acc, g) => acc + g.categorias.length, 0) : 0), [detalle]);
 
+  /** Registrados ante ARCA por alguna empleadora, y de esos los que no tienen ni una categoría. */
+  const registrados = useMemo(() => convenios.filter((c) => c.registrado), [convenios]);
+  const vacios = useMemo(() => registrados.filter((c) => c.categorias === 0), [registrados]);
+
   // ───────────────────────────────── Escala del grupo
   const abrirEscala = (grupo: GrupoConvenio) => {
     setCreandoGrupo(false);
@@ -485,34 +489,81 @@ export const CategoriasArcaTab: React.FC = () => {
           <h2 className="text-sm font-bold text-gray-700 dark:text-gray-200">Elegí un convenio</h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Las categorías profesionales cuelgan de un Convenio Colectivo. La escala salarial vive en sus grupos, no en cada categoría.</p>
         </div>
+        {/*
+         * Chequeo de consistencia, arriba: un convenio registrado ante ARCA y sin categorías es un
+         * bloqueo, no un detalle — ningún alta bajo ese CCT se puede generar. Mismo patrón que los
+         * chequeos de Obras Sociales, y es lo que evita que vuelva a pasar en silencio.
+         */}
+        {vacios.length > 0 && (
+          <div className="rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-4 flex items-start gap-3">
+            <FontAwesomeIcon icon={faTriangleExclamation} className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                {vacios.length} de {registrados.length} convenios registrados no tienen categorías cargadas
+              </p>
+              <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">Ningún contrato puede darse de alta bajo esos convenios: ARCA solo ofrece categorías de los CCT que el CUIT registró, y acá no hay ninguna.</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {vacios.map((c) => (
+                  <button key={c.convenio} type="button" onClick={() => setConvenioSel(c.convenio)} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold border border-amber-400 dark:border-amber-700 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors">
+                    <span className="font-mono">{c.convenio}</span>
+                    {c.nombre}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {convenios.length === 0 ? (
-          <EmptyState icon={faListCheck} title="No hay categorías cargadas" description="Todavía no hay ningún convenio con categorías. Cargalas desde el nomenclador de ARCA." />
+          <EmptyState icon={faListCheck} title="No hay convenios registrados" description="Ninguna empleadora tiene convenios registrados ante ARCA. Registralos en la ficha de la empresa, en ARCA → Convenios." />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {convenios.map((c) => (
-              <button
-                key={c.convenio}
-                onClick={() => setConvenioSel(c.convenio)}
-                className="text-left rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-md transition-all"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-sm font-bold text-blue-700 dark:text-blue-400">{c.convenio}</span>
-                  <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 text-gray-400" />
-                </div>
-                <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100 truncate" title={c.nombre}>
-                  {c.nombre || '(sin descripción en el catálogo de Convenios)'}
-                </div>
-                <div className="mt-3 flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                  <span>
-                    <strong className="text-gray-700 dark:text-gray-300">{c.grupos}</strong> grupos
-                  </span>
-                  <span>
-                    <strong className="text-gray-700 dark:text-gray-300">{c.categorias}</strong> categorías
-                  </span>
-                  <span className="ml-auto">Escala: {formatDate(c.ultimaActualizacion)}</span>
-                </div>
-              </button>
-            ))}
+            {convenios.map((c) => {
+              // Vacío = registrado ante ARCA pero sin categorías. Va en ÁMBAR y no en gris: gris se
+              // lee como "no aplica" y esto es trabajo pendiente que bloquea altas.
+              const vacio = c.categorias === 0;
+              return (
+                <button
+                  key={c.convenio}
+                  onClick={() => setConvenioSel(c.convenio)}
+                  className={`text-left rounded-xl border p-4 hover:shadow-md transition-all ${
+                    vacio
+                      ? 'border-amber-300 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-950/20 hover:border-amber-500 dark:hover:border-amber-600'
+                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-400 dark:hover:border-blue-600'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`font-mono text-sm font-bold ${vacio ? 'text-amber-700 dark:text-amber-400' : 'text-blue-700 dark:text-blue-400'}`}>{c.convenio}</span>
+                    <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 text-gray-400" />
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100 truncate" title={c.nombre}>
+                    {c.nombre || '(sin descripción en el catálogo de Convenios)'}
+                  </div>
+                  {vacio ? (
+                    <div className="mt-3 flex items-center gap-2 text-xs">
+                      {/* "0 grupos · 0 categorías" describe; "Sin categorías cargadas" acciona. */}
+                      <span className="font-semibold text-amber-700 dark:text-amber-400">Sin categorías cargadas</span>
+                      <span className="ml-auto inline-flex items-center gap-1.5 px-2 py-0.5 rounded border border-amber-400 dark:border-amber-700 text-amber-800 dark:text-amber-300 font-semibold">
+                        <FontAwesomeIcon icon={faUpload} className="h-2.5 w-2.5" />
+                        Importar de ARCA
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="mt-3 flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                      <span>
+                        <strong className="text-gray-700 dark:text-gray-300">{c.grupos}</strong> {c.grupos === 1 ? 'grupo' : 'grupos'}
+                      </span>
+                      <span>
+                        <strong className="text-gray-700 dark:text-gray-300">{c.categorias}</strong> {c.categorias === 1 ? 'categoría' : 'categorías'}
+                      </span>
+                      <span className="ml-auto">Escala: {formatDate(c.ultimaActualizacion)}</span>
+                    </div>
+                  )}
+                  {/* Categorías de un CCT que ninguna empleadora registró: ARCA las va a rechazar. */}
+                  {!c.registrado && <p className="mt-2 text-[11px] text-red-700 dark:text-red-400">Ninguna empleadora tiene este convenio registrado ante ARCA.</p>}
+                </button>
+              );
+            })}
           </div>
         )}
         {modalCategoria()}
@@ -855,16 +906,28 @@ export const CategoriasArcaTab: React.FC = () => {
   function modalCategoria() {
     const convenioForm = formCategoria.convenio.trim();
     const opcionesConvenio = (() => {
-      // Los que ya tienen categorías van primero; el resto del catálogo queda disponible para poder
-      // estrenar un convenio (es el caso de "Actor", que hay que mudar a un CCT de actores).
-      const conCategorias = convenios.map((c) => ({ codigo: c.convenio, nombre: c.nombre }));
-      const yaListados = new Set(conCategorias.map((c) => c.codigo));
+      /**
+       * Primero los REGISTRADOS por alguna empleadora, tengan o no categorías.
+       *
+       * Antes iban primero "los que ya tienen categorías", que es el criterio equivocado para el caso
+       * que este modal resuelve: "Actor" hay que mudarla a un CCT de actores, y esos son justamente
+       * los que no tienen ninguna categoría cargada. El primer grupo del combo mostraba entonces todo
+       * menos el destino correcto, y los 2.669 del catálogo quedaban abajo, mezclados.
+       *
+       * ARCA solo acepta categorías de los convenios que el CUIT registró: elegir uno no registrado
+       * produce un alta rechazada, así que ese es el corte que importa.
+       */
+      const registrados = convenios.filter((c) => c.registrado).map((c) => ({ codigo: c.convenio, nombre: c.nombre, categorias: c.categorias }));
+      const yaListados = new Set(registrados.map((c) => c.codigo));
       const resto = catalogoConvenios
         .map((c) => ({ codigo: String(c.externalId || '').trim(), nombre: c.name }))
         .filter((c) => c.codigo && !yaListados.has(c.codigo))
         .sort((a, b) => a.codigo.localeCompare(b.codigo));
-      return { conCategorias, resto };
+      return { registrados, resto };
     })();
+
+    /** El convenio elegido está registrado pero sin categorías: importarlas es mejor que sumar una suelta. */
+    const elegidoVacio = opcionesConvenio.registrados.find((c) => c.codigo === convenioForm && c.categorias === 0);
 
     return (
       <InfoModal
@@ -899,17 +962,18 @@ export const CategoriasArcaTab: React.FC = () => {
               className="input-field w-full"
             >
               <option value="">— Elegir convenio —</option>
-              {opcionesConvenio.conCategorias.length > 0 && (
-                <optgroup label="Con categorías cargadas">
-                  {opcionesConvenio.conCategorias.map((c) => (
+              {opcionesConvenio.registrados.length > 0 && (
+                <optgroup label="Registrados ante ARCA por alguna empleadora">
+                  {opcionesConvenio.registrados.map((c) => (
                     <option key={c.codigo} value={c.codigo}>
                       {c.codigo} — {c.nombre || 'sin descripción'}
+                      {c.categorias === 0 ? ' · sin categorías cargadas' : ''}
                     </option>
                   ))}
                 </optgroup>
               )}
               {opcionesConvenio.resto.length > 0 && (
-                <optgroup label="Resto del catálogo de ARCA">
+                <optgroup label="Resto del catálogo de ARCA (ninguna empleadora los registró)">
                   {opcionesConvenio.resto.map((c) => (
                     <option key={c.codigo} value={c.codigo}>
                       {c.codigo} — {c.nombre}
@@ -919,6 +983,30 @@ export const CategoriasArcaTab: React.FC = () => {
               )}
             </select>
             <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">No viaja al TXT: ARCA lo infiere del código de categoría. Se usa para verificar que la empleadora tenga ese convenio habilitado.</p>
+            {/*
+             * El convenio destino no tiene categorías: crear una suelta a mano deja el convenio con
+             * UNA categoría inventada y las 4 (o 219) reales sin cargar — que es exactamente cómo
+             * nació "Actor". El camino correcto es traerlas del nomenclador.
+             */}
+            {elegidoVacio && (
+              <div className="mt-2 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-2.5">
+                <p className="text-[11px] text-amber-800 dark:text-amber-300">
+                  <strong>{elegidoVacio.codigo}</strong> no tiene ninguna categoría cargada. Sus categorías reales están en el nomenclador de ARCA: importalas en vez de crear una suelta, o vas a terminar con
+                  una categoría inventada y las del convenio sin cargar.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCategoria(false);
+                    setConvenioSel(elegidoVacio.codigo);
+                  }}
+                  className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold border border-amber-400 dark:border-amber-700 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                >
+                  <FontAwesomeIcon icon={faUpload} className="h-2.5 w-2.5" />
+                  Ir a importar las categorías de {elegidoVacio.codigo}
+                </button>
+              </div>
+            )}
           </div>
 
           <div>

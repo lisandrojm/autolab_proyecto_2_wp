@@ -28,7 +28,6 @@ interface RegistroForm {
   generoId: string;
   nivelEstudioId: string;
   nacionalidadId: string;
-  osId: string;
   estadoCivil: string;
   rolFrameId: string;
   // Domicilio
@@ -62,7 +61,6 @@ const emptyForm: RegistroForm = {
   generoId: '',
   nivelEstudioId: '',
   nacionalidadId: '',
-  osId: '',
   estadoCivil: '',
   rolFrameId: '',
   pais: '',
@@ -179,7 +177,7 @@ const InfoSinCuit: React.FC = () => {
   );
 };
 
-/** Selector con modal y buscador, para listas largas (Nacionalidad, Obra social, Rol frame). */
+/** Selector con modal y buscador, para listas largas (Nacionalidad, Rol frame). */
 const SearchableSelect: React.FC<{
   title: string;
   value: string;
@@ -259,7 +257,6 @@ export const RegistroPage: React.FC = () => {
   const [tiposDocumento, setTiposDocumento] = useState<InfoOption[]>([]);
   const [nivelesEstudio, setNivelesEstudio] = useState<InfoOption[]>([]);
   const [nacionalidades, setNacionalidades] = useState<InfoOption[]>([]);
-  const [obrasSociales, setObrasSociales] = useState<InfoOption[]>([]);
   const [bancos, setBancos] = useState<BancoOption[]>([]);
   const [rolesFrame, setRolesFrame] = useState<InfoOption[]>([]);
 
@@ -300,7 +297,6 @@ export const RegistroPage: React.FC = () => {
         // siendo un default: cambiarla reajusta los tipos de documento y muestra el switch del CUIL.
         const argentina = opcionArgentina(nacs);
         if (argentina) setForm((prev) => (prev.nacionalidadId ? prev : { ...prev, nacionalidadId: String(argentina.id) }));
-        setObrasSociales(data.obrasSociales || []);
         setBancos(data.bancos || []);
         setRolesFrame(data.rolesFrame || []);
       } catch {
@@ -509,7 +505,6 @@ export const RegistroPage: React.FC = () => {
         generoId: form.generoId,
         nivelEstudioId: form.nivelEstudioId,
         nacionalidadId: form.nacionalidadId,
-        osId: form.osId,
         estadoCivil: form.estadoCivil,
         rolFrameId: form.rolFrameId,
         pais: form.pais,
@@ -728,11 +723,12 @@ export const RegistroPage: React.FC = () => {
                   </div>
                   {/* Nacionalidad se movió arriba: es la que decide documento y CUIL. */}
                 </div>
+                {/*
+                 * Acá se pedía la Obra social. Se sacó: quien se registra no puede saber qué RNOS le
+                 * corresponde ante ARCA, y es un dato de la RELACIÓN LABORAL, no de la persona —
+                 * vive en el contrato y se constata en el padrón de la SSS al hacerlo.
+                 */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <label className={labelClass}>Obra social</label>
-                    <SearchableSelect title="Obra social" value={form.osId} options={obrasSociales} onChange={(v) => set('osId', v)} />
-                  </div>
                   <div>
                     <label className={labelClass}>Estado civil</label>
                     <select className={fieldClass} value={form.estadoCivil} onChange={(e) => set('estadoCivil', e.target.value)}>
