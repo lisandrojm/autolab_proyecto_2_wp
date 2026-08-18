@@ -140,11 +140,19 @@ export const ConstatarObrasSocialesLote: React.FC<{
   filas: FilaConstatacion[];
   /** Razón social de la empleadora activa, o vacío si están todas. */
   empleadora?: string;
+  /** Id de la empleadora activa. Sin ella no se puede aplicar un lote: la validación del RNOS es por CUIT. */
+  empresaId?: string;
+  /** Recargar el listado después de aplicar un lote (toca muchas filas de una). */
+  onLoteAplicado?: () => void;
   onGuardado: (row: ContractOverviewRow, patch: Partial<ContractOverviewRow>) => void;
-}> = ({ filas, empleadora, onGuardado }) => {
+}> = ({ filas, empleadora, empresaId, onLoteAplicado, onGuardado }) => {
   const [catalogo, setCatalogo] = useState<SimpleCatalogItem[]>([]);
   const [estados, setEstados] = useState<Record<string, EstadoFila>>({});
   const [verTodas, setVerTodas] = useState(false);
+  /** Panel de ida y vuelta con ARCA: copiar los CUIL y pegar lo que devolvió. */
+  const [pegado, setPegado] = useState('');
+  const [aplicando, setAplicando] = useState(false);
+  const [resumen, setResumen] = useState<string[] | null>(null);
 
   useEffect(() => {
     obrasSocialesApi
@@ -196,6 +204,62 @@ export const ConstatarObrasSocialesLote: React.FC<{
     }
   };
 
+  const cuilsPendientes = pendientes.map((f) => soloDigitos(f.row.cuit || '')).filter((c) => c.length === 11);
+
+  const copiarCuils = async () => {
+    try {
+      await navigator.clipboard.writeText(cuilsPendientes.join('\n'));
+      setResumen([`${cuilsPendientes.length} CUIL copiados. Pegalos en el panel del script, en la pestaña de ARCA.`]);
+    } catch {
+      setResumen(['El navegador bloqueó el portapapeles.']);
+    }
+  };
+
+  /**
+   * Aplica lo que devolvió ARCA para toda la tanda.
+   *
+   * El formato es `CUIL,RNOS` por línea, con el RNOS vacío cuando el organismo no devolvió ninguna.
+   * Se parsea acá y no en el server para poder rechazar un pegado sin sentido antes de mandarlo, pero
+   * la validación que importa —que el RNOS exista y esté registrado por la empleadora— es del server:
+   * es la única que puede fallar de verdad.
+   */
+  const aplicarLote = async () => {
+    if (!empresaId) return;
+    const parsed = pegado
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((l) => {
+        const [a, b] = l.split(/[,;\t]/);
+        return { cuil: soloDigitos(a), rnos: soloDigitos(b) };
+      })
+      .filter((f) => f.cuil.length === 11);
+
+    if (parsed.length === 0) {
+      setResumen(['No encontré ninguna línea con un CUIL de 11 dígitos. El formato es CUIL,RNOS por línea.']);
+      return;
+    }
+
+    setAplicando(true);
+    setResumen(null);
+    try {
+      const r = await projectsAPI.aplicarObrasSocialesLote(empresaId, parsed);
+      const lineas = [`${r.aplicados} personas aplicadas (${r.contratosAlcanzados} contratos)${r.noFigura ? `, ${r.noFigura} sin obra social en ARCA` : ''}.`];
+      // Lo que NO entró se enumera con el CUIL: sin eso, "23 de 26" obliga a comparar a mano.
+      if (r.sinContrato.length) lineas.push(`${r.sinContrato.length} sin contrato en esta empleadora: ${r.sinContrato.join(', ')}`);
+      if (r.yaBloqueados.length) lineas.push(`${r.yaBloqueados.length} ya estaban constatados en ARCA y no se pisaron: ${r.yaBloqueados.join(', ')}`);
+      if (r.rnosDesconocido.length) lineas.push(`${r.rnosDesconocido.length} con un RNOS que no está en el catálogo: ${r.rnosDesconocido.map((x) => `${x.cuil}→${x.rnos}`).join(', ')}`);
+      if (r.noRegistrada.length) lineas.push(`${r.noRegistrada.length} con una obra social que la empleadora no tiene registrada ante ARCA (el organismo rechazaría el alta): ${r.noRegistrada.map((x) => `${x.cuil}→${x.nombre}`).join(', ')}`);
+      setResumen(lineas);
+      setPegado('');
+      onLoteAplicado?.();
+    } catch (e: any) {
+      setResumen([e?.response?.data?.error || 'No se pudo aplicar el lote.']);
+    } finally {
+      setAplicando(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* El link va UNA vez y arriba: se abre en otra pestaña y se queda ahí toda la tanda. */}
@@ -213,6 +277,48 @@ export const ConstatarObrasSocialesLote: React.FC<{
           <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
         </a>
       </div>
+
+      {/*
+        * Ida y vuelta con ARCA en una sola corrida.
+        *
+        * Es el camino rápido y el que se usa de verdad: se copian los CUIL, el script los recorre en
+        * la pestaña de ARCA ya logueada y devuelve `CUIL,RNOS`, que se pega acá. La tabla de abajo
+        * sigue estando para el caso suelto y para lo que el lote no pudo resolver.
+        */}
+      {empresaId && cuilsPendientes.length > 0 && (
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2.5">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">Traer todas de una — con el script en la pestaña de ARCA</p>
+            <button type="button" onClick={copiarCuils} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+              <FontAwesomeIcon icon={faCopy} className="h-3 w-3" />
+              Copiar los {cuilsPendientes.length} CUIL
+            </button>
+          </div>
+          <textarea
+            value={pegado}
+            onChange={(e) => setPegado(e.target.value)}
+            placeholder="Pegá acá lo que devolvió el script: una línea por persona, CUIL,RNOS — el RNOS vacío significa que ARCA no devolvió ninguna."
+            className="input-field w-full text-xs font-mono"
+            rows={4}
+          />
+          <div className="flex items-center gap-2 flex-wrap">
+            <button type="button" disabled={aplicando || !pegado.trim()} onClick={aplicarLote} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+              {aplicando ? <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3" /> : <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />}
+              Aplicar lo que devolvió ARCA
+            </button>
+            <span className="text-[11px] text-gray-500 dark:text-gray-400">Cada una queda fija, igual que si se cargara de a una.</span>
+          </div>
+          {resumen && (
+            <ul className="text-[11px] text-gray-700 dark:text-gray-300 space-y-1 pt-1 border-t border-gray-200 dark:border-gray-700">
+              {resumen.map((l, i) => (
+                <li key={i} className={i === 0 ? 'font-semibold text-gray-800 dark:text-gray-100' : 'text-amber-700 dark:text-amber-400'}>
+                  {l}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-xs text-gray-600 dark:text-gray-300">

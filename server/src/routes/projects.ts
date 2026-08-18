@@ -1745,6 +1745,179 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/obra-social"
   }
 });
 
+/**
+ * POST /projects/obras-sociales/aplicar-lote
+ *
+ * Aplica de una vez lo que ARCA devolvió para una tanda de CUIL. Body:
+ *   { empresaId: string, filas: [{ cuil: string, rnos: string }] }
+ *
+ * `rnos` vacío significa que ARCA no devolvió obra social para ese CUIL: se registra como consultado
+ * —igual que el "No devolvió ninguna" del modal— y rige la del convenio.
+ *
+ * Existe porque la constatación es de a una PANTALLA pero de a muchas PERSONAS: el operador entra a
+ * ARCA una vez y sale con 26 respuestas. Aplicarlas con 26 requests desde el cliente dejaba el
+ * resultado a mitad de camino ante cualquier corte, y sin forma de saber cuáles entraron.
+ *
+ * Se direcciona por CUIL y no por contrato porque eso es lo único que ARCA conoce. La traducción
+ * CUIL → contratos la hace el server, y NO es 1 a 1: una persona puede tener varios contratos en la
+ * misma empleadora. Todos reciben la misma obra social —el RNOS es de la persona, aunque se declare
+ * por alta— y la respuesta dice a cuántos alcanzó cada fila.
+ *
+ * Se acota a UNA empleadora a propósito: la validación de "está entre las registradas ante ARCA" es
+ * por CUIT, y mezclar empleadoras en una tanda haría que el mismo RNOS sea válido para unas filas e
+ * inválido para otras dentro del mismo lote.
+ */
+router.post("/projects/obras-sociales/aplicar-lote", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const empresaId = String(req.body?.empresaId || "");
+    const filas: Array<{ cuil?: string; rnos?: string }> = Array.isArray(req.body?.filas) ? req.body.filas : [];
+    if (!Types.ObjectId.isValid(empresaId)) {
+      res.status(400).json({ error: "Falta la empleadora: el lote se aplica a los contratos de un solo CUIT." });
+      return;
+    }
+    if (filas.length === 0) {
+      res.status(400).json({ error: "No llegó ninguna fila para aplicar." });
+      return;
+    }
+    // Tope defensivo: una tanda real son decenas. Miles significa que algo se pegó mal, y conviene
+    // frenarlo antes de escribir que a la mitad.
+    if (filas.length > 500) {
+      res.status(400).json({ error: `Llegaron ${filas.length} filas. El lote está pensado para una tanda de constatación, no para una carga masiva: revisá lo que pegaste.` });
+      return;
+    }
+
+    const empresa = await Company.findById(empresaId).select("obrasSocialesIds razonSocial").lean();
+    if (!empresa) {
+      res.status(404).json({ error: "Empresa no encontrada" });
+      return;
+    }
+    const registradas = new Set(((empresa as any).obrasSocialesIds || []).map((id: any) => String(id)));
+
+    const soloDigitos = (v: unknown) => String(v ?? "").replace(/\D/g, "");
+
+    // Se normalizan y deduplican las filas ANTES de tocar la base: el pegado puede traer la misma
+    // persona dos veces (dos corridas encimadas) y aplicarla dos veces daría dos resultados distintos
+    // si los RNOS no coinciden, sin que nadie lo note.
+    const porCuil = new Map<string, string>();
+    const conflictos: string[] = [];
+    for (const f of filas) {
+      const cuil = soloDigitos(f?.cuil);
+      if (cuil.length !== 11) continue;
+      const rnos = soloDigitos(f?.rnos);
+      if (porCuil.has(cuil) && porCuil.get(cuil) !== rnos) conflictos.push(cuil);
+      porCuil.set(cuil, rnos);
+    }
+    if (porCuil.size === 0) {
+      res.status(400).json({ error: "Ninguna fila tenía un CUIL de 11 dígitos. El formato esperado es CUIL,RNOS por línea." });
+      return;
+    }
+    if (conflictos.length > 0) {
+      res.status(400).json({
+        error: `El mismo CUIL vino con dos obras sociales distintas (${conflictos.slice(0, 3).join(", ")}${conflictos.length > 3 ? "…" : ""}). No se aplicó nada: revisá el pegado antes de reintentar.`,
+      });
+      return;
+    }
+
+    // Catálogo de las obras sociales mencionadas, en una sola consulta.
+    const rnosPedidos = [...new Set([...porCuil.values()].filter(Boolean))];
+    const catalogo = await ObraSocial.find({ externalId: { $in: rnosPedidos } })
+      .select("_id name externalId data")
+      .lean();
+    const porRnos = new Map(catalogo.map((o: any) => [soloDigitos(o.externalId), o]));
+
+    // Usuarios de este tenant por CUIL. `metadata.cuit` guarda el CUIL de la persona.
+    const usuarios = await User.find({ tenantId: req.tenantObjectId, "metadata.cuit": { $exists: true, $ne: "" } })
+      .select("_id metadata.cuit firstName lastName")
+      .lean();
+    const usuariosPorCuil = new Map<string, any[]>();
+    for (const u of usuarios as any[]) {
+      const c = soloDigitos(u?.metadata?.cuit);
+      if (c.length !== 11) continue;
+      usuariosPorCuil.set(c, [...(usuariosPorCuil.get(c) || []), u]);
+    }
+
+    const resultado = {
+      aplicados: 0,
+      contratosAlcanzados: 0,
+      sinContrato: [] as string[],
+      rnosDesconocido: [] as Array<{ cuil: string; rnos: string }>,
+      noRegistrada: [] as Array<{ cuil: string; rnos: string; nombre: string }>,
+      yaBloqueados: [] as string[],
+      noFigura: 0,
+    };
+
+    for (const [cuil, rnos] of porCuil) {
+      const users = usuariosPorCuil.get(cuil) || [];
+      if (users.length === 0) {
+        resultado.sinContrato.push(cuil);
+        continue;
+      }
+
+      // Se resuelve la obra social ANTES de escribir: si el código no existe o la empleadora no lo
+      // tiene registrado, esa fila no se aplica y se informa — pero no frena a las demás. Cortar toda
+      // la tanda por una fila obligaría a rehacer una consulta que ya se hizo.
+      let os: any = null;
+      if (rnos) {
+        os = porRnos.get(rnos) || null;
+        if (!os) {
+          resultado.rnosDesconocido.push({ cuil, rnos });
+          continue;
+        }
+        if (registradas.size > 0 && !registradas.has(String(os._id))) {
+          resultado.noRegistrada.push({ cuil, rnos, nombre: os.name || "" });
+          continue;
+        }
+      }
+
+      const ups = await UserProject.find({ userId: { $in: users.map((u: any) => u._id) }, "contracts.empresaContratoId": new Types.ObjectId(empresaId) });
+      let alcanzados = 0;
+      let bloqueadoAlguno = false;
+
+      for (const up of ups) {
+        let tocado = false;
+        (up.contracts as any[]).forEach((contrato: any, idx: number) => {
+          if (String(contrato?.empresaContratoId || "") !== empresaId) return;
+          // Lo ya sellado en ARCA no se pisa: el lote es para constatar lo pendiente, y una corrida
+          // repetida no puede cambiar en silencio algo que quedó fijo.
+          if (contrato.obraSocialBloqueada === true || (contrato.obraSocialConstatadaEn === "arca" && (contrato.obraSocialId != null || contrato.obraSocialNoFigura === true))) {
+            bloqueadoAlguno = true;
+            return;
+          }
+          up.contracts[idx] = {
+            ...contrato.toObject(),
+            obraSocialId: os ? Number(os?.data?.id) : null,
+            obraSocialOrigen: os ? "constatada" : undefined,
+            obraSocialConstatadaEn: "arca",
+            obraSocialConstatadaEl: new Date(),
+            obraSocialNoFigura: !os,
+            obraSocialBloqueada: true,
+          } as any;
+          tocado = true;
+          alcanzados++;
+        });
+        if (tocado) {
+          up.markModified("contracts");
+          await up.save();
+        }
+      }
+
+      if (alcanzados === 0) {
+        if (bloqueadoAlguno) resultado.yaBloqueados.push(cuil);
+        else resultado.sinContrato.push(cuil);
+        continue;
+      }
+      resultado.aplicados++;
+      resultado.contratosAlcanzados += alcanzados;
+      if (!os) resultado.noFigura++;
+    }
+
+    res.json(resultado);
+  } catch (error) {
+    console.error("Aplicar lote obras sociales error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // PATCH /projects/:projectId/members/:userId/contracts/:index/sucursal-arca - Elige la sucursal del
 // padrón de ARCA (domicilio de desempeño) de un contrato puntual, igual que empresa-contrato.
 //

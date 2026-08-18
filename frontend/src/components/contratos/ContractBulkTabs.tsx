@@ -1580,6 +1580,8 @@ export const ContractBulkAfipTab: React.FC<{
           <ConstatarObrasSocialesLote
             filas={filasConstatacion}
             empleadora={filterEmpresaId && filterEmpresaId !== SIN_EMPRESA ? empresaOptions.find((e) => e.value === filterEmpresaId)?.label : undefined}
+            empresaId={filterEmpresaId && filterEmpresaId !== SIN_EMPRESA ? filterEmpresaId : undefined}
+            onLoteAplicado={() => load(true)}
             onGuardado={(row, patch) => aplicarCambio(row, patch)}
           />
         </Modal>

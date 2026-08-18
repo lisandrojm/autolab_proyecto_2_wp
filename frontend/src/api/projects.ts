@@ -516,6 +516,28 @@ class ProjectsAPI {
   }
 
   /**
+   * Aplica de una vez lo que ARCA devolvió para una tanda de CUIL.
+   *
+   * `rnos` vacío = ARCA no devolvió obra social para ese CUIL: se registra como consultado y rige la
+   * del convenio. Es una respuesta, no una fila que falte.
+   */
+  async aplicarObrasSocialesLote(
+    empresaId: string,
+    filas: Array<{ cuil: string; rnos: string }>,
+  ): Promise<{
+    aplicados: number;
+    contratosAlcanzados: number;
+    sinContrato: string[];
+    rnosDesconocido: Array<{ cuil: string; rnos: string }>;
+    noRegistrada: Array<{ cuil: string; rnos: string; nombre: string }>;
+    yaBloqueados: string[];
+    noFigura: number;
+  }> {
+    const { data } = await axios.post(`/projects/obras-sociales/aplicar-lote`, { empresaId, filas }, { headers: this.getHeaders() });
+    return data;
+  }
+
+  /**
    * Elige la actividad del domicilio de desempeño de un contrato puntual. Solo hace falta cuando la
    * sucursal tiene más de una actividad declarada; con una sola se hereda. Pasar "" para desasignarla.
    */
