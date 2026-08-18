@@ -4,7 +4,7 @@ import { createSimpleCatalogRouter } from "./_simpleCatalogRouter.js";
 // CÓDIGO que va en el TXT de alta, con sus ceros a la izquierda: se conserva tal cual, sin sanitizar.
 const router = createSimpleCatalogRouter(ArcaModalidadContratacion, {
     entityLabel: "Modalidad de contratación",
-    sheetName: "Modalidades de Contratación",
+    sheetName: "Modalidades de Contrato",
     templateFilename: "plantilla_arca_modalidades_contratacion.xlsx",
     sampleNames: ["A tiempo completo indeterminado/Trabajo permanente", "A tiempo completo determinado (contrato a plazo fijo)"],
     externalIdExcelHeader: "Código (3 díg.)",

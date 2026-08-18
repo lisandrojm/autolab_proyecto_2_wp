@@ -34,6 +34,8 @@
     "categorias:auditar-nombres": "dotenv -e .env.production -- tsx src/scripts/auditarNombresCategorias.ts",
     "categorias:importar:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/importarCategoriasArca.ts",
     "categorias:importar": "dotenv -e .env.production -- tsx src/scripts/importarCategoriasArca.ts",
+    "tipos-servicio:grupo:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/backfillGrupoTipoServicio.ts",
+    "tipos-servicio:grupo": "dotenv -e .env.production -- tsx src/scripts/backfillGrupoTipoServicio.ts",
     "test:additive": "tsx --test src/utils/additiveSync.test.ts",
     "test:constancia": "tsx --test src/utils/constanciaPdf.test.ts"
   },

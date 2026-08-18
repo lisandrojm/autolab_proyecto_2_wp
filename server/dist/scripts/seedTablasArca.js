@@ -28,7 +28,7 @@ const DRY_RUN = process.env.DRY_RUN === "true";
 const CSV_PATH = process.env.CSV || "";
 /** Tabla del CSV → colección destino y largo del código en el TXT. */
 const TABLAS = [
-    { csv: "MODALIDAD_CONTRATACION", coleccion: "arca-modalidades-contratacion", largo: 3, etiqueta: "Modalidades de contratación" },
+    { csv: "MODALIDAD_CONTRATACION", coleccion: "arca-modalidades-contratacion", largo: 3, etiqueta: "Modalidades de Contrato" },
     { csv: "TIPO_SERVICIO", coleccion: "arca-tipos-servicio", largo: 3, etiqueta: "Tipos de servicio" },
     { csv: "MODALIDAD_LIQUIDACION", coleccion: "arca-modalidades-liquidacion", largo: 1, etiqueta: "Modalidades de liquidación" },
 ];

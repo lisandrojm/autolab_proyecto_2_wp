@@ -12,6 +12,17 @@ import { Document, Model } from "mongoose";
 export interface IArcaTipoServicio extends Document {
     externalId: string;
     name: string;
+    /**
+     * Código del Grupo de Tipo de Servicio (`l_GTS`): "1" continuos, "2" discontinuos.
+     *
+     * NO viaja en el TXT — el registro de 130 posiciones no le reserva ninguna. Está para desambiguar
+     * el selector: 49 nombres de este catálogo aparecen dos veces (98 registros), y sin el grupo las
+     * dos filas se ven idénticas. Ver `models/ArcaGrupoTipoServicio.ts`.
+     *
+     * Vacío = todavía no se clasificó. No se asume ningún grupo por defecto: elegir mal acá es escribir
+     * otro código en las posiciones 107-109.
+     */
+    grupo?: string;
     data: {
         id: number;
         nombre: string;

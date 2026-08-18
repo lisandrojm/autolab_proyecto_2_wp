@@ -77,11 +77,26 @@ function parseCsv(texto: string): string[][] {
   return filas;
 }
 
-/** "DIRECTOR DE PROGRAMAS - GRUPO 1" → { nombre: "DIRECTOR DE PROGRAMAS", grupo: 1 }. */
-const partirDescripcion = (descripcion: string): { nombre: string; grupo: number | null } => {
-  const m = descripcion.match(/^(.*?)\s*-\s*GRUPO\s+(\d+)\s*$/i);
-  if (!m) return { nombre: descripcion.trim(), grupo: null };
-  return { nombre: m[1].trim(), grupo: Number(m[2]) };
+/**
+ * Separa el grupo salarial que ARCA embebe en la descripción. Hay DOS formas, y reconocer una sola
+ * no es un detalle cosmético: la categoría que no cae en ninguna se lleva un grupo propio, así que
+ * un convenio con 219 categorías genera 219 escalas para cargar a mano en vez de 3.
+ *
+ *   sufijo   0634/11  "DIRECTOR DE PROGRAMAS - GRUPO 1"   → grupo 1, sin nombre
+ *   prefijo  0131/75  "1ª CATEGORIA - ASISTENTE DE DIRECCION" → grupo 1, llamado "1ª CATEGORIA"
+ *
+ * El ordinal se matchea por code point (`ª` ª / `º` º / `°` °) y no con el carácter
+ * literal: escrito a mano, cualquier reguardado del archivo con otro encoding lo rompe en silencio y
+ * el script vuelve a la rama de "un grupo por categoría" sin decir nada.
+ */
+const partirDescripcion = (descripcion: string): { nombre: string; grupo: number | null; nombreGrupo: string } => {
+  const sufijo = descripcion.match(/^(.*?)\s*-\s*GRUPO\s+(\d+)\s*$/i);
+  if (sufijo) return { nombre: sufijo[1].trim(), grupo: Number(sufijo[2]), nombreGrupo: "" };
+
+  const prefijo = descripcion.match(/^((\d+)\s*[ªº°]?\s*CATEGORIA)\s*-\s*(.+)$/i);
+  if (prefijo) return { nombre: prefijo[3].trim(), grupo: Number(prefijo[2]), nombreGrupo: prefijo[1].trim() };
+
+  return { nombre: descripcion.trim(), grupo: null, nombreGrupo: "" };
 };
 
 async function run() {
@@ -131,9 +146,21 @@ async function run() {
     const sinGrupoPropio: Array<{ codigo: string; nombre: string }> = [];
     const asignaciones: Array<{ codigo: string; nombre: string; descripcion: string; grupo: number; nombreGrupo: string }> = [];
     for (const it of items) {
-      const { nombre, grupo } = partirDescripcion(it.descripcion);
+      const { nombre, grupo, nombreGrupo } = partirDescripcion(it.descripcion);
       if (grupo === null) sinGrupoPropio.push({ codigo: it.codigo, nombre });
-      else asignaciones.push({ codigo: it.codigo, nombre, descripcion: it.descripcion, grupo, nombreGrupo: "" });
+      else asignaciones.push({ codigo: it.codigo, nombre, descripcion: it.descripcion, grupo, nombreGrupo });
+    }
+
+    // Dos nombres distintos reclamando el mismo número serían dos escalas fusionadas en silencio (un
+    // "GRUPO 1" y una "1ª CATEGORIA" en el mismo CCT). No pasa en los datos de hoy; si algún día
+    // pasa, es mejor que el script se plante a que las junte.
+    const nombresPorNumero = new Map<number, Set<string>>();
+    for (const a of asignaciones.filter((x) => x.nombreGrupo)) {
+      if (!nombresPorNumero.has(a.grupo)) nombresPorNumero.set(a.grupo, new Set());
+      nombresPorNumero.get(a.grupo)!.add(a.nombreGrupo);
+    }
+    for (const [numero, nombres] of nombresPorNumero) {
+      if (nombres.size > 1) throw new Error(`${cct}: el grupo ${numero} aparece con dos nombres distintos (${[...nombres].join(" / ")}). Revisá el CSV antes de importar.`);
     }
     // Numeración de los grupos inventados: arranca después del último que ARCA sí nombró, para no
     // pisar un "GRUPO 3" real con un grupo sintético que casualmente cayó tercero.
@@ -176,6 +203,11 @@ async function run() {
     let creadas = 0;
     for (const a of asignaciones.sort((x, y) => x.grupo - y.grupo || x.codigo.localeCompare(y.codigo))) {
       if (yaCargadas.has(a.codigo)) continue;
+      // Se marca ACÁ y no solo al leer la base: el propio export de ARCA repite filas textualmente
+      // (0131/75 trae dos veces "2ª CATEGORIA - OPERADOR TECNICO DE PLANTA TRANSMISORA", código
+      // 000401), y sin esto la primera corrida crea las dos. El código es la identidad de la
+      // categoría dentro del convenio; dos filas con el mismo código son la misma categoría.
+      yaCargadas.add(a.codigo);
       const grupo = gruposExistentes.get(a.grupo);
       if (!DRY_RUN) {
         await db.collection("categorias").insertOne({
