@@ -73,16 +73,34 @@ al `tbody`, su texto tiene todos los CUIL de la grilla y el primero es el de otr
 input se emparejaría con el mismo y las obras sociales quedarían corridas, con todas las filas
 viéndose bien. Si aparecen dos o más, **la corrida frena** en vez de exportar algo dudoso.
 
-## Dos casos que nunca se resuelven adivinando
+## La sesión de ARCA dura poco — y el script cuenta con eso
+
+Verificado en la pantalla real: la sesión se vence **en medio de una tanda** con toda naturalidad. En
+20 personas es probable que pase. No es una falla: es parte del flujo normal.
+
+Cuando pasa, el script **frena y conserva la cola**:
+
+> ⏸ Se venció la sesión de ARCA. Volvé a loguearte y reabrí "Registrar Nuevas Altas".
+> Quedan 14 por constatar — el script sigue solo.
+
+Volvés a entrar, abrís esa pantalla y retoma donde iba. Contá con loguearte **una o dos veces** por
+tanda; todo lo demás lo hace el script.
+
+## Tres casos que nunca se resuelven adivinando
 
 Lo que el script devuelve se guarda **fijo, con candado**, del lado de WeProdu: un dato mal leído no
-se corrige solo.
+se corrige solo. Un vacío en el pegado significa *"ARCA dijo que esta persona no tiene obra social"*,
+así que solo se emite cuando la fila apareció y el campo vino en blanco.
 
+- **Sesión vencida** → frena sin tocar los pendientes. Se chequea **antes** de leer nada del DOM: con
+  la sesión caída, cualquier cosa que se dedujera de la página sería falsa.
+- **La fila no apareció** (CUIL inválido, ya con relación activa, un popup) → va a *no se pudieron
+  consultar*, se lista aparte y **no** se exporta. Esa persona sigue apareciendo como pendiente.
 - **Emparejamiento ambiguo** → frena y avisa. No exporta nada.
-- **CUIL que ARCA rechaza** (mal tipeado, inexistente, ya dado de alta) → tras dos intentos va a la
-  lista de *no se pudieron agregar*, y **no** se exporta como `CUIL,` vacío. Un vacío significa "no
-  tiene obra social" y se sellaría como constatado: esa persona quedaría con un dato falso e
-  inmutable. Así, sigue apareciendo como pendiente.
+
+El error que estas tres reglas evitan es el mismo: declarar en silencio *"sin obra social"* a alguien
+que sí tiene, sellarlo con candado, y que sus aportes vayan a la obra social equivocada sin que nadie
+se entere.
 
 ## Si deja de encontrar algo
 

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WeProdu — Constatar obras sociales en ARCA
 // @namespace    weprodu
-// @version      1.1
+// @version      1.2
 // @description  Recorre una lista de CUIL en Registrar Nuevas Altas, lee la obra social que ARCA precompleta y devuelve CUIL,RNOS. No confirma ninguna alta.
 // @match        https://serviciossegsoc.afip.gob.ar/tramites_con_clave_fiscal/MiSimplificacion/app/Contribuyente/RelacionLaboral/Altas.aspx*
 // @run-at       document-idle
@@ -18,16 +18,21 @@
 
   IMPORTANTE
   - NUNCA aprieta "Aceptar". Solo escribe, Agrega y lee. No registra ninguna alta. `btnAgregar()`
-    exige que el rótulo del control sea exactamente "Agregar", y es el único que se clickea.
+    exige que el rótulo sea exactamente "Agregar", y es el único control que se clickea.
   - La cola vive en localStorage y el script se re-ejecuta en cada recarga: por eso sobrevive los
     postbacks. Es reanudable: si recargás a mano, sigue donde iba.
-  - No guarda ni ve tu clave fiscal. Corre en la sesión que vos abriste. Esa es la decisión de fondo:
-    WeProdu nunca toca la credencial de AFIP, y el login manual es la garantía, no una limitación.
+  - No guarda ni ve tu clave fiscal. Corre en la sesión que vos abriste.
 
-  DOS COSAS QUE NO PUEDEN FALLAR EN SILENCIO
-  Lo que este script devuelve se guarda FIJO, con candado, en WeProdu. Un dato mal leído no se
-  corrige solo: queda sellado. Por eso hay dos casos donde prefiere frenar o excluir antes que
-  adivinar — ver `cuilDeLaFila()` y la lista `fallidos`.
+  TRES COSAS QUE NUNCA SE RESUELVEN ADIVINANDO
+  Lo que este script devuelve se guarda FIJO, con candado, en WeProdu: un dato mal leído no se
+  corrige solo. Por eso hay tres casos donde prefiere frenar o excluir antes que suponer:
+
+    1. Sesión vencida  -> frena y conserva la cola. Ver `sesionExpirada()`.
+    2. Fila que no apareció -> va a `errores`, NO se exporta como vacío. Ver el paso 2 de `procesar()`.
+    3. Emparejamiento ambiguo -> frena. Ver `cuilDeLaFila()`.
+
+  Un vacío en el pegado significa "ARCA dijo que esta persona no tiene obra social", y WeProdu lo
+  aplica como tal. Solo se emite cuando la fila apareció y el campo vino en blanco.
 */
 
 (function () {
@@ -57,6 +62,20 @@
       if (/^Agregar$/i.test(t)) return cands[i];
     }
     return null;
+  }
+
+  /*
+    ¿Se cayó la sesión de ARCA?
+
+    Dura poco —se vence en medio de una tanda de 20 con toda naturalidad— y al vencerse la página
+    pasa a "Su tiempo de sesión ha finalizado". Sin detectarlo, el Agregar no produce fila y el CUIL
+    en curso se contabilizaría como problema suyo cuando en realidad no se pudo consultar. Detectado,
+    se frena sin tocar los pendientes: la cola sobrevive al relogin y el script retoma solo.
+  */
+  function sesionExpirada() {
+    if (inputCuil()) return false; // si está el campo de CUIL, la sesión vive
+    var txt = (document.body.textContent || '');
+    return /sesi[oó]n ha finalizado|no ha iniciado su sesi[oó]n|ingrese con su clave fiscal/i.test(txt);
   }
 
   /*
@@ -93,7 +112,7 @@
       var valEl = document.getElementById(os.id.replace('_AutocompleteText', '_AutocompleteValue'));
       if (valEl && valEl.value) code = valEl.value.replace(/\D/g, '');
       if (!code) code = (os.value || '').replace(/\D/g, '');
-      out[cuil] = code; // '' es válido: significa que ARCA no tiene obra social para esa persona
+      out[cuil] = code; // '' es válido: ARCA no tiene obra social para esa persona
     }
     return { filas: out, ambiguas: ambiguas };
   }
@@ -156,19 +175,21 @@
       lista = lista.filter(function (v, i) { return lista.indexOf(v) === i; }); // dedupe
       ov.remove();
       if (!lista.length) { badge('No encontré CUIL válidos.', '#d29922'); botonInicio(); return; }
-      save({ active: true, orden: lista.slice(), pendientes: lista.slice(), hechos: {}, fallidos: [], last: null, stuck: 0 });
+      save({ active: true, orden: lista.slice(), pendientes: lista.slice(), hechos: {}, errores: {}, last: null });
       procesar();
     };
   }
 
   function mostrarResultado(s) {
-    // Solo se exporta lo que ARCA efectivamente contestó. Los fallidos van aparte, NO como fila
-    // vacía: ver el comentario en `procesar()`.
-    var exportables = s.orden.filter(function (c) { return c in s.hechos; });
+    var err = s.errores || {};
+    // Solo se exporta lo que ARCA efectivamente contestó. Los que fallaron NO van: una línea
+    // `CUIL,` vacía se aplica como "no tiene obra social" y queda sellada con candado.
+    var exportables = s.orden.filter(function (c) { return !err[c]; });
     var texto = exportables.map(function (c) { return c + ',' + (s.hechos[c] || ''); }).join('\n');
     var conOS = exportables.filter(function (c) { return s.hechos[c]; }).length;
     var sinOS = exportables.length - conOS;
-    var fallidos = s.fallidos || [];
+    var fallidos = s.orden.filter(function (c) { return err[c]; });
+
     var ov = document.createElement('div');
     ov.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(1,4,9,.7);display:flex;align-items:center;justify-content:center';
     ov.innerHTML =
@@ -176,7 +197,7 @@
       '<div style="font-size:16px;font-weight:600;margin-bottom:6px">Listo — ' + exportables.length + ' constatadas</div>' +
       '<div style="color:#8b949e;margin-bottom:10px">' + conOS + ' con obra social · ' + sinOS + ' sin afiliación (queda la del convenio). Copiá y pegá en WeProdu.</div>' +
       (fallidos.length
-        ? '<div style="color:#d29922;margin-bottom:10px;font-size:12px">⚠ ' + fallidos.length + ' no se pudieron agregar en ARCA y quedan SIN constatar (revisá esos CUIL a mano): ' + fallidos.join(', ') + '</div>'
+        ? '<div style="color:#d29922;margin-bottom:10px;font-size:12px">⚠ ' + fallidos.length + ' no se pudieron consultar y NO van en el pegado (quedan sin constatar): ' + fallidos.join(', ') + '</div>'
         : '') +
       '<textarea id="__weprodu_out" readonly style="width:100%;height:170px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font:12px ui-monospace,monospace;padding:8px"></textarea>' +
       '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">' +
@@ -198,17 +219,28 @@
     var s = load();
     if (!s || !s.active) { botonInicio(); return; }
 
+    // 0) ¿se venció la sesión de ARCA? -> PARAR sin tocar los pendientes.
+    //    La cola queda guardada: cuando el operador vuelve a loguearse y reabre Registrar Nuevas
+    //    Altas, el script retoma solo desde donde iba. Esto va PRIMERO, antes de cosechar o de
+    //    marcar nada: con la sesión caída, todo lo que se dedujera del DOM sería falso.
+    if (sesionExpirada()) {
+      badge('⏸ Se venció la sesión de ARCA.<br>' +
+            '<span style="color:#8b949e">Volvé a loguearte y reabrí “Registrar Nuevas Altas”.<br>' +
+            'Quedan ' + s.pendientes.length + ' por constatar — el script sigue solo.</span>', '#d29922');
+      return; // NO marcar nada
+    }
+
     // 1) leer todo lo que ya está agregado y guardarlo (idempotente)
     var lectura = leerFilas();
     var filas = lectura.filas;
 
     // Emparejamiento ambiguo: se FRENA. Seguir significaría exportar obras sociales posiblemente
-    // corridas, y del otro lado se guardan fijas con candado. Mejor cortar y revisar la página.
+    // corridas, y del otro lado se guardan fijas con candado.
     if (lectura.ambiguas > 0) {
       s.active = false;
       save(s);
       badge('⚠ Frené: no pude emparejar ' + lectura.ambiguas + ' fila(s) con su CUIL.<br>' +
-            '<span style="color:#8b949e">La estructura de la grilla cambió. No exporto nada dudoso: revisá la página antes de seguir.</span>', '#d29922');
+            '<span style="color:#8b949e">La estructura de la grilla cambió. No exporto nada dudoso: revisá la página.</span>', '#d29922');
       return;
     }
 
@@ -221,23 +253,17 @@
     if (s.pendientes.length) {
       var next = s.pendientes[0];
 
-      // Control de atascado: si el CUIL que mandé no aparece como fila, ARCA lo rechazó (mal tipeado,
-      // inexistente, o ya dado de alta). NO se guarda como '' — un vacío significa "no tiene obra
-      // social" y del otro lado se sella con candado, así que un CUIL rechazado quedaría registrado
-      // como constatado sin afiliación, que es un dato falso e inmutable. Va a `fallidos` y se
-      // reporta aparte, para que esa persona siga apareciendo como pendiente.
+      // Intenté `next` la vuelta pasada y NO apareció como fila, con la sesión viva: es un problema
+      // de ESE CUIL en ARCA (inválido, ya con relación activa, un popup). Se marca ERROR y se sigue.
+      // NUNCA vacío: vacío significa "ARCA dijo que no tiene obra social", y eso solo se sabe si la
+      // fila apareció. Marcarlo vacío sellaría con candado un dato falso.
       if (s.last === next && !(next in filas)) {
-        s.stuck = (s.stuck || 0) + 1;
-        if (s.stuck >= 2) {
-          s.fallidos = s.fallidos || [];
-          s.fallidos.push(next);
-          s.pendientes.shift();
-          s.last = null; s.stuck = 0;
-          save(s);
-          return procesar();             // seguir con el siguiente sin recargar
-        }
-      } else {
-        s.stuck = 0;
+        s.errores = s.errores || {};
+        s.errores[next] = true;
+        s.pendientes.shift();
+        s.last = null;
+        save(s);
+        return procesar(); // seguir con el siguiente sin recargar
       }
 
       s.last = next;
