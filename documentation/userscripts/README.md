@@ -31,14 +31,14 @@ donde iba. Por eso la cola vive en `localStorage` y no en memoria.
 
 1. **WeProdu** → Contratos → Alta temprana → elegí la empleadora → *"N obras sociales sin constatar"*
    → **Copiar los N CUIL a constatar**.
-2. **ARCA** → logueate en [auth.afip.gob.ar](https://auth.afip.gob.ar/contribuyente_/login.xhtml) →
-   Simplificación Registral → elegí el CUIT de esa empleadora → Relaciones Laborales →
-   **Registrar Nuevas Altas**.
+2. **ARCA** → entrá por [auth.afip.gob.ar](https://auth.afip.gob.ar/contribuyente_/login.xhtml) con
+   clave fiscal → **Simplificación Registral - Empleadores** → elegí el CUIT de esa empleadora →
+   Relaciones Laborales → **Registrar Nuevas Altas**.
 
-   Con la sesión ya abierta se entra directo por
-   `MiSimplificacion/app/Contribuyente/DatosBasicos.aspx`. Ojo con
-   `login/indexContribuyente.aspx`: sin sesión viva redirige a `FinSession.aspx` y parece un link
-   roto.
+   No hay atajo por URL: cualquier link profundo a `MiSimplificacion/app/...` —incluidos
+   `login/indexContribuyente.aspx` y `Contribuyente/DatosBasicos.aspx`— redirige a `FinSession.aspx`
+   ("su tiempo de sesión ha finalizado") si no hay una sesión viva **del servicio**, que es propia y
+   no se hereda de estar logueado en ARCA. Por eso WeProdu enlaza siempre el login.
 3. Abajo a la derecha aparece el panel del script → **▶ Constatar obras sociales** → pegá los CUIL.
    Recorre la lista solo; podés frenar y reanudar.
 4. Al terminar copia `CUIL,RNOS` al portapapeles → volvé a WeProdu y pegalo → **Revisar lo que
