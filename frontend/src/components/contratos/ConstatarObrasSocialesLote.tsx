@@ -227,13 +227,22 @@ export const ConstatarObrasSocialesLote: React.FC<{
   /** Con guiones: es como los pide el formulario de ARCA, así se pegan sin retocarlos. */
   const conGuiones = (c: string) => `${c.slice(0, 2)}-${c.slice(2, 10)}-${c.slice(10)}`;
 
-  const copiarCuils = async () => {
+  /**
+   * Copiar los CUIL y abrir ARCA, en un solo gesto.
+   *
+   * Eran dos botones separados y siempre se apretaban juntos: copiar sin ir a ARCA no sirve para
+   * nada, e ir sin haber copiado obliga a volver. Se abre DESPUÉS de copiar y solo si copió — con la
+   * pestaña nueva ya en foco, un fallo del portapapeles pasaría desapercibido.
+   */
+  const copiarYAbrir = async () => {
     try {
       await navigator.clipboard.writeText(cuilsPendientes.map(conGuiones).join('\n'));
-      setResumen([`${cuilsPendientes.length} CUIL copiados. Pegalos en el panel del script, en la pestaña de ARCA.`]);
     } catch {
-      setResumen(['El navegador bloqueó el portapapeles.']);
+      setResumen(['El navegador bloqueó el portapapeles: copiá los CUIL a mano desde la tabla de abajo.']);
+      return;
     }
+    setResumen([`${cuilsPendientes.length} CUIL copiados. En ARCA, apretá «▶ Constatar obras sociales» y pegalos.`]);
+    window.open(LOGIN_AFIP_URL, '_blank', 'noopener,noreferrer');
   };
 
   /**
@@ -316,10 +325,11 @@ export const ConstatarObrasSocialesLote: React.FC<{
             Lo que contesta ARCA queda fijo. <strong>Que no devuelva ninguna también es una respuesta</strong>: se registra con fecha, rige la del convenio y esa persona no vuelve a aparecer como pendiente. <strong>No completes el alta en ARCA</strong> — el alta sale del TXT.
           </p>
         </div>
-        <a href={LOGIN_AFIP_URL} target="_blank" rel="noreferrer" className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700">
-          Entrar a ARCA
+        <button type="button" onClick={copiarYAbrir} disabled={cuilsPendientes.length === 0} className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+          <FontAwesomeIcon icon={faCopy} className="h-3 w-3" />
+          Copiar {cuilsPendientes.length} CUIL y abrir ARCA
           <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
-        </a>
+        </button>
       </div>
 
       {/*
@@ -333,9 +343,9 @@ export const ConstatarObrasSocialesLote: React.FC<{
         <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">Traer todas de una, con el script</p>
-            <button type="button" onClick={copiarCuils} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+            <button type="button" onClick={copiarYAbrir} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
               <FontAwesomeIcon icon={faCopy} className="h-3 w-3" />
-              Copiar los {cuilsPendientes.length} CUIL a constatar
+              Copiar los {cuilsPendientes.length} CUIL y abrir ARCA
             </button>
           </div>
 
@@ -343,7 +353,7 @@ export const ConstatarObrasSocialesLote: React.FC<{
               poder mirarlos mientras se ejecutan. */}
           <ol className="text-[11px] text-gray-600 dark:text-gray-400 space-y-1 list-decimal pl-4">
             <li>
-              Logueate en ARCA → Simplificación Registral → elegí <strong>{empleadora || 'la empleadora'}</strong> → Relaciones Laborales → <em>Registrar Nuevas Altas</em>.
+              El botón de arriba copia los CUIL y abre ARCA. Ahí: entrá con clave fiscal → Simplificación Registral → elegí <strong>{empleadora || 'la empleadora'}</strong> → Relaciones Laborales → <em>Registrar Nuevas Altas</em>.
             </li>
             <li>
               Apretá <strong>▶ Constatar obras sociales</strong> (el botón del script, abajo a la derecha) y pegá los CUIL.

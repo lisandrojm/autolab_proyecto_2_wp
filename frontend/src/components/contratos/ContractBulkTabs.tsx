@@ -1160,9 +1160,9 @@ export const ContractBulkAfipTab: React.FC<{
             {/* La constatación de obras sociales no bloquea el TXT, así que va como contador aparte y
                 no dentro de "incompletos": es trabajo pendiente de verificación, no un dato faltante. */}
             {countSinConstatar > 0 && (
-              <button onClick={() => setLoteObrasSociales(true)} title="Constatar en ARCA (Registrar Nuevas Altas) a quiénes les falta" className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold border transition-colors bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200/60 dark:border-blue-800/60 hover:bg-blue-100 dark:hover:bg-blue-900/30">
+              <button onClick={() => setLoteObrasSociales(true)} title="Copiar los CUIL de esta empleadora y traerlas de ARCA en una corrida" className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold border transition-colors bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200/60 dark:border-blue-800/60 hover:bg-blue-100 dark:hover:bg-blue-900/30">
                 <FontAwesomeIcon icon={faStethoscope} className="h-3 w-3" />
-                {countSinConstatar} obra{countSinConstatar === 1 ? '' : 's'} social{countSinConstatar === 1 ? '' : 'es'} sin constatar
+                Constatar obras sociales en ARCA ({countSinConstatar})
               </button>
             )}
           </div>
