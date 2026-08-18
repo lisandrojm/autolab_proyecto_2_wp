@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faArrowUpRightFromSquare, faTrash, faUpload } from '@fortawesome/free-solid-svg-icons';
+import { faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faArrowUpRightFromSquare, faTrash, faUpload } from '@fortawesome/free-solid-svg-icons';
 import { usersAPI, ContractOverviewRow, Contract, SinCuitValidacion } from '../../api/users';
 import { projectsAPI } from '../../api/projects';
 import { companiesAPI, Company } from '../../api/companies';
@@ -10,7 +10,7 @@ import { contratosAPI, ContratoItem } from '../../api/contratos';
 import { categoriaSatAPI, CategoriaSatItem } from '../../api/categoriasSat';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { arcaSucursalesAPI, ArcaSucursal } from '../../api/arcaSucursales';
-import { DatosArcaDetalle, BadgeArca } from './DatosArcaDetalle';
+import { DatosArcaDetalle, BadgeArca, ProgresoArca } from './DatosArcaDetalle';
 import { Release } from '../../api/release';
 import { firmaDigitalAPI, FirmaDigitalConfig } from '../../api/firmaDigital';
 import { afipAPI } from '../../api/afip';
@@ -25,6 +25,7 @@ import { Modal } from '../ui/Modal';
 import { ContractDocsColumns, ContractDocsHeaders, ContractActionsButtons, ContractActionsCell, ContractActionsHeader, downloadContractRow, downloadReleaseRow, uploadAltaRow } from './ContractRowDocs';
 import { resolveAfip, resolveAfipValues, AfipRowResult, AfipValues } from './afipCompleteness';
 import { buildAltaRecord, buildAltaTxt, downloadTxt } from './afipTxt';
+import { ConstatarObrasSocialesLote, FilaConstatacion } from './ConstatarObrasSocialesLote';
 import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, cuitEsValido, fmtCuit, cuitDisplay, noPoseeCuit } from './ConstanciaBulk';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { cachedFetch, invalidateRefCache, updateRefCache } from '../../utils/refCache';
@@ -608,7 +609,14 @@ export const ContractBulkAfipTab: React.FC<{
   const [arcaSucursales, setArcaSucursales] = useState<ArcaSucursal[]>([]);
   const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
   // Detalle de completitud de una fila (modal).
-  const [detalle, setDetalle] = useState<{ row: ImpositivoRow; result: AfipRowResult } | null>(null);
+  /**
+   * Detalle de "Datos ARCA" abierto. Se guarda la IDENTIDAD de la fila, no la fila.
+   *
+   * Guardar `{ row, result }` congelaba una copia del momento en que se abrió el modal: al elegir la
+   * empresa (o la obra social) desde adentro, el patch actualizaba la grilla pero el modal seguía
+   * mostrando los datos viejos. Con la identidad, `detalle` se recalcula solo de `impositivoRows`.
+   */
+  const [detalleRef, setDetalleRef] = useState<{ _id: string; contractIndex: number } | null>(null);
   // Detalle de los datos para la Constancia de CUIT/CUIL (único requisito: el CUIT/CUIL).
   const [constancia, setConstancia] = useState<{ row: ImpositivoRow; cuil: string } | null>(null);
   // Explicación de qué hace la columna "Verificar (Opc)" (modal informativo).
@@ -817,6 +825,19 @@ export const ContractBulkAfipTab: React.FC<{
     return out;
   }, [rows, impositivoPorClave, afipCat]);
 
+  // Si la fila deja de ser impositiva (le cambiaron el estado), el modal se cierra solo: mostrar el
+  // detalle ARCA de un contrato que ya no está en el listado sería peor que cerrarlo.
+  const detalle = useMemo(() => (detalleRef ? impositivoRows.find((x) => x.row._id === detalleRef._id && x.row.contractIndex === detalleRef.contractIndex) || null : null), [impositivoRows, detalleRef]);
+
+  /**
+   * Constatación de obras sociales EN LOTE.
+   *
+   * Vive acá y no en una pantalla aparte porque el corte que importa —qué empleadora— ya está hecho
+   * por las pestañas de arriba: el padrón se consulta por CUIL, pero el RNOS se declara por contrato
+   * y es de la empleadora que presenta el alta.
+   */
+  const [loteObrasSociales, setLoteObrasSociales] = useState(false);
+
   // Filtros de la barra superior (búsqueda + filtro avanzado), sin el trámite ni los toggles propios
   // de cada pestaña: se usa tanto para la tabla como para los contadores de las pestañas, que deben
   // reflejar los filtros activos (p. ej. "Contratos: Vigentes") aunque pertenezcan al otro trámite.
@@ -861,6 +882,19 @@ export const ContractBulkAfipTab: React.FC<{
   );
 
   const rowsPorFiltrosComunes = useMemo(() => impositivoRows.filter((x) => matchesCommonFilters(x.row) && matchesEmpresa(x.row)), [impositivoRows, matchesCommonFilters, matchesEmpresa]);
+
+  // Filas del lote de obras sociales: las mismas que se están mirando (filtros + empleadora), con sus
+  // valores ya resueltos. Solo se calculan con el lote abierto: son ~500 resoluciones completas de la
+  // cascada y no hacen falta para pintar la tabla.
+  const filasConstatacion = useMemo<FilaConstatacion[]>(
+    () => (loteObrasSociales ? rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'alta_temprana_afip').map((x) => ({ row: x.row, valores: resolveAfipValues(x.row, afipCat) })) : []),
+    [loteObrasSociales, rowsPorFiltrosComunes, afipCat],
+  );
+  /** Cuántas quedan sin constatar en lo que se está mirando: es el número del botón. */
+  const countSinConstatar = useMemo(
+    () => rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'alta_temprana_afip' && !x.row.obraSocialNoFigura && x.row.obraSocialOrigen !== 'constatada').length,
+    [rowsPorFiltrosComunes],
+  );
 
   // Los contadores siguen el mismo corte que la tabla: la gente sin CUIT se cuenta aparte y no
   // infla los trámites de ARCA, que no le aplican.
@@ -1123,6 +1157,14 @@ export const ContractBulkAfipTab: React.FC<{
               <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
               {countIncompletos} incompletos
             </button>
+            {/* La constatación de obras sociales no bloquea el TXT, así que va como contador aparte y
+                no dentro de "incompletos": es trabajo pendiente de verificación, no un dato faltante. */}
+            {countSinConstatar > 0 && (
+              <button onClick={() => setLoteObrasSociales(true)} title="Constatar en ARCA (Registrar Nuevas Altas) a quiénes les falta" className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold border transition-colors bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200/60 dark:border-blue-800/60 hover:bg-blue-100 dark:hover:bg-blue-900/30">
+                <FontAwesomeIcon icon={faStethoscope} className="h-3 w-3" />
+                {countSinConstatar} obra{countSinConstatar === 1 ? '' : 's'} social{countSinConstatar === 1 ? '' : 'es'} sin constatar
+              </button>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-3">
             {/* Grupo 1 — asignación masiva de Empresa: siempre visible, se activa al tildar filas. */}
@@ -1256,7 +1298,7 @@ export const ContractBulkAfipTab: React.FC<{
                     </>
                   )}
                   {filterTipo === 'alta_temprana_afip' && (
-                    <BadgeArca result={result} onClick={() => setDetalle({ row: r, result })} prefijo="ARCA: " />
+                    <BadgeArca result={result} onClick={() => setDetalleRef({ _id: r._id, contractIndex: r.contractIndex })} prefijo="ARCA: " />
                   )}
                   <span className="ml-auto">
                     <ContractActionsButtons record={r} onDeleted={() => load(true)} />
@@ -1446,7 +1488,7 @@ export const ContractBulkAfipTab: React.FC<{
                     )}
                     {filterTipo === 'alta_temprana_afip' && (
                       <td className="px-4 py-3">
-                        <BadgeArca result={result} onClick={() => setDetalle({ row: r, result })} />
+                        <BadgeArca result={result} onClick={() => setDetalleRef({ _id: r._id, contractIndex: r.contractIndex })} />
                       </td>
                     )}
                     {filterTipo !== 'sin_cuit' && <ContractDocsColumns record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onDownloadContract={handleDownloadContract} onDownloadRelease={handleDownloadRelease} onUploadAlta={handleUploadAlta} showContrato={false} showRelease={false} hideAltaLabel />}
@@ -1502,16 +1544,19 @@ export const ContractBulkAfipTab: React.FC<{
       {detalle && (
         <Modal
           isOpen={!!detalle}
-          onClose={() => setDetalle(null)}
+          onClose={() => setDetalleRef(null)}
           title={`Datos ARCA — ${detalle.row.userName}`}
           subtitle={`${detalle.row.projectName} · ${detalle.row.nombre_contrato}`}
           size="lg"
           zIndex={70}
           footer={
-            <div className="flex items-center justify-between gap-3 w-full">
-              {/* El pie dice qué falta para habilitar el botón. "Resolvé lo pendiente" no distingue
-                  entre ir a configurar algo y elegir un combo que está en la fila de atrás. */}
-              <span className="text-[11px] text-gray-500 dark:text-gray-400">{detalle.result.completo ? 'Podés generar el alta de esta persona.' : detalle.result.configuracionesPendientes === 0 && detalle.result.errores === 0 ? 'Elegilo en la fila y el TXT queda habilitado.' : 'Resolvé lo pendiente para poder generar el TXT.'}</span>
+            <div className="flex items-center justify-between gap-4 w-full">
+              {/*
+               * El avance vive acá, no arriba: el pie es lo único que queda fijo mientras se scrollea
+               * el formulario, y la barra dice exactamente cuánto falta para que el botón de al lado
+               * se habilite. Arriba se comía dos renglones y empujaba los campos fuera de la vista.
+               */}
+              <ProgresoArca result={detalle.result} />
               <button onClick={() => generarTxt([detalle], `alta_${detalle.row.userName.replace(/\s+/g, '_')}`)} disabled={!detalle.result.completo} className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0">
                 <FontAwesomeIcon icon={faFileLines} />
                 Descargar TXT de esta persona
@@ -1519,7 +1564,24 @@ export const ContractBulkAfipTab: React.FC<{
             </div>
           }
         >
-          <DatosArcaDetalle row={detalle.row} result={detalle.result} cat={afipCat} onNavegar={() => setDetalle(null)} onGuardado={(patch) => aplicarCambio(detalle.row, patch)} />
+          <DatosArcaDetalle row={detalle.row} result={detalle.result} cat={afipCat} empresas={companies} onGuardado={(patch) => aplicarCambio(detalle.row, patch)} onCambioNivel={() => load(true)} />
+        </Modal>
+      )}
+
+      {loteObrasSociales && (
+        <Modal
+          isOpen={loteObrasSociales}
+          onClose={() => setLoteObrasSociales(false)}
+          title="Constatar obras sociales"
+          subtitle={filterEmpresaId && filterEmpresaId !== SIN_EMPRESA ? empresaOptions.find((e) => e.value === filterEmpresaId)?.label || '' : 'Todas las empleadoras — el RNOS se declara por contrato'}
+          size="95"
+          zIndex={70}
+        >
+          <ConstatarObrasSocialesLote
+            filas={filasConstatacion}
+            empleadora={filterEmpresaId && filterEmpresaId !== SIN_EMPRESA ? empresaOptions.find((e) => e.value === filterEmpresaId)?.label : undefined}
+            onGuardado={(row, patch) => aplicarCambio(row, patch)}
+          />
         </Modal>
       )}
 

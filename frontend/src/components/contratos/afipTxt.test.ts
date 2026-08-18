@@ -19,7 +19,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 import { buildAltaRecord, buildAltaTxt, describirRegistro, fechaAfip, LAYOUT_ALTA } from "./afipTxt";
-import { resolveAfip } from "./afipCompleteness";
+import { resolveAfip, resolveAfipValues, resumenArca } from "./afipCompleteness";
 import type { AfipCatalogs } from "./afipCompleteness";
 import type { ContractOverviewRow } from "../../api/users";
 
@@ -435,5 +435,109 @@ describe("obra social — vive en el CONTRATO, no en la persona", () => {
     // ARCA rechaza un alta con ceros en 40-45, así que la línea no se arma.
     const cat = catalogos({ convenios: [{ _id: "cv1", externalId: "0634/11", name: "TELEVISIÓN" }] } as any);
     assert.equal(buildAltaRecord(fila(), cat), null);
+  });
+});
+
+/**
+ * Los tres estados de la constatación en ARCA (Relaciones Laborales → Registrar Nuevas Altas).
+ *
+ * El que hay que blindar es "no devolvió ninguna": es una RESPUESTA, no un vacío. Antes no se podía
+ * guardar, así que la fila quedaba indistinguible de las que nadie había mirado y se volvía a
+ * consultar cada semana. Ahora se sella con fecha y tiene que leerse como trabajo hecho — pero sin
+ * cambiar una coma del TXT, porque la constatación es un dato nuestro y ARCA no la recibe.
+ */
+describe("constatación en ARCA — los tres estados", () => {
+  const cat = () =>
+    catalogos({
+      obrasSociales: [
+        { _id: "os1", externalId: "126205", name: "OSPIA", data: { id: 7 } },
+        { _id: "os2", externalId: "901402", name: "OS CONSTATADA", data: { id: 44 } },
+      ],
+      convenios: [{ _id: "cv1", externalId: "0634/11", name: "TELEVISIÓN", obraSocialDefaultId: 7 }],
+    } as any);
+
+  it("nadie la miró todavía: sin_constatar", () => {
+    assert.equal(resolveAfipValues(fila(), cat()).constatacion, "sin_constatar");
+  });
+
+  it("ARCA devolvió una obra social: afiliada", () => {
+    const v = resolveAfipValues(fila({ osId: 44, obraSocialOrigen: "constatada", obraSocialConstatadaEn: "arca", obraSocialConstatadaEl: "2026-08-18T00:00:00.000Z" } as any), cat());
+    assert.equal(v.constatacion, "afiliada");
+    assert.equal(v.constatadaEl, "2026-08-18T00:00:00.000Z");
+  });
+
+  it("ARCA no devolvió ninguna: es una respuesta, NO un sin_constatar", () => {
+    const v = resolveAfipValues(fila({ obraSocialNoFigura: true, obraSocialConstatadaEn: "arca", obraSocialConstatadaEl: "2026-08-18T00:00:00.000Z" } as any), cat());
+    assert.equal(v.constatacion, "no_figura");
+    assert.notEqual(v.constatacion, "sin_constatar");
+  });
+
+  it("no devolvió ninguna ⇒ sigue valiendo la del convenio, y el TXT no cambia", () => {
+    const row = fila({ obraSocialNoFigura: true, obraSocialConstatadaEn: "arca", obraSocialConstatadaEl: "2026-08-18T00:00:00.000Z" } as any);
+    assert.equal(tramo(buildAltaRecord(row, cat())!, 40, 45), "126205");
+    // Mismo registro, byte por byte, que sin la marca: la constatación no viaja a ARCA.
+    assert.equal(buildAltaRecord(row, cat()), buildAltaRecord(fila(), cat()));
+  });
+
+  it("una constatación no puede volver incompleto un contrato, ni con respuesta ni sin ella", () => {
+    for (const over of [{ obraSocialNoFigura: true, obraSocialConstatadaEn: "arca" }, { osId: 44, obraSocialOrigen: "constatada", obraSocialConstatadaEn: "arca" }]) {
+      assert.equal(resolveAfip(fila(over as any), cat()).completo, true);
+    }
+  });
+
+  it("ya constatado ⇒ se apaga el aviso de sin constatar", () => {
+    const conAviso = resolveAfip(fila(), cat());
+    assert.equal(conAviso.checks.find((c) => c.key === "rnosSinConstatar")?.estado, "aviso", "sin constatar tiene que avisar");
+
+    const yaConsultado = resolveAfip(fila({ obraSocialNoFigura: true, obraSocialConstatadaEn: "arca" } as any), cat());
+    assert.equal(yaConsultado.checks.find((c) => c.key === "rnosSinConstatar"), undefined, "consultado es trabajo hecho: no se vuelve a pedir");
+  });
+
+  /**
+   * La fuente vieja no se reescribe.
+   *
+   * Cuando se cambió la constatación de la SSS a ARCA, los contratos ya constatados quedaron con
+   * `constatadaEn: "sss"`. Ese valor decía la verdad cuando se guardó, así que sigue contando como
+   * constatado: convertirlo en pendiente mandaría a rehacer trabajo que ya se hizo, y borrarlo
+   * perdería de dónde salió el dato.
+   */
+  it("lo constatado con la fuente vieja (SSS) sigue valiendo como constatado", () => {
+    const row = fila({ osId: 44, obraSocialOrigen: "constatada", obraSocialConstatadaEn: "sss", obraSocialConstatadaEl: "2026-08-01T00:00:00.000Z" } as any);
+    assert.equal(resolveAfipValues(row, cat()).constatacion, "afiliada");
+    assert.equal(resolveAfip(row, cat()).checks.find((c) => c.key === "rnosSinConstatar"), undefined);
+    // Y la etiqueta conserva la fuente: dos orígenes distintos a la vista es mejor que uno inventado.
+    assert.match(resolveAfip(row, cat()).checks.find((c) => c.key === "rnos")!.label, /SSS/);
+  });
+
+  it("la etiqueta de lo constatado en ARCA dice ARCA", () => {
+    const row = fila({ osId: 44, obraSocialOrigen: "constatada", obraSocialConstatadaEn: "arca", obraSocialConstatadaEl: "2026-08-18T00:00:00.000Z" } as any);
+    assert.match(resolveAfip(row, cat()).checks.find((c) => c.key === "rnos")!.label, /ARCA/);
+  });
+
+  /**
+   * Un aviso no baja el completado.
+   *
+   * Es el bug que se veía como "5/15 campos" con la obra social en ámbar: el contrato era generable
+   * —tenía el RNOS del convenio— pero la fracción lo contaba como si le faltara un dato, mandando a
+   * resolver algo que no cambia el archivo. La fracción tiene que medir lo que falta para GENERAR.
+   */
+  it("sin constatar no baja la fracción de campos: el TXT sale igual", () => {
+    const c = cat();
+    const sinConstatar = fila();
+    const constatado = fila({ osId: 7, obraSocialOrigen: "constatada", obraSocialConstatadaEn: "arca" } as any);
+
+    // Hay aviso, y aun así el registro se genera.
+    assert.equal(resolveAfip(sinConstatar, c).avisos > 0, true);
+    assert.ok(buildAltaRecord(sinConstatar, c));
+
+    // La fracción es la MISMA que con la obra social ya constatada: el aviso no resta.
+    assert.equal(resumenArca(resolveAfip(sinConstatar, c)).texto, resumenArca(resolveAfip(constatado, c)).texto);
+  });
+
+  it("la fracción llega al total cuando lo único pendiente es constatar", () => {
+    const r = resolveAfip(fila(), cat());
+    // `fila()` es un contrato completo salvo la constatación: si el aviso restara, nunca cerraría.
+    assert.equal(r.completo, true);
+    assert.equal(resumenArca(r).texto, "Completo");
   });
 });

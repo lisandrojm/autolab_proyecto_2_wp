@@ -1,11 +1,15 @@
 import React, { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faXmark, faTriangleExclamation, faLock, faArrowUpRightFromSquare, faCircleInfo, faChevronDown, faChevronRight, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faXmark, faTriangleExclamation, faLock, faCircleInfo, faChevronDown, faChevronRight, faPenToSquare, faGear } from "@fortawesome/free-solid-svg-icons";
 import { ContractOverviewRow } from "../../api/users";
-import { AfipCatalogs, AfipRowResult, AfipFieldCheck, GrupoFaltante, TonoArca, resumenArca } from "./afipCompleteness";
+import { AfipCatalogs, AfipRowResult, AfipFieldCheck, TonoArca, resumenArca, esResuelto } from "./afipCompleteness";
 import { describirRegistro, CampoRegistro } from "./afipTxt";
 import { ObraSocialDelContrato } from "./ObraSocialDelContrato";
+import { InfoModal } from "../ui/InfoModal";
+import { EXPLICACIONES, ExplicacionCampo } from "./explicacionesArca";
+import { BandaEmpleador } from "./BandaEmpleador";
+import { FormularioArca } from "./FormularioArca";
+import { Company } from "../../api/companies";
 
 /**
  * Detalle de "Datos ARCA" de un contrato.
@@ -39,24 +43,28 @@ const ICONO: Record<AfipFieldCheck["estado"], { icon: typeof faCheck; clase: str
 };
 
 /** Paleta por tono, compartida por el badge de la grilla y el encabezado del detalle. */
-const TONO: Record<TonoArca, { icon: typeof faCheck; badge: string; panel: string; barra: string }> = {
+/** `texto` es el color suelto del encabezado, que ya no tiene panel: sin fondo, el tono lo da la tipografía. */
+const TONO: Record<TonoArca, { icon: typeof faCheck; badge: string; panel: string; barra: string; texto: string }> = {
   ok: {
     icon: faCheck,
     badge: "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/40",
     panel: "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/70 text-green-800 dark:text-green-300",
     barra: "bg-green-500",
+    texto: "text-green-700 dark:text-green-400",
   },
   error: {
     icon: faTriangleExclamation,
     badge: "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/40",
     panel: "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/70 text-red-800 dark:text-red-300",
     barra: "bg-red-500",
+    texto: "text-red-700 dark:text-red-400",
   },
   falta: {
     icon: faTriangleExclamation,
     badge: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40",
     panel: "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/70 text-amber-800 dark:text-amber-300",
     barra: "bg-amber-500",
+    texto: "text-amber-700 dark:text-amber-400",
   },
   // Gris a propósito: no hay nada para configurar, solo elegir en un combo que ya está en pantalla.
   // En ámbar competía por atención con los faltantes reales.
@@ -65,6 +73,7 @@ const TONO: Record<TonoArca, { icon: typeof faCheck; badge: string; panel: strin
     badge: "bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700",
     panel: "bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200",
     barra: "bg-blue-500",
+    texto: "text-gray-700 dark:text-gray-200",
   },
 };
 
@@ -76,12 +85,78 @@ const TONO: Record<TonoArca, { icon: typeof faCheck; badge: string; panel: strin
 export const BadgeArca: React.FC<{ result: AfipRowResult; onClick: () => void; prefijo?: string }> = ({ result, onClick, prefijo }) => {
   const { tono, texto } = resumenArca(result);
   const t = TONO[tono];
+  // Tuerca y no alerta: el badge ABRE el formulario, no reporta un problema. El color ya dice la
+  // gravedad (rojo si hay algo mal cargado, ámbar si falta). En el encabezado del detalle sí va la
+  // alerta, porque ahí no hay nada que clickear: es un estado.
+  const icono = result.completo ? t.icon : faGear;
   return (
     <button type="button" onClick={onClick} title="Ver el detalle de los datos ARCA de este contrato" className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap transition-colors ${t.badge}`}>
-      <FontAwesomeIcon icon={t.icon} className="h-2.5 w-2.5" />
+      <FontAwesomeIcon icon={icono} className="h-2.5 w-2.5" />
       {prefijo}
       {texto}
     </button>
+  );
+};
+
+/** Colores del recuadro de "qué pasa acá", por estado del campo. */
+const CAJA_SITUACION: Record<string, string> = {
+  falta: "bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800/70 text-amber-800 dark:text-amber-300",
+  error: "bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-800/70 text-red-800 dark:text-red-300",
+  bloqueado: "bg-gray-50 dark:bg-gray-800/60 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300",
+  aviso: "bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800/70 text-amber-800 dark:text-amber-300",
+  ok: "bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-800/70 text-green-800 dark:text-green-300",
+};
+
+/**
+ * Ícono de ayuda de un campo. Abre el InfoModal con DOS cosas:
+ *
+ *   1. Qué pasa con este contrato puntual (`situacion`) — lo que antes iba como segunda línea de
+ *      cada fila del checklist.
+ *   2. Qué es el campo, de dónde sale y por qué frena el TXT (la explicación fija).
+ *
+ * Todo eso vive acá y no en el cuerpo del checklist a propósito: con trece campos, dos renglones por
+ * cada uno convierten el modal en un documento y tapan lo único que se viene a mirar, que es qué
+ * falta. La lista queda en un renglón por campo; el porqué está a un click.
+ */
+export const InfoCampo: React.FC<{ campo: string; situacion?: string; estado?: string; zIndex?: number }> = ({ campo, situacion, estado, zIndex = 90 }) => {
+  const [abierto, setAbierto] = useState(false);
+  const exp: ExplicacionCampo | undefined = EXPLICACIONES[campo];
+  // Sin explicación fija pero con situación, el ícono se muestra igual: el texto de la fila se movió
+  // acá adentro, así que si el campo no estuviera en el diccionario desaparecería sin dejar rastro.
+  if (!exp && !situacion) return null;
+  const titulo = exp?.titulo || "Qué pasa con este campo";
+  const subtitulo = exp ? [exp.posicion ? `Posiciones ${exp.posicion} del registro` : "No es un campo del archivo", exp.origen].filter(Boolean).join(" · ") : undefined;
+  return (
+    <>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setAbierto(true);
+        }}
+        title={`Qué es "${titulo}"`}
+        aria-label={`Qué es "${titulo}"`}
+        className="shrink-0 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+      >
+        <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+      </button>
+      {abierto && (
+        <InfoModal
+          isOpen={abierto}
+          onClose={() => setAbierto(false)}
+          title={titulo}
+          subtitle={subtitulo}
+          size="md"
+          zIndex={zIndex}
+        >
+          <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            {/* Primero lo de ESTE contrato: es la razón por la que se abrió el ícono. */}
+            {situacion && <div className={`rounded-lg border px-3 py-2 text-[13px] ${CAJA_SITUACION[estado || "falta"] || CAJA_SITUACION.falta}`}>{situacion}</div>}
+            {exp?.cuerpo}
+          </div>
+        </InfoModal>
+      )}
+    </>
   );
 };
 
@@ -94,8 +169,10 @@ const FilaCheck: React.FC<{ c: AfipFieldCheck }> = ({ c }) => {
         <span className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-200 min-w-0">
           <FontAwesomeIcon icon={icon} className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${clase}`} />
           <span className="min-w-0">
-            <span className="block">{c.label}</span>
-            {c.detalle && <span className={`block text-[11px] mt-0.5 ${c.estado === "error" ? "text-red-600 dark:text-red-400" : "text-gray-500 dark:text-gray-400"}`}>{c.detalle}</span>}
+            <span className="flex items-center gap-1.5">
+              <span>{c.label}</span>
+              <InfoCampo campo={c.key} situacion={c.detalle} estado={c.estado} />
+            </span>
           </span>
         </span>
         <span className="shrink-0 text-right">
@@ -103,130 +180,17 @@ const FilaCheck: React.FC<{ c: AfipFieldCheck }> = ({ c }) => {
           {c.estado === "falta" && <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">Falta</span>}
           {c.estado === "error" && <span className="text-[11px] font-semibold text-red-600 dark:text-red-400">Mal cargado</span>}
           {c.estado === "bloqueado" && <span className="text-[11px] font-semibold text-gray-500">En espera</span>}
-          {c.estado === "aviso" && <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">Sin constatar</span>}
+          {/* "Sin constatar" solo para el aviso que HABLA de constatar. Puesto en todos los avisos,
+              etiquetaba "Obra social sin verificar contra ARCA" como "Sin constatar" y esa fila se
+              leía como un duplicado del estado que ya muestra la tarjeta de obra social. */}
+          {c.estado === "aviso" && <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">{c.key === "rnosSinConstatar" ? "Sin constatar" : "Aviso"}</span>}
         </span>
       </div>
     </li>
   );
 };
 
-/**
- * Un origen con algo pendiente.
- *
- * `paso` numera la tarea cuando es configuración de ARCA: el operador tiene que hacer N cosas y verlas
- * numeradas dice cuántas son sin leer. Los grupos "en la fila" no se numeran —no son tareas de esta
- * pantalla— y van con borde punteado para que se lean como otra categoría de cosa.
- */
-const Grupo: React.FC<{ g: GrupoFaltante; paso?: number; onNavegar?: () => void }> = ({ g, paso, onNavegar }) => {
-  const bloqueado = !!g.bloqueadoPor;
-  const borde = bloqueado ? "border-gray-200 dark:border-gray-700" : g.enFila ? "border-dashed border-gray-300 dark:border-gray-600" : g.tieneErrores ? "border-red-300 dark:border-red-800/70" : "border-amber-300 dark:border-amber-800/70";
-  const fondo = bloqueado || g.enFila ? "bg-gray-50 dark:bg-gray-800/40" : g.tieneErrores ? "bg-red-50/70 dark:bg-red-950/20" : "bg-amber-50/70 dark:bg-amber-950/20";
-  return (
-    <div className={`rounded-lg border ${borde} overflow-hidden ${bloqueado ? "opacity-70" : ""}`}>
-      <div className={`px-3 py-2 ${fondo}`}>
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex items-start gap-2">
-            {paso !== undefined && <span className="shrink-0 mt-0.5 inline-flex items-center justify-center h-4 w-4 rounded-full bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 text-[10px] font-bold">{paso}</span>}
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                {bloqueado && <FontAwesomeIcon icon={faLock} className="h-3 w-3 text-gray-400" />}
-                {g.titulo}
-              </p>
-              <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-0.5">{bloqueado ? "Se destraba solo al resolver lo de arriba." : g.accion}</p>
-            </div>
-          </div>
-          {!bloqueado && g.link && "to" in g.link && (
-            <Link to={g.link.to} target="_blank" onClick={onNavegar} className="shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-              {g.link.label}
-              <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
-            </Link>
-          )}
-          {!bloqueado && g.link && "enFila" in g.link && <span className="shrink-0 text-[11px] text-gray-500 dark:text-gray-400 max-w-[12rem] text-right">{g.link.enFila}</span>}
-        </div>
-      </div>
-      {/*
-       * Un grupo "en la fila" no lista los campos EN ESPERA: decir "la actividad espera a la
-       * sucursal" al lado de "elegí la sucursal" es la misma frase dos veces. Los que faltan o están
-       * mal sí se listan: traen el detalle concreto ("esta sucursal tiene 3 actividades declaradas").
-       */}
-      {(() => {
-        const visibles = g.enFila ? g.checks.filter((c) => c.estado !== "bloqueado") : g.checks;
-        if (visibles.length === 0) return null;
-        return (
-          <ul className="divide-y divide-gray-100 dark:divide-gray-700/60 bg-white dark:bg-gray-900/30">
-            {visibles.map((c) => (
-              <FilaCheck key={c.key} c={c} />
-            ))}
-          </ul>
-        );
-      })()}
-    </div>
-  );
-};
 
-/** Título de sección: separa las tres categorías de pendiente sin gastar una tarjeta en cada una. */
-const Seccion: React.FC<{ titulo: string; children: React.ReactNode }> = ({ titulo, children }) => (
-  <div className="space-y-2">
-    <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-0.5">{titulo}</p>
-    {children}
-  </div>
-);
-
-/**
- * Estado en una línea, con barra de avance.
- *
- * La barra cuenta CAMPOS del registro (es la medida de cuán lejos está el contrato); el título cuenta
- * CONFIGURACIONES (es la medida de cuánto trabajo falta). Son dos números distintos a propósito: un
- * tipo de contrato sin códigos es 1 sola cosa que cargar y mueve 3 campos.
- */
-const Cabecera: React.FC<{ result: AfipRowResult; resueltos: number }> = ({ result, resueltos }) => {
-  const { tono } = resumenArca(result);
-  const t = TONO[tono];
-  const total = result.checks.length;
-  const pct = total ? Math.round((resueltos / total) * 100) : 0;
-  const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
-
-  const titulo = result.completo
-    ? "Listo para la carga masiva"
-    : result.errores > 0
-      ? plural(result.errores, "dato cargado mal", "datos cargados mal")
-      : result.configuracionesPendientes > 0
-        ? plural(result.configuracionesPendientes, "configuración de ARCA pendiente", "configuraciones de ARCA pendientes")
-        : "Solo falta elegirlo en la grilla";
-
-  const chips: Array<{ texto: string; clase: string }> = [];
-  if (!result.completo && result.errores > 0 && result.configuracionesPendientes > 0) chips.push({ texto: plural(result.configuracionesPendientes, "configuración pendiente", "configuraciones pendientes"), clase: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" });
-  if (result.pendientesEnFila > 0) chips.push({ texto: `${plural(result.pendientesEnFila, "dato", "datos")} a elegir en la fila`, clase: "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200" });
-  if (result.avisos > 0) chips.push({ texto: plural(result.avisos, "aviso", "avisos"), clase: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" });
-
-  return (
-    <div className={`rounded-lg border px-3 py-2.5 ${t.panel}`}>
-      <div className="flex items-start gap-2">
-        <FontAwesomeIcon icon={t.icon} className="mt-1 shrink-0 h-3.5 w-3.5" />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold">{titulo}</p>
-          <div className="mt-2 flex items-center gap-2">
-            <div className="h-1.5 flex-1 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
-              <div className={`h-full rounded-full ${t.barra} transition-all`} style={{ width: `${pct}%` }} />
-            </div>
-            <span className="text-[11px] font-semibold tabular-nums shrink-0 opacity-80">
-              {resueltos}/{total} campos
-            </span>
-          </div>
-          {chips.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {chips.map((c) => (
-                <span key={c.texto} className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${c.clase}`}>
-                  {c.texto}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
 
 /**
  * Vista previa del registro tal como va a salir en el archivo. Sirve para dos cosas: auditar los
@@ -296,51 +260,150 @@ const VistaPrevia: React.FC<{ campos: CampoRegistro[] }> = ({ campos }) => {
   );
 };
 
+/**
+ * Avance del alta: barra + fracción + el desglose detrás del ⓘ.
+ *
+ * Vive en el PIE del modal, al lado del botón de descargar, y no arriba. Dos razones:
+ *
+ *  - Arriba se comía dos renglones de una pantalla que ya scrollea, empujando el formulario —que es
+ *    lo que se viene a completar— fuera de la vista.
+ *  - Al lado del botón está donde importa: la barra dice cuánto falta para que ese botón se
+ *    habilite, y el pie es lo único que queda fijo mientras se scrollea la grilla de campos.
+ *
+ * El desglose no es decorativo: sus renglones más los resueltos SIEMPRE suman el total, así el 14 se
+ * puede reconstruir y se entiende por qué faltando "3 por cargar" el avance no está al 80%.
+ */
+export const ProgresoArca: React.FC<{ result: AfipRowResult }> = ({ result }) => {
+  // Misma regla que el badge de la grilla: un aviso no es un faltante (ver `esResuelto`).
+  const resueltos = result.checks.filter(esResuelto).length;
+  const [verDesglose, setVerDesglose] = useState(false);
+  const { tono } = resumenArca(result);
+  const t = TONO[tono];
+  const total = result.checks.length;
+  const pct = total ? Math.round((resueltos / total) * 100) : 0;
+
+  const titulo = result.completo ? "Listo para la carga masiva" : result.errores > 0 ? "Hay datos cargados mal" : result.configuracionesPendientes > 0 ? "Faltan datos para el alta" : "Solo falta elegirlo";
+
+  // Se cuenta sobre `checks` —no sobre los grupos— para que la suma cierre: resueltos + chips = total.
+  const clavesEnFila = new Set(result.grupos.filter((g) => g.enFila).flatMap((g) => g.checks.map((c) => c.key)));
+  const cuenta = { porCargar: 0, malCargados: 0, aElegir: 0, enEspera: 0, avisos: 0 };
+  for (const c of result.checks) {
+    if (c.estado === "ok") continue;
+    if (c.estado === "aviso") cuenta.avisos++;
+    else if (c.estado === "bloqueado") cuenta.enEspera++;
+    else if (clavesEnFila.has(c.key)) cuenta.aElegir++;
+    else if (c.estado === "error") cuenta.malCargados++;
+    else cuenta.porCargar++;
+  }
+
+  // Cada renglón del desglose, con qué significa. Los chips sueltos daban el número pero no el
+  // sentido: "4 en espera" no dice que esos se resuelven solos, que es lo único que hace falta saber
+  // para no salir a buscarlos.
+  // Singular y plural explícitos: "por cargar", "a elegir" y "en espera" son invariables, así que
+  // pegarles una "s" al final daba "3 por cargars".
+  const desglose: Array<{ n: number; uno: string; varios: string; que: string; punto: string }> = [
+    { n: cuenta.malCargados, uno: "mal cargado", varios: "mal cargados", que: "El dato está, pero es inconsistente y ARCA lo va a rechazar. Es lo más grave: hoy pasa desapercibido.", punto: "bg-red-500" },
+    { n: cuenta.porCargar, uno: "por cargar", varios: "por cargar", que: "Falta el dato. Se carga en este mismo formulario.", punto: "bg-amber-500" },
+    { n: cuenta.aElegir, uno: "a elegir", varios: "a elegir", que: "La opción ya está en pantalla, solo falta elegirla.", punto: "bg-blue-500" },
+    { n: cuenta.enEspera, uno: "en espera", varios: "en espera", que: "No se puede resolver todavía porque depende de otro campo. Se destraba solo al completarlo.", punto: "bg-gray-400" },
+    { n: cuenta.avisos, uno: "aviso", varios: "avisos", que: "No bloquea el alta: el archivo se genera igual. Conviene revisarlo.", punto: "bg-amber-500" },
+  ].filter((d) => d.n > 0);
+
+  return (
+    <div className="min-w-0 flex-1 flex items-center gap-2.5">
+      <FontAwesomeIcon icon={t.icon} className={`shrink-0 h-3.5 w-3.5 ${t.texto}`} />
+      <div className="min-w-0 flex-1">
+        <p className={`text-[12px] font-bold flex items-center gap-1.5 ${t.texto}`}>
+          <span className="truncate">{titulo}</span>
+          {desglose.length > 0 && (
+            <button type="button" onClick={() => setVerDesglose(true)} title="Qué son los campos que faltan" aria-label="Qué son los campos que faltan" className="shrink-0 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors">
+              <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+            </button>
+          )}
+        </p>
+        <div className="mt-1 flex items-center gap-2">
+          <div className="h-1.5 flex-1 min-w-[6rem] max-w-[16rem] rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+            <div className={`h-full rounded-full ${t.barra} transition-all`} style={{ width: `${pct}%` }} />
+          </div>
+          <span className="text-[11px] font-semibold tabular-nums shrink-0 text-gray-500 dark:text-gray-400">
+            {resueltos}/{total} campos
+          </span>
+        </div>
+      </div>
+
+      {verDesglose && (
+        <InfoModal isOpen={verDesglose} onClose={() => setVerDesglose(false)} title={`${resueltos} de ${total} campos resueltos`} subtitle="En qué estado están los que faltan" size="md" zIndex={90}>
+          <div className="space-y-3">
+            <ul className="space-y-2.5">
+              {desglose.map((d) => (
+                <li key={d.uno} className="flex items-start gap-2.5">
+                  <span className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${d.punto}`} />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-gray-800 dark:text-gray-100">
+                      {d.n} {d.n === 1 ? d.uno : d.varios}
+                    </span>
+                    <span className="block text-[12px] text-gray-600 dark:text-gray-400 leading-relaxed">{d.que}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700 pt-2.5">
+              Estos {total - resueltos} más los {resueltos} resueltos son los {total} campos que mira el chequeo. El archivo se genera cuando no queda ninguno por cargar, mal cargado ni a elegir — los avisos no lo frenan.
+            </p>
+          </div>
+        </InfoModal>
+      )}
+    </div>
+  );
+};
+
 export const DatosArcaDetalle: React.FC<{
   row: ContractOverviewRow;
   result: AfipRowResult;
   cat: AfipCatalogs;
-  onNavegar?: () => void;
+  /** Empresas del ABM, para la banda de empleador (razón social + CUIT). */
+  empresas?: Company[];
+  /** Algo del TIPO DE CONTRATO cambió: no vive en la fila, hay que recargar el listado. */
+  onCambioNivel?: () => void;
   /** Se llama al fijar o quitar la obra social del contrato, para refrescar la fila sin recargar. */
   onGuardado?: (patch?: Partial<ContractOverviewRow>) => void;
-}> = ({ row, result, cat, onNavegar, onGuardado }) => {
+}> = ({ row, result, cat, onGuardado, empresas = [], onCambioNivel }) => {
   const { campos, valores } = useMemo(() => describirRegistro(row, cat), [row, cat]);
-  const resueltos = result.checks.filter((c) => c.estado === "ok").length;
-  const avisos = result.checks.filter((c) => c.estado === "aviso");
+  /**
+   * Los avisos de la obra social NO van en esta lista: viven dentro de su propia tarjeta.
+   *
+   * Estaban en los dos lugares y se leía como el mismo dato repetido — la tarjeta decía "Sin
+   * constatar en ARCA" y abajo aparecía otra fila de obra social diciendo lo mismo. La tarjeta es la
+   * dueña del tema: tiene el valor, el estado, la fecha y el botón para resolverlo.
+   */
+  const avisos = result.checks.filter((c) => c.estado === "aviso" && c.origen !== "obra_social");
+  const avisosObraSocial = result.checks.filter((c) => c.estado === "aviso" && c.origen === "obra_social");
 
-  // Los tres bloques de pendientes. `configuracion` son los únicos que cuentan como "Faltan N".
-  const configuracion = result.grupos.filter((g) => !g.bloqueadoPor && !g.enFila);
-  const enFila = result.grupos.filter((g) => !g.bloqueadoPor && g.enFila);
-  const enEspera = result.grupos.filter((g) => !!g.bloqueadoPor);
 
   // El origen de la obra social ya viene redactado en el label del check; acá solo se le saca el
   // prefijo del campo, que en la tarjeta lo dice el título.
   const origenObraSocial = result.checks.find((c) => c.key === "rnos")?.label.replace(/^Código RNOS\s*—\s*/, "") || "";
 
+  const empresaSel = cat.empresas?.find((e) => e._id === row.empresaContratoId);
+
   return (
     <div className="space-y-4">
-      <Cabecera result={result} resueltos={resueltos} />
+      {/* La empleadora es el CONTEXTO de todo lo de abajo, no un campo más: define qué sucursales,
+          qué convenios y qué obras sociales son elegibles. Por eso va como banda, igual que en ARCA. */}
+      {onGuardado && <BandaEmpleador row={row} empresas={empresas} convenios={(empresaSel?.convenioIds || []).length} domicilios={(empresaSel?.sucursalIds || []).length} onGuardado={onGuardado} />}
 
-      {configuracion.length > 0 && (
-        <Seccion titulo="Para cargar en ARCA">
-          {configuracion.map((g, i) => (
-            <Grupo key={g.origen} g={g} paso={i + 1} onNavegar={onNavegar} />
-          ))}
-        </Seccion>
-      )}
+      {/* El formulario con la forma de ARCA. Todo se resuelve acá adentro: ya no hay "Ir a ↗". */}
+      {onGuardado && <FormularioArca row={row} valores={valores} cat={cat} onGuardado={onGuardado} onCambioNivel={onCambioNivel} />}
 
       {/*
-       * La obra social tiene su propia tarjeta, siempre visible.
-       *
-       * Es el único dato del checklist que se CARGA acá y no en otra pantalla: los demás se arreglan
-       * en la ficha de la empresa, en el tipo de contrato o en la categoría. Y es el único que hay que
-       * ir a buscar afuera —al padrón de la SSS—, así que necesita las instrucciones al lado.
+       * La obra social conserva su tarjeta propia: es el único dato que hay que ir a buscar AFUERA
+       * (a Registrar Nuevas Altas de ARCA, con el CUIL) y necesita las instrucciones al lado. El resto
+       * se elige de un catálogo que ya está en la base.
        */}
-      {onGuardado && <ObraSocialDelContrato row={row} valores={valores} etiquetaOrigen={origenObraSocial} onGuardado={onGuardado} />}
+      {onGuardado && <ObraSocialDelContrato row={row} valores={valores} etiquetaOrigen={origenObraSocial} avisos={avisosObraSocial} onGuardado={onGuardado} />}
 
-      {/* Los avisos van VISIBLES aunque el contrato esté completo: no bloquean el alta, pero si
-          quedaran colapsados con los campos resueltos nadie se enteraría de que hay una obra social
-          sin constatar, que es justo lo que hay que ir limpiando. */}
+      {/* Los avisos van visibles aunque el contrato esté completo: no bloquean el alta, pero son lo
+          que hay que ir limpiando. */}
       {avisos.length > 0 && (
         <ul className="rounded-lg border border-amber-300 dark:border-amber-800/70 bg-amber-50/70 dark:bg-amber-950/20 divide-y divide-amber-200/60 dark:divide-amber-800/40">
           {avisos.map((c) => (
@@ -348,49 +411,6 @@ export const DatosArcaDetalle: React.FC<{
           ))}
         </ul>
       )}
-
-      {/*
-       * Lo que se elige en la grilla va DESPUÉS de la configuración y atenuado. No es una tarea de
-       * esta pantalla: el combo está a dos columnas de acá, en ámbar, pidiendo lo mismo. Se muestra
-       * igual porque frena el TXT y hay que saber por qué.
-       */}
-      {enFila.length > 0 && (
-        <Seccion titulo="Se elige en la fila, no acá">
-          {enFila.map((g) => (
-            <Grupo key={g.origen} g={g} onNavegar={onNavegar} />
-          ))}
-        </Seccion>
-      )}
-
-      {/* En espera: se destraba solo. Colapsado, porque ocupaba media pantalla para no pedir nada. */}
-      {enEspera.length > 0 && (
-        <details className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <summary className="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40 flex items-center gap-2">
-            <FontAwesomeIcon icon={faLock} className="h-3 w-3 text-gray-400" />
-            En espera ({enEspera.length}) — se resuelven solos al completar lo de arriba
-          </summary>
-          <div className="border-t border-gray-200 dark:border-gray-700 p-2 space-y-2">
-            {enEspera.map((g) => (
-              <Grupo key={g.origen} g={g} onNavegar={onNavegar} />
-            ))}
-          </div>
-        </details>
-      )}
-
-      {/* Los campos ya resueltos van al final y colapsados: lo que importa es lo que falta. */}
-      <details className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <summary className="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40 flex items-center gap-2">
-          <FontAwesomeIcon icon={faCheck} className="h-3 w-3 text-green-500" />
-          Campos resueltos ({resueltos})
-        </summary>
-        <ul className="divide-y divide-gray-100 dark:divide-gray-700/60 border-t border-gray-200 dark:border-gray-700">
-          {result.checks
-            .filter((c) => c.estado === "ok")
-            .map((c) => (
-              <FilaCheck key={c.key} c={c} />
-            ))}
-        </ul>
-      </details>
 
       <VistaPrevia campos={campos} />
 

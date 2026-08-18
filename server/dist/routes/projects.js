@@ -1450,15 +1450,18 @@ function resolverIndiceContrato(up, param) {
  *
  * Fija la obra social de ESTE contrato (RNOS, pos. 40-45 del TXT). Body:
  *   { obraSocialId: number|null, origen: "constatada"|"manual", constatadaEn?: "sss"|"arca" }
+ *   { noFigura: true, constatadaEn: "arca" }  ← se consultó y ARCA no devolvió obra social
+ *   { ..., forzar: true }                     ← sobrescribir un valor ya sellado en ARCA
  *
  * Vive en el contrato y no en la persona: ARCA declara el RNOS en cada alta, y el dato caduca solo
  * por desregulación. Mandar `obraSocialId: null` la desfija y vuelve a resolver por la cascada
  * (convenio → excepción de la empresa → excluidos), que es el caso normal.
  *
  * VALIDACIÓN que no puede faltar: el RNOS tiene que estar entre las obras sociales que esa
- * empleadora tiene registradas ante ARCA. La SSS no sabe nada de la empleadora y puede devolver
- * perfectamente una que la empresa no declaró — ARCA rechaza esa alta. Se avisa con 400 y el motivo,
- * en vez de dejar pasar un dato que falla recién contra el organismo.
+ * empleadora tiene registradas ante ARCA. Sigue haciendo falta aunque el dato venga de ARCA: lo que
+ * la pantalla de altas precompleta sale de la afiliación de la PERSONA (relaciones laborales
+ * anteriores, con cualquier empleador), y no tiene por qué estar entre las que esta empleadora
+ * declaró. Se avisa con 400 y el motivo, en vez de dejar pasar un dato que falla recién en la carga.
  */
 router.patch("/projects/:projectId/members/:userId/contracts/:index/obra-social", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
     try {
@@ -1466,11 +1469,21 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/obra-social"
         const obraSocialId = req.body?.obraSocialId === null || req.body?.obraSocialId === "" ? null : Number(req.body?.obraSocialId);
         const origen = String(req.body?.origen || "manual");
         const constatadaEn = req.body?.constatadaEn ? String(req.body.constatadaEn) : undefined;
+        /**
+         * "No figura en el padrón" es un RESULTADO de la consulta, no la ausencia de uno. Se guarda con
+         * `obraSocialId: null` —porque no figurar significa que corresponde la del convenio— pero
+         * sellando la fecha, así el contrato deja de pedir que se vuelva a consultar.
+         */
+        const noFigura = req.body?.noFigura === true;
         if (obraSocialId !== null && !Number.isFinite(obraSocialId)) {
             res.status(400).json({ error: "Obra social inválida" });
             return;
         }
-        if (!["constatada", "manual"].includes(origen)) {
+        if (noFigura && (!constatadaEn || !["sss", "arca"].includes(constatadaEn))) {
+            res.status(400).json({ error: "Falta indicar dónde se consultó: arca (Registrar Nuevas Altas) o sss (padrón de beneficiarios)" });
+            return;
+        }
+        if (!noFigura && !["constatada", "manual"].includes(origen)) {
             res.status(400).json({ error: "Origen inválido" });
             return;
         }
@@ -1479,7 +1492,7 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/obra-social"
         // mirar. Lo mismo con la fuente: "sss" y "arca" no son etiquetas libres, significan cosas
         // distintas sobre cuánto se le puede creer al dato.
         if (origen === "constatada" && (!constatadaEn || !["sss", "arca"].includes(constatadaEn))) {
-            res.status(400).json({ error: "Falta indicar dónde se constató: sss (padrón de beneficiarios) o arca" });
+            res.status(400).json({ error: "Falta indicar dónde se constató: arca (Registrar Nuevas Altas) o sss (padrón de beneficiarios)" });
             return;
         }
         const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("_id").lean();
@@ -1495,6 +1508,29 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/obra-social"
             return;
         }
         const contrato = up.contracts[idx];
+        /**
+         * Lo que devolvió ARCA queda FIJO.
+         *
+         * Es la regla que pidió el negocio y tiene que vivir acá, no en la UI: ARCA es la autoridad que
+         * después recibe el alta, así que su respuesta no se "mejora" con una elección a mano. Si el
+         * campo quedara editable, un cambio posterior produciría un TXT que contradice al organismo que
+         * lo va a validar — y el error aparecería recién en la carga, sin rastro de quién lo cambió.
+         *
+         * `forzar: true` es la única puerta, y existe por una razón concreta: el paso es manual y un
+         * dígito mal tipeado quedaría clavado para siempre, sin más salida que editar la base a mano. El
+         * cliente lo manda solo después de una confirmación explícita.
+         */
+        // Se lee el flag persistido. El fallback por `constatadaEn` cubre los contratos que se sellaron
+        // antes de que el flag existiera: sin él, un valor viejo de ARCA quedaría editable.
+        const selladaEnArca = contrato.obraSocialBloqueada === true || (contrato.obraSocialConstatadaEn === "arca" && (contrato.obraSocialId != null || contrato.obraSocialNoFigura === true));
+        if (selladaEnArca && req.body?.forzar !== true) {
+            const cuando = contrato.obraSocialConstatadaEl ? new Date(contrato.obraSocialConstatadaEl).toLocaleDateString("es-AR") : "";
+            res.status(409).json({
+                error: `La obra social de este contrato ya se constató en ARCA${cuando ? ` el ${cuando}` : ""} y queda fija. Si el dato está mal, desbloqueala y volvé a constatarla.`,
+                selladaEnArca: true,
+            });
+            return;
+        }
         if (obraSocialId !== null) {
             const os = await ObraSocial.findOne({ "data.id": obraSocialId }).select("_id name externalId").lean();
             if (!os) {
@@ -1515,13 +1551,19 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/obra-social"
                 }
             }
         }
+        // "No figura" sella la consulta sin fijar obra social: el valor lo sigue poniendo el convenio.
+        const sellaConstatacion = noFigura || (obraSocialId !== null && origen === "constatada");
         up.contracts[idx] = {
             ...contrato.toObject(),
-            obraSocialId,
+            obraSocialId: noFigura ? null : obraSocialId,
             // Desfijarla borra también el rastro: dejar el origen de un valor que ya no está solo confunde.
-            obraSocialOrigen: obraSocialId === null ? undefined : origen,
-            obraSocialConstatadaEn: obraSocialId === null || origen !== "constatada" ? undefined : constatadaEn,
-            obraSocialConstatadaEl: obraSocialId === null || origen !== "constatada" ? null : new Date(),
+            obraSocialOrigen: noFigura || obraSocialId === null ? undefined : origen,
+            obraSocialConstatadaEn: sellaConstatacion ? constatadaEn : undefined,
+            obraSocialConstatadaEl: sellaConstatacion ? new Date() : null,
+            obraSocialNoFigura: noFigura,
+            // Fijo solo si la respuesta vino de ARCA. "Cargar a mano" sigue siendo editable: no es lo que
+            // dice el organismo, y bloquear una excepción cargada a mano dejaría clavado un dato sin fuente.
+            obraSocialBloqueada: sellaConstatacion && constatadaEn === "arca",
         };
         up.markModified("contracts");
         await up.save();
@@ -1531,6 +1573,8 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/obra-social"
             obraSocialOrigen: guardado.obraSocialOrigen || "",
             obraSocialConstatadaEn: guardado.obraSocialConstatadaEn || "",
             obraSocialConstatadaEl: guardado.obraSocialConstatadaEl || "",
+            obraSocialNoFigura: !!guardado.obraSocialNoFigura,
+            obraSocialBloqueada: !!guardado.obraSocialBloqueada,
         });
     }
     catch (error) {

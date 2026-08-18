@@ -76,7 +76,7 @@ interface IContract {
     /**
      * De dónde salió `obraSocialId`. Es lo que decide si el dato se puede creer:
      *
-     *  - `constatada`        se verificó contra el padrón (ver `obraSocialConstatadaEn`). Gana siempre.
+     *  - `constatada`        la devolvió el organismo (ver `obraSocialConstatadaEn`). Gana siempre.
      *  - `manual`            la cargó alguien a mano como excepción.
      *  - `heredada-usuario`  viene del campo viejo de la persona, sin fecha ni verificación. Es el
      *                        origen que deja la migración, y el que hay que ir limpiando.
@@ -88,18 +88,49 @@ interface IContract {
      */
     obraSocialOrigen?: "constatada" | "manual" | "heredada-usuario";
     /**
-     * Dónde se constató. La FUENTE es el Padrón de Beneficiarios de la Superintendencia de Servicios
-     * de Salud (SSS): lo actualiza cada obra social con carácter de declaración jurada, la consulta es
-     * de solo lectura y no exige estar logueado con el CUIT de la empleadora.
+     * Dónde se constató.
      *
-     * ARCA queda como DESEMPATE, no como fuente: lo que precompleta en su pantalla de altas es lo que
-     * ÉL tiene registrado para ese CUIL —viene de relaciones laborales anteriores— y puede estar
-     * atrasado respecto de una opción de cambio. Además esa pantalla es un formulario de alta: se
-     * entra a mirar y se queda a un click de registrar algo.
+     *  - `arca`  Simplificación Registral → Relaciones Laborales → Registrar Nuevas Altas: se pone el
+     *            CUIL y el organismo precompleta la obra social que tiene registrada. Es la FUENTE
+     *            actual, y su respuesta es INMUTABLE (ver el candado en el PATCH de obra-social): ARCA
+     *            es quien después valida el alta, así que su valor no se corrige a mano.
+     *  - `sss`   Padrón de Beneficiarios de la Superintendencia de Servicios de Salud. Fue la fuente
+     *            original y quedó DEPRECADA: obligaba a salir a otro organismo, con otro captcha, para
+     *            preguntar lo mismo que ARCA contesta en la pantalla donde el operador igual tiene que
+     *            entrar a subir el TXT. Los contratos ya constatados con este valor NO se reescriben —
+     *            decían la verdad cuando se guardaron— y se siguen mostrando con su fuente.
+     *
+     * El trade-off asumido: lo que ARCA precompleta sale de relaciones laborales anteriores y puede
+     * estar atrasado frente a una opción de cambio reciente, que la SSS sí reflejaría. Se acepta a
+     * cambio de que el trámite sea uno y no dos.
      */
     obraSocialConstatadaEn?: "sss" | "arca";
-    /** Cuándo se constató. Solo con `obraSocialOrigen: "constatada"`. */
+    /** Cuándo se constató. Con `obraSocialOrigen: "constatada"` o con `obraSocialNoFigura`. */
     obraSocialConstatadaEl?: Date | null;
+    /**
+     * El valor está FIJO: lo devolvió ARCA y no se edita a mano.
+     *
+     * Se persiste en vez de derivarse de `obraSocialConstatadaEn === "arca"` porque es una regla de
+     * negocio, no una consecuencia: el server lo lee para rechazar cualquier sobrescritura (409) y el
+     * cliente lo lee para mostrar el campo en modo lectura. Un flag explícito hace que los dos hablen
+     * del mismo dato — derivarlo en cada lado es cómo terminan discrepando.
+     *
+     * El único camino para cambiar un valor bloqueado es re-constatar en ARCA, que manda `forzar: true`
+     * después de una confirmación explícita.
+     */
+    obraSocialBloqueada?: boolean;
+    /**
+     * Se consultó y NO hay obra social registrada para esa persona.
+     *
+     * Es una RESPUESTA, no un vacío: el operador hizo el trabajo —copió el CUIL, lo puso en Registrar
+     * Nuevas Altas, miró el resultado— y lo que obtuvo fue nada. Sin poder guardarlo, ese contrato
+     * quedaba en ámbar para siempre y se volvía a consultar una y otra vez.
+     *
+     * Convive con `obraSocialId: null` a propósito: no figurar significa que corresponde la del
+     * CONVENIO, así que el id se deja vacío para que la cascada la resuelva y siga siguiendo al
+     * convenio si la categoría cambia. Lo que se sella es que la consulta se hizo.
+     */
+    obraSocialNoFigura?: boolean;
     altaDocumentoUrl?: string;
     altaDocumentoNombre?: string;
     constanciaVigenciaDesde?: string;

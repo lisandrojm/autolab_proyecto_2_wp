@@ -158,6 +158,13 @@ export interface ContractOverviewRow {
   obraSocialConstatadaEn?: "sss" | "arca" | "";
   /** Cuándo se constató (solo con origen `constatada`). */
   obraSocialConstatadaEl?: string;
+  /**
+   * Se consultó el padrón de la SSS y la persona NO figura afiliada. Es una respuesta, no un vacío:
+   * el contrato queda constatado y usa la obra social del convenio.
+   */
+  obraSocialNoFigura?: boolean;
+  /** Lo devolvió ARCA: el campo va en modo lectura y el server rechaza sobrescribirlo (409). */
+  obraSocialBloqueada?: boolean;
   categoria_sat_id?: number | null;
   sede_id?: number | null;
   tipo_contrato_id?: number | null;

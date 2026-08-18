@@ -220,6 +220,15 @@ export interface AfipValues {
    * empresa ni obra social. No se asume que esté bien ni que esté mal.
    */
   obraSocialRegistrada: boolean | null;
+  /**
+   * Estado de la constatación en ARCA (Relaciones Laborales → Registrar Nuevas Altas). Son TRES:
+   *  - `afiliada`     se consultó y ARCA devolvió esta obra social. Queda fija.
+   *  - `no_figura`    se consultó y ARCA no devolvió ninguna: rige la del convenio. Es una RESPUESTA.
+   *  - `sin_constatar` nadie consultó: el valor que se muestra es una suposición.
+   */
+  constatacion: "afiliada" | "no_figura" | "sin_constatar";
+  /** Cuándo se constató ("" si no se constató). */
+  constatadaEl: string;
 }
 
 /** Resuelve los valores ARCA de un contrato contra los catálogos (sin validar). */
@@ -342,6 +351,8 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
     rnosPorDefecto: !obraSocialPropia && !!obraSocial,
     // Un `osId` sin origen registrado se trata como heredado: no se sabe de dónde salió, y esa es
     // justamente la situación que hay que marcar en amarillo.
+    constatacion: row.obraSocialNoFigura ? "no_figura" : row.obraSocialOrigen === "constatada" ? "afiliada" : "sin_constatar",
+    constatadaEl: String(row.obraSocialConstatadaEl || ""),
     rnosOrigen: obraSocialPropia ? ((row.obraSocialOrigen || "heredada-usuario") as "constatada" | "manual" | "heredada-usuario") : obraSocialOverride ? "override" : obraSocialConvenio ? "convenio" : obraSocialEmpresa ? "empresa" : "ninguno",
     sucursal: sucursal?.codigo ? String(sucursal.codigo) : "",
   };
@@ -464,8 +475,9 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
   // --- Obra social. Decir de DÓNDE salió no es un detalle: si salió del convenio, corregirla es
   // cambiar el convenio y alcanza a todos sus contratos; si salió de la persona, es solo de ella.
   const fechaConstatada = row.obraSocialConstatadaEl ? new Date(row.obraSocialConstatadaEl).toLocaleDateString("es-AR") : "";
-  // La fuente va en la etiqueta junto con la fecha: no es lo mismo constatarla en el padrón de la SSS
-  // —declaración jurada de la obra social— que en ARCA, que refleja relaciones laborales anteriores.
+  // La fuente va en la etiqueta junto con la fecha. Hoy se constata en ARCA; "SSS" sobrevive para los
+  // contratos constatados antes del cambio de fuente, que no se reescriben: decían la verdad cuando
+  // se guardaron y borrar de dónde salió un dato es peor que mostrar dos orígenes distintos.
   const fuenteConstatada = row.obraSocialConstatadaEn === "arca" ? "ARCA" : row.obraSocialConstatadaEn === "sss" ? "SSS" : "";
   const etiquetaRnos = {
     constatada: `Código RNOS — constatada${fuenteConstatada ? ` · ${fuenteConstatada}` : ""}${fechaConstatada ? ` · ${fechaConstatada}` : ""}`,
@@ -517,17 +529,25 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
     );
   }
 
-  if (v.rnos && v.rnosOrigen === "heredada-usuario") {
-    checks.push(
-      mk(
-        "rnosSinConstatar",
-        "Obra social sin constatar",
-        "obra_social",
-        v.rnos,
-        "aviso",
-        "Viene de la ficha de la persona, de antes de que la obra social se declarara por contrato. Puede estar vencida: constatala en el padrón de la SSS (Base de Datos → Padrón de Beneficiarios → Acceso Público, con el CUIL) y cargala acá.",
-      ),
-    );
+  /**
+   * Sin constatar. NO bloquea el TXT: siempre hay un valor —el del convenio— así que el archivo se
+   * genera igual. Lo que está en juego no es que ARCA rechace el alta, es que los aportes de esa
+   * persona vayan a la obra social equivocada, que no lo avisa nadie.
+   *
+   * La caída al convenio es aporte de WeProdu: ARCA precompleta lo que tiene registrado, pero si no
+   * tiene nada lo deja vacío y el empleador elige a mano. Como la suposición la hace la app, la app
+   * tiene que mostrar cuándo la está haciendo.
+   */
+  if (v.rnos && v.constatacion === "sin_constatar") {
+    const deDonde =
+      v.rnosOrigen === "heredada-usuario"
+        ? "Viene de la ficha de la persona, de antes de que la obra social se declarara por contrato, así que puede estar vencida."
+        : v.rnosOrigen === "convenio"
+          ? `Se está asumiendo la del convenio ${v.convenioCategoria}. Si la persona optó por otra, los aportes van a la equivocada.`
+          : v.rnosOrigen === "override"
+            ? `Se está asumiendo la excepción que la empleadora puso para el convenio ${v.convenioCategoria}. Si la persona optó por otra, los aportes van a la equivocada.`
+            : "El valor que se muestra es una suposición, no un dato constatado.";
+    checks.push(mk("rnosSinConstatar", "Obra social sin constatar", "obra_social", v.rnos, "aviso", `${deDonde} Constatala en ARCA: Relaciones Laborales → Registrar Nuevas Altas, con el CUIL. No frena el archivo.`));
   }
 
   // Obra social ∈ registradas por la empleadora. Mismo tipo de regla que el convenio de la categoría:
@@ -651,23 +671,43 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
   };
 }
 
+/**
+ * Un campo cuenta como RESUELTO si el TXT se puede generar con él: `ok` y también `aviso`.
+ *
+ * Un aviso no es un faltante. El caso que lo obliga es la obra social: si ARCA no devolvió ninguna,
+ * rige la del convenio y el registro sale igual — que esté sin constatar es una verificación
+ * pendiente, no un dato ausente. Contándolo como no resuelto, un contrato perfectamente generable
+ * mostraba 5/15 y quedaba pidiendo trabajo que no cambiaba el archivo. Es el mismo error que ya se
+ * corrigió con Puesto Desempeñado y Situación de Revista.
+ *
+ * La regla vive acá para que la fracción del badge, la barra del pie y `completo` no puedan
+ * discrepar: los tres dicen lo mismo sobre el mismo contrato.
+ */
+export const esResuelto = (c: AfipFieldCheck): boolean => c.estado === "ok" || c.estado === "aviso";
+
 /** Tono del resumen: define el color del badge y del encabezado del detalle. */
 export type TonoArca = "ok" | "error" | "falta" | "en_fila";
 
 /**
  * Qué decir en una línea sobre el estado ARCA de un contrato. Vive acá y no en el badge porque lo
  * consumen tres lugares (las dos vistas de la grilla y el encabezado del detalle) y tienen que
- * coincidir: un badge que dice "Faltan 2" abriendo un detalle que dice otra cosa es peor que
- * cualquiera de los dos textos.
+ * coincidir: un badge que dice una cosa abriendo un detalle que dice otra es peor que cualquiera de
+ * los dos textos.
  *
- * El estado `en_fila` existe para que un contrato al que solo le falta elegir la empresa no muestre
- * "Faltan 0": no es configuración pendiente, pero tampoco está completo.
+ * Habla en CAMPOS y no en configuraciones. "1 configuración" era exacto —un tipo de contrato sin
+ * códigos es una sola cosa que ir a cargar— pero no se entendía al lado de la barra que marcaba
+ * 5/14: dos unidades distintas para la misma fila se leen como una contradicción. Ahora el badge y
+ * la barra dicen el MISMO número en la MISMA dirección (resueltos sobre el total), y el desglose de
+ * cuántos "lugares" hay que tocar queda para los pasos numerados del detalle, que es donde importa.
+ *
+ * El tono sigue distinguiendo la gravedad: rojo si hay datos mal cargados, ámbar si falta cargar,
+ * gris si solo falta elegir algo que ya está en pantalla.
  */
 export function resumenArca(r: AfipRowResult): { tono: TonoArca; texto: string } {
+  const total = r.checks.length;
+  const resueltos = r.checks.filter(esResuelto).length;
   if (r.completo) return { tono: "ok", texto: "Completo" };
-  if (r.errores > 0) return { tono: "error", texto: `${r.errores} mal cargado(s)` };
-  if (r.configuracionesPendientes > 0) return { tono: "falta", texto: `Faltan ${r.configuracionesPendientes}` };
-  const enFila = r.grupos.filter((g) => !g.bloqueadoPor && g.enFila);
-  if (enFila.length === 1) return { tono: "en_fila", texto: ORIGENES[enFila[0].origen].corto || enFila[0].titulo };
-  return { tono: "en_fila", texto: "Elegí empresa y sucursal" };
+  // Solo la fracción: que el badge sea una ACCIÓN lo dice el ícono de tuerca, no una palabra que
+  // repite en cada fila lo mismo y le come el lugar al único dato que distingue una de otra.
+  return { tono: r.errores > 0 ? "error" : r.configuracionesPendientes > 0 ? "falta" : "en_fila", texto: `${resueltos}/${total}` };
 }

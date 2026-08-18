@@ -501,8 +501,16 @@ class ProjectsAPI {
     projectId: string,
     userId: string,
     contractIndex: number,
-    payload: { obraSocialId: number | null; origen: "constatada" | "manual"; constatadaEn?: "sss" | "arca" },
-  ): Promise<{ obraSocialId: number | null; obraSocialOrigen: string; obraSocialConstatadaEn: string; obraSocialConstatadaEl: string }> {
+    /**
+     * `noFigura: true` registra que se consultó y NO hay obra social registrada para esa persona. Es
+     * una respuesta, no un vacío: se guarda sin obra social —corresponde la del convenio— pero
+     * sellando la fecha, así el contrato deja de pedir que se vuelva a consultar.
+     *
+     * `forzar: true` sobrescribe un valor ya sellado en ARCA, que por defecto es inmutable (el server
+     * contesta 409). Solo se manda después de una confirmación explícita de quien lo usa.
+     */
+    payload: ({ obraSocialId: number | null; origen: "constatada" | "manual"; constatadaEn?: "sss" | "arca" } | { noFigura: true; constatadaEn: "sss" | "arca" }) & { forzar?: boolean },
+  ): Promise<{ obraSocialId: number | null; obraSocialOrigen: string; obraSocialConstatadaEn: string; obraSocialConstatadaEl: string; obraSocialNoFigura?: boolean }> {
     const { data } = await axios.patch(`/projects/${projectId}/members/${userId}/contracts/${contractIndex}/obra-social`, payload, { headers: this.getHeaders() });
     return data;
   }

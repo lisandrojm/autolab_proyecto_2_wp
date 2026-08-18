@@ -52,6 +52,8 @@ const contractSchema = new Schema({
     obraSocialOrigen: { type: String, enum: ["constatada", "manual", "heredada-usuario"] },
     obraSocialConstatadaEn: { type: String, enum: ["sss", "arca"] },
     obraSocialConstatadaEl: { type: Date, default: null },
+    obraSocialNoFigura: { type: Boolean, default: false },
+    obraSocialBloqueada: { type: Boolean, default: false },
     altaDocumentoUrl: { type: String },
     altaDocumentoNombre: { type: String },
     constanciaVigenciaDesde: { type: String },

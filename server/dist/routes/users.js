@@ -833,6 +833,10 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 contratoId: c._id ? String(c._id) : "",
                 obraSocialConstatadaEn: c.obraSocialConstatadaEn || "",
                 obraSocialConstatadaEl: c.obraSocialConstatadaEl || "",
+                // "No figura en el padrón" es una respuesta constatada, no un vacío: la fila va en verde.
+                obraSocialNoFigura: !!c.obraSocialNoFigura,
+                // Lo que devolvió ARCA queda fijo: el cliente muestra el campo en modo lectura.
+                obraSocialBloqueada: !!c.obraSocialBloqueada,
                 // Flujo "Sin CUIT": documentación de respaldo + OK manual (pestaña Sin CUIT de Contratos).
                 sinCuitValidacion: c.sinCuitValidacion || null,
             };
