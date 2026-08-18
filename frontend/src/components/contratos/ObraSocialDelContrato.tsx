@@ -37,11 +37,17 @@ import { InfoCampo } from './DatosArcaDetalle';
  */
 
 /**
- * Punto de entrada de Simplificación Registral con clave fiscal: la pantalla que pide con qué CUIT
- * operar. No se enlaza más profundo a propósito — las URLs internas de MiSimplificación dependen de
- * la sesión, y un link que caduca es peor que uno que obliga a dos clicks conocidos.
+ * Simplificación Registral, ya adentro (Datos del Empleador).
+ *
+ * NO se enlaza `login/indexContribuyente.aspx`: sin una sesión viva, ARCA lo redirige a
+ * `FinSession.aspx` —la pantalla de sesión terminada— y el link parece roto justo cuando más se
+ * necesita. Esta URL funciona cuando ya hay sesión, que es el caso normal, y para el otro está el
+ * link de login de al lado.
  */
-const MISIMPLIFICACION_URL = 'https://serviciossegsoc.afip.gob.ar/tramites_con_clave_fiscal/MiSimplificacion/app/login/indexContribuyente.aspx';
+const SIMPLIFICACION_URL = 'https://serviciossegsoc.afip.gob.ar/tramites_con_clave_fiscal/MiSimplificacion/app/Contribuyente/DatosBasicos.aspx';
+
+/** Clave fiscal de ARCA. Es el que sirve cuando la sesión venció o todavía no se inició. */
+const LOGIN_AFIP_URL = 'https://auth.afip.gob.ar/contribuyente_/login.xhtml';
 
 const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
 
@@ -343,26 +349,10 @@ export const ObraSocialDelContrato: React.FC<{
 
       {abierto && (
         <div className="border-t border-blue-200 dark:border-blue-900/60 bg-blue-50/60 dark:bg-blue-950/20 p-3 space-y-3">
-          {/* El CUIL primero y copiable: es el único dato que hay que llevar al padrón, y tipearlo a
-              mano desde otra pantalla es donde se cuela el error que después nadie encuentra. */}
-          <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 flex items-center gap-3">
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">CUIL de {row.userName || 'la persona'}</p>
-              <p className="font-mono text-sm font-bold text-gray-800 dark:text-gray-100">{row.cuit ? formatCuil(row.cuit) : '— sin CUIL cargado'}</p>
-            </div>
-            {!!row.cuit && (
-              <button type="button" onClick={copiarCuil} className="ml-auto shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
-                <FontAwesomeIcon icon={copiado ? faCheck : faCopy} className="h-3 w-3" />
-                {copiado ? 'Copiado' : 'Copiar'}
-              </button>
-            )}
-          </div>
-
           {bloqueada ? (
             /* Sellada por ARCA: se muestra el resultado y NO el formulario. Ofrecer un picker que el
                server va a rechazar con 409 sería mentirle a quien lo usa. */
             <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2.5">
-              {/* El campo, en modo lectura: sin input y sin lista de 494. No hay forma de tipear acá. */}
               <div className="flex items-center gap-2.5">
                 <FontAwesomeIcon icon={faLock} className="h-3.5 w-3.5 shrink-0 text-gray-400" />
                 {row.obraSocialNoFigura ? (
@@ -385,98 +375,136 @@ export const ObraSocialDelContrato: React.FC<{
                   Re-constatar
                 </button>
               </p>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5">
-                {row.obraSocialNoFigura
-                  ? 'Sin afiliación registrada rige la del convenio. Queda fijo: no hace falta volver a consultarlo.'
-                  : 'Queda fija porque es lo que declara el organismo que después valida el alta.'}
-              </p>
             </div>
           ) : (
             <>
-          {/* Paso ①: la consulta es manual — Simplificación Registral no tiene webservice. La UI
-              acompaña el trámite en la misma pantalla donde el operador va a subir el TXT. */}
-          <div className="text-[11px] text-gray-700 dark:text-gray-300 space-y-1.5">
-            <p className="font-semibold text-gray-800 dark:text-gray-100">① Consultá el CUIL en ARCA</p>
-            <p>
-              Simplificación Registral → elegí el CUIT de la empleadora → <strong>Relaciones Laborales</strong> → <em>Registrar Nuevas Altas</em>: pegá el CUIL y mirá qué obra social precompleta.
-            </p>
-            <a href={MISIMPLIFICACION_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 font-semibold text-blue-700 dark:text-blue-400 hover:underline">
-              Abrir Simplificación Registral
-              <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
-            </a>
-            <p className="text-gray-500 dark:text-gray-400">No completes el alta ahí: el alta sale del TXT masivo. Esta consulta es solo para leer la obra social.</p>
-          </div>
+              {/*
+               * CUIL + link en UNA línea, y sin instructivo.
+               *
+               * El paso a paso vivía acá repetido: ya está en el ⓘ del título, que es el patrón del
+               * modal —lo largo va en el info, la pantalla queda operativa—. Con las instrucciones
+               * adentro, este panel ocupaba media pantalla y empujaba el resto del checklist fuera
+               * de la vista para decir algo que se lee una vez y no se vuelve a mirar.
+               */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 shrink-0">CUIL</span>
+                <span className="font-mono text-sm font-bold text-gray-800 dark:text-gray-100">{row.cuit ? formatCuil(row.cuit) : '— sin CUIL cargado'}</span>
+                {!!row.cuit && (
+                  <button
+                    type="button"
+                    onClick={copiarCuil}
+                    title="Copiar para pegarlo en Registrar Nuevas Altas"
+                    className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    <FontAwesomeIcon icon={copiado ? faCheck : faCopy} className="h-3 w-3" />
+                    {copiado ? 'Copiado' : 'Copiar'}
+                  </button>
+                )}
+                <a
+                  href={SIMPLIFICACION_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="Relaciones Laborales → Registrar Nuevas Altas. No completes el alta ahí: el alta sale del TXT."
+                  className="ml-auto inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold text-blue-700 dark:text-blue-400 hover:bg-blue-100/60 dark:hover:bg-blue-900/30"
+                >
+                  Abrir ARCA
+                  <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
+                </a>
+                {/* Salida para la sesión vencida: sin esto, "Abrir ARCA" cae en FinSession.aspx y no
+                    hay desde dónde volver a entrar sin salir de la pantalla. */}
+                <a href={LOGIN_AFIP_URL} target="_blank" rel="noreferrer" title="Si la sesión venció o todavía no entraste" className="text-[11px] text-gray-500 dark:text-gray-400 hover:underline shrink-0">
+                  iniciar sesión
+                </a>
+              </div>
 
-          {/* Paso ②: las DOS respuestas se registran. Que ARCA no devuelva nada es un resultado tan
-              válido como que devuelva un código, y hasta ahora no había dónde anotarlo: la fila
-              quedaba en ámbar y alguien volvía a consultarla la semana siguiente. */}
-          <div className="space-y-2">
-            <p className="text-[11px] font-semibold text-gray-800 dark:text-gray-100">② ¿Qué devolvió ARCA?</p>
+              {/* Las DOS respuestas se registran. Que ARCA no devuelva nada es un resultado tan
+                  válido como que devuelva un código, y hasta ahora no había dónde anotarlo: la fila
+                  quedaba en ámbar y alguien volvía a consultarla la semana siguiente. Las
+                  descripciones largas se fueron al ⓘ del título: acá los rótulos alcanzan. */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[11px] font-semibold text-gray-800 dark:text-gray-100 shrink-0">¿Qué devolvió?</span>
+                  {[
+                    { v: 'afiliada' as const, txt: 'Una obra social' },
+                    { v: 'no_figura' as const, txt: 'Ninguna' },
+                  ].map((op) => (
+                    <label
+                      key={op.v}
+                      className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 cursor-pointer text-[11px] font-semibold transition-colors ${
+                        rama === op.v
+                          ? 'border-blue-400 dark:border-blue-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100'
+                          : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-gray-900/40'
+                      }`}
+                    >
+                      <input type="radio" name={`rama-os-${row.contratoId || row.contractIndex}`} checked={rama === op.v} onChange={() => setRama(op.v)} className="h-3 w-3" />
+                      {op.txt}
+                    </label>
+                  ))}
+                  {rama === 'no_figura' && (
+                    <span className="text-[11px] text-gray-500 dark:text-gray-400">rige la del convenio{valores.nombreObraSocial ? ` · ${valores.nombreObraSocial}` : ''}</span>
+                  )}
+                </div>
 
-            <label className={`flex items-start gap-2.5 rounded-md border px-3 py-2 cursor-pointer transition-colors ${rama === 'afiliada' ? 'border-blue-400 dark:border-blue-700 bg-white dark:bg-gray-900' : 'border-gray-200 dark:border-gray-700 hover:bg-white/60 dark:hover:bg-gray-900/40'}`}>
-              <input type="radio" name={`rama-os-${row.contratoId || row.contractIndex}`} checked={rama === 'afiliada'} onChange={() => setRama('afiliada')} className="mt-0.5" />
-              <span className="min-w-0">
-                <span className="block text-xs font-semibold text-gray-800 dark:text-gray-100">Devolvió una obra social</span>
-                <span className="block text-[11px] text-gray-500 dark:text-gray-400">Buscala por código o por nombre. Queda fija en este contrato: es lo que dice el organismo.</span>
-              </span>
-            </label>
+                {rama === 'afiliada' && (
+                  <div className="space-y-2">
+                    {elegida ? (
+                      <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 flex items-center gap-3">
+                        <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-400" title={`RNOS ${formatRnos(elegida.externalId)}`}>
+                          {String(elegida.externalId || '').replace(/\D/g, '')}
+                        </span>
+                        <span className="text-sm text-gray-800 dark:text-gray-200 min-w-0 flex-1 truncate">{elegida.name}</span>
+                        <button type="button" onClick={() => setElegida(null)} className="text-[11px] text-gray-500 hover:underline shrink-0">
+                          Cambiar
+                        </button>
+                      </div>
+                    ) : (
+                      <BuscadorObraSocial catalogo={catalogo} onElegir={setElegida} />
+                    )}
 
-            {rama === 'afiliada' && (
-              <div className="pl-7 space-y-2">
-                {elegida ? (
-                  <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 flex items-center gap-3">
-                    <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-400" title={`RNOS ${formatRnos(elegida.externalId)}`}>
-                      {String(elegida.externalId || '').replace(/\D/g, '')}
-                    </span>
-                    <span className="text-sm text-gray-800 dark:text-gray-200 min-w-0 flex-1 truncate">{elegida.name}</span>
-                    <button type="button" onClick={() => setElegida(null)} className="text-[11px] text-gray-500 hover:underline shrink-0">
-                      Cambiar
-                    </button>
+                    {elegida && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={guardando}
+                          onClick={() => guardar('constatada', 'arca')}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          {guardando ? <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3" /> : <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />}
+                          Es la que devolvió ARCA
+                        </button>
+                        {/* "Cargar a mano" sobrevive para el caso en que el dato no salga de la
+                            pantalla de altas (un papel de la obra social, un traspaso recién hecho).
+                            NO queda fijo ni pinta de verde: se guarda como excepción sin constatar. */}
+                        <button
+                          type="button"
+                          disabled={guardando}
+                          onClick={() => guardar('manual')}
+                          title="No sale de ARCA: queda como excepción cargada a mano, sin constatar"
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+                        >
+                          Cargar a mano
+                        </button>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <BuscadorObraSocial catalogo={catalogo} onElegir={setElegida} />
                 )}
 
-                {elegida && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button type="button" disabled={guardando} onClick={() => guardar('constatada', 'sss')} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
-                      {guardando ? <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3" /> : <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />}
-                      Es la que devolvió ARCA
-                    </button>
-                    {/* "Cargar a mano" sobrevive para el caso en que el dato no salga de la pantalla de
-                        altas (un papel de la obra social, un traspaso recién hecho). NO queda fijo ni
-                        pinta de verde: se guarda como excepción sin constatar, que es lo que es. */}
-                    <button type="button" disabled={guardando} onClick={() => guardar('manual')} title="No sale de ARCA: queda como excepción cargada a mano, sin constatar" className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
-                      Cargar a mano
-                    </button>
-                  </div>
+                {rama === 'no_figura' && (
+                  <button
+                    type="button"
+                    disabled={guardando}
+                    onClick={marcarNoFigura}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {guardando ? <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3" /> : <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />}
+                    Registrar que no devolvió ninguna
+                  </button>
                 )}
               </div>
-            )}
-
-            <label className={`flex items-start gap-2.5 rounded-md border px-3 py-2 cursor-pointer transition-colors ${rama === 'no_figura' ? 'border-blue-400 dark:border-blue-700 bg-white dark:bg-gray-900' : 'border-gray-200 dark:border-gray-700 hover:bg-white/60 dark:hover:bg-gray-900/40'}`}>
-              <input type="radio" name={`rama-os-${row.contratoId || row.contractIndex}`} checked={rama === 'no_figura'} onChange={() => setRama('no_figura')} className="mt-0.5" />
-              <span className="min-w-0">
-                <span className="block text-xs font-semibold text-gray-800 dark:text-gray-100">No devolvió ninguna</span>
-                <span className="block text-[11px] text-gray-500 dark:text-gray-400">
-                  Sin afiliación registrada queda la del convenio{valores.rnos && valores.rnosOrigen !== 'constatada' ? ` (${valores.nombreObraSocial || String(valores.rnos).replace(/\D/g, '')})` : ''}. Se registra con fecha y no vuelve a pedirse.
-                </span>
-              </span>
-            </label>
-
-            {rama === 'no_figura' && (
-              <div className="pl-7">
-                <button type="button" disabled={guardando} onClick={marcarNoFigura} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
-                  {guardando ? <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3" /> : <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />}
-                  Registrar que no devolvió ninguna
-                </button>
-              </div>
-            )}
-          </div>
             </>
           )}
 
-          {fijada && (
+          {fijada && !bloqueada && (
             <div className="pt-2 border-t border-blue-200/60 dark:border-blue-800/60 flex items-center gap-2">
               <button type="button" disabled={guardando} onClick={quitar} className="text-[11px] font-semibold text-red-600 dark:text-red-400 hover:underline disabled:opacity-50">
                 Quitar la obra social de este contrato

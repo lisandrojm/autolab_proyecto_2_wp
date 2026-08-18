@@ -26,8 +26,18 @@ import { AfipValues } from './afipCompleteness';
  * de un trabajador. Lo que sí se puede es no repetirla: lo que ARCA contesta queda fijo.
  */
 
-/** Entrada de Simplificación Registral con clave fiscal (la pantalla que pide con qué CUIT operar). */
-const MISIMPLIFICACION_URL = 'https://serviciossegsoc.afip.gob.ar/tramites_con_clave_fiscal/MiSimplificacion/app/login/indexContribuyente.aspx';
+/**
+ * Simplificación Registral, ya adentro (Datos del Empleador).
+ *
+ * NO se enlaza `login/indexContribuyente.aspx`: sin una sesión viva, ARCA lo redirige a
+ * `FinSession.aspx` —la pantalla de sesión terminada— y el link parece roto justo cuando más se
+ * necesita. Esta URL funciona cuando ya hay sesión, que es el caso normal, y para el otro está el
+ * link de login de al lado.
+ */
+const SIMPLIFICACION_URL = 'https://serviciossegsoc.afip.gob.ar/tramites_con_clave_fiscal/MiSimplificacion/app/Contribuyente/DatosBasicos.aspx';
+
+/** Clave fiscal de ARCA. Es el que sirve cuando la sesión venció o todavía no se inició. */
+const LOGIN_AFIP_URL = 'https://auth.afip.gob.ar/contribuyente_/login.xhtml';
 
 const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
 
@@ -305,10 +315,17 @@ export const ConstatarObrasSocialesLote: React.FC<{
             Lo que contesta ARCA queda fijo. <strong>Que no devuelva ninguna también es una respuesta</strong>: se registra con fecha, rige la del convenio y esa persona no vuelve a aparecer como pendiente. <strong>No completes el alta en ARCA</strong> — el alta sale del TXT.
           </p>
         </div>
-        <a href={MISIMPLIFICACION_URL} target="_blank" rel="noreferrer" className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700">
-          Abrir ARCA
-          <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
-        </a>
+        <div className="shrink-0 flex flex-col items-end gap-1">
+          <a href={SIMPLIFICACION_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700">
+            Abrir ARCA
+            <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
+          </a>
+          {/* Salida para la sesión vencida: sin esto, "Abrir ARCA" cae en FinSession.aspx y no hay
+              desde dónde volver a entrar sin salir de la pantalla. */}
+          <a href={LOGIN_AFIP_URL} target="_blank" rel="noreferrer" className="text-[11px] text-gray-500 dark:text-gray-400 hover:underline">
+            iniciar sesión en ARCA
+          </a>
+        </div>
       </div>
 
       {/*
