@@ -112,7 +112,20 @@ export interface GrupoFaltante {
   bloqueadoPor?: OrigenDato;
   /** true si el grupo tiene al menos un `error` (dato cargado mal, no faltante). */
   tieneErrores: boolean;
+  /** true si NO es configuración de ARCA sino un selector de la propia fila (ver `ORIGENES_EN_FILA`). */
+  enFila: boolean;
 }
+
+/**
+ * Orígenes que no son configuración de ARCA: se eligen en la propia fila de la grilla, en columnas
+ * que están a la vista al lado del badge.
+ *
+ * Se separan del conteo por eso mismo. "Faltan 2" en la columna ARCA, con una de las dos siendo la
+ * empresa que la columna de al lado ya está pidiendo en ámbar, cuenta el mismo pendiente dos veces y
+ * manda a configurar algo que no hay que ir a configurar a ningún lado. Siguen frenando el TXT —
+ * `completo` los sigue exigiendo—, pero no se cuentan como configuración pendiente.
+ */
+export const ORIGENES_EN_FILA: OrigenDato[] = ["empresa", "sucursal"];
 
 export interface AfipRowResult {
   checks: AfipFieldCheck[];
@@ -121,8 +134,13 @@ export interface AfipRowResult {
   completo: boolean;
   /** Orígenes con problemas, que es lo que hay que ir a resolver. */
   grupos: GrupoFaltante[];
-  /** Cuántas configuraciones hay que tocar AHORA (excluye las bloqueadas por otra). */
+  /**
+   * Cuántas CONFIGURACIONES de ARCA hay que tocar AHORA. Excluye las bloqueadas por otro origen
+   * (se destraban solas) y las que se eligen en la propia fila (ver `ORIGENES_EN_FILA`).
+   */
   configuracionesPendientes: number;
+  /** Cuántos selectores de la propia fila están sin elegir (empresa, sucursal/actividad). */
+  pendientesEnFila: number;
   /** Cuántos campos están cargados MAL (no faltantes). */
   errores: number;
   /** Cuántos avisos hay: no bloquean el alta, pero conviene mirarlos. */
@@ -181,6 +199,8 @@ export interface AfipValues {
    * social global que lo rellene: ver la cascada en `resolveAfipValues`).
    */
   rnosOrigen: "constatada" | "manual" | "heredada-usuario" | "override" | "convenio" | "empresa" | "ninguno";
+  /** Nombre del Agente del Seguro. El RNOS solo no le dice nada a nadie: se muestran los dos. */
+  nombreObraSocial: string;
   sucursal: string;
   /** Cómo se resolvió la actividad (o por qué no se pudo). */
   actividadOrigen: ActividadOrigen;
@@ -318,6 +338,7 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
     modalidadLiq: tipo?.data?.afipModalidadLiquidacion || "",
     // El "ID Externo" de la Obra Social siempre fue el código RNOS (ver ObrasSocialesPage.tsx).
     rnos: soloDigitos(obraSocial?.externalId),
+    nombreObraSocial: obraSocial?.name || "",
     rnosPorDefecto: !obraSocialPropia && !!obraSocial,
     // Un `osId` sin origen registrado se trata como heredado: no se sabe de dónde salió, y esa es
     // justamente la situación que hay que marcar en amarillo.
@@ -326,8 +347,11 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
   };
 }
 
-/** Metadatos de cada origen: cómo se llama y a dónde se va a resolverlo. */
-const ORIGENES: Record<OrigenDato, { titulo: string; accion: string; link?: { to: string; label: string } | { enFila: string } }> = {
+/**
+ * Metadatos de cada origen: cómo se llama y a dónde se va a resolverlo.
+ * `corto` es el imperativo que va en el badge de la grilla, donde no entra el título largo.
+ */
+const ORIGENES: Record<OrigenDato, { titulo: string; accion: string; corto?: string; link?: { to: string; label: string } | { enFila: string } }> = {
   persona: { titulo: "Datos de la persona", accion: "Corregí el CUIT/CUIL en la ficha de la persona.", link: { to: "/users", label: "Ir a Usuarios" } },
   contrato: { titulo: "Fechas del contrato", accion: "Revisá las fechas de alta y baja del contrato.", link: { enFila: "Se edita en el contrato del miembro" } },
   tipo_contrato: { titulo: "Códigos ARCA del Tipo de Contrato", accion: "Cargá los códigos ARCA de este tipo de contrato (modalidad, tipo de servicio y modalidad de liquidación).", link: { to: "/contratos", label: "Ir a Contratos" } },
@@ -338,8 +362,8 @@ const ORIGENES: Record<OrigenDato, { titulo: string; accion: string; link?: { to
   // que hay que revisar es la del CCT de la categoría, no la de la empresa. El catálogo es el
   // universo; lo que ARCA acepta es el subconjunto que ese CUIT registró.
   obra_social: { titulo: "Obra social", accion: "Cargá la obra social del convenio de la categoría (Configuración → ARCA → Convenios), o asignásela a la persona. Tiene que estar entre las registradas por la empleadora.", link: { to: "/convenios", label: "Ir a Convenios" } },
-  empresa: { titulo: "Empresa del Contrato", accion: "Elegí con qué empleadora se da de alta a esta persona.", link: { enFila: "Se elige en la columna «Empresa Contrato»" } },
-  sucursal: { titulo: "Sucursal y actividad", accion: "Elegí el domicilio de desempeño con el que se declara el alta.", link: { enFila: "Se elige en las columnas «Sucursal» y «Actividad»" } },
+  empresa: { titulo: "Empresa del Contrato", accion: "Elegí con qué empleadora se da de alta a esta persona.", corto: "Elegí la empresa", link: { enFila: "Se elige en la columna «Empresa Contrato»" } },
+  sucursal: { titulo: "Sucursal y actividad", accion: "Elegí el domicilio de desempeño con el que se declara el alta.", corto: "Elegí la sucursal", link: { enFila: "Se elige en las columnas «Sucursal» y «Actividad»" } },
 };
 
 /** Orden de presentación: primero lo que desbloquea a lo demás. */
@@ -606,19 +630,44 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
         checks: propios,
         bloqueadoPor,
         tieneErrores: propios.some((c) => c.estado === "error"),
+        enFila: ORIGENES_EN_FILA.includes(origen),
       },
     ];
   });
+
+  // Lo que se puede hacer AHORA: los grupos bloqueados no suman, porque se resuelven solos al
+  // destrabar el origen del que dependen.
+  const accionables = grupos.filter((g) => !g.bloqueadoPor);
 
   return {
     checks,
     faltantes: conProblema.length,
     completo: conProblema.length === 0,
     grupos,
-    // Lo que se puede hacer AHORA: los grupos bloqueados no suman, porque se resuelven solos al
-    // destrabar el origen del que dependen.
-    configuracionesPendientes: grupos.filter((g) => !g.bloqueadoPor).length,
+    configuracionesPendientes: accionables.filter((g) => !g.enFila).length,
+    pendientesEnFila: accionables.filter((g) => g.enFila).length,
     errores: checks.filter((c) => c.estado === "error").length,
     avisos: avisos.length,
   };
+}
+
+/** Tono del resumen: define el color del badge y del encabezado del detalle. */
+export type TonoArca = "ok" | "error" | "falta" | "en_fila";
+
+/**
+ * Qué decir en una línea sobre el estado ARCA de un contrato. Vive acá y no en el badge porque lo
+ * consumen tres lugares (las dos vistas de la grilla y el encabezado del detalle) y tienen que
+ * coincidir: un badge que dice "Faltan 2" abriendo un detalle que dice otra cosa es peor que
+ * cualquiera de los dos textos.
+ *
+ * El estado `en_fila` existe para que un contrato al que solo le falta elegir la empresa no muestre
+ * "Faltan 0": no es configuración pendiente, pero tampoco está completo.
+ */
+export function resumenArca(r: AfipRowResult): { tono: TonoArca; texto: string } {
+  if (r.completo) return { tono: "ok", texto: "Completo" };
+  if (r.errores > 0) return { tono: "error", texto: `${r.errores} mal cargado(s)` };
+  if (r.configuracionesPendientes > 0) return { tono: "falta", texto: `Faltan ${r.configuracionesPendientes}` };
+  const enFila = r.grupos.filter((g) => !g.bloqueadoPor && g.enFila);
+  if (enFila.length === 1) return { tono: "en_fila", texto: ORIGENES[enFila[0].origen].corto || enFila[0].titulo };
+  return { tono: "en_fila", texto: "Elegí empresa y sucursal" };
 }

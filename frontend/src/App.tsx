@@ -56,6 +56,7 @@ import { ArcaComoFuncionaPage } from "./pages/ArcaComoFuncionaPage";
 import { ArcaActividadesPage } from "./pages/ArcaActividadesPage";
 import { ArcaModalidadesContratacionPage } from "./pages/ArcaModalidadesContratacionPage";
 import { ArcaTiposServicioPage } from "./pages/ArcaTiposServicioPage";
+import { ArcaGruposTipoServicioPage } from "./pages/ArcaGruposTipoServicioPage";
 import { ArcaModalidadesLiquidacionPage } from "./pages/ArcaModalidadesLiquidacionPage";
 import { ConveniosPage } from "./pages/ConveniosPage";
 import { CentrosCostoPage } from "./pages/CentrosCostoPage";
@@ -572,6 +573,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ArcaTiposServicioPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/arca/grupos-tipo-servicio"
+                element={
+                  <ProtectedRoute>
+                    <ArcaGruposTipoServicioPage />
                   </ProtectedRoute>
                 }
               />

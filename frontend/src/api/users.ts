@@ -139,6 +139,11 @@ export interface ContractOverviewRow {
   /** Flujo "Sin CUIT": documentación de respaldo cargada + OK manual de quien revisa. */
   sinCuitValidacion?: SinCuitValidacion | null;
   /**
+   * Identidad del contrato dentro del member. Se usa para direccionarlo en los PATCH sin depender del
+   * índice: la posición cambia sola si se borra otro contrato mientras la pantalla está abierta.
+   */
+  contratoId?: string;
+  /**
    * Obra social de ESTE contrato (RNOS), no de la persona: ARCA la declara por alta (pos. 40-45) y
    * caduca sola por desregulación. Vacío no es un faltante — significa que se aplica la del convenio.
    */

@@ -10,7 +10,7 @@ import { contratosAPI, ContratoItem } from '../../api/contratos';
 import { categoriaSatAPI, CategoriaSatItem } from '../../api/categoriasSat';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { arcaSucursalesAPI, ArcaSucursal } from '../../api/arcaSucursales';
-import { DatosArcaDetalle } from './DatosArcaDetalle';
+import { DatosArcaDetalle, BadgeArca } from './DatosArcaDetalle';
 import { Release } from '../../api/release';
 import { firmaDigitalAPI, FirmaDigitalConfig } from '../../api/firmaDigital';
 import { afipAPI } from '../../api/afip';
@@ -1256,10 +1256,7 @@ export const ContractBulkAfipTab: React.FC<{
                     </>
                   )}
                   {filterTipo === 'alta_temprana_afip' && (
-                    <button onClick={() => setDetalle({ row: r, result })} className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border transition-colors ${result.completo ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100'}`}>
-                      <FontAwesomeIcon icon={result.completo ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
-                      ARCA: {result.completo ? 'Completo' : result.errores > 0 ? `${result.errores} mal cargado(s)` : `Faltan ${result.configuracionesPendientes}`}
-                    </button>
+                    <BadgeArca result={result} onClick={() => setDetalle({ row: r, result })} prefijo="ARCA: " />
                   )}
                   <span className="ml-auto">
                     <ContractActionsButtons record={r} onDeleted={() => load(true)} />
@@ -1449,10 +1446,7 @@ export const ContractBulkAfipTab: React.FC<{
                     )}
                     {filterTipo === 'alta_temprana_afip' && (
                       <td className="px-4 py-3">
-                        <button onClick={() => setDetalle({ row: r, result })} title="Ver detalle de los datos ARCA" className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap transition-colors ${result.completo ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100'}`}>
-                          <FontAwesomeIcon icon={result.completo ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
-                          {result.completo ? 'Completo' : result.errores > 0 ? `${result.errores} mal cargado(s)` : `Faltan ${result.configuracionesPendientes}`}
-                        </button>
+                        <BadgeArca result={result} onClick={() => setDetalle({ row: r, result })} />
                       </td>
                     )}
                     {filterTipo !== 'sin_cuit' && <ContractDocsColumns record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onDownloadContract={handleDownloadContract} onDownloadRelease={handleDownloadRelease} onUploadAlta={handleUploadAlta} showContrato={false} showRelease={false} hideAltaLabel />}
@@ -1515,7 +1509,9 @@ export const ContractBulkAfipTab: React.FC<{
           zIndex={70}
           footer={
             <div className="flex items-center justify-between gap-3 w-full">
-              <span className="text-[11px] text-gray-500 dark:text-gray-400">{detalle.result.completo ? 'Podés generar el alta de esta persona.' : 'Resolvé lo pendiente para poder generar el TXT.'}</span>
+              {/* El pie dice qué falta para habilitar el botón. "Resolvé lo pendiente" no distingue
+                  entre ir a configurar algo y elegir un combo que está en la fila de atrás. */}
+              <span className="text-[11px] text-gray-500 dark:text-gray-400">{detalle.result.completo ? 'Podés generar el alta de esta persona.' : detalle.result.configuracionesPendientes === 0 && detalle.result.errores === 0 ? 'Elegilo en la fila y el TXT queda habilitado.' : 'Resolvé lo pendiente para poder generar el TXT.'}</span>
               <button onClick={() => generarTxt([detalle], `alta_${detalle.row.userName.replace(/\s+/g, '_')}`)} disabled={!detalle.result.completo} className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0">
                 <FontAwesomeIcon icon={faFileLines} />
                 Descargar TXT de esta persona
@@ -1523,7 +1519,7 @@ export const ContractBulkAfipTab: React.FC<{
             </div>
           }
         >
-          <DatosArcaDetalle row={detalle.row} result={detalle.result} cat={afipCat} onNavegar={() => setDetalle(null)} />
+          <DatosArcaDetalle row={detalle.row} result={detalle.result} cat={afipCat} onNavegar={() => setDetalle(null)} onGuardado={(patch) => aplicarCambio(detalle.row, patch)} />
         </Modal>
       )}
 
@@ -1653,28 +1649,31 @@ export const ContractBulkAfipTab: React.FC<{
         <Modal isOpen={datosAfipInfoOpen} onClose={() => setDatosAfipInfoOpen(false)} title="Datos ARCA" size="sm" zIndex={80}>
           <div className="space-y-3">
             <p className="text-sm text-gray-700 dark:text-gray-200">El TXT de Alta temprana necesita un conjunto fijo de códigos por persona. Si a alguno le "Faltan N", significa que esos códigos no se pudieron armar todavía — y por eso ese contrato queda afuera del TXT hasta completarlos.</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">La N cuenta CONFIGURACIONES, no campos: un tipo de contrato sin códigos es una sola cosa que ir a cargar, aunque deje tres campos vacíos.</p>
             <p className="text-sm text-gray-600 dark:text-gray-300">Los códigos salen de:</p>
             <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1.5 list-disc list-inside">
               <li>
-                <strong>Tipo de Contrato</strong>: modalidad, tipo de servicio, actividad y modalidad de liquidación.
+                <strong>Tipo de Contrato</strong>: modalidad, tipo de servicio y modalidad de liquidación.
               </li>
               <li>
-                <strong>Categoría</strong>: categoría profesional y sueldo bruto.
+                <strong>Categoría</strong>: categoría profesional y sueldo bruto — y de su convenio sale la obra social.
               </li>
               <li>
-                <strong>Obra Social</strong>: código RNOS.
+                <strong>Contrato</strong>: código RNOS de la obra social, constatado en el padrón de la SSS. Se carga desde este mismo detalle.
               </li>
               <li>
-                <strong>Sede</strong>: código de sucursal.
+                <strong>Domicilios de Explotación de la empresa</strong>: código de sucursal y actividad. No sale de la Sede: son cosas distintas.
               </li>
               <li>
                 <strong>Datos personales</strong>: CUIL.
               </li>
-              <li>
-                <strong>Empresa del Contrato</strong>: se elige en la columna "Empresa" — un mismo TXT se sube a la sesión de ARCA de una sola empresa, así que hace falta saber a cuál corresponde cada contrato.
-              </li>
             </ul>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400">Tocá el badge "Faltan N" de una fila para ver exactamente cuáles faltan.</p>
+            {/* La empresa y la sucursal se piden en columnas de esta misma grilla. Contarlas en el
+                badge duplicaba el pedido y mandaba a "configurar" algo que se elige acá al lado. */}
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              <strong>La Empresa del Contrato y la Sucursal no entran en esa cuenta</strong>: no hay nada que configurar, se eligen en las columnas de esta misma grilla. Frenan el TXT igual, y el detalle las muestra aparte.
+            </p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">Tocá el badge de una fila para ver exactamente qué falta.</p>
           </div>
         </Modal>
       )}

@@ -11,7 +11,24 @@ import { faPlus, faEdit, faTrash, faFileContract, faGrip, faTable, faFileInvoice
 import { contratosAPI, ContratoItem } from '../../api/contratos';
 import { contratoFrameAPI, ContratoFrameItem } from '../../api/contratosFrame';
 import { infoAPI, InfoItem } from '../../api/info';
+import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
+import { SelectorCodigoArca } from '../arca/SelectorCodigoArca';
 import { EstadoBadge, EstadoSecundarioBadge } from '../EstadoSelect';
+
+// Nomencladores de ARCA de los que salen los tres códigos. Se leen enteros (153 / 293 / 8 / 2): son
+// chicos y se cargan una vez al abrir la pestaña.
+const modalidadesContratoApi = createSimpleCatalogApi('/arca/modalidades-contratacion');
+const tiposServicioApi = createSimpleCatalogApi('/arca/tipos-servicio');
+const modalidadesLiqApi = createSimpleCatalogApi('/arca/modalidades-liquidacion');
+const gruposTipoServicioApi = createSimpleCatalogApi('/arca/grupos-tipo-servicio');
+
+/** Los códigos van con ceros a la izquierda: es lo que espera el TXT. */
+const padN = (n: number) => (raw: string): string => {
+  const d = String(raw || '').replace(/\D/g, '');
+  return d ? d.padStart(n, '0').slice(-n) : '';
+};
+const pad3 = padN(3);
+const pad1 = padN(1);
 
 const normalizar = (s: string): string =>
   (s || '')
@@ -137,6 +154,56 @@ export const ContractTypesTab: React.FC = () => {
   useEffect(() => {
     cargar();
   }, []);
+
+  /*
+   * Los nomencladores de ARCA, para los tres selectores de códigos. Van aparte de `cargar()` a
+   * propósito: si ARCA está sin sembrar, la pestaña de Tipos de Contrato tiene que abrir igual. El
+   * selector se encarga de decir que su catálogo está vacío y dónde se llena.
+   */
+  const [modalidadesContrato, setModalidadesContrato] = useState<SimpleCatalogItem[]>([]);
+  const [tiposServicio, setTiposServicio] = useState<SimpleCatalogItem[]>([]);
+  const [modalidadesLiq, setModalidadesLiq] = useState<SimpleCatalogItem[]>([]);
+  const [gruposTipoServicio, setGruposTipoServicio] = useState<SimpleCatalogItem[]>([]);
+  const [cargandoArca, setCargandoArca] = useState(true);
+
+  useEffect(() => {
+    const vacio = () => [] as SimpleCatalogItem[];
+    Promise.all([modalidadesContratoApi.list().catch(vacio), tiposServicioApi.list().catch(vacio), modalidadesLiqApi.list().catch(vacio), gruposTipoServicioApi.list().catch(vacio)])
+      .then(([mc, ts, ml, gts]) => {
+        setModalidadesContrato(mc);
+        setTiposServicio(ts);
+        setModalidadesLiq(ml);
+        setGruposTipoServicio(gts);
+      })
+      .finally(() => setCargandoArca(false));
+  }, []);
+
+  /**
+   * Grupo de tipo de servicio: filtra el selector de abajo y NO se guarda.
+   *
+   * No es un campo del tipo de contrato — no viaja en el TXT y no aporta nada que el tipo de servicio
+   * no diga ya. Al reabrir el formulario se DEDUCE del tipo de servicio guardado, que es de dónde
+   * salió. Guardarlo sería inventar un dato que puede quedar contradiciendo al código.
+   */
+  const [grupoTipoServicio, setGrupoTipoServicio] = useState('');
+  useEffect(() => {
+    if (!showModal) return;
+    const ts = tiposServicio.find((t) => pad3(String(t.externalId || '')) === pad3(form.afipTipoServicio));
+    setGrupoTipoServicio(String(ts?.grupo || ''));
+    // Solo al abrir el modal o al llegar el catálogo: si dependiera del tipo de servicio elegido,
+    // cambiar de tipo reescribiría el grupo que el operador acaba de elegir para filtrar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showModal, tiposServicio]);
+
+  /**
+   * Sin ningún tipo de servicio clasificado, filtrar por grupo deja la lista en cero y parece que el
+   * catálogo está roto. Mientras eso pase, el grupo no filtra: solo se avisa.
+   */
+  const hayGruposCargados = useMemo(() => tiposServicio.some((t) => String(t.grupo || '').trim()), [tiposServicio]);
+  const tiposServicioFiltrados = useMemo(() => {
+    if (!hayGruposCargados || !grupoTipoServicio) return tiposServicio;
+    return tiposServicio.filter((t) => String(t.grupo || '') === grupoTipoServicio);
+  }, [tiposServicio, grupoTipoServicio, hayGruposCargados]);
 
   const filtrados = useMemo(() => {
     const q = normalizar(searchTerm);
@@ -587,21 +654,71 @@ export const ContractTypesTab: React.FC = () => {
               <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">Códigos ARCA (Alta masiva)</p>
             </div>
             <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-0.5">
-              Códigos de la interfaz de "Alta masiva" de ARCA, específicos del convenio/modalidad. Se usan para generar el TXT. Dejalos en blanco si no aplican. La <strong>actividad del domicilio</strong> no va acá: depende de la sede y de la empleadora, así que se carga en Configuración → Empresas, sección "Sedes en ARCA".
+              Códigos de la interfaz de "Alta masiva" de ARCA, específicos del convenio/modalidad. Se usan para generar el TXT. Dejalos en blanco si no aplican. La <strong>actividad del domicilio</strong> no va acá: depende del domicilio de explotación y de la empleadora, así que se carga en la ficha de la empresa, en ARCA → Domicilios de Explotación.
             </p>
-            <div className="grid grid-cols-2 gap-3">
+
+            <div className="space-y-3">
+              <SelectorCodigoArca
+                label="Modalidad de contrato"
+                sufijoLabel="(3 díg.)"
+                items={modalidadesContrato}
+                cargando={cargandoArca}
+                value={form.afipModalidadContrato}
+                onChange={(c) => setForm((p) => ({ ...p, afipModalidadContrato: c }))}
+                formatCodigo={pad3}
+                placeholder="Sin elegir — ej. 008 tiempo completo indeterminado"
+                vacioHint="El catálogo de Modalidades de Contrato está vacío. Se siembra en Configuración → ARCA → Modalidades de Contrato."
+              />
+
+              {/*
+               * El grupo va ARRIBA del tipo de servicio porque lo filtra, igual que Convenio →
+               * Categoría y Domicilio → Actividad. No se guarda: solo recorta la lista.
+               */}
               <div className="space-y-1.5">
-                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">Modalidad de contrato <span className="normal-case tracking-normal text-gray-400">(3 díg.)</span></label>
-                <input maxLength={3} inputMode="numeric" className="input-field w-full" value={form.afipModalidadContrato} onChange={(e) => setForm((p) => ({ ...p, afipModalidadContrato: e.target.value.replace(/\D/g, '') }))} placeholder="Ej: 008" />
+                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">Grupo de tipo de servicio <span className="normal-case tracking-normal text-gray-400">(no va al TXT)</span></label>
+                <select className="input-field w-full" value={grupoTipoServicio} onChange={(e) => setGrupoTipoServicio(e.target.value)} disabled={gruposTipoServicio.length === 0}>
+                  <option value="">Todos los tipos de servicio</option>
+                  {gruposTipoServicio.map((g) => (
+                    <option key={g._id} value={String(g.externalId || '')}>
+                      {g.externalId} — {g.name}
+                    </option>
+                  ))}
+                </select>
+                {!hayGruposCargados ? (
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1 flex items-start gap-1.5">
+                    <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5 mt-1 shrink-0" />
+                    Todavía ningún tipo de servicio tiene grupo cargado, así que el filtro no se aplica. Clasificalos en Configuración → ARCA → Tipos de Servicio.
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
+                    Hay 49 nombres repetidos entre los {tiposServicio.length} tipos de servicio (el mismo texto con dos códigos). Elegir el grupo deja a la vista solo los de ese grupo.
+                  </p>
+                )}
               </div>
-              <div className="space-y-1.5">
-                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">Tipo de servicio <span className="normal-case tracking-normal text-gray-400">(3 díg.)</span></label>
-                <input maxLength={3} inputMode="numeric" className="input-field w-full" value={form.afipTipoServicio} onChange={(e) => setForm((p) => ({ ...p, afipTipoServicio: e.target.value.replace(/\D/g, '') }))} placeholder="Ej: 001" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">Modalidad de liquidación <span className="normal-case tracking-normal text-gray-400">(1 díg.)</span></label>
-                <input maxLength={1} inputMode="numeric" className="input-field w-full" value={form.afipModalidadLiquidacion} onChange={(e) => setForm((p) => ({ ...p, afipModalidadLiquidacion: e.target.value.replace(/\D/g, '') }))} placeholder="Ej: 1" />
-              </div>
+
+              <SelectorCodigoArca
+                label="Tipo de servicio"
+                sufijoLabel={grupoTipoServicio && hayGruposCargados ? `(3 díg. · ${tiposServicioFiltrados.length} del grupo)` : '(3 díg.)'}
+                items={tiposServicioFiltrados}
+                cargando={cargandoArca}
+                value={form.afipTipoServicio}
+                onChange={(c) => setForm((p) => ({ ...p, afipTipoServicio: c }))}
+                formatCodigo={pad3}
+                placeholder="Sin elegir — ej. 000 servicios comunes continuos"
+                vacioHint="El catálogo de Tipos de Servicio está vacío. Se siembra en Configuración → ARCA → Tipos de Servicio."
+              />
+
+              <SelectorCodigoArca
+                label="Modalidad de liquidación"
+                sufijoLabel="(1 díg.)"
+                items={modalidadesLiq}
+                cargando={cargandoArca}
+                value={form.afipModalidadLiquidacion}
+                onChange={(c) => setForm((p) => ({ ...p, afipModalidadLiquidacion: c }))}
+                formatCodigo={pad1}
+                placeholder="Sin elegir — ej. 1 por mes"
+                vacioHint="El catálogo de Modalidades de Liquidación está vacío. Se siembra en Configuración → ARCA → Modalidades de Liquidación."
+              />
             </div>
           </div>
 

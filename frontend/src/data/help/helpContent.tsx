@@ -57,6 +57,7 @@ export type HelpKey =
   | "arcaActividades"
   | "arcaModalidadContratacion"
   | "arcaTipoServicio"
+  | "arcaGrupoTipoServicio"
   | "arcaModalidadLiquidacion";
 
 export type HelpEntry = {
@@ -387,7 +388,7 @@ const helpResources = {
       ],
 
       // Tablas oficiales de ARCA (Simplificación Registral)
-      "arcaModalidadContratacion.title": "Información de Modalidades de Contratación",
+      "arcaModalidadContratacion.title": "Información de Modalidades de Contrato",
       "arcaModalidadContratacion.description": "Tabla oficial de ARCA: con qué modalidad se declara la relación laboral en el alta.",
       "arcaModalidadContratacion.items": [
         "**Qué es**: El código de 3 dígitos que va en las posiciones 17-19 del TXT de alta masiva. Ej.: *008* tiempo completo indeterminado, *022* plazo fijo a tiempo completo.",
@@ -402,8 +403,21 @@ const helpResources = {
       "arcaTipoServicio.items": [
         "**Qué es**: El código de 3 dígitos que va en las posiciones 107-109 del TXT de alta masiva.",
         "**Valor habitual**: *000 — Servicios comunes continuos*. El resto son regímenes especiales (tareas insalubres, aeronavegantes, docentes, etc.) con cómputo jubilatorio distinto.",
-        "**Dónde se usa**: Se asigna por Tipo de Contrato, en Configuración → Contratos.",
+        "**Ojo: hay nombres repetidos**. De los 293, hay 49 nombres que aparecen dos veces (98 registros): *TAREAS INSALUBRES* es 006 y también 506. Lo que los separa es el **Grupo**: los continuos y los discontinuos tienen listas espejadas.",
+        "**Por eso el código siempre está a la vista**: en dos casos —114/115 y 248/249— ni el grupo alcanza para distinguirlos, así que el código es lo único que los identifica.",
+        "**Dónde se usa**: Se asigna por Tipo de Contrato, en Configuración → Contratos, eligiendo primero el grupo.",
         "**Origen**: Se siembra desde el nomenclador de ARCA y solo hace falta tocarla si el organismo la actualiza.",
+      ],
+
+      // Grupos de tipo de servicio (ARCA, tabla l_GTS)
+      "arcaGrupoTipoServicio.title": "Información de Grupos de Tipo de Servicio",
+      "arcaGrupoTipoServicio.description": "Tabla oficial de ARCA: separa los tipos de servicio continuos de los discontinuos.",
+      "arcaGrupoTipoServicio.items": [
+        "**Son dos**: *1 — Continuos* y *2 — Discontinuos*. ARCA no tiene más.",
+        "**No va al TXT**: no ocupa ninguna de las 130 posiciones del registro de alta. Existe solo para filtrar el selector de Tipo de Servicio.",
+        "**Para qué sirve entonces**: el catálogo de Tipos de Servicio tiene 49 nombres repetidos —el mismo texto con dos códigos distintos, uno por grupo—. Sin elegir el grupo primero, las dos filas se ven idénticas y es un 50% de chance de escribir el código equivocado.",
+        "**Cómo se clasifican**: los códigos de 500 en adelante son discontinuos; el resto, continuos. Lo dice el propio nomenclador: *000 Servicios comunes continuos* / *500 Servicios comunes discontinuos*.",
+        "**No hace falta tocarla**: son dos registros que ARCA no cambia.",
       ],
 
       // Modalidades de liquidación (ARCA)
@@ -616,8 +630,9 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
   empresaContratos: { title: "Contratos de esta empleadora", size: "md", content: buildHelpContent("empresaContratos") },
   arcaSucursales: { title: "Domicilios de Explotación", size: "md", content: buildHelpContent("arcaSucursales") },
   arcaActividades: { title: "Actividades", size: "md", content: buildHelpContent("arcaActividades") },
-  arcaModalidadContratacion: { title: "Modalidades de Contratación (ARCA)", size: "md", content: buildHelpContent("arcaModalidadContratacion") },
+  arcaModalidadContratacion: { title: "Modalidades de Contrato (ARCA)", size: "md", content: buildHelpContent("arcaModalidadContratacion") },
   arcaTipoServicio: { title: "Tipos de Servicio (ARCA)", size: "md", content: buildHelpContent("arcaTipoServicio") },
+  arcaGrupoTipoServicio: { title: "Grupos de Tipo de Servicio (ARCA)", size: "md", content: buildHelpContent("arcaGrupoTipoServicio") },
   arcaModalidadLiquidacion: { title: "Modalidades de Liquidación (ARCA)", size: "md", content: buildHelpContent("arcaModalidadLiquidacion") },
   orderTypes: { title: "Información de Pedidos", size: "sm", content: buildHelpContent("orderTypes") },
   releases: { title: "Información de Releases", size: "sm", content: buildHelpContent("releases") },

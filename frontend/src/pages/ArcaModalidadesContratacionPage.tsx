@@ -13,10 +13,10 @@ const formatCodigo = (raw: string): string => {
 
 export const ArcaModalidadesContratacionPage: React.FC = () => (
   <SimpleCatalogManager
-    title="Modalidades de Contratación"
+    title="Modalidades de Contrato"
     subtitle="Tabla oficial de ARCA. Define la modalidad con la que se declara cada Tipo de Contrato en el alta."
     icon={faFileContract}
-    entityLabel="modalidad de contratación"
+    entityLabel="modalidad de contrato"
     api={api}
     templateBaseName="arca_modalidades_contratacion"
     externalIdLabel="Código"

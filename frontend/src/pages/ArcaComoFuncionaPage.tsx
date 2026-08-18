@@ -134,7 +134,7 @@ export const ArcaComoFuncionaPage: React.FC = () => {
               <Chip nombre="Convenios Colectivos" total={conteos.convenios} to="/convenios" />
               <Chip nombre="Categorías profesionales" to="/arca/categorias" total={undefined} />
               <Chip nombre="Tipos de Servicio" total={conteos.tiposServicio} to="/arca/tipos-servicio" />
-              <Chip nombre="Modalidades de Contratación" total={conteos.modContratacion} to="/arca/modalidades-contratacion" />
+              <Chip nombre="Modalidades de Contrato" total={conteos.modContratacion} to="/arca/modalidades-contratacion" />
               <Chip nombre="Modalidades de Liquidación" total={conteos.modLiquidacion} to="/arca/modalidades-liquidacion" />
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
@@ -177,7 +177,7 @@ export const ArcaComoFuncionaPage: React.FC = () => {
               <Aporte que="CUIL y fechas" para={<>De la persona y del contrato. La <em className="not-italic font-medium text-gray-800 dark:text-gray-200">fecha de fin</em> es obligatoria solo si la modalidad es a plazo determinado; en las de tiempo indeterminado tiene que ir en blanco.</>} />
               <Aporte que="Categoría" para={<>Arrastra su <em className="not-italic font-medium text-gray-800 dark:text-gray-200">convenio</em> → obra social, y su <em className="not-italic font-medium text-gray-800 dark:text-gray-200">grupo salarial</em> → retribución.</>} />
               <Aporte que="Domicilio" para={<>Arrastra la <em className="not-italic font-medium text-gray-800 dark:text-gray-200">actividad</em>: si el domicilio declara una sola, se completa sola; si tiene varias, hay que elegir cuál se informa.</>} />
-              <Aporte que="Tipo de contrato" to="/contratos" para={<>Arrastra <em className="not-italic font-medium text-gray-800 dark:text-gray-200">modalidad de contratación</em>, <em className="not-italic font-medium text-gray-800 dark:text-gray-200">tipo de servicio</em> y <em className="not-italic font-medium text-gray-800 dark:text-gray-200">modalidad de liquidación</em>.</>} />
+              <Aporte que="Tipo de contrato" to="/contratos" para={<>Arrastra <em className="not-italic font-medium text-gray-800 dark:text-gray-200">modalidad de contrato</em>, <em className="not-italic font-medium text-gray-800 dark:text-gray-200">tipo de servicio</em> y <em className="not-italic font-medium text-gray-800 dark:text-gray-200">modalidad de liquidación</em>.</>} />
             </div>
           </Capa>
 

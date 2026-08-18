@@ -66,7 +66,7 @@ const PLANTILLAS_PATHS = [MEMBRETE_PATH, '/pdfs', '/pdfs-vacaciones', '/contrato
  * autocompletar el código y normalizar la descripción al cargarlas ahí. Por eso va pegado a
  * Domicilios de Explotación y comparte su permiso.
  */
-const ARCA_NOMENCLADOR_PATHS = ['/obras-sociales', '/arca/sucursales', '/arca/actividades', '/arca/tipos-servicio', '/arca/modalidades-contratacion', '/arca/modalidades-liquidacion'];
+const ARCA_NOMENCLADOR_PATHS = ['/obras-sociales', '/arca/sucursales', '/arca/actividades', '/arca/tipos-servicio', '/arca/grupos-tipo-servicio', '/arca/modalidades-contratacion', '/arca/modalidades-liquidacion'];
 /**
  * La Conexión va ÚLTIMA y separada por una raya.
  *
@@ -318,8 +318,14 @@ export const MobileNavbar: React.FC = () => {
       // que un contrato puede declarar sigue saliendo del domicilio; acá solo viven código y texto.
       if (hasPermission('config_arca_sucursales:view')) base.push({ path: '/arca/actividades', icon: faIndustry, label: 'Actividades', scope: 'global' });
       if (hasPermission('config_arca_tablas:view')) {
-        base.push({ path: '/arca/modalidades-contratacion', icon: faFileContract, label: 'Modalidades de Contratación', scope: 'global' });
+        // "Modalidad de Contrato" es como lo llama ARCA. Era "Modalidades de Contratación" acá y
+        // "Modalidad de contrato" en el formulario del tipo de contrato: dos nombres para el MISMO
+        // catálogo (153 registros, mismos códigos) hacían dudar de si eran dos cosas.
+        base.push({ path: '/arca/modalidades-contratacion', icon: faFileContract, label: 'Modalidades de Contrato', scope: 'global' });
         base.push({ path: '/arca/tipos-servicio', icon: faListCheck, label: 'Tipos de Servicio', scope: 'global' });
+        // Va PEGADO a Tipos de Servicio y comparte su permiso, igual que Actividades con Domicilios:
+        // son 2 registros que nadie navega, existen para filtrar el de arriba.
+        base.push({ path: '/arca/grupos-tipo-servicio', icon: faLayerGroup, label: 'Grupos de Tipo de Servicio', scope: 'global' });
         base.push({ path: '/arca/modalidades-liquidacion', icon: faClock, label: 'Modalidades de Liquidación', scope: 'global' });
       }
     }
