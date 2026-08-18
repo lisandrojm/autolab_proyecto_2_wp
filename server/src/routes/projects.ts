@@ -1754,6 +1754,10 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/obra-social"
  * `rnos` vacío significa que ARCA no devolvió obra social para ese CUIL: se registra como consultado
  * —igual que el "No devolvió ninguna" del modal— y rige la del convenio.
  *
+ * Con `previsualizar: true` calcula exactamente lo mismo y NO escribe nada. La previsualización usa
+ * este mismo código a propósito: una que recorra otro camino puede prometer un resultado distinto al
+ * que después ocurre, y entonces no sirve para decidir.
+ *
  * Existe porque la constatación es de a una PANTALLA pero de a muchas PERSONAS: el operador entra a
  * ARCA una vez y sale con 26 respuestas. Aplicarlas con 26 requests desde el cliente dejaba el
  * resultado a mitad de camino ante cualquier corte, y sin forma de saber cuáles entraron.
@@ -1770,6 +1774,7 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/obra-social"
 router.post("/projects/obras-sociales/aplicar-lote", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const empresaId = String(req.body?.empresaId || "");
+    const previsualizar = req.body?.previsualizar === true;
     const filas: Array<{ cuil?: string; rnos?: string }> = Array.isArray(req.body?.filas) ? req.body.filas : [];
     if (!Types.ObjectId.isValid(empresaId)) {
       res.status(400).json({ error: "Falta la empleadora: el lote se aplica a los contratos de un solo CUIT." });
@@ -1883,6 +1888,8 @@ router.post("/projects/obras-sociales/aplicar-lote", requireTenant, authenticate
             bloqueadoAlguno = true;
             return;
           }
+          alcanzados++;
+          if (previsualizar) return;
           up.contracts[idx] = {
             ...contrato.toObject(),
             obraSocialId: os ? Number(os?.data?.id) : null,
@@ -1893,9 +1900,8 @@ router.post("/projects/obras-sociales/aplicar-lote", requireTenant, authenticate
             obraSocialBloqueada: true,
           } as any;
           tocado = true;
-          alcanzados++;
         });
-        if (tocado) {
+        if (tocado && !previsualizar) {
           up.markModified("contracts");
           await up.save();
         }
@@ -1911,7 +1917,7 @@ router.post("/projects/obras-sociales/aplicar-lote", requireTenant, authenticate
       if (!os) resultado.noFigura++;
     }
 
-    res.json(resultado);
+    res.json({ ...resultado, previsualizacion: previsualizar });
   } catch (error) {
     console.error("Aplicar lote obras sociales error:", error);
     res.status(500).json({ error: "Internal server error" });

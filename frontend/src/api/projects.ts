@@ -524,6 +524,8 @@ class ProjectsAPI {
   async aplicarObrasSocialesLote(
     empresaId: string,
     filas: Array<{ cuil: string; rnos: string }>,
+    /** `true` calcula el mismo resultado sin escribir nada: es la previsualización. */
+    previsualizar?: boolean,
   ): Promise<{
     aplicados: number;
     contratosAlcanzados: number;
@@ -532,8 +534,9 @@ class ProjectsAPI {
     noRegistrada: Array<{ cuil: string; rnos: string; nombre: string }>;
     yaBloqueados: string[];
     noFigura: number;
+    previsualizacion: boolean;
   }> {
-    const { data } = await axios.post(`/projects/obras-sociales/aplicar-lote`, { empresaId, filas }, { headers: this.getHeaders() });
+    const { data } = await axios.post(`/projects/obras-sociales/aplicar-lote`, { empresaId, filas, previsualizar: !!previsualizar }, { headers: this.getHeaders() });
     return data;
   }
 
