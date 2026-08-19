@@ -1,108 +1,157 @@
 // ==UserScript==
-// @name         WeProdu — Constatar obras sociales en ARCA
+// @name         WeProdu — Validar obras sociales en ARCA (auto)
 // @namespace    weprodu
-// @version      1.3
-// @description  Recorre una lista de CUIL en Registrar Nuevas Altas, lee la obra social que ARCA precompleta y devuelve CUIL,RNOS. No confirma ninguna alta.
-// @match        https://serviciossegsoc.afip.gob.ar/tramites_con_clave_fiscal/MiSimplificacion/app/Contribuyente/RelacionLaboral/Altas.aspx*
-// @match        https://autolab.fun/*
+// @version      2.0.1
+// @description  Puente automático WeProdu <-> ARCA. WeProdu manda la lista de CUIL, el script la valida en ARCA sola y devuelve los RNOS a WeProdu. No confirma altas. No guarda clave fiscal.
 // @match        http://localhost:5173/*
+// @match        https://autolab.fun/*
+// @match        https://serviciossegsoc.afip.gob.ar/tramites_con_clave_fiscal/*/Contribuyente/RelacionLaboral/Altas.aspx*
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @grant        GM_deleteValue
 // @run-at       document-idle
-// @grant        none
 // ==/UserScript==
 
 /*
-  QUÉ HACE
-  - Vos te logueás a mano en AFIP y llegás a "Registrar Nuevas Altas".
-  - Apretás el botón flotante "▶ Constatar obras sociales", pegás los CUIL (uno por línea).
-  - El script, por cada CUIL: lo escribe, aprieta "Agregar", espera el postback de ASP.NET
-    (que recarga la página), y en la recarga lee la obra social que ARCA precompletó.
-  - Cuando termina, te muestra el resultado CUIL,RNOS para copiar y pegar en WeProdu.
+  CÓMO FUNCIONA (para que funcione SOLO)
 
-  IMPORTANTE
-  - NUNCA aprieta "Aceptar". Solo escribe, Agrega y lee. No registra ninguna alta. `btnAgregar()`
-    exige que el rótulo sea exactamente "Agregar", y es el único control que se clickea.
-  - La cola vive en localStorage y el script se re-ejecuta en cada recarga: por eso sobrevive los
-    postbacks. Es reanudable: si recargás a mano, sigue donde iba.
-  - No guarda ni ve tu clave fiscal. Corre en la sesión que vos abriste.
+  El script corre en DOS lugares:
+   - En WeProdu: escucha cuando apretás "Validar obras sociales", guarda la lista de CUIL en el
+     almacén compartido de Tampermonkey, y queda esperando el resultado.
+   - En ARCA (Altas.aspx): lee esa lista, valida CUIL por CUIL sola (Agregar + leer la obra social +
+     siguiente), sobrevive los postbacks y la sesión vencida, y al terminar deja los resultados en el
+     mismo almacén.
+   - De vuelta en WeProdu: los levanta y se los entrega a la app con un evento.
 
-  TRES COSAS QUE NUNCA SE RESUELVEN ADIVINANDO
-  Lo que este script devuelve se guarda FIJO, con candado, en WeProdu: un dato mal leído no se
-  corrige solo. Por eso hay tres casos donde prefiere frenar o excluir antes que suponer:
+  El almacén de Tampermonkey (GM_setValue/GM_getValue) es lo que cruza los dos sitios: localStorage
+  no sirve porque es por-dominio. Por eso hace falta la extensión y no alcanza un bookmarklet.
 
-    1. Sesión vencida  -> frena y conserva la cola. Ver `sesionExpirada()`.
-    2. Fila que no apareció -> va a `errores`, NO se exporta como vacío. Ver el paso 2 de `procesar()`.
-    3. Emparejamiento ambiguo -> frena. Ver `cuilDeLaFila()`.
+  SEGURIDAD: nunca aprieta "Aceptar" en ARCA. Solo lee. No toca ni guarda la clave fiscal: trabaja
+  dentro de la sesión que vos abriste.
 
-  Un vacío en el pegado significa "ARCA dijo que esta persona no tiene obra social", y WeProdu lo
-  aplica como tal. Solo se emite cuando la fila apareció y el campo vino en blanco.
+  CONTRATO CON WEPRODU (lo implementa el front, ver `puenteArca.ts`):
+   - Arranque:    window.dispatchEvent(new CustomEvent('weprodu-os-start',
+                    { detail: [ { cuil:'27-40073687-7', contractId:'...' }, ... ] }))
+   - Resultado:   window.addEventListener('weprodu-os-results', e => ...)
+                    e.detail = [ { cuil, rnos, contractId } ]   rnos '' = sin afiliación -> convenio
+   - Handshake:   window.dispatchEvent(new Event('weprodu-os-ready'))   ← ver `entregar()`
+   - Presencia:   window.__weproduOSExt  ó  <meta name="weprodu-os-ext">
 */
 
 (function () {
   'use strict';
 
-  var VERSION = '1.3';
-  var KEY = '__weprodu_os_v1';
+  var VERSION = '2.0.1';
+  var ARCA_HOST = 'serviciossegsoc.afip.gob.ar';
+  var K = {
+    queue: 'os_queue', // [{cuil, contractId}]
+    orden: 'os_orden', // [cuil]
+    hechos: 'os_hechos', // {cuil: rnos}
+    active: 'os_active',
+    done: 'os_done',
+    last: 'os_last',
+    errores: 'os_errores', // {cuil:true}
+  };
+  function g(k, d) { try { return GM_getValue(k, d); } catch (e) { return d; } }
+  function s(k, v) { try { GM_setValue(k, v); } catch (e) {} }
 
-  /*
-    En WeProdu el script no hace NADA salvo dejar constancia de que está instalado.
+  var isARCA = location.hostname.indexOf(ARCA_HOST) >= 0;
 
-    Sirve para que la app pueda decir "extensión detectada" en vez de dar instrucciones a quien ya la
-    tiene. La marca va como atributo del <html> y no solo en `window`: si Tampermonkey corre el script
-    en su sandbox, el `window` no se comparte con la página, pero el DOM siempre sí.
-  */
-  if (!/serviciossegsoc\.afip\.gob\.ar/.test(location.hostname)) {
-    document.documentElement.setAttribute('data-weprodu-os', VERSION);
-    try { window.__weproduOS = VERSION; } catch (e) { /* sandbox: alcanza con el atributo */ }
-    return;
+  // ======================= LADO WEPRODU =======================
+  function initWeprodu() {
+    // 1) avisar que la extensión está instalada
+    try {
+      window.__weproduOSExt = VERSION;
+      if (!document.querySelector('meta[name="weprodu-os-ext"]')) {
+        var m = document.createElement('meta');
+        m.name = 'weprodu-os-ext';
+        m.content = VERSION;
+        (document.head || document.documentElement).appendChild(m);
+      }
+    } catch (e) {}
+
+    // 2) cuando WeProdu pide validar, sembrar la cola y empezar a esperar
+    window.addEventListener('weprodu-os-start', function (ev) {
+      var lista = (ev && ev.detail) || [];
+      var cuils = [], orden = [];
+      lista.forEach(function (it) {
+        var c = fmtCuil(it.cuil);
+        if (c) { cuils.push({ cuil: c, contractId: it.contractId }); orden.push(c); }
+      });
+      if (!cuils.length) return;
+      s(K.queue, cuils);
+      s(K.orden, orden);
+      s(K.hechos, {});
+      s(K.errores, {});
+      s(K.last, '');
+      s(K.done, false);
+      s(K.active, true);
+      esperarResultados();
+    });
+
+    /*
+      3) Handshake para una carrera real.
+
+      Si el operador vuelve a WeProdu con la tanda ya terminada y la app recarga, el script corre en
+      `document-idle` —antes de que React monte su listener— y el `weprodu-os-results` se dispara
+      contra nadie: los resultados se pierden y hay que rehacer toda la corrida. Por eso WeProdu avisa
+      cuando está listo, y recién ahí se entrega.
+    */
+    window.addEventListener('weprodu-os-ready', function () { if (g(K.done, false)) entregar(); });
+
+    // Y si React ya estaba montado (navegación sin recarga), esto alcanza.
+    if (g(K.done, false)) entregar();
   }
 
-  // ---------- estado ----------
-  function load() {
-    try { return JSON.parse(localStorage.getItem(KEY)) || null; } catch (e) { return null; }
+  var pollTimer = null;
+  function esperarResultados() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(function () {
+      if (g(K.done, false)) { clearInterval(pollTimer); pollTimer = null; entregar(); }
+    }, 1000);
   }
-  function save(s) { localStorage.setItem(KEY, JSON.stringify(s)); }
-  function clear() { localStorage.removeItem(KEY); }
 
-  // ---------- helpers de la página ----------
-  var RE_CUIL = /\d{2}-\d{8}-\d/g;
-
-  function inputCuil() {
-    return document.getElementById('ctl00_ContentPlaceHolder1_InputCuil_txtCuil');
+  function entregar() {
+    var orden = g(K.orden, []);
+    var hechos = g(K.hechos, {});
+    var errores = g(K.errores, {});
+    var queue = g(K.queue, []);
+    var byCuil = {};
+    queue.forEach(function (q) { byCuil[q.cuil] = q.contractId; });
+    // Los que fallaron NO se entregan: un rnos '' significa "ARCA dijo que no tiene obra social", y
+    // del otro lado se guarda como validado. Un error de consulta entregado como '' sellaría un dato
+    // falso — esas personas quedan sin validar y vuelven a aparecer como pendientes.
+    var detail = orden
+      .filter(function (c) { return !errores[c]; })
+      .map(function (c) { return { cuil: c, rnos: hechos[c] || '', contractId: byCuil[c] }; });
+    try {
+      window.dispatchEvent(new CustomEvent('weprodu-os-results', { detail: detail }));
+    } catch (e) {}
+    // limpiar para la próxima tanda
+    s(K.done, false); s(K.active, false);
+    s(K.queue, []); s(K.orden, []); s(K.hechos, {}); s(K.errores, {}); s(K.last, '');
   }
-  /* Se busca por rótulo y no por id: el id generado por WebForms cambia más que el texto del botón.
-     El `^Agregar$` es exacto a propósito — es lo único que este script tiene permitido apretar. */
+
+  // ======================= LADO ARCA =======================
+  function inputCuil() { return document.getElementById('ctl00_ContentPlaceHolder1_InputCuil_txtCuil'); }
   function btnAgregar() {
-    var cands = document.querySelectorAll('input[type=submit],input[type=button],button');
-    for (var i = 0; i < cands.length; i++) {
-      var t = (cands[i].value || cands[i].textContent || '').trim();
-      if (/^Agregar$/i.test(t)) return cands[i];
-    }
+    // Por rótulo y no por id: el id de WebForms cambia más que el texto. `^Agregar$` es exacto a
+    // propósito — es lo ÚNICO que este script tiene permitido apretar. Nunca "Aceptar".
+    var c = document.querySelectorAll('input[type=submit],input[type=button],button');
+    for (var i = 0; i < c.length; i++) { if (/^Agregar$/i.test((c[i].value || c[i].textContent || '').trim())) return c[i]; }
     return null;
   }
-
-  /*
-    ¿Se cayó la sesión de ARCA?
-
-    Dura poco —se vence en medio de una tanda de 20 con toda naturalidad— y al vencerse la página
-    pasa a "Su tiempo de sesión ha finalizado". Sin detectarlo, el Agregar no produce fila y el CUIL
-    en curso se contabilizaría como problema suyo cuando en realidad no se pudo consultar. Detectado,
-    se frena sin tocar los pendientes: la cola sobrevive al relogin y el script retoma solo.
-  */
   function sesionExpirada() {
-    if (inputCuil()) return false; // si está el campo de CUIL, la sesión vive
-    var txt = (document.body.textContent || '');
-    return /sesi[oó]n ha finalizado|no ha iniciado su sesi[oó]n|ingrese con su clave fiscal/i.test(txt);
+    if (inputCuil()) return false;
+    return /sesi[oó]n ha finalizado|no ha iniciado su sesi[oó]n|ingrese con su clave fiscal/i.test(document.body.textContent || '');
   }
 
+  var RE_CUIL = /\d{2}-\d{8}-\d/g;
   /*
-    Encuentra el CUIL de la fila a la que pertenece ESTE input de obra social.
-    Sube por los ancestros hasta el primero que contenga exactamente UN CUIL.
-
-    El "exactamente uno" es el punto. Subir hasta el primer texto que parezca un CUIL es lo natural,
-    pero si el ancestro se pasa de tamaño —salta de la fila al tbody— su textContent tiene todos los
-    CUIL de la grilla y el primero es el de OTRA persona. Ahí cada input de obra social se emparejaría
-    con el mismo CUIL y las obras sociales quedarían corridas, con todas las filas viéndose bien.
-    Si aparecen dos o más, es ambiguo y se devuelve null: el llamador frena la corrida.
+    El CUIL de la fila a la que pertenece ESTE input: se sube hasta el ancestro que contenga
+    exactamente UNO. Si se pasa de tamaño y salta al tbody, su texto tiene todos los CUIL de la
+    grilla y el primero es el de otra persona: cada input se emparejaría con el mismo y las obras
+    sociales quedarían corridas, con todas las filas viéndose bien. Dos o más = ambiguo, no se adivina.
   */
   function cuilDeLaFila(osInput) {
     var node = osInput;
@@ -110,43 +159,31 @@
       node = node.parentElement;
       var todos = (node.textContent || '').match(RE_CUIL) || [];
       if (todos.length === 1) return todos[0];
-      if (todos.length > 1) return null; // ancestro demasiado grande: no se adivina
+      if (todos.length > 1) return null;
     }
     return null;
   }
 
-  // Devuelve { filas: { "27-40073687-7": "901402", ... }, ambiguas: n } de las filas ya agregadas.
   function leerFilas() {
-    var out = {}, ambiguas = 0;
-    var osInputs = document.querySelectorAll('input[id*="ExtendCodeOS_AutocompleteText"]');
-    for (var i = 0; i < osInputs.length; i++) {
-      var os = osInputs[i];
-      var cuil = cuilDeLaFila(os);
+    var out = {}, ambiguas = 0, os = document.querySelectorAll('input[id*="ExtendCodeOS_AutocompleteText"]');
+    for (var i = 0; i < os.length; i++) {
+      var cuil = cuilDeLaFila(os[i]);
       if (!cuil) { ambiguas++; continue; }
       // El código real vive en el input oculto `_AutocompleteValue`; el visible trae la descripción.
-      var code = '';
-      var valEl = document.getElementById(os.id.replace('_AutocompleteText', '_AutocompleteValue'));
-      if (valEl && valEl.value) code = valEl.value.replace(/\D/g, '');
-      if (!code) code = (os.value || '').replace(/\D/g, '');
-      out[cuil] = code; // '' es válido: ARCA no tiene obra social para esa persona
+      var v = document.getElementById(os[i].id.replace('_AutocompleteText', '_AutocompleteValue'));
+      var code = v && v.value ? v.value.replace(/\D/g, '') : '';
+      if (!code) code = (os[i].value || '').replace(/\D/g, '');
+      out[cuil] = code;
     }
     return { filas: out, ambiguas: ambiguas };
   }
 
-  function soloDigitos(c) { return (c || '').replace(/\D/g, ''); }
-  function fmtCuil(d) {
-    d = soloDigitos(d);
-    return d.length === 11 ? d.slice(0, 2) + '-' + d.slice(2, 10) + '-' + d.slice(10) : d;
-  }
-
-  // ---------- UI flotante ----------
   function badge(txt, color) {
     var b = document.getElementById('__weprodu_badge');
     if (!b) {
       b = document.createElement('div');
       b.id = '__weprodu_badge';
-      b.style.cssText = 'position:fixed;z-index:999999;right:16px;bottom:16px;background:#161b22;color:#e6edf3;' +
-        'font:13px system-ui;padding:10px 14px;border-radius:8px;border:1px solid #30363d;box-shadow:0 8px 24px rgba(0,0,0,.4);max-width:340px';
+      b.style.cssText = 'position:fixed;z-index:999999;right:16px;bottom:16px;background:#161b22;color:#e6edf3;font:13px system-ui;padding:10px 14px;border-radius:8px;border:1px solid #30363d;box-shadow:0 8px 24px rgba(0,0,0,.4);max-width:340px';
       document.body.appendChild(b);
     }
     b.style.borderColor = color || '#30363d';
@@ -154,157 +191,81 @@
     return b;
   }
 
-  function botonInicio() {
-    if (document.getElementById('__weprodu_start')) return;
-    var btn = document.createElement('button');
-    btn.id = '__weprodu_start';
-    btn.textContent = '▶ Constatar obras sociales';
-    btn.style.cssText = 'position:fixed;z-index:999999;right:16px;bottom:16px;background:#1f6feb;color:#fff;' +
-      'font:13px system-ui;padding:10px 14px;border:none;border-radius:8px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.4)';
-    btn.onclick = pedirCuils;
-    document.body.appendChild(btn);
-  }
+  function procesarARCA() {
+    if (!g(K.active, false)) return; // no hay tanda en curso
 
-  function pedirCuils() {
-    var b = document.getElementById('__weprodu_start');
-    if (b) b.remove();
-    var ov = document.createElement('div');
-    ov.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(1,4,9,.7);display:flex;align-items:center;justify-content:center';
-    ov.innerHTML =
-      '<div style="background:#161b22;border:1px solid #30363d;border-radius:12px;width:440px;padding:18px;font:13px system-ui;color:#e6edf3">' +
-      '<div style="font-size:16px;font-weight:600;margin-bottom:8px">Pegá los CUIL a constatar</div>' +
-      '<div style="color:#8b949e;margin-bottom:10px">Uno por línea. Con o sin guiones. Copialos desde WeProdu.</div>' +
-      '<textarea id="__weprodu_ta" style="width:100%;height:150px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font:12px ui-monospace,monospace;padding:8px"></textarea>' +
-      '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">' +
-      '<button id="__weprodu_cancel" style="background:transparent;border:1px solid #30363d;color:#e6edf3;border-radius:6px;padding:7px 13px;cursor:pointer">Cancelar</button>' +
-      '<button id="__weprodu_go" style="background:#238636;border:none;color:#fff;border-radius:6px;padding:7px 13px;cursor:pointer">Empezar</button>' +
-      '</div></div>';
-    document.body.appendChild(ov);
-    document.getElementById('__weprodu_cancel').onclick = function () { ov.remove(); botonInicio(); };
-    document.getElementById('__weprodu_go').onclick = function () {
-      var raw = document.getElementById('__weprodu_ta').value || '';
-      var lista = [];
-      raw.split(/\s+/).forEach(function (tok) {
-        var d = soloDigitos(tok);
-        if (d.length === 11) lista.push(fmtCuil(d));
-      });
-      lista = lista.filter(function (v, i) { return lista.indexOf(v) === i; }); // dedupe
-      ov.remove();
-      if (!lista.length) { badge('No encontré CUIL válidos.', '#d29922'); botonInicio(); return; }
-      save({ active: true, orden: lista.slice(), pendientes: lista.slice(), hechos: {}, errores: {}, last: null });
-      procesar();
-    };
-  }
-
-  function mostrarResultado(s) {
-    var err = s.errores || {};
-    // Solo se exporta lo que ARCA efectivamente contestó. Los que fallaron NO van: una línea
-    // `CUIL,` vacía se aplica como "no tiene obra social" y queda sellada con candado.
-    var exportables = s.orden.filter(function (c) { return !err[c]; });
-    var texto = exportables.map(function (c) { return c + ',' + (s.hechos[c] || ''); }).join('\n');
-    var conOS = exportables.filter(function (c) { return s.hechos[c]; }).length;
-    var sinOS = exportables.length - conOS;
-    var fallidos = s.orden.filter(function (c) { return err[c]; });
-
-    var ov = document.createElement('div');
-    ov.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(1,4,9,.7);display:flex;align-items:center;justify-content:center';
-    ov.innerHTML =
-      '<div style="background:#161b22;border:1px solid #30363d;border-radius:12px;width:460px;padding:18px;font:13px system-ui;color:#e6edf3">' +
-      '<div style="font-size:16px;font-weight:600;margin-bottom:6px">Listo — ' + exportables.length + ' constatadas</div>' +
-      '<div style="color:#8b949e;margin-bottom:10px">' + conOS + ' con obra social · ' + sinOS + ' sin afiliación (queda la del convenio). Copiá y pegá en WeProdu.</div>' +
-      (fallidos.length
-        ? '<div style="color:#d29922;margin-bottom:10px;font-size:12px">⚠ ' + fallidos.length + ' no se pudieron consultar y NO van en el pegado (quedan sin constatar): ' + fallidos.join(', ') + '</div>'
-        : '') +
-      '<textarea id="__weprodu_out" readonly style="width:100%;height:170px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font:12px ui-monospace,monospace;padding:8px"></textarea>' +
-      '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">' +
-      '<button id="__weprodu_close" style="background:transparent;border:1px solid #30363d;color:#e6edf3;border-radius:6px;padding:7px 13px;cursor:pointer">Cerrar</button>' +
-      '<button id="__weprodu_copy" style="background:#238636;border:none;color:#fff;border-radius:6px;padding:7px 13px;cursor:pointer">Copiar</button>' +
-      '</div></div>';
-    document.body.appendChild(ov);
-    document.getElementById('__weprodu_out').value = texto;
-    document.getElementById('__weprodu_close').onclick = function () { ov.remove(); };
-    document.getElementById('__weprodu_copy').onclick = function () {
-      var ta = document.getElementById('__weprodu_out'); ta.select();
-      try { navigator.clipboard.writeText(texto); } catch (e) { document.execCommand('copy'); }
-      document.getElementById('__weprodu_copy').textContent = '✓ copiado';
-    };
-  }
-
-  // ---------- máquina de estados, corre en cada carga ----------
-  function procesar() {
-    var s = load();
-    if (!s || !s.active) { botonInicio(); return; }
-
-    // 0) ¿se venció la sesión de ARCA? -> PARAR sin tocar los pendientes.
-    //    La cola queda guardada: cuando el operador vuelve a loguearse y reabre Registrar Nuevas
-    //    Altas, el script retoma solo desde donde iba. Esto va PRIMERO, antes de cosechar o de
-    //    marcar nada: con la sesión caída, todo lo que se dedujera del DOM sería falso.
+    // Sesión vencida: se frena SIN tocar los pendientes. La cola sobrevive al relogin y retoma sola.
+    // Va primero: con la sesión caída, cualquier cosa que se dedujera del DOM sería falsa.
     if (sesionExpirada()) {
-      badge('⏸ Se venció la sesión de ARCA.<br>' +
-            '<span style="color:#8b949e">Volvé a loguearte y reabrí “Registrar Nuevas Altas”.<br>' +
-            'Quedan ' + s.pendientes.length + ' por constatar — el script sigue solo.</span>', '#d29922');
-      return; // NO marcar nada
+      var orden0 = g(K.orden, []), hechos0 = g(K.hechos, {});
+      var faltan = orden0.filter(function (c) { return !(c in hechos0); }).length;
+      badge('⏸ Se venció la sesión de ARCA.<br><span style="color:#8b949e">Volvé a loguearte y reabrí “Registrar Nuevas Altas”.<br>Quedan ' + faltan + ' — sigue solo.</span>', '#d29922');
+      return;
     }
 
-    // 1) leer todo lo que ya está agregado y guardarlo (idempotente)
+    var orden = g(K.orden, []);
+    var hechos = g(K.hechos, {});
+    var errores = g(K.errores, {});
+    var last = g(K.last, '');
+
     var lectura = leerFilas();
     var filas = lectura.filas;
 
-    // Emparejamiento ambiguo: se FRENA. Seguir significaría exportar obras sociales posiblemente
-    // corridas, y del otro lado se guardan fijas con candado.
+    // Emparejamiento ambiguo: se FRENA. Seguir sería exportar obras sociales posiblemente corridas,
+    // y del otro lado se guardan fijas con candado.
     if (lectura.ambiguas > 0) {
-      s.active = false;
-      save(s);
-      badge('⚠ Frené: no pude emparejar ' + lectura.ambiguas + ' fila(s) con su CUIL.<br>' +
-            '<span style="color:#8b949e">La estructura de la grilla cambió. No exporto nada dudoso: revisá la página.</span>', '#d29922');
+      s(K.active, false);
+      badge('⚠ Frené: no pude emparejar ' + lectura.ambiguas + ' fila(s) con su CUIL.<br><span style="color:#8b949e">La estructura de la grilla cambió. No mando nada dudoso a WeProdu.</span>', '#d29922');
       return;
     }
 
-    Object.keys(filas).forEach(function (cuil) {
-      if (s.orden.indexOf(cuil) >= 0) s.hechos[cuil] = filas[cuil];
-    });
-    s.pendientes = s.pendientes.filter(function (c) { return !(c in filas); });
+    Object.keys(filas).forEach(function (c) { if (orden.indexOf(c) >= 0) hechos[c] = filas[c]; });
+    var pendientes = orden.filter(function (c) { return !(c in hechos); });
 
-    // 2) ¿quedan pendientes?
-    if (s.pendientes.length) {
-      var next = s.pendientes[0];
-
-      // Intenté `next` la vuelta pasada y NO apareció como fila, con la sesión viva: es un problema
-      // de ESE CUIL en ARCA (inválido, ya con relación activa, un popup). Se marca ERROR y se sigue.
-      // NUNCA vacío: vacío significa "ARCA dijo que no tiene obra social", y eso solo se sabe si la
-      // fila apareció. Marcarlo vacío sellaría con candado un dato falso.
-      if (s.last === next && !(next in filas)) {
-        s.errores = s.errores || {};
-        s.errores[next] = true;
-        s.pendientes.shift();
-        s.last = null;
-        save(s);
-        return procesar(); // seguir con el siguiente sin recargar
+    if (pendientes.length) {
+      var next = pendientes[0];
+      // Ya lo intenté y no apareció, con la sesión viva: es un problema de ESE CUIL en ARCA
+      // (inválido, ya con relación activa, un popup). Se marca ERROR y se sigue — nunca vacío, que
+      // significaría "ARCA dijo que no tiene obra social".
+      if (last === next && !(next in filas)) {
+        errores[next] = true;
+        hechos[next] = '';
+        s(K.hechos, hechos); s(K.errores, errores); s(K.last, '');
+        return procesarARCA();
       }
-
-      s.last = next;
-      save(s);
-      badge('Constatando… ' + (s.orden.length - s.pendientes.length + 1) + ' / ' + s.orden.length +
-            '<br><span style="color:#8b949e">no cierres esta pestaña</span>', '#1f6feb');
-
+      s(K.hechos, hechos);
+      s(K.last, next);
+      badge('Validando… ' + (orden.length - pendientes.length + 1) + ' / ' + orden.length + '<br><span style="color:#8b949e">no cierres esta pestaña</span>', '#1f6feb');
       var inp = inputCuil(), btn = btnAgregar();
-      if (!inp || !btn) {
-        badge('No encuentro el campo CUIL o el botón Agregar.<br>¿Estás en “Registrar Nuevas Altas”?', '#d29922');
-        return;
-      }
-      inp.value = soloDigitos(next);      // ARCA acepta los 11 dígitos sin guiones
-      setTimeout(function () { btn.click(); }, 250); // dispara el postback -> recarga -> vuelve a correr
+      if (!inp || !btn) { badge('No encuentro el campo CUIL / Agregar.<br>¿Estás en “Registrar Nuevas Altas”?', '#d29922'); return; }
+      inp.value = next.replace(/\D/g, '');
+      setTimeout(function () { btn.click(); }, 250); // postback -> recarga -> corre de nuevo
       return;
     }
 
-    // 3) sin pendientes -> terminar
-    s.active = false;
-    save(s);
-    badge('✓ Constatación completa', '#238636');
-    mostrarResultado(s);
-    clear();
+    // terminado
+    s(K.hechos, hechos);
+    s(K.done, true);
+    s(K.active, false);
+    var conOS = orden.filter(function (c) { return hechos[c] && !errores[c]; }).length;
+    var errN = orden.filter(function (c) { return errores[c]; }).length;
+    badge(
+      '✓ Validación completa — ' + orden.length + '<br><span style="color:#8b949e">' + conOS + ' con obra social · ' + (orden.length - conOS - errN) + ' del convenio' +
+        (errN ? ' · ' + errN + ' con error' : '') + '<br>Volvé a WeProdu: se guardan solas.</span>',
+      '#238636',
+    );
   }
 
-  // arranque: dar un instante a que ARCA pinte las obras sociales precompletadas
-  setTimeout(procesar, 400);
+  // ======================= helpers comunes =======================
+  function fmtCuil(x) {
+    var d = (x || '').replace(/\D/g, '');
+    return d.length === 11 ? d.slice(0, 2) + '-' + d.slice(2, 10) + '-' + d.slice(10) : '';
+  }
+
+  // ======================= arranque =======================
+  if (isARCA) {
+    setTimeout(procesarARCA, 400); // dar tiempo a que ARCA pinte la obra social precompletada
+  } else {
+    initWeprodu();
+  }
 })();

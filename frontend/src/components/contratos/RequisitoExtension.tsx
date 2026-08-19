@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowUpRightFromSquare, faCircleCheck, faTriangleExclamation, faPuzzlePiece } from '@fortawesome/free-solid-svg-icons';
+import { useExtensionArca } from './puenteArca';
 
 /**
  * Aviso de instalación de la extensión que valida las obras sociales contra ARCA.
@@ -17,37 +18,11 @@ export const TAMPERMONKEY_URL = 'https://www.tampermonkey.net/';
 /** Se sirve desde la propia app: abrirlo con Tampermonkey instalado ofrece instalarlo en un click. */
 export const USERSCRIPT_URL = '/scripts/weprodu-obra-social.user.js';
 
-/**
- * ¿Está instalada la extensión?
- *
- * El userscript también corre en WeProdu —sin hacer nada más— y deja `data-weprodu-os` en el <html>.
- * Se busca el atributo y no `window.__weproduOS` porque Tampermonkey puede ejecutar el script en un
- * sandbox donde el `window` no se comparte con la página; el DOM siempre sí.
- *
- * Se consulta con reintentos y no una sola vez: el script corre en `document-idle` y React puede
- * montar antes. Un chequeo único diría "no detectada" a quien la tiene, que es peor que no avisar.
- */
-export function useExtensionInstalada(): string | null {
-  const [version, setVersion] = useState<string | null>(() => document.documentElement.getAttribute('data-weprodu-os'));
-
-  useEffect(() => {
-    if (version) return;
-    let intentos = 0;
-    const id = window.setInterval(() => {
-      const v = document.documentElement.getAttribute('data-weprodu-os');
-      if (v || ++intentos > 12) {
-        if (v) setVersion(v);
-        window.clearInterval(id);
-      }
-    }, 250);
-    return () => window.clearInterval(id);
-  }, [version]);
-
-  return version;
-}
+/* La detección vive en `puenteArca.ts`, junto al resto del contrato con el script: repartirla en
+   dos archivos es cómo terminan usando marcas distintas y una dice que está y la otra que no. */
 
 export const RequisitoExtension: React.FC<{ compacto?: boolean }> = ({ compacto }) => {
-  const version = useExtensionInstalada();
+  const version = useExtensionArca();
 
   // Instalada: una línea y nada más. Quien ya la tiene no necesita volver a leer las instrucciones,
   // y dejarlas puestas convierte el aviso en ruido que se aprende a ignorar.
@@ -55,7 +30,7 @@ export const RequisitoExtension: React.FC<{ compacto?: boolean }> = ({ compacto 
     return (
       <p className="text-[11px] text-green-700 dark:text-green-400 flex items-center gap-1.5">
         <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3" />
-        Extensión de validación detectada (v{version}).
+        Extensión de validación detectada (v{version}) — la validación corre sola.
       </p>
     );
   }
@@ -67,7 +42,8 @@ export const RequisitoExtension: React.FC<{ compacto?: boolean }> = ({ compacto 
         Requisito: extensión de validación
       </p>
       <p className="text-[11px] text-gray-700 dark:text-gray-300">
-        Para traer las obras sociales desde ARCA automáticamente necesitás <strong>Tampermonkey</strong> con nuestro script. Se instala una vez.
+        Para traer las obras sociales desde ARCA automáticamente necesitás <strong>Tampermonkey</strong> con nuestro script. Se instala una vez. Sin él la validación es manual: copiar los CUIL, correrlos
+        en ARCA y pegar el resultado.
       </p>
       <div className="flex items-center gap-2 flex-wrap">
         <a

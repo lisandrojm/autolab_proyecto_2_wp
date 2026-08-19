@@ -26,6 +26,7 @@ import { ContractDocsColumns, ContractDocsHeaders, ContractActionsButtons, Contr
 import { resolveAfip, resolveAfipValues, AfipRowResult, AfipValues } from './afipCompleteness';
 import { buildAltaRecord, buildAltaTxt, downloadTxt } from './afipTxt';
 import { ConstatarObrasSocialesLote, FilaConstatacion } from './ConstatarObrasSocialesLote';
+import { useExtensionArca, useResultadosArca, iniciarValidacionArca, PedidoValidacion, ResultadoValidacion } from './puenteArca';
 import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, cuitEsValido, fmtCuit, cuitDisplay, noPoseeCuit } from './ConstanciaBulk';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { cachedFetch, invalidateRefCache, updateRefCache } from '../../utils/refCache';
@@ -958,6 +959,9 @@ export const ContractBulkAfipTab: React.FC<{
    * son dos formas de que diverjan.
    */
   const [loteObrasSociales, setLoteObrasSociales] = useState<Set<string> | null>(null);
+  const extensionArca = useExtensionArca();
+  /** Progreso de la corrida automática, para no dejar la pantalla muda mientras guarda. */
+  const [validandoArca, setValidandoArca] = useState<string>('');
 
   // Filtros de la barra superior (búsqueda + filtro avanzado), sin el trámite ni los toggles propios
   // de cada pestaña: se usa tanto para la tabla como para los contadores de las pestañas, que deben
@@ -1030,6 +1034,80 @@ export const ContractBulkAfipTab: React.FC<{
     const ids = new Set(filasConstatacion.map((f) => String(f.row.empresaContratoId || '')));
     return ids.size === 1 ? [...ids][0] : '';
   }, [filasConstatacion]);
+
+  /**
+   * Arranca la validación automática: siembra la cola en la extensión y abre ARCA.
+   *
+   * Manda el `contratoId` además del CUIL. No se usa para escribir —eso lo resuelve el server por
+   * CUIL, que es lo único que ARCA conoce— pero identifica de qué contrato salió cada pedido.
+   */
+  const validarEnArca = useCallback((objetivo: Array<{ row: ImpositivoRow }>) => {
+    const pedidos: PedidoValidacion[] = objetivo
+      .filter((x) => String(x.row.cuit || '').replace(/\D/g, '').length === 11)
+      .map((x) => ({ cuil: x.row.cuit || '', contractId: String(x.row.contratoId || x.row._id) }));
+    if (!iniciarValidacionArca(pedidos)) {
+      sweetAlert.error('Sin CUIL válidos', 'Ninguno de los contratos elegidos tiene un CUIL de 11 dígitos cargado.');
+      return;
+    }
+    setValidandoArca(`Validando ${pedidos.length} en ARCA — dejá esa pestaña abierta. Al terminar se guardan solas.`);
+  }, []);
+
+  /**
+   * Guarda lo que devolvió la extensión. ESTO es lo que hace que "se guarde solo".
+   *
+   * Usa el mismo endpoint de lote que el pegado manual, así hereda sus validaciones: que el RNOS
+   * exista en el catálogo y que la empleadora lo tenga registrado ante ARCA. Guardar de a uno desde
+   * el cliente dejaría la tanda a medias ante cualquier corte y sin forma de saber cuáles entraron.
+   *
+   * Se agrupa por empleadora porque "está entre las registradas" es una regla por CUIT: una tanda
+   * que mezcle dos haría que el mismo RNOS sea válido para unas filas e inválido para otras.
+   */
+  const guardarResultadosArca = useCallback(
+    async (resultados: ResultadoValidacion[]) => {
+      const dig = (v: unknown) => String(v ?? '').replace(/\D/g, '');
+      const porCuil = new Map(resultados.map((r) => [dig(r.cuil), r]));
+      const porEmpresa = new Map<string, Array<{ cuil: string; rnos: string }>>();
+      for (const row of rows) {
+        const cuil = dig(row.cuit);
+        const r = porCuil.get(cuil);
+        const empresaId = String(row.empresaContratoId || '');
+        if (!r || !empresaId) continue;
+        const actuales = porEmpresa.get(empresaId) || [];
+        if (!actuales.some((x) => x.cuil === cuil)) actuales.push({ cuil, rnos: dig(r.rnos) });
+        porEmpresa.set(empresaId, actuales);
+      }
+
+      if (porEmpresa.size === 0) {
+        setValidandoArca('');
+        sweetAlert.error('No se pudo guardar', 'Los contratos validados no tienen empleadora asignada, así que no hay contra qué CUIT registrar la obra social.');
+        return;
+      }
+
+      setValidandoArca('Guardando los resultados…');
+      let aplicados = 0;
+      const problemas: string[] = [];
+      for (const [empresaId, filas] of porEmpresa) {
+        try {
+          const r = await projectsAPI.aplicarObrasSocialesLote(empresaId, filas, false);
+          aplicados += r.aplicados;
+          if (r.noRegistrada.length) problemas.push(`${r.noRegistrada.length} con una obra social que la empleadora no registró ante ARCA`);
+          if (r.rnosDesconocido.length) problemas.push(`${r.rnosDesconocido.length} con un código que no está en el catálogo`);
+          if (r.yaBloqueados.length) problemas.push(`${r.yaBloqueados.length} ya estaban validadas y no se pisaron`);
+        } catch (e: any) {
+          problemas.push(e?.response?.data?.error || 'error al aplicar una de las empleadoras');
+        }
+      }
+
+      setValidandoArca('');
+      await load(true);
+      if (problemas.length) sweetAlert.error(`Se guardaron ${aplicados}`, `Con observaciones: ${problemas.join(' · ')}. Revisá la columna Obra Social.`);
+      else sweetAlert.success('Listo', `${aplicados} obra(s) social(es) validada(s) y guardada(s).`);
+    },
+    [rows, load],
+  );
+
+  useResultadosArca(guardarResultadosArca);
+
   /**
    * Cuántas quedan sin constatar en lo que se está mirando: es el número del botón.
    *
@@ -1317,19 +1395,27 @@ export const ContractBulkAfipTab: React.FC<{
             </button>
             {/* La constatación de obras sociales no bloquea el TXT, así que va como contador aparte y
                 no dentro de "incompletos": es trabajo pendiente de verificación, no un dato faltante. */}
+            {/* Mientras la corrida está en marcha en otra pestaña, esta pantalla no puede quedar
+                muda: si no dice nada, se lee como que el botón no hizo nada. */}
+            {validandoArca && (
+              <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60">
+                <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3" />
+                {validandoArca}
+              </span>
+            )}
             {countSinConstatar > 0 && (
               <button
                 onClick={() => {
-                  // Además de abrir el lote, deja la grilla filtrada en esas mismas filas: al cerrar
-                  // el modal, lo que queda a la vista es exactamente la cola de trabajo.
+                  // Además de arrancar, deja la grilla filtrada en esas mismas filas: al volver de
+                  // ARCA, lo que queda a la vista es exactamente lo que se estaba validando.
                   setFilterObraSocial('sin_validar');
-                  setLoteObrasSociales(
-                    new Set(
-                      rowsPorFiltrosComunes
-                        .filter((x) => x.row._tipo === 'alta_temprana_afip' && estadoObraSocial(x.row, resolveAfipValues(x.row, afipCat)) === 'sin_validar')
-                        .map((x) => rowKey(x.row)),
-                    ),
+                  const pendientes = rowsPorFiltrosComunes.filter(
+                    (x) => x.row._tipo === 'alta_temprana_afip' && estadoObraSocial(x.row, resolveAfipValues(x.row, afipCat)) === 'sin_validar' && !!x.row.empresaContratoId,
                   );
+                  // Con la extensión, la corrida es automática de punta a punta. Sin ella queda el
+                  // camino manual del lote (copiar/pegar), que sigue funcionando.
+                  if (extensionArca) validarEnArca(pendientes);
+                  else setLoteObrasSociales(new Set(pendientes.map((x) => rowKey(x.row))));
                 }}
                 title="Copiar los CUIL de esta empleadora y traerlas de ARCA en una corrida. También filtra la grilla en las que faltan." className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold border transition-colors bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200/60 dark:border-blue-800/60 hover:bg-blue-100 dark:hover:bg-blue-900/30">
                 <FontAwesomeIcon icon={faStethoscope} className="h-3 w-3" />
@@ -1346,8 +1432,14 @@ export const ContractBulkAfipTab: React.FC<{
             <button
               type="button"
               disabled={seleccionados.length === 0}
-              onClick={() => setLoteObrasSociales(new Set(seleccionados.map((x) => rowKey(x.row))))}
-              title={seleccionados.length === 0 ? 'Tildá los contratos que querés validar' : `Validar la obra social de los ${seleccionados.length} contratos tildados`}
+              onClick={() => (extensionArca ? validarEnArca(seleccionados) : setLoteObrasSociales(new Set(seleccionados.map((x) => rowKey(x.row)))))}
+              title={
+                seleccionados.length === 0
+                  ? 'Tildá los contratos que querés validar'
+                  : extensionArca
+                    ? `Validar en ARCA la obra social de los ${seleccionados.length} contratos tildados. Se abre ARCA, te logueás y el resto es automático.`
+                    : `Sin la extensión instalada la validación es manual (copiar/pegar). Instalala desde Configuración → ARCA.`
+              }
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
             >
               <FontAwesomeIcon icon={faStethoscope} className="h-3.5 w-3.5" />
@@ -1711,7 +1803,7 @@ export const ContractBulkAfipTab: React.FC<{
                           record={r}
                           valores={resolveAfipValues(r, afipCat)}
                           onAbrir={() => setDetalleRef({ _id: r._id, contractIndex: r.contractIndex })}
-                          onValidar={() => setLoteObrasSociales(new Set([rowKey(r)]))}
+                          onValidar={() => (extensionArca ? validarEnArca([{ row: r }]) : setLoteObrasSociales(new Set([rowKey(r)])))}
                         />
                       </td>
                     )}
