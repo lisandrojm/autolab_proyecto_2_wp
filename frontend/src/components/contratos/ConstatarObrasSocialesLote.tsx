@@ -6,6 +6,7 @@ import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatal
 import { projectsAPI } from '../../api/projects';
 import { formatRnos } from '../../utils/rnos';
 import { AfipValues } from './afipCompleteness';
+import { RequisitoExtension } from './RequisitoExtension';
 
 /**
  * Constatar la obra social de MUCHOS contratos de una sentada.
@@ -332,6 +333,10 @@ export const ConstatarObrasSocialesLote: React.FC<{
         </button>
       </div>
 
+      {/* Va arriba de todo: es el prerrequisito del camino rápido, y sin él la pantalla parece rota
+          en vez de incompleta. Cuando la extensión está, se reduce a una línea verde. */}
+      <RequisitoExtension />
+
       {/*
         * El camino rápido: dos botones y un login.
         *
@@ -446,7 +451,7 @@ export const ConstatarObrasSocialesLote: React.FC<{
               <tr className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                 <th className="text-left px-3 py-2">Persona</th>
                 <th className="text-left px-3 py-2">CUIL</th>
-                <th className="text-left px-3 py-2">Obra social hoy</th>
+                <th className="text-left px-3 py-2">Obra social</th>
                 <th className="text-left px-3 py-2 w-[38%]">¿Qué devolvió ARCA?</th>
               </tr>
             </thead>
@@ -476,11 +481,18 @@ export const ConstatarObrasSocialesLote: React.FC<{
                           <span className="text-xs text-gray-700 dark:text-gray-200 min-w-0">{f.valores.nombreObraSocial || '—'}</span>
                         </p>
                       ) : (
-                        <p className="text-[11px] text-amber-700 dark:text-amber-400">sin resolver</p>
+                        /* Sin validar no hay valor. Lo que se muestra es la REFERENCIA de qué va a
+                           quedar si ARCA no devuelve ninguna — atenuada, para que no se lea como un
+                           dato ya puesto. */
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500 min-w-0">
+                          sin validar
+                          {f.valores.rnosSugerido ? (
+                            <span className="block">
+                              quedaría <span className="font-mono">{soloDigitos(f.valores.rnosSugerido)}</span> {f.valores.nombreObraSocialSugerida}
+                            </span>
+                          ) : null}
+                        </p>
                       )}
-                      {/* Lo que se ve acá puede venir del convenio: decirlo evita constatar "confirmando"
-                          lo que la pantalla ya mostraba, que es como se cuelan los falsos positivos. */}
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">{f.valores.rnosOrigen === 'constatada' ? 'constatada' : f.valores.rnosOrigen === 'convenio' || f.valores.rnosOrigen === 'override' ? `del convenio ${f.valores.convenioCategoria || ''}`.trim() : f.valores.rnosOrigen === 'empresa' ? 'de la empleadora' : f.valores.rnosOrigen === 'manual' ? 'cargada a mano' : f.valores.rnosOrigen === 'heredada-usuario' ? 'de la ficha de la persona' : ''}</p>
                     </td>
                     <td className="px-3 py-2 align-top">
                       {est.guardando ? (

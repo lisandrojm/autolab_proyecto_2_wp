@@ -74,6 +74,17 @@ const fila = (over: Partial<ContractOverviewRow> = {}): ContractOverviewRow =>
     empresaContratoId: EMPRESA_ID,
     sucursalArcaId: SUCURSAL_ID,
     osId: null,
+    /*
+     * La fila base va VALIDADA contra ARCA, sin obra social propia — el caso más común.
+     *
+     * Hace falta explicitarlo desde que la obra social solo tiene valor una vez validada: sin esto,
+     * el RNOS queda vacío, `buildAltaRecord` devuelve null y TODOS los tests del layout fallan por un
+     * motivo que no es el que están probando. Los tests que necesitan el estado "sin validar" lo
+     * piden al revés, con `obraSocialNoFigura: false`.
+     */
+    obraSocialNoFigura: true,
+    obraSocialConstatadaEn: "arca",
+    obraSocialConstatadaEl: "2026-08-18T00:00:00.000Z",
     ...over,
   }) as unknown as ContractOverviewRow;
 
@@ -416,19 +427,23 @@ describe("obra social — vive en el CONTRATO, no en la persona", () => {
     assert.equal(tramo(record, 40, 45), "126205");
   });
 
-  it("la heredada de la ficha vieja avisa, pero no bloquea el alta", () => {
+  it("la heredada de la ficha vieja ya NO alcanza: sin validar no hay obra social", () => {
+    /*
+     * Este test decía lo contrario hasta que cambió la regla. Antes, un `osId` heredado del campo
+     * viejo de la persona servía para el alta y solo se avisaba que nadie lo había verificado; ahora
+     * el valor tiene que salir de ARCA, así que un dato de origen desconocido no llena el campo.
+     * Es el caso que motivó el cambio: ese código venía de una migración, podía estar vencido por
+     * desregulación, y viajaba al organismo como si estuviera confirmado.
+     */
     const cat = conCascada();
-    const row = fila({ osId: 44, obraSocialOrigen: "heredada-usuario" } as any);
+    const row = fila({ osId: 44, obraSocialOrigen: "heredada-usuario", obraSocialNoFigura: false } as any);
 
-    assert.equal(tramo(buildAltaRecord(row, cat)!, 40, 45), "901402", "el TXT sale igual");
+    assert.equal(resolveAfipValues(row, cat).rnos, "", "sin validar, el campo va vacío");
+    assert.equal(buildAltaRecord(row, cat), null, "y sin RNOS no se arma el registro");
 
     const res = resolveAfip(row, cat);
-    assert.equal(res.completo, true, "un aviso no puede dejar el contrato incompleto");
-    assert.equal(res.checks.find((c) => c.key === "rnosSinConstatar")?.estado, "aviso");
-    // La empresa del fixture no tiene cargadas sus obras sociales registradas, así que además avisa
-    // que NO se pudo verificar contra el padrón de ARCA. Sin ese aviso la fila se vería validada.
-    assert.equal(res.checks.find((c) => c.key === "obraSocialSinVerificar")?.estado, "aviso");
-    assert.equal(res.avisos, 2);
+    assert.equal(res.completo, false, "validar en ARCA es ahora un paso del alta, no una mejora");
+    assert.equal(res.checks.find((c) => c.key === "rnos")?.estado, "falta");
   });
 
   it("el RNOS nunca sale en 000000: sin obra social no hay registro", () => {
@@ -439,105 +454,75 @@ describe("obra social — vive en el CONTRATO, no en la persona", () => {
 });
 
 /**
- * Los tres estados de la constatación en ARCA (Relaciones Laborales → Registrar Nuevas Altas).
+ * Los tres estados de la obra social. Son TRES, no dos, y el del medio es el que se perdía.
  *
- * El que hay que blindar es "no devolvió ninguna": es una RESPUESTA, no un vacío. Antes no se podía
- * guardar, así que la fila quedaba indistinguible de las que nadie había mirado y se volvía a
- * consultar cada semana. Ahora se sella con fecha y tiene que leerse como trabajo hecho — pero sin
- * cambiar una coma del TXT, porque la constatación es un dato nuestro y ARCA no la recibe.
+ * La regla: **antes de validar contra ARCA, el contrato no tiene obra social**. La cascada del
+ * convenio se sigue calculando, pero como REFERENCIA (`rnosSugerido`) — "esto es lo que va a quedar
+ * si el organismo no devuelve una propia"—, no como valor. Mostrarla como valor hacía creer que
+ * estaba confirmada, y el número que terminaba en el archivo salía de una suposición nuestra.
+ *
+ * El estado que hay que blindar es `no_figura`: se consultó, ARCA no devolvió nada, y por eso la del
+ * convenio queda CONFIRMADA. Es el caso más común —la mayoría no tiene obra social propia— y si
+ * colapsa contra cualquiera de los otros dos, la UI miente sobre trabajo hecho o pendiente.
  */
-describe("constatación en ARCA — los tres estados", () => {
+describe("obra social — los tres estados de validación", () => {
   const cat = () =>
     catalogos({
       obrasSociales: [
-        { _id: "os1", externalId: "126205", name: "OSPIA", data: { id: 7 } },
-        { _id: "os2", externalId: "901402", name: "OS CONSTATADA", data: { id: 44 } },
+        { _id: "os1", externalId: "120900", name: "O.S. PERSONAL DE TELEVISION", data: { id: 7 } },
+        { _id: "os2", externalId: "901402", name: "O.S. DE DIRECCION", data: { id: 44 } },
       ],
       convenios: [{ _id: "cv1", externalId: "0634/11", name: "TELEVISIÓN", obraSocialDefaultId: 7 }],
     } as any);
 
-  it("nadie la miró todavía: sin_constatar", () => {
-    assert.equal(resolveAfipValues(fila(), cat()).constatacion, "sin_constatar");
+  /** Sin validar. El fixture base viene validado, así que hay que pedirlo explícitamente. */
+  const sinValidar = () => fila({ obraSocialNoFigura: false, obraSocialConstatadaEn: "", obraSocialConstatadaEl: "" } as any);
+
+  it("sin validar: NO hay obra social, pero sí una referencia de lo que va a quedar", () => {
+    const v = resolveAfipValues(sinValidar(), cat());
+    assert.equal(v.constatacion, "sin_constatar");
+    assert.equal(v.rnos, "", "el campo va vacío: mostrar la del convenio diría que está confirmada");
+    assert.equal(v.rnosSugerido, "120900", "pero se sabe cuál va a quedar, para poder anticiparlo");
+    assert.equal(v.nombreObraSocialSugerida, "O.S. PERSONAL DE TELEVISION");
   });
 
-  it("ARCA devolvió una obra social: afiliada", () => {
-    const v = resolveAfipValues(fila({ osId: 44, obraSocialOrigen: "constatada", obraSocialConstatadaEn: "arca", obraSocialConstatadaEl: "2026-08-18T00:00:00.000Z" } as any), cat());
-    assert.equal(v.constatacion, "afiliada");
-    assert.equal(v.constatadaEl, "2026-08-18T00:00:00.000Z");
+  it("sin validar, el TXT de esa persona NO se genera", () => {
+    // La consecuencia asumida al cambiar la regla: validar pasó a ser un paso del alta.
+    assert.equal(buildAltaRecord(sinValidar(), cat()), null);
+    assert.equal(resolveAfip(sinValidar(), cat()).completo, false);
   });
 
-  it("ARCA no devolvió ninguna: es una respuesta, NO un sin_constatar", () => {
-    const v = resolveAfipValues(fila({ obraSocialNoFigura: true, obraSocialConstatadaEn: "arca", obraSocialConstatadaEl: "2026-08-18T00:00:00.000Z" } as any), cat());
-    assert.equal(v.constatacion, "no_figura");
-    assert.notEqual(v.constatacion, "sin_constatar");
-  });
-
-  it("no devolvió ninguna ⇒ sigue valiendo la del convenio, y el TXT no cambia", () => {
+  it("ARCA no devolvió ninguna: queda la del convenio, y queda VALIDADA", () => {
     const row = fila({ obraSocialNoFigura: true, obraSocialConstatadaEn: "arca", obraSocialConstatadaEl: "2026-08-18T00:00:00.000Z" } as any);
-    assert.equal(tramo(buildAltaRecord(row, cat())!, 40, 45), "126205");
-    // Mismo registro, byte por byte, que sin la marca: la constatación no viaja a ARCA.
-    assert.equal(buildAltaRecord(row, cat()), buildAltaRecord(fila(), cat()));
+    const v = resolveAfipValues(row, cat());
+    assert.equal(v.constatacion, "no_figura", "no es `sin_constatar`: el trabajo se hizo");
+    assert.equal(v.rnos, "120900", "y ahora sí es el VALOR, no una referencia");
+    assert.equal(tramo(buildAltaRecord(row, cat())!, 40, 45), "120900");
+    assert.equal(resolveAfip(row, cat()).completo, true, "una validación completa no deja el contrato incompleto");
   });
 
-  it("una constatación no puede volver incompleto un contrato, ni con respuesta ni sin ella", () => {
-    for (const over of [{ obraSocialNoFigura: true, obraSocialConstatadaEn: "arca" }, { osId: 44, obraSocialOrigen: "constatada", obraSocialConstatadaEn: "arca" }]) {
-      assert.equal(resolveAfip(fila(over as any), cat()).completo, true);
-    }
+  it("ARCA devolvió una: esa reemplaza a la del convenio", () => {
+    const row = fila({ osId: 44, obraSocialOrigen: "constatada", obraSocialConstatadaEn: "arca", obraSocialNoFigura: false } as any);
+    const v = resolveAfipValues(row, cat());
+    assert.equal(v.constatacion, "afiliada");
+    assert.equal(v.rnos, "901402", "gana la de ARCA, no la del convenio");
+    assert.equal(tramo(buildAltaRecord(row, cat())!, 40, 45), "901402");
   });
 
-  it("ya constatado ⇒ se apaga el aviso de sin constatar", () => {
-    const conAviso = resolveAfip(fila(), cat());
-    assert.equal(conAviso.checks.find((c) => c.key === "rnosSinConstatar")?.estado, "aviso", "sin constatar tiene que avisar");
-
-    const yaConsultado = resolveAfip(fila({ obraSocialNoFigura: true, obraSocialConstatadaEn: "arca" } as any), cat());
-    assert.equal(yaConsultado.checks.find((c) => c.key === "rnosSinConstatar"), undefined, "consultado es trabajo hecho: no se vuelve a pedir");
+  it("los tres estados son distinguibles entre sí", () => {
+    const estados = [
+      resolveAfipValues(sinValidar(), cat()).constatacion,
+      resolveAfipValues(fila({ obraSocialNoFigura: true, obraSocialConstatadaEn: "arca" } as any), cat()).constatacion,
+      resolveAfipValues(fila({ osId: 44, obraSocialOrigen: "constatada", obraSocialConstatadaEn: "arca", obraSocialNoFigura: false } as any), cat()).constatacion,
+    ];
+    assert.equal(new Set(estados).size, 3, "si dos colapsan, la UI miente sobre trabajo hecho o pendiente");
   });
 
-  /**
-   * La fuente vieja no se reescribe.
-   *
-   * Cuando se cambió la constatación de la SSS a ARCA, los contratos ya constatados quedaron con
-   * `constatadaEn: "sss"`. Ese valor decía la verdad cuando se guardó, así que sigue contando como
-   * constatado: convertirlo en pendiente mandaría a rehacer trabajo que ya se hizo, y borrarlo
-   * perdería de dónde salió el dato.
-   */
-  it("lo constatado con la fuente vieja (SSS) sigue valiendo como constatado", () => {
-    const row = fila({ osId: 44, obraSocialOrigen: "constatada", obraSocialConstatadaEn: "sss", obraSocialConstatadaEl: "2026-08-01T00:00:00.000Z" } as any);
+  it("lo validado con la fuente vieja (SSS) sigue valiendo", () => {
+    // Cuando la constatación se mudó de la SSS a ARCA, lo ya constatado no se reescribió: decía la
+    // verdad cuando se guardó, y convertirlo en pendiente mandaría a rehacer trabajo hecho.
+    const row = fila({ osId: 44, obraSocialOrigen: "constatada", obraSocialConstatadaEn: "sss", obraSocialNoFigura: false } as any);
     assert.equal(resolveAfipValues(row, cat()).constatacion, "afiliada");
-    assert.equal(resolveAfip(row, cat()).checks.find((c) => c.key === "rnosSinConstatar"), undefined);
-    // Y la etiqueta conserva la fuente: dos orígenes distintos a la vista es mejor que uno inventado.
-    assert.match(resolveAfip(row, cat()).checks.find((c) => c.key === "rnos")!.label, /SSS/);
-  });
-
-  it("la etiqueta de lo constatado en ARCA dice ARCA", () => {
-    const row = fila({ osId: 44, obraSocialOrigen: "constatada", obraSocialConstatadaEn: "arca", obraSocialConstatadaEl: "2026-08-18T00:00:00.000Z" } as any);
-    assert.match(resolveAfip(row, cat()).checks.find((c) => c.key === "rnos")!.label, /ARCA/);
-  });
-
-  /**
-   * Un aviso no baja el completado.
-   *
-   * Es el bug que se veía como "5/15 campos" con la obra social en ámbar: el contrato era generable
-   * —tenía el RNOS del convenio— pero la fracción lo contaba como si le faltara un dato, mandando a
-   * resolver algo que no cambia el archivo. La fracción tiene que medir lo que falta para GENERAR.
-   */
-  it("sin constatar no baja la fracción de campos: el TXT sale igual", () => {
-    const c = cat();
-    const sinConstatar = fila();
-    const constatado = fila({ osId: 7, obraSocialOrigen: "constatada", obraSocialConstatadaEn: "arca" } as any);
-
-    // Hay aviso, y aun así el registro se genera.
-    assert.equal(resolveAfip(sinConstatar, c).avisos > 0, true);
-    assert.ok(buildAltaRecord(sinConstatar, c));
-
-    // La fracción es la MISMA que con la obra social ya constatada: el aviso no resta.
-    assert.equal(resumenArca(resolveAfip(sinConstatar, c)).texto, resumenArca(resolveAfip(constatado, c)).texto);
-  });
-
-  it("la fracción llega al total cuando lo único pendiente es constatar", () => {
-    const r = resolveAfip(fila(), cat());
-    // `fila()` es un contrato completo salvo la constatación: si el aviso restara, nunca cerraría.
-    assert.equal(r.completo, true);
-    assert.equal(resumenArca(r).texto, "Completo");
+    assert.equal(resolveAfip(row, cat()).completo, true);
   });
 });

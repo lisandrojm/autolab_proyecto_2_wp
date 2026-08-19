@@ -4,7 +4,6 @@ import { faCheck, faXmark, faTriangleExclamation, faLock, faCircleInfo, faChevro
 import { ContractOverviewRow } from "../../api/users";
 import { AfipCatalogs, AfipRowResult, AfipFieldCheck, TonoArca, resumenArca, esResuelto } from "./afipCompleteness";
 import { describirRegistro, CampoRegistro } from "./afipTxt";
-import { ObraSocialDelContrato } from "./ObraSocialDelContrato";
 import { InfoModal } from "../ui/InfoModal";
 import { EXPLICACIONES, ExplicacionCampo } from "./explicacionesArca";
 import { BandaEmpleador } from "./BandaEmpleador";
@@ -177,7 +176,10 @@ const FilaCheck: React.FC<{ c: AfipFieldCheck }> = ({ c }) => {
         </span>
         <span className="shrink-0 text-right">
           {c.estado === "ok" && <span className="text-sm font-mono text-gray-600 dark:text-gray-300">{c.value || "—"}</span>}
-          {c.estado === "falta" && <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">Falta</span>}
+          {/* La obra social no "falta" como un campo que alguien olvidó tipear: es un trámite que
+              todavía no se hizo, y el remedio es validar, no cargar. Decirle Falta la iguala a
+              Modalidad o Tipo de Servicio, que se resuelven en un click del formulario. */}
+          {c.estado === "falta" && <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">{c.key === "rnos" ? "Sin validar" : "Falta"}</span>}
           {c.estado === "error" && <span className="text-[11px] font-semibold text-red-600 dark:text-red-400">Mal cargado</span>}
           {c.estado === "bloqueado" && <span className="text-[11px] font-semibold text-gray-500">En espera</span>}
           {/* "Sin constatar" solo para el aviso que HABLA de constatar. Puesto en todos los avisos,
@@ -369,20 +371,8 @@ export const DatosArcaDetalle: React.FC<{
   onGuardado?: (patch?: Partial<ContractOverviewRow>) => void;
 }> = ({ row, result, cat, onGuardado, empresas = [], onCambioNivel }) => {
   const { campos, valores } = useMemo(() => describirRegistro(row, cat), [row, cat]);
-  /**
-   * Los avisos de la obra social NO van en esta lista: viven dentro de su propia tarjeta.
-   *
-   * Estaban en los dos lugares y se leía como el mismo dato repetido — la tarjeta decía "Sin
-   * constatar en ARCA" y abajo aparecía otra fila de obra social diciendo lo mismo. La tarjeta es la
-   * dueña del tema: tiene el valor, el estado, la fecha y el botón para resolverlo.
-   */
-  const avisos = result.checks.filter((c) => c.estado === "aviso" && c.origen !== "obra_social");
-  const avisosObraSocial = result.checks.filter((c) => c.estado === "aviso" && c.origen === "obra_social");
+  const avisos = result.checks.filter((c) => c.estado === "aviso");
 
-
-  // El origen de la obra social ya viene redactado en el label del check; acá solo se le saca el
-  // prefijo del campo, que en la tarjeta lo dice el título.
-  const origenObraSocial = result.checks.find((c) => c.key === "rnos")?.label.replace(/^Código RNOS\s*—\s*/, "") || "";
 
   const empresaSel = cat.empresas?.find((e) => e._id === row.empresaContratoId);
 
@@ -394,13 +384,6 @@ export const DatosArcaDetalle: React.FC<{
 
       {/* El formulario con la forma de ARCA. Todo se resuelve acá adentro: ya no hay "Ir a ↗". */}
       {onGuardado && <FormularioArca row={row} valores={valores} cat={cat} onGuardado={onGuardado} onCambioNivel={onCambioNivel} />}
-
-      {/*
-       * La obra social conserva su tarjeta propia: es el único dato que hay que ir a buscar AFUERA
-       * (a Registrar Nuevas Altas de ARCA, con el CUIL) y necesita las instrucciones al lado. El resto
-       * se elige de un catálogo que ya está en la base.
-       */}
-      {onGuardado && <ObraSocialDelContrato row={row} valores={valores} etiquetaOrigen={origenObraSocial} avisos={avisosObraSocial} onGuardado={onGuardado} />}
 
       {/* Los avisos van visibles aunque el contrato esté completo: no bloquean el alta, pero son lo
           que hay que ir limpiando. */}

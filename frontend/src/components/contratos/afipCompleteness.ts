@@ -229,6 +229,14 @@ export interface AfipValues {
   constatacion: "afiliada" | "no_figura" | "sin_constatar";
   /** Cuándo se constató ("" si no se constató). */
   constatadaEl: string;
+  /**
+   * Lo que la cascada resolvería si ARCA no devuelve una obra social propia.
+   *
+   * Se expone aparte de `rnos` porque antes de validar NO es el valor del contrato: es una
+   * referencia para decir "esto es lo que va a quedar". `rnos` está vacío hasta que se valida.
+   */
+  rnosSugerido: string;
+  nombreObraSocialSugerida: string;
 }
 
 /** Resuelve los valores ARCA de un contrato contra los catálogos (sin validar). */
@@ -326,6 +334,21 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
   const cuil = soloDigitos(row.cuit);
   const retribucion = categoria?.data?.sueldoBruto || 0;
 
+  /**
+   * Hasta que no se valida contra ARCA, el contrato NO TIENE obra social.
+   *
+   * La cascada (convenio → excepción de la empleadora → excluidos) sigue calculándose, pero su
+   * resultado queda en `rnosSugerido`: es lo que VA A quedar si ARCA no devuelve una propia, no lo
+   * que hay. Mostrarlo como valor antes de validar hacía creer que estaba confirmado, y el número
+   * que termina en el archivo salía de una suposición nuestra en vez del organismo.
+   *
+   * Consecuencia asumida: sin validar, las posiciones 40-45 quedan sin dato y el TXT de esa persona
+   * no se puede generar. Validar deja de ser una mejora y pasa a ser un paso del alta.
+   */
+  const constatacion: "afiliada" | "no_figura" | "sin_constatar" = row.obraSocialNoFigura ? "no_figura" : row.obraSocialOrigen === "constatada" ? "afiliada" : "sin_constatar";
+  const validada = constatacion !== "sin_constatar";
+  const rnosCascada = soloDigitos(obraSocial?.externalId);
+
   return {
     cuil,
     cuilValido: cuitEsValido(cuil),
@@ -346,12 +369,14 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
     obraSocialRegistrada,
     modalidadLiq: tipo?.data?.afipModalidadLiquidacion || "",
     // El "ID Externo" de la Obra Social siempre fue el código RNOS (ver ObrasSocialesPage.tsx).
-    rnos: soloDigitos(obraSocial?.externalId),
-    nombreObraSocial: obraSocial?.name || "",
+    // Vacío mientras no esté validada: ver el comentario de `rnosSugerido`.
+    rnos: validada ? rnosCascada : "",
+    nombreObraSocial: validada ? obraSocial?.name || "" : "",
+    /** Lo que va a quedar si ARCA no devuelve una propia. Es una REFERENCIA, no el valor. */
+    rnosSugerido: rnosCascada,
+    nombreObraSocialSugerida: obraSocial?.name || "",
     rnosPorDefecto: !obraSocialPropia && !!obraSocial,
-    // Un `osId` sin origen registrado se trata como heredado: no se sabe de dónde salió, y esa es
-    // justamente la situación que hay que marcar en amarillo.
-    constatacion: row.obraSocialNoFigura ? "no_figura" : row.obraSocialOrigen === "constatada" ? "afiliada" : "sin_constatar",
+    constatacion,
     constatadaEl: String(row.obraSocialConstatadaEl || ""),
     rnosOrigen: obraSocialPropia ? ((row.obraSocialOrigen || "heredada-usuario") as "constatada" | "manual" | "heredada-usuario") : obraSocialOverride ? "override" : obraSocialConvenio ? "convenio" : obraSocialEmpresa ? "empresa" : "ninguno",
     sucursal: sucursal?.codigo ? String(sucursal.codigo) : "",
@@ -479,7 +504,9 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
   // contratos constatados antes del cambio de fuente, que no se reescriben: decían la verdad cuando
   // se guardaron y borrar de dónde salió un dato es peor que mostrar dos orígenes distintos.
   const fuenteConstatada = row.obraSocialConstatadaEn === "arca" ? "ARCA" : row.obraSocialConstatadaEn === "sss" ? "SSS" : "";
-  const etiquetaRnos = {
+  const etiquetaRnos = v.constatacion === "sin_constatar"
+    ? "Código RNOS — sin validar en ARCA"
+    : {
     constatada: `Código RNOS — constatada${fuenteConstatada ? ` · ${fuenteConstatada}` : ""}${fechaConstatada ? ` · ${fechaConstatada}` : ""}`,
     manual: "Código RNOS — cargada a mano en este contrato",
     "heredada-usuario": "Código RNOS — viene de la ficha de la persona",
@@ -487,16 +514,26 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
     convenio: `Código RNOS — del convenio ${v.convenioCategoria || ""}`.trim(),
     empresa: "Código RNOS — excluido de convenio: de la empleadora",
     ninguno: "Código RNOS — obra social",
-  }[v.rnosOrigen];
+      }[v.rnosOrigen];
 
   // El detalle del faltante dice QUÉ falta cargar, que depende de por dónde se cortó la cascada.
   // Antes acá había una obra social global que rellenaba el campo: se eliminó porque solo tapaba
   // esta misma situación con un valor sin fundamento, que ARCA acepta igual.
-  const faltaRnos = !v.convenioCategoria
-    ? "La categoría del contrato no tiene cargado a qué convenio pertenece, así que no se puede saber qué obra social corresponde. Cargásela en Configuración → ARCA → Categorías, o constatá la obra social de la persona en el padrón de la SSS y cargala en este contrato."
-    : v.convenioCategoria === CONVENIO_EXCLUIDO
-      ? "Es un excluido de convenio (9999/99): no hay sindicato del que heredar la obra social, así que la define la empleadora. Cargala en su ficha, en ARCA → Obras Sociales."
-      : `El convenio ${v.convenioCategoria} no tiene obra social cargada. La define el sindicato: asignásela en Configuración → ARCA → Convenios, o constatá la de la persona en el padrón de la SSS y cargala en este contrato.`;
+  /**
+   * Qué falta, que ahora es SIEMPRE lo mismo: validar contra ARCA.
+   *
+   * Antes acá se explicaba cómo configurar el convenio, porque el valor salía de la cascada y el
+   * faltante era que la cascada no llegara a nada. Ahora el valor sale de ARCA: mientras no se
+   * valide no hay obra social, tenga o no el convenio la suya cargada. Lo que sí cambia es la NOTA
+   * de referencia —qué va a quedar si ARCA no devuelve ninguna—, que se arma abajo.
+   */
+  const faltaRnos = v.rnosSugerido
+    ? `Validá el CUIL en ARCA (Relaciones Laborales → Registrar Nuevas Altas) y aplicá el resultado en «Constatar obras sociales». Si el organismo no tiene una registrada para esta persona, va a quedar la del ${v.convenioCategoria ? `convenio ${v.convenioCategoria}` : "convenio"}: ${v.rnosSugerido} · ${v.nombreObraSocialSugerida}.`
+    : !v.convenioCategoria
+      ? "Validá el CUIL en ARCA. Y ojo: la categoría del contrato no tiene cargado a qué convenio pertenece, así que si ARCA no devuelve ninguna no hay de dónde sacarla — cargásela en Configuración → ARCA → Categorías."
+      : v.convenioCategoria === CONVENIO_EXCLUIDO
+        ? "Validá el CUIL en ARCA. Es un excluido de convenio (9999/99): si el organismo no devuelve ninguna, la define la empleadora y hay que cargarla en su ficha (ARCA → Obras Sociales)."
+        : `Validá el CUIL en ARCA. Y ojo: el convenio ${v.convenioCategoria} no tiene obra social cargada, así que si el organismo no devuelve ninguna no hay de dónde sacarla — asignásela en Configuración → ARCA → Convenios.`;
   checks.push(presencia("rnos", etiquetaRnos, "obra_social", v.rnos, faltaRnos));
 
   /**
@@ -529,26 +566,12 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
     );
   }
 
-  /**
-   * Sin constatar. NO bloquea el TXT: siempre hay un valor —el del convenio— así que el archivo se
-   * genera igual. Lo que está en juego no es que ARCA rechace el alta, es que los aportes de esa
-   * persona vayan a la obra social equivocada, que no lo avisa nadie.
-   *
-   * La caída al convenio es aporte de WeProdu: ARCA precompleta lo que tiene registrado, pero si no
-   * tiene nada lo deja vacío y el empleador elige a mano. Como la suposición la hace la app, la app
-   * tiene que mostrar cuándo la está haciendo.
+  /*
+   * Acá vivía el aviso "obra social sin constatar": el valor estaba —salía del convenio— y lo que se
+   * marcaba era que nadie lo había verificado. Se eliminó al cambiar la regla: ahora, sin validar, no
+   * hay valor, así que el estado no es un aviso sino el faltante que ya declara `presencia("rnos")`
+   * unas líneas arriba. Un aviso sobre un campo vacío diría dos veces lo mismo.
    */
-  if (v.rnos && v.constatacion === "sin_constatar") {
-    const deDonde =
-      v.rnosOrigen === "heredada-usuario"
-        ? "Viene de la ficha de la persona, de antes de que la obra social se declarara por contrato, así que puede estar vencida."
-        : v.rnosOrigen === "convenio"
-          ? `Se está asumiendo la del convenio ${v.convenioCategoria}. Si la persona optó por otra, los aportes van a la equivocada.`
-          : v.rnosOrigen === "override"
-            ? `Se está asumiendo la excepción que la empleadora puso para el convenio ${v.convenioCategoria}. Si la persona optó por otra, los aportes van a la equivocada.`
-            : "El valor que se muestra es una suposición, no un dato constatado.";
-    checks.push(mk("rnosSinConstatar", "Obra social sin constatar", "obra_social", v.rnos, "aviso", `${deDonde} Constatala en ARCA: Relaciones Laborales → Registrar Nuevas Altas, con el CUIL. No frena el archivo.`));
-  }
 
   // Obra social ∈ registradas por la empleadora. Mismo tipo de regla que el convenio de la categoría:
   // el nomenclador es universal, pero ARCA solo acepta las que ESE CUIT declaró en Datos del Empleador.

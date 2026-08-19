@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLandmark, faPlug, faSpinner, faTriangleExclamation, faCalendarDays, faFingerprint, faHourglassHalf, faCheck, faRotate, faListUl, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
+import { RequisitoExtension } from '../components/contratos/RequisitoExtension';
 import { Modal } from "../components/ui/Modal";
 import { afipAPI, AfipStatus, AfipLogEntry } from "../api/afip";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -203,6 +204,21 @@ export function AfipConfigPage() {
         content: GUIA_ARCA,
       }}
     >
+      {/*
+        * La extensión de validación de obras sociales.
+        *
+        * Vive acá y no en una pantalla propia porque es lo mismo que el resto de esta página: cómo
+        * queda WeProdu conectado con ARCA. La diferencia es por dónde: arriba es el certificado
+        * contra los webservices; esto es el navegador contra la web de clave fiscal, que es la única
+        * vía para un dato que ningún webservice publica.
+        *
+        * Se repite en "Constatar obras sociales", que es donde hace falta en el momento; acá está
+        * para tenerlo a mano y para que se entienda que forma parte de la conexión con el organismo.
+        */}
+      <div className="max-w-xl mb-6">
+        <RequisitoExtension compacto />
+      </div>
+
       {loading ? (
         <div className="flex justify-center py-16 text-gray-400">
           <FontAwesomeIcon icon={faSpinner} spin className="mr-2" /> Cargando...

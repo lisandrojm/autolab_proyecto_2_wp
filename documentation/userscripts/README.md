@@ -19,9 +19,25 @@ decisión distinta y hay que tomarla a propósito, no heredarla de este archivo.
 
 ## Instalación (una sola vez)
 
-1. Instalá **Tampermonkey** en Chrome (o Violentmonkey en Firefox).
-2. Panel de la extensión → *Crear nuevo script* → pegá el contenido de
-   [`arca-obras-sociales.user.js`](arca-obras-sociales.user.js) → guardar.
+Desde la app: **Contratos → Constatar obras sociales**, o **Configuración → ARCA → Conexión**. El
+bloque "Requisito: extensión de validación" tiene los dos botones y dice si ya está instalada.
+
+1. Instalá **Tampermonkey** en Chrome (o Violentmonkey en Firefox) desde
+   [tampermonkey.net](https://www.tampermonkey.net/).
+2. Abrí `/scripts/weprodu-obra-social.user.js` — la app lo sirve como estático y Tampermonkey ofrece
+   instalarlo en un click.
+
+El archivo vive en
+[`frontend/public/scripts/weprodu-obra-social.user.js`](../../frontend/public/scripts/weprodu-obra-social.user.js).
+Es **una sola copia**: se sirve desde donde se edita, así que no hay forma de que el que se instala
+quede atrasado respecto del que está en el repo.
+
+### Cómo sabe la app que está instalada
+
+El script también corre en WeProdu (`autolab.fun` y `localhost:5173`), donde **no hace nada** salvo
+dejar `data-weprodu-os="<versión>"` en el `<html>`. La app lee ese atributo —y no `window.__weproduOS`,
+porque Tampermonkey puede correr el script en un sandbox donde el `window` no se comparte, mientras
+que el DOM siempre sí— y muestra "detectada" o las instrucciones según corresponda.
 
 Hace falta un userscript y no alcanza un bookmarklet porque **cada *Agregar* es un `__doPostBack` que
 recarga la página entera**: el script tiene que volver a inyectarse en cada carga y retomar la cola

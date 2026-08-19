@@ -102,7 +102,7 @@ export const EXPLICACIONES: Record<string, ExplicacionCampo> = {
           El código de 6 dígitos de la obra social del trabajador. ARCA lo declara <strong>en cada alta</strong>, no por persona: dos contratos de la misma persona en dos empleadoras llevan cada uno el suyo.
         </p>
         <p>
-          Se resuelve en cascada: la de la <strong>persona</strong> si la tiene; si no, la de la <strong>empresa</strong>; y si no, la marcada como global en el catálogo. La tarjeta de abajo dice cuál se está usando.
+          <strong>Hasta que no se valida contra ARCA, el contrato no tiene obra social</strong> y su TXT no se puede generar. El valor aparece recién con la validación: si el organismo devuelve una, va esa; si no devuelve ninguna, queda la del convenio de su categoría, también confirmada. Antes de validar se muestra cuál <em>iría</em>, como referencia — no como valor puesto, porque nadie lo verificó todavía.
         </p>
         <p>
           La fuente es <strong>ARCA</strong>: Simplificación Registral → Relaciones Laborales → <em>Registrar Nuevas Altas</em>. Se pone el CUIL y el organismo precompleta la obra social que tiene registrada. Lo que devuelve <strong>queda fijo</strong>: es quien después valida el alta, así que no se corrige a mano. Si no devuelve nada, la persona no tiene afiliación registrada y rige la del convenio.

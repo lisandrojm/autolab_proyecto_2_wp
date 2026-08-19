@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faArrowUpRightFromSquare, faTrash, faUpload } from '@fortawesome/free-solid-svg-icons';
+import { faSort, faLock, faCircleCheck, faCircleQuestion, faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faArrowUpRightFromSquare, faTrash, faUpload } from '@fortawesome/free-solid-svg-icons';
 import { usersAPI, ContractOverviewRow, Contract, SinCuitValidacion } from '../../api/users';
 import { projectsAPI } from '../../api/projects';
 import { companiesAPI, Company } from '../../api/companies';
@@ -393,6 +393,100 @@ const SucursalSelectCell: React.FC<{ record: ContractOverviewRow; valores: AfipV
 };
 
 /**
+ * Estado de la obra social de un contrato. Son TRES, no dos.
+ *
+ * La distinción que faltaba es la del medio: se consultó ARCA y el organismo **no devolvió ninguna**.
+ * Eso no es un pendiente, es una respuesta —esa persona no tiene afiliación registrada, así que la
+ * del convenio es la correcta y quedó confirmada—, pero al colapsarlo con "constatada" o dejarlo en
+ * "sin constatar" se perdía. Y es el caso MÁS COMÚN: la mayoría no tiene obra social propia. Sin este
+ * estado, esas personas quedaban en ámbar para siempre aunque el trabajo ya estuviera hecho.
+ *
+ *  - `sin_validar`       nadie consultó. Rige la del convenio y el TXT sale igual.
+ *  - `validada_default`  se consultó, ARCA no devolvió ninguna → sigue la del convenio, confirmada.
+ *  - `validada_arca`     se consultó y ARCA devolvió una → esa reemplaza a la del convenio, y queda fija.
+ *  - `no_registrada`     la que rige no está entre las que la empleadora declaró: ARCA rechaza el alta.
+ *
+ * Vive fuera de la celda porque lo usan CUATRO lugares que tienen que coincidir: la celda, el filtro,
+ * el orden y el contador del botón de lote. Con la clasificación repetida en cada uno, el botón decía
+ * 26 y el filtro traía 24 — que es exactamente lo que pasaba antes.
+ */
+export type EstadoObraSocial = 'sin_validar' | 'validada_default' | 'validada_arca' | 'no_registrada';
+
+export const estadoObraSocial = (_row: ContractOverviewRow, v: AfipValues): EstadoObraSocial => {
+  // El error va primero: una obra social que la empleadora no registró hace que ARCA rechace el alta,
+  // y eso importa más que si además está constatada.
+  if (v.rnos && v.obraSocialRegistrada === false) return 'no_registrada';
+  if (v.constatacion === 'no_figura') return 'validada_default';
+  if (v.constatacion === 'afiliada') return 'validada_arca';
+  return 'sin_validar';
+};
+
+/** Para ordenar: primero lo que hay que resolver. */
+export const ORDEN_ESTADO_OS: Record<EstadoObraSocial, number> = { no_registrada: 0, sin_validar: 1, validada_default: 2, validada_arca: 3 };
+
+export const FILTROS_OBRA_SOCIAL: Array<{ value: EstadoObraSocial; label: string }> = [
+  { value: 'sin_validar', label: 'Sin validar en ARCA' },
+  { value: 'validada_arca', label: 'Validadas — con obra social propia' },
+  { value: 'validada_default', label: 'Validadas — sin afiliación (rige el convenio)' },
+  { value: 'no_registrada', label: 'No registradas por la empleadora' },
+];
+
+/**
+ * Celda "Obra social": qué RNOS (pos. 40-45) lleva este contrato y si está validado contra ARCA.
+ *
+ * Sin validar, la celda va VACÍA. La cascada del convenio se conoce —está en `rnosSugerido`— pero
+ * mostrarla acá haría creer que ese código está confirmado, y es justo lo contrario: nadie lo miró.
+ * El valor aparece recién cuando ARCA contesta. La referencia de qué va a quedar se muestra en el
+ * modal, junto al botón de validar, donde sirve para anticipar y no para confundir.
+ *
+ * Solo el código de 6 dígitos: el nombre de la obra social mide hasta 40 caracteres y en una grilla
+ * de 16 columnas empujaría todo lo demás fuera de la pantalla. El nombre completo, de dónde sale y
+ * cuándo se validó van en el tooltip.
+ *
+ * NO es editable: validada = fija (el server rechaza sobrescribirla con un 409). Se cambia por
+ * Re-constatar, desde el modal, no tipeando en la grilla.
+ */
+const ObraSocialCell: React.FC<{ record: ContractOverviewRow; valores: AfipValues; onAbrir: () => void }> = ({ record, valores, onAbrir }) => {
+  const estado = estadoObraSocial(record, valores);
+  const codigo = String(valores.rnos || '').replace(/\D/g, '');
+  const fecha = valores.constatadaEl ? new Date(valores.constatadaEl).toLocaleDateString('es-AR') : '';
+  const nombre = valores.nombreObraSocial || '';
+  const delConvenio = valores.convenioCategoria ? `convenio ${valores.convenioCategoria}` : 'convenio';
+
+  const { icono, clase, titulo } = {
+    sin_validar: {
+      icono: faCircleQuestion,
+      clase: 'text-gray-400 dark:text-gray-500',
+      titulo: `Sin validar en ARCA — este contrato todavía no tiene obra social y su TXT no se puede generar.${
+        valores.rnosSugerido ? ` Si el organismo no devuelve ninguna, va a quedar la del ${delConvenio}: ${valores.rnosSugerido} · ${valores.nombreObraSocialSugerida}.` : ''
+      }${record.empresaContratoId ? '' : ' Elegí la empleadora para poder validarla.'}`,
+    },
+    validada_default: {
+      icono: faCircleCheck,
+      clase: 'text-green-700 dark:text-green-400',
+      titulo: `${nombre} — por defecto (${delConvenio}) · validada en ARCA${fecha ? ` el ${fecha}` : ''}: el organismo no tiene afiliación propia para esta persona, así que rige la del convenio.`,
+    },
+    validada_arca: {
+      icono: faLock,
+      clase: 'text-green-700 dark:text-green-400',
+      titulo: `${nombre} — la devolvió ARCA${fecha ? ` el ${fecha}` : ''} · queda fija, no editable.`,
+    },
+    no_registrada: {
+      icono: faXmark,
+      clase: 'text-red-600 dark:text-red-400',
+      titulo: `${nombre} — no está entre las obras sociales que la empleadora tiene registradas ante ARCA: el organismo va a rechazar el alta.`,
+    },
+  }[estado];
+
+  return (
+    <button type="button" onClick={onAbrir} title={titulo} className={`inline-flex items-center gap-1.5 font-mono text-xs font-semibold hover:underline ${clase}`}>
+      <FontAwesomeIcon icon={icono} className="h-3 w-3 shrink-0" />
+      {codigo || <span className="font-sans font-normal">sin validar</span>}
+    </button>
+  );
+};
+
+/**
  * Celda "Actividad": con qué actividad del domicilio se declara este contrato.
  *
  * Solo pide decidir cuando la sucursal tiene MÁS DE UNA actividad declarada (ARCA lo permite). Con
@@ -582,6 +676,10 @@ export const ContractBulkAfipTab: React.FC<{
   const [filterRolMobile, setFilterRolMobile] = useState('');
   const [filterTipoContrato, setFilterTipoContrato] = useState('');
   const [filterEstadoContrato, setFilterEstadoContrato] = useState('');
+  /** Filtro por estado de la obra social: convierte la grilla en la cola de trabajo del trámite. */
+  const [filterObraSocial, setFilterObraSocial] = useState<EstadoObraSocial | ''>('');
+  /** Orden por estado de obra social: agrupa arriba lo que hay que resolver. */
+  const [ordenObraSocial, setOrdenObraSocial] = useState(false);
   const [filterReemplazo, setFilterReemplazo] = useState('');
   const [filterClientId, setFilterClientId] = useState('');
   // Preseleccionado cuando se entra desde el proyecto (Gestionar Equipo → Gestión masiva de Contratos).
@@ -890,10 +988,16 @@ export const ContractBulkAfipTab: React.FC<{
     () => (loteObrasSociales ? rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'alta_temprana_afip').map((x) => ({ row: x.row, valores: resolveAfipValues(x.row, afipCat) })) : []),
     [loteObrasSociales, rowsPorFiltrosComunes, afipCat],
   );
-  /** Cuántas quedan sin constatar en lo que se está mirando: es el número del botón. */
+  /**
+   * Cuántas quedan sin constatar en lo que se está mirando: es el número del botón.
+   *
+   * Se cuenta con `estadoObraSocial`, la misma función que pinta la celda y filtra la columna. Antes
+   * tenía su propia condición y contaba de más —incluía las que no tienen empleadora y las que la
+   * empleadora no registró—, así que el botón decía 26 y el filtro traía 24.
+   */
   const countSinConstatar = useMemo(
-    () => rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'alta_temprana_afip' && !x.row.obraSocialNoFigura && x.row.obraSocialOrigen !== 'constatada').length,
-    [rowsPorFiltrosComunes],
+    () => rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'alta_temprana_afip' && estadoObraSocial(x.row, resolveAfipValues(x.row, afipCat)) === 'sin_validar').length,
+    [rowsPorFiltrosComunes, afipCat],
   );
 
   // Los contadores siguen el mismo corte que la tabla: la gente sin CUIT se cuenta aparte y no
@@ -943,7 +1047,15 @@ export const ContractBulkAfipTab: React.FC<{
     [filterTipo, soloIncompletos, soloPendientes],
   );
 
-  const filtered = useMemo(() => rowsPorFiltrosComunes.filter(pasaFiltroTramite), [rowsPorFiltrosComunes, pasaFiltroTramite]);
+  const filtered = useMemo(() => {
+    const base = rowsPorFiltrosComunes.filter(pasaFiltroTramite);
+    // El filtro y el orden se resuelven con `estadoObraSocial`, la MISMA función que pinta la celda:
+    // si cada uno clasificara por su cuenta, filtrar "sin constatar" podría traer filas que la celda
+    // muestra en verde.
+    const conFiltro = filterObraSocial ? base.filter((x) => estadoObraSocial(x.row, resolveAfipValues(x.row, afipCat)) === filterObraSocial) : base;
+    if (!ordenObraSocial) return conFiltro;
+    return [...conFiltro].sort((a, b) => ORDEN_ESTADO_OS[estadoObraSocial(a.row, resolveAfipValues(a.row, afipCat))] - ORDEN_ESTADO_OS[estadoObraSocial(b.row, resolveAfipValues(b.row, afipCat))]);
+  }, [rowsPorFiltrosComunes, pasaFiltroTramite, filterObraSocial, ordenObraSocial, afipCat]);
 
   /**
    * Cuántos contratos hay detrás de cada pestaña de empresa.
@@ -1097,6 +1209,10 @@ export const ContractBulkAfipTab: React.FC<{
               // El filtro de Empresa se hace con la columna "Empresa Contrato" de cada fila, no con un select general.
               { label: 'Rol/es', value: filterRolMobile, onChange: setFilterRolMobile, placeholder: 'Todos los roles', options: MOBILE_ROLE_OPTIONS },
               { label: 'Tipo de contrato', value: filterTipoContrato, onChange: setFilterTipoContrato, placeholder: 'Todos los tipos', options: tipoContratoOptions },
+              // Solo en Alta temprana: en Constancia de CUIT la obra social no participa del trámite.
+              ...(filterTipo === 'alta_temprana_afip'
+                ? [{ label: 'Obra social', value: filterObraSocial, onChange: (v: string) => setFilterObraSocial(v as EstadoObraSocial | ''), placeholder: 'Todas', options: FILTROS_OBRA_SOCIAL }]
+                : []),
               { label: 'Estado de contrato', value: filterEstadoContrato, onChange: setFilterEstadoContrato, placeholder: 'Todos los estados', options: estadoContratoOptions, renderOption: (opt: { label: string }) => <EstadoBadge name={opt.label} /> },
               {
                 label: 'Reemplazo',
@@ -1160,7 +1276,14 @@ export const ContractBulkAfipTab: React.FC<{
             {/* La constatación de obras sociales no bloquea el TXT, así que va como contador aparte y
                 no dentro de "incompletos": es trabajo pendiente de verificación, no un dato faltante. */}
             {countSinConstatar > 0 && (
-              <button onClick={() => setLoteObrasSociales(true)} title="Copiar los CUIL de esta empleadora y traerlas de ARCA en una corrida" className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold border transition-colors bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200/60 dark:border-blue-800/60 hover:bg-blue-100 dark:hover:bg-blue-900/30">
+              <button
+                onClick={() => {
+                  // Además de abrir el lote, deja la grilla filtrada en esas mismas filas: al cerrar
+                  // el modal, lo que queda a la vista es exactamente la cola de trabajo.
+                  setFilterObraSocial('sin_validar');
+                  setLoteObrasSociales(true);
+                }}
+                title="Copiar los CUIL de esta empleadora y traerlas de ARCA en una corrida. También filtra la grilla en las que faltan." className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold border transition-colors bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200/60 dark:border-blue-800/60 hover:bg-blue-100 dark:hover:bg-blue-900/30">
                 <FontAwesomeIcon icon={faStethoscope} className="h-3 w-3" />
                 Constatar obras sociales en ARCA ({countSinConstatar})
               </button>
@@ -1392,6 +1515,17 @@ export const ContractBulkAfipTab: React.FC<{
                       Actividad
                     </th>
                   )}
+                  {/* Tercera de la familia ARCA, con Sucursal y Actividad: las tres van a posiciones
+                      fijas del registro de 130. Va acá y no al lado de Empresa porque Empresa y CUIT
+                      son el CONTEXTO; esto es un valor que viaja al archivo. */}
+                  {filterTipo !== 'sin_cuit' && (
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Código RNOS (pos. 40-45). Ordena por estado: primero lo que hay que resolver.">
+                      <button type="button" onClick={() => setOrdenObraSocial((v) => !v)} className={`uppercase tracking-wider font-bold inline-flex items-center gap-1.5 hover:text-gray-700 dark:hover:text-gray-300 ${ordenObraSocial ? 'text-blue-600 dark:text-blue-400' : ''}`}>
+                        Obra Social
+                        <FontAwesomeIcon icon={faSort} className="h-2.5 w-2.5" />
+                      </button>
+                    </th>
+                  )}
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Empresa Release</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Cliente</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto</th>
@@ -1508,6 +1642,11 @@ export const ContractBulkAfipTab: React.FC<{
                     {filterTipo !== 'sin_cuit' && (
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <ActividadSelectCell record={r} valores={resolveAfipValues(r, afipCat)} onGuardado={(patch) => aplicarCambio(r, patch)} />
+                      </td>
+                    )}
+                    {filterTipo !== 'sin_cuit' && (
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <ObraSocialCell record={r} valores={resolveAfipValues(r, afipCat)} onAbrir={() => setDetalleRef({ _id: r._id, contractIndex: r.contractIndex })} />
                       </td>
                     )}
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>

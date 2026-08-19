@@ -6,6 +6,7 @@ import { contratosAPI, ContratoItem } from '../../api/contratos';
 import { projectsAPI } from '../../api/projects';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { CampoArca } from './CampoArca';
+import { CampoObraSocial } from './CampoObraSocial';
 import { PickerArca, OpcionPicker } from './PickerArca';
 
 /**
@@ -139,16 +140,10 @@ export const FormularioArca: React.FC<{
         <div>
           <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Relación laboral</h4>
 
-          <CampoArca
-            rotulo="Obra Social"
-            info="rnos"
-            rol="campo"
-            etiqueta="40–45"
-            valor={valores.rnos}
-            nombre={valores.nombreObraSocial}
-            falta={!valores.rnos}
-            origen={<>se elige abajo, contra lo que devuelva ARCA</>}
-          />
+          {/* No usa CampoArca: no es un campo que se elige de un catálogo, es uno que se valida
+              contra ARCA. Trae su propio flujo adentro — antes vivía en un panel aparte y el dato
+              quedaba mostrado dos veces, con el valor en un lugar y la acción en otro. */}
+          <CampoObraSocial row={row} valores={valores} onGuardado={onGuardado} />
 
           <CampoArca
             rotulo="Sucursal"
