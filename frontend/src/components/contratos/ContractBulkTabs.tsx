@@ -446,7 +446,7 @@ export const FILTROS_OBRA_SOCIAL: Array<{ value: EstadoObraSocial; label: string
  * NO es editable: validada = fija (el server rechaza sobrescribirla con un 409). Se cambia por
  * Re-constatar, desde el modal, no tipeando en la grilla.
  */
-const ObraSocialCell: React.FC<{ record: ContractOverviewRow; valores: AfipValues; onAbrir: () => void }> = ({ record, valores, onAbrir }) => {
+const ObraSocialCell: React.FC<{ record: ContractOverviewRow; valores: AfipValues; onAbrir: () => void; onValidar: () => void }> = ({ record, valores, onAbrir, onValidar }) => {
   const estado = estadoObraSocial(record, valores);
   const codigo = String(valores.rnos || '').replace(/\D/g, '');
   const fecha = valores.constatadaEl ? new Date(valores.constatadaEl).toLocaleDateString('es-AR') : '';
@@ -479,10 +479,24 @@ const ObraSocialCell: React.FC<{ record: ContractOverviewRow; valores: AfipValue
   }[estado];
 
   return (
-    <button type="button" onClick={onAbrir} title={titulo} className={`inline-flex items-center gap-1.5 font-mono text-xs font-semibold hover:underline ${clase}`}>
-      <FontAwesomeIcon icon={icono} className="h-3 w-3 shrink-0" />
-      {codigo || <span className="font-sans font-normal">sin validar</span>}
-    </button>
+    <span className="inline-flex items-center gap-2 whitespace-nowrap">
+      <button type="button" onClick={onAbrir} title={titulo} className={`inline-flex items-center gap-1.5 font-mono text-xs font-semibold hover:underline ${clase}`}>
+        <FontAwesomeIcon icon={icono} className="h-3 w-3 shrink-0" />
+        {codigo || <span className="font-sans font-normal">sin validar</span>}
+      </button>
+      {/* Validar desde la propia fila: sin esto había que abrir el modal para arrancar un trámite que
+          no necesita mirar nada más. Solo con empleadora: la validación del RNOS es por CUIT. */}
+      {estado === 'sin_validar' && !!record.empresaContratoId && (
+        <button
+          type="button"
+          onClick={onValidar}
+          title="Validar la obra social de este contrato contra ARCA"
+          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10.5px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+        >
+          Validar
+        </button>
+      )}
+    </span>
   );
 };
 
@@ -934,7 +948,16 @@ export const ContractBulkAfipTab: React.FC<{
    * por las pestañas de arriba: el padrón se consulta por CUIL, pero el RNOS se declara por contrato
    * y es de la empleadora que presenta el alta.
    */
-  const [loteObrasSociales, setLoteObrasSociales] = useState(false);
+  /**
+   * A QUÉ contratos apunta la corrida de validación. `null` = cerrado.
+   *
+   * Es un conjunto de claves y no un booleano porque hay tres formas de arrancar el mismo proceso —el
+   * botón del contador (todos los pendientes del filtro), la selección de la grilla, y el botón de
+   * una fila suelta— y las tres tienen que terminar en el MISMO motor. Un flujo aparte "para una
+   * sola" es lo que se viene sacando a propósito: dos caminos por los que un RNOS entra al sistema
+   * son dos formas de que diverjan.
+   */
+  const [loteObrasSociales, setLoteObrasSociales] = useState<Set<string> | null>(null);
 
   // Filtros de la barra superior (búsqueda + filtro avanzado), sin el trámite ni los toggles propios
   // de cada pestaña: se usa tanto para la tabla como para los contadores de las pestañas, que deben
@@ -985,9 +1008,28 @@ export const ContractBulkAfipTab: React.FC<{
   // valores ya resueltos. Solo se calculan con el lote abierto: son ~500 resoluciones completas de la
   // cascada y no hacen falta para pintar la tabla.
   const filasConstatacion = useMemo<FilaConstatacion[]>(
-    () => (loteObrasSociales ? rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'alta_temprana_afip').map((x) => ({ row: x.row, valores: resolveAfipValues(x.row, afipCat) })) : []),
+    () =>
+      loteObrasSociales
+        ? rowsPorFiltrosComunes
+            .filter((x) => x.row._tipo === 'alta_temprana_afip' && loteObrasSociales.has(`${x.row._id}-${x.row.contractIndex}`))
+            .map((x) => ({ row: x.row, valores: resolveAfipValues(x.row, afipCat) }))
+        : [],
     [loteObrasSociales, rowsPorFiltrosComunes, afipCat],
   );
+
+  /**
+   * La empleadora de la tanda sale de las FILAS, no de la pestaña.
+   *
+   * La validación de "esta obra social está entre las registradas" es por CUIT, así que mezclar dos
+   * empleadoras haría que el mismo RNOS sea válido para unas filas e inválido para otras dentro del
+   * mismo lote. Si el conjunto no comparte una sola empleadora, el lote no se puede aplicar y la
+   * pantalla lo dice — antes eso dependía de estar parado en la pestaña correcta, y desde "Todas" el
+   * panel simplemente no aparecía, sin explicar por qué.
+   */
+  const empresaDelLote = useMemo(() => {
+    const ids = new Set(filasConstatacion.map((f) => String(f.row.empresaContratoId || '')));
+    return ids.size === 1 ? [...ids][0] : '';
+  }, [filasConstatacion]);
   /**
    * Cuántas quedan sin constatar en lo que se está mirando: es el número del botón.
    *
@@ -1281,7 +1323,13 @@ export const ContractBulkAfipTab: React.FC<{
                   // Además de abrir el lote, deja la grilla filtrada en esas mismas filas: al cerrar
                   // el modal, lo que queda a la vista es exactamente la cola de trabajo.
                   setFilterObraSocial('sin_validar');
-                  setLoteObrasSociales(true);
+                  setLoteObrasSociales(
+                    new Set(
+                      rowsPorFiltrosComunes
+                        .filter((x) => x.row._tipo === 'alta_temprana_afip' && estadoObraSocial(x.row, resolveAfipValues(x.row, afipCat)) === 'sin_validar')
+                        .map((x) => rowKey(x.row)),
+                    ),
+                  );
                 }}
                 title="Copiar los CUIL de esta empleadora y traerlas de ARCA en una corrida. También filtra la grilla en las que faltan." className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold border transition-colors bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200/60 dark:border-blue-800/60 hover:bg-blue-100 dark:hover:bg-blue-900/30">
                 <FontAwesomeIcon icon={faStethoscope} className="h-3 w-3" />
@@ -1292,6 +1340,19 @@ export const ContractBulkAfipTab: React.FC<{
           <div className="flex flex-wrap items-center gap-3">
             {/* Grupo 1 — asignación masiva de Empresa: siempre visible, se activa al tildar filas. */}
             {asignacionMasivaEmpresa}
+
+            {/* Validar las tildadas. Misma corrida que el botón del contador, con otro conjunto: el
+                operador arma la tanda que quiere en vez de tomar la que le dan. */}
+            <button
+              type="button"
+              disabled={seleccionados.length === 0}
+              onClick={() => setLoteObrasSociales(new Set(seleccionados.map((x) => rowKey(x.row))))}
+              title={seleccionados.length === 0 ? 'Tildá los contratos que querés validar' : `Validar la obra social de los ${seleccionados.length} contratos tildados`}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+            >
+              <FontAwesomeIcon icon={faStethoscope} className="h-3.5 w-3.5" />
+              Validar obras sociales{seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
+            </button>
 
             {/* Separador: lo de arriba edita datos; lo de abajo son las salidas hacia ARCA. */}
             <span className="hidden sm:block h-6 w-px bg-gray-200 dark:bg-gray-700" />
@@ -1646,7 +1707,12 @@ export const ContractBulkAfipTab: React.FC<{
                     )}
                     {filterTipo !== 'sin_cuit' && (
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                        <ObraSocialCell record={r} valores={resolveAfipValues(r, afipCat)} onAbrir={() => setDetalleRef({ _id: r._id, contractIndex: r.contractIndex })} />
+                        <ObraSocialCell
+                          record={r}
+                          valores={resolveAfipValues(r, afipCat)}
+                          onAbrir={() => setDetalleRef({ _id: r._id, contractIndex: r.contractIndex })}
+                          onValidar={() => setLoteObrasSociales(new Set([rowKey(r)]))}
+                        />
                       </td>
                     )}
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -1709,17 +1775,17 @@ export const ContractBulkAfipTab: React.FC<{
 
       {loteObrasSociales && (
         <Modal
-          isOpen={loteObrasSociales}
-          onClose={() => setLoteObrasSociales(false)}
-          title="Constatar obras sociales"
-          subtitle={filterEmpresaId && filterEmpresaId !== SIN_EMPRESA ? empresaOptions.find((e) => e.value === filterEmpresaId)?.label || '' : 'Todas las empleadoras — el RNOS se declara por contrato'}
+          isOpen={!!loteObrasSociales}
+          onClose={() => setLoteObrasSociales(null)}
+          title={filasConstatacion.length === 1 ? `Validar obra social — ${filasConstatacion[0].row.userName}` : `Validar obras sociales (${filasConstatacion.length})`}
+          subtitle={empresaDelLote ? empresaOptions.find((e) => e.value === empresaDelLote)?.label || '' : 'Los contratos elegidos son de más de una empleadora (o no tienen una asignada)'}
           size="95"
           zIndex={70}
         >
           <ConstatarObrasSocialesLote
             filas={filasConstatacion}
-            empleadora={filterEmpresaId && filterEmpresaId !== SIN_EMPRESA ? empresaOptions.find((e) => e.value === filterEmpresaId)?.label : undefined}
-            empresaId={filterEmpresaId && filterEmpresaId !== SIN_EMPRESA ? filterEmpresaId : undefined}
+            empleadora={empresaOptions.find((e) => e.value === empresaDelLote)?.label}
+            empresaId={empresaDelLote || undefined}
             onLoteAplicado={() => load(true)}
             onGuardado={(row, patch) => aplicarCambio(row, patch)}
           />

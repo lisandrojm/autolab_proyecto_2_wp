@@ -338,6 +338,23 @@ export const ConstatarObrasSocialesLote: React.FC<{
       <RequisitoExtension />
 
       {/*
+        * Sin una sola empleadora no se puede aplicar la tanda, y hay que DECIRLO.
+        *
+        * La validación de "esta obra social está entre las registradas" es por CUIT: mezclar dos
+        * empleadoras haría que el mismo RNOS sea válido para unas filas e inválido para otras. Antes
+        * el panel simplemente no aparecía y la pantalla se leía como rota.
+        */}
+      {!empresaId && (
+        <div className="rounded-lg border border-amber-300 dark:border-amber-800/70 bg-amber-50/70 dark:bg-amber-950/20 px-3 py-2.5 text-[11px] text-gray-700 dark:text-gray-300 flex items-start gap-2">
+          <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <span>
+            Los contratos elegidos son de <strong>más de una empleadora</strong>, o todavía no tienen una asignada. La obra social se valida contra el CUIT que la declara, así que la tanda tiene que ser de una
+            sola: elegí la empleadora en las pestañas de arriba —o asignásela a estos contratos— y volvé a intentar.
+          </span>
+        </div>
+      )}
+
+      {/*
         * El camino rápido: dos botones y un login.
         *
         * Se copian los CUIL, el script los recorre en la pestaña de ARCA que el operador ya abrió, y
