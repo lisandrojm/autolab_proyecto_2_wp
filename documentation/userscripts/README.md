@@ -22,10 +22,20 @@ decisión distinta y hay que tomarla a propósito, no heredarla de este archivo.
 Desde la app: **Contratos → Constatar obras sociales**, o **Configuración → ARCA → Conexión**. El
 bloque "Requisito: extensión de validación" tiene los dos botones y dice si ya está instalada.
 
-1. Instalá **Tampermonkey** en Chrome (o Violentmonkey en Firefox) desde
-   [tampermonkey.net](https://www.tampermonkey.net/).
-2. Abrí `/scripts/weprodu-obra-social.user.js` — la app lo sirve como estático y Tampermonkey ofrece
-   instalarlo en un click.
+1. Instalá **Tampermonkey** desde [tampermonkey.net](https://www.tampermonkey.net/).
+2. En Chrome, entrá a `chrome://extensions` y activá el **Modo de desarrollador** (arriba a la
+   derecha). Chrome lo exige para que Tampermonkey pueda ejecutar userscripts; sin eso queda
+   instalado pero no corre — y el síntoma es idéntico a no tenerlo: "No detectada".
+3. En la app, botón **Copiar el script** → panel de Tampermonkey → *Crear un nuevo script* → pegar
+   reemplazando todo → guardar (Ctrl/Cmd+S).
+
+### Por qué no se instala con un click
+
+Chrome **intercepta cualquier `.user.js`** y corta la instalación con *"No es posible añadir
+aplicaciones, extensiones ni secuencias de comandos de usuario desde este sitio web"*. No es algo que
+se pueda evitar desde el servidor: pasa por la extensión del archivo en la URL, sin importar el
+content-type. Por eso la vía buena es copiar y pegar en el editor de Tampermonkey, donde Chrome no
+interviene.
 
 El archivo vive en
 [`frontend/public/scripts/weprodu-obra-social.user.js`](../../frontend/public/scripts/weprodu-obra-social.user.js).
