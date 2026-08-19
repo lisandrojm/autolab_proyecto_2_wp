@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WeProdu — Validar obras sociales en ARCA (auto)
 // @namespace    weprodu
-// @version      2.0.1
+// @version      2.1.0
 // @description  Puente automático WeProdu <-> ARCA. WeProdu manda la lista de CUIL, el script la valida en ARCA sola y devuelve los RNOS a WeProdu. No confirma altas. No guarda clave fiscal.
 // @match        http://localhost:5173/*
 // @match        https://autolab.fun/*
@@ -29,19 +29,21 @@
   SEGURIDAD: nunca aprieta "Aceptar" en ARCA. Solo lee. No toca ni guarda la clave fiscal: trabaja
   dentro de la sesión que vos abriste.
 
-  CONTRATO CON WEPRODU (lo implementa el front, ver `puenteArca.ts`):
-   - Arranque:    window.dispatchEvent(new CustomEvent('weprodu-os-start',
+  CONTRATO CON WEPRODU (lo implementa el front, ver `puenteArca.ts`).
+  Todo va por `document`: es lo único que cruza el sandbox de Tampermonkey — ver LA FRONTERA abajo.
+   - Arranque:    document.dispatchEvent(new CustomEvent('weprodu-os-start',
                     { detail: [ { cuil:'27-40073687-7', contractId:'...' }, ... ] }))
-   - Resultado:   window.addEventListener('weprodu-os-results', e => ...)
+   - Resultado:   document.addEventListener('weprodu-os-results', e => ...)
                     e.detail = [ { cuil, rnos, contractId } ]   rnos '' = sin afiliación -> convenio
-   - Handshake:   window.dispatchEvent(new Event('weprodu-os-ready'))   ← ver `entregar()`
-   - Presencia:   window.__weproduOSExt  ó  <meta name="weprodu-os-ext">
+   - Handshake:   document.dispatchEvent(new Event('weprodu-os-ready'))   ← ver `entregar()`
+   - Presencia:   <meta name="weprodu-os-ext"> ó <html data-weprodu-os>  (window.__weproduOSExt
+                  también se setea, pero puede no llegar a la página)
 */
 
 (function () {
   'use strict';
 
-  var VERSION = '2.0.1';
+  var VERSION = '2.1.0';
   var ARCA_HOST = 'serviciossegsoc.afip.gob.ar';
   var K = {
     queue: 'os_queue', // [{cuil, contractId}]
@@ -57,11 +59,41 @@
 
   var isARCA = location.hostname.indexOf(ARCA_HOST) >= 0;
 
+  /*
+    ======================= LA FRONTERA DEL SANDBOX =======================
+
+    Con cualquier `@grant` distinto de `none` —y acá hacen falta GM_setValue/GM_getValue para cruzar
+    los datos entre ARCA y WeProdu— Tampermonkey ejecuta el script en un SANDBOX: el `window` de acá
+    NO es el `window` de la página. Una marca puesta en `window.__weproduOSExt` no la ve la app, y un
+    `window.addEventListener('weprodu-os-start')` nunca recibe el evento que dispara React. Los dos
+    lados funcionan por separado y no se hablan — el síntoma es "no detecta el script".
+
+    Lo único que atraviesa el sandbox es el DOM. Por eso todo el contrato se apoya en `document`:
+    las marcas van como <meta> y como atributo del <html>, y los eventos se escuchan y emiten en
+    `document`. `window` se mantiene como respaldo por si algún día no hay sandbox, y `unsafeWindow`
+    se usa cuando Tampermonkey lo expone.
+  */
+  function paginaWindow() {
+    try { return typeof unsafeWindow !== 'undefined' && unsafeWindow ? unsafeWindow : window; } catch (e) { return window; }
+  }
+  /** Escucha en los dos lados de la frontera: el que no exista, simplemente no dispara. */
+  function escuchar(nombre, fn) {
+    try { document.addEventListener(nombre, fn); } catch (e) {}
+    try { window.addEventListener(nombre, fn); } catch (e) {}
+    try { var w = paginaWindow(); if (w !== window) w.addEventListener(nombre, fn); } catch (e) {}
+  }
+  function emitir(nombre, detail) {
+    try { document.dispatchEvent(new CustomEvent(nombre, { detail: detail })); } catch (e) {}
+    try { window.dispatchEvent(new CustomEvent(nombre, { detail: detail })); } catch (e) {}
+    try { var w = paginaWindow(); if (w !== window) w.dispatchEvent(new CustomEvent(nombre, { detail: detail })); } catch (e) {}
+  }
+
   // ======================= LADO WEPRODU =======================
   function initWeprodu() {
-    // 1) avisar que la extensión está instalada
+    // 1) avisar que la extensión está instalada. Las marcas del DOM son las que valen: el `window`
+    //    puede no ser el de la página (ver arriba).
     try {
-      window.__weproduOSExt = VERSION;
+      document.documentElement.setAttribute('data-weprodu-os', VERSION);
       if (!document.querySelector('meta[name="weprodu-os-ext"]')) {
         var m = document.createElement('meta');
         m.name = 'weprodu-os-ext';
@@ -69,9 +101,11 @@
         (document.head || document.documentElement).appendChild(m);
       }
     } catch (e) {}
+    try { window.__weproduOSExt = VERSION; } catch (e) {}
+    try { var pw = paginaWindow(); if (pw !== window) pw.__weproduOSExt = VERSION; } catch (e) {}
 
     // 2) cuando WeProdu pide validar, sembrar la cola y empezar a esperar
-    window.addEventListener('weprodu-os-start', function (ev) {
+    escuchar('weprodu-os-start', function (ev) {
       var lista = (ev && ev.detail) || [];
       var cuils = [], orden = [];
       lista.forEach(function (it) {
@@ -97,7 +131,7 @@
       contra nadie: los resultados se pierden y hay que rehacer toda la corrida. Por eso WeProdu avisa
       cuando está listo, y recién ahí se entrega.
     */
-    window.addEventListener('weprodu-os-ready', function () { if (g(K.done, false)) entregar(); });
+    escuchar('weprodu-os-ready', function () { if (g(K.done, false)) entregar(); });
 
     // Y si React ya estaba montado (navegación sin recarga), esto alcanza.
     if (g(K.done, false)) entregar();
@@ -124,9 +158,7 @@
     var detail = orden
       .filter(function (c) { return !errores[c]; })
       .map(function (c) { return { cuil: c, rnos: hechos[c] || '', contractId: byCuil[c] }; });
-    try {
-      window.dispatchEvent(new CustomEvent('weprodu-os-results', { detail: detail }));
-    } catch (e) {}
+    emitir('weprodu-os-results', detail);
     // limpiar para la próxima tanda
     s(K.done, false); s(K.active, false);
     s(K.queue, []); s(K.orden, []); s(K.hechos, {}); s(K.errores, {}); s(K.last, '');
