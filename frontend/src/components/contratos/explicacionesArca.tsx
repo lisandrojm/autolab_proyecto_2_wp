@@ -108,7 +108,12 @@ export const EXPLICACIONES: Record<string, ExplicacionCampo> = {
           La fuente es <strong>ARCA</strong>: Simplificación Registral → Relaciones Laborales → <em>Registrar Nuevas Altas</em>. Se pone el CUIL y el organismo precompleta la obra social que tiene registrada. Lo que devuelve <strong>queda fijo</strong>: es quien después valida el alta, así que no se corrige a mano. Si no devuelve nada, la persona no tiene afiliación registrada y rige la del convenio.
         </p>
         <p>
-          Se consulta a mano y no hay forma de automatizarlo: Simplificación Registral es una aplicación web con clave fiscal, sin webservice, y el servicio de ARCA que sí está conectado (Consulta Padrón) devuelve datos del contribuyente, no la obra social de un trabajador.
+          Se consulta a mano y no hay forma de automatizarlo desde el server: Simplificación Registral es una aplicación web con clave fiscal, sin webservice, y el servicio de ARCA que sí está conectado (Consulta Padrón) devuelve datos del contribuyente, no la obra social de un trabajador. Lo que sí se automatiza es el tipeo, con una extensión que corre en tu propia sesión.
+        </p>
+        <p>
+          <a href="/arca/guia-obras-sociales" target="_blank" rel="noreferrer" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+            Guía completa de la validación de obras sociales →
+          </a>
         </p>
       </>
     ),

@@ -39,8 +39,10 @@ function crearEntorno(hostname: string) {
   const document: any = {
     documentElement,
     head: { appendChild: (n: any) => metas.push(n) },
-    body: { textContent: "" },
-    createElement: () => ({ name: "", content: "" }),
+    body: { textContent: "", appendChild: () => {} },
+    // Nodo mínimo pero suficiente: el script le toca `style`, `innerHTML` y a veces `querySelector`
+    // (el badge trae un botón adentro). Sin `style` el badge explota y el test falla por el andamio.
+    createElement: () => ({ name: "", content: "", id: "", innerHTML: "", style: {}, querySelector: () => null, appendChild: () => {} }),
     querySelector: (sel: string) => (sel.includes("weprodu-os-ext") ? metas.find((m) => m.name === "weprodu-os-ext") || null : null),
     querySelectorAll: () => [],
     getElementById: () => null,
@@ -225,5 +227,179 @@ describe("puente WeProdu ↔ userscript — doble canal", () => {
 
     assert.equal(porDocumento, 1, "el canal que sobrevive al sandbox");
     assert.equal(porWindow, 1, "el canal para cuando no hay sandbox");
+  });
+});
+
+describe("puente WeProdu ↔ userscript — prueba del canal", () => {
+  /**
+   * La marca en el DOM prueba que el script SE EJECUTÓ. No prueba que los eventos crucen.
+   *
+   * Se puede llegar a "detectada" y que igual no arranque nada —con el permiso "Permitir scripts de
+   * usuario" apagado en Chrome, por ejemplo—, y ese estado del medio es el más caro: manda a alguien
+   * a validar 21 personas y no pasa nada, sin ningún error que lo explique. El pong es lo único que
+   * distingue "cargó" de "funciona".
+   */
+  it("contesta el ping con su versión, por document", () => {
+    const env = crearEntorno("localhost");
+    correr(env);
+
+    const pongs: any[] = [];
+    env.document.addEventListener("weprodu-os-pong", (e: any) => pongs.push(e.detail));
+    env.document.dispatchEvent(new CustomEvent("weprodu-os-ping"));
+
+    assert.equal(pongs.length, 1, "sin pong, la app no puede distinguir «instalada» de «funcionando»");
+    assert.ok(plano(pongs[0]).version, "el pong tiene que traer la versión que efectivamente está corriendo");
+  });
+
+  it("en ARCA no contesta pings: ahí el script trabaja, no dialoga con la app", () => {
+    const env = crearEntorno("serviciossegsoc.afip.gob.ar");
+    correr(env);
+    const pongs: any[] = [];
+    env.document.addEventListener("weprodu-os-pong", (e: any) => pongs.push(e.detail));
+    env.document.dispatchEvent(new CustomEvent("weprodu-os-ping"));
+    assert.equal(pongs.length, 0);
+  });
+});
+
+describe("puente WeProdu ↔ userscript — un evento, una vez", () => {
+  /**
+   * El mismo handler queda registrado en `document` y en `window` porque no se sabe de qué lado del
+   * sandbox está la página. Sin deduplicar, un evento que llega por los dos canales sembraría la cola
+   * dos veces y reiniciaría el poller a mitad de camino.
+   */
+  it("un start que llega por los dos canales se procesa una sola vez", () => {
+    const env = crearEntorno("localhost");
+    correr(env);
+
+    // El MISMO objeto evento, despachado por los dos targets: es lo que hace el front.
+    const ev = new CustomEvent("weprodu-os-start", { detail: [{ cuil: "27-40073687-7", contractId: "c2" }] });
+    env.document.dispatchEvent(ev);
+    env.window.dispatchEvent(ev);
+
+    assert.deepEqual(plano(env.almacen.get("os_orden")), ["27-40073687-7"]);
+    assert.equal(env.almacen.get("os_active"), true);
+  });
+});
+
+/**
+ * El tope de 10 de ARCA — el bug que perdía gente en silencio.
+ *
+ * "Registrar Nuevas Altas" no acepta más de 10 relaciones laborales cargadas a la vez. Al intentar la
+ * 11 no agrega la fila y contesta un mensaje en rojo. La lógica vieja leía eso como "el CUIL falló",
+ * lo sacaba de pendientes y seguía: en una tanda de 21 se validaban 10 y los otros 11 quedaban
+ * marcados como error, sin que nadie se enterara. Gente sin validar que APARENTABA haber sido
+ * consultada — el peor tipo de falla, porque no se nota.
+ *
+ * Estos tests simulan la grilla de ARCA con su tope real y verifican que no se pierda nadie.
+ */
+describe("ARCA — el tope de 10 filas", () => {
+  /** Grilla de ARCA con el tope real: agregar más de 10 no hace nada y pinta el mensaje. */
+  function crearArca(tope = 10) {
+    const env = crearEntorno("serviciossegsoc.afip.gob.ar");
+    const filas: Array<{ cuil: string; rnos: string }> = [];
+    let mensajeTope = false;
+    const cuilInput = { id: "ctl00_ContentPlaceHolder1_InputCuil_txtCuil", value: "" };
+
+    // Qué obra social "tiene" cada CUIL en ARCA. Vacío = sin afiliación, que es una respuesta válida.
+    const enArca: Record<string, string> = {};
+
+    const nodoFila = (f: { cuil: string; rnos: string }, i: number) => {
+      const contenedor: any = { textContent: `${f.cuil} - APELLIDO NOMBRE`, parentElement: null };
+      return { id: `rptRegistrosAlta_ctl${i}_RAR_ExtendCodeOS_AutocompleteText`, value: f.rnos, parentElement: contenedor };
+    };
+
+    env.document.querySelectorAll = (sel: string) => {
+      if (sel.includes("ExtendCodeOS_AutocompleteText")) return filas.map(nodoFila);
+      if (sel.includes("submit")) return [botonAgregar, botonReiniciar];
+      return [];
+    };
+    env.document.getElementById = (id: string) => {
+      if (id === cuilInput.id) return cuilInput;
+      if (id.includes("_AutocompleteValue")) {
+        const m = id.match(/ctl(\d+)/);
+        const f = m ? filas[Number(m[1])] : null;
+        return f ? { value: f.rnos } : null;
+      }
+      return null;
+    };
+    Object.defineProperty(env.document.body, "textContent", {
+      get: () => (mensajeTope ? "No es posible ingresar mas de 10 relaciones laborales a la vez" : ""),
+      configurable: true,
+    });
+
+    const botonAgregar: any = {
+      value: "Agregar",
+      click: () => {
+        const cuil = cuilInput.value.replace(/(\d{2})(\d{8})(\d)/, "$1-$2-$3");
+        if (filas.length >= tope) { mensajeTope = true; return correr(env); }
+        mensajeTope = false;
+        filas.push({ cuil, rnos: enArca[cuil] ?? "" });
+        return correr(env);
+      },
+    };
+    const botonReiniciar: any = {
+      value: "Reiniciar",
+      click: () => {
+        filas.length = 0;
+        mensajeTope = false;
+        return correr(env);
+      },
+    };
+
+    return { env, filas, enArca, get mensajeTope() { return mensajeTope; } };
+  }
+
+  const cuils = (n: number) => Array.from({ length: n }, (_, i) => `20-${String(10000000 + i).padStart(8, "0")}-9`);
+
+  it("una tanda de 12 valida a los 12, en dos tandas, sin saltearse a nadie", () => {
+    const arca = crearArca();
+    const lista = cuils(12);
+    lista.forEach((c, i) => { if (i % 3 === 0) arca.enArca[c] = "901402"; });
+
+    arca.env.almacen.set("os_orden", lista);
+    arca.env.almacen.set("os_queue", lista.map((c) => ({ cuil: c, contractId: c })));
+    arca.env.almacen.set("os_hechos", {});
+    arca.env.almacen.set("os_errores", {});
+    arca.env.almacen.set("os_active", true);
+    correr(arca.env);
+
+    const hechos = plano(arca.env.almacen.get("os_hechos")) || {};
+    const errores = plano(arca.env.almacen.get("os_errores")) || {};
+    assert.equal(Object.keys(hechos).length, 12, "los 12 tienen que quedar consultados, no 10");
+    assert.equal(Object.keys(errores).length, 0, "el tope NO es un error de esos CUIL: se reintentan");
+    for (const c of lista) assert.equal(hechos[c], arca.enArca[c] ?? "", `${c} tiene que traer lo que ARCA devolvió`);
+  });
+
+  it("al terminar deja la grilla de ARCA vacía", () => {
+    const arca = crearArca();
+    const lista = cuils(12);
+    arca.env.almacen.set("os_orden", lista);
+    arca.env.almacen.set("os_queue", lista.map((c) => ({ cuil: c, contractId: c })));
+    arca.env.almacen.set("os_hechos", {});
+    arca.env.almacen.set("os_errores", {});
+    arca.env.almacen.set("os_active", true);
+    correr(arca.env);
+
+    // Filas cargadas = altas a medio hacer que alguien puede confirmar por error más adelante.
+    assert.equal(arca.filas.length, 0, "la corrida tiene que limpiar la pantalla al terminar");
+    assert.equal(arca.env.almacen.get("os_done"), true);
+  });
+
+  it("arrancar con filas ajenas ya cargadas no rompe el conteo", () => {
+    const arca = crearArca();
+    const lista = cuils(11);
+    // Alguien dejó 4 filas de otra cosa: ocupan lugar del tope y hay que vaciarlas.
+    for (let i = 0; i < 4; i++) arca.filas.push({ cuil: `27-9999999${i}-0`, rnos: "" });
+
+    arca.env.almacen.set("os_orden", lista);
+    arca.env.almacen.set("os_queue", lista.map((c) => ({ cuil: c, contractId: c })));
+    arca.env.almacen.set("os_hechos", {});
+    arca.env.almacen.set("os_errores", {});
+    arca.env.almacen.set("os_active", true);
+    correr(arca.env);
+
+    const hechos = plano(arca.env.almacen.get("os_hechos")) || {};
+    assert.equal(Object.keys(hechos).length, 11, "los 11 propios se consultan igual");
+    assert.equal(arca.filas.length, 0);
   });
 });

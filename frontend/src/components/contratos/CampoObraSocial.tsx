@@ -111,7 +111,29 @@ export const CampoObraSocial: React.FC<{
     }
   };
 
-  /** Re-validar: devuelve el contrato a pendiente y reabre el flujo. Nunca se edita a mano. */
+  /**
+   * Borra la validación y devuelve el contrato a "sin validar".
+   *
+   * Va con `forzar` porque lo sellado en ARCA es inmutable para el server: sin eso contesta 409. Es
+   * el único punto que escribe ese borrado, y lo comparten los dos botones de abajo — que se
+   * diferencian solo en qué pasa DESPUÉS.
+   */
+  const desfijar = async (): Promise<boolean> => {
+    setTrabajando(true);
+    try {
+      const ref = row.contratoId || row.contractIndex;
+      await projectsAPI.updateObraSocialContrato(row.projectId, row.userId, ref as never, { obraSocialId: null, origen: 'manual', forzar: true });
+      onGuardado({ osId: null, obraSocialOrigen: '', obraSocialConstatadaEn: '', obraSocialConstatadaEl: '', obraSocialNoFigura: false, obraSocialBloqueada: false });
+      return true;
+    } catch (e: any) {
+      sweetAlert.error('No se pudo', e?.response?.data?.error || 'No se pudo quitar la obra social.');
+      return false;
+    } finally {
+      setTrabajando(false);
+    }
+  };
+
+  /** Re-validar: borra y sigue de largo a ARCA, para volver a validar en el momento. */
   const reValidar = async () => {
     const r = await sweetAlert.confirm(
       '¿Volver a validar en ARCA?',
@@ -119,17 +141,23 @@ export const CampoObraSocial: React.FC<{
       'Sí, re-validar',
     );
     if (!r.isConfirmed) return;
-    setTrabajando(true);
-    try {
-      const ref = row.contratoId || row.contractIndex;
-      await projectsAPI.updateObraSocialContrato(row.projectId, row.userId, ref as never, { obraSocialId: null, origen: 'manual', forzar: true });
-      onGuardado({ osId: null, obraSocialOrigen: '', obraSocialConstatadaEn: '', obraSocialConstatadaEl: '', obraSocialNoFigura: false, obraSocialBloqueada: false });
-      await empezar();
-    } catch (e: any) {
-      sweetAlert.error('No se pudo', e?.response?.data?.error || 'No se pudo desfijar la obra social.');
-    } finally {
-      setTrabajando(false);
-    }
+    if (await desfijar()) await empezar();
+  };
+
+  /**
+   * Quitar: borra y se queda ahí.
+   *
+   * Existe aparte de Re-validar porque hay un caso en que no se quiere ir a ARCA: el dato quedó mal y
+   * primero hay que arreglar otra cosa —elegir la empleadora, por ejemplo—. Sin esto, la única forma
+   * de sacar una obra social sellada era arrancar una consulta que todavía no se puede completar.
+   */
+  const quitar = async () => {
+    const r = await sweetAlert.confirm(
+      '¿Quitar la obra social?',
+      'Este contrato vuelve a quedar SIN VALIDAR y no va a entrar en el TXT hasta que se valide de nuevo en ARCA. No se pierde nada más: el valor sale del organismo, no se carga a mano.',
+      'Sí, quitar',
+    );
+    if (r.isConfirmed) await desfijar();
   };
 
   return (
@@ -186,6 +214,10 @@ export const CampoObraSocial: React.FC<{
           </span>
           <button type="button" disabled={trabajando} onClick={reValidar} className="font-semibold text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50">
             Re-validar
+          </button>
+          <span aria-hidden>·</span>
+          <button type="button" disabled={trabajando} onClick={quitar} title="Borra la validación y deja el campo sin validar, sin ir a ARCA" className="font-semibold text-red-600 dark:text-red-400 hover:underline disabled:opacity-50">
+            Quitar
           </button>
         </p>
       )}

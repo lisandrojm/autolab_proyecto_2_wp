@@ -16,6 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  *   ← `weprodu-os-results` el script devuelve `{ cuil, rnos, contractId }[]` — `rnos: ''` significa
  *                          que ARCA no tiene afiliación para esa persona, y es una RESPUESTA.
  *   → `weprodu-os-ready`   WeProdu avisa que ya puede recibir (ver `useResultadosArca`).
+ *   ↔ `weprodu-os-ping/pong` prueba de que el canal funciona (ver `probarExtension`).
  *
  * TODO va por `document`, no por `window`. Tampermonkey ejecuta el script en un SANDBOX apenas hay un
  * `@grant` distinto de `none` —y este necesita `GM_setValue` para cruzar los datos entre ARCA y
@@ -71,6 +72,89 @@ export function useExtensionArca(): string | null {
   }, [version]);
 
   return version;
+}
+
+/** Los tres estados posibles, que NO son dos. Ver `probarExtension`. */
+export type EstadoExtension = 'activa' | 'instalada_sin_responder' | 'ausente';
+
+/**
+ * ¿El canal funciona de verdad?
+ *
+ * La marca en el DOM solo prueba que el script se ejecutó una vez; no dice nada del camino de vuelta.
+ * Se puede estar "detectada" y que igual no arranque nada —con "Permitir scripts de usuario" apagado
+ * en Chrome, por ejemplo—, y ese estado del medio es el más caro: manda a alguien a validar 21
+ * personas y no pasa nada, sin ningún error que explique por qué.
+ *
+ * El ping lo distingue: si contesta, los eventos cruzan. Si no contesta pero la marca está, el script
+ * cargó y quedó mudo, que tiene una causa y una solución concretas.
+ */
+export function probarExtension(timeoutMs = 1500): Promise<{ estado: EstadoExtension; version: string | null }> {
+  return new Promise((resolve) => {
+    const marca = leerMarca();
+    let listo = false;
+    const onPong = (e: Event) => {
+      if (listo) return;
+      listo = true;
+      limpiar();
+      const detail = (e as CustomEvent).detail as { version?: string } | undefined;
+      resolve({ estado: 'activa', version: detail?.version || marca });
+    };
+    const limpiar = () => {
+      document.removeEventListener('weprodu-os-pong', onPong);
+      window.removeEventListener('weprodu-os-pong', onPong);
+      window.clearTimeout(id);
+    };
+    const id = window.setTimeout(() => {
+      if (listo) return;
+      listo = true;
+      limpiar();
+      resolve({ estado: marca ? 'instalada_sin_responder' : 'ausente', version: marca });
+    }, timeoutMs);
+
+    document.addEventListener('weprodu-os-pong', onPong);
+    window.addEventListener('weprodu-os-pong', onPong);
+    document.dispatchEvent(new CustomEvent('weprodu-os-ping'));
+    window.dispatchEvent(new CustomEvent('weprodu-os-ping'));
+  });
+}
+
+/**
+ * Estado de la extensión, probado AUTOMÁTICAMENTE al montar.
+ *
+ * El ping no puede quedar detrás de un botón: si hay que apretarlo para enterarse, el operador se
+ * entera recién cuando ya mandó a validar 21 personas y no pasó nada. Se prueba solo, con un par de
+ * reintentos —el script corre en `document-idle` y React puede montar antes— y el resultado se
+ * muestra al lado del botón de validar, que es donde importa.
+ */
+export function useEstadoExtension(): { estado: EstadoExtension; version: string | null; probando: boolean; reintentar: () => void } {
+  const [resultado, setResultado] = useState<{ estado: EstadoExtension; version: string | null }>({ estado: 'ausente', version: null });
+  const [probando, setProbando] = useState(true);
+  const [intento, setIntento] = useState(0);
+
+  useEffect(() => {
+    let vivo = true;
+    let reintentos = 0;
+    const correr = async () => {
+      const r = await probarExtension();
+      if (!vivo) return;
+      // Si no contestó y todavía puede estar cargando, se reintenta antes de dar el veredicto: un
+      // "no instalada" prematuro manda a reinstalar algo que ya está.
+      if (r.estado === 'ausente' && reintentos < 2) {
+        reintentos++;
+        window.setTimeout(correr, 700);
+        return;
+      }
+      setResultado(r);
+      setProbando(false);
+    };
+    setProbando(true);
+    correr();
+    return () => {
+      vivo = false;
+    };
+  }, [intento]);
+
+  return { ...resultado, probando, reintentar: () => setIntento((n) => n + 1) };
 }
 
 /**

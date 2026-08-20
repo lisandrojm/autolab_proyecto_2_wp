@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowUpRightFromSquare, faCircleCheck, faTriangleExclamation, faPuzzlePiece, faCopy, faCheck, faSpinner } from '@fortawesome/free-solid-svg-icons';
-import { useExtensionArca } from './puenteArca';
+import { faArrowUpRightFromSquare, faCircleCheck, faTriangleExclamation, faPuzzlePiece, faCopy, faCheck, faSpinner, faPlug } from '@fortawesome/free-solid-svg-icons';
+import { useExtensionArca, probarExtension, useEstadoExtension, EstadoExtension } from './puenteArca';
+import { Modal } from '../ui/Modal';
 
 /**
  * Aviso de instalación de la extensión que valida las obras sociales contra ARCA.
@@ -22,6 +23,15 @@ export const USERSCRIPT_URL = '/scripts/weprodu-obra-social.user.js';
 export const RequisitoExtension: React.FC<{ compacto?: boolean }> = ({ compacto }) => {
   const version = useExtensionArca();
   const [copiando, setCopiando] = useState(false);
+  /** Resultado del ping. `null` = todavía no se probó en esta sesión. */
+  const [prueba, setPrueba] = useState<{ estado: EstadoExtension; version: string | null } | null>(null);
+  const [probando, setProbando] = useState(false);
+
+  const probar = async () => {
+    setProbando(true);
+    setPrueba(await probarExtension());
+    setProbando(false);
+  };
   const [copiado, setCopiado] = useState(false);
   const [error, setError] = useState('');
 
@@ -49,13 +59,47 @@ export const RequisitoExtension: React.FC<{ compacto?: boolean }> = ({ compacto 
     }
   };
 
-  // Instalada: una línea y nada más. Quien ya la tiene no necesita volver a leer las instrucciones,
-  // y dejarlas puestas convierte el aviso en ruido que se aprende a ignorar.
+  /*
+   * El estado del medio: el script está instalado pero NO contesta.
+   *
+   * Es el más caro de los tres porque se parece al bueno —la marca está, la app dice "detectada"— y
+   * sin embargo no va a arrancar nada. La causa concreta en Chrome es el permiso "Permitir scripts de
+   * usuario", apagado por defecto, que no da ningún error: simplemente no pasa nada.
+   */
+  if (prueba?.estado === 'instalada_sin_responder') {
+    return (
+      <div className="rounded-lg border border-amber-300 dark:border-amber-800/70 bg-amber-50/70 dark:bg-amber-950/20 px-3 py-2.5 space-y-1.5">
+        <p className="text-xs font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-1.5">
+          <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+          El script está instalado pero no responde
+        </p>
+        <p className="text-[11px] text-gray-700 dark:text-gray-300">
+          Cargó, pero los eventos no llegan. En <code className="font-mono text-[10.5px]">chrome://extensions</code> → <strong>Tampermonkey</strong> → <em>Detalles</em>, activá{' '}
+          <strong>Permitir scripts de usuario</strong>. Después recargá esta pantalla.
+        </p>
+        <button type="button" onClick={probar} disabled={probando} className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50">
+          {probando ? 'Probando…' : 'Volver a probar'}
+        </button>
+      </div>
+    );
+  }
+
+  // Instalada y respondiendo: una línea y nada más. Quien ya la tiene no necesita releer las
+  // instrucciones, y dejarlas puestas convierte el aviso en ruido que se aprende a ignorar.
   if (version) {
     return (
       <p className="text-[11px] text-green-700 dark:text-green-400 flex items-center gap-1.5">
-        <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3" />
-        Extensión de validación detectada (v{version}) — la validación corre sola.
+        <FontAwesomeIcon icon={prueba?.estado === 'activa' ? faCircleCheck : faPlug} className="h-3 w-3" />
+        {prueba?.estado === 'activa' ? (
+          <>Extensión activa (v{prueba.version || version}) — la validación corre sola.</>
+        ) : (
+          <>
+            Extensión detectada (v{version}).
+            <button type="button" onClick={probar} disabled={probando} className="font-semibold hover:underline disabled:opacity-50 ml-1">
+              {probando ? 'Probando…' : 'Probar la extensión'}
+            </button>
+          </>
+        )}
       </p>
     );
   }
@@ -83,8 +127,12 @@ export const RequisitoExtension: React.FC<{ compacto?: boolean }> = ({ compacto 
           .
         </li>
         <li>
-          En Chrome, entrá a <code className="font-mono text-[10.5px]">chrome://extensions</code> y activá el <strong>Modo de desarrollador</strong> (arriba a la derecha). Chrome lo exige para que
-          Tampermonkey pueda ejecutar scripts; sin eso queda instalado pero no corre.
+          En Chrome, entrá a <code className="font-mono text-[10.5px]">chrome://extensions</code> → Tampermonkey → <strong>Detalles</strong> y prendé <strong>«Permitir secuencias de comandos del usuario»</strong>{' '}
+          (y el <strong>Modo de desarrollador</strong>, arriba a la derecha). Sin eso queda instalada pero no ejecuta nada, y no siempre lo avisa —{' '}
+          <a href="/arca/guia-obras-sociales#permiso-chrome" target="_blank" rel="noreferrer" className="font-semibold text-blue-700 dark:text-blue-400 hover:underline">
+            ver el paso con detalle
+          </a>
+          .
         </li>
         <li>
           Copiá el script con el botón de acá abajo, abrí el panel de Tampermonkey → <strong>Crear un nuevo script</strong>, pegá reemplazando todo y guardá (Ctrl/Cmd+S).
@@ -112,6 +160,10 @@ export const RequisitoExtension: React.FC<{ compacto?: boolean }> = ({ compacto 
           Ver el archivo
           <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
         </a>
+        <button type="button" onClick={probar} disabled={probando} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
+          <FontAwesomeIcon icon={probando ? faSpinner : faPlug} spin={probando} className="h-3 w-3" />
+          {probando ? 'Probando…' : 'Probar la extensión'}
+        </button>
         <span className="text-[11px] text-amber-700 dark:text-amber-400 inline-flex items-center gap-1.5">
           <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5" />
           No detectada
@@ -125,5 +177,87 @@ export const RequisitoExtension: React.FC<{ compacto?: boolean }> = ({ compacto 
         La extensión corre en tu navegador y solo lee la obra social que ARCA ya muestra en Registrar Nuevas Altas. No guarda tu clave fiscal ni registra ninguna alta.
       </p>
     </div>
+  );
+};
+
+/**
+ * El estado de la extensión, en la barra de la grilla.
+ *
+ * Va donde está el botón de validar y no solo dentro del modal: si el operador se entera de que falta
+ * algo recién cuando abre la pantalla de validación —o peor, cuando mandó la tanda y no pasó nada—,
+ * el aviso llegó tarde. Se prueba solo al cargar (`useEstadoExtension`), así el estado es real y no
+ * "cargó una vez".
+ *
+ * Los tres estados se ven distintos a propósito. El del medio —instalada pero muda— se parece al
+ * bueno y sin embargo no funciona; darle el mismo color que a "activa" es lo que hace que alguien
+ * pierda una tarde.
+ */
+export const ChipExtension: React.FC = () => {
+  const { estado, version, probando, reintentar } = useEstadoExtension();
+  const [abierto, setAbierto] = useState(false);
+
+  const base = 'inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold border transition-colors';
+
+  if (probando) {
+    return (
+      <span className={`${base} bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700`}>
+        <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3" />
+        Extensión…
+      </span>
+    );
+  }
+
+  const chip =
+    estado === 'activa' ? (
+      <span title={`Tampermonkey responde (v${version}). La validación de obras sociales corre sola.`} className={`${base} bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200/60 dark:border-green-800/60`}>
+        <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3" />
+        Extensión activa
+      </span>
+    ) : (
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
+        title={
+          estado === 'instalada_sin_responder'
+            ? 'El script está instalado pero no responde: falta activar «Permitir secuencias de comandos del usuario». Click para ver cómo.'
+            : 'Sin la extensión la validación de obras sociales es manual. Click para instalarla.'
+        }
+        className={`${base} bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/60 hover:bg-amber-100 dark:hover:bg-amber-900/30`}
+      >
+        <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
+        {estado === 'instalada_sin_responder' ? 'Extensión sin permiso' : 'Extensión no instalada'}
+      </button>
+    );
+
+  return (
+    <>
+      {chip}
+      {abierto && (
+        <Modal isOpen={abierto} onClose={() => setAbierto(false)} title="Extensión de validación" subtitle="Necesaria para traer las obras sociales desde ARCA automáticamente" size="lg" zIndex={80}>
+          <div className="space-y-3">
+            {estado === 'instalada_sin_responder' && (
+              <div className="rounded-lg border border-amber-300 dark:border-amber-800/70 bg-amber-50/70 dark:bg-amber-950/20 px-4 py-3 text-sm text-gray-700 dark:text-gray-200">
+                <p className="font-semibold text-gray-900 dark:text-gray-100">Está instalada, pero no responde.</p>
+                <p className="mt-1">
+                  Falta un permiso. Entrá a <code className="font-mono text-[12.5px]">chrome://extensions</code> → <strong>Tampermonkey</strong> → <em>Detalles</em> y activá{' '}
+                  <strong>«Permitir secuencias de comandos del usuario»</strong>. Después recargá esta pantalla.
+                </p>
+                <button type="button" onClick={reintentar} className="text-[12px] font-semibold text-blue-600 dark:text-blue-400 hover:underline mt-2">
+                  Ya lo activé — volver a probar
+                </button>
+              </div>
+            )}
+            {/* El bloque de instalación solo cuando falta instalarla. Con el script ya puesto diría
+                "detectada" justo debajo del cartel que explica que no responde — dos mensajes que se
+                contradicen sobre la misma cosa. */}
+            {estado === 'ausente' && <RequisitoExtension />}
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              Los dos requisitos son <strong>independientes</strong>: tener Tampermonkey instalado, y que ese script tenga permitido ejecutarse. El segundo viene apagado por defecto y no da ningún error —
+              simplemente no pasa nada.
+            </p>
+          </div>
+        </Modal>
+      )}
+    </>
   );
 };

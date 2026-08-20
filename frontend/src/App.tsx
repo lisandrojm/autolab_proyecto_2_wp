@@ -53,6 +53,7 @@ import { BancosPage } from "./pages/BancosPage";
 import { ObrasSocialesPage } from "./pages/ObrasSocialesPage";
 import { ArcaSucursalesPage } from "./pages/ArcaSucursalesPage";
 import { ArcaComoFuncionaPage } from "./pages/ArcaComoFuncionaPage";
+import { GuiaObrasSocialesPage } from "./pages/GuiaObrasSocialesPage";
 import { ArcaActividadesPage } from "./pages/ArcaActividadesPage";
 import { ArcaModalidadesContratacionPage } from "./pages/ArcaModalidadesContratacionPage";
 import { ArcaTiposServicioPage } from "./pages/ArcaTiposServicioPage";
@@ -549,6 +550,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ArcaActividadesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/arca/guia-obras-sociales"
+                element={
+                  <ProtectedRoute>
+                    <GuiaObrasSocialesPage />
                   </ProtectedRoute>
                 }
               />

@@ -475,7 +475,19 @@ class ProjectsAPI {
 
   /** Actualiza SOLO la Empresa del Contrato de un contrato puntual (por índice), sin abrir el wizard
    *  completo de "Configurar Miembro". Pasar "" para desasignarla. */
-  async updateContratoEmpresa(projectId: string, userId: string, contractIndex: number, empresaContratoId: string): Promise<{ empresaContratoId: string | null; nombre_empresa_contrato: string }> {
+  async updateContratoEmpresa(
+    projectId: string,
+    userId: string,
+    contractIndex: number,
+    empresaContratoId: string,
+  ): Promise<{
+    empresaContratoId: string | null;
+    nombre_empresa_contrato: string;
+    /** La obra social del contrato ya no está registrada por la empleadora NUEVA. Es aviso, no bloqueo. */
+    avisoObraSocial?: string;
+    /** Al quitar la empleadora se borró la validación de la obra social: sin CUIT no tiene sujeto. */
+    obraSocialLimpiada?: boolean;
+  }> {
     const { data } = await axios.patch(`/projects/${projectId}/members/${userId}/contracts/${contractIndex}/empresa-contrato`, { empresaContratoId }, { headers: this.getHeaders() });
     return data;
   }

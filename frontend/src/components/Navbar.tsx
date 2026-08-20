@@ -7,7 +7,7 @@ import { EmpresaContextMenu } from './EmpresaContextMenu';
 import { FichasHeader } from './context/FichasHeader';
 import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart } from '@fortawesome/free-solid-svg-icons';
 import { faDropbox } from '@fortawesome/free-brands-svg-icons';
 import { Logo } from '../components/ui/Logo';
 import axios from '../api/axiosConfig';
@@ -84,7 +84,9 @@ const ARCA_CONEXION_PATH = '/afip';
  * de arriba porque cada una muestra solo su pedazo.
  */
 const ARCA_COMO_FUNCIONA_PATH = '/arca/como-funciona';
-const ARCA_PATHS = [...ARCA_NOMENCLADOR_PATHS, '/convenios', '/arca/categorias', ARCA_CONEXION_PATH, ARCA_COMO_FUNCIONA_PATH];
+/** Guía del único trámite del módulo que sale de la app: la validación de obras sociales. */
+const ARCA_GUIA_OS_PATH = '/arca/guia-obras-sociales';
+const ARCA_PATHS = [...ARCA_NOMENCLADOR_PATHS, '/convenios', '/arca/categorias', ARCA_CONEXION_PATH, ARCA_COMO_FUNCIONA_PATH, ARCA_GUIA_OS_PATH];
 
 /** ABM de Empresas. La ficha de cada una vive aparte, en el bloque FICHAS. */
 const EMPRESAS_PATH = '/empresas';
@@ -311,6 +313,7 @@ export const MobileNavbar: React.FC = () => {
       // Comparte permiso con la Conexión: quien puede ver cómo se conecta el módulo puede leer cómo
       // funciona. No expone ningún dato — es la explicación del circuito.
       if (hasPermission('config_afip:view')) base.push({ path: ARCA_COMO_FUNCIONA_PATH, icon: faSitemap, label: 'Cómo funciona', scope: 'global' });
+      if (hasPermission('config_afip:view')) base.push({ path: ARCA_GUIA_OS_PATH, icon: faShieldHeart, label: 'Validar obras sociales', scope: 'global' });
       // Tablas oficiales del organismo: comparten un solo permiso porque son el mismo tipo de
       // nomenclador (se siembran desde ARCA y casi no se editan), no tres módulos distintos.
       if (hasPermission('config_arca_sucursales:view')) base.push({ path: '/arca/sucursales', icon: faLocationDot, label: 'Domicilios de Explotación', scope: 'global' });

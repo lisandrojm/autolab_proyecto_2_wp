@@ -38,8 +38,15 @@ export const BandaEmpleador: React.FC<{
     setGuardando(true);
     try {
       const res = await projectsAPI.updateContratoEmpresa(row.projectId, row.userId, row.contractIndex, empresaId);
-      onGuardado({ empresaContratoId: res.empresaContratoId || '', nombre_empresa_contrato: res.nombre_empresa_contrato || '' });
+      // Quitar la empleadora borra la validación de la obra social en el server (sin CUIT no hay
+      // contra qué validar): la fila local tiene que reflejarlo o queda un verde que ya no existe.
+      onGuardado({
+        empresaContratoId: res.empresaContratoId || '',
+        nombre_empresa_contrato: res.nombre_empresa_contrato || '',
+        ...(res.obraSocialLimpiada ? { osId: null, obraSocialOrigen: '' as const, obraSocialConstatadaEn: '' as const, obraSocialConstatadaEl: '', obraSocialNoFigura: false, obraSocialBloqueada: false } : {}),
+      });
       setAbierto(false);
+      if (res.avisoObraSocial) sweetAlert.error('Revisá la obra social', res.avisoObraSocial);
     } catch (e: any) {
       sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo guardar la empresa.');
     } finally {
@@ -54,9 +61,17 @@ export const BandaEmpleador: React.FC<{
    * Lo elegido NO se borra del contrato: si se vuelve a elegir la misma empleadora, la sucursal y la
    * actividad reaparecen. Si se elige otra, el checklist marca la sucursal como "mal cargada" en vez
    * de arrastrarla en silencio a un alta de la empresa equivocada.
+   *
+   * La obra social SÍ se borra, y es la excepción: validarla significa "ARCA, consultado con el CUIT
+   * de esta empleadora, dice esto". Sin empleadora esa afirmación no tiene sujeto, y quedaba un campo
+   * en verde, fijo y con fecha, arriba del cartel "Falta elegir la empleadora".
    */
   const quitar = async () => {
-    const r = await sweetAlert.confirm('¿Quitar la empleadora?', `Se va a desasignar ${nombre || 'la empresa'} de este contrato. La Sucursal y la Actividad quedan en espera hasta que elijas otra.`, 'Sí, quitar');
+    const r = await sweetAlert.confirm(
+      '¿Quitar la empleadora?',
+      `Se va a desasignar ${nombre || 'la empresa'} de este contrato. La Sucursal y la Actividad quedan en espera hasta que elijas otra, y la obra social vuelve a quedar SIN VALIDAR: se valida contra el CUIT de la empleadora, así que sin ella hay que volver a consultarla en ARCA.`,
+      'Sí, quitar',
+    );
     if (!r.isConfirmed) return;
     await guardar('');
   };

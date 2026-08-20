@@ -27,6 +27,7 @@ import { resolveAfip, resolveAfipValues, AfipRowResult, AfipValues } from './afi
 import { buildAltaRecord, buildAltaTxt, downloadTxt } from './afipTxt';
 import { ConstatarObrasSocialesLote, FilaConstatacion } from './ConstatarObrasSocialesLote';
 import { useExtensionArca, useResultadosArca, iniciarValidacionArca, PedidoValidacion, ResultadoValidacion } from './puenteArca';
+import { ChipExtension } from './RequisitoExtension';
 import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, cuitEsValido, fmtCuit, cuitDisplay, noPoseeCuit } from './ConstanciaBulk';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { cachedFetch, invalidateRefCache, updateRefCache } from '../../utils/refCache';
@@ -276,8 +277,24 @@ const EstadoImpositivoCell: React.FC<{ record: ContractOverviewRow; contratoFram
  * incluirse); la de Release es opcional.
  */
 /** Campos de la fila que cambian al elegir (o quitar) la empresa de un documento. */
+/**
+ * Parche de fila al cambiar una empresa.
+ *
+ * Quitar la Empresa CONTRATO arrastra la obra social: validarla significa "ARCA, consultado con el
+ * CUIT de esta empleadora, dice esto", y sin empleadora esa afirmación no tiene sujeto. El server la
+ * borra; acá se refleja, o la fila queda mostrando un código en verde y con candado que ya no existe
+ * en la base — y al recargar aparecería vacío sin que nadie entienda por qué.
+ *
+ * La Empresa RELEASE no toca nada: no interviene en el alta.
+ */
 export const parcheEmpresa = (campo: 'contrato' | 'release', empresaId: string, label: string): Partial<ContractOverviewRow> =>
-  campo === 'contrato' ? { empresaContratoId: empresaId, nombre_empresa_contrato: label } : { empresaReleaseId: empresaId, nombre_empresa_release: label };
+  campo === 'contrato'
+    ? {
+        empresaContratoId: empresaId,
+        nombre_empresa_contrato: label,
+        ...(empresaId ? {} : { osId: null, obraSocialOrigen: '' as const, obraSocialConstatadaEn: '' as const, obraSocialConstatadaEl: '', obraSocialNoFigura: false, obraSocialBloqueada: false }),
+      }
+    : { empresaReleaseId: empresaId, nombre_empresa_release: label };
 
 const EmpresaSelectCell: React.FC<{ record: ContractOverviewRow; campo: 'contrato' | 'release'; requerido: boolean; onGuardado: (patch?: Partial<ContractOverviewRow>) => void }> = ({ record, campo, requerido, onGuardado }) => {
   const [guardando, setGuardando] = useState(false);
@@ -1116,7 +1133,18 @@ export const ContractBulkAfipTab: React.FC<{
    * empleadora no registró—, así que el botón decía 26 y el filtro traía 24.
    */
   const countSinConstatar = useMemo(
-    () => rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'alta_temprana_afip' && estadoObraSocial(x.row, resolveAfipValues(x.row, afipCat)) === 'sin_validar').length,
+    () => rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'alta_temprana_afip' && !!x.row.empresaContratoId && estadoObraSocial(x.row, resolveAfipValues(x.row, afipCat)) === 'sin_validar').length,
+    [rowsPorFiltrosComunes, afipCat],
+  );
+  /**
+   * Pendientes que NO se pueden validar todavía porque les falta la empleadora.
+   *
+   * Se cuentan aparte y se dicen: si entraran en el número del botón, este abriría una tanda que no
+   * puede aplicar ninguna. Y si no se mencionaran, el contador diría 0 con 20 contratos pendientes a
+   * la vista, que se lee como que el sistema no los ve.
+   */
+  const countSinEmpleadora = useMemo(
+    () => rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'alta_temprana_afip' && !x.row.empresaContratoId && estadoObraSocial(x.row, resolveAfipValues(x.row, afipCat)) === 'sin_validar').length,
     [rowsPorFiltrosComunes, afipCat],
   );
 
@@ -1266,6 +1294,14 @@ export const ContractBulkAfipTab: React.FC<{
       return n;
     });
   const seleccionados = useMemo(() => filtered.filter((x) => selected.has(rowKey(x.row))), [filtered, selected]);
+  /**
+   * De lo tildado, lo que efectivamente se puede validar.
+   *
+   * La obra social se valida contra el CUIT de la empleadora: sin ella no hay contra qué. Se filtra
+   * acá en vez de bloquear el check porque el check es de selección GENERAL — tildar filas SIN
+   * empresa es justamente cómo se les asigna una en masa, que es el paso anterior a poder validarlas.
+   */
+  const seleccionadosValidables = useMemo(() => seleccionados.filter((x) => !!x.row.empresaContratoId), [seleccionados]);
   /** Aplica en la tabla (y en la caché) los cambios de una asignación masiva de empresa. */
   const aplicarPatchesEmpresa = useCallback(
     (patches: { row: ContractOverviewRow; patch: Partial<ContractOverviewRow> }[]) => {
@@ -1403,6 +1439,17 @@ export const ContractBulkAfipTab: React.FC<{
                 {validandoArca}
               </span>
             )}
+            {/* Lo que falta pero todavía no se puede hacer. Sin esto, el contador de validables diría
+                0 con 20 contratos pendientes a la vista y se leería como que el sistema no los ve. */}
+            {countSinEmpleadora > 0 && (
+              <span
+                title="La obra social se valida contra el CUIT de la empleadora. Elegí la Empresa Contrato de estos contratos —podés hacerlo en masa tildándolos— y después validalos."
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700"
+              >
+                <FontAwesomeIcon icon={faStethoscope} className="h-3 w-3" />
+                {countSinEmpleadora} esperan empleadora
+              </span>
+            )}
             {countSinConstatar > 0 && (
               <button
                 onClick={() => {
@@ -1427,23 +1474,31 @@ export const ContractBulkAfipTab: React.FC<{
             {/* Grupo 1 — asignación masiva de Empresa: siempre visible, se activa al tildar filas. */}
             {asignacionMasivaEmpresa}
 
+            {/* El estado de la extensión, al lado del botón que la necesita. Enterarse de que falta
+                un permiso DESPUÉS de mandar la tanda es enterarse tarde. */}
+            <ChipExtension />
+
             {/* Validar las tildadas. Misma corrida que el botón del contador, con otro conjunto: el
                 operador arma la tanda que quiere en vez de tomar la que le dan. */}
             <button
               type="button"
-              disabled={seleccionados.length === 0}
-              onClick={() => (extensionArca ? validarEnArca(seleccionados) : setLoteObrasSociales(new Set(seleccionados.map((x) => rowKey(x.row)))))}
+              disabled={seleccionadosValidables.length === 0}
+              onClick={() => (extensionArca ? validarEnArca(seleccionadosValidables) : setLoteObrasSociales(new Set(seleccionadosValidables.map((x) => rowKey(x.row)))))}
               title={
                 seleccionados.length === 0
                   ? 'Tildá los contratos que querés validar'
-                  : extensionArca
-                    ? `Validar en ARCA la obra social de los ${seleccionados.length} contratos tildados. Se abre ARCA, te logueás y el resto es automático.`
-                    : `Sin la extensión instalada la validación es manual (copiar/pegar). Instalala desde Configuración → ARCA.`
+                  : seleccionadosValidables.length === 0
+                    ? 'Los contratos tildados no tienen Empresa Contrato. La obra social se valida contra el CUIT de la empleadora: elegila primero (podés hacerlo en masa con el selector de al lado).'
+                    : extensionArca
+                      ? `Validar en ARCA la obra social de ${seleccionadosValidables.length} contrato(s). Se abre ARCA, te logueás y el resto es automático.${
+                          seleccionados.length > seleccionadosValidables.length ? ` Se omiten ${seleccionados.length - seleccionadosValidables.length} sin empleadora.` : ''
+                        }`
+                      : 'Sin la extensión instalada la validación es manual (copiar/pegar). Instalala desde Configuración → ARCA.'
               }
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
             >
               <FontAwesomeIcon icon={faStethoscope} className="h-3.5 w-3.5" />
-              Validar obras sociales{seleccionados.length > 0 ? ` (${seleccionados.length})` : ''}
+              Validar obras sociales{seleccionadosValidables.length > 0 ? ` (${seleccionadosValidables.length})` : ''}
             </button>
 
             {/* Separador: lo de arriba edita datos; lo de abajo son las salidas hacia ARCA. */}

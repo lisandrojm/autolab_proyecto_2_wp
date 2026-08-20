@@ -526,3 +526,43 @@ describe("obra social — los tres estados de validación", () => {
     assert.equal(resolveAfip(row, cat()).completo, true);
   });
 });
+
+/**
+ * Sin empleadora no puede haber obra social validada.
+ *
+ * Validar significa "ARCA, consultado con el CUIT de ESTA empleadora, dice esto". Sin empleadora la
+ * afirmación no tiene sujeto: el contrato quedaba mostrando un código en verde, fijo y con fecha,
+ * justo debajo del cartel "Falta elegir la empleadora" — y nadie lo iba a revisar precisamente porque
+ * estaba en verde. El borrado lo hace el PATCH de empresa-contrato; acá se fija la invariante que ese
+ * borrado tiene que dejar cierta.
+ */
+describe("obra social — la validación depende de la empleadora", () => {
+  const cat = () =>
+    catalogos({
+      obrasSociales: [{ _id: "os1", externalId: "120900", name: "O.S. PERSONAL DE TELEVISION", data: { id: 7 } }],
+      convenios: [{ _id: "cv1", externalId: "0634/11", name: "TELEVISIÓN", obraSocialDefaultId: 7 }],
+    } as any);
+
+  it("un contrato sin empleadora no puede quedar validado", () => {
+    // Lo que el server deja tras quitar la empleadora: todo el bloque de obra social en cero.
+    const row = fila({
+      empresaContratoId: null,
+      osId: null,
+      obraSocialOrigen: undefined,
+      obraSocialConstatadaEn: undefined,
+      obraSocialConstatadaEl: null,
+      obraSocialNoFigura: false,
+      obraSocialBloqueada: false,
+    } as any);
+
+    const v = resolveAfipValues(row, cat());
+    assert.equal(v.constatacion, "sin_constatar", "sin empleadora la validación no puede sobrevivir");
+    assert.equal(v.rnos, "", "y por lo tanto tampoco el valor");
+    assert.equal(buildAltaRecord(row, cat()), null, "ese contrato no entra al archivo");
+  });
+
+  it("la referencia del convenio SÍ sobrevive: es lo que va a quedar cuando se valide", () => {
+    const row = fila({ empresaContratoId: null, obraSocialNoFigura: false, obraSocialConstatadaEn: "", obraSocialConstatadaEl: "" } as any);
+    assert.equal(resolveAfipValues(row, cat()).rnosSugerido, "120900");
+  });
+});

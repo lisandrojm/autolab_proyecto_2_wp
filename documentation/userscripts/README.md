@@ -26,8 +26,25 @@ bloque "Requisito: extensión de validación" tiene los dos botones y dice si ya
 2. En Chrome, entrá a `chrome://extensions` y activá el **Modo de desarrollador** (arriba a la
    derecha). Chrome lo exige para que Tampermonkey pueda ejecutar userscripts; sin eso queda
    instalado pero no corre — y el síntoma es idéntico a no tenerlo: "No detectada".
-3. En la app, botón **Copiar el script** → panel de Tampermonkey → *Crear un nuevo script* → pegar
+3. En Tampermonkey → **Detalles** (en `chrome://extensions`), activá **Permitir scripts de usuario**.
+   Es un permiso aparte del Modo de desarrollador y viene apagado: sin él el script carga pero queda
+   **mudo** —los eventos no cruzan— y la app dice "detectada" sin que funcione nada.
+4. En la app, botón **Copiar el script** → panel de Tampermonkey → *Crear un nuevo script* → pegar
    reemplazando todo → guardar (Ctrl/Cmd+S).
+5. Volvé a la app y apretá **Probar la extensión**: tiene que decir *"Extensión activa"*.
+
+### Los tres estados, y por qué importan
+
+| Lo que ves | Qué pasa | Qué hacer |
+|---|---|---|
+| ✅ **Extensión activa (vX)** | el canal funciona | nada |
+| ⚠ **Instalada pero no responde** | el script cargó y quedó mudo | activar *Permitir scripts de usuario* |
+| ⚠ **No detectada** | no está instalado | los pasos de arriba |
+
+El del medio es el caro: se parece al bueno —la marca está— y sin embargo no arranca nada, sin ningún
+error que lo explique. Por eso existe el botón **Probar la extensión**: hace un ping y espera el pong.
+La marca en el DOM solo prueba que el script se ejecutó una vez; el pong prueba que los eventos
+cruzan, que es lo que hace falta saber ANTES de mandar a alguien a validar 21 personas.
 
 ### Por qué no se instala con un click
 
@@ -112,6 +129,23 @@ Cuando pasa, el script **frena y conserva la cola**:
 Volvés a entrar, abrís esa pantalla y retoma donde iba. Contá con loguearte **una o dos veces** por
 tanda; todo lo demás lo hace el script.
 
+## El tope de 10 de ARCA
+
+«Registrar Nuevas Altas» **no acepta más de 10 relaciones laborales cargadas a la vez**. Al intentar
+la 11 no agrega la fila y contesta *"No es posible ingresar mas de 10 relaciones laborales a la vez"*.
+
+El script trabaja **en tandas de 10**: carga 10, lee las 10, aprieta **Reiniciar** y sigue con las
+siguientes. El progreso lo muestra — *"Validando 14 / 21 · tanda 2 de 3"*.
+
+> **`Reiniciar` vacía la grilla sin registrar nada. Es lo contrario de `Aceptar`.** Están uno al lado
+> del otro y confundirlos registraría altas reales, masivas e irreversibles por fuera del TXT. Por eso
+> los dos botones se buscan por su **rótulo exacto**, nunca por posición, y `botonPorRotulo()` es el
+> único lugar del script que devuelve un control accionable.
+
+Al terminar **la grilla queda vacía**: filas cargadas son altas a medio hacer que alguien puede
+confirmar por error más adelante. Si una corrida se cancela a mitad de camino, el panel ofrece un
+botón **«Limpiar pantalla de ARCA»**.
+
 ## Tres casos que nunca se resuelven adivinando
 
 Lo que el script devuelve se guarda **fijo, con candado**, del lado de WeProdu: un dato mal leído no
@@ -120,8 +154,10 @@ así que solo se emite cuando la fila apareció y el campo vino en blanco.
 
 - **Sesión vencida** → frena sin tocar los pendientes. Se chequea **antes** de leer nada del DOM: con
   la sesión caída, cualquier cosa que se dedujera de la página sería falsa.
-- **La fila no apareció** (CUIL inválido, ya con relación activa, un popup) → va a *no se pudieron
-  consultar*, se lista aparte y **no** se exporta. Esa persona sigue apareciendo como pendiente.
+- **La fila no apareció** → solo cuenta como error de ESE CUIL si la sesión está viva **y** no se
+  alcanzó el tope de 10. Cualquier otra causa se reintenta o frena; nunca se descarta a la persona.
+  Cuando sí es error suyo (CUIL inválido, ya con relación activa, un popup) va a *no se pudieron
+  consultar*, se lista aparte y **no** se exporta: sigue apareciendo como pendiente.
 - **Emparejamiento ambiguo** → frena y avisa. No exporta nada.
 
 El error que estas tres reglas evitan es el mismo: declarar en silencio *"sin obra social"* a alguien

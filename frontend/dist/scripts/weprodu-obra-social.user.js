@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WeProdu — Validar obras sociales en ARCA (auto)
 // @namespace    weprodu
-// @version      2.1.0
+// @version      2.3.0
 // @description  Puente automático WeProdu <-> ARCA. WeProdu manda la lista de CUIL, el script la valida en ARCA sola y devuelve los RNOS a WeProdu. No confirma altas. No guarda clave fiscal.
 // @match        http://localhost:5173/*
 // @match        https://autolab.fun/*
@@ -36,14 +36,21 @@
    - Resultado:   document.addEventListener('weprodu-os-results', e => ...)
                     e.detail = [ { cuil, rnos, contractId } ]   rnos '' = sin afiliación -> convenio
    - Handshake:   document.dispatchEvent(new Event('weprodu-os-ready'))   ← ver `entregar()`
+   - Prueba:      document.dispatchEvent(new CustomEvent('weprodu-os-ping'))
+                  → contesta 'weprodu-os-pong' con { version }. Es lo ÚNICO que prueba que el canal
+                    funciona: la marca sola solo dice que el script se ejecutó una vez.
    - Presencia:   <meta name="weprodu-os-ext"> ó <html data-weprodu-os>  (window.__weproduOSExt
                   también se setea, pero puede no llegar a la página)
+
+  REGLA: con `@grant` distinto de `none`, `document` es el único canal confiable en las DOS
+  direcciones. `window` y `unsafeWindow` son respaldo — nunca el canal principal, ni para emitir ni
+  para escuchar.
 */
 
 (function () {
   'use strict';
 
-  var VERSION = '2.1.0';
+  var VERSION = '2.3.0';
   var ARCA_HOST = 'serviciossegsoc.afip.gob.ar';
   var K = {
     queue: 'os_queue', // [{cuil, contractId}]
@@ -53,6 +60,7 @@
     done: 'os_done',
     last: 'os_last',
     errores: 'os_errores', // {cuil:true}
+    fase: 'os_fase', // '' | 'limpiando' — el Reiniciar final, para no dejar filas cargadas
   };
   function g(k, d) { try { return GM_getValue(k, d); } catch (e) { return d; } }
   function s(k, v) { try { GM_setValue(k, v); } catch (e) {} }
@@ -76,11 +84,26 @@
   function paginaWindow() {
     try { return typeof unsafeWindow !== 'undefined' && unsafeWindow ? unsafeWindow : window; } catch (e) { return window; }
   }
-  /** Escucha en los dos lados de la frontera: el que no exista, simplemente no dispara. */
+  /**
+   * Escucha en los dos lados de la frontera, procesando cada evento UNA vez.
+   *
+   * El mismo handler queda registrado en `document`, `window` y `unsafeWindow` porque no se sabe de
+   * cuál lado está la página. Como del otro lado también se emite por más de un canal, el handler
+   * correría dos o tres veces por el MISMO evento — sembrando la cola de nuevo y reiniciando el
+   * poller a mitad de camino. El WeakSet lo procesa una sola vez y no retiene nada en memoria.
+   */
   function escuchar(nombre, fn) {
-    try { document.addEventListener(nombre, fn); } catch (e) {}
-    try { window.addEventListener(nombre, fn); } catch (e) {}
-    try { var w = paginaWindow(); if (w !== window) w.addEventListener(nombre, fn); } catch (e) {}
+    var vistos = new WeakSet();
+    var wrap = function (e) {
+      if (e && typeof e === 'object') {
+        if (vistos.has(e)) return;
+        vistos.add(e);
+      }
+      fn(e);
+    };
+    try { document.addEventListener(nombre, wrap); } catch (e) {}
+    try { window.addEventListener(nombre, wrap); } catch (e) {}
+    try { var w = paginaWindow(); if (w !== window) w.addEventListener(nombre, wrap); } catch (e) {}
   }
   function emitir(nombre, detail) {
     try { document.dispatchEvent(new CustomEvent(nombre, { detail: detail })); } catch (e) {}
@@ -119,6 +142,7 @@
       s(K.errores, {});
       s(K.last, '');
       s(K.done, false);
+      s(K.fase, '');
       s(K.active, true);
       esperarResultados();
     });
@@ -132,6 +156,17 @@
       cuando está listo, y recién ahí se entrega.
     */
     escuchar('weprodu-os-ready', function () { if (g(K.done, false)) entregar(); });
+
+    /*
+      4) Ping/pong: la única prueba de que el CANAL funciona.
+
+      Que exista la marca en el DOM solo demuestra que el script se ejecutó una vez. No dice nada del
+      camino de vuelta: con el permiso "Permitir scripts de usuario" apagado, o con un cambio futuro
+      en el sandbox, se puede llegar a "detectada" y que igual no arranque nada. Contestar un pong es
+      lo que prueba que los eventos cruzan de verdad, que es lo que hace falta saber ANTES de mandar
+      a alguien a validar 21 personas.
+    */
+    escuchar('weprodu-os-ping', function () { emitir('weprodu-os-pong', { version: VERSION }); });
 
     // Y si React ya estaba montado (navegación sin recarga), esto alcanza.
     if (g(K.done, false)) entregar();
@@ -161,21 +196,58 @@
     emitir('weprodu-os-results', detail);
     // limpiar para la próxima tanda
     s(K.done, false); s(K.active, false);
-    s(K.queue, []); s(K.orden, []); s(K.hechos, {}); s(K.errores, {}); s(K.last, '');
+    s(K.queue, []); s(K.orden, []); s(K.hechos, {}); s(K.errores, {}); s(K.last, ''); s(K.fase, '');
   }
 
   // ======================= LADO ARCA =======================
+  /**
+   * ARCA no acepta más de 10 relaciones laborales cargadas a la vez.
+   *
+   * Al intentar la 11 no agrega la fila y contesta "No es posible ingresar mas de 10 relaciones
+   * laborales a la vez". Con la lógica vieja eso se leía como "el CUIL falló", así que en una tanda
+   * de 21 se validaban 10 y los otros 11 quedaban marcados como error sin que nadie se enterara:
+   * gente sin validar que APARENTABA haber sido consultada. Por eso el trabajo va en tandas de 10,
+   * con `Reiniciar` en el medio.
+   */
+  var TOPE_ARCA = 10;
+
   function inputCuil() { return document.getElementById('ctl00_ContentPlaceHolder1_InputCuil_txtCuil'); }
-  function btnAgregar() {
-    // Por rótulo y no por id: el id de WebForms cambia más que el texto. `^Agregar$` es exacto a
-    // propósito — es lo ÚNICO que este script tiene permitido apretar. Nunca "Aceptar".
+
+  /**
+   * Los DOS únicos botones que este script puede apretar, buscados por su rótulo EXACTO.
+   *
+   *   Agregar   → carga un CUIL en la grilla. No registra nada.
+   *   Reiniciar → vacía la grilla. NO registra nada: es lo contrario de Aceptar.
+   *
+   * `Aceptar` está al lado de `Reiniciar` y CONFIRMA las altas ante el organismo. Confundirlos es el
+   * peor error posible de este script: registraría altas reales, masivas e irreversibles, por fuera
+   * del TXT. Por eso nunca se busca por posición ni por índice — solo por texto exacto — y no hay
+   * ninguna otra función que dispare un control.
+   */
+  function botonPorRotulo(rotulo) {
     var c = document.querySelectorAll('input[type=submit],input[type=button],button');
-    for (var i = 0; i < c.length; i++) { if (/^Agregar$/i.test((c[i].value || c[i].textContent || '').trim())) return c[i]; }
+    for (var i = 0; i < c.length; i++) {
+      if (rotulo.test((c[i].value || c[i].textContent || '').trim())) return c[i];
+    }
     return null;
   }
+  function btnAgregar() { return botonPorRotulo(/^Agregar$/i); }
+  function btnReiniciar() { return botonPorRotulo(/^Reiniciar$/i); }
+
   function sesionExpirada() {
     if (inputCuil()) return false;
     return /sesi[oó]n ha finalizado|no ha iniciado su sesi[oó]n|ingrese con su clave fiscal/i.test(document.body.textContent || '');
+  }
+
+  /**
+   * ¿ARCA acaba de rechazar por el tope de 10?
+   *
+   * Se chequea aunque el script ya trabaje de a 10: el contador puede desincronizarse si el operador
+   * tenía filas cargadas antes de arrancar. Cuando aparece, el CUIL en curso NO es un error — no se
+   * lo pudo ni intentar — así que se reintenta en la tanda siguiente.
+   */
+  function topeAlcanzado() {
+    return /no es posible ingresar mas de 10 relaciones laborales/i.test(document.body.textContent || '');
   }
 
   var RE_CUIL = /\d{2}-\d{8}-\d/g;
@@ -197,8 +269,9 @@
   }
 
   function leerFilas() {
-    var out = {}, ambiguas = 0, os = document.querySelectorAll('input[id*="ExtendCodeOS_AutocompleteText"]');
+    var out = {}, ambiguas = 0, total = 0, os = document.querySelectorAll('input[id*="ExtendCodeOS_AutocompleteText"]');
     for (var i = 0; i < os.length; i++) {
+      total++;
       var cuil = cuilDeLaFila(os[i]);
       if (!cuil) { ambiguas++; continue; }
       // El código real vive en el input oculto `_AutocompleteValue`; el visible trae la descripción.
@@ -207,7 +280,7 @@
       if (!code) code = (os[i].value || '').replace(/\D/g, '');
       out[cuil] = code;
     }
-    return { filas: out, ambiguas: ambiguas };
+    return { filas: out, ambiguas: ambiguas, total: total };
   }
 
   function badge(txt, color) {
@@ -223,15 +296,50 @@
     return b;
   }
 
+  /** Aprieta Reiniciar y deja la grilla vacía. Devuelve false si el botón no está. */
+  function reiniciarGrilla() {
+    var btn = btnReiniciar();
+    if (!btn) return false;
+    setTimeout(function () { btn.click(); }, 200); // postback -> recarga -> procesarARCA() de nuevo
+    return true;
+  }
+
+  /**
+   * Botón manual para dejar la pantalla prolija sin correr una validación.
+   *
+   * Existe porque una corrida cancelada a mitad de camino deja filas cargadas, y filas cargadas son
+   * altas a medio hacer que alguien puede confirmar por error más adelante.
+   */
+  function ofrecerLimpieza(cuantas) {
+    var b = badge(
+      '⚠ Quedaron ' + cuantas + ' fila(s) cargadas en ARCA.<br><span style="color:#8b949e">No son altas: se descartan con Reiniciar.</span><br>' +
+        '<button id="__weprodu_limpiar" style="margin-top:8px;background:#1f6feb;border:none;color:#fff;border-radius:6px;padding:6px 11px;cursor:pointer;font:12px system-ui">Limpiar pantalla de ARCA</button>',
+      '#d29922',
+    );
+    var btn = b.querySelector('#__weprodu_limpiar');
+    if (btn) btn.onclick = function () { if (!reiniciarGrilla()) badge('No encuentro el botón Reiniciar.', '#d29922'); };
+  }
+
   function procesarARCA() {
-    if (!g(K.active, false)) return; // no hay tanda en curso
+    var activa = g(K.active, false);
+    var limpiando = g(K.fase, '') === 'limpiando';
+    if (!activa && !limpiando) {
+      // Sin tanda en curso: si el operador dejó filas de una corrida cancelada, se le ofrece limpiar.
+      var suelto = leerFilas();
+      if (suelto.total > 0) ofrecerLimpieza(suelto.total);
+      return;
+    }
 
     // Sesión vencida: se frena SIN tocar los pendientes. La cola sobrevive al relogin y retoma sola.
     // Va primero: con la sesión caída, cualquier cosa que se dedujera del DOM sería falsa.
     if (sesionExpirada()) {
       var orden0 = g(K.orden, []), hechos0 = g(K.hechos, {});
       var faltan = orden0.filter(function (c) { return !(c in hechos0); }).length;
-      badge('⏸ Se venció la sesión de ARCA.<br><span style="color:#8b949e">Volvé a loguearte y reabrí “Registrar Nuevas Altas”.<br>Quedan ' + faltan + ' — sigue solo.</span>', '#d29922');
+      badge(
+        '⏸ Se venció la sesión de ARCA.<br><span style="color:#8b949e">Volvé a loguearte y reabrí “Registrar Nuevas Altas”.<br>Quedan ' + faltan + ' — sigue solo.<br>' +
+          'Las filas que hayan quedado cargadas se limpian al retomar.</span>',
+        '#d29922',
+      );
       return;
     }
 
@@ -251,41 +359,85 @@
       return;
     }
 
-    Object.keys(filas).forEach(function (c) { if (orden.indexOf(c) >= 0) hechos[c] = filas[c]; });
-    var pendientes = orden.filter(function (c) { return !(c in hechos); });
+    // 1) COSECHAR SIEMPRE, antes de cualquier Reiniciar. Reiniciar sin haber leído es perder la tanda.
+    var propias = 0, ajenas = 0;
+    Object.keys(filas).forEach(function (c) {
+      if (orden.indexOf(c) >= 0) { hechos[c] = filas[c]; propias++; }
+      else ajenas++;
+    });
+    s(K.hechos, hechos);
 
-    if (pendientes.length) {
-      var next = pendientes[0];
-      // Ya lo intenté y no apareció, con la sesión viva: es un problema de ESE CUIL en ARCA
-      // (inválido, ya con relación activa, un popup). Se marca ERROR y se sigue — nunca vacío, que
-      // significaría "ARCA dijo que no tiene obra social".
-      if (last === next && !(next in filas)) {
-        errores[next] = true;
-        hechos[next] = '';
-        s(K.hechos, hechos); s(K.errores, errores); s(K.last, '');
-        return procesarARCA();
-      }
-      s(K.hechos, hechos);
-      s(K.last, next);
-      badge('Validando… ' + (orden.length - pendientes.length + 1) + ' / ' + orden.length + '<br><span style="color:#8b949e">no cierres esta pestaña</span>', '#1f6feb');
-      var inp = inputCuil(), btn = btnAgregar();
-      if (!inp || !btn) { badge('No encuentro el campo CUIL / Agregar.<br>¿Estás en “Registrar Nuevas Altas”?', '#d29922'); return; }
-      inp.value = next.replace(/\D/g, '');
-      setTimeout(function () { btn.click(); }, 250); // postback -> recarga -> corre de nuevo
+    var pendientes = orden.filter(function (c) { return !(c in hechos) && !errores[c]; });
+
+    // 2) Limpieza final: se pidió Reiniciar y la grilla ya está vacía → la corrida terminó.
+    if (limpiando) {
+      if (lectura.total > 0) { reiniciarGrilla(); return; }
+      s(K.fase, '');
+      s(K.done, true);
+      s(K.active, false);
+      var conOS = orden.filter(function (c) { return hechos[c] && !errores[c]; }).length;
+      var errN = orden.filter(function (c) { return errores[c]; }).length;
+      badge(
+        '✓ Validación completa — ' + orden.length + ' CUIL<br><span style="color:#8b949e">' + conOS + ' con obra social · ' + (orden.length - conOS - errN) + ' del convenio' +
+          (errN ? ' · ' + errN + ' con error' : '') + '<br><b>La pantalla de ARCA quedó limpia: no se registró ningún alta.</b><br>Volvé a WeProdu: se guardan solas.</span>',
+        '#238636',
+      );
       return;
     }
 
-    // terminado
-    s(K.hechos, hechos);
-    s(K.done, true);
-    s(K.active, false);
-    var conOS = orden.filter(function (c) { return hechos[c] && !errores[c]; }).length;
-    var errN = orden.filter(function (c) { return errores[c]; }).length;
+    // 3) Terminó de consultar: se limpia la grilla ANTES de dar por cerrada la corrida, para no dejar
+    //    relaciones laborales a medio cargar que alguien pueda confirmar por error.
+    if (pendientes.length === 0) {
+      s(K.fase, 'limpiando');
+      if (lectura.total > 0 && reiniciarGrilla()) return;
+      return procesarARCA();
+    }
+
+    // 4) El tope: ARCA rechazó por tener 10 cargadas. El CUIL en curso NO es un error —no se lo pudo
+    //    ni intentar— así que se deja pendiente y se reintenta después de vaciar la grilla.
+    if (topeAlcanzado()) {
+      s(K.last, '');
+      badge('Tanda llena (' + TOPE_ARCA + '). Vaciando para seguir…<br><span style="color:#8b949e">' + (orden.length - pendientes.length) + ' / ' + orden.length + ' listos</span>', '#1f6feb');
+      if (!reiniciarGrilla()) badge('No encuentro el botón Reiniciar: no puedo seguir sin vaciar la grilla.', '#d29922');
+      return;
+    }
+
+    // 5) La grilla está llena de lo propio, o tiene filas ajenas que ocupan lugar del tope. En los dos
+    //    casos hay que vaciar: lo propio ya se cosechó arriba y lo ajeno no es nuestro para leerlo.
+    if (lectura.total >= TOPE_ARCA || (ajenas > 0 && propias === 0)) {
+      s(K.last, '');
+      var hechosN = orden.length - pendientes.length;
+      badge('Vaciando la grilla para la tanda siguiente…<br><span style="color:#8b949e">' + hechosN + ' / ' + orden.length + ' listos</span>', '#1f6feb');
+      if (!reiniciarGrilla()) badge('No encuentro el botón Reiniciar: no puedo seguir sin vaciar la grilla.', '#d29922');
+      return;
+    }
+
+    // 6) Mandar el siguiente CUIL.
+    var next = pendientes[0];
+    // Lo intenté la vuelta pasada y no apareció, con la sesión viva y SIN tope: es un problema de ESE
+    // CUIL en ARCA (inválido, ya con relación activa, un popup). Se marca ERROR y se sigue — nunca
+    // vacío, que significaría "ARCA dijo que no tiene obra social".
+    if (last === next && !(next in filas)) {
+      errores[next] = true;
+      s(K.errores, errores);
+      s(K.last, '');
+      return procesarARCA();
+    }
+
+    s(K.last, next);
+    var hechosAhora = orden.length - pendientes.length;
+    var tandaActual = Math.floor(hechosAhora / TOPE_ARCA) + 1;
+    var tandasTotales = Math.ceil(orden.length / TOPE_ARCA);
     badge(
-      '✓ Validación completa — ' + orden.length + '<br><span style="color:#8b949e">' + conOS + ' con obra social · ' + (orden.length - conOS - errN) + ' del convenio' +
-        (errN ? ' · ' + errN + ' con error' : '') + '<br>Volvé a WeProdu: se guardan solas.</span>',
-      '#238636',
+      'Validando ' + (hechosAhora + 1) + ' / ' + orden.length + (tandasTotales > 1 ? ' · tanda ' + tandaActual + ' de ' + tandasTotales : '') +
+        '<br><span style="color:#8b949e">no cierres esta pestaña</span>',
+      '#1f6feb',
     );
+
+    var inp = inputCuil(), btn = btnAgregar();
+    if (!inp || !btn) { badge('No encuentro el campo CUIL / Agregar.<br>¿Estás en “Registrar Nuevas Altas”?', '#d29922'); return; }
+    inp.value = next.replace(/\D/g, '');
+    setTimeout(function () { btn.click(); }, 250); // postback -> recarga -> corre de nuevo
   }
 
   // ======================= helpers comunes =======================

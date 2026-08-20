@@ -224,7 +224,9 @@ export const ConstatarObrasSocialesLote: React.FC<{
     }
   };
 
-  const cuilsPendientes = pendientes.map((f) => soloDigitos(f.row.cuit || '')).filter((c) => c.length === 11);
+  // Solo los que tienen empleadora: los otros no se pueden aplicar, y mandarlos a ARCA sería hacer
+  // consultar a alguien un dato que después no va a poder guardar.
+  const cuilsPendientes = pendientes.filter((f) => !!f.row.empresaContratoId).map((f) => soloDigitos(f.row.cuit || '')).filter((c) => c.length === 11);
   /** Con guiones: es como los pide el formulario de ARCA, así se pegan sin retocarlos. */
   const conGuiones = (c: string) => `${c.slice(0, 2)}-${c.slice(2, 10)}-${c.slice(10)}`;
 
@@ -323,7 +325,11 @@ export const ConstatarObrasSocialesLote: React.FC<{
             La obra social sale de <strong>Relaciones Laborales → Registrar Nuevas Altas</strong>: se pone el CUIL y ARCA precompleta la que tiene registrada. Con el script instalado se hacen todas de una (panel de abajo); si no, se van cargando fila por fila en la tabla.
           </p>
           <p className="text-gray-500 dark:text-gray-400">
-            Lo que contesta ARCA queda fijo. <strong>Que no devuelva ninguna también es una respuesta</strong>: se registra con fecha, rige la del convenio y esa persona no vuelve a aparecer como pendiente. <strong>No completes el alta en ARCA</strong> — el alta sale del TXT.
+            Lo que contesta ARCA queda fijo. <strong>Que no devuelva ninguna también es una respuesta</strong>: se registra con fecha, rige la del convenio y esa persona no vuelve a aparecer como pendiente.{' '}
+            <strong>No completes el alta en ARCA</strong> — el alta sale del TXT.{' '}
+            <a href="/arca/guia-obras-sociales" target="_blank" rel="noreferrer" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+              ¿Cómo funciona esto?
+            </a>
           </p>
         </div>
         <button type="button" onClick={copiarYAbrir} disabled={cuilsPendientes.length === 0} className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
@@ -531,6 +537,10 @@ export const ConstatarObrasSocialesLote: React.FC<{
                               valor sellado se hace desde el modal del contrato, que exige confirmar. */}
                           {(f.row.obraSocialBloqueada || f.row.obraSocialConstatadaEn === 'arca') && <FontAwesomeIcon icon={faLock} className="h-2.5 w-2.5 opacity-60" />}
                         </p>
+                      ) : !f.row.empresaContratoId ? (
+                        /* Sin empleadora no hay contra qué CUIT validar: ofrecer el buscador sería
+                           ofrecer una acción que el server va a rechazar. */
+                        <p className="text-[11px] text-amber-700 dark:text-amber-400 py-1.5">Falta elegir la empleadora de este contrato</p>
                       ) : (
                         <div className="flex items-start gap-2">
                           <div className="min-w-0 flex-1">

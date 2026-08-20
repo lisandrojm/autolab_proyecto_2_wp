@@ -1409,14 +1409,35 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/empresa-cont
                 }
             }
         }
+        /**
+         * Quitar la empleadora BORRA la validación de la obra social.
+         *
+         * Validar significa "ARCA, consultado con el CUIT de esta empleadora, dice esto". Sin empleadora
+         * esa afirmación no tiene sujeto: el contrato quedaba mostrando una obra social en verde, fija y
+         * con fecha, mientras arriba decía "Falta elegir la empleadora" — un dato sellado que ya no se
+         * podía sostener, y que nadie iba a revisar justamente porque estaba en verde.
+         *
+         * Al CAMBIAR de empleadora, en cambio, NO se borra: el RNOS es de la PERSONA y sigue siendo el
+         * mismo. Lo que cambia es si la nueva empleadora lo tiene registrado, y eso ya se avisa arriba
+         * (`avisoObraSocial`) y lo marca el checklist en rojo. Borrarlo obligaría a re-validar una tanda
+         * entera por corregir la empresa, que es un castigo por arreglar un error.
+         */
+        const quitandoEmpleadora = !empresaContratoId;
+        const contratoPrevio = up.contracts[idx].toObject();
         up.contracts[idx] = {
-            ...up.contracts[idx].toObject(),
+            ...contratoPrevio,
             empresaContratoId: empresaContratoId || null,
             nombre_empresa_contrato: nombreEmpresaContrato,
+            ...(quitandoEmpleadora
+                ? { obraSocialId: null, obraSocialOrigen: undefined, obraSocialConstatadaEn: undefined, obraSocialConstatadaEl: null, obraSocialNoFigura: false, obraSocialBloqueada: false }
+                : {}),
         };
         up.markModified("contracts");
         await up.save();
-        res.json({ empresaContratoId: empresaContratoId || null, nombre_empresa_contrato: nombreEmpresaContrato, avisoObraSocial });
+        // Se informa que se borró: es un efecto sobre OTRO campo, y en silencio se lee como que la
+        // validación se perdió sola.
+        const obraSocialLimpiada = quitandoEmpleadora && (contratoPrevio.obraSocialBloqueada === true || contratoPrevio.obraSocialId != null || contratoPrevio.obraSocialNoFigura === true);
+        res.json({ empresaContratoId: empresaContratoId || null, nombre_empresa_contrato: nombreEmpresaContrato, avisoObraSocial, obraSocialLimpiada });
     }
     catch (error) {
         console.error("Update contract empresa-contrato error:", error);
