@@ -222,30 +222,47 @@ router.post("/download-zip", async (req, res) => {
             res.status(403).json({ error: "Alguna ruta está fuera de la carpeta permitida." });
             return;
         }
+        /*
+          Se bajan de a ZIP_CONCURRENCIA en paralelo, no de a uno.
+    
+          En secuencia, cada archivo paga su ida y vuelta completa a Dropbox: 34 PDF tardaban más de un
+          minuto y el pedido moría por timeout del cliente ANTES de que el ZIP estuviera armado —el
+          trabajo se hacía entero y se tiraba a la basura—. De a 5, el mismo lote entra en una fracción
+          del tiempo. Cinco y no cincuenta: Dropbox limita por app y una ráfaga grande devuelve 429, que
+          es cambiar una espera larga por un error.
+        */
+        const ZIP_CONCURRENCIA = 5;
+        const buffers = new Array(items.length);
+        for (let i = 0; i < items.length; i += ZIP_CONCURRENCIA) {
+            const tanda = items.slice(i, i + ZIP_CONCURRENCIA);
+            await Promise.all(tanda.map(async (item, n) => {
+                /*
+                  Se pide POR ID cuando lo hay: `id:AbC123…` es un identificador opaco y ASCII, así que el
+                  archivo se baja igual se llame como se llame. Pedirlo por path lo ataba al texto del
+                  nombre —acentos, puntos suspensivos, la forma Unicode con la que quedó guardado— y
+                  cualquier diferencia ahí daba `path/not_found` sobre un archivo que estaba a la vista.
+      
+                  El path queda de respaldo por si algún día una entrada llega sin id.
+                */
+                const referencia = item.id ? (item.id.startsWith("id:") ? item.id : `id:${item.id}`) : item.path;
+                try {
+                    buffers[i + n] = await downloadFileContent(String(req.tenantObjectId), cfg, referencia);
+                }
+                catch (e) {
+                    // Qué archivo falló, no solo que "falló". Con 34 seleccionados, un error sin nombre deja
+                    // al operador sin nada que hacer salvo probar de a uno hasta encontrarlo.
+                    e.__archivo = item.path.split("/").pop() || item.path;
+                    throw e;
+                }
+            }));
+        }
         const zip = new PizZip();
         const used = new Map(); // evita colisiones de nombre en el ZIP
         let total = 0;
-        for (const item of items) {
-            const p = item.path;
-            /*
-              Se pide POR ID cuando lo hay: `id:AbC123…` es un identificador opaco y ASCII, así que el
-              archivo se baja igual se llame como se llame. Pedirlo por path lo ataba al texto del nombre —
-              acentos, puntos suspensivos, la forma Unicode con la que quedó guardado— y cualquier
-              diferencia ahí daba `path/not_found` sobre un archivo que estaba a la vista en la lista.
-      
-              El path queda de respaldo por si algún día una entrada llega sin id.
-            */
-            const referencia = item.id ? (item.id.startsWith("id:") ? item.id : `id:${item.id}`) : p;
-            // Qué archivo falló, no solo que "falló". Con 34 seleccionados, un error sin nombre deja al
-            // operador sin nada que hacer salvo probar de a uno hasta encontrarlo.
-            let buf;
-            try {
-                buf = await downloadFileContent(String(req.tenantObjectId), cfg, referencia);
-            }
-            catch (e) {
-                e.__archivo = p.split("/").pop() || p;
-                throw e;
-            }
+        // El ZIP se arma en el orden original, que es el de la lista que el operador vio.
+        for (let i = 0; i < items.length; i++) {
+            const p = items[i].path;
+            const buf = buffers[i];
             total += buf.length;
             if (total > ZIP_MAX_TOTAL_BYTES) {
                 res.status(400).json({ error: `La selección supera el máximo de ${Math.round(ZIP_MAX_TOTAL_BYTES / 1024 / 1024)} MB. Elegí menos archivos (no hay tope de cantidad: lo que se mide es el peso).` });

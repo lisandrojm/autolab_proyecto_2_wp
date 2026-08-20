@@ -192,6 +192,13 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
    * Peso de lo tildado, sumado a medida que se selecciona. Sobre `entries` y no sobre lo filtrado: el
    * filtro esconde filas pero no las destilda, y sumar solo lo visible daría de menos.
    */
+  /**
+   * Bytes del ZIP ya recibidos, o `null` si no arrancó. `0` no es lo mismo que `null`: 0 es "el
+   * server está armando el ZIP y todavía no mandó nada", que es la etapa larga.
+   */
+  const [zipRecibidos, setZipRecibidos] = useState<number | null>(null);
+  const [zipTotal, setZipTotal] = useState<number | undefined>(undefined);
+
   const bytesSeleccionados = useMemo(() => entries.reduce((acc, e) => (selected.has(e.path) ? acc + (e.size || 0) : acc), 0), [entries, selected]);
   const excedePeso = bytesSeleccionados > ZIP_MAX_BYTES;
 
@@ -245,8 +252,13 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
       return;
     }
     setDescargandoZip(true);
+    setZipRecibidos(0);
+    setZipTotal(undefined);
     try {
-      const blob = await dropboxAPI.downloadZip(items, true);
+      const blob = await dropboxAPI.downloadZip(items, true, (recibidos, total) => {
+        setZipRecibidos(recibidos);
+        if (total) setZipTotal(total);
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -257,17 +269,22 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
       URL.revokeObjectURL(url);
       setSelected(new Set());
     } catch (e: any) {
-      // Con responseType "blob" el error del server también llega como Blob: lo leemos para mostrar el mensaje.
-      let msg = "No se pudo generar el ZIP.";
+      /*
+        Con responseType "blob" el error del server también llega como Blob: hay que leerlo para
+        mostrar el mensaje. Y si no hay respuesta —timeout, red caída— el mensaje útil es el del
+        propio error: quedarse con el genérico ahí escondía la única pista que había.
+      */
+      let msg = e?.message || "No se pudo generar el ZIP.";
       try {
         const txt = await e?.response?.data?.text?.();
         if (txt) msg = JSON.parse(txt).error || msg;
       } catch {
-        /* dejamos el mensaje genérico */
+        /* nos quedamos con el mensaje del error */
       }
       sweetAlert.error("Error", msg);
     } finally {
       setDescargandoZip(false);
+      setZipRecibidos(null);
     }
   };
 
@@ -374,7 +391,14 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
               }
               className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <FontAwesomeIcon icon={descargandoZip ? faSpinner : faFileZipper} spin={descargandoZip} /> Descargar {selected.size} (ZIP)
+              <FontAwesomeIcon icon={descargandoZip ? faSpinner : faFileZipper} spin={descargandoZip} />{" "}
+              {/* Primero "Preparando" —el server bajando de Dropbox—, después los MB que van llegando:
+                  un spinner sin números no distingue "tardando" de "colgado". */}
+              {descargandoZip
+                ? zipRecibidos
+                  ? `Bajando ${fmtTamanio(zipRecibidos)}${zipTotal ? ` de ${fmtTamanio(zipTotal)}` : ""}`
+                  : `Preparando ${selected.size} archivos…`
+                : `Descargar ${selected.size} (ZIP)`}
             </button>
           </div>
         </div>

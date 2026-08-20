@@ -155,8 +155,13 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
       return;
     }
     setBusy(true);
+    setZipRecibidos(0);
+    setZipTotal(undefined);
     try {
-      const blob = await dropboxAPI.downloadZip(items, full);
+      const blob = await dropboxAPI.downloadZip(items, full, (recibidos, total) => {
+        setZipRecibidos(recibidos);
+        if (total) setZipTotal(total);
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -167,17 +172,22 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
       URL.revokeObjectURL(url);
       setSelected(new Set());
     } catch (e: any) {
-      // Con responseType "blob" el error del server también llega como Blob: lo leemos para mostrar el mensaje.
-      let msg = "No se pudo generar el ZIP.";
+      /*
+        Con responseType "blob" el error del server también llega como Blob: hay que leerlo para
+        mostrar el mensaje. Y si no hay respuesta —timeout, red caída— el mensaje útil es el del
+        propio error: quedarse con el genérico ahí escondía la única pista que había.
+      */
+      let msg = e?.message || "No se pudo generar el ZIP.";
       try {
         const txt = await e?.response?.data?.text?.();
         if (txt) msg = JSON.parse(txt).error || msg;
       } catch {
-        /* dejamos el mensaje genérico */
+        /* nos quedamos con el mensaje del error */
       }
       sweetAlert.error("Error", msg);
     } finally {
       setBusy(false);
+      setZipRecibidos(null);
     }
   };
 
@@ -274,6 +284,16 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
    * destilda, así que sumar lo visible daría de menos justo cuando alguien selecciona todo, filtra y
    * agrega más — que es como se arma una tanda grande.
    */
+  /**
+   * Bytes del ZIP ya recibidos, o `null` si no arrancó.
+   *
+   * `0` no es lo mismo que `null`: 0 significa "el server está armando el ZIP y todavía no mandó
+   * nada", que es la etapa larga. Distinguirlos es lo que evita que un minuto sin movimiento se lea
+   * como colgado.
+   */
+  const [zipRecibidos, setZipRecibidos] = useState<number | null>(null);
+  const [zipTotal, setZipTotal] = useState<number | undefined>(undefined);
+
   const bytesSeleccionados = useMemo(() => entries.reduce((acc, e) => (selected.has(e.path) ? acc + (e.size || 0) : acc), 0), [entries, selected]);
   const excedePeso = bytesSeleccionados > ZIP_MAX_BYTES;
 
@@ -421,7 +441,11 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
               }
               className="btn-primary text-xs py-1.5 px-3 flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <FontAwesomeIcon icon={busy ? faSpinner : faFileZipper} spin={busy} /> Descargar {selected.size} (ZIP)
+              <FontAwesomeIcon icon={busy ? faSpinner : faFileZipper} spin={busy} />{" "}
+              {/* Mientras trabaja, el botón cuenta lo que va pasando: primero "Preparando" —el server
+                  bajando de Dropbox y armando el ZIP, que es la etapa larga— y después los MB que van
+                  llegando. Un spinner solo, sin números, no distingue "tardando" de "colgado". */}
+              {busy ? (zipRecibidos ? `Bajando ${formatSize(zipRecibidos)}${zipTotal ? ` de ${formatSize(zipTotal)}` : ""}` : `Preparando ${selected.size} archivos…`) : `Descargar ${selected.size} (ZIP)`}
             </button>
           </div>
         </div>

@@ -62,13 +62,40 @@ export const dropboxAPI = {
    * el generador del PDF haya metido en el nombre—, y ahí Dropbox contesta `path/not_found` sobre un
    * archivo que está a la vista en la lista. El id es opaco y ASCII: no depende de cómo se llame.
    */
-  async downloadZip(items: Array<{ path: string; id?: string }>, full?: boolean): Promise<Blob> {
+  async downloadZip(
+    items: Array<{ path: string; id?: string }>,
+    full?: boolean,
+    /**
+     * Progreso de la BAJADA del ZIP al navegador (bytes recibidos / total, si el server manda
+     * Content-Length — que lo manda).
+     *
+     * Ojo con qué mide: la espera tiene dos etapas y esta es la segunda. Primero el server baja de
+     * Dropbox todos los archivos y arma el ZIP —ahí no hay bytes viajando y esto no se mueve—, y
+     * recién después empieza a llegar. Por eso quien lo use tiene que mostrar también el estado
+     * "preparando": si no, un minuto en 0 MB se lee como colgado.
+     */
+    onProgreso?: (recibidos: number, total?: number) => void,
+  ): Promise<Blob> {
     const { data } = await axios.post(
       "/dropbox/download-zip",
       // `paths` va además de `items` por la ventana de deploy: el front (Vercel) y el server (VPS) se
       // publican por separado, así que un front nuevo puede pegarle un rato a un server viejo.
       { items, paths: items.map((i) => i.path), full },
-      { responseType: "blob" },
+      {
+        responseType: "blob",
+        /*
+          Timeout propio, mucho más largo que los 60 s del cliente general.
+
+          El server tiene que bajar de Dropbox todos los archivos ANTES de poder devolver el ZIP: no
+          hay nada que mandar hasta que estén todos. Con el timeout general, 34 archivos cortaban el
+          pedido a mitad de camino y el trabajo ya hecho se tiraba entero — y el operador veía "la
+          solicitud tardó demasiado" sin ninguna pista de que en realidad estaba funcionando.
+
+          Es generoso a propósito: el tope real de la tanda lo pone el peso (200 MB), no el reloj.
+        */
+        timeout: 10 * 60 * 1000,
+        onDownloadProgress: onProgreso ? (e) => onProgreso(e.loaded, e.total) : undefined,
+      },
     );
     return data;
   },
