@@ -21,8 +21,9 @@ import { Company } from "../../api/companies";
  * tarjetas todas iguales:
  *
  *   1. Configuración de ARCA — lo que hay que ir a cargar a otra pantalla. Numerado, es la tarea.
- *   2. Se elige en esta fila — empresa y sucursal. No es configuración: los selectores están a la
- *      vista en la grilla, dos columnas más allá. Van atenuados y NO entran en el "Faltan N".
+ *   2. Solo hay que elegirlo — empresa y sucursal/actividad. No es configuración: los selectores ya
+ *      están en pantalla (la empresa en su columna de la grilla; la sucursal y la actividad, acá
+ *      abajo en este mismo formulario). Van atenuados y NO entran en el "Faltan N".
  *   3. En espera — lo que se destraba solo. Colapsado: ocupaba media pantalla para decir "En espera".
  *
  * Tres estados de campo se distinguen a propósito:

@@ -117,8 +117,10 @@ export interface GrupoFaltante {
 }
 
 /**
- * Orígenes que no son configuración de ARCA: se eligen en la propia fila de la grilla, en columnas
- * que están a la vista al lado del badge.
+ * Orígenes que no son configuración de ARCA: son opciones que ya están en pantalla y solo hay que
+ * ELEGIR. La empresa, en su columna de la grilla; la sucursal y su actividad, en este mismo
+ * formulario de Datos ARCA (tenían columna propia y se sacaron: la grilla no daba abasto y el lugar
+ * natural de esos dos códigos es el checklist del alta).
  *
  * Se separan del conteo por eso mismo. "Faltan 2" en la columna ARCA, con una de las dos siendo la
  * empresa que la columna de al lado ya está pidiendo en ámbar, cuenta el mismo pendiente dos veces y
@@ -399,7 +401,7 @@ const ORIGENES: Record<OrigenDato, { titulo: string; accion: string; corto?: str
   // universo; lo que ARCA acepta es el subconjunto que ese CUIT registró.
   obra_social: { titulo: "Obra social", accion: "Cargá la obra social del convenio de la categoría (Configuración → ARCA → Convenios), o asignásela a la persona. Tiene que estar entre las registradas por la empleadora.", link: { to: "/convenios", label: "Ir a Convenios" } },
   empresa: { titulo: "Empresa del Contrato", accion: "Elegí con qué empleadora se da de alta a esta persona.", corto: "Elegí la empresa", link: { enFila: "Se elige en la columna «Empresa Contrato»" } },
-  sucursal: { titulo: "Sucursal y actividad", accion: "Elegí el domicilio de desempeño con el que se declara el alta.", corto: "Elegí la sucursal", link: { enFila: "Se elige en las columnas «Sucursal» y «Actividad»" } },
+  sucursal: { titulo: "Sucursal y actividad", accion: "Elegí el domicilio de desempeño con el que se declara el alta.", corto: "Elegí la sucursal", link: { enFila: "Se eligen acá abajo, en «Sucursal» y «Actividad»" } },
 };
 
 /** Orden de presentación: primero lo que desbloquea a lo demás. */
@@ -598,7 +600,7 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
   } else {
     switch (v.actividadOrigen) {
       case "sin_sucursal":
-        checks.push(mk("sucursal", "Sucursal de ARCA", "sucursal", "", "falta", v.sucursalesDisponibles.length === 0 ? "La empresa no tiene domicilios de explotación registrados: cargáselos en su ficha, en ARCA → Domicilios." : "Elegí el domicilio de desempeño en la columna «Sucursal»."));
+        checks.push(mk("sucursal", "Sucursal de ARCA", "sucursal", "", "falta", v.sucursalesDisponibles.length === 0 ? "La empresa no tiene domicilios de explotación registrados: cargáselos en su ficha, en ARCA → Domicilios." : "Elegí el domicilio de desempeño en «Sucursal», acá abajo."));
         checks.push(mk("actividad", "Actividad del domicilio", "sucursal", "", "bloqueado", "Las actividades son las declaradas para la sucursal.", "sucursal"));
         break;
       case "sucursal_invalida":
