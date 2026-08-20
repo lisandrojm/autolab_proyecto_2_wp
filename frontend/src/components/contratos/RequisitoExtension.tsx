@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowUpRightFromSquare, faCircleCheck, faTriangleExclamation, faPuzzlePiece, faCopy, faCheck, faSpinner, faPlug } from '@fortawesome/free-solid-svg-icons';
-import { useExtensionArca, probarExtension, useEstadoExtension, EstadoExtension } from './puenteArca';
+import { useExtensionArca, probarExtension, useEstadoExtension, USERSCRIPT_URL, EstadoExtension } from './puenteArca';
 import { Modal } from '../ui/Modal';
 
 /**
@@ -15,7 +15,6 @@ import { Modal } from '../ui/Modal';
  */
 
 export const TAMPERMONKEY_URL = 'https://www.tampermonkey.net/';
-export const USERSCRIPT_URL = '/scripts/weprodu-obra-social.user.js';
 
 /* La detección vive en `puenteArca.ts`, junto al resto del contrato con el script: repartirla en
    dos archivos es cómo terminan usando marcas distintas y una dice que está y la otra que no. */
@@ -115,8 +114,9 @@ export const RequisitoExtension: React.FC<{ compacto?: boolean }> = ({ compacto 
         ARCA y pegar el resultado.
       </p>
 
-      {/* Los pasos van numerados y explícitos porque el camino natural —abrir el .user.js— NO
-          funciona en Chrome, y sin decirlo el operador se queda golpeando contra ese cartel. */}
+      {/* Instalar desde la URL es el camino BUENO, no el cómodo: así el script queda vinculado a su
+          origen y Tampermonkey lo actualiza solo. Pegado a mano no tiene de dónde actualizarse y se
+          queda en la versión del día que se pegó, mientras la app avanza. */}
       <ol className="text-[11px] text-gray-700 dark:text-gray-300 space-y-1.5 list-decimal pl-4">
         <li>
           Instalá <strong>Tampermonkey</strong> desde{' '}
@@ -135,31 +135,29 @@ export const RequisitoExtension: React.FC<{ compacto?: boolean }> = ({ compacto 
           .
         </li>
         <li>
-          Copiá el script con el botón de acá abajo, abrí el panel de Tampermonkey → <strong>Crear un nuevo script</strong>, pegá reemplazando todo y guardá (Ctrl/Cmd+S).
+          Abrí el script con <strong>Instalar el script</strong> (abajo): Tampermonkey muestra su pantalla de instalación y se aprieta <strong>Instalar</strong>. Instalado así <strong>se actualiza
+          solo</strong> cuando publicamos una versión nueva.
         </li>
-        <li>Volvé a esta pantalla y recargá: debería decir «Extensión detectada».</li>
+        <li>Volvé a esta pantalla y apretá «Probar la extensión»: tiene que decir «Extensión activa».</li>
       </ol>
 
       <div className="flex items-center gap-2 flex-wrap">
+        <a href={USERSCRIPT_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-blue-600 text-white hover:bg-blue-700">
+          Instalar el script
+          <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
+        </a>
+        {/* Copiar y pegar sobrevive como salida de emergencia, marcado como tal: si Tampermonkey no
+            intercepta el archivo, es la única forma de instalarlo — pero así no se actualiza solo. */}
         <button
           type="button"
           onClick={copiarScript}
           disabled={copiando}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+          title="Alternativa si Tampermonkey no abre su pantalla de instalación. Ojo: pegado a mano NO se actualiza solo."
+          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
         >
           <FontAwesomeIcon icon={copiando ? faSpinner : copiado ? faCheck : faCopy} spin={copiando} className="h-3 w-3" />
-          {copiado ? 'Copiado — pegalo en Tampermonkey' : 'Copiar el script'}
+          {copiado ? 'Copiado' : '¿Problemas? Copiar y pegar'}
         </button>
-        <a
-          href={USERSCRIPT_URL}
-          target="_blank"
-          rel="noreferrer"
-          title="Abre el archivo para copiarlo a mano. Chrome no permite instalarlo directamente desde acá."
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
-        >
-          Ver el archivo
-          <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
-        </a>
         <button type="button" onClick={probar} disabled={probando} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
           <FontAwesomeIcon icon={probando ? faSpinner : faPlug} spin={probando} className="h-3 w-3" />
           {probando ? 'Probando…' : 'Probar la extensión'}
@@ -193,7 +191,7 @@ export const RequisitoExtension: React.FC<{ compacto?: boolean }> = ({ compacto 
  * pierda una tarde.
  */
 export const ChipExtension: React.FC = () => {
-  const { estado, version, probando, reintentar } = useEstadoExtension();
+  const { estado, version, disponible, probando, reintentar } = useEstadoExtension();
   const [abierto, setAbierto] = useState(false);
 
   const base = 'inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold border transition-colors';
@@ -208,7 +206,20 @@ export const ChipExtension: React.FC = () => {
   }
 
   const chip =
-    estado === 'activa' ? (
+    estado === 'desactualizada' ? (
+      /* Responde, pero con una versión vieja. Se ve igual que "funciona" y sin embargo le pueden
+         faltar arreglos que la app ya da por hechos — el tope de 10 de ARCA, por ejemplo, que sin el
+         arreglo pierde gente en silencio. Por eso tiene su propio color y su propia acción. */
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
+        title={`Tenés la v${version} instalada y hay una v${disponible}. Click para actualizar.`}
+        className={`${base} bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/60 hover:bg-amber-100 dark:hover:bg-amber-900/30`}
+      >
+        <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
+        Extensión v{version} · hay v{disponible}
+      </button>
+    ) : estado === 'activa' ? (
       <span title={`Tampermonkey responde (v${version}). La validación de obras sociales corre sola.`} className={`${base} bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200/60 dark:border-green-800/60`}>
         <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3" />
         Extensión activa
@@ -235,6 +246,25 @@ export const ChipExtension: React.FC = () => {
       {abierto && (
         <Modal isOpen={abierto} onClose={() => setAbierto(false)} title="Extensión de validación" subtitle="Necesaria para traer las obras sociales desde ARCA automáticamente" size="lg" zIndex={80}>
           <div className="space-y-3">
+            {estado === 'desactualizada' && (
+              <div className="rounded-lg border border-amber-300 dark:border-amber-800/70 bg-amber-50/70 dark:bg-amber-950/20 px-4 py-3 text-sm text-gray-700 dark:text-gray-200">
+                <p className="font-semibold text-gray-900 dark:text-gray-100">
+                  Tenés la v{version} y hay una v{disponible}.
+                </p>
+                <p className="mt-1">
+                  Si lo instalaste <strong>pegándolo a mano</strong>, no tiene de dónde actualizarse y se va a quedar ahí para siempre. Reinstalalo desde el link —así queda vinculado al origen y
+                  Tampermonkey lo actualiza solo—, o abrí el panel de Tampermonkey → <em>Buscar actualizaciones</em>.
+                </p>
+                <div className="flex items-center gap-3 mt-2">
+                  <a href={USERSCRIPT_URL} target="_blank" rel="noreferrer" className="text-[12px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                    Instalar la v{disponible}
+                  </a>
+                  <button type="button" onClick={reintentar} className="text-[12px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                    Ya actualicé — volver a probar
+                  </button>
+                </div>
+              </div>
+            )}
             {estado === 'instalada_sin_responder' && (
               <div className="rounded-lg border border-amber-300 dark:border-amber-800/70 bg-amber-50/70 dark:bg-amber-950/20 px-4 py-3 text-sm text-gray-700 dark:text-gray-200">
                 <p className="font-semibold text-gray-900 dark:text-gray-100">Está instalada, pero no responde.</p>

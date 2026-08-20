@@ -29,17 +29,27 @@ bloque "Requisito: extensión de validación" tiene los dos botones y dice si ya
 3. En Tampermonkey → **Detalles** (en `chrome://extensions`), activá **Permitir scripts de usuario**.
    Es un permiso aparte del Modo de desarrollador y viene apagado: sin él el script carga pero queda
    **mudo** —los eventos no cruzan— y la app dice "detectada" sin que funcione nada.
-4. En la app, botón **Copiar el script** → panel de Tampermonkey → *Crear un nuevo script* → pegar
-   reemplazando todo → guardar (Ctrl/Cmd+S).
+4. En la app, botón **Instalar el script**: abre el `.user.js`, Tampermonkey muestra su pantalla de
+   instalación y se aprieta **Instalar**.
+
+   Instalado **desde la URL** queda vinculado a su origen (`@updateURL`) y Tampermonkey lo actualiza
+   solo. Copiado y pegado a mano **no tiene de dónde actualizarse**: se queda en la versión del día
+   que se pegó mientras el archivo servido avanza, y desde afuera se ve igual que "funciona" aunque
+   le falten arreglos. El botón «¿Problemas? Copiar y pegar» está como salida de emergencia.
 5. Volvé a la app y apretá **Probar la extensión**: tiene que decir *"Extensión activa"*.
 
 ### Los tres estados, y por qué importan
 
 | Lo que ves | Qué pasa | Qué hacer |
 |---|---|---|
-| ✅ **Extensión activa (vX)** | el canal funciona | nada |
-| ⚠ **Instalada pero no responde** | el script cargó y quedó mudo | activar *Permitir scripts de usuario* |
+| ✅ **Extensión activa (vX)** | el canal funciona y la versión es la vigente | nada |
+| ⚠ **vX · hay vY** | responde, pero con una versión vieja | reinstalar desde el link, o *Buscar actualizaciones* |
+| ⚠ **Instalada pero no responde** | el script cargó y quedó mudo | activar *Permitir secuencias de comandos del usuario* |
 | ⚠ **No detectada** | no está instalado | los pasos de arriba |
+
+Son **cuatro**, no dos. Los dos del medio se ven iguales desde afuera —"algo pasa"— pero se arreglan
+de forma distinta, y confundirlos manda a reinstalar lo que ya está o a buscar un permiso que ya está
+puesto.
 
 El del medio es el caro: se parece al bueno —la marca está— y sin embargo no arranca nada, sin ningún
 error que lo explique. Por eso existe el botón **Probar la extensión**: hace un ping y espera el pong.

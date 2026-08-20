@@ -403,3 +403,25 @@ describe("ARCA — el tope de 10 filas", () => {
     assert.equal(arca.filas.length, 0);
   });
 });
+
+describe("userscript — origen de actualización", () => {
+  /**
+   * Sin `@updateURL`/`@downloadURL`, Tampermonkey no puede actualizar el script, y uno instalado
+   * pegándolo a mano tampoco queda vinculado a ningún origen. Cada versión nueva dejaba al operador
+   * con la copia vieja —o rota, si el pegado salió incompleto— sin ningún aviso: "funcionaba, y dejó
+   * de funcionar". Este test evita que las líneas se caigan en una edición futura.
+   */
+  it("la cabecera declara de dónde se actualiza", () => {
+    const cabecera = SCRIPT.slice(0, SCRIPT.indexOf("==/UserScript=="));
+    assert.match(cabecera, /@updateURL\s+https?:\/\/\S+\.user\.js/, "sin @updateURL el script no se actualiza nunca");
+    assert.match(cabecera, /@downloadURL\s+https?:\/\/\S+\.user\.js/);
+  });
+
+  it("la versión de la cabecera y la del código son la misma", () => {
+    // La app compara la versión que responde el script (la del código) contra la del archivo servido
+    // (la de la cabecera). Si divergen, se reportaría "desactualizada" para siempre, sin arreglo.
+    const enCabecera = SCRIPT.match(/@version\s+([\w.\-]+)/)?.[1];
+    const enCodigo = SCRIPT.match(/var VERSION = '([^']+)'/)?.[1];
+    assert.equal(enCodigo, enCabecera, "el pong devuelve la del código; Tampermonkey usa la de la cabecera");
+  });
+});

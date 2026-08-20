@@ -74,8 +74,34 @@ export function useExtensionArca(): string | null {
   return version;
 }
 
-/** Los tres estados posibles, que NO son dos. Ver `probarExtension`. */
-export type EstadoExtension = 'activa' | 'instalada_sin_responder' | 'ausente';
+/**
+ * Los estados posibles. Son CUATRO, no dos.
+ *
+ *  - `activa`                  responde, y con la versión que corresponde.
+ *  - `desactualizada`          responde, pero con una versión vieja. El script no se actualiza solo
+ *                              si se instaló pegándolo a mano: queda sin origen de actualización, y
+ *                              una versión vieja puede no tener arreglos que la app ya da por hechos.
+ *  - `instalada_sin_responder` cargó y quedó mudo: falta el permiso de Chrome.
+ *  - `ausente`                 no está.
+ *
+ * Los dos del medio se ven iguales desde afuera —"algo pasa"— pero se arreglan de forma distinta, y
+ * confundirlos manda a reinstalar lo que ya está o a buscar un permiso que ya está puesto.
+ */
+export type EstadoExtension = 'activa' | 'desactualizada' | 'instalada_sin_responder' | 'ausente';
+
+/** La versión del archivo que sirve la app: contra esta se compara la que responde el script. */
+export const USERSCRIPT_URL = '/scripts/weprodu-obra-social.user.js';
+
+export async function versionServida(): Promise<string | null> {
+  try {
+    const res = await fetch(USERSCRIPT_URL, { cache: 'no-store' });
+    if (!res.ok) return null;
+    // Solo la cabecera: el archivo entero son decenas de KB y lo único que hace falta son 20 líneas.
+    return (await res.text()).slice(0, 2000).match(/@version\s+([\w.\-]+)/)?.[1] || null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * ¿El canal funciona de verdad?
@@ -89,7 +115,7 @@ export type EstadoExtension = 'activa' | 'instalada_sin_responder' | 'ausente';
  * cargó y quedó mudo, que tiene una causa y una solución concretas.
  */
 export function probarExtension(timeoutMs = 1500): Promise<{ estado: EstadoExtension; version: string | null }> {
-  return new Promise((resolve) => {
+  return new Promise<{ estado: EstadoExtension; version: string | null }>((resolve) => {
     const marca = leerMarca();
     let listo = false;
     const onPong = (e: Event) => {
@@ -126,8 +152,8 @@ export function probarExtension(timeoutMs = 1500): Promise<{ estado: EstadoExten
  * reintentos —el script corre en `document-idle` y React puede montar antes— y el resultado se
  * muestra al lado del botón de validar, que es donde importa.
  */
-export function useEstadoExtension(): { estado: EstadoExtension; version: string | null; probando: boolean; reintentar: () => void } {
-  const [resultado, setResultado] = useState<{ estado: EstadoExtension; version: string | null }>({ estado: 'ausente', version: null });
+export function useEstadoExtension(): { estado: EstadoExtension; version: string | null; disponible: string | null; probando: boolean; reintentar: () => void } {
+  const [resultado, setResultado] = useState<{ estado: EstadoExtension; version: string | null; disponible: string | null }>({ estado: 'ausente', version: null, disponible: null });
   const [probando, setProbando] = useState(true);
   const [intento, setIntento] = useState(0);
 
@@ -135,7 +161,7 @@ export function useEstadoExtension(): { estado: EstadoExtension; version: string
     let vivo = true;
     let reintentos = 0;
     const correr = async () => {
-      const r = await probarExtension();
+      const [r, servida] = await Promise.all([probarExtension(), versionServida()]);
       if (!vivo) return;
       // Si no contestó y todavía puede estar cargando, se reintenta antes de dar el veredicto: un
       // "no instalada" prematuro manda a reinstalar algo que ya está.
@@ -144,7 +170,16 @@ export function useEstadoExtension(): { estado: EstadoExtension; version: string
         window.setTimeout(correr, 700);
         return;
       }
-      setResultado(r);
+      /*
+       * Responde, pero con otra versión: el estado que faltaba.
+       *
+       * Un script instalado pegándolo a mano no tiene origen de actualización, así que se queda en la
+       * versión del día que se pegó mientras el archivo servido avanza. Desde afuera se ve igual que
+       * "funciona", pero le pueden faltar arreglos que la app ya da por hechos — el tope de 10 de
+       * ARCA, por ejemplo, que sin el arreglo pierde gente en silencio.
+       */
+      const estado: EstadoExtension = r.estado === 'activa' && servida && r.version && r.version !== servida ? 'desactualizada' : r.estado;
+      setResultado({ estado, version: r.version, disponible: servida });
       setProbando(false);
     };
     setProbando(true);

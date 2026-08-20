@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name         WeProdu — Validar obras sociales en ARCA (auto)
 // @namespace    weprodu
-// @version      2.3.0
+// @version      2.4.0
 // @description  Puente automático WeProdu <-> ARCA. WeProdu manda la lista de CUIL, el script la valida en ARCA sola y devuelve los RNOS a WeProdu. No confirma altas. No guarda clave fiscal.
 // @match        http://localhost:5173/*
 // @match        https://autolab.fun/*
 // @match        https://serviciossegsoc.afip.gob.ar/tramites_con_clave_fiscal/*/Contribuyente/RelacionLaboral/Altas.aspx*
+// @updateURL    https://autolab.fun/scripts/weprodu-obra-social.user.js
+// @downloadURL  https://autolab.fun/scripts/weprodu-obra-social.user.js
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_deleteValue
@@ -47,10 +49,22 @@
   para escuchar.
 */
 
+/*
+  SOBRE @updateURL / @downloadURL
+
+  Sin estas dos líneas Tampermonkey NO puede actualizar el script, y un script creado con "Crear un
+  nuevo script" + pegar tampoco queda vinculado a ningún origen. Eso hacía que cada versión nueva
+  dejara al operador con la copia vieja —o con el script roto si el pegado salió incompleto— sin
+  ningún aviso. Instalado desde la URL, Tampermonkey chequea y actualiza solo.
+
+  Apuntan a PRODUCCIÓN a propósito: es donde está el operador real. Trabajando en localhost, el
+  auto-update traería la versión publicada en vez de la local — por eso la app compara la versión que
+  responde el script contra la del archivo servido y avisa cuando no coinciden (ver `puenteArca.ts`).
+*/
 (function () {
   'use strict';
 
-  var VERSION = '2.3.0';
+  var VERSION = '2.4.0';
   var ARCA_HOST = 'serviciossegsoc.afip.gob.ar';
   var K = {
     queue: 'os_queue', // [{cuil, contractId}]
