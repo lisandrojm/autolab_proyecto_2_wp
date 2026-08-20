@@ -39,15 +39,37 @@ export const dropboxAPI = {
     return data;
   },
 
-  /** `full`: permite una ruta fuera del rootPath (ver /dropbox/temp-link). */
-  async tempLink(path: string, full?: boolean): Promise<string> {
-    const { data } = await axios.get("/dropbox/temp-link", { params: { path, full: full ? "1" : undefined } });
+  /**
+   * `full`: permite una ruta fuera del rootPath (ver /dropbox/temp-link).
+   *
+   * El `id` es opcional pero conviene mandarlo: es con lo que el server va a pedirle el archivo a
+   * Dropbox. Ver `downloadZip`.
+   */
+  async tempLink(path: string, full?: boolean, id?: string): Promise<string> {
+    const { data } = await axios.get("/dropbox/temp-link", { params: { path, id, full: full ? "1" : undefined } });
     return data.link;
   },
 
-  /** `full`: permite rutas fuera del rootPath (ver /dropbox/download-zip). */
-  async downloadZip(paths: string[], full?: boolean): Promise<Blob> {
-    const { data } = await axios.post("/dropbox/download-zip", { paths, full }, { responseType: "blob" });
+  /**
+   * Descarga varios archivos como un ZIP.
+   *
+   * Se manda el `id` de Dropbox de cada archivo además del path, y el server baja POR ID. El path
+   * sigue viajando porque es con lo que se valida que la selección esté dentro de la carpeta
+   * permitida —un id no dice dónde vive— y porque es el nombre que termina adentro del ZIP.
+   *
+   * Por qué por id: el path es texto y el texto de un nombre de archivo puede volver distinto de como
+   * está guardado —acentos en otra forma Unicode, mayúsculas, puntos suspensivos, cualquier cosa que
+   * el generador del PDF haya metido en el nombre—, y ahí Dropbox contesta `path/not_found` sobre un
+   * archivo que está a la vista en la lista. El id es opaco y ASCII: no depende de cómo se llame.
+   */
+  async downloadZip(items: Array<{ path: string; id?: string }>, full?: boolean): Promise<Blob> {
+    const { data } = await axios.post(
+      "/dropbox/download-zip",
+      // `paths` va además de `items` por la ventana de deploy: el front (Vercel) y el server (VPS) se
+      // publican por separado, así que un front nuevo puede pegarle un rato a un server viejo.
+      { items, paths: items.map((i) => i.path), full },
+      { responseType: "blob" },
+    );
     return data;
   },
 

@@ -126,7 +126,7 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
 
   const handleDownload = async (entry: DropboxEntry) => {
     try {
-      const link = await dropboxAPI.tempLink(entry.path, full);
+      const link = await dropboxAPI.tempLink(entry.path, full, entry.id);
       window.open(link, "_blank");
     } catch (e: any) {
       sweetAlert.error("Error", e?.response?.data?.error || "No se pudo generar el enlace de descarga.");
@@ -143,8 +143,10 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
   };
 
   const handleBulkDownload = async () => {
-    const paths = Array.from(selected);
-    if (paths.length === 0) return;
+    // Path + id de cada tildado: el server valida con el path y baja con el id, que es lo único que
+    // no depende de cómo se llame el archivo (ver `dropboxAPI.downloadZip`).
+    const items = entries.filter((e) => selected.has(e.path)).map((e) => ({ path: e.path, id: e.id }));
+    if (items.length === 0) return;
     if (excedePeso) {
       sweetAlert.error(
         "La selección pesa demasiado",
@@ -154,7 +156,7 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
     }
     setBusy(true);
     try {
-      const blob = await dropboxAPI.downloadZip(paths, full);
+      const blob = await dropboxAPI.downloadZip(items, full);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;

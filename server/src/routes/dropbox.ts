@@ -190,12 +190,15 @@ router.get("/temp-link", async (req: AuthenticatedRequest & TenantRequest, res) 
     const cfg = await requireConfig(req, res);
     if (!cfg) return;
     const path = String(req.query.path || "");
+    const id = String(req.query.id || "");
     const full = req.query.full === "1" || req.query.full === "true";
     if (!path || (!full && !isWithinRoot(cfg, path))) {
       res.status(403).json({ error: "Ruta inválida." });
       return;
     }
-    const link = await getTemporaryLink(String(req.tenantObjectId), cfg, path);
+    // Mismo criterio que el ZIP: se valida con el path (es lo único que dice dónde vive el archivo) y
+    // se le pide a Dropbox por id, que no depende de cómo se llame.
+    const link = await getTemporaryLink(String(req.tenantObjectId), cfg, id ? (id.startsWith("id:") ? id : `id:${id}`) : path);
     res.json({ link });
   } catch (error) {
     dropboxError(res, error);
@@ -210,10 +213,25 @@ router.post("/download-zip", async (req: AuthenticatedRequest & TenantRequest, r
     if (!cfg) return;
 
     const full = !!req.body?.full;
-    const raw = Array.isArray(req.body?.paths) ? req.body.paths : [];
-    // Normaliza, deduplica y valida que todo esté dentro del rootPath permitido.
-    const paths: string[] = Array.from(new Set(raw.map((p: any) => String(p || "")).filter(Boolean) as string[]));
-    if (paths.length === 0) {
+    /*
+      El front manda `items` con el path Y el id de cada archivo. Los dos hacen falta, para cosas
+      distintas: el PATH es lo único que dice dónde vive el archivo, así que es con lo que se valida
+      que la selección no se salga de la carpeta permitida (y de ahí sale el nombre dentro del ZIP);
+      el ID es con lo que se le pide a Dropbox, porque no depende de cómo se llame el archivo.
+
+      `paths` sigue aceptándose para la ventana de deploy: el front (Vercel) y el server (VPS) se
+      publican por separado, así que un server nuevo puede recibir un rato pedidos de un front viejo.
+    */
+    const crudos: Array<{ path: string; id?: string }> = Array.isArray(req.body?.items)
+      ? req.body.items.map((i: any) => ({ path: String(i?.path || ""), id: i?.id ? String(i.id) : undefined }))
+      : (Array.isArray(req.body?.paths) ? req.body.paths : []).map((p: any) => ({ path: String(p || "") }));
+
+    // Normaliza y deduplica por path.
+    const porPath = new Map<string, { path: string; id?: string }>();
+    for (const it of crudos) if (it.path) porPath.set(it.path, it);
+    const items = [...porPath.values()];
+    const paths = items.map((i) => i.path);
+    if (items.length === 0) {
       res.status(400).json({ error: "No se seleccionó ningún archivo." });
       return;
     }
@@ -225,12 +243,22 @@ router.post("/download-zip", async (req: AuthenticatedRequest & TenantRequest, r
     const zip = new PizZip();
     const used = new Map<string, number>(); // evita colisiones de nombre en el ZIP
     let total = 0;
-    for (const p of paths) {
+    for (const item of items) {
+      const p = item.path;
+      /*
+        Se pide POR ID cuando lo hay: `id:AbC123…` es un identificador opaco y ASCII, así que el
+        archivo se baja igual se llame como se llame. Pedirlo por path lo ataba al texto del nombre —
+        acentos, puntos suspensivos, la forma Unicode con la que quedó guardado— y cualquier
+        diferencia ahí daba `path/not_found` sobre un archivo que estaba a la vista en la lista.
+
+        El path queda de respaldo por si algún día una entrada llega sin id.
+      */
+      const referencia = item.id ? (item.id.startsWith("id:") ? item.id : `id:${item.id}`) : p;
       // Qué archivo falló, no solo que "falló". Con 34 seleccionados, un error sin nombre deja al
       // operador sin nada que hacer salvo probar de a uno hasta encontrarlo.
       let buf: Buffer;
       try {
-        buf = await downloadFileContent(String(req.tenantObjectId), cfg, p);
+        buf = await downloadFileContent(String(req.tenantObjectId), cfg, referencia);
       } catch (e: any) {
         (e as any).__archivo = p.split("/").pop() || p;
         throw e;

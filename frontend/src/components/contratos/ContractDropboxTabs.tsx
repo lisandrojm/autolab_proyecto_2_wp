@@ -203,7 +203,7 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
   const descargar = async (entry: DropboxEntry) => {
     setDescargando(entry.path);
     try {
-      const url = await dropboxAPI.tempLink(entry.path, true);
+      const url = await dropboxAPI.tempLink(entry.path, true, entry.id);
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (e: any) {
       sweetAlert.error("Error", e?.response?.data?.error || "No se pudo abrir el archivo.");
@@ -233,8 +233,10 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
   };
 
   const handleBulkDownload = async () => {
-    const paths = Array.from(selected);
-    if (paths.length === 0) return;
+    // Path + id de cada tildado: el server valida con el path y baja con el id, que es lo único que
+    // no depende de cómo se llame el archivo (ver `dropboxAPI.downloadZip`).
+    const items = entries.filter((e) => selected.has(e.path)).map((e) => ({ path: e.path, id: e.id }));
+    if (items.length === 0) return;
     if (excedePeso) {
       sweetAlert.error(
         "La selección pesa demasiado",
@@ -244,7 +246,7 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
     }
     setDescargandoZip(true);
     try {
-      const blob = await dropboxAPI.downloadZip(paths, true);
+      const blob = await dropboxAPI.downloadZip(items, true);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
