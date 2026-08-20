@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name         WeProdu — Validar obras sociales en ARCA (auto)
 // @namespace    weprodu
-// @version      2.4.0
+// @version      2.5.0
 // @description  Puente automático WeProdu <-> ARCA. WeProdu manda la lista de CUIL, el script la valida en ARCA sola y devuelve los RNOS a WeProdu. No confirma altas. No guarda clave fiscal.
 // @match        http://localhost:5173/*
 // @match        https://autolab.fun/*
-// @match        https://serviciossegsoc.afip.gob.ar/tramites_con_clave_fiscal/*/Contribuyente/RelacionLaboral/Altas.aspx*
+// @match        https://serviciossegsoc.afip.gob.ar/tramites_con_clave_fiscal/*
+// @match        https://auth.afip.gob.ar/*
+// @match        https://portalcf.cloud.afip.gob.ar/*
 // @updateURL    https://autolab.fun/scripts/weprodu-obra-social.user.js
 // @downloadURL  https://autolab.fun/scripts/weprodu-obra-social.user.js
 // @grant        GM_setValue
@@ -64,8 +66,19 @@
 (function () {
   'use strict';
 
-  var VERSION = '2.4.0';
+  var VERSION = '2.5.0';
   var ARCA_HOST = 'serviciossegsoc.afip.gob.ar';
+  /*
+    Los otros dos hosts del camino. Antes el script SOLO corría en Altas.aspx, y con la sesión caída
+    ARCA no te deja ahí: te rebota a FinSession.aspx ("ingrese con su clave fiscal"), una pantalla
+    donde el script no existía. Resultado: apretabas "Validar", se abría una pestaña muerta y no
+    pasaba nada más — la cola quedaba sembrada esperando una pantalla que nunca se iba a abrir.
+    Corriendo también en el login y en el portal, el script se encarga del camino de vuelta.
+  */
+  var AUTH_HOST = 'auth.afip.gob.ar';
+  var PORTAL_HOST = 'portalcf.cloud.afip.gob.ar';
+  var ARCA_ALTAS_URL = 'https://serviciossegsoc.afip.gob.ar/tramites_con_clave_fiscal/MiSimplificacion/app/Contribuyente/RelacionLaboral/Altas.aspx';
+  var AFIP_LOGIN_URL = 'https://auth.afip.gob.ar/contribuyente_/login.xhtml';
   var K = {
     queue: 'os_queue', // [{cuil, contractId}]
     orden: 'os_orden', // [cuil]
@@ -75,11 +88,16 @@
     last: 'os_last',
     errores: 'os_errores', // {cuil:true}
     fase: 'os_fase', // '' | 'limpiando' — el Reiniciar final, para no dejar filas cargadas
+    nav: 'os_nav', // {t, n} — saltos automáticos hechos, para no quedar en un loop de redirecciones
   };
   function g(k, d) { try { return GM_getValue(k, d); } catch (e) { return d; } }
   function s(k, v) { try { GM_setValue(k, v); } catch (e) {} }
 
   var isARCA = location.hostname.indexOf(ARCA_HOST) >= 0;
+  var isAuth = location.hostname.indexOf(AUTH_HOST) >= 0;
+  var isPortal = location.hostname.indexOf(PORTAL_HOST) >= 0;
+  /** La pantalla donde el script trabaja de verdad. El resto del recorrido es solo llegar hasta acá. */
+  function enAltas() { return /RelacionLaboral\/Altas\.aspx/i.test(location.pathname); }
 
   /*
     ======================= LA FRONTERA DEL SANDBOX =======================
@@ -460,9 +478,79 @@
     return d.length === 11 ? d.slice(0, 2) + '-' + d.slice(2, 10) + '-' + d.slice(10) : '';
   }
 
+  // ======================= llegar hasta la pantalla de altas =======================
+  /**
+   * Tope de saltos automáticos.
+   *
+   * Todo el ruteo de abajo son redirecciones, y una cadena de redirecciones puede cerrarse en
+   * círculo — login → portal → Altas → sesión caída → login…—, por ejemplo si la clave fiscal no
+   * tiene habilitado "Simplificación Registral" o si hay que elegir a qué empresa se representa.
+   * Sin tope, eso es una pestaña rebotando para siempre. Con tope, el script se rinde y dice qué
+   * hacer a mano, que es lo único útil llegado ese punto.
+   */
+  function puedeNavegar() {
+    var v = g(K.nav, null);
+    var ahora = Date.now();
+    if (!v || typeof v !== 'object' || ahora - (v.t || 0) > 120000) v = { t: ahora, n: 0 };
+    if (v.n >= 6) return false;
+    s(K.nav, { t: v.t, n: v.n + 1 });
+    return true;
+  }
+  function irA(url) {
+    if (!puedeNavegar()) return false;
+    setTimeout(function () { location.href = url; }, 900); // que el cartel se alcance a leer
+    return true;
+  }
+  function faltanCuantos() {
+    var orden = g(K.orden, []), hechos = g(K.hechos, {});
+    return orden.filter(function (c) { return !(c in hechos); }).length;
+  }
+  function rendirse(quePasa) {
+    badge(
+      '⚠ ' + quePasa + '<br><span style="color:#8b949e">Entrá a mano a <b>Simplificación Registral → Registrar Nuevas Altas</b> (si representás a varias empresas, elegí una: la obra social se consulta por CUIL, sirve cualquiera).<br>' +
+        'Quedan ' + faltanCuantos() + ' — apenas llegues sigo solo.</span>',
+      '#d29922',
+    );
+  }
+
+  /**
+   * A dónde ir según dónde cayó la pestaña.
+   *
+   * El disparo desde WeProdu abre Altas.aspx directo, que es lo correcto cuando la sesión de ARCA
+   * está viva. Cuando no lo está —el caso normal si hace rato que no se entra— ARCA rebota a
+   * FinSession, y a partir de ahí este ruteo lleva solo hasta el login y de vuelta. La cola no se
+   * toca en ningún momento: sobrevive al relogin y retoma donde quedó.
+   */
+  function rutearARCA() {
+    if (isARCA && enAltas() && !sesionExpirada()) {
+      s(K.nav, { t: Date.now(), n: 0 }); // llegamos: el presupuesto de saltos se renueva
+      procesarARCA();
+      return;
+    }
+    // Sin tanda en curso no se navega nada: nadie pidió ir a ningún lado.
+    if (!g(K.active, false) && g(K.fase, '') !== 'limpiando') return;
+
+    if (isAuth) {
+      badge('🔑 Entrá con tu clave fiscal.<br><span style="color:#8b949e">Cuando estés adentro sigo solo con las ' + faltanCuantos() + ' que faltan. No leo ni guardo tu clave.</span>', '#1f6feb');
+      return;
+    }
+    if (isPortal) {
+      if (!irA(ARCA_ALTAS_URL)) return rendirse('No pude entrar solo a la pantalla de altas.');
+      badge('✅ Sesión iniciada — voy a <b>Registrar Nuevas Altas</b>…', '#1f6feb');
+      return;
+    }
+    // ARCA, pero fuera de Altas (FinSession, el menú, una pantalla intermedia).
+    if (sesionExpirada()) {
+      if (!irA(AFIP_LOGIN_URL)) return rendirse('La sesión de ARCA se venció y no pude volver solo al login.');
+      badge('⏸ Se venció la sesión de ARCA — te llevo a iniciar sesión…<br><span style="color:#8b949e">Quedan ' + faltanCuantos() + '. Retomo apenas entres.</span>', '#d29922');
+      return;
+    }
+    if (!irA(ARCA_ALTAS_URL)) rendirse('No pude entrar solo a la pantalla de altas.');
+  }
+
   // ======================= arranque =======================
-  if (isARCA) {
-    setTimeout(procesarARCA, 400); // dar tiempo a que ARCA pinte la obra social precompletada
+  if (isARCA || isAuth || isPortal) {
+    setTimeout(rutearARCA, 400); // dar tiempo a que ARCA pinte la obra social precompletada
   } else {
     initWeprodu();
   }

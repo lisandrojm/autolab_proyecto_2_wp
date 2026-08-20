@@ -568,6 +568,9 @@ const ObraSocialCell: React.FC<{
  * aplicar se saltean las filas donde esa empresa no está habilitada (se informa cuántas quedaron
  * afuera en vez de fallar en silencio).
  */
+/** Valor del select para DESASIGNAR: no es el id de ninguna empresa, es la ausencia de una. */
+const SIN_EMPRESA_MASIVO = '__sin_empresa__';
+
 const AsignarEmpresaMasivo: React.FC<{
   campo: 'contrato' | 'release';
   /** Filas sobre las que se aplica (las tildadas). Vacío = control visible pero inactivo. */
@@ -596,36 +599,59 @@ const AsignarEmpresaMasivo: React.FC<{
 
   const aplicar = async () => {
     if (!empresaId) return;
-    const nombre = opciones.find((o) => o.id === empresaId)?.label || '';
-    const aplicables = filas.filter((r) => ((campo === 'contrato' ? r.contratoEmpresas : r.releaseEmpresas) || []).some((e) => e.id === empresaId));
+    const quitando = empresaId === SIN_EMPRESA_MASIVO;
+    const nombre = quitando ? '' : opciones.find((o) => o.id === empresaId)?.label || '';
+    // Quitar aplica a las filas que HOY tienen una asignada; asignar, a las que tengan esa empresa
+    // habilitada en su proyecto. En los dos casos el resto se saltea y se dice cuántas fueron.
+    const aplicables = quitando
+      ? filas.filter((r) => !!(campo === 'contrato' ? r.empresaContratoId : r.empresaReleaseId))
+      : filas.filter((r) => ((campo === 'contrato' ? r.contratoEmpresas : r.releaseEmpresas) || []).some((e) => e.id === empresaId));
     const salteadas = filas.length - aplicables.length;
     if (aplicables.length === 0) {
-      sweetAlert.error('No se puede aplicar', `Ninguno de los contratos elegidos tiene habilitada "${nombre}" en su proyecto.`);
+      if (quitando) sweetAlert.error('No hay nada que quitar', `Ninguno de los contratos elegidos tiene ${label} asignada.`);
+      else sweetAlert.error('No se puede aplicar', `Ninguno de los contratos elegidos tiene habilitada "${nombre}" en su proyecto.`);
       return;
     }
-    const conf = await sweetAlert.confirm(
-      `¿Asignar ${label}?`,
-      `Se va a poner "${nombre}" como ${label} en ${aplicables.length} contrato(s).${salteadas > 0 ? ` Se saltean ${salteadas} porque su proyecto no tiene esa empresa habilitada.` : ''}`,
-      'Sí, asignar',
-    );
+    const conf = quitando
+      ? await sweetAlert.confirm(
+          `¿Quitar la ${label}?`,
+          `Se va a dejar SIN ${label} a ${aplicables.length} contrato(s).${salteadas > 0 ? ` Se saltean ${salteadas} que no tienen ninguna asignada.` : ''}${
+            campo === 'contrato'
+              ? ' Ojo: eso borra también lo que sale del padrón de esa empleadora — Sucursal, Actividad y la validación de la Obra Social, que vuelve a quedar SIN VALIDAR—, y esos contratos dejan de poder entrar en el TXT.'
+              : ''
+          }`,
+          'Sí, quitar',
+        )
+      : await sweetAlert.confirm(
+          `¿Asignar ${label}?`,
+          `Se va a poner "${nombre}" como ${label} en ${aplicables.length} contrato(s).${salteadas > 0 ? ` Se saltean ${salteadas} porque su proyecto no tiene esa empresa habilitada.` : ''}`,
+          'Sí, asignar',
+        );
     if (!conf.isConfirmed) return;
 
     setAplicando(true);
     const patches: { row: ContractOverviewRow; patch: Partial<ContractOverviewRow> }[] = [];
     let fallidas = 0;
+    // Por qué falló la PRIMERA: sin esto el error del server se perdía y la barra decía "20 fallaron"
+    // sin decir de qué, que se lee como que el botón no anda.
+    let motivo = '';
+    // El server borra la asignación con string vacío: es el mismo valor que manda el select de la fila.
+    const valor = quitando ? '' : empresaId;
     for (const r of aplicables) {
       try {
-        if (campo === 'contrato') await projectsAPI.updateContratoEmpresa(r.projectId, r.userId, r.contractIndex, empresaId);
-        else await projectsAPI.updateReleaseEmpresa(r.projectId, r.userId, r.contractIndex, empresaId);
-        patches.push({ row: r, patch: parcheEmpresa(campo, empresaId, nombre) });
-      } catch {
+        if (campo === 'contrato') await projectsAPI.updateContratoEmpresa(r.projectId, r.userId, r.contractIndex, valor);
+        else await projectsAPI.updateReleaseEmpresa(r.projectId, r.userId, r.contractIndex, valor);
+        patches.push({ row: r, patch: parcheEmpresa(campo, valor, nombre) });
+      } catch (e: any) {
         fallidas++;
+        if (!motivo) motivo = e?.response?.data?.error || e?.message || '';
       }
     }
     setAplicando(false);
     onAplicado(patches);
     setEmpresaId('');
-    if (fallidas > 0) sweetAlert.error('Se asignaron con errores', `${patches.length} actualizados, ${fallidas} fallaron.`);
+    if (fallidas > 0) sweetAlert.error('Se actualizaron con errores', `${patches.length} actualizados, ${fallidas} fallaron.${motivo ? ` El primero falló por: ${motivo}` : ''}`);
+    else if (quitando) sweetAlert.success('Listo', `${patches.length} contrato(s) quedaron sin ${label}.`);
     else sweetAlert.success('Listo', `${patches.length} contrato(s) actualizados con "${nombre}".`);
   };
 
@@ -641,6 +667,10 @@ const AsignarEmpresaMasivo: React.FC<{
         className="text-xs rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/40 disabled:opacity-40 disabled:cursor-not-allowed"
       >
         <option value="">{label}...</option>
+        {/* Quitar en masa, la contracara de asignar: el select de cada fila ya ofrece «Sin empresa»
+            y hacerlo de a una para corregir una asignación equivocada era el mismo trabajo que la
+            barra existe para evitar. Va primero y separado por eso: no es una empresa más. */}
+        <option value={SIN_EMPRESA_MASIVO}>Sin {label}</option>
         {opciones.map((o) => (
           <option key={o.id} value={o.id}>
             {o.label}
@@ -651,11 +681,30 @@ const AsignarEmpresaMasivo: React.FC<{
         type="button"
         onClick={aplicar}
         disabled={inhabilitado || !empresaId || aplicando}
-        title={bloqueado || (sinSeleccion ? `Tildá contratos para asignarles la ${label}` : empresaId ? `Asignar a ${filas.length} contrato(s)` : 'Elegí una empresa')}
+        title={
+          bloqueado ||
+          (sinSeleccion
+            ? `Tildá contratos para asignarles la ${label}`
+            : empresaId === SIN_EMPRESA_MASIVO
+              ? `Dejar sin ${label} a ${filas.length} contrato(s)`
+              : empresaId
+                ? `Asignar a ${filas.length} contrato(s)`
+                : 'Elegí una empresa')
+        }
         className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold bg-gray-700 text-white hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
       >
         <FontAwesomeIcon icon={aplicando ? faSpinner : faCheck} spin={aplicando} className="h-3 w-3" />
         Aplicar
+      </button>
+      {/* El «cómo se usa», en un ⓘ y no escrito al lado: el texto ocupaba media barra para decir
+          siempre lo mismo, y una vez que hay filas tildadas ya no hacía falta. */}
+      <button
+        type="button"
+        title={`Tildá contratos en la lista, elegí una empresa acá y tocá «Aplicar»: se le pone esa ${label} a todos los tildados de una. Con «Sin ${label}» se los deja sin ella.`}
+        aria-label={`Cómo asignar la ${label} en masa`}
+        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0"
+      >
+        <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
       </button>
     </div>
   );
@@ -1389,9 +1438,9 @@ export const ContractBulkAfipTab: React.FC<{
   const bloqueoPorValidacion = validandoArca ? 'Hay una validación de obras sociales en curso: esperá a que termine para hacer otra acción masiva.' : undefined;
   const asignacionMasivaEmpresa = (
     <div className="flex flex-wrap items-center gap-2">
-      <span className={`text-xs ${seleccionados.length > 0 ? 'text-gray-500 dark:text-gray-400' : 'text-gray-400 dark:text-gray-500'}`}>
-        {seleccionados.length > 0 ? `${seleccionados.length} seleccionado(s)` : 'Tildá contratos para asignar Empresa'}
-      </span>
+      {/* Solo el dato que cambia. El "tildá contratos para asignar Empresa" pasó al ⓘ de cada
+          control: era una instrucción fija ocupando lugar en una barra que ya va apretada. */}
+      {seleccionados.length > 0 && <span className="text-xs text-gray-500 dark:text-gray-400">{seleccionados.length} seleccionado(s)</span>}
       <AsignarEmpresaMasivo campo="contrato" filas={seleccionados.map((x) => x.row)} filasParaOpciones={filtered.map((x) => x.row)} bloqueado={bloqueoPorValidacion} onAplicado={aplicarPatchesEmpresa} />
       <AsignarEmpresaMasivo campo="release" filas={seleccionados.map((x) => x.row)} filasParaOpciones={filtered.map((x) => x.row)} bloqueado={bloqueoPorValidacion} onAplicado={aplicarPatchesEmpresa} />
     </div>
@@ -1515,6 +1564,23 @@ export const ContractBulkAfipTab: React.FC<{
               <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60">
                 <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3" />
                 {validandoArca}
+                {/*
+                  * Salida de emergencia. La corrida se da por terminada cuando la extensión avisa
+                  * desde la pestaña de ARCA; si esa pestaña se cierra —o la corrida nunca llega a
+                  * contestar— este estado no se apaga nunca, y como bloquea el resto de las acciones
+                  * masivas dejaba la pantalla entera trabada sin forma de destrabarla salvo
+                  * recargando. Esto solo deja de esperar: no cancela nada en ARCA ni borra lo que ya
+                  * se haya guardado.
+                  */}
+                <button
+                  type="button"
+                  onClick={() => setValidandoArca('')}
+                  title="Dejar de esperar esta corrida y destrabar las acciones masivas. Usalo si cerraste la pestaña de ARCA o si quedó colgada: no cancela lo que ARCA ya haya hecho ni borra lo guardado."
+                  aria-label="Dejar de esperar la validación"
+                  className="ml-0.5 text-blue-400 hover:text-blue-700 dark:hover:text-blue-200 transition-colors"
+                >
+                  <FontAwesomeIcon icon={faXmark} className="h-3 w-3" />
+                </button>
               </span>
             )}
             {/*

@@ -238,7 +238,10 @@ export const CampoObraSocial: React.FC<{
             <button
               type="button"
               onClick={empezar}
-              className="shrink-0 inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-[12.5px] font-semibold bg-blue-600 text-white hover:bg-blue-700"
+              /* `self-center`: la banda crece con el texto de «Qué va a quedar» —que envuelve en dos
+                 renglones— y el botón, alineado arriba con el resto, quedaba colgando de la primera
+                 línea. Centrado, queda a la altura del bloque que explica lo que va a validar. */
+              className="shrink-0 self-center inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-[12.5px] font-semibold bg-blue-600 text-white hover:bg-blue-700"
             >
               Validar en ARCA
               <FontAwesomeIcon icon={faChevronRight} className="h-2.5 w-2.5" />
