@@ -9,8 +9,19 @@ import { getTenantDropboxConfig, verifyAccount, listFolder, getTemporaryLink, do
 import { escanearTenantAhora, getEscaneoConfig, setEscaneoIntervalo, MIN_INTERVAL_MINUTES, MAX_INTERVAL_MINUTES } from "../services/estadoDropboxCronService.js";
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
-// Límites de la descarga masiva (ZIP): evitan saturar la memoria del server.
-const ZIP_MAX_FILES = 50;
+/*
+  Límite de la descarga masiva (ZIP): el PESO, no la cantidad.
+  
+  Había además un tope de 50 archivos. Se sacó: no protegía de nada que el peso no cubriera ya —el ZIP
+  se arma entero en memoria, así que lo que puede tumbar al server son los bytes— y en cambio frenaba
+  el caso normal, bajar la carpeta de un mes completa (129 altas de ~280 KB son 36 MB, holgadamente
+  adentro del tope). Partir la descarga en tres tandas de 50 no hacía el server más seguro; hacía el
+  trabajo más largo.
+  
+  El peso sí se sigue mirando, y se corta apenas se pasa: los archivos se bajan de a uno y el
+  acumulado se chequea en cada vuelta, así que una selección enorme se rechaza sin llegar a juntarla
+  entera en memoria.
+*/
 const ZIP_MAX_TOTAL_BYTES = 200 * 1024 * 1024; // 200 MB descomprimidos
 router.use(requireTenant, authenticateToken);
 const isAdmin = (req) => (req.user?.roles || []).some((r) => ["admin", "superadmin"].includes(r.toLowerCase()));
@@ -170,10 +181,6 @@ router.post("/download-zip", async (req, res) => {
             res.status(400).json({ error: "No se seleccionó ningún archivo." });
             return;
         }
-        if (paths.length > ZIP_MAX_FILES) {
-            res.status(400).json({ error: `Demasiados archivos: máximo ${ZIP_MAX_FILES} por descarga.` });
-            return;
-        }
         if (!full && paths.some((p) => !isWithinRoot(cfg, p))) {
             res.status(403).json({ error: "Alguna ruta está fuera de la carpeta permitida." });
             return;
@@ -185,7 +192,7 @@ router.post("/download-zip", async (req, res) => {
             const buf = await downloadFileContent(String(req.tenantObjectId), cfg, p);
             total += buf.length;
             if (total > ZIP_MAX_TOTAL_BYTES) {
-                res.status(400).json({ error: `La selección supera el máximo de ${Math.round(ZIP_MAX_TOTAL_BYTES / 1024 / 1024)} MB. Elegí menos archivos.` });
+                res.status(400).json({ error: `La selección supera el máximo de ${Math.round(ZIP_MAX_TOTAL_BYTES / 1024 / 1024)} MB. Elegí menos archivos (no hay tope de cantidad: lo que se mide es el peso).` });
                 return;
             }
             let name = p.split("/").pop() || "archivo";

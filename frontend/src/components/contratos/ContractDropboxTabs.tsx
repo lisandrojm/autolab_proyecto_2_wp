@@ -147,7 +147,6 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
 
   /** "enviado_firma" queda de solo lectura: la solicitud ya está en curso en Dropbox Sign. */
   const permiteAcciones = tipo !== "enviado_firma";
-  const MAX_ZIP_FILES = 50; // debe coincidir con ZIP_MAX_FILES del backend
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -221,10 +220,6 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
   const handleBulkDownload = async () => {
     const paths = Array.from(selected);
     if (paths.length === 0) return;
-    if (paths.length > MAX_ZIP_FILES) {
-      sweetAlert.error("Demasiados archivos", `Máximo ${MAX_ZIP_FILES} archivos por descarga. Deseleccioná algunos.`);
-      return;
-    }
     setDescargandoZip(true);
     try {
       const blob = await dropboxAPI.downloadZip(paths, true);

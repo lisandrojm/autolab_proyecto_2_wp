@@ -44,7 +44,6 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const MAX_ZIP_FILES = 50; // debe coincidir con ZIP_MAX_FILES del backend
 
   // Form de conexión (solo admin, cuando no está conectado)
   const [form, setForm] = useState({ appKey: "", appSecret: "", refreshToken: "", rootPath: "/HelloSign" });
@@ -133,10 +132,6 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
   const handleBulkDownload = async () => {
     const paths = Array.from(selected);
     if (paths.length === 0) return;
-    if (paths.length > MAX_ZIP_FILES) {
-      sweetAlert.error("Demasiados archivos", `Máximo ${MAX_ZIP_FILES} archivos por descarga. Deseleccioná algunos.`);
-      return;
-    }
     setBusy(true);
     try {
       const blob = await dropboxAPI.downloadZip(paths, full);
