@@ -25,15 +25,33 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 
 const ZIP_MAX_TOTAL_BYTES = 200 * 1024 * 1024; // 200 MB descomprimidos
 router.use(requireTenant, authenticateToken);
 const isAdmin = (req) => (req.user?.roles || []).some((r) => ["admin", "superadmin"].includes(r.toLowerCase()));
-// Traduce errores de Dropbox a algo legible (cubre errores RPC y de OAuth).
+/**
+ * Traduce errores de Dropbox a algo legible (cubre errores RPC, de OAuth y de contenido).
+ *
+ * El decodificado del Buffer no es cosmético. Las llamadas de contenido —`/files/download`— piden
+ * `responseType: "arraybuffer"`, así que cuando Dropbox contesta un error, axios entrega el cuerpo
+ * como Buffer y no como JSON: `error_summary` queda adentro, sin leer, y el mensaje se degradaba al
+ * genérico de axios — «Request failed with status code 409», que no dice absolutamente nada. El
+ * motivo real (`path/not_found`, `path/restricted_content`, …) estuvo siempre ahí.
+ */
 function dropboxError(res, error) {
-    const dbx = error?.response?.data;
+    let dbx = error?.response?.data;
+    if (Buffer.isBuffer(dbx) || dbx instanceof ArrayBuffer) {
+        const txt = Buffer.from(dbx).toString("utf8");
+        try {
+            dbx = JSON.parse(txt);
+        }
+        catch {
+            dbx = txt;
+        }
+    }
     const oauth = dbx?.error_description || (typeof dbx?.error === "string" ? dbx.error : "");
     const summary = dbx?.error_summary || oauth || (typeof dbx === "string" ? dbx : "") || error?.message || "Error de Dropbox";
     // Pista para el error más común: pegar un access token en vez de un refresh token.
     const hint = oauth === "invalid_grant" ? " (¿el refresh token es válido y de tipo offline? no un access token)" : oauth === "invalid_client" ? " (revisá App key / App secret)" : "";
-    console.error("[Dropbox]", summary, JSON.stringify(dbx || {}));
-    res.status(400).json({ error: `Dropbox: ${summary}${hint}` });
+    const archivo = error?.__archivo ? ` — al bajar «${error.__archivo}»` : "";
+    console.error("[Dropbox]", summary, archivo, JSON.stringify(dbx || {}));
+    res.status(400).json({ error: `Dropbox: ${summary}${archivo}${hint}` });
 }
 // GET /dropbox/status - ¿está conectado este tenant?
 router.get("/status", async (req, res) => {
@@ -189,7 +207,16 @@ router.post("/download-zip", async (req, res) => {
         const used = new Map(); // evita colisiones de nombre en el ZIP
         let total = 0;
         for (const p of paths) {
-            const buf = await downloadFileContent(String(req.tenantObjectId), cfg, p);
+            // Qué archivo falló, no solo que "falló". Con 34 seleccionados, un error sin nombre deja al
+            // operador sin nada que hacer salvo probar de a uno hasta encontrarlo.
+            let buf;
+            try {
+                buf = await downloadFileContent(String(req.tenantObjectId), cfg, p);
+            }
+            catch (e) {
+                e.__archivo = p.split("/").pop() || p;
+                throw e;
+            }
             total += buf.length;
             if (total > ZIP_MAX_TOTAL_BYTES) {
                 res.status(400).json({ error: `La selección supera el máximo de ${Math.round(ZIP_MAX_TOTAL_BYTES / 1024 / 1024)} MB. Elegí menos archivos (no hay tope de cantidad: lo que se mide es el peso).` });
