@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faLock, faSpinner, faCheck, faCopy, faArrowUpRightFromSquare, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { faLock, faSpinner, faCheck, faCopy, faArrowUpRightFromSquare, faChevronRight, faTrash, faRotateRight } from '@fortawesome/free-solid-svg-icons';
 import { ContractOverviewRow } from '../../api/users';
 import { projectsAPI } from '../../api/projects';
 import { sweetAlert } from '../../utils/sweetAlert';
@@ -162,65 +162,104 @@ export const CampoObraSocial: React.FC<{
 
   return (
     <div className="mb-3">
-      <div className="flex items-center justify-between gap-2 mb-1">
-        <span className="text-[12px] text-gray-600 dark:text-gray-400 flex items-center gap-1.5 min-w-0">
-          <span className="truncate">Obra Social</span>
-          <InfoCampo campo="rnos" />
-        </span>
-        <span className="shrink-0 text-[9.5px] px-1.5 py-px rounded border tracking-wide bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/70">40–45</span>
-      </div>
+      {/*
+        * Banda de ancho completo, con el mismo formato que la del Empleador.
+        *
+        * Estaba como un campo más de la primera columna y no entraba: el nombre de la obra social
+        * mide hasta 40 caracteres y quedaba cortado, con la línea de estado —origen, fecha, acciones—
+        * apretada abajo en tres renglones. Es además el único campo del formulario que tiene un
+        * trámite propio; al ancho completo, ese trámite tiene lugar y el trash cae donde el ojo ya lo
+        * busca, alineado con el de Empleador.
+        */}
+      <div className={`rounded-lg border px-3 py-2.5 ${validada ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900/40'}`}>
+        <div className="flex items-start gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-5 gap-y-2 flex-1 min-w-0">
+            <div className="min-w-0">
+              <span className="block text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
+                Obra Social
+                <InfoCampo campo="rnos" />
+                <span className="text-[9.5px] px-1.5 py-px rounded border tracking-wide bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/70">40–45</span>
+              </span>
+              <span className="block text-[12.5px] text-gray-800 dark:text-gray-200 truncate mt-0.5">
+                {validada ? (
+                  <span className="flex items-baseline gap-2 min-w-0">
+                    <FontAwesomeIcon icon={faLock} className="h-2.5 w-2.5 text-gray-400 self-center shrink-0" />
+                    <span className="font-mono font-semibold shrink-0">{soloDigitos(valores.rnos)}</span>
+                    <span className="truncate">{valores.nombreObraSocial}</span>
+                  </span>
+                ) : (
+                  <span className="text-gray-400 dark:text-gray-500">— sin validar</span>
+                )}
+              </span>
+            </div>
 
-      {/* Sin validar NO va en el ámbar de "Falta": no es un dato que alguien olvidó tipear, es un
-          trámite que todavía no se hizo. El borde neutro y el botón dicen eso. */}
-      <div className={`rounded-md border px-2.5 py-1.5 flex items-center justify-between gap-2 ${validada ? 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900/40' : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/40'}`}>
-        <span className="min-w-0 flex items-baseline gap-2">
-          {validada ? (
-            <>
-              <FontAwesomeIcon icon={faLock} className="h-2.5 w-2.5 text-gray-400 self-center shrink-0" />
-              <span className="font-mono text-[12.5px] text-gray-900 dark:text-gray-100 shrink-0">{soloDigitos(valores.rnos)}</span>
-              <span className="text-[12px] text-gray-500 dark:text-gray-400 truncate">{valores.nombreObraSocial}</span>
-            </>
-          ) : (
-            <span className="text-[12.5px] text-gray-400 dark:text-gray-500">— sin validar</span>
-          )}
-        </span>
-        {!validada && !!row.empresaContratoId && (
-          <button type="button" onClick={empezar} className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30">
-            Validar
-            <FontAwesomeIcon icon={faChevronRight} className="h-2.5 w-2.5" />
-          </button>
-        )}
-      </div>
+            <div className="min-w-0 md:col-span-2">
+              <span className="block text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">{validada ? 'Estado' : 'Qué va a quedar'}</span>
+              <span className="block text-[12.5px] text-gray-600 dark:text-gray-400 mt-0.5">
+                {validada ? (
+                  <span className="flex items-center gap-2 flex-wrap">
+                    <span>
+                      {row.obraSocialNoFigura ? <>validada · ARCA sin afiliación → del {delConvenio}</> : <>validada en ARCA</>}
+                      {fecha ? ` · ${fecha}` : ''}
+                    </span>
+                    {/* Ícono y no texto: al lado del trash, dos acciones escritas competían por la
+                        lectura de una línea que ya dice el estado. La flecha circular es la de
+                        "volver a consultar" en cualquier interfaz; el rótulo va en el hover. */}
+                    <button
+                      type="button"
+                      disabled={trabajando}
+                      onClick={reValidar}
+                      title="Re-validar: vuelve a consultar el CUIL en ARCA"
+                      aria-label="Re-validar en ARCA"
+                      className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 transition-colors"
+                    >
+                      <FontAwesomeIcon icon={faRotateRight} className="h-3 w-3" />
+                    </button>
+                  </span>
+                ) : !row.empresaContratoId ? (
+                  <>elegí la empleadora para poder validarla</>
+                ) : valores.rnosSugerido ? (
+                  <>
+                    por defecto iría <span className="font-mono">{soloDigitos(valores.rnosSugerido)}</span> · {valores.nombreObraSocialSugerida} ({delConvenio})
+                  </>
+                ) : (
+                  <>sin validar el contrato no entra en el TXT</>
+                )}
+              </span>
+            </div>
+          </div>
 
-      {/* La nota de referencia SOLO antes de validar: después el valor ya está puesto y repetirla
-          sobra. Dice qué va a pasar; no es el valor. */}
-      {!validada ? (
-        <p className="text-[10.5px] text-gray-500 dark:text-gray-500 mt-1 px-0.5 leading-snug">
-          {!row.empresaContratoId ? (
-            <>elegí la empleadora para poder validarla</>
-          ) : valores.rnosSugerido ? (
-            <>
-              por defecto iría <span className="font-mono">{soloDigitos(valores.rnosSugerido)}</span> · {valores.nombreObraSocialSugerida} ({delConvenio})
-            </>
-          ) : (
-            <>sin validar el contrato no entra en el TXT</>
+          {/*
+            * La acción que destraba el campo, con el mismo peso que «Elegir empleadora»: botón azul,
+            * a la derecha, en la misma posición. Eran las dos cosas que hay que hacer para que el
+            * contrato entre al TXT, y una escrita como link se leía como opcional al lado de la otra.
+            */}
+          {!validada && !!row.empresaContratoId && !abierto && (
+            <button
+              type="button"
+              onClick={empezar}
+              className="shrink-0 inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-[12.5px] font-semibold bg-blue-600 text-white hover:bg-blue-700"
+            >
+              Validar en ARCA
+              <FontAwesomeIcon icon={faChevronRight} className="h-2.5 w-2.5" />
+            </button>
           )}
-        </p>
-      ) : (
-        <p className="text-[10.5px] text-gray-500 dark:text-gray-500 mt-1 px-0.5 leading-snug flex items-center gap-1.5 flex-wrap">
-          <span>
-            {row.obraSocialNoFigura ? <>validada · ARCA sin afiliación → del {delConvenio}</> : <>validada en ARCA</>}
-            {fecha ? ` · ${fecha}` : ''}
-          </span>
-          <button type="button" disabled={trabajando} onClick={reValidar} className="font-semibold text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50">
-            Re-validar
-          </button>
-          <span aria-hidden>·</span>
-          <button type="button" disabled={trabajando} onClick={quitar} title="Borra la validación y deja el campo sin validar, sin ir a ARCA" className="font-semibold text-red-600 dark:text-red-400 hover:underline disabled:opacity-50">
-            Quitar
-          </button>
-        </p>
-      )}
+
+          {/* Trash a la derecha, alineado con el de Empleador. Solo con algo que borrar. */}
+          {validada && (
+            <button
+              type="button"
+              onClick={quitar}
+              disabled={trabajando}
+              title="Quitar la obra social: vuelve a quedar sin validar"
+              aria-label="Quitar la obra social de este contrato"
+              className="shrink-0 p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+            >
+              <FontAwesomeIcon icon={trabajando ? faSpinner : faTrash} spin={trabajando} className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* El flujo de validar: aparece al pedirlo, no como sección permanente. */}
       {abierto && !validada && (

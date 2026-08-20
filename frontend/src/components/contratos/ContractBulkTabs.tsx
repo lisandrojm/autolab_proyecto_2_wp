@@ -280,10 +280,10 @@ const EstadoImpositivoCell: React.FC<{ record: ContractOverviewRow; contratoFram
 /**
  * Parche de fila al cambiar una empresa.
  *
- * Quitar la Empresa CONTRATO arrastra la obra social: validarla significa "ARCA, consultado con el
- * CUIT de esta empleadora, dice esto", y sin empleadora esa afirmación no tiene sujeto. El server la
- * borra; acá se refleja, o la fila queda mostrando un código en verde y con candado que ya no existe
- * en la base — y al recargar aparecería vacío sin que nadie entienda por qué.
+ * Quitar la Empresa CONTRATO arrastra los tres datos que salen del padrón de ESE CUIT: sucursal,
+ * actividad y la validación de la obra social. Sin empleadora ninguno tiene sujeto. El server los
+ * borra; acá se refleja, o la fila queda mostrando valores que ya no existen en la base — y al
+ * recargar aparecerían vacíos sin que nadie entienda por qué.
  *
  * La Empresa RELEASE no toca nada: no interviene en el alta.
  */
@@ -292,7 +292,18 @@ export const parcheEmpresa = (campo: 'contrato' | 'release', empresaId: string, 
     ? {
         empresaContratoId: empresaId,
         nombre_empresa_contrato: label,
-        ...(empresaId ? {} : { osId: null, obraSocialOrigen: '' as const, obraSocialConstatadaEn: '' as const, obraSocialConstatadaEl: '', obraSocialNoFigura: false, obraSocialBloqueada: false }),
+        ...(empresaId
+          ? {}
+          : {
+              sucursalArcaId: null,
+              actividadArca: '',
+              osId: null,
+              obraSocialOrigen: '' as const,
+              obraSocialConstatadaEn: '' as const,
+              obraSocialConstatadaEl: '',
+              obraSocialNoFigura: false,
+              obraSocialBloqueada: false,
+            }),
       }
     : { empresaReleaseId: empresaId, nombre_empresa_release: label };
 
@@ -504,16 +515,29 @@ const ObraSocialCell: React.FC<{ record: ContractOverviewRow; valores: AfipValue
       </button>
       {/* Validar desde la propia fila: sin esto había que abrir el modal para arrancar un trámite que
           no necesita mirar nada más. Solo con empleadora: la validación del RNOS es por CUIT. */}
-      {estado === 'sin_validar' && !!record.empresaContratoId && (
-        <button
-          type="button"
-          onClick={onValidar}
-          title="Validar la obra social de este contrato contra ARCA"
-          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10.5px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30"
-        >
-          Validar
-        </button>
-      )}
+      {estado === 'sin_validar' &&
+        (record.empresaContratoId ? (
+          <button
+            type="button"
+            onClick={onValidar}
+            title="Validar la obra social de este contrato contra ARCA"
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10.5px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+          >
+            Validar
+          </button>
+        ) : (
+          /* Sin empleadora no hay contra qué validar. Va como INFO y no como texto: el motivo es
+             siempre el mismo y escrito ocupaba en cada fila más que el propio dato de la columna.
+             El ícono ocupa el lugar donde iría «Validar» —se ve que ahí falta algo— y el porqué
+             está a un hover. */
+          <span
+            title="Sin Empresa Contrato no se puede validar la obra social: se valida contra el CUIT de la empleadora. Asignale una empresa al contrato (columna «Empresa Contrato», o en masa tildando filas) y después validá."
+            className="inline-flex items-center text-amber-600 dark:text-amber-400 cursor-help"
+            aria-label="Falta la Empresa Contrato para poder validar la obra social"
+          >
+            <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+          </span>
+        ))}
     </span>
   );
 };
@@ -755,6 +779,7 @@ export const ContractBulkAfipTab: React.FC<{
   const [cargarArcaInfoOpen, setCargarArcaInfoOpen] = useState(false);
   // Explicación del flujo completo: Generar TXT → Cargar en ARCA → sincronización automática.
   const [flujoTxtInfoOpen, setFlujoTxtInfoOpen] = useState(false);
+  const [validarObrasSocialesInfoOpen, setValidarObrasSocialesInfoOpen] = useState(false);
   // Explicación de qué son y de dónde salen los datos que exige la columna "Datos ARCA".
   const [datosAfipInfoOpen, setDatosAfipInfoOpen] = useState(false);
   // Explicación de qué es la columna "Datos CUIT/CUIL" y por qué gatea Validar / Validar ARCA Masivo.
@@ -1308,6 +1333,18 @@ export const ContractBulkAfipTab: React.FC<{
    * asignarles la Empresa en masa porque les faltaba, precisamente, la Empresa.
    */
   const esSeleccionable = useCallback((_row: ImpositivoRow, _result: AfipRowResult): boolean => true, []);
+  /**
+   * Tildada PERO sin empleadora: «Validar obras sociales» la va a omitir.
+   *
+   * Se marca —check en ámbar y aviso en la fila— en vez de bloquear el check: tildar filas sin
+   * empresa es justamente cómo se les asigna una en masa. Sin la marca, tildar 2 y ver «Validar
+   * obras sociales (1)» se leía como que el botón contaba mal.
+   */
+  const omitidaEnValidacion = (r: ContractOverviewRow) => selected.has(rowKey(r)) && !r.empresaContratoId;
+  const tituloCheck = (r: ContractOverviewRow) =>
+    omitidaEnValidacion(r)
+      ? 'Tildada. Sin Empresa Contrato NO entra en «Validar obras sociales» (se valida contra el CUIT de la empleadora); sí entra en la asignación masiva de Empresa y en el TXT.'
+      : 'Seleccionar para las acciones masivas (asignar Empresa, generar TXT, validar en ARCA)';
   const selectableFiltered = useMemo(() => filtered.filter((x) => esSeleccionable(x.row, x.result)), [filtered, esSeleccionable]);
   const allSel = selectableFiltered.length > 0 && selectableFiltered.every((x) => selected.has(rowKey(x.row)));
   const toggleAll = () =>
@@ -1500,14 +1537,19 @@ export const ContractBulkAfipTab: React.FC<{
               type="button"
               disabled={seleccionadosValidables.length === 0}
               onClick={() => (extensionArca ? validarEnArca(seleccionadosValidables) : setLoteObrasSociales(new Set(seleccionadosValidables.map((x) => rowKey(x.row)))))}
+              /* Deshabilitado, el hover tiene que decir el REQUISITO, no solo "tildá algo": la obra
+                 social se consulta con el CUIT de la empleadora, así que sin Empresa Contrato no hay
+                 validación posible. Es el motivo por el que un contrato tildado no suma al contador. */
               title={
                 seleccionados.length === 0
-                  ? 'Tildá los contratos que querés validar'
+                  ? 'Para validar obras sociales, el contrato tiene que tener asignada una Empresa Contrato: la obra social se valida contra el CUIT de la empleadora. Tildá los contratos que ya la tengan y usá este botón.'
                   : seleccionadosValidables.length === 0
-                    ? 'Los contratos tildados no tienen Empresa Contrato. La obra social se valida contra el CUIT de la empleadora: elegila primero (podés hacerlo en masa con el selector de al lado).'
+                    ? 'Ninguno de los contratos tildados tiene Empresa Contrato. Para poder validar la obra social hay que asignarle una empresa al contrato (la validación va contra el CUIT de la empleadora): elegila en la columna «Empresa Contrato» o en masa con el selector de al lado, y después validá.'
                     : extensionArca
                       ? `Validar en ARCA la obra social de ${seleccionadosValidables.length} contrato(s). Se abre ARCA, te logueás y el resto es automático.${
-                          seleccionados.length > seleccionadosValidables.length ? ` Se omiten ${seleccionados.length - seleccionadosValidables.length} sin empleadora.` : ''
+                          seleccionados.length > seleccionadosValidables.length
+                            ? ` Se omiten ${seleccionados.length - seleccionadosValidables.length} contrato(s) tildado(s) sin Empresa Contrato: sin empresa asignada no se puede validar la obra social.`
+                            : ''
                         }`
                       : 'Sin la extensión instalada la validación es manual (copiar/pegar). Instalala desde Configuración → ARCA.'
               }
@@ -1516,9 +1558,14 @@ export const ContractBulkAfipTab: React.FC<{
               <FontAwesomeIcon icon={faStethoscope} className="h-3.5 w-3.5" />
               Validar obras sociales{seleccionadosValidables.length > 0 ? ` (${seleccionadosValidables.length})` : ''}
             </button>
+            {/* Mismo tono que el texto del botón al que acompaña: en azul se leía como otra acción,
+                independiente de «Validar obras sociales», y no como su explicación. */}
+            <button type="button" onClick={() => setValidarObrasSocialesInfoOpen(true)} title="Cómo se validan las obras sociales" className="text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white shrink-0">
+              <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+            </button>
 
-            {/* Separador: lo de arriba edita datos; lo de abajo son las salidas hacia ARCA. */}
-            <span className="hidden sm:block h-6 w-px bg-gray-200 dark:bg-gray-700" />
+            {/* Sin separador: la barra ya envuelve en dos renglones, así que la línea no separaba dos
+                grupos — quedaba colgada al final del primero, pareciendo un elemento roto. */}
 
             {/* Grupo 2 — salidas hacia ARCA: generar el TXT y abrir ARCA. */}
             <button onClick={() => generarTxt(fuenteTxt, nombreArchivoTxt)} disabled={fuenteTxt.every((x) => !x.result.completo)} title={seleccionados.length > 0 ? 'Generar el TXT con los contratos seleccionados (solo los completos)' : 'Generar el TXT con los contratos completos del listado (o marcá algunos con el check)'} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0">
@@ -1596,7 +1643,7 @@ export const ContractBulkAfipTab: React.FC<{
               <div key={`${r._id}-${r.contractIndex}`} className={`bg-white dark:bg-gray-800 rounded-xl border p-4 flex flex-col gap-3 ${selected.has(rowKey(r)) ? 'border-emerald-400 dark:border-emerald-700' : 'border-gray-200 dark:border-gray-700'}`}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3 min-w-0">
-                    <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!esSeleccionable(r, result)} onChange={() => toggleSel(rowKey(r))} title="Seleccionar para las acciones masivas (asignar Empresa, generar TXT, validar en ARCA)" className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0" />
+                    <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!esSeleccionable(r, result)} onChange={() => toggleSel(rowKey(r))} title={tituloCheck(r)} className={`rounded border-gray-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0 ${omitidaEnValidacion(r) ? 'text-amber-500 focus:ring-amber-500' : 'text-emerald-600 focus:ring-emerald-500'}`} />
                     <FontAwesomeIcon icon={faUser} className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0" />
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{r.userName}</p>
@@ -1739,6 +1786,18 @@ export const ContractBulkAfipTab: React.FC<{
                       )}
                     </span>
                   </th>
+                  {/* Pegada a Empresa Contrato: la obra social se valida contra el CUIT de la
+                      empleadora, así que las dos columnas se leen juntas —sin empresa, esta no se
+                      puede resolver—. Antes quedaba después de Sucursal y Actividad y había que
+                      cruzar media grilla para entender por qué una fila no se podía validar. */}
+                  {filterTipo !== 'sin_cuit' && (
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Código RNOS (pos. 40-45). Ordena por estado: primero lo que hay que resolver.">
+                      <button type="button" onClick={() => setOrdenObraSocial((v) => !v)} className={`uppercase tracking-wider font-bold inline-flex items-center gap-1.5 hover:text-gray-700 dark:hover:text-gray-300 ${ordenObraSocial ? 'text-blue-600 dark:text-blue-400' : ''}`}>
+                        Obra Social
+                        <FontAwesomeIcon icon={faSort} className="h-2.5 w-2.5" />
+                      </button>
+                    </th>
+                  )}
                   {filterTipo !== 'sin_cuit' && (
                     <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Sucursal del padrón de ARCA (domicilio de desempeño) con la que se declara el alta">
                       Sucursal
@@ -1747,17 +1806,6 @@ export const ContractBulkAfipTab: React.FC<{
                   {filterTipo !== 'sin_cuit' && (
                     <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Actividad declarada para esa sucursal">
                       Actividad
-                    </th>
-                  )}
-                  {/* Tercera de la familia ARCA, con Sucursal y Actividad: las tres van a posiciones
-                      fijas del registro de 130. Va acá y no al lado de Empresa porque Empresa y CUIT
-                      son el CONTEXTO; esto es un valor que viaja al archivo. */}
-                  {filterTipo !== 'sin_cuit' && (
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Código RNOS (pos. 40-45). Ordena por estado: primero lo que hay que resolver.">
-                      <button type="button" onClick={() => setOrdenObraSocial((v) => !v)} className={`uppercase tracking-wider font-bold inline-flex items-center gap-1.5 hover:text-gray-700 dark:hover:text-gray-300 ${ordenObraSocial ? 'text-blue-600 dark:text-blue-400' : ''}`}>
-                        Obra Social
-                        <FontAwesomeIcon icon={faSort} className="h-2.5 w-2.5" />
-                      </button>
                     </th>
                   )}
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Empresa Release</th>
@@ -1773,7 +1821,7 @@ export const ContractBulkAfipTab: React.FC<{
                 {filtered.map(({ row: r, result }) => (
                   <tr key={`${r._id}-${r.contractIndex}`} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : ''}`}>
                     <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
-                      <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!esSeleccionable(r, result)} onChange={() => toggleSel(rowKey(r))} title="Seleccionar para las acciones masivas (asignar Empresa, generar TXT, validar en ARCA)" className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
+                      <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!esSeleccionable(r, result)} onChange={() => toggleSel(rowKey(r))} title={tituloCheck(r)} className={`rounded border-gray-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${omitidaEnValidacion(r) ? 'text-amber-500 focus:ring-amber-500' : 'text-emerald-600 focus:ring-emerald-500'}`} />
                     </td>
                     <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)] ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
                       {/* Sin CUIT los trámites de ARCA no aplican: la salida es generar los documentos. */}
@@ -1870,22 +1918,22 @@ export const ContractBulkAfipTab: React.FC<{
                     </td>
                     {filterTipo !== 'sin_cuit' && (
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                        <SucursalSelectCell record={r} valores={resolveAfipValues(r, afipCat)} onGuardado={(patch) => aplicarCambio(r, patch)} />
-                      </td>
-                    )}
-                    {filterTipo !== 'sin_cuit' && (
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                        <ActividadSelectCell record={r} valores={resolveAfipValues(r, afipCat)} onGuardado={(patch) => aplicarCambio(r, patch)} />
-                      </td>
-                    )}
-                    {filterTipo !== 'sin_cuit' && (
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <ObraSocialCell
                           record={r}
                           valores={resolveAfipValues(r, afipCat)}
                           onAbrir={() => setDetalleRef({ _id: r._id, contractIndex: r.contractIndex })}
                           onValidar={() => (extensionArca ? validarEnArca([{ row: r }]) : setLoteObrasSociales(new Set([rowKey(r)])))}
                         />
+                      </td>
+                    )}
+                    {filterTipo !== 'sin_cuit' && (
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <SucursalSelectCell record={r} valores={resolveAfipValues(r, afipCat)} onGuardado={(patch) => aplicarCambio(r, patch)} />
+                      </td>
+                    )}
+                    {filterTipo !== 'sin_cuit' && (
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <ActividadSelectCell record={r} valores={resolveAfipValues(r, afipCat)} onGuardado={(patch) => aplicarCambio(r, patch)} />
                       </td>
                     )}
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -2065,6 +2113,29 @@ export const ContractBulkAfipTab: React.FC<{
                 Ir a <strong>Relaciones Laborales → Carga masiva</strong>, donde se sube el archivo TXT con el formato de campos requerido.
               </li>
             </ol>
+          </div>
+        </Modal>
+      )}
+
+      {validarObrasSocialesInfoOpen && (
+        <Modal isOpen={validarObrasSocialesInfoOpen} onClose={() => setValidarObrasSocialesInfoOpen(false)} title="Validar obras sociales" size="sm" zIndex={80}>
+          <div className="space-y-3">
+            <p className="text-sm text-gray-700 dark:text-gray-200">
+              La obra social no se carga a mano: la devuelve ARCA. La consulta se hace con el CUIL de la persona <strong>contra el CUIT de la empleadora</strong> — por eso el contrato necesita tener asignada una <strong>Empresa Contrato</strong> antes de poder validarse.
+            </p>
+            <ol className="text-sm text-gray-600 dark:text-gray-300 space-y-2 list-decimal list-inside">
+              <li>
+                Asigná la <strong>Empresa Contrato</strong>: en la columna de cada fila, o en masa tildando filas y usando el selector «Empresa Contrato…» + <strong>Aplicar</strong>.
+              </li>
+              <li>
+                Tildá los contratos y usá <strong>Validar obras sociales</strong>. El número del botón cuenta solo los que ya tienen empresa: los tildados sin empresa se omiten.
+              </li>
+              <li>Con la extensión de ARCA instalada la corrida es automática (se abre ARCA, te logueás y el resto va solo). Sin extensión, la validación es manual.</li>
+            </ol>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              En la columna <strong>Obra Social</strong> —al lado de Empresa Contrato—, las filas que todavía no tienen empresa muestran un <span className="text-amber-600 dark:text-amber-400 font-semibold">ⓘ ámbar</span> en vez del botón «Validar»: el hover dice qué falta.
+            </p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">Una vez validada, la obra social queda fija (no editable) y el contrato puede entrar en el TXT.</p>
           </div>
         </Modal>
       )}

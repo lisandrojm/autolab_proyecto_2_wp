@@ -117,6 +117,23 @@ export const FormularioArca: React.FC<{
   };
 
   const hayEmpresa = !!row.empresaContratoId;
+  /**
+   * Nada se toca hasta tener empleadora y la obra social validada.
+   *
+   * Es un orden de trabajo impuesto a propósito: los dos primeros datos son los que destraban el
+   * resto —la empleadora define qué sucursales, convenios y obras sociales son elegibles, y la
+   * validación es el único paso que sale de la app— así que llenar los detalles antes lleva a
+   * rehacerlos cuando alguno de los dos cambia.
+   *
+   * El costo, para que sea una decisión y no un descuido: Tipo de Servicio, Modalidad de Contrato y
+   * Modalidad de Liquidación NO dependen de estos dos —salen del TIPO DE CONTRATO y alcanzan a todos
+   * los contratos de ese tipo—, así que quien entre a configurar el tipo desde acá va a encontrarlos
+   * bloqueados por el estado de UN contrato. Se acepta a cambio de que el orden sea uno solo.
+   */
+  const faltaObraSocial = valores.constatacion === 'sin_constatar';
+  const bloqueadoPorPrevios = !hayEmpresa || faltaObraSocial;
+  /** Qué falta, en el mismo orden en que hay que resolverlo. */
+  const motivoBloqueo = !hayEmpresa ? <>se habilita al elegir la empleadora</> : <>se habilita al validar la obra social</>;
   const sucursalElegida = valores.sucursalesDisponibles.find((s) => s._id === row.sucursalArcaId);
 
   // La fecha de fin depende de la modalidad: sin modalidad no se sabe si corresponde.
@@ -135,15 +152,16 @@ export const FormularioArca: React.FC<{
 
   return (
     <>
+      {/* Obra Social va a lo ancho y no en una columna: es el único campo con un trámite propio —el
+          valor lo pone ARCA, no un catálogo— y adentro de una columna no entraban ni el nombre de la
+          obra social ni su línea de estado. Con el mismo formato que la banda de Empleador, el trash
+          queda alineado donde el ojo ya lo busca. */}
+      <CampoObraSocial row={row} valores={valores} onGuardado={onGuardado} />
+
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-5">
         {/* ── Columna 1: relación laboral ─────────────────────────────────────── */}
         <div>
           <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Relación laboral</h4>
-
-          {/* No usa CampoArca: no es un campo que se elige de un catálogo, es uno que se valida
-              contra ARCA. Trae su propio flujo adentro — antes vivía en un panel aparte y el dato
-              quedaba mostrado dos veces, con el valor en un lugar y la acción en otro. */}
-          <CampoObraSocial row={row} valores={valores} onGuardado={onGuardado} />
 
           <CampoArca
             rotulo="Sucursal"
@@ -153,10 +171,10 @@ export const FormularioArca: React.FC<{
             valor={valores.sucursal}
             nombre={sucursalElegida?.domicilio}
             falta={hayEmpresa && !valores.sucursal}
-            enEspera={!hayEmpresa}
+            enEspera={bloqueadoPorPrevios}
             guardando={guardando === 'sucursal'}
             onEditar={() => setAbierto('sucursal')}
-            origen={hayEmpresa ? <>de los domicilios declarados por la empleadora</> : <>se habilita al elegir la empleadora</>}
+            origen={bloqueadoPorPrevios ? motivoBloqueo : <>de los domicilios declarados por la empleadora</>}
           />
 
           <CampoArca
@@ -167,10 +185,10 @@ export const FormularioArca: React.FC<{
             valor={valores.actividad}
             nombre={valores.actividadesDisponibles.find((a) => a.codigo === valores.actividad)?.descripcion}
             falta={!!valores.sucursal && !valores.actividad}
-            enEspera={!valores.sucursal}
+            enEspera={bloqueadoPorPrevios || !valores.sucursal}
             guardando={guardando === 'actividad'}
             onEditar={valores.actividadesDisponibles.length > 1 ? () => setAbierto('actividad') : undefined}
-            origen={valores.sucursal ? <>declarada en <strong>{valores.nombreSucursal || 'la sucursal'}</strong>{valores.actividadesDisponibles.length === 1 ? ' · única, se hereda' : ''}</> : <>se habilita al elegir la sucursal</>}
+            origen={bloqueadoPorPrevios ? motivoBloqueo : valores.sucursal ? <>declarada en <strong>{valores.nombreSucursal || 'la sucursal'}</strong>{valores.actividadesDisponibles.length === 1 ? ' · única, se hereda' : ''}</> : <>se habilita al elegir la sucursal</>}
           />
 
           <CampoArca
@@ -208,8 +226,9 @@ export const FormularioArca: React.FC<{
             etiqueta="filtra tipo"
             valor={grupoTS}
             nombre={grupoTS ? nombreDe(gruposTS, grupoTS) : 'sin filtrar'}
+            enEspera={bloqueadoPorPrevios}
             onEditar={() => setAbierto('grupoTipoServicio')}
-            origen={<>solo filtra la lista de abajo · <strong>no se guarda</strong></>}
+            origen={bloqueadoPorPrevios ? motivoBloqueo : <>solo filtra la lista de abajo · <strong>no se guarda</strong></>}
           />
 
           <CampoArca
@@ -221,8 +240,9 @@ export const FormularioArca: React.FC<{
             nombre={nombreDe(tiposServicio, valores.tipoServicio)}
             falta={!valores.tipoServicio}
             guardando={guardando === 'afipTipoServicio'}
+            enEspera={bloqueadoPorPrevios}
             onEditar={() => setAbierto('tipoServicio')}
-            origen={<>del tipo de contrato <strong>«{nombreTipo}»</strong></>}
+            origen={bloqueadoPorPrevios ? motivoBloqueo : <>del tipo de contrato <strong>«{nombreTipo}»</strong></>}
           />
 
           <CampoArca
@@ -234,8 +254,9 @@ export const FormularioArca: React.FC<{
             nombre={nombreDe(modalidadesContrato, valores.modalidadContrato)}
             falta={!valores.modalidadContrato}
             guardando={guardando === 'afipModalidadContrato'}
+            enEspera={bloqueadoPorPrevios}
             onEditar={() => setAbierto('modalidadContrato')}
-            origen={<>del tipo de contrato <strong>«{nombreTipo}»</strong> · define si va la fecha de fin</>}
+            origen={bloqueadoPorPrevios ? motivoBloqueo : <>del tipo de contrato <strong>«{nombreTipo}»</strong> · define si va la fecha de fin</>}
           />
 
           <CampoArca rotulo="Situación Revista" rol="no_va" etiqueta="no va" origen={<>el registro de 130 lo deja vacío</>} />
@@ -249,8 +270,9 @@ export const FormularioArca: React.FC<{
             nombre={nombreDe(modalidadesLiq, valores.modalidadLiq)}
             falta={!valores.modalidadLiq}
             guardando={guardando === 'afipModalidadLiquidacion'}
+            enEspera={bloqueadoPorPrevios}
             onEditar={() => setAbierto('modalidadLiq')}
-            origen={<>del tipo de contrato <strong>«{nombreTipo}»</strong></>}
+            origen={bloqueadoPorPrevios ? motivoBloqueo : <>del tipo de contrato <strong>«{nombreTipo}»</strong></>}
           />
 
           <CampoArca

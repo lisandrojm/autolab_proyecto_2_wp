@@ -1410,17 +1410,22 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/empresa-cont
             }
         }
         /**
-         * Quitar la empleadora BORRA la validación de la obra social.
+         * Quitar la empleadora BORRA todo lo que dependía de ella.
          *
-         * Validar significa "ARCA, consultado con el CUIT de esta empleadora, dice esto". Sin empleadora
-         * esa afirmación no tiene sujeto: el contrato quedaba mostrando una obra social en verde, fija y
-         * con fecha, mientras arriba decía "Falta elegir la empleadora" — un dato sellado que ya no se
-         * podía sostener, y que nadie iba a revisar justamente porque estaba en verde.
+         * Los tres datos que salen del padrón de ESE CUIT —sucursal, actividad y la validación de la obra
+         * social— dejan de tener sujeto sin empleadora. El contrato quedaba mostrando una sucursal
+         * elegida y una obra social en verde, fija y con fecha, mientras arriba decía "Falta elegir la
+         * empleadora": datos que ya no se podían sostener y que nadie iba a revisar, justamente porque se
+         * veían resueltos.
          *
-         * Al CAMBIAR de empleadora, en cambio, NO se borra: el RNOS es de la PERSONA y sigue siendo el
-         * mismo. Lo que cambia es si la nueva empleadora lo tiene registrado, y eso ya se avisa arriba
-         * (`avisoObraSocial`) y lo marca el checklist en rojo. Borrarlo obligaría a re-validar una tanda
-         * entera por corregir la empresa, que es un castigo por arreglar un error.
+         * NO se toca lo que es del contrato o de la persona: categoría, convenio, fechas y retribución no
+         * dependen de quién emplea.
+         *
+         * Al CAMBIAR de empleadora, en cambio, no se borra nada acá: la sucursal nueva se valida en su
+         * propio endpoint y el RNOS es de la PERSONA, así que sigue siendo el mismo. Lo que cambia es si
+         * la empleadora nueva lo tiene registrado, y eso ya se avisa (`avisoObraSocial`) y lo marca el
+         * checklist en rojo. Borrarlo obligaría a rehacer una tanda entera por corregir la empresa, que
+         * es castigar a alguien por arreglar un error.
          */
         const quitandoEmpleadora = !empresaContratoId;
         const contratoPrevio = up.contracts[idx].toObject();
@@ -1429,7 +1434,16 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/empresa-cont
             empresaContratoId: empresaContratoId || null,
             nombre_empresa_contrato: nombreEmpresaContrato,
             ...(quitandoEmpleadora
-                ? { obraSocialId: null, obraSocialOrigen: undefined, obraSocialConstatadaEn: undefined, obraSocialConstatadaEl: null, obraSocialNoFigura: false, obraSocialBloqueada: false }
+                ? {
+                    sucursalArcaId: null,
+                    actividadArca: "",
+                    obraSocialId: null,
+                    obraSocialOrigen: undefined,
+                    obraSocialConstatadaEn: undefined,
+                    obraSocialConstatadaEl: null,
+                    obraSocialNoFigura: false,
+                    obraSocialBloqueada: false,
+                }
                 : {}),
         };
         up.markModified("contracts");

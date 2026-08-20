@@ -43,7 +43,18 @@ export const BandaEmpleador: React.FC<{
       onGuardado({
         empresaContratoId: res.empresaContratoId || '',
         nombre_empresa_contrato: res.nombre_empresa_contrato || '',
-        ...(res.obraSocialLimpiada ? { osId: null, obraSocialOrigen: '' as const, obraSocialConstatadaEn: '' as const, obraSocialConstatadaEl: '', obraSocialNoFigura: false, obraSocialBloqueada: false } : {}),
+        ...(empresaId
+          ? {}
+          : {
+              sucursalArcaId: null,
+              actividadArca: '',
+              osId: null,
+              obraSocialOrigen: '' as const,
+              obraSocialConstatadaEn: '' as const,
+              obraSocialConstatadaEl: '',
+              obraSocialNoFigura: false,
+              obraSocialBloqueada: false,
+            }),
       });
       setAbierto(false);
       if (res.avisoObraSocial) sweetAlert.error('Revisá la obra social', res.avisoObraSocial);
@@ -58,18 +69,15 @@ export const BandaEmpleador: React.FC<{
    * Quitar la empleadora. Se confirma porque arrastra: sin ella, la Sucursal y la Actividad dejan de
    * poder resolverse (sus opciones salen del padrón de ESE CUIT).
    *
-   * Lo elegido NO se borra del contrato: si se vuelve a elegir la misma empleadora, la sucursal y la
-   * actividad reaparecen. Si se elige otra, el checklist marca la sucursal como "mal cargada" en vez
-   * de arrastrarla en silencio a un alta de la empresa equivocada.
    *
-   * La obra social SÍ se borra, y es la excepción: validarla significa "ARCA, consultado con el CUIT
-   * de esta empleadora, dice esto". Sin empleadora esa afirmación no tiene sujeto, y quedaba un campo
-   * en verde, fijo y con fecha, arriba del cartel "Falta elegir la empleadora".
+   * Los tres datos que salen del padrón de ESE CUIT —sucursal, actividad y la validación de la obra
+   * social— SÍ se borran: sin empleadora ninguno tiene sujeto, y quedaban campos resueltos, en verde
+   * y con candado, arriba del cartel "Falta elegir la empleadora".
    */
   const quitar = async () => {
     const r = await sweetAlert.confirm(
       '¿Quitar la empleadora?',
-      `Se va a desasignar ${nombre || 'la empresa'} de este contrato. La Sucursal y la Actividad quedan en espera hasta que elijas otra, y la obra social vuelve a quedar SIN VALIDAR: se valida contra el CUIT de la empleadora, así que sin ella hay que volver a consultarla en ARCA.`,
+      `Se va a desasignar ${nombre || 'la empresa'} de este contrato. Se borran los datos que salen de su padrón: Sucursal, Actividad y la validación de la Obra Social —que vuelve a quedar SIN VALIDAR y hay que consultarla de nuevo en ARCA—. La categoría, el convenio, las fechas y la retribución no se tocan.`,
       'Sí, quitar',
     );
     if (!r.isConfirmed) return;

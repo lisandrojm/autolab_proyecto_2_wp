@@ -544,9 +544,13 @@ describe("obra social — la validación depende de la empleadora", () => {
     } as any);
 
   it("un contrato sin empleadora no puede quedar validado", () => {
-    // Lo que el server deja tras quitar la empleadora: todo el bloque de obra social en cero.
+    // Lo que el server deja tras quitar la empleadora: los TRES datos que salen de su padrón en cero
+    // —sucursal, actividad y la validación de la obra social—. La categoría y el convenio sobreviven:
+    // no dependen de quién emplea.
     const row = fila({
       empresaContratoId: null,
+      sucursalArcaId: null,
+      actividadArca: '',
       osId: null,
       obraSocialOrigen: undefined,
       obraSocialConstatadaEn: undefined,
