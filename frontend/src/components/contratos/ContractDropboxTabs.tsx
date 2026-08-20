@@ -18,6 +18,14 @@ const CARPETA_ESPERADA: Record<TipoBandejaDropbox, string> = {
   firmados: "Requested signatures",
 };
 
+/*
+  Tope de la descarga masiva, en BYTES y no en cantidad de archivos: el ZIP se arma entero en memoria
+  del server y Dropbox corta las descargas que se pasan de este tamaño. Tiene que coincidir con
+  ZIP_MAX_TOTAL_BYTES del backend; se chequea igual acá para decirlo mientras se tilda, y no a los 40
+  segundos de espera cuando el server rechaza la tanda entera.
+*/
+const ZIP_MAX_BYTES = 200 * 1024 * 1024;
+
 const fmtTamanio = (bytes?: number): string => {
   if (!bytes) return "—";
   if (bytes < 1024) return `${bytes} B`;
@@ -180,6 +188,13 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
     return q ? entries.filter((e) => e.name.toLowerCase().includes(q)) : entries;
   }, [entries, filtro]);
 
+  /**
+   * Peso de lo tildado, sumado a medida que se selecciona. Sobre `entries` y no sobre lo filtrado: el
+   * filtro esconde filas pero no las destilda, y sumar solo lo visible daría de menos.
+   */
+  const bytesSeleccionados = useMemo(() => entries.reduce((acc, e) => (selected.has(e.path) ? acc + (e.size || 0) : acc), 0), [entries, selected]);
+  const excedePeso = bytesSeleccionados > ZIP_MAX_BYTES;
+
   // El padre muestra la cantidad en la pestaña.
   useEffect(() => {
     onCount?.(entries.length);
@@ -220,6 +235,13 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
   const handleBulkDownload = async () => {
     const paths = Array.from(selected);
     if (paths.length === 0) return;
+    if (excedePeso) {
+      sweetAlert.error(
+        "La selección pesa demasiado",
+        `Son ${fmtTamanio(bytesSeleccionados)} y el máximo por descarga es ${fmtTamanio(ZIP_MAX_BYTES)} — más que eso lo corta Dropbox. Deseleccioná algunos y bajalos en dos tandas.`,
+      );
+      return;
+    }
     setDescargandoZip(true);
     try {
       const blob = await dropboxAPI.downloadZip(paths, true);
@@ -328,14 +350,28 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
       {/* Barra de selección masiva — igual que en "Dropbox | Documentos" */}
       {permiteAcciones && selected.size > 0 && (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5">
+          {/* El peso al lado de la cantidad: es lo único que puede frenar la descarga. */}
           <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
             {selected.size} archivo{selected.size === 1 ? "" : "s"} seleccionado{selected.size === 1 ? "" : "s"}
+            {bytesSeleccionados > 0 && (
+              <span className={excedePeso ? "text-red-600 dark:text-red-400 font-semibold" : "text-blue-600/70 dark:text-blue-300/70"}> · {fmtTamanio(bytesSeleccionados)}</span>
+            )}
+            {excedePeso && <span className="text-red-600 dark:text-red-400 font-semibold"> — máximo {fmtTamanio(ZIP_MAX_BYTES)}</span>}
           </span>
           <div className="flex items-center gap-2">
             <button onClick={() => setSelected(new Set())} className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 whitespace-nowrap">
               Deseleccionar
             </button>
-            <button onClick={handleBulkDownload} disabled={descargandoZip} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-60">
+            <button
+              onClick={handleBulkDownload}
+              disabled={descargandoZip || excedePeso}
+              title={
+                excedePeso
+                  ? `La selección pesa ${fmtTamanio(bytesSeleccionados)} y el máximo es ${fmtTamanio(ZIP_MAX_BYTES)}: más que eso lo corta Dropbox. Deseleccioná algunos.`
+                  : `Bajar los ${selected.size} tildados en un ZIP (${fmtTamanio(bytesSeleccionados)})`
+              }
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
               <FontAwesomeIcon icon={descargandoZip ? faSpinner : faFileZipper} spin={descargandoZip} /> Descargar {selected.size} (ZIP)
             </button>
           </div>

@@ -13,6 +13,19 @@ const formatSize = (n?: number): string => {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 };
 
+/*
+  Tope de la descarga masiva, en BYTES y no en cantidad de archivos.
+
+  El ZIP se arma entero en memoria del lado del server, y Dropbox corta las descargas que se pasan de
+  este tamaño. Lo que decide es el peso: 300 PDF de 200 KB entran cómodos, 5 videos no. Por eso el
+  viejo tope de "50 archivos" no protegía nada y sí frenaba el caso normal.
+
+  Tiene que coincidir con ZIP_MAX_TOTAL_BYTES del backend. Se chequea igual acá para poder decirlo
+  ANTES —con el total a la vista mientras se tilda— en vez de dejar que se descubra a los 40 segundos
+  de espera, cuando el server rechaza la tanda entera y hay que empezar de nuevo.
+*/
+const ZIP_MAX_BYTES = 200 * 1024 * 1024;
+
 const formatDate = (s?: string): string => {
   if (!s) return "";
   const d = new Date(s);
@@ -132,6 +145,13 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
   const handleBulkDownload = async () => {
     const paths = Array.from(selected);
     if (paths.length === 0) return;
+    if (excedePeso) {
+      sweetAlert.error(
+        "La selección pesa demasiado",
+        `Son ${formatSize(bytesSeleccionados)} y el máximo por descarga es ${formatSize(ZIP_MAX_BYTES)} — más que eso lo corta Dropbox. Deseleccioná algunos y bajalos en dos tandas.`,
+      );
+      return;
+    }
     setBusy(true);
     try {
       const blob = await dropboxAPI.downloadZip(paths, full);
@@ -245,6 +265,15 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
   // Archivos seleccionables en la vista actual (las carpetas no se tildan).
   const fileEntries = useMemo(() => filtered.filter((e) => e.tag === "file"), [filtered]);
   const allFilesSelected = fileEntries.length > 0 && fileEntries.every((e) => selected.has(e.path));
+  /**
+   * Peso de lo tildado, sumado a medida que se selecciona.
+   *
+   * Se calcula sobre `entries` y no sobre `filtered`: el filtro de texto esconde filas pero no las
+   * destilda, así que sumar lo visible daría de menos justo cuando alguien selecciona todo, filtra y
+   * agrega más — que es como se arma una tanda grande.
+   */
+  const bytesSeleccionados = useMemo(() => entries.reduce((acc, e) => (selected.has(e.path) ? acc + (e.size || 0) : acc), 0), [entries, selected]);
+  const excedePeso = bytesSeleccionados > ZIP_MAX_BYTES;
 
   const toggleSelectAll = () => {
     setSelected((prev) => {
@@ -367,14 +396,29 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
       {/* Barra de selección masiva */}
       {selected.size > 0 && (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5">
+          {/* El peso al lado de la cantidad: es lo único que puede frenar la descarga, así que se ve
+              mientras se tilda y no recién al apretar el botón. */}
           <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
             {selected.size} archivo{selected.size === 1 ? "" : "s"} seleccionado{selected.size === 1 ? "" : "s"}
+            {bytesSeleccionados > 0 && (
+              <span className={excedePeso ? "text-red-600 dark:text-red-400 font-semibold" : "text-blue-600/70 dark:text-blue-300/70"}> · {formatSize(bytesSeleccionados)}</span>
+            )}
+            {excedePeso && <span className="text-red-600 dark:text-red-400 font-semibold"> — máximo {formatSize(ZIP_MAX_BYTES)}</span>}
           </span>
           <div className="flex items-center gap-2">
             <button onClick={() => setSelected(new Set())} className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 whitespace-nowrap">
               Deseleccionar
             </button>
-            <button onClick={handleBulkDownload} disabled={busy} className="btn-primary text-xs py-1.5 px-3 flex items-center gap-2 disabled:opacity-60">
+            <button
+              onClick={handleBulkDownload}
+              disabled={busy || excedePeso}
+              title={
+                excedePeso
+                  ? `La selección pesa ${formatSize(bytesSeleccionados)} y el máximo es ${formatSize(ZIP_MAX_BYTES)}: más que eso lo corta Dropbox. Deseleccioná algunos.`
+                  : `Bajar los ${selected.size} tildados en un ZIP (${formatSize(bytesSeleccionados)})`
+              }
+              className="btn-primary text-xs py-1.5 px-3 flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
               <FontAwesomeIcon icon={busy ? faSpinner : faFileZipper} spin={busy} /> Descargar {selected.size} (ZIP)
             </button>
           </div>
