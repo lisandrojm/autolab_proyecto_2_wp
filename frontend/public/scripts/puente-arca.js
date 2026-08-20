@@ -1,31 +1,37 @@
-// ==UserScript==
-// @name         WeProdu — Puente ARCA (standalone)
-// @namespace    weprodu
-// @version      1.0.0
-// @description  Versión autocontenida del puente WeProdu <-> ARCA, para pegar a mano en Tampermonkey. No trae nada por red. GENERADO: no editar acá, editar public/scripts/puente-arca.js y correr npm run build:userscript.
-// @match        http://localhost:5173/*
-// @match        https://autolab.fun/*
-// @match        https://serviciossegsoc.afip.gob.ar/tramites_con_clave_fiscal/*
-// @match        https://auth.afip.gob.ar/*
-// @match        https://portalcf.cloud.afip.gob.ar/*
-// @grant        GM_setValue
-// @grant        GM_getValue
-// @grant        GM_deleteValue
-// @run-at       document-idle
-// ==/UserScript==
-
 /*
-  ARCHIVO GENERADO — no lo edites acá.
+  ============================================================================
+  LA LÓGICA DEL PUENTE ARCA — este archivo es el que se toca.
+  ============================================================================
 
-  La fuente es `public/scripts/puente-arca.js`. Este archivo es esa misma lógica con la cabecera
-  ==UserScript== adelante, para el camino de "copiar y pegar en Tampermonkey", que funciona sin
-  `GM_xmlhttpRequest` y sin red.
+  No es un userscript: no tiene cabecera ==UserScript== y Tampermonkey no lo
+  instala. Lo trae y lo ejecuta la cáscara `weprodu-puente.user.js`, que está
+  CONGELADA en v1.0.0 y no se toca nunca más.
 
-  Sin cáscara no hay `WEPRODU`, así que la lógica reporta la versión 1.0.0 por defecto — la misma
-  que la cáscara congelada. Es a propósito: la app compara esa versión contra la cáscara servida, y
-  las dos formas de instalarlo tienen que dar el mismo resultado, sin avisos de desfasaje.
+  POR QUÉ ESTÁ PARTIDO EN DOS
 
-  Regenerar:  npm run build:userscript
+  Tampermonkey chequea actualizaciones una vez por día, no al instante. Con la
+  lógica adentro del .user.js, cada cambio subía la versión y dejaba al operador
+  con un "tenés la vieja, hay una nueva" hasta que la actualizara a mano. Cinco
+  veces seguidas. Tampermonkey está pensado para scripts estables, no para algo
+  bajo iteración activa.
+
+  Partido, iterar esto es como iterar cualquier archivo del front: se guarda, se
+  recarga la página y listo. NO se sube ninguna versión y NO se reinstala nada.
+
+  CÓMO SE EJECUTA
+
+  La cáscara hace `new Function('GM_setValue','GM_getValue','GM_deleteValue','WEPRODU', <este texto>)`
+  y lo invoca con las funciones GM y con `WEPRODU = { version, base }`. Por eso
+  acá abajo se pueden usar GM_setValue/GM_getValue/GM_deleteValue como si fueran
+  globales: son parámetros.
+
+  La versión que reporta el pong es la de la CÁSCARA (congelada), no la de este
+  archivo: es lo único que el operador tiene instalado y lo único que tendría
+  sentido actualizar. `SELLO` es informativo, para saber qué copia está corriendo
+  cuando se depura; no se compara contra nada y no dispara ningún aviso.
+
+  El resto de la documentación —el contrato con WeProdu, la frontera del sandbox,
+  el recorrido por ARCA— está en su sección, más abajo.
 */
 
 (function () {

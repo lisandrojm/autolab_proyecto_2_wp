@@ -11,7 +11,8 @@
     "lint": "eslint src --ext .ts,.tsx",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
-    "test:afip": "tsx --test src/components/contratos/afipTxt.test.ts"
+    "test:afip": "tsx --test src/components/contratos/afipTxt.test.ts",
+    "build:userscript": "node scripts/build-userscript-standalone.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

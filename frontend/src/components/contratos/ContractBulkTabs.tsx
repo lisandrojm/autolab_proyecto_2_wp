@@ -1575,7 +1575,7 @@ export const ContractBulkAfipTab: React.FC<{
                 <button
                   type="button"
                   onClick={() => setValidandoArca('')}
-                  title="Dejar de esperar esta corrida y destrabar las acciones masivas. Usalo si cerraste la pestaña de ARCA o si quedó colgada: no cancela lo que ARCA ya haya hecho ni borra lo guardado."
+                  title="Dejar de esperar esta corrida y destrabar las acciones masivas. Usalo si cerraste la pestaña de ARCA o si quedó colgada: no cancela lo que ARCA ya haya hecho ni borra lo guardado. Si al arrancar de nuevo sigue sin avanzar, vaciá la cola del script desde el chip de Tampermonkey → «Reiniciar validación»."
                   aria-label="Dejar de esperar la validación"
                   className="ml-0.5 text-blue-400 hover:text-blue-700 dark:hover:text-blue-200 transition-colors"
                 >

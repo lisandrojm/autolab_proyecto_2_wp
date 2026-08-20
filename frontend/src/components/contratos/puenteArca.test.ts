@@ -22,7 +22,16 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 
-const SCRIPT = fs.readFileSync(path.resolve("public/scripts/weprodu-obra-social.user.js"), "utf-8");
+/**
+ * Se testea la LÓGICA, que es la fuente de la verdad.
+ *
+ * El userscript se partió en dos: una cáscara congelada (`weprodu-puente.user.js`) que solo trae y
+ * ejecuta este archivo, y la lógica servida aparte para poder iterarla sin subir versiones ni obligar
+ * a nadie a reinstalar. El standalone —el de pegar a mano— se GENERA a partir de esta misma lógica.
+ */
+const SCRIPT = fs.readFileSync(path.resolve("public/scripts/puente-arca.js"), "utf-8");
+const STANDALONE = fs.readFileSync(path.resolve("public/scripts/weprodu-obra-social.user.js"), "utf-8");
+const CASCARA = fs.readFileSync(path.resolve("public/scripts/weprodu-puente.user.js"), "utf-8");
 
 /** DOM mínimo: solo lo que el script toca. */
 function crearEntorno(hostname: string) {
@@ -55,7 +64,9 @@ function crearEntorno(hostname: string) {
   // El `window` del SANDBOX: distinto del de la página, como hace Tampermonkey con @grant.
   const winTarget = new EventTarget();
   const window: any = {
-    location: { hostname },
+    // `pathname` además de `hostname`: el script decide por la URL si ya está en la pantalla de altas
+    // o si tiene que navegar hasta ella.
+    location: { hostname, pathname: hostname.includes("afip") ? "/tramites_con_clave_fiscal/MiSimplificacion/app/Contribuyente/RelacionLaboral/Altas.aspx" : "/" },
     addEventListener: winTarget.addEventListener.bind(winTarget),
     removeEventListener: winTarget.removeEventListener.bind(winTarget),
     dispatchEvent: winTarget.dispatchEvent.bind(winTarget),
@@ -84,7 +95,20 @@ function crearEntorno(hostname: string) {
   return { contexto, document, window, almacen, metas, atributos };
 }
 
-const correr = (env: ReturnType<typeof crearEntorno>) => vm.runInNewContext(SCRIPT, env.contexto);
+/**
+ * Corre el script como si la página se acabara de cargar.
+ *
+ * El lock de instancia única vive en un atributo del <html>, así que se limpia antes: cada `correr()`
+ * modela una CARGA de página —en ARCA, cada postback es exactamente eso: un documento nuevo— y no una
+ * segunda instancia sobre el mismo documento. Para lo segundo está `correrDeNuevo()`.
+ */
+const correr = (env: ReturnType<typeof crearEntorno>) => {
+  env.atributos.delete('data-weprodu-lock');
+  return vm.runInNewContext(SCRIPT, env.contexto);
+};
+
+/** Una segunda copia del script sobre el MISMO documento: es lo que el lock tiene que impedir. */
+const correrDeNuevo = (env: ReturnType<typeof crearEntorno>) => vm.runInNewContext(SCRIPT, env.contexto);
 
 /**
  * Los objetos que devuelve el script nacen dentro del `vm`, en otro realm: su prototipo no es el
@@ -404,24 +428,147 @@ describe("ARCA — el tope de 10 filas", () => {
   });
 });
 
-describe("userscript — origen de actualización", () => {
+describe("cáscara — lo que queda congelado", () => {
+  const CABECERA = CASCARA.slice(0, CASCARA.indexOf("==/UserScript=="));
+
   /**
-   * Sin `@updateURL`/`@downloadURL`, Tampermonkey no puede actualizar el script, y uno instalado
-   * pegándolo a mano tampoco queda vinculado a ningún origen. Cada versión nueva dejaba al operador
-   * con la copia vieja —o rota, si el pegado salió incompleto— sin ningún aviso: "funcionaba, y dejó
-   * de funcionar". Este test evita que las líneas se caigan en una edición futura.
+   * Sin `@updateURL`/`@downloadURL` un userscript no queda vinculado a ningún origen. Ya casi no
+   * importa —la cáscara no va a cambiar— pero si algún día hay que cambiarla de verdad, sin estas
+   * líneas no habría forma de hacerla llegar.
    */
-  it("la cabecera declara de dónde se actualiza", () => {
-    const cabecera = SCRIPT.slice(0, SCRIPT.indexOf("==/UserScript=="));
-    assert.match(cabecera, /@updateURL\s+https?:\/\/\S+\.user\.js/, "sin @updateURL el script no se actualiza nunca");
-    assert.match(cabecera, /@downloadURL\s+https?:\/\/\S+\.user\.js/);
+  it("declara de dónde se actualiza", () => {
+    assert.match(CABECERA, /@updateURL\s+https?:\/\/\S+\.user\.js/, "sin @updateURL no hay forma de actualizarla nunca");
+    assert.match(CABECERA, /@downloadURL\s+https?:\/\/\S+\.user\.js/);
   });
 
-  it("la versión de la cabecera y la del código son la misma", () => {
-    // La app compara la versión que responde el script (la del código) contra la del archivo servido
-    // (la de la cabecera). Si divergen, se reportaría "desactualizada" para siempre, sin arreglo.
-    const enCabecera = SCRIPT.match(/@version\s+([\w.\-]+)/)?.[1];
-    const enCodigo = SCRIPT.match(/var VERSION = '([^']+)'/)?.[1];
-    assert.equal(enCodigo, enCabecera, "el pong devuelve la del código; Tampermonkey usa la de la cabecera");
+  /**
+   * La versión de la cáscara es la que el pong reporta y la que la app compara contra el archivo
+   * servido. Está CONGELADA a propósito: subirla es volver a poner el cartel de "hay una más nueva"
+   * a todos los que la tienen instalada, que es exactamente lo que este diseño vino a eliminar.
+   */
+  it("sigue congelada en 1.0.0", () => {
+    assert.equal(CABECERA.match(/@version\s+([\w.\-]+)/)?.[1], "1.0.0", "subir la versión de la cáscara obliga a todos a reinstalar: no se toca");
+    assert.equal(CASCARA.match(/var VERSION = '([^']+)'/)?.[1], "1.0.0", "el pong reporta esta; tiene que ser la de la cabecera");
+  });
+
+  /**
+   * Lo único que la cáscara NO puede cambiar después de congelada: dónde puede correr y qué permisos
+   * tiene. Si estos faltan, la lógica no llega o no puede trabajar, y no hay arreglo del lado del
+   * servidor — hay que reinstalar en cada máquina.
+   */
+  it("puede traer la lógica y correr en todo el recorrido de ARCA", () => {
+    assert.match(CABECERA, /@grant\s+GM_xmlhttpRequest/, "sin esto no puede pedir la lógica");
+    for (const host of ["localhost", "autolab.fun"]) assert.ok(CABECERA.includes("@connect      " + host), `falta @connect ${host}`);
+    for (const m of ["serviciossegsoc.afip.gob.ar/tramites_con_clave_fiscal/*", "auth.afip.gob.ar/*", "portalcf.cloud.afip.gob.ar/*"]) {
+      assert.ok(CABECERA.includes(m), `falta el @match de ${m}: la sesión vencida rebota ahí y la lógica no podría volver al login`);
+    }
+  });
+
+  /** El cache-buster va en la lógica; en el .user.js rompería la detección de actualizaciones. */
+  it("no le pone cache-buster a su propia URL", () => {
+    assert.ok(!/@(update|download)URL\s+\S*[?&]t=/.test(CABECERA), "un `?t=` en el .user.js rompe la detección de actualizaciones de Tampermonkey");
+    assert.match(CASCARA, /puente-arca\.js/, "la cáscara tiene que pedir la lógica");
+    assert.match(CASCARA, /\?t=' \+ Date\.now\(\)/, "la lógica sí se pide con cache-buster, o el navegador sirve la vieja");
+  });
+});
+
+describe("puente WeProdu ↔ userscript — las dos copias", () => {
+  /**
+   * El standalone se genera (`npm run build:userscript`) y se commitea, así que puede quedar viejo:
+   * alguien toca la lógica, no regenera, y el que instaló pegando a mano se queda con una versión
+   * distinta de la que corre por la cáscara — sin ningún aviso, que es la peor forma de divergir.
+   */
+  it("el standalone es la misma lógica que se sirve por la cáscara", () => {
+    const cuerpo = SCRIPT.slice(SCRIPT.indexOf("(function () {"));
+    assert.ok(STANDALONE.endsWith(cuerpo), "el standalone quedó viejo: corré `npm run build:userscript`");
+  });
+});
+
+describe("una sola instancia por pestaña", () => {
+  /**
+   * Con la cola en el almacén compartido de Tampermonkey, dos copias no son redundancia: siembran,
+   * leen y pisan las mismas claves, y la tanda queda trabada en "validando" sin validar a nadie.
+   * Pasó con tres copias conviviendo (el monolito viejo, el standalone y la cáscara).
+   */
+  it("una segunda copia sobre la misma página no hace nada", () => {
+    const env = crearEntorno("localhost");
+    correr(env);
+    const metasTrasLaPrimera = env.metas.length;
+
+    correrDeNuevo(env);
+    assert.equal(env.metas.length, metasTrasLaPrimera, "la segunda copia no tiene que volver a marcar el DOM");
+
+    // Un ping tiene que traer UN pong: dos son dos instancias peleándose la cola.
+    const pongs: any[] = [];
+    env.document.addEventListener("weprodu-os-pong", (e: any) => pongs.push(e.detail));
+    env.document.dispatchEvent(new CustomEvent("weprodu-os-ping"));
+    assert.equal(pongs.length, 1, `un ping devolvió ${pongs.length} pongs: hay más de una instancia viva`);
+  });
+
+  it("el lock es por documento: una recarga arranca sin él", () => {
+    // Si el lock sobreviviera a la recarga —guardado en el almacén de Tampermonkey, por ejemplo— la
+    // página siguiente quedaría muda para siempre: el script se saldría solo en cada carga.
+    const env = crearEntorno("localhost");
+    correr(env);
+    assert.ok(env.atributos.get("data-weprodu-lock"), "la instancia que gana tiene que dejar el lock puesto");
+
+    const recargada = crearEntorno("localhost"); // documento nuevo = <html> nuevo, sin atributos
+    assert.equal(recargada.atributos.get("data-weprodu-lock"), undefined, "el lock vive en el <html> y se va con él");
+    correr(recargada);
+    const pongs: any[] = [];
+    recargada.document.addEventListener("weprodu-os-pong", (e: any) => pongs.push(e.detail));
+    recargada.document.dispatchEvent(new CustomEvent("weprodu-os-ping"));
+    assert.equal(pongs.length, 1, "tras recargar, el script tiene que volver a estar vivo");
+  });
+});
+
+describe("las dos versiones del pong", () => {
+  /**
+   * `shell` y `logica` son numeraciones INDEPENDIENTES y la app las trata distinto: la cáscara pide
+   * reinstalar (acción del usuario), la lógica se actualiza sola al recargar (no se avisa nada).
+   * Mezclarlas fue lo que produjo el cartel "Extensión v2.5.0 · instalar v1.0.0", que además de
+   * inútil parecía un downgrade.
+   */
+  it("el pong trae la cáscara y la lógica por separado", () => {
+    const env = crearEntorno("localhost");
+    correr(env);
+    let detail: any = null;
+    env.document.addEventListener("weprodu-os-pong", (e: any) => (detail = e.detail));
+    env.document.dispatchEvent(new CustomEvent("weprodu-os-ping"));
+    assert.ok(detail, "el script tiene que contestar el ping");
+    assert.equal(typeof detail.shell, "string", "sin `shell` la app no sabe qué comparar contra el .user.js servido");
+    assert.equal(typeof detail.logica, "string", "el sello de la lógica va aparte, solo para depurar");
+    assert.notEqual(detail.shell, detail.logica, "son dos numeraciones distintas: si coinciden, alguien las unificó por error");
+  });
+
+  it("la marca del <meta> y la del <html> dicen lo mismo", () => {
+    // Se contradecían cuando había dos copias: el <html> lo pisaba la última y el <meta> lo dejaba la
+    // primera. Con el lock, las dos salen de la misma instancia.
+    const env = crearEntorno("localhost");
+    correr(env);
+    correrDeNuevo(env);
+    assert.equal(env.atributos.get("data-weprodu-os"), env.metas.find((m) => m.name === "weprodu-os-ext")?.content);
+  });
+});
+
+describe("reiniciar la cola envenenada", () => {
+  /**
+   * La cola vive en el almacén del script, no en la app: si queda inconsistente no hay nada del lado
+   * de WeProdu que la arregle, y la única salida era desinstalar el script.
+   */
+  it("`weprodu-os-reset` vacía el almacén y avisa", () => {
+    const env = crearEntorno("localhost");
+    correr(env);
+    env.document.dispatchEvent(new CustomEvent("weprodu-os-start", { detail: [{ cuil: "27-40073687-7", contractId: "c1" }] }));
+    assert.ok(env.almacen.get("os_active"), "andamio: la cola tiene que estar sembrada antes de limpiarla");
+
+    let ok = false;
+    env.document.addEventListener("weprodu-os-reset-ok", () => (ok = true));
+    env.document.dispatchEvent(new CustomEvent("weprodu-os-reset"));
+
+    assert.ok(ok, "sin confirmación, la app no puede decir si se limpió");
+    for (const k of ["os_queue", "os_orden", "os_hechos", "os_active", "os_done", "os_last", "os_errores", "os_fase"]) {
+      assert.equal(env.almacen.get(k), undefined, `quedó \`${k}\` en el almacén`);
+    }
   });
 });
