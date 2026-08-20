@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowUpRightFromSquare, faCircleCheck, faTriangleExclamation, faPuzzlePiece, faCopy, faCheck, faSpinner, faPlug } from '@fortawesome/free-solid-svg-icons';
+import { faArrowUpRightFromSquare, faCircleCheck, faTriangleExclamation, faPuzzlePiece, faCopy, faCheck, faSpinner, faPlug, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { useExtensionArca, probarExtension, useEstadoExtension, USERSCRIPT_URL, EstadoExtension } from './puenteArca';
 import { Modal } from '../ui/Modal';
 
@@ -220,9 +220,14 @@ export const ChipExtension: React.FC = () => {
         Extensión v{version} · hay v{disponible}
       </button>
     ) : estado === 'activa' ? (
-      <span title={`Tampermonkey responde (v${version}). La validación de obras sociales corre sola.`} className={`${base} bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200/60 dark:border-green-800/60`}>
+      /* Con nombre: "Extensión activa" no dice CUÁL, y el operador que quiere revisarla no sabe qué
+         buscar en chrome://extensions. El ⓘ abre la explicación completa. */
+      <span className={`${base} bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200/60 dark:border-green-800/60`}>
         <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3" />
-        Extensión activa
+        Tampermonkey activa (v{version})
+        <button type="button" onClick={() => setAbierto(true)} title="Qué es, qué hace y qué no hace" className="text-green-700/70 dark:text-green-400/70 hover:text-green-800 dark:hover:text-green-300">
+          <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+        </button>
       </span>
     ) : (
       <button
@@ -236,7 +241,7 @@ export const ChipExtension: React.FC = () => {
         className={`${base} bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/60 hover:bg-amber-100 dark:hover:bg-amber-900/30`}
       >
         <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
-        {estado === 'instalada_sin_responder' ? 'Extensión sin permiso' : 'Extensión no instalada'}
+        {estado === 'instalada_sin_responder' ? 'Tampermonkey sin permiso' : 'Tampermonkey no instalada'}
       </button>
     );
 
@@ -281,13 +286,84 @@ export const ChipExtension: React.FC = () => {
                 "detectada" justo debajo del cartel que explica que no responde — dos mensajes que se
                 contradicen sobre la misma cosa. */}
             {estado === 'ausente' && <RequisitoExtension />}
-            <p className="text-[11px] text-gray-500 dark:text-gray-400">
-              Los dos requisitos son <strong>independientes</strong>: tener Tampermonkey instalado, y que ese script tenga permitido ejecutarse. El segundo viene apagado por defecto y no da ningún error —
-              simplemente no pasa nada.
-            </p>
+
+            <QueEsLaExtension estado={estado} version={version} />
           </div>
         </Modal>
       )}
     </>
   );
 };
+
+/**
+ * Qué es la extensión, qué hace y qué no. Todo en un lugar.
+ *
+ * Se pregunta siempre lo mismo y en este orden: por qué hace falta instalar algo, qué va a hacer en
+ * mi navegador, y si toca mi clave fiscal. Contestarlo acá evita que cada operador tenga que
+ * preguntarlo — y que alguien decida no instalarla por una duda que se responde en tres líneas.
+ */
+const QueEsLaExtension: React.FC<{ estado: EstadoExtension; version: string | null }> = ({ estado, version }) => (
+  <div className="space-y-3 text-[13px] text-gray-700 dark:text-gray-300 leading-relaxed">
+    <div>
+      <p className="font-semibold text-gray-900 dark:text-gray-100">Qué es</p>
+      <p>
+        <strong>Tampermonkey</strong> es una extensión de navegador que ejecuta pequeños programas en las páginas que vos abrís. Nosotros le damos uno —el <em>userscript</em> de WeProdu— que hace de puente
+        entre esta app y la pantalla de ARCA.
+      </p>
+    </div>
+
+    <div>
+      <p className="font-semibold text-gray-900 dark:text-gray-100">Por qué hace falta</p>
+      <p>
+        La obra social que ARCA tiene registrada para un CUIL <strong>no la devuelve ninguna API</strong>: el único webservice conectado trae datos del contribuyente, no la obra social de un trabajador. El
+        dato solo aparece precompletado en la pantalla de altas del organismo. WeProdu y ARCA son dos sitios distintos y el navegador no deja que uno lea al otro — la extensión es lo único que puede
+        estar en los dos lados y pasar los datos.
+      </p>
+    </div>
+
+    <div>
+      <p className="font-semibold text-gray-900 dark:text-gray-100">Qué hace exactamente</p>
+      <ul className="list-disc pl-5 space-y-0.5 mt-0.5">
+        <li>En WeProdu: recibe la lista de CUIL a validar. Nada más.</li>
+        <li>En ARCA, en <em>Registrar Nuevas Altas</em>: escribe cada CUIL, aprieta <strong>Agregar</strong> y lee la obra social que el organismo precompleta.</li>
+        <li>Trabaja en tandas de 10 —el máximo que ARCA acepta— y usa <strong>Reiniciar</strong> entre tandas, que vacía la grilla sin registrar nada.</li>
+        <li>Al terminar deja la pantalla de ARCA vacía y devuelve los resultados a WeProdu, que los guarda.</li>
+      </ul>
+    </div>
+
+    <div className="rounded-lg border border-red-300 dark:border-red-800/70 bg-red-50/70 dark:bg-red-950/20 px-3 py-2.5">
+      <p className="font-semibold text-gray-900 dark:text-gray-100">Qué NO hace</p>
+      <ul className="list-disc pl-5 space-y-0.5 mt-0.5">
+        <li>
+          <strong>No registra ninguna alta.</strong> Nunca aprieta «Aceptar»: los únicos dos botones que puede tocar son <em>Agregar</em> y <em>Reiniciar</em>, buscados por su rótulo exacto. Las altas
+          salen del TXT.
+        </li>
+        <li>
+          <strong>No guarda ni ve tu clave fiscal.</strong> Trabaja dentro de la sesión que abriste vos; por eso el login es manual y no se puede saltear. Esa es la garantía, no una limitación pendiente.
+        </li>
+        <li>
+          <strong>No manda nada a ningún lado.</strong> Solo habla entre esta app y ARCA, en tu navegador.
+        </li>
+        <li>
+          <strong>No corre en otros sitios.</strong> Solo en WeProdu y en la pantalla de altas de ARCA (ver <code className="font-mono text-[12px]">@match</code> en la cabecera del script, que podés leer
+          entero).
+        </li>
+      </ul>
+    </div>
+
+    <div>
+      <p className="font-semibold text-gray-900 dark:text-gray-100">Si algo falla</p>
+      <p>
+        La corrida frena y avisa; nunca marca a alguien como «sin obra social» por una falla. Si se vence la sesión de ARCA, retoma sola después del relogin. Si un CUIL no se puede consultar, queda
+        pendiente en vez de darse por hecho.
+      </p>
+    </div>
+
+    <p className="text-[12px] text-gray-500 dark:text-gray-400 pt-1 border-t border-gray-200 dark:border-gray-800">
+      Estado actual: <strong>{estado === 'activa' ? `activa, v${version}` : estado === 'desactualizada' ? `v${version} instalada (hay una más nueva)` : estado === 'instalada_sin_responder' ? 'instalada pero sin permiso para ejecutarse' : 'no instalada'}</strong>.{' '}
+      <a href="/arca/guia-obras-sociales" target="_blank" rel="noreferrer" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+        Guía completa de la validación →
+      </a>
+    </p>
+  </div>
+);

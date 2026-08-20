@@ -935,6 +935,9 @@ export const ContractBulkAfipTab: React.FC<{
     // parecidos, y un TXT subido a la sesión equivocada ARCA lo acepta sin chistar.
     const cuitLote = String(companies.find((c) => c._id === empresasDelLote[0])?.cuit ?? '').replace(/\D/g, '');
     downloadTxt(buildAltaTxt(registros), `${filenameBase}${cuitLote ? `_${cuitLote}` : ''}_${hoyStamp()}.txt`);
+    // "Cargar en ARCA" se habilita recién ahora: sin archivo generado, ese botón lleva al portal a
+    // subir algo que no existe. Se recuerda de qué empleadora era, porque el TXT es de UN CUIT.
+    setTxtGeneradoPara(cuitLote || 'sin-cuit');
     if (omitidos > 0) {
       sweetAlert.info('TXT generado', `Se incluyeron ${registros.length} alta(s). Se omitieron ${omitidos} contrato(s) por datos ARCA incompletos o mal cargados.${detalleOmitidos}`);
     } else {
@@ -976,6 +979,21 @@ export const ContractBulkAfipTab: React.FC<{
    * son dos formas de que diverjan.
    */
   const [loteObrasSociales, setLoteObrasSociales] = useState<Set<string> | null>(null);
+  /**
+   * CUIT del último TXT generado en esta sesión, o `''`.
+   *
+   * "Cargar en ARCA" solo tiene sentido con un archivo en la mano: antes de generarlo manda al portal
+   * a subir algo que no existe. Se guarda el CUIT y no un booleano porque el TXT es de UNA
+   * empleadora: cambiando de pestaña de empresa, el archivo que se bajó ya no es el que corresponde.
+   */
+  const [txtGeneradoPara, setTxtGeneradoPara] = useState('');
+  /*
+   * Cambiar de empleadora invalida el archivo bajado: el TXT se sube logueado con UN CUIT, así que el
+   * de la empresa anterior no sirve para esta. Sin esto, "Cargar en ARCA" quedaba habilitado y
+   * llevaba al portal a subir el archivo equivocado — que ARCA acepta sin chistar, dando de alta a
+   * gente bajo la empresa que no es.
+   */
+  useEffect(() => setTxtGeneradoPara(''), [filterEmpresaId]);
   const extensionArca = useExtensionArca();
   /** Progreso de la corrida automática, para no dejar la pantalla muda mientras guarda. */
   const [validandoArca, setValidandoArca] = useState<string>('');
@@ -1143,6 +1161,12 @@ export const ContractBulkAfipTab: React.FC<{
    * puede aplicar ninguna. Y si no se mencionaran, el contador diría 0 con 20 contratos pendientes a
    * la vista, que se lee como que el sistema no los ve.
    */
+  /** Total y validadas, para el chip informativo. Misma función que la celda: no pueden discrepar. */
+  const countObraSocialTotal = useMemo(() => rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'alta_temprana_afip').length, [rowsPorFiltrosComunes]);
+  const countObraSocialValidadas = useMemo(
+    () => rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'alta_temprana_afip' && ['validada_arca', 'validada_default'].includes(estadoObraSocial(x.row, resolveAfipValues(x.row, afipCat)))).length,
+    [rowsPorFiltrosComunes, afipCat],
+  );
   const countSinEmpleadora = useMemo(
     () => rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'alta_temprana_afip' && !x.row.empresaContratoId && estadoObraSocial(x.row, resolveAfipValues(x.row, afipCat)) === 'sin_validar').length,
     [rowsPorFiltrosComunes, afipCat],
@@ -1439,35 +1463,27 @@ export const ContractBulkAfipTab: React.FC<{
                 {validandoArca}
               </span>
             )}
-            {/* Lo que falta pero todavía no se puede hacer. Sin esto, el contador de validables diría
-                0 con 20 contratos pendientes a la vista y se leería como que el sistema no los ve. */}
-            {countSinEmpleadora > 0 && (
+            {/*
+              * Obras sociales: INFORMATIVO, no una acción.
+              *
+              * Había acá un botón que arrancaba la corrida sobre "todos los pendientes del filtro".
+              * Se sacó: la validación es por selección —se tildan las filas y se usa «Validar obras
+              * sociales»—, y tener dos botones que hacen lo mismo con conjuntos distintos hacía que
+              * no se supiera cuál se estaba por mandar. Acá solo se dice cómo viene la cosa.
+              */}
+            {countObraSocialTotal > 0 && (
               <span
-                title="La obra social se valida contra el CUIT de la empleadora. Elegí la Empresa Contrato de estos contratos —podés hacerlo en masa tildándolos— y después validalos."
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700"
+                title={`${countObraSocialValidadas} con la obra social validada contra ARCA · ${countSinConstatar} sin validar${
+                  countSinEmpleadora > 0 ? ` (de esas, ${countSinEmpleadora} esperan que se les elija la empleadora)` : ''
+                }. Para validar: tildá las filas y usá «Validar obras sociales».`}
+                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
               >
                 <FontAwesomeIcon icon={faStethoscope} className="h-3 w-3" />
-                {countSinEmpleadora} esperan empleadora
+                Obras sociales:
+                <span className="text-green-700 dark:text-green-400">{countObraSocialValidadas} validadas</span>
+                <span aria-hidden className="text-gray-400">·</span>
+                <span className={countSinConstatar + countSinEmpleadora > 0 ? 'text-amber-700 dark:text-amber-400' : ''}>{countSinConstatar + countSinEmpleadora} sin validar</span>
               </span>
-            )}
-            {countSinConstatar > 0 && (
-              <button
-                onClick={() => {
-                  // Además de arrancar, deja la grilla filtrada en esas mismas filas: al volver de
-                  // ARCA, lo que queda a la vista es exactamente lo que se estaba validando.
-                  setFilterObraSocial('sin_validar');
-                  const pendientes = rowsPorFiltrosComunes.filter(
-                    (x) => x.row._tipo === 'alta_temprana_afip' && estadoObraSocial(x.row, resolveAfipValues(x.row, afipCat)) === 'sin_validar' && !!x.row.empresaContratoId,
-                  );
-                  // Con la extensión, la corrida es automática de punta a punta. Sin ella queda el
-                  // camino manual del lote (copiar/pegar), que sigue funcionando.
-                  if (extensionArca) validarEnArca(pendientes);
-                  else setLoteObrasSociales(new Set(pendientes.map((x) => rowKey(x.row))));
-                }}
-                title="Copiar los CUIL de esta empleadora y traerlas de ARCA en una corrida. También filtra la grilla en las que faltan." className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold border transition-colors bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200/60 dark:border-blue-800/60 hover:bg-blue-100 dark:hover:bg-blue-900/30">
-                <FontAwesomeIcon icon={faStethoscope} className="h-3 w-3" />
-                Constatar obras sociales en ARCA ({countSinConstatar})
-              </button>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -1512,11 +1528,21 @@ export const ContractBulkAfipTab: React.FC<{
             <button type="button" onClick={() => setFlujoTxtInfoOpen(true)} title="Qué hacer con el TXT" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 shrink-0">
               <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
             </button>
-            <button onClick={() => window.open('https://www.arca.gob.ar', '_blank', 'noopener,noreferrer')} title="Abrir ARCA para subir el TXT ya generado" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shrink-0">
+            <button
+              onClick={() => window.open('https://www.arca.gob.ar', '_blank', 'noopener,noreferrer')}
+              disabled={!txtGeneradoPara}
+              title={txtGeneradoPara ? 'Abrir ARCA para subir el TXT que acabás de generar' : 'Primero generá el TXT: este botón abre ARCA para subir ese archivo'}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+            >
               <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-4 w-4" />
               Cargar en ARCA
             </button>
-            <button type="button" onClick={() => setCargarArcaInfoOpen(true)} title="Qué hacer en ARCA" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0">
+            <button
+              type="button"
+              onClick={() => setCargarArcaInfoOpen(true)}
+              title={txtGeneradoPara ? 'Qué hacer en ARCA' : 'Qué hacer en ARCA (se habilita al generar el TXT)'}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0"
+            >
               <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
             </button>
           </div>
