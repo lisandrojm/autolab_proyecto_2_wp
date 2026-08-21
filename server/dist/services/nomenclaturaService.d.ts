@@ -1,9 +1,22 @@
 import { TipoNomenclatura } from "../utils/nomenclatura.js";
 /**
+ * Razón social y CUIT de la empleadora, para el final del nombre.
+ *
+ * El CUIT sale ETIQUETADO (`CUIT-30710295839`) y no como once dígitos sueltos. Dos motivos, y el
+ * segundo importa: al lado del `CUIL-…` de la persona, dos números de once dígitos sin rótulo son
+ * indistinguibles para quien mira la carpeta; y el respaldo que usa `extraerIdentidadDeArchivo` para
+ * los archivos viejos busca justamente un CUIT suelto de once dígitos, así que dejarlo pelado sería
+ * poner una trampa para el día que alguien saque `{{identidad}}` del patrón.
+ */
+export declare function datosEmpresa(empresaId: unknown, nombreCache?: string): Promise<{
+    empresa: string;
+    empresaCuit: string;
+}>;
+/**
  * El nombre de un archivo, según lo que el tenant configuró.
  *
- * Si no configuró nada rige `PATRON_POR_DEFECTO`, que reproduce exactamente el nombre que la
- * plataforma generaba antes: por eso esto se puede soltar sin migrar nada.
+ * Si no configuró nada rige `PATRON_POR_DEFECTO`. Los archivos ya generados NO se renombran nunca:
+ * este patrón solo decide cómo se van a llamar los próximos.
  *
  * Ante CUALQUIER problema —la base no responde, el patrón guardado quedó raro, el render sale
  * vacío— cae al default en vez de fallar. Un documento tiene que poder generarse siempre: quedarse

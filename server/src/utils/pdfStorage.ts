@@ -28,7 +28,9 @@ export async function savePdfToStorage(
   userId: string,
   orderNumber: string,
   pdfBuffer: Buffer,
-  identidadTag?: string
+  identidadTag?: string,
+  /** Datos extra para el patrón de nomenclatura (proyecto, persona, empleadora). */
+  datosNombre?: Record<string, string>
 ): Promise<string> {
   try {
     console.log("[PDF STORAGE] Starting PDF save process...");
@@ -65,7 +67,7 @@ export async function savePdfToStorage(
     const identidad = (identidadTag || "").replace(/[^a-zA-Z0-9_-]/g, "");
     // El patrón lo define el ABM de Nomenclatura de archivos (Plantillas). Sin configurar, el default
     // reproduce exactamente este nombre: por eso esto se pudo soltar sin migrar ni renombrar nada.
-    const filename = `${await nombreArchivo(tenantId, "Pedido", { numero: sanitizedOrderNumber, identidad, timestamp, fecha: String(timestamp).slice(0, 8) })}.pdf`;
+    const filename = `${await nombreArchivo(tenantId, "Pedido", { ...(datosNombre || {}), tipo: "Pedido", numero: sanitizedOrderNumber, identidad, timestamp, fecha: String(timestamp).slice(0, 8) })}.pdf`;
     console.log("[PDF STORAGE] Filename:", filename);
 
     const filePath = path.join(storageDir, filename);
@@ -97,7 +99,9 @@ export async function savePdfVacationToStorage(
   userId: string,
   vacationNumber: string,
   pdfBuffer: Buffer,
-  identidadTag?: string
+  identidadTag?: string,
+  /** Datos extra para el patrón de nomenclatura (proyecto, persona, empleadora). */
+  datosNombre?: Record<string, string>
 ): Promise<string> {
   try {
     console.log("[PDF STORAGE] Starting vacation PDF save process...");
@@ -132,7 +136,7 @@ export async function savePdfVacationToStorage(
     const timestamp = Date.now();
     const sanitizedVacationNumber = vacationNumber.replace(/[^a-zA-Z0-9-]/g, "_");
     const identidad = (identidadTag || "").replace(/[^a-zA-Z0-9_-]/g, "");
-    const filename = `${await nombreArchivo(tenantId, "Vacacion", { numero: sanitizedVacationNumber, identidad, timestamp, fecha: String(timestamp).slice(0, 8) })}.pdf`;
+    const filename = `${await nombreArchivo(tenantId, "Vacacion", { ...(datosNombre || {}), tipo: "Vacacion", numero: sanitizedVacationNumber, identidad, timestamp, fecha: String(timestamp).slice(0, 8), anio: String(timestamp).slice(0, 4) })}.pdf`;
     console.log("[PDF STORAGE] Filename:", filename);
 
     const filePath = path.join(storageDir, filename);

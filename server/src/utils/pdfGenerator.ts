@@ -33,6 +33,27 @@ async function resolverIdentidadTag(user: any): Promise<string> {
 }
 
 /**
+ * Los datos que el patrón de nomenclatura puede usar en un PDF de Pedido o de Vacación.
+ *
+ * Antes el nombre era `pedido_<nro>_<identidad>_<timestamp>` y no hacía falta nada más. Desde que el
+ * patrón es configurable —y por pedido explícito, arranca con el proyecto y termina con la
+ * empleadora— hay que juntar esos datos acá y pasarlos al guardado.
+ */
+function datosNombrePdf(user: any, company: any, resolucion: any): Record<string, string> {
+  const cuit = String(company?.cuit || "").replace(/\D/g, "");
+  return {
+    apellido: String(user?.lastName || ""),
+    nombres: String(user?.firstName || ""),
+    email: String(user?.email || "").replace(/@/g, "-"),
+    proyecto: String(resolucion?.externalProjectId || resolucion?.projectId || ""),
+    empresa: String(company?.razonSocial || ""),
+    // Etiquetado, como en los documentos de contrato: al lado del CUIL de la persona, dos números de
+    // once dígitos sin rótulo son indistinguibles para quien mira la carpeta.
+    empresaCuit: cuit ? `CUIT-${cuit}` : "",
+  };
+}
+
+/**
  * Mapea la empresa (Company) al `config` que espera getSystemVariables / buildPdfHtml
  * (razón social, cuit, ciudad, dirección, firmante + logo/firma). El membrete de los PDF
  * de Pedidos/Vacaciones sale de la empresa marcada como default (Empresa/s | Membrete/s).
@@ -281,9 +302,11 @@ export async function generateOrderPDF(order: IOrder, category: IOrderConfig, te
 
     // Empresa del membrete: sale del último contrato activo del usuario (o la elegida al descargar).
     let company: any = null;
+    let resolucion: any = null;
     try {
       const uid = String((user as any)?._id || (order as any).userId || "");
-      company = (await resolveContractEmpresa(uid, empresaIdOverride)).empresa;
+      resolucion = await resolveContractEmpresa(uid, empresaIdOverride);
+      company = resolucion.empresa;
     } catch (e) {
       console.error("[PDF GENERATOR] resolveContractEmpresa error:", e);
     }
@@ -331,7 +354,7 @@ export async function generateOrderPDF(order: IOrder, category: IOrderConfig, te
     console.log("[PDF GENERATOR] Tenant ID:", tenantId);
     console.log("[PDF GENERATOR] User ID:", userId);
 
-    const pdfUrl = await savePdfToStorage(tenantId, userId, order.orderNumber, pdfBuffer, await resolverIdentidadTag(user));
+    const pdfUrl = await savePdfToStorage(tenantId, userId, order.orderNumber, pdfBuffer, await resolverIdentidadTag(user), datosNombrePdf(user, company, resolucion));
     console.log("[PDF GENERATOR] PDF saved successfully!");
     console.log("[PDF GENERATOR] PDF URL:", pdfUrl);
 
@@ -367,9 +390,11 @@ export async function generateVacationPDF(vacation: IVacation, template: IPdf, u
 
     // Empresa del membrete: sale del último contrato activo del usuario (o la elegida al descargar).
     let company: any = null;
+    let resolucion: any = null;
     try {
       const uid = String((user as any)?._id || (vacation as any).userId || "");
-      company = (await resolveContractEmpresa(uid, empresaIdOverride)).empresa;
+      resolucion = await resolveContractEmpresa(uid, empresaIdOverride);
+      company = resolucion.empresa;
     } catch (e) {
       console.error("[PDF GENERATOR] resolveContractEmpresa error:", e);
     }
@@ -417,7 +442,7 @@ export async function generateVacationPDF(vacation: IVacation, template: IPdf, u
     console.log("[PDF GENERATOR] Tenant ID:", tenantId);
     console.log("[PDF GENERATOR] User ID:", userId);
 
-    const pdfUrl = await savePdfVacationToStorage(tenantId, userId, vacationNumber, pdfBuffer, await resolverIdentidadTag(user));
+    const pdfUrl = await savePdfVacationToStorage(tenantId, userId, vacationNumber, pdfBuffer, await resolverIdentidadTag(user), datosNombrePdf(user, company, resolucion));
     console.log("[PDF GENERATOR] Vacation PDF saved successfully!");
     console.log("[PDF GENERATOR] PDF URL:", pdfUrl);
 

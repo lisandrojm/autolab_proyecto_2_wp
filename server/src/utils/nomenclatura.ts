@@ -54,6 +54,8 @@ const V = {
   timestamp: { variable: "{{timestamp}}", descripcion: "Marca temporal de generación" },
   anio: { variable: "{{anio}}", descripcion: "Año del período" },
   fecha: { variable: "{{fecha}}", descripcion: "Fecha de generación, YYYYMMDD" },
+  empresa: { variable: "{{empresa}}", descripcion: "Razón social de la empleadora" },
+  empresaCuit: { variable: "{{empresaCuit}}", descripcion: "CUIT de la empleadora, como CUIT-30710295839" },
 } satisfies Record<string, VariableNomenclatura>;
 
 /**
@@ -63,17 +65,37 @@ const V = {
  * se ve bien en el ABM y renderiza vacío en producción. Un contrato no tiene `{{numero}}` y un
  * pedido no tiene `{{fechaAlta}}`.
  */
-export const VARIABLES_POR_TIPO: Record<TipoNomenclatura, VariableNomenclatura[]> = {
-  Contrato: [V.apellido, V.nombres, V.proyecto, V.tipo, V.docName, { ...V.fechaAlta, requerida: true }, { ...V.fechaBaja, requerida: true }, { ...V.identidad, requerida: true }, V.email, V.extra],
-  Release: [V.apellido, V.nombres, V.proyecto, V.tipo, V.docName, { ...V.fechaAlta, requerida: true }, { ...V.fechaBaja, requerida: true }, { ...V.identidad, requerida: true }, V.email, V.extra],
-  AltaAFIP: [V.apellido, V.nombres, V.proyecto, V.tipo, V.docName, { ...V.fechaAlta, requerida: true }, { ...V.fechaBaja, requerida: true }, { ...V.identidad, requerida: true }, V.email, V.extra],
-  ConstanciaCUIT: [V.apellido, V.nombres, V.proyecto, V.tipo, V.docName, { ...V.fechaAlta, requerida: true }, { ...V.fechaBaja, requerida: true }, { ...V.identidad, requerida: true }, V.email, V.extra],
-  Documentacion: [V.apellido, V.nombres, V.proyecto, V.tipo, V.docName, { ...V.fechaAlta, requerida: true }, { ...V.fechaBaja, requerida: true }, { ...V.identidad, requerida: true }, V.email, V.extra],
-  // Pedidos y Vacaciones no vuelven de la firma, así que solo se les exige la identidad: es lo que
-  // permite encontrar el PDF de una persona en la carpeta sin abrirlo.
-  Pedido: [V.apellido, V.nombres, V.numero, { ...V.identidad, requerida: true }, V.email, V.fecha, V.timestamp],
-  Vacacion: [V.apellido, V.nombres, V.numero, { ...V.identidad, requerida: true }, V.email, V.anio, V.fecha, V.timestamp],
-};
+export const VARIABLES_POR_TIPO: Record<TipoNomenclatura, VariableNomenclatura[]> = (() => {
+  // Los cinco documentos de contrato comparten las mismas variables: son el mismo documento de una
+  // persona en un proyecto, con distinto propósito. Repetir la lista cinco veces era garantizar que
+  // se desincronizaran.
+  const deContrato: VariableNomenclatura[] = [
+    V.proyecto,
+    V.apellido,
+    V.nombres,
+    V.tipo,
+    V.docName,
+    { ...V.fechaAlta, requerida: true },
+    { ...V.fechaBaja, requerida: true },
+    { ...V.identidad, requerida: true },
+    V.email,
+    V.extra,
+    V.empresa,
+    V.empresaCuit,
+  ];
+  return {
+    Contrato: deContrato,
+    Release: deContrato,
+    AltaAFIP: deContrato,
+    ConstanciaCUIT: deContrato,
+    Documentacion: deContrato,
+    // Pedidos y Vacaciones no vuelven de la firma, así que solo se les exige la identidad: es lo que
+    // permite encontrar el PDF de una persona en la carpeta sin abrirlo. El resto de las variables es
+    // el mismo esqueleto, con lo que estos documentos sí tienen (un número en vez de un período).
+    Pedido: [V.proyecto, V.apellido, V.nombres, V.tipo, V.numero, V.fecha, { ...V.identidad, requerida: true }, V.email, V.empresa, V.empresaCuit, V.timestamp],
+    Vacacion: [V.proyecto, V.apellido, V.nombres, V.tipo, V.numero, V.anio, V.fecha, { ...V.identidad, requerida: true }, V.email, V.empresa, V.empresaCuit, V.timestamp],
+  };
+})();
 
 /**
  * Lo que se usa cuando el tenant no configuró nada.
@@ -82,15 +104,32 @@ export const VARIABLES_POR_TIPO: Record<TipoNomenclatura, VariableNomenclatura[]
  * como patrón. Que el default reproduzca el comportamiento anterior es lo que permite soltar esta
  * función sin migrar nada ni renombrar un solo archivo ya generado.
  */
-export const PATRON_POR_DEFECTO: Record<TipoNomenclatura, string> = {
-  Contrato: "{{apellido}}_{{nombres}}_{{proyecto}}_{{tipo}}_{{docName}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}_{{identidad}}_{{email}}_{{extra}}",
-  Release: "{{apellido}}_{{nombres}}_{{proyecto}}_{{tipo}}_{{docName}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}_{{identidad}}_{{email}}_{{extra}}",
-  AltaAFIP: "{{apellido}}_{{nombres}}_{{proyecto}}_{{tipo}}_{{docName}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}_{{identidad}}_{{email}}_{{extra}}",
-  ConstanciaCUIT: "{{apellido}}_{{nombres}}_{{proyecto}}_{{tipo}}_{{docName}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}_{{identidad}}_{{email}}_{{extra}}",
-  Documentacion: "{{apellido}}_{{nombres}}_{{proyecto}}_{{tipo}}_{{docName}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}_{{identidad}}_{{email}}_{{extra}}",
-  Pedido: "pedido_{{numero}}_{{identidad}}_{{timestamp}}",
-  Vacacion: "vacacion_{{numero}}_{{identidad}}_{{timestamp}}",
-};
+export const PATRON_POR_DEFECTO: Record<TipoNomenclatura, string> = (() => {
+  /*
+    Un solo esqueleto para todos, leído de izquierda a derecha como una frase:
+
+      DÓNDE (proyecto) · QUIÉN (persona) · QUÉ (documento) · CUÁNDO · IDENTIFICADORES · PARA QUIÉN (empleadora)
+
+    El PROYECTO va primero porque es cómo se agrupan las carpetas: al mirar un directorio ordenado
+    por nombre, todo lo del mismo proyecto queda junto. La EMPLEADORA va al final porque es el dato
+    que menos se busca y el más largo — adelante empujaría el nombre de la persona fuera de la vista
+    en cualquier listado angosto.
+
+    Que los siete sean iguales no es prolijidad: el que mira una carpeta con contratos, pedidos y
+    vacaciones mezclados lee siempre los mismos campos en el mismo lugar. Cada tipo cambia solo en lo
+    que de verdad tiene distinto —un período contra un número de pedido— y todo lo demás coincide.
+  */
+  const deContrato = "{{proyecto}}_{{apellido}}_{{nombres}}_{{tipo}}_{{docName}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}_{{identidad}}_{{email}}_{{extra}}_{{empresa}}_{{empresaCuit}}";
+  return {
+    Contrato: deContrato,
+    Release: deContrato,
+    AltaAFIP: deContrato,
+    ConstanciaCUIT: deContrato,
+    Documentacion: deContrato,
+    Pedido: "{{proyecto}}_{{apellido}}_{{nombres}}_{{tipo}}_{{numero}}_{{fecha}}_{{identidad}}_{{email}}_{{empresa}}_{{empresaCuit}}",
+    Vacacion: "{{proyecto}}_{{apellido}}_{{nombres}}_{{tipo}}_{{numero}}_{{anio}}_{{identidad}}_{{email}}_{{empresa}}_{{empresaCuit}}",
+  };
+})();
 
 /**
  * Un valor listo para ir adentro de un nombre de archivo.

@@ -21,7 +21,9 @@ function isValidObjectId(id) {
  * el documento sin abrirlo (desde el mail o al listar la carpeta). Si la persona no tiene los datos
  * cargados llega vacío y el nombre queda como antes.
  */
-export async function savePdfToStorage(tenantId, userId, orderNumber, pdfBuffer, identidadTag) {
+export async function savePdfToStorage(tenantId, userId, orderNumber, pdfBuffer, identidadTag, 
+/** Datos extra para el patrón de nomenclatura (proyecto, persona, empleadora). */
+datosNombre) {
     try {
         console.log("[PDF STORAGE] Starting PDF save process...");
         console.log("[PDF STORAGE] Tenant ID:", tenantId);
@@ -50,7 +52,7 @@ export async function savePdfToStorage(tenantId, userId, orderNumber, pdfBuffer,
         const identidad = (identidadTag || "").replace(/[^a-zA-Z0-9_-]/g, "");
         // El patrón lo define el ABM de Nomenclatura de archivos (Plantillas). Sin configurar, el default
         // reproduce exactamente este nombre: por eso esto se pudo soltar sin migrar ni renombrar nada.
-        const filename = `${await nombreArchivo(tenantId, "Pedido", { numero: sanitizedOrderNumber, identidad, timestamp, fecha: String(timestamp).slice(0, 8) })}.pdf`;
+        const filename = `${await nombreArchivo(tenantId, "Pedido", { ...(datosNombre || {}), tipo: "Pedido", numero: sanitizedOrderNumber, identidad, timestamp, fecha: String(timestamp).slice(0, 8) })}.pdf`;
         console.log("[PDF STORAGE] Filename:", filename);
         const filePath = path.join(storageDir, filename);
         console.log("[PDF STORAGE] Full file path:", filePath);
@@ -72,7 +74,9 @@ export async function savePdfToStorage(tenantId, userId, orderNumber, pdfBuffer,
     }
 }
 /** `identidadTag`: ver `savePdfToStorage`. */
-export async function savePdfVacationToStorage(tenantId, userId, vacationNumber, pdfBuffer, identidadTag) {
+export async function savePdfVacationToStorage(tenantId, userId, vacationNumber, pdfBuffer, identidadTag, 
+/** Datos extra para el patrón de nomenclatura (proyecto, persona, empleadora). */
+datosNombre) {
     try {
         console.log("[PDF STORAGE] Starting vacation PDF save process...");
         console.log("[PDF STORAGE] Tenant ID:", tenantId);
@@ -99,7 +103,7 @@ export async function savePdfVacationToStorage(tenantId, userId, vacationNumber,
         const timestamp = Date.now();
         const sanitizedVacationNumber = vacationNumber.replace(/[^a-zA-Z0-9-]/g, "_");
         const identidad = (identidadTag || "").replace(/[^a-zA-Z0-9_-]/g, "");
-        const filename = `${await nombreArchivo(tenantId, "Vacacion", { numero: sanitizedVacationNumber, identidad, timestamp, fecha: String(timestamp).slice(0, 8) })}.pdf`;
+        const filename = `${await nombreArchivo(tenantId, "Vacacion", { ...(datosNombre || {}), tipo: "Vacacion", numero: sanitizedVacationNumber, identidad, timestamp, fecha: String(timestamp).slice(0, 8), anio: String(timestamp).slice(0, 4) })}.pdf`;
         console.log("[PDF STORAGE] Filename:", filename);
         const filePath = path.join(storageDir, filename);
         console.log("[PDF STORAGE] Full file path:", filePath);

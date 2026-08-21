@@ -27,6 +27,10 @@ const DATOS = {
     extra: "Constancia-de-Cuit",
     numero: "1042",
     timestamp: "20260821-143012",
+    anio: "2026",
+    fecha: "20260821",
+    empresa: "FZERO S.R.L",
+    empresaCuit: "CUIT-30710295839",
 };
 describe("lo que el archivo necesita para volver de la firma", () => {
     /**
@@ -81,12 +85,38 @@ describe("lo que el archivo necesita para volver de la firma", () => {
 });
 describe("el default rinde el nombre de siempre", () => {
     /**
-     * Es lo que permite soltar esto sin migrar nada ni renombrar un archivo ya generado: sin
-     * configurar, el nombre es idéntico al que producía `buildDocFileName` a mano.
+     * El orden es una decisión, no una casualidad: DÓNDE · QUIÉN · QUÉ · CUÁNDO · IDENTIFICADORES ·
+     * PARA QUIÉN. El proyecto primero agrupa las carpetas por proyecto al ordenar por nombre; la
+     * empleadora al final porque es el campo más largo y el que menos se busca.
      */
-    it("reproduce el ejemplo de la documentación", () => {
+    it("arranca con el proyecto y termina con la empleadora", () => {
         const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
-        assert.equal(nombre, "gonzalez-rotstein_juan-manuel_748_Contrato_Alta_20260810_Baja_-_CUIL-20331501027_DNI-33150102_juanmanuel.gonzalezrotstein-gmail.com_Constancia-de-Cuit");
+        assert.equal(nombre, "748_gonzalez-rotstein_juan-manuel_Contrato_Alta_20260810_Baja_-_CUIL-20331501027_DNI-33150102_juanmanuel.gonzalezrotstein-gmail.com_Constancia-de-Cuit_FZERO-S.R.L_CUIT-30710295839");
+        assert.ok(nombre.startsWith("748_"), "el proyecto va primero");
+        assert.ok(nombre.endsWith("_CUIT-30710295839"), "el CUIT de la empleadora va último");
+    });
+    /**
+     * Los siete tipos comparten el mismo esqueleto. Quien mira una carpeta con contratos, pedidos y
+     * vacaciones mezclados lee siempre los mismos campos en el mismo lugar; cada tipo cambia solo en lo
+     * que de verdad tiene distinto (un período contra un número).
+     */
+    it("todos empiezan por proyecto y terminan en la empleadora", () => {
+        for (const tipo of TIPOS_NOMENCLATURA) {
+            const p = PATRON_POR_DEFECTO[tipo];
+            assert.ok(p.startsWith("{{proyecto}}_"), `${tipo} no arranca con el proyecto: ${p}`);
+            assert.ok(p.endsWith("_{{empresa}}_{{empresaCuit}}"), `${tipo} no termina con la empleadora: ${p}`);
+            assert.match(p, /\{\{apellido\}\}_\{\{nombres\}\}_\{\{tipo\}\}/, `${tipo} no respeta el orden persona → documento`);
+        }
+    });
+    /**
+     * El CUIT de la empleadora convive con el CUIL de la persona sin confundirlos, y sus once dígitos
+     * no se leen como una fecha (el cron busca tokens de OCHO).
+     */
+    it("el CUIT de la empleadora no interfiere con el parseo de vuelta", () => {
+        const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
+        assert.equal(/(?:^|_)CUIL-(\d{11})/.exec(nombre)?.[1], "20331501027", "el CUIL que se extrae tiene que ser el de la PERSONA");
+        const fechas = nombre.match(/(?<!\d)(?<!(?:DNI|CI|LE|LC|PAS|DOC)-)(\d{8})(?!\d)/g) ?? [];
+        assert.deepEqual(fechas, ["20260810"], "el CUIT no puede colarse como fecha");
     });
     it("el bloque Alta/Baja sobrevive con la baja vacía", () => {
         // Un "-" NO es basura: distingue "contrato sin fin" de "dato sin cargar". Si la limpieza se lo
@@ -109,8 +139,8 @@ describe("el default rinde el nombre de siempre", () => {
         assert.ok(fechas.includes("20260810"), `extraerFechasDeNombre no encontraría el alta (encontró ${JSON.stringify(fechas)})`);
     });
     it("los de pedidos y vacaciones también conservan su identidad", () => {
-        const pedido = renderNomenclatura(PATRON_POR_DEFECTO.Pedido, DATOS);
-        assert.equal(pedido, "pedido_1042_CUIL-20331501027_DNI-33150102_20260821-143012");
+        const pedido = renderNomenclatura(PATRON_POR_DEFECTO.Pedido, { ...DATOS, tipo: "Pedido" });
+        assert.equal(pedido, "748_gonzalez-rotstein_juan-manuel_Pedido_1042_20260821_CUIL-20331501027_DNI-33150102_juanmanuel.gonzalezrotstein-gmail.com_FZERO-S.R.L_CUIT-30710295839");
         assert.match(pedido, /(?:^|_)CUIL-(\d{11})/);
     });
 });
