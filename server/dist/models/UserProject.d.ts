@@ -131,6 +131,17 @@ interface IContract {
      * convenio si la categoría cambia. Lo que se sella es que la consulta se hizo.
      */
     obraSocialNoFigura?: boolean;
+    /**
+     * Por dónde entró la constatación: el panel de pegado o el script que opera ARCA.
+     *
+     * Se guarda junto con quién y cuándo porque el dato queda BLOQUEADO: si alguien lo discute meses
+     * después —"esta persona no tiene esta obra social"— la única forma de reconstruir qué pasó es
+     * saber de dónde salió. Con el pegado manual bastaba el `El`, porque siempre había alguien
+     * mirando; desde que hay un script que aplica por API, no.
+     */
+    obraSocialAplicadaOrigen?: "panel" | "script";
+    /** Quién la aplicó. En el camino automático es el dueño del token que corrió el script. */
+    obraSocialAplicadaPor?: Types.ObjectId | null;
     altaDocumentoUrl?: string;
     altaDocumentoNombre?: string;
     constanciaVigenciaDesde?: string;

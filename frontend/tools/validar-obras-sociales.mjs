@@ -77,6 +77,18 @@ export const ROTULOS_PERMITIDOS = ["Agregar", "Reiniciar"];
 /** ARCA no admite más de 10 relaciones laborales cargadas a la vez. */
 export const TOPE_ARCA = 10;
 
+/**
+ * Cuánto se espera a que alguien se loguee, en minutos.
+ *
+ * Generoso a propósito: el login de ARCA tiene sus propios tiempos y quien lo corre puede estar
+ * haciendo otra cosa. Lo que NO hay es reintento ciego — al vencerse, el script sale con un mensaje
+ * que dice qué falta, no vuelve a probar solo.
+ */
+export const ESPERA_LOGIN_MIN_DEFAULT = 5;
+
+/** La pantalla de login de ARCA. Se abre, no se completa: la clave la pone una persona. */
+const AFIP_LOGIN_URL = "https://auth.afip.gob.ar/contribuyente_/login.xhtml";
+
 const SEL = {
   cuil: "#ctl00_ContentPlaceHolder1_InputCuil_txtCuil",
   obraSocial: 'input[id*="ExtendCodeOS_AutocompleteText"]',
@@ -90,13 +102,17 @@ export const conGuiones = (s) => {
 
 // ---------------------------------------------------------------- argumentos
 export function parsearArgs(argv) {
-  const args = { cuils: [], out: "", archivo: "" };
+  const args = { empresa: "", cuils: [], archivo: "", dryRun: false, forzar: false, esperaMin: ESPERA_LOGIN_MIN_DEFAULT };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === "--cuils" || a === "-f") args.archivo = argv[++i] || "";
+    if (a === "--empresa" || a === "-e") args.empresa = argv[++i] || "";
+    else if (a === "--dry-run" || a === "-n") args.dryRun = true;
+    else if (a === "--forzar") args.forzar = true;
+    else if (a === "--espera") args.esperaMin = Number(argv[++i]) || ESPERA_LOGIN_MIN_DEFAULT;
+    // `--cuils`/`--cuil` siguen existiendo para acotar la corrida a mano (probar con dos personas,
+    // reintentar las que fallaron). Sin ellos, los pendientes salen de la API.
+    else if (a === "--cuils" || a === "-f") args.archivo = argv[++i] || "";
     else if (a === "--cuil") args.cuils.push(argv[++i] || "");
-    else if (a === "--out" || a === "-o") args.out = argv[++i] || "";
-    else if (!a.startsWith("-") && !args.archivo) args.archivo = a;
   }
   if (args.archivo) {
     // Un CUIL por línea, o un CSV del que se toma la primera columna.
@@ -108,6 +124,56 @@ export function parsearArgs(argv) {
   // Deduplicado conservando el orden: repetir un CUIL desperdicia un lugar de la tanda de 10.
   args.cuils = [...new Set(args.cuils.map(conGuiones).filter(Boolean))];
   return args;
+}
+
+// ------------------------------------------------------------------------ API
+/*
+  La API de WeProdu, en las dos puntas: de dónde salen los pendientes y a dónde va el resultado.
+
+  El token sale del entorno y nunca de un archivo del repo. Es el mismo JWT que usa el navegador:
+  se saca de las DevTools de WeProdu (Application → Local Storage → `token`).
+*/
+const API = {
+  url: (process.env.WEPRODU_API_URL || "http://localhost:7001/api/v1").replace(/\/$/, ""),
+  token: process.env.WEPRODU_TOKEN || "",
+  tenant: process.env.WEPRODU_TENANT || "",
+};
+
+async function api(ruta, opciones = {}) {
+  if (!API.token) {
+    throw new Error("Falta WEPRODU_TOKEN. Sacalo de las DevTools de WeProdu (Application → Local Storage → token) y exportalo:\n  export WEPRODU_TOKEN='...'\n  export WEPRODU_TENANT='<slug o id del tenant>'");
+  }
+  const res = await fetch(`${API.url}${ruta}`, {
+    ...opciones,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${API.token}`,
+      ...(API.tenant ? { "X-Tenant-Id": API.tenant } : {}),
+      ...(opciones.headers || {}),
+    },
+  });
+  const texto = await res.text();
+  let cuerpo;
+  try {
+    cuerpo = texto ? JSON.parse(texto) : null;
+  } catch {
+    cuerpo = null;
+  }
+  if (!res.ok) throw new Error(cuerpo?.error || `${res.status} en ${ruta}`);
+  return cuerpo;
+}
+
+/** Los pendientes de esa empleadora, con el mismo criterio que la grilla. */
+export async function traerPendientes(empresa) {
+  return api(`/contratos/obras-sociales/pendientes?empresa=${encodeURIComponent(empresa)}`);
+}
+
+/** Aplica el lote. Con `dryRun` calcula lo mismo y no escribe nada. */
+export async function aplicarLote(empresa, items, { dryRun = false, forzar = false } = {}) {
+  return api("/contratos/obras-sociales/constatar", {
+    method: "POST",
+    body: JSON.stringify({ empresa, origen: "script", items, dryRun, forzar }),
+  });
 }
 
 // ------------------------------------------------------------------- páginas
@@ -215,137 +281,230 @@ async function agregarCuil(page, cuil) {
 }
 
 // --------------------------------------------------------------------- salida
-const log = (...a) => console.error(...a); // stderr: stdout es SOLO el CSV, para poder pipear
+const log = (...a) => console.error(...a); // stderr: stdout queda libre para pipear
 
-async function main() {
-  const args = parsearArgs(process.argv.slice(2));
-  if (args.cuils.length === 0) {
-    log("Faltan los CUIL. Ejemplo:\n  npm run validar-obras-sociales -- --cuils cuils.txt\n  npm run validar-obras-sociales -- --cuil 27-40073687-7 --cuil 20-36397260-9");
-    process.exit(1);
+/**
+ * Espera a que haya "sesión de trabajo" en ARCA, sin tocar la clave de nadie.
+ *
+ * Abre el login en el perfil dedicado, dice qué falta, y sondea la pestaña hasta que aparezca la
+ * pantalla de altas. Al vencerse el plazo NO reintenta: sale y explica. Un reintento ciego contra el
+ * organismo no resuelve nada y encima puede endurecer sus defensas.
+ */
+async function esperarSesion(ctx, minutos) {
+  const hasta = Date.now() + minutos * 60_000;
+  let page = await buscarPaginaArca(ctx);
+  if (!page) {
+    page = await ctx.newPage();
+    await page.goto(AFIP_LOGIN_URL).catch(() => {});
   }
+  log(
+    `\nFalta iniciar sesión en ARCA. Te abrí el login en esta ventana de Chrome.\n\n` +
+      `  1. Entrá con tu clave fiscal.\n` +
+      `  2. Simplificación Registral - Empleadores → elegí el CUIT de la empleadora.\n` +
+      `     (Ese paso es el que inicia la «sesión de trabajo»: sin él, ARCA rechaza la pantalla de altas.)\n` +
+      `  3. Relaciones Laborales → Registrar Nuevas Altas.\n\n` +
+      `Espero hasta ${minutos} minuto(s) y sigo solo…`,
+  );
+  while (Date.now() < hasta) {
+    const p = (await buscarPaginaArca(ctx)) || page;
+    if ((await estadoPantalla(p).catch(() => "otra")) === "altas") {
+      log("Sesión lista. Sigo.\n");
+      return p;
+    }
+    await new Promise((r) => setTimeout(r, 3000));
+  }
+  return null;
+}
 
-  /*
-    Import perezoso: Playwright solo hace falta para hablar con el navegador. Arriba del archivo
-    obligaría a tenerlo instalado para importar cualquier función de acá —los tests, por ejemplo— y
-    convertiría una dependencia faltante en un stack trace en vez de una instrucción.
-  */
+/**
+ * ¿Y el login automático?
+ *
+ * No está, y no es un olvido. Tipear CUIT y clave en el formulario de ARCA obliga a apretar botones
+ * que no son «Agregar» ni «Reiniciar», y eso rompe la única protección real que tiene este script: la
+ * lista blanca de `boton()`, que es lo que garantiza que nunca se apriete «Aceptar» y se registren
+ * altas de verdad. Hay un test que escanea esta fuente y falla ante cualquier `.click()` que no pase
+ * por ahí; relajarlo para que entre un login sería cambiar la garantía más importante del proyecto
+ * por ahorrar un login cada varios días.
+ *
+ * Porque eso es lo que compraría: con el perfil dedicado la sesión de ARCA sobrevive días, así que el
+ * login no es "cada corrida", es "cada tanto". A cambio habría que poner la clave fiscal en juego —en
+ * variables de entorno o en el keychain— y aun así abortar ante el segundo factor, que ARCA pide cada
+ * vez más seguido. No compensa.
+ *
+ * Lo que sí hace el script es ESPERAR: abre el login, dice qué falta y sigue solo cuando la sesión
+ * está lista (ver `esperarSesion`).
+ */
+
+/**
+ * El trabajo, sin CLI alrededor./**
+ * El trabajo, sin CLI alrededor.
+ *
+ * Separado a propósito: el día que esto se dispare de otra forma —un agente local escuchando un
+ * pedido de WeProdu, un cron— se llama a esta función y no hay nada que reescribir.
+ */
+export async function validarObrasSociales({ empresa, cuils, dryRun = false, forzar = false, esperaMin = ESPERA_LOGIN_MIN_DEFAULT, cdpUrl = CDP_URL }) {
   let chromium;
   try {
     ({ chromium } = await import("playwright-core"));
   } catch {
-    log("Falta la dependencia `playwright-core`.\n\nCorré `npm install` en frontend/ y volvé a intentar.\n");
-    process.exit(1);
+    throw new Error("Falta la dependencia `playwright-core`.\n\nCorré `npm install` en frontend/ y volvé a intentar.");
   }
 
   let browser;
   try {
-    browser = await chromium.connectOverCDP(CDP_URL);
+    browser = await chromium.connectOverCDP(cdpUrl);
   } catch {
     // Sin stack trace: el 100% de las veces es que Chrome no está en modo debug.
-    log(
-      `No pude conectarme a Chrome en ${CDP_URL}.\n\n` +
-        "Cerrá Chrome del todo y volvé a abrirlo con el puerto de depuración:\n" +
-        '  macOS  open -a "Google Chrome" --args --remote-debugging-port=9222\n' +
-        "  Win    chrome.exe --remote-debugging-port=9222\n",
+    throw new Error(
+      `No pude conectarme a Chrome en ${cdpUrl}.\n\n` +
+        "Levantá el perfil dedicado con:\n" +
+        "  npm run chrome-arca\n\n" +
+        "Es un Chrome aparte, con su propio perfil: no hace falta cerrar el que estás usando, y el puerto abierto solo alcanza a esa ventana.",
     );
-    process.exit(1);
   }
 
-  const ctx = browser.contexts()[0];
-  const page = ctx && (await buscarPaginaArca(ctx));
-  if (!page) {
-    log(
-      "Chrome está en modo depuración, pero no encontré ninguna pestaña de ARCA.\n\n" +
-        "Entrá con clave fiscal → Simplificación Registral → elegí la empleadora →\n" +
-        "Relaciones Laborales → Registrar Nuevas Altas, y volvé a correr esto.\n",
-    );
-    await browser.close();
-    process.exit(1);
-  }
+  try {
+    const ctx = browser.contexts()[0];
+    if (!ctx) throw new Error("Chrome respondió pero no tiene ninguna ventana abierta.");
 
-  const estado = await estadoPantalla(page);
-  if (estado !== "altas") {
-    log(
-      estado === "sin_sesion"
-        ? "La sesión de ARCA no está activa (o falta elegir el CUIT de la empleadora).\n\nVolvé a entrar y dejá abierta la pantalla «Registrar Nuevas Altas».\n"
-        : `La pestaña de ARCA no está en «Registrar Nuevas Altas».\n\nEstá en: ${page.url()}\n`,
-    );
-    await browser.close();
-    process.exit(1);
-  }
-
-  log(`Validando ${args.cuils.length} CUIL en tandas de ${TOPE_ARCA}…`);
-
-  /** cuil -> rnos ('' = ARCA no tiene afiliación: es una RESPUESTA, no un error). */
-  const hechos = new Map();
-  /** Los que ARCA no pudo resolver. NO se emiten: ver el filtro final. */
-  const errores = new Set();
-  let pendientes = [...args.cuils];
-  let sinSesion = false;
-
-  while (pendientes.length > 0 && !sinSesion) {
-    if (!(await reiniciarGrilla(page))) {
-      log("No encontré el botón «Reiniciar»: no puedo vaciar la grilla para la tanda siguiente.");
-      break;
-    }
-
-    const tanda = pendientes.slice(0, TOPE_ARCA);
-    const reencolar = [];
-
-    for (const cuil of tanda) {
-      if ((await estadoPantalla(page)) !== "altas") {
-        // Sesión caída a mitad de camino: se FRENA. Lo pendiente queda pendiente — jamás se lo marca
-        // como vacío, porque vacío significa "ARCA dijo que no tiene obra social" y se guarda validado.
-        sinSesion = true;
-        break;
-      }
-      await agregarCuil(page, cuil);
-      if (await topeAlcanzado(page)) {
-        reencolar.push(cuil); // no se lo pudo ni intentar
-        break;
+    let page = await buscarPaginaArca(ctx);
+    const estado = page ? await estadoPantalla(page) : "otra";
+    if (estado !== "altas") {
+      page = await esperarSesion(ctx, esperaMin);
+      if (!page) {
+        throw new Error(`Pasaron ${esperaMin} minuto(s) y la pantalla «Registrar Nuevas Altas» sigue sin estar lista.\n\nDejala abierta en esa ventana de Chrome y volvé a correr esto.`);
       }
     }
 
-    if (!sinSesion) {
-      const { filas, ambiguas } = await leerFilas(page);
-      if (ambiguas > 0) {
-        // Emparejamiento dudoso: se frena. Seguir sería exportar obras sociales posiblemente corridas,
-        // y del otro lado se guardan fijas, con candado.
-        log(`Frené: no pude emparejar ${ambiguas} fila(s) con su CUIL. La estructura de la grilla cambió.`);
+    log(`Validando ${cuils.length} CUIL en tandas de ${TOPE_ARCA}…`);
+
+    /** cuil -> rnos ('' = ARCA no tiene afiliación: es una RESPUESTA, no un error). */
+    const hechos = new Map();
+    /** Los que ARCA no pudo resolver. NO se aplican: ver el filtro final. */
+    const errores = new Set();
+    let pendientes = [...cuils];
+    let sinSesion = false;
+
+    while (pendientes.length > 0 && !sinSesion) {
+      if (!(await reiniciarGrilla(page))) {
+        log("No encontré el botón «Reiniciar»: no puedo vaciar la grilla para la tanda siguiente.");
         break;
       }
+
+      const tanda = pendientes.slice(0, TOPE_ARCA);
+      const reencolar = [];
+
       for (const cuil of tanda) {
-        if (reencolar.includes(cuil)) continue;
-        if (cuil in filas) hechos.set(cuil, filas[cuil]);
-        // La fila no apareció con la sesión viva y sin tope: es un error DE ESE CUIL (inválido, con
-        // relación activa, un popup). Se reporta aparte y no se aplica.
-        else errores.add(cuil);
+        if ((await estadoPantalla(page)) !== "altas") {
+          // Sesión caída a mitad de camino: se FRENA. Lo pendiente queda pendiente — jamás se lo marca
+          // como vacío, porque vacío significa "ARCA dijo que no tiene obra social" y se guarda validado.
+          sinSesion = true;
+          break;
+        }
+        await agregarCuil(page, cuil);
+        if (await topeAlcanzado(page)) {
+          reencolar.push(cuil); // no se lo pudo ni intentar
+          break;
+        }
       }
+
+      if (!sinSesion) {
+        const { filas, ambiguas } = await leerFilas(page);
+        if (ambiguas > 0) {
+          // Emparejamiento dudoso: se frena. Seguir sería exportar obras sociales posiblemente
+          // corridas, y del otro lado se guardan fijas, con candado.
+          log(`Frené: no pude emparejar ${ambiguas} fila(s) con su CUIL. La estructura de la grilla cambió.`);
+          break;
+        }
+        for (const cuil of tanda) {
+          if (reencolar.includes(cuil)) continue;
+          if (cuil in filas) hechos.set(cuil, filas[cuil]);
+          // La fila no apareció con la sesión viva y sin tope: es un error DE ESE CUIL (inválido, con
+          // relación activa, un popup). Se reporta aparte y no se aplica.
+          else errores.add(cuil);
+        }
+      }
+
+      pendientes = [...reencolar, ...pendientes.slice(tanda.length)];
+      log(`  ${hechos.size}/${cuils.length} leídos${errores.size ? ` · ${errores.size} con error` : ""}`);
     }
 
-    pendientes = [...reencolar, ...pendientes.slice(tanda.length)];
-    log(`  ${hechos.size}/${args.cuils.length} validados${errores.size ? ` · ${errores.size} con error` : ""}`);
+    // Reinicio final: la pantalla de ARCA queda vacía. Filas cargadas son altas a medio hacer que
+    // alguien puede confirmar por error más adelante.
+    await reiniciarGrilla(page);
+
+    const items = [...hechos.entries()].map(([cuil, rnos]) => ({ cuil, rnos }));
+    const resultado = items.length ? await aplicarLote(empresa, items, { dryRun, forzar }) : { aplicadas: 0, rechazadas: [], dryRun };
+    return { items, errores: [...errores], sinSesion, faltaron: cuils.length - hechos.size, resultado };
+  } finally {
+    await browser.close().catch(() => {});
+  }
+}
+
+async function main() {
+  const args = parsearArgs(process.argv.slice(2));
+
+  /*
+    Sin `--empresa` NO se adivina. La validación de "esta obra social está entre las registradas" es
+    por CUIT: correr contra la empleadora equivocada escribe datos que parecen bien y están mal, que
+    es exactamente lo que este circuito existe para evitar.
+  */
+  if (!args.empresa) {
+    log(
+      "Falta --empresa <id>.\n\n" +
+        "Es el id de la Empresa Contrato cuyos pendientes se van a validar. Sin eso no se puede correr:\n" +
+        "la obra social se valida contra el CUIT de la empleadora, y usar el equivocado guarda un dato\n" +
+        "que parece correcto y no lo es.\n\n" +
+        "  npm run validar-obras-sociales -- --empresa <id>\n" +
+        "  npm run validar-obras-sociales -- --empresa <id> --dry-run\n",
+    );
+    process.exit(1);
   }
 
-  // Reinicio final: la pantalla de ARCA queda vacía. Filas cargadas son altas a medio hacer que
-  // alguien puede confirmar por error más adelante.
-  await reiniciarGrilla(page);
-  await browser.close();
+  let cuils = args.cuils;
+  if (cuils.length === 0) {
+    try {
+      const pendientes = await traerPendientes(args.empresa);
+      cuils = pendientes.map((p) => conGuiones(p.cuil)).filter(Boolean);
+      log(`${cuils.length} pendiente(s) de esa empleadora.`);
+    } catch (e) {
+      log(`\nNo pude traer los pendientes: ${e.message}\n`);
+      process.exit(1);
+    }
+  }
+  if (cuils.length === 0) {
+    log("No hay nada pendiente para esa empleadora.");
+    return;
+  }
 
-  if (sinSesion) {
-    log(`\nSe cortó la sesión de ARCA. Quedaron ${args.cuils.length - hechos.size} sin validar: volvé a entrar y corré esto de nuevo con los que faltan.`);
-  }
-  if (errores.size) {
-    log(`\nARCA no devolvió fila para ${errores.size} CUIL (no se emiten):\n  ${[...errores].join("\n  ")}`);
+  let r;
+  try {
+    r = await validarObrasSociales({
+      empresa: args.empresa,
+      cuils,
+      dryRun: args.dryRun,
+      forzar: args.forzar,
+      esperaMin: args.esperaMin,
+    });
+  } catch (e) {
+    log(`\n${e.message}\n`);
+    process.exit(1);
   }
 
-  const csv = [...hechos.entries()].map(([cuil, rnos]) => `${cuil},${rnos}`).join("\n");
-  if (args.out) {
-    writeFileSync(args.out, csv + "\n");
-    log(`\n${hechos.size} validados → ${args.out}`);
+  if (r.sinSesion) log(`\nSe cortó la sesión de ARCA. Quedaron ${r.faltaron} sin leer: volvé a entrar y corré esto de nuevo.`);
+  if (r.errores.length) log(`\nARCA no devolvió fila para ${r.errores.length} CUIL (no se aplican):\n  ${r.errores.join("\n  ")}`);
+
+  const { aplicadas = 0, rechazadas = [] } = r.resultado || {};
+  if (args.dryRun) {
+    log(`\n--dry-run: NO se escribió nada. Se aplicarían ${aplicadas}.`);
+    for (const { cuil, rnos } of r.items) log(`  ${cuil},${rnos}`);
+  } else {
+    log(`\n${aplicadas} obra(s) social(es) aplicada(s).`);
   }
-  log(`\nPegá esto en WeProdu → Contratos → «Constatar obras sociales»:\n`);
-  process.stdout.write(csv + "\n");
+  if (rechazadas.length) {
+    log(`\n${rechazadas.length} rechazada(s):`);
+    for (const x of rechazadas) log(`  ${x.cuil}${x.rnos ? ` (${x.rnos})` : ""} — ${x.motivo}`);
+  }
 }
 
 /*

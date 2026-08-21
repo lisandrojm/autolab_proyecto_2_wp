@@ -15,7 +15,8 @@ import UserProject from "../models/UserProject.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { requireAnyRole } from "../middleware/requireAnyRole.js";
-import { Types } from "mongoose"; // <-- IMPORTANTE: para castear a ObjectId
+import { Types } from "mongoose";
+import { aplicarLoteObrasSociales, pendientesObraSocial, LoteObrasSocialesError } from "../services/obrasSocialesLoteService.js";
 import { Area } from "../models/Area.js";
 import { Position } from "../models/Position.js";
 import { Level } from "../models/Level.js";
@@ -1645,150 +1646,89 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/obra-social"
  */
 router.post("/projects/obras-sociales/aplicar-lote", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
     try {
-        const empresaId = String(req.body?.empresaId || "");
-        const previsualizar = req.body?.previsualizar === true;
-        const filas = Array.isArray(req.body?.filas) ? req.body.filas : [];
-        if (!Types.ObjectId.isValid(empresaId)) {
-            res.status(400).json({ error: "Falta la empleadora: el lote se aplica a los contratos de un solo CUIT." });
-            return;
-        }
-        if (filas.length === 0) {
-            res.status(400).json({ error: "No llegó ninguna fila para aplicar." });
-            return;
-        }
-        // Tope defensivo: una tanda real son decenas. Miles significa que algo se pegó mal, y conviene
-        // frenarlo antes de escribir que a la mitad.
-        if (filas.length > 500) {
-            res.status(400).json({ error: `Llegaron ${filas.length} filas. El lote está pensado para una tanda de constatación, no para una carga masiva: revisá lo que pegaste.` });
-            return;
-        }
-        const empresa = await Company.findById(empresaId).select("obrasSocialesIds razonSocial").lean();
-        if (!empresa) {
-            res.status(404).json({ error: "Empresa no encontrada" });
-            return;
-        }
-        const registradas = new Set((empresa.obrasSocialesIds || []).map((id) => String(id)));
-        const soloDigitos = (v) => String(v ?? "").replace(/\D/g, "");
-        // Se normalizan y deduplican las filas ANTES de tocar la base: el pegado puede traer la misma
-        // persona dos veces (dos corridas encimadas) y aplicarla dos veces daría dos resultados distintos
-        // si los RNOS no coinciden, sin que nadie lo note.
-        const porCuil = new Map();
-        const conflictos = [];
-        for (const f of filas) {
-            const cuil = soloDigitos(f?.cuil);
-            if (cuil.length !== 11)
-                continue;
-            const rnos = soloDigitos(f?.rnos);
-            if (porCuil.has(cuil) && porCuil.get(cuil) !== rnos)
-                conflictos.push(cuil);
-            porCuil.set(cuil, rnos);
-        }
-        if (porCuil.size === 0) {
-            res.status(400).json({ error: "Ninguna fila tenía un CUIL de 11 dígitos. El formato esperado es CUIL,RNOS por línea." });
-            return;
-        }
-        if (conflictos.length > 0) {
-            res.status(400).json({
-                error: `El mismo CUIL vino con dos obras sociales distintas (${conflictos.slice(0, 3).join(", ")}${conflictos.length > 3 ? "…" : ""}). No se aplicó nada: revisá el pegado antes de reintentar.`,
-            });
-            return;
-        }
-        // Catálogo de las obras sociales mencionadas, en una sola consulta.
-        const rnosPedidos = [...new Set([...porCuil.values()].filter(Boolean))];
-        const catalogo = await ObraSocial.find({ externalId: { $in: rnosPedidos } })
-            .select("_id name externalId data")
-            .lean();
-        const porRnos = new Map(catalogo.map((o) => [soloDigitos(o.externalId), o]));
-        // Usuarios de este tenant por CUIL. `metadata.cuit` guarda el CUIL de la persona.
-        const usuarios = await User.find({ tenantId: req.tenantObjectId, "metadata.cuit": { $exists: true, $ne: "" } })
-            .select("_id metadata.cuit firstName lastName")
-            .lean();
-        const usuariosPorCuil = new Map();
-        for (const u of usuarios) {
-            const c = soloDigitos(u?.metadata?.cuit);
-            if (c.length !== 11)
-                continue;
-            usuariosPorCuil.set(c, [...(usuariosPorCuil.get(c) || []), u]);
-        }
-        const resultado = {
-            aplicados: 0,
-            contratosAlcanzados: 0,
-            sinContrato: [],
-            rnosDesconocido: [],
-            noRegistrada: [],
-            yaBloqueados: [],
-            noFigura: 0,
-        };
-        for (const [cuil, rnos] of porCuil) {
-            const users = usuariosPorCuil.get(cuil) || [];
-            if (users.length === 0) {
-                resultado.sinContrato.push(cuil);
-                continue;
-            }
-            // Se resuelve la obra social ANTES de escribir: si el código no existe o la empleadora no lo
-            // tiene registrado, esa fila no se aplica y se informa — pero no frena a las demás. Cortar toda
-            // la tanda por una fila obligaría a rehacer una consulta que ya se hizo.
-            let os = null;
-            if (rnos) {
-                os = porRnos.get(rnos) || null;
-                if (!os) {
-                    resultado.rnosDesconocido.push({ cuil, rnos });
-                    continue;
-                }
-                if (registradas.size > 0 && !registradas.has(String(os._id))) {
-                    resultado.noRegistrada.push({ cuil, rnos, nombre: os.name || "" });
-                    continue;
-                }
-            }
-            const ups = await UserProject.find({ userId: { $in: users.map((u) => u._id) }, "contracts.empresaContratoId": new Types.ObjectId(empresaId) });
-            let alcanzados = 0;
-            let bloqueadoAlguno = false;
-            for (const up of ups) {
-                let tocado = false;
-                up.contracts.forEach((contrato, idx) => {
-                    if (String(contrato?.empresaContratoId || "") !== empresaId)
-                        return;
-                    // Lo ya sellado en ARCA no se pisa: el lote es para constatar lo pendiente, y una corrida
-                    // repetida no puede cambiar en silencio algo que quedó fijo.
-                    if (contrato.obraSocialBloqueada === true || (contrato.obraSocialConstatadaEn === "arca" && (contrato.obraSocialId != null || contrato.obraSocialNoFigura === true))) {
-                        bloqueadoAlguno = true;
-                        return;
-                    }
-                    alcanzados++;
-                    if (previsualizar)
-                        return;
-                    up.contracts[idx] = {
-                        ...contrato.toObject(),
-                        obraSocialId: os ? Number(os?.data?.id) : null,
-                        obraSocialOrigen: os ? "constatada" : undefined,
-                        obraSocialConstatadaEn: "arca",
-                        obraSocialConstatadaEl: new Date(),
-                        obraSocialNoFigura: !os,
-                        obraSocialBloqueada: true,
-                    };
-                    tocado = true;
-                });
-                if (tocado && !previsualizar) {
-                    up.markModified("contracts");
-                    await up.save();
-                }
-            }
-            if (alcanzados === 0) {
-                if (bloqueadoAlguno)
-                    resultado.yaBloqueados.push(cuil);
-                else
-                    resultado.sinContrato.push(cuil);
-                continue;
-            }
-            resultado.aplicados++;
-            resultado.contratosAlcanzados += alcanzados;
-            if (!os)
-                resultado.noFigura++;
-        }
-        res.json({ ...resultado, previsualizacion: previsualizar });
+        const resultado = await aplicarLoteObrasSociales({
+            tenantObjectId: req.tenantObjectId,
+            empresaId: String(req.body?.empresaId || ""),
+            filas: Array.isArray(req.body?.filas) ? req.body.filas : [],
+            previsualizar: req.body?.previsualizar === true,
+            origen: "panel",
+            usuarioId: req.user?.userId,
+        });
+        res.json(resultado);
     }
     catch (error) {
+        if (error instanceof LoteObrasSocialesError) {
+            res.status(error.status).json({ error: error.message });
+            return;
+        }
         console.error("Aplicar lote obras sociales error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+/**
+ * GET /contratos/obras-sociales/pendientes?empresa=<id>
+ *
+ * Los CUIL que le faltan constatar a una empleadora. Existe para que el script que opera ARCA no
+ * tenga que replicar el criterio de "sin validar": replicarlo es cómo se termina consultando gente
+ * que ya estaba resuelta, o salteando gente que faltaba.
+ */
+router.get("/contratos/obras-sociales/pendientes", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
+    try {
+        const empresa = String(req.query?.empresa || "");
+        const pendientes = await pendientesObraSocial(req.tenantObjectId, empresa);
+        res.json(pendientes);
+    }
+    catch (error) {
+        if (error instanceof LoteObrasSocialesError) {
+            res.status(error.status).json({ error: error.message });
+            return;
+        }
+        console.error("Pendientes obras sociales error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+/**
+ * POST /contratos/obras-sociales/constatar
+ *
+ * La punta de escritura del camino automático. Body:
+ *   { empresa, origen: "script", items: [{ cuil, rnos }], dryRun?, forzar? }
+ *
+ * Corre EXACTAMENTE la misma validación que el panel de pegado —mismo servicio— porque escribir por
+ * API saltea la previsualización humana que hasta ahora era la última red. La regla de catálogo
+ * ("este RNOS existe y la empleadora lo tiene registrado ante ARCA") vivía en el navegador; acá está
+ * del lado del server, donde no se puede saltear.
+ *
+ * Es idempotente por contrato: lo ya constatado queda bloqueado y no se pisa, así que el mismo lote
+ * dos veces no cambia nada la segunda vez.
+ */
+router.post("/contratos/obras-sociales/constatar", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
+    try {
+        const r = await aplicarLoteObrasSociales({
+            tenantObjectId: req.tenantObjectId,
+            empresaId: String(req.body?.empresa || req.body?.empresaId || ""),
+            filas: Array.isArray(req.body?.items) ? req.body.items : [],
+            previsualizar: req.body?.dryRun === true,
+            forzar: req.body?.forzar === true,
+            origen: req.body?.origen === "panel" ? "panel" : "script",
+            usuarioId: req.user?.userId,
+        });
+        // Se traduce a la forma que el script entiende: cuántas entraron y, de las que no, POR QUÉ. Un
+        // "rechazadas: 3" sin motivo obliga a adivinar entre catálogo, empleadora y ya-constatada, que se
+        // arreglan de tres formas distintas.
+        const rechazadas = [
+            ...r.rnosDesconocido.map((x) => ({ ...x, motivo: "El código no está en el catálogo de Obras Sociales." })),
+            ...r.noRegistrada.map((x) => ({ cuil: x.cuil, rnos: x.rnos, motivo: `«${x.nombre}» no está entre las obras sociales que la empleadora tiene registradas ante ARCA.` })),
+            ...r.yaBloqueados.map((cuil) => ({ cuil, rnos: "", motivo: "Ya estaba constatada: no se pisa (usá forzar para reemplazarla)." })),
+            ...r.sinContrato.map((cuil) => ({ cuil, rnos: "", motivo: "No tiene ningún contrato con esa empleadora." })),
+        ];
+        res.json({ aplicadas: r.aplicados, contratosAlcanzados: r.contratosAlcanzados, sinObraSocial: r.noFigura, rechazadas, dryRun: r.previsualizacion });
+    }
+    catch (error) {
+        if (error instanceof LoteObrasSocialesError) {
+            res.status(error.status).json({ error: error.message });
+            return;
+        }
+        console.error("Constatar obras sociales error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });

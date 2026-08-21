@@ -7,7 +7,7 @@ import { EmpresaContextMenu } from './EmpresaContextMenu';
 import { FichasHeader } from './context/FichasHeader';
 import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag } from '@fortawesome/free-solid-svg-icons';
 import { faDropbox } from '@fortawesome/free-brands-svg-icons';
 import { Logo } from '../components/ui/Logo';
 import axios from '../api/axiosConfig';
@@ -32,7 +32,13 @@ interface AdminCounts {
  */
 // El membrete va PRIMERO (es prerrequisito de las plantillas); el resto se ordena alfabéticamente.
 const MEMBRETE_PATH = '/empresas-membretes';
-const PLANTILLAS_PATHS = [MEMBRETE_PATH, '/pdfs', '/pdfs-vacaciones', '/contratos-frame', '/releases'];
+/**
+ * Cómo se llaman los archivos que salen de esas plantillas. Va en el mismo subgrupo porque es
+ * transversal a todas —contratos, releases, pedidos y vacaciones— y entra en su orden alfabético,
+ * como el resto (el membrete es la única excepción: va primero por ser prerrequisito).
+ */
+const NOMENCLATURA_PATH = '/nomenclatura-archivos';
+const PLANTILLAS_PATHS = [MEMBRETE_PATH, '/pdfs', '/pdfs-vacaciones', '/contratos-frame', '/releases', NOMENCLATURA_PATH];
 
 /**
  * Subgrupo "ARCA" (dentro de Configuración): todo lo que depende del organismo (ex AFIP).
@@ -284,6 +290,9 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission('config_pdf_templates:view')) base.push({ path: '/pdfs', icon: faFilePdf, label: 'Pedidos', scope: 'global' });
       if (hasPermission('config_pdf_templates:view')) base.push({ path: '/pdfs-vacaciones', icon: faFilePdf, label: 'Vacaciones', scope: 'global' });
       if (hasPermission('config_releases:view')) base.push({ path: '/releases', icon: faFilePdf, label: 'Releases', scope: 'global' });
+      // Cómo se llaman los archivos que salen de todas esas plantillas. Comparte permiso con ellas:
+      // quien puede definir el contenido de un documento puede definir su nombre.
+      if (hasPermission('config_releases:view') || hasPermission('config_contratos_frame:view')) base.push({ path: NOMENCLATURA_PATH, icon: faTag, label: 'Nomenclatura de archivos', scope: 'global' });
       if (hasPermission('config_releases:view')) base.push({ path: '/releases-tipos', icon: faRocket, label: 'Releases', scope: 'global' });
       // Categorías y Funciones FRAME viven en un solo ítem con dos tabs: alcanza con cualquiera de los dos permisos.
       if (hasPermission('config_categorias_sat:view') || hasPermission('config_frame_functions:view')) base.push({ path: '/arca/categorias', icon: faListCheck, label: 'Categorías', scope: 'global' });

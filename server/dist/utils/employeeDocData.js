@@ -102,6 +102,32 @@ export const ETIQUETA_TRAMITE = {
  *
  * Devuelve el nombre SIN extensión (el caller agrega la extensión correspondiente).
  */
+/**
+ * Los datos crudos del nombre, sin decidir todavía en qué orden van.
+ *
+ * Separado de `buildDocFileName` porque ahora hay DOS consumidores: el nombre por defecto (abajo) y
+ * el patrón configurable del ABM de Nomenclatura, que arma el mismo nombre en otro orden. Los dos
+ * tienen que partir de los mismos valores ya normalizados o el `{{apellido}}` del ABM y el de acá
+ * darían resultados distintos para la misma persona.
+ */
+export function datosNombreArchivo(opts) {
+    const { tipo, user, up, contract, docName, extra } = opts;
+    const proyecto = up?.externalProjectId ?? contract?.proyecto_id ?? up?.nombre_proyecto ?? contract?.nombre_proyecto ?? "";
+    return {
+        apellido: campo(user?.lastName),
+        nombres: campo(user?.firstName),
+        proyecto: campo(proyecto),
+        tipo: campo(tipo),
+        docName: campo(docName),
+        // El período va SIEMPRE, con "-" en lo que falte: sin baja significa contrato vigente / sin fin,
+        // y sin alta significa dato sin cargar. Omitir el bloque hacía indistinguibles esos dos casos.
+        fechaAlta: fechaCompacta(contract?.fecha_alta_contrato) || "-",
+        fechaBaja: fechaCompacta(contract?.fecha_baja_contrato) || "-",
+        identidad: buildIdentidadTag(user), // ya viene como CUIL-…_DNI-…, con "_" entre bloques
+        email: campo(String(user?.email || "").replace(/@/g, "-")),
+        extra: campo(extra),
+    };
+}
 export function buildDocFileName(opts) {
     const { tipo, user, up, contract, docName, extra } = opts;
     const proyecto = up?.externalProjectId ?? contract?.proyecto_id ?? up?.nombre_proyecto ?? contract?.nombre_proyecto ?? "";

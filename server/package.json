@@ -37,7 +37,9 @@
     "tipos-servicio:grupo:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/backfillGrupoTipoServicio.ts",
     "tipos-servicio:grupo": "dotenv -e .env.production -- tsx src/scripts/backfillGrupoTipoServicio.ts",
     "test:additive": "tsx --test src/utils/additiveSync.test.ts",
-    "test:constancia": "tsx --test src/utils/constanciaPdf.test.ts"
+    "test:constancia": "tsx --test src/utils/constanciaPdf.test.ts",
+    "test:obras-sociales": "tsx --test src/services/obrasSocialesLoteService.test.ts",
+    "test:nomenclatura": "tsx --test src/utils/nomenclatura.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",

@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
+import { nombreArchivo } from "../services/nomenclaturaService.js";
 
 async function ensureDir(dir: string): Promise<void> {
   try {
@@ -62,7 +63,9 @@ export async function savePdfToStorage(
     const timestamp = Date.now();
     const sanitizedOrderNumber = orderNumber.replace(/[^a-zA-Z0-9-]/g, "_");
     const identidad = (identidadTag || "").replace(/[^a-zA-Z0-9_-]/g, "");
-    const filename = `pedido_${sanitizedOrderNumber}${identidad ? `_${identidad}` : ""}_${timestamp}.pdf`;
+    // El patrón lo define el ABM de Nomenclatura de archivos (Plantillas). Sin configurar, el default
+    // reproduce exactamente este nombre: por eso esto se pudo soltar sin migrar ni renombrar nada.
+    const filename = `${await nombreArchivo(tenantId, "Pedido", { numero: sanitizedOrderNumber, identidad, timestamp, fecha: String(timestamp).slice(0, 8) })}.pdf`;
     console.log("[PDF STORAGE] Filename:", filename);
 
     const filePath = path.join(storageDir, filename);
@@ -129,7 +132,7 @@ export async function savePdfVacationToStorage(
     const timestamp = Date.now();
     const sanitizedVacationNumber = vacationNumber.replace(/[^a-zA-Z0-9-]/g, "_");
     const identidad = (identidadTag || "").replace(/[^a-zA-Z0-9_-]/g, "");
-    const filename = `vacacion_${sanitizedVacationNumber}${identidad ? `_${identidad}` : ""}_${timestamp}.pdf`;
+    const filename = `${await nombreArchivo(tenantId, "Vacacion", { numero: sanitizedVacationNumber, identidad, timestamp, fecha: String(timestamp).slice(0, 8) })}.pdf`;
     console.log("[PDF STORAGE] Filename:", filename);
 
     const filePath = path.join(storageDir, filename);

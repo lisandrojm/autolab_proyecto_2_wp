@@ -55,6 +55,22 @@ export declare const ETIQUETA_TRAMITE: Record<"alta_temprana_afip" | "constancia
  *
  * Devuelve el nombre SIN extensión (el caller agrega la extensión correspondiente).
  */
+/**
+ * Los datos crudos del nombre, sin decidir todavía en qué orden van.
+ *
+ * Separado de `buildDocFileName` porque ahora hay DOS consumidores: el nombre por defecto (abajo) y
+ * el patrón configurable del ABM de Nomenclatura, que arma el mismo nombre en otro orden. Los dos
+ * tienen que partir de los mismos valores ya normalizados o el `{{apellido}}` del ABM y el de acá
+ * darían resultados distintos para la misma persona.
+ */
+export declare function datosNombreArchivo(opts: {
+    tipo: string;
+    user: any;
+    up: any;
+    contract: any;
+    docName?: string;
+    extra?: string;
+}): Record<string, string>;
 export declare function buildDocFileName(opts: {
     tipo: "Contrato" | "Release" | "ConstanciaCUIT" | "AltaAFIP" | "Documentacion";
     user: any;

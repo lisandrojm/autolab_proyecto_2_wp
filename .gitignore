@@ -15,3 +15,15 @@ coverage
 *.pem
 *.p12
 afip
+
+# Perfil de Chrome dedicado a ARCA (`npm run chrome-arca`). Adentro vive una SESIÓN de clave fiscal:
+# nunca se commitea. Es local y descartable — se borra y se vuelve a loguear.
+frontend/.chrome-arca/
+
+# Credenciales y CUIL de una corrida. El script lee su token del entorno, no de un archivo, pero un
+# `.env` local o un `cuils.txt` a mano no pueden terminar en el repo.
+.env
+.env.*
+!.env.example
+cuils.txt
+frontend/cuils.txt

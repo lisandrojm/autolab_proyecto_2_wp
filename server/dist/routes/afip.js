@@ -16,7 +16,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { encryptSecret } from "../utils/secretCrypto.js";
 import { normalizarCuit, cuitEsValido } from "../utils/constanciaPdf.js";
-import { buildDocFileName } from "../utils/employeeDocData.js";
+import { nombreArchivoDocumento } from "../services/nomenclaturaService.js";
 import { resolverCarpetaPorPatron } from "../utils/estadoCarpetas.js";
 import { getTenantAfipConfig, verificarCredenciales, verificarServicioPadron, consultarPadron, clearTenantTicket, getCertificadoInfo } from "../services/afipService.js";
 import { getTenantDropboxConfig, uploadFile, getTemporaryLink, deleteEntry } from "../services/dropboxService.js";
@@ -361,7 +361,7 @@ router.post("/consulta-padron/bulk", async (req, res) => {
                                 try {
                                     const user = userById.get(t.userId);
                                     const contract = up.contracts[t.contractIndex];
-                                    const nombreArchivo = buildDocFileName({ tipo: "ConstanciaCUIT", user, up, contract, docName: "ValidacionAFIP" });
+                                    const nombreArchivo = await nombreArchivoDocumento({ tenantId: req.tenantObjectId, tipo: "ConstanciaCUIT", user, up, contract, docName: "ValidacionAFIP" });
                                     const contenido = Buffer.from(JSON.stringify({
                                         cuit,
                                         estado: resultado.estado,
@@ -487,7 +487,7 @@ router.post("/constancia-archivada/eliminar", async (req, res) => {
  * el camino normal (Generar TXT / Validar en ARCA) y quedan trabados antes de Firma digital.
  *
  * En lugar de eso se archiva un JSON en la MISMA carpeta de Dropbox que vigila la transición
- * automática para ese trámite, con la misma nomenclatura que los PDF (`buildDocFileName`). El cron
+ * automática para ese trámite, con la misma nomenclatura que los PDF (ver `nomenclaturaService`). El cron
  * `estadoDropboxCronService` lo ve, lo matchea con el contrato y lo pasa al estado de Firma digital
  * —igual que si hubiera llegado la constancia real—, y desde ahí ya se le puede generar el Contrato
  * y el Release.
@@ -572,7 +572,7 @@ router.post("/habilitar-firma", async (req, res) => {
                 omitidos.push({ userId: t.userId, nombre, motivo: "Falta cargar la documentación de respaldo y marcar la validación." });
                 continue;
             }
-            const nombreArchivo = buildDocFileName({ tipo: tipo === "alta_temprana_afip" ? "AltaAFIP" : "ConstanciaCUIT", user, up, contract, docName: "SinCuit" });
+            const nombreArchivo = await nombreArchivoDocumento({ tenantId: req.tenantObjectId, tipo: tipo === "alta_temprana_afip" ? "AltaAFIP" : "ConstanciaCUIT", user, up, contract, docName: "SinCuit" });
             const contenido = Buffer.from(JSON.stringify({
                 // Equivalente al JSON de la constancia de CUIT, pero para quien no tiene CUIT: en vez del
                 // resultado de la consulta a AFIP, deja asentada la validación manual que se hizo acá.
@@ -651,7 +651,7 @@ const EXT_PERMITIDAS = [".pdf", ".jpg", ".jpeg", ".png"];
 /**
  * El archivo se recibe en memoria porque SIEMPRE se guarda como PDF: si suben una foto (JPG/PNG) se
  * convierte acá, así toda la documentación de respaldo queda en un formato único y con la misma
- * nomenclatura que el resto de los documentos del contrato (`buildDocFileName`).
+ * nomenclatura que el resto de los documentos del contrato (ver `nomenclaturaService`).
  */
 const uploadSinCuitDoc = multer({
     storage: multer.memoryStorage(),
@@ -727,13 +727,13 @@ router.post("/sin-cuit/documento", uploadSinCuitDoc, async (req, res) => {
         if (req.file) {
             const empleado = await User.findById(userId).select("firstName lastName email metadata").lean();
             const correlativo = String(yaCargados + 1).padStart(2, "0");
-            const base = buildDocFileName({ tipo: "Documentacion", user: empleado, up, contract: contrato, docName: correlativo });
+            const base = await nombreArchivoDocumento({ tenantId: req.tenantObjectId, tipo: "Documentacion", user: empleado, up, contract: contrato, docName: correlativo });
             const esPdf = path.extname(req.file.originalname).toLowerCase() === ".pdf";
             const pdfBuffer = esPdf ? req.file.buffer : await imagenAPdf(req.file.buffer);
             const dir = path.join(__afipDirname, "../../storage", tenantId, String(userId), "sin-cuit");
             await fs.mkdir(dir, { recursive: true });
             // El nombre en disco lleva un sufijo único: si se recarga el mismo correlativo no se pisa el anterior.
-            // `buildDocFileName` ya no deja espacios (el "_" es el único separador de campos), así que el
+            // La nomenclatura ya no deja espacios (el "_" es el único separador de campos), así que el
             // nombre en disco y el lógico coinciden salvo por el sufijo único.
             const enDisco = `${base}__${new mongoose.Types.ObjectId()}.pdf`;
             await fs.writeFile(path.join(dir, enDisco), pdfBuffer);

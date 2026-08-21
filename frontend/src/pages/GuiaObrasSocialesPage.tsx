@@ -94,29 +94,29 @@ export const GuiaObrasSocialesPage: React.FC = () => (
         </p>
 
         <ol className="space-y-4 mt-2">
-          <Paso n={1} titulo="Cerrá Chrome por completo">
-            No alcanza con cerrar la ventana: tiene que salir del todo, porque el puerto de depuración se abre al arrancar el proceso.
+          <Paso n={1} titulo={<>Levantá el Chrome de ARCA: <Cod>npm run chrome-arca</Cod></>}>
+            Desde <Cod>frontend/</Cod>. Abre un Chrome <strong>aparte</strong>, con su propio perfil y el puerto de depuración. No cierres el que estás usando: son dos ventanas independientes.
           </Paso>
-          <Paso n={2} titulo="Abrilo con el puerto de depuración">
-            <span className="block mt-1">
-              macOS: <Cod>open -a "Google Chrome" --args --remote-debugging-port=9222</Cod>
-            </span>
-            <span className="block mt-1">
-              Windows: <Cod>chrome.exe --remote-debugging-port=9222</Cod>
-            </span>
+          <Paso n={2} titulo="Entrá a ARCA y dejá abierta la pantalla de altas">
+            En <strong>esa</strong> ventana: clave fiscal → <strong>Simplificación Registral - Empleadores</strong> → elegí el CUIT de la empleadora → <strong>Relaciones Laborales → Registrar Nuevas
+            Altas</strong>. Elegir el CUIT no es opcional: es lo que inicia la «sesión de trabajo», y sin ese paso ARCA rechaza la pantalla de altas aunque estés logueado.
           </Paso>
-          <Paso n={3} titulo="Entrá a ARCA y dejá abierta la pantalla de altas">
-            Clave fiscal → <strong>Simplificación Registral - Empleadores</strong> → elegí el CUIT de la empleadora → <strong>Relaciones Laborales → Registrar Nuevas Altas</strong>. Elegir el CUIT no es
-            opcional: es lo que inicia la «sesión de trabajo», y sin ese paso ARCA rechaza la pantalla de altas aunque estés logueado.
-          </Paso>
-          <Paso n={4} titulo={<>Corré <Cod>npm run validar-obras-sociales</Cod></>}>
-            El <Cod>cuils.txt</Cod> lo bajás desde el panel <strong>«Validar obras sociales»</strong> de WeProdu. El script devuelve un <Cod>CUIL,RNOS</Cod> por línea, que se pega en ese mismo panel.
+          <Paso n={3} titulo={<>Corré <Cod>npm run validar-obras-sociales -- --empresa &lt;id&gt;</Cod></>}>
+            Toma los pendientes de esa empleadora, los consulta en ARCA de a 10 y guarda el resultado. No hay archivo que bajar ni nada que pegar. Con <Cod>--dry-run</Cod> muestra exactamente qué
+            aplicaría y no escribe nada.
           </Paso>
         </ol>
 
+        <Clave>
+          {/* Es la diferencia práctica más grande del rediseño y conviene decirla explícita: el login
+              deja de ser un peaje por corrida. */}
+          <strong>El perfil queda guardado, así que la sesión de ARCA dura días.</strong> El login deja de ser «cada corrida» y pasa a ser «cada tanto». Si la sesión no está, el script te abre el login,
+          te dice qué falta y espera hasta 5 minutos a que entres — después sigue solo.
+        </Clave>
+
         <Aviso>
-          Mientras Chrome esté abierto con <Cod>--remote-debugging-port</Cod>, <strong>cualquier programa que corra en tu máquina puede controlarlo</strong>: leer tus pestañas, tu sesión de ARCA, todo.
-          Usalo solo mientras dure la validación y después volvé a abrir Chrome normal. Es la contrapartida honesta de no instalar una extensión.
+          Mientras ese Chrome esté abierto, <strong>cualquier programa que corra en tu máquina puede controlarlo</strong>. Como usa un <strong>perfil aparte</strong>, el alcance se limita a esa ventana:
+          tu mail, tu banco y el resto de tus pestañas —que viven en tu Chrome de siempre— quedan afuera. Igual, cerralo cuando termines. Es la contrapartida honesta de no instalar una extensión.
         </Aviso>
 
         <p>
@@ -125,13 +125,13 @@ export const GuiaObrasSocialesPage: React.FC = () => (
 
         <p className="text-[13px] text-gray-500 dark:text-gray-400">
           Antes esto se hacía con una extensión de navegador (Tampermonkey). Se abandonó: sus fallas eran todas del mecanismo y no del trámite — el sandbox de la extensión, un permiso de Chrome apagado
-          por defecto, versiones que había que reinstalar a mano, copias duplicadas pisándose entre ellas. Nada de eso existe conectándose al Chrome que ya está abierto.
+          por defecto, versiones que había que reinstalar a mano, copias duplicadas pisándose entre ellas. Nada de eso existe conectándose a un Chrome común.
         </p>
       </Seccion>
 
       <Seccion n={3} titulo="El circuito, por tanda">
         <div className="flex items-center gap-2 flex-wrap text-[13px] my-1">
-          {['Asignar empleadora', 'Copiar los CUIL', 'Login en ARCA', 'Correr el script', 'Pegar el resultado', 'Generar TXT'].map((paso, i, arr) => (
+          {['Asignar empleadora', 'Login en ARCA', 'Correr el script', 'Generar TXT'].map((paso, i, arr) => (
             <React.Fragment key={paso}>
               <span className={`px-3 py-2 rounded-lg border ${i === 1 ? 'border-blue-400 dark:border-blue-600 text-blue-700 dark:text-blue-300' : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'}`}>
                 {paso}
@@ -149,18 +149,22 @@ export const GuiaObrasSocialesPage: React.FC = () => (
 
         <p className="font-semibold text-gray-900 dark:text-gray-100 pt-1">Validar</p>
         <p>
-          Apretás <strong>«Validar obras sociales»</strong>: WeProdu junta los CUIL pendientes de esa empleadora y te los deja para copiar. Con eso corrés el script (sección 2), que los carga en ARCA de
-          a 10 —el máximo que el organismo acepta—, lee la obra social que precompleta cada fila y deja la pantalla vacía al terminar.
+          El script le pide a WeProdu los pendientes de esa empleadora, los carga en ARCA de a 10 —el máximo que el organismo acepta—, lee la obra social que precompleta cada fila, deja la pantalla
+          vacía al terminar y guarda el resultado. Cada obra social queda cargada en su contrato, con fecha y con el origen, y deja de figurar como pendiente.
         </p>
         <Clave>
           <strong>El script solo lee.</strong> Los únicos botones que aprieta en la pantalla de altas son <strong>Agregar</strong> y <strong>Reiniciar</strong>. <strong>Nunca «Aceptar»</strong>, que es el
           que registra las altas ante el organismo: esas salen del TXT, no de acá.
         </Clave>
 
-        <p className="font-semibold text-gray-900 dark:text-gray-100 pt-1">Pegar el resultado</p>
+        <p className="font-semibold text-gray-900 dark:text-gray-100 pt-1">Qué se guarda y qué se rechaza</p>
         <p>
-          El script devuelve <Cod>CUIL,RNOS</Cod> por línea. Eso se pega en el panel <strong>«Validar obras sociales»</strong> —el mismo de donde bajaste el <Cod>cuils.txt</Cod>—, que antes de guardar te muestra la previsualización y valida que cada
-          obra social esté entre las que la empleadora tiene registradas ante ARCA. Recién ahí queda cargada en cada contrato, con fecha, y deja de figurar como pendiente.
+          Antes de escribir, el servidor valida cada código igual que cuando se pegaba a mano: que el RNOS exista en el catálogo de Obras Sociales y que <strong>la empleadora lo tenga registrado ante
+          ARCA</strong>. Lo que no pasa esa prueba se rechaza con el motivo y no se guarda. Y lo ya constatado <strong>no se pisa</strong>: correr el script dos veces seguidas no cambia nada la segunda.
+        </p>
+        <p>
+          El panel <strong>«Validar obras sociales»</strong> sigue aceptando el pegado manual <Cod>CUIL,RNOS</Cod> para cuando no se puede correr el script — otra máquina, otra persona, otro navegador—.
+          Ese camino conserva su previsualización antes de guardar.
         </p>
       </Seccion>
 

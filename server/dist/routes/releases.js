@@ -8,7 +8,8 @@ import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
-import { buildEmployeeDocData, buildDocFileName } from "../utils/employeeDocData.js";
+import { buildEmployeeDocData } from "../utils/employeeDocData.js";
+import { nombreArchivoDocumento } from "../services/nomenclaturaService.js";
 import { buildDocPdf, getDummyDocVariables, htmlHasText, empresaToMembrete } from "../utils/documentPdf.js";
 const router = Router();
 // El release se redacta en la plataforma (editor con formato) y se guarda como HTML en `content`.
@@ -167,7 +168,8 @@ export async function generarReleasePdf(opts) {
     const data = await buildEmployeeDocData(user, up, contract, empresa);
     const membrete = release.usaMembrete && empresa ? empresaToMembrete(empresa) : undefined;
     const buffer = await buildDocPdf(release.content, data, membrete);
-    const filename = buildDocFileName({ tipo: "Release", user, up, contract, docName: release.name });
+    // Ver `nomenclaturaService`: el patrón es configurable y el default reproduce el nombre de antes.
+    const filename = await nombreArchivoDocumento({ tenantId: opts.tenantId, tipo: "Release", user, up, contract, docName: release.name });
     return { buffer, filename, empresaIdUsado: chosenId || "" };
 }
 // GET /releases/:id/download-filled?userId=&projectId=&contractIndex=

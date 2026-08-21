@@ -12,7 +12,8 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { getTenantDropboxConfig, uploadFile } from "../services/dropboxService.js";
 import { resolverCarpetaPorPatron, resolverEstadoPorCarpetas } from "../utils/estadoCarpetas.js";
-import { buildDocFileName, ETIQUETA_TRAMITE } from "../utils/employeeDocData.js";
+import { ETIQUETA_TRAMITE } from "../utils/employeeDocData.js";
+import { nombreArchivoDocumento } from "../services/nomenclaturaService.js";
 import { generarContratoPdf } from "./contratosFrame.js";
 import { generarReleasePdf } from "./releases.js";
 const __filename = fileURLToPath(import.meta.url);
@@ -315,11 +316,11 @@ router.post("/enviar", async (req, res) => {
                     continue;
                 }
                 // Alta temprana de AFIP: el documento ya cargado (altaDocumentoUrl) se suma, pero renombrado
-                // con el CUIT (buildDocFileName) — el nombre original que le puso quien lo subió a mano no
+                // con la nomenclatura del sistema — el nombre original que le puso quien lo subió a mano no
                 // necesariamente lo trae, y el cron de estadoDropboxCronService.ts matchea por CUIT en el nombre.
                 if (t.tipoImpositivo === "alta_temprana_afip" && contract.altaDocumentoUrl) {
                     const ext = (contract.altaDocumentoNombre || "").match(/\.[a-z0-9]+$/i)?.[0] || ".pdf";
-                    const nombreAlta = `${buildDocFileName({ tipo: "AltaAFIP", user, up, contract, docName: "AltaAFIP" })}${ext}`;
+                    const nombreAlta = `${await nombreArchivoDocumento({ tenantId: req.tenantObjectId, tipo: "AltaAFIP", user, up, contract, docName: "AltaAFIP" })}${ext}`;
                     archivos.push({ nombre: nombreAlta, buffer: leerArchivoStorage(contract.altaDocumentoUrl) });
                 }
                 for (const archivo of archivos) {

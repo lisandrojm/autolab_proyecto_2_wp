@@ -6,7 +6,8 @@ import { Project } from "../models/Project.js";
 import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
 import { authenticateToken } from "../middleware/auth.js";
-import { buildEmployeeDocData, buildDocFileName } from "../utils/employeeDocData.js";
+import { buildEmployeeDocData } from "../utils/employeeDocData.js";
+import { nombreArchivoDocumento } from "../services/nomenclaturaService.js";
 import { buildDocPdf, getDummyDocVariables, htmlHasText, empresaToMembrete } from "../utils/documentPdf.js";
 import { ensureContratosBackfilled } from "./contratos.js";
 const router = Router();
@@ -134,7 +135,9 @@ export async function generarContratoPdf(opts) {
     const data = await buildEmployeeDocData(user, up, contract, empresa);
     const membrete = item.usaMembrete && empresa ? empresaToMembrete(empresa) : undefined;
     const buffer = await buildDocPdf(item.content, data, membrete);
-    const filename = buildDocFileName({ tipo: "Contrato", user, up, contract });
+    // El nombre sale del patrón que el tenant tenga configurado (Plantillas → Nomenclatura de
+    // archivos). Sin configurar, rige el de fábrica, que es exactamente el de antes.
+    const filename = await nombreArchivoDocumento({ tenantId: opts.tenantId, tipo: "Contrato", user, up, contract });
     return { buffer, filename, empresaIdUsado: chosenId || "" };
 }
 // GET /:id/download-filled?userId=&projectId=&contractIndex=

@@ -8,7 +8,8 @@ import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
-import { buildEmployeeDocData, buildDocFileName } from "../utils/employeeDocData.js";
+import { buildEmployeeDocData } from "../utils/employeeDocData.js";
+import { nombreArchivoDocumento } from "../services/nomenclaturaService.js";
 import { buildDocPdf, getDummyDocVariables, htmlHasText, empresaToMembrete } from "../utils/documentPdf.js";
 
 const router = Router();
@@ -182,7 +183,8 @@ export async function generarReleasePdf(opts: { tenantId: string; releaseId: str
 
   const membrete = release.usaMembrete && empresa ? empresaToMembrete(empresa) : undefined;
   const buffer = await buildDocPdf(release.content, data, membrete);
-  const filename = buildDocFileName({ tipo: "Release", user, up, contract, docName: release.name });
+  // Ver `nomenclaturaService`: el patrón es configurable y el default reproduce el nombre de antes.
+  const filename = await nombreArchivoDocumento({ tenantId: opts.tenantId, tipo: "Release", user, up, contract, docName: release.name });
   return { buffer, filename, empresaIdUsado: chosenId || "" };
 }
 

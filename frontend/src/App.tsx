@@ -54,6 +54,7 @@ import { ObrasSocialesPage } from "./pages/ObrasSocialesPage";
 import { ArcaSucursalesPage } from "./pages/ArcaSucursalesPage";
 import { ArcaComoFuncionaPage } from "./pages/ArcaComoFuncionaPage";
 import { GuiaObrasSocialesPage } from "./pages/GuiaObrasSocialesPage";
+import { NomenclaturaArchivosPage } from "./pages/NomenclaturaArchivosPage";
 import { ArcaActividadesPage } from "./pages/ArcaActividadesPage";
 import { ArcaModalidadesContratacionPage } from "./pages/ArcaModalidadesContratacionPage";
 import { ArcaTiposServicioPage } from "./pages/ArcaTiposServicioPage";
@@ -550,6 +551,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ArcaActividadesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/nomenclatura-archivos"
+                element={
+                  <ProtectedRoute>
+                    <NomenclaturaArchivosPage />
                   </ProtectedRoute>
                 }
               />

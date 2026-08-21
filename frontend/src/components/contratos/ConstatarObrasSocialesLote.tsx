@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faLock, faSearch, faArrowUpRightFromSquare, faSpinner, faCheck, faCopy, faCircleCheck, faCircleQuestion, faXmark, faTriangleExclamation, faDownload } from '@fortawesome/free-solid-svg-icons';
+import { faLock, faSearch, faArrowUpRightFromSquare, faSpinner, faCheck, faCopy, faCircleCheck, faCircleQuestion, faXmark, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { ContractOverviewRow } from '../../api/users';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { projectsAPI } from '../../api/projects';
@@ -247,27 +247,12 @@ export const ConstatarObrasSocialesLote: React.FC<{
     window.open(LOGIN_AFIP_URL, '_blank', 'noopener,noreferrer');
   };
 
-  /**
-   * Bajar los CUIL como el archivo que el script lee (`--cuils cuils.txt`).
-   *
-   * Es la única forma de que el portapapeles y el script se encuentren: el botón de copiar sirve para
-   * pegar de a uno en ARCA, pero `--cuils` quiere un archivo. La alternativa era enseñarle al script a
-   * leer del portapapeles por stdin, que obliga a documentar tres comandos distintos —`pbpaste`,
-   * `Get-Clipboard`, `xclip`— y en Linux ni siquiera viene instalado. Un archivo es un archivo en los
-   * tres sistemas.
-   */
-  const descargarCuils = () => {
-    const blob = new Blob([cuilsPendientes.map(conGuiones).join('\n') + '\n'], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'cuils.txt';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    setResumen([`${cuilsPendientes.length} CUIL en cuils.txt. Corré el script con ese archivo y pegá acá lo que devuelva.`]);
-  };
+  /*
+    Acá vivía un botón para bajar `cuils.txt`, que era como el portapapeles y el script se encontraban.
+    Ya no hace falta: el script pide los pendientes a la API con `--empresa` y aplica el resultado por
+    la misma vía. El archivo era un intermediario que existía solo porque las dos puntas no se
+    hablaban.
+  */
 
   /**
    * Parsea el pegado. `CUIL,RNOS` por línea, con el RNOS vacío cuando ARCA no devolvió ninguna.
@@ -386,63 +371,56 @@ export const ConstatarObrasSocialesLote: React.FC<{
         */}
       {empresaId && cuilsPendientes.length > 0 && (
         <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-3">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">Traer todas de una, con el script</p>
-            {/* El archivo, no el portapapeles: es lo que el script lee (`--cuils`). El botón de copiar
-                sigue existiendo arriba, para el otro camino — pegar de a uno en ARCA. */}
-            <button type="button" onClick={descargarCuils} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
-              <FontAwesomeIcon icon={faDownload} className="h-3 w-3" />
-              Descargar cuils.txt ({cuilsPendientes.length})
-            </button>
-          </div>
+          <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">Traer todas de una, con el script</p>
 
           {/* Los pasos van acá y no en un manual: se ejecutan en otra ventana y en una terminal, así
-              que hay que poder mirarlos mientras se hacen. */}
+              que hay que poder mirarlos mientras se hacen. Ya no hay archivo que bajar ni resultado
+              que pegar: el script pide los pendientes y aplica lo que ARCA contesta. */}
           <ol className="text-[11px] text-gray-600 dark:text-gray-400 space-y-1.5 list-decimal pl-4">
             <li>
-              <strong>Cerrá Chrome</strong> y volvé a abrirlo con el puerto de depuración:
-              <span className="block font-mono text-[10.5px] text-gray-500 dark:text-gray-400 mt-0.5">
-                macOS: open -a "Google Chrome" --args --remote-debugging-port=9222
-                <br />
-                Windows: chrome.exe --remote-debugging-port=9222
-                <br />
-                Linux: google-chrome --remote-debugging-port=9222
-              </span>
-              {/* El error más fácil de cometer: dejar la Chrome de siempre abierta al lado y trabajar
-                  ahí. El script mira las pestañas del proceso con el puerto, no las de cualquier Chrome. */}
-              <span className="block text-amber-700 dark:text-amber-400">
-                La pestaña de ARCA tiene que quedar abierta <strong>en esa</strong> ventana: el script busca entre las pestañas de la Chrome con el puerto, no ve las de una Chrome normal abierta en
-                paralelo.
-              </span>
+              Levantá el Chrome de ARCA: <span className="font-mono text-[10.5px]">npm run chrome-arca</span> desde <span className="font-mono text-[10.5px]">frontend/</span>.
+              {/* El perfil aparte es lo que evita tener que cerrar el Chrome de todos los días, y lo
+                  que limita el puerto abierto a esta única ventana. */}
+              <span className="block">Es un Chrome aparte, con su propio perfil: no cierres el que estás usando.</span>
             </li>
             <li>
-              Ahí entrá a ARCA: clave fiscal → <strong>Simplificación Registral - Empleadores</strong> → <strong>elegí el CUIT de {empleadora || 'la empleadora'}</strong> → Relaciones Laborales →{' '}
-              <em>Registrar Nuevas Altas</em>, y dejá esa pantalla abierta.
+              En esa ventana entrá a ARCA: clave fiscal → <strong>Simplificación Registral - Empleadores</strong> → <strong>elegí el CUIT de {empleadora || 'la empleadora'}</strong> → Relaciones
+              Laborales → <em>Registrar Nuevas Altas</em>, y dejá esa pantalla abierta.
               {/* El paso del CUIT se marca como obligatorio y no como un tránsito más: saltearlo es lo
                   que hace que ARCA conteste "su tiempo de sesión ha finalizado" con la sesión intacta. */}
               <span className="block text-amber-700 dark:text-amber-400">
                 Elegir el CUIT no es opcional: es lo que inicia la «sesión de trabajo». Sin ese paso, ARCA rechaza la pantalla de altas aunque estés logueado.
               </span>
+              <span className="block">Como el perfil queda guardado, esta sesión dura días: no hay que loguearse en cada corrida.</span>
             </li>
             <li>
-              Bajá el <strong>cuils.txt</strong> con el botón de arriba y, desde <span className="font-mono text-[10.5px]">frontend/</span>, corré:
-              <span className="block font-mono text-[10.5px] text-gray-500 dark:text-gray-400 mt-0.5">npm run validar-obras-sociales -- --cuils ~/Downloads/cuils.txt</span>
+              En otra terminal, desde <span className="font-mono text-[10.5px]">frontend/</span>:
+              <span className="block font-mono text-[10.5px] text-gray-500 dark:text-gray-400 mt-0.5">npm run validar-obras-sociales -- --empresa {empresaId}</span>
+              <span className="block">
+                Toma los {cuilsPendientes.length} pendiente(s) de esta empleadora, los consulta en ARCA y los guarda. Agregale{' '}
+                <span className="font-mono text-[10.5px]">--dry-run</span> para ver qué haría sin escribir nada.
+              </span>
             </li>
-            <li>Cuando termine, volvé acá y pegá lo que devolvió.</li>
           </ol>
 
           <p className="text-[11px] text-amber-700 dark:text-amber-400">
             <strong>No aprietes Aceptar en ARCA.</strong> Esa pantalla se usa solo para leer: el alta sale del TXT.
           </p>
           <p className="text-[11px] text-gray-500 dark:text-gray-400">
-            {/* La contrapartida de no instalar una extensión, dicha donde se toma la decisión y no solo
-                en la guía: con el puerto abierto, cualquier programa local puede manejar ese Chrome. */}
-            Mientras Chrome corra con <span className="font-mono text-[10.5px]">--remote-debugging-port</span>, cualquier programa de tu máquina puede controlarlo: usalo solo durante la validación y
-            después volvé a abrir Chrome normal.{' '}
+            {/* La contrapartida de automatizar con el navegador, dicha donde se toma la decisión. Con
+                el perfil dedicado el alcance es mucho menor, pero no es cero. */}
+            Mientras ese Chrome esté abierto, cualquier programa de tu máquina puede controlarlo. Como usa un perfil aparte, solo alcanza a esa ventana —no a tus otras pestañas—; igual, cerralo cuando
+            termines.{' '}
             <a href="/arca/guia-obras-sociales" target="_blank" rel="noreferrer" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
               Ver la guía
             </a>
             .
+          </p>
+
+          {/* El pegado manual se conserva: es el camino cuando no se puede correr el script —otra
+              máquina, otra persona, un navegador que no es Chrome— y es el que probó todo lo demás. */}
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-gray-700">
+            <strong className="text-gray-700 dark:text-gray-300">O a mano:</strong> copiá los CUIL con el botón de arriba, cargalos en ARCA uno por uno y pegá acá el resultado, una línea por persona.
           </p>
 
           <textarea

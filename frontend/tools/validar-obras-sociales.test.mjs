@@ -92,17 +92,20 @@ describe("reglas del trámite", () => {
    * convenio»— y cuenta como validada. Un error de consulta emitido como vacío sellaría ese
    * significado sobre alguien que ARCA nunca contestó.
    */
-  it("los CUIL con error NO se emiten en el CSV", () => {
+  it("los CUIL con error NO se aplican", () => {
     assert.match(FUENTE, /else errores\.add\(cuil\)/, "la fila que no aparece es un error de ESE CUIL");
-    const salida = FUENTE.slice(FUENTE.indexOf("const csv ="));
-    assert.match(salida.slice(0, 200), /hechos\.entries\(\)/, "el CSV sale de `hechos`, no de la lista original");
-    assert.ok(!/errores/.test(salida.slice(0, 200)), "los errores no pueden entrar al CSV");
+    // Lo que se manda a la API sale de `hechos` —lo que ARCA efectivamente contestó— y nunca de la
+    // lista original: un error emitido como rnos vacío se guardaría como "no tiene obra social".
+    const salida = FUENTE.slice(FUENTE.indexOf("const items ="));
+    assert.match(salida.slice(0, 200), /hechos\.entries\(\)/, "los items salen de `hechos`, no de la lista original");
+    assert.ok(!/errores/.test(salida.slice(0, 200)), "los errores no pueden entrar al lote");
   });
 
   /** Sesión caída = frenar. Lo pendiente queda pendiente; jamás se lo marca como vacío. */
   it("si se cae la sesión, frena y reporta cuántos faltan", () => {
     assert.match(FUENTE, /sinSesion = true;/);
-    assert.match(FUENTE, /Quedaron \$\{args\.cuils\.length - hechos\.size\} sin validar/);
+    assert.match(FUENTE, /faltaron: cuils\.length - hechos\.size/, "hay que poder decir cuántos quedaron sin leer");
+    assert.match(FUENTE, /Se cortó la sesión de ARCA\. Quedaron \$\{r\.faltaron\}/);
   });
 
   /** Reinicio final: filas cargadas son altas a medio hacer que alguien puede confirmar por error. */
@@ -149,5 +152,30 @@ describe("entrada", () => {
     fs.writeFileSync(tmp, "cuil,nombre\n27-40073687-7,PEREZ JUAN\n20-36397260-9,GOMEZ ANA\n\n");
     t.after(() => fs.rmSync(tmp, { force: true }));
     assert.deepEqual(parsearArgs(["--cuils", tmp]).cuils, ["27-40073687-7", "20-36397260-9"]);
+  });
+});
+
+describe("la empleadora no se adivina", () => {
+  /**
+   * "Está entre las registradas ante ARCA" es una regla POR CUIT. Correr contra la empleadora
+   * equivocada escribe obras sociales que pasan todas las validaciones y están mal — y quedan
+   * bloqueadas, así que el error sobrevive hasta la rectificativa. Por eso falta de `--empresa` es un
+   * error duro y no un default.
+   */
+  it("sin --empresa, `parsearArgs` no inventa ninguna", () => {
+    assert.equal(parsearArgs(["--cuil", "27-40073687-7"]).empresa, "");
+  });
+
+  it("el CLI corta con un mensaje que explica por qué, no con un stack trace", () => {
+    const main = FUENTE.slice(FUENTE.indexOf("async function main()"));
+    assert.match(main, /if \(!args\.empresa\)/, "tiene que chequearlo antes de hacer nada");
+    assert.match(main, /Falta --empresa/);
+    assert.match(main.slice(0, 2000), /la obra social se valida contra el CUIT de la empleadora/i, "el mensaje tiene que decir POR QUÉ hace falta");
+  });
+
+  it("`--dry-run` llega hasta la API como dryRun y no escribe", () => {
+    assert.equal(parsearArgs(["--dry-run"]).dryRun, true);
+    assert.match(FUENTE, /body: JSON\.stringify\(\{ empresa, origen: "script", items, dryRun, forzar \}\)/, "el flag tiene que viajar al endpoint");
+    assert.match(FUENTE, /--dry-run: NO se escribió nada/);
   });
 });
