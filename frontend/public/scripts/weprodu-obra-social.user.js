@@ -116,6 +116,10 @@
     // selector y para resaltarlo en la lista: "elegí el CUIT" a secas, con cinco representadas
     // adelante, no alcanza.
     empleadoras: 'os_empleadoras',
+    // Cuántas veces ya se intentó elegir el CUIT solo. Un click contra AFIP que no surte efecto no
+    // se reintenta: si la página vuelve al selector, se frena y se avisa. Un bucle de clicks contra
+    // el organismo es exactamente lo que no queremos.
+    autocuit: 'os_autocuit',
   };
   function g(k, d) { try { return GM_getValue(k, d); } catch (e) { return d; } }
   function s(k, v) { try { GM_setValue(k, v); } catch (e) {} }
@@ -210,6 +214,7 @@
       });
       if (!cuils.length) return;
       s(K.empleadoras, empleadoras);
+      s(K.autocuit, 0); // tanda nueva: se vuelve a permitir elegir el CUIT solo
       s(K.queue, cuils);
       s(K.orden, orden);
       s(K.hechos, {});
@@ -627,6 +632,60 @@
   function enFinSession() { return /FinSession\.aspx/i.test(location.pathname || '') || sesionExpirada(); }
   function enSelectorCuit() { return /IndexContribuyente\.aspx/i.test(location.pathname || ''); }
 
+  /*
+    ===========================================================================
+    LOS DOS BOTONES «Aceptar». SE LLAMAN IGUAL Y NO SON LO MISMO.
+    ===========================================================================
+
+      PANTALLA                                  «Aceptar»     QUÉ HACE
+      ----------------------------------------  ------------  ---------------------------------------
+      IndexContribuyente.aspx (selector CUIT)   ✅ seguro     Entra al servicio con ese CUIT.
+                                                              Navegación pura, reversible, no registra
+                                                              nada ante el organismo.
+      Altas.aspx (formulario de altas)          🔴 PROHIBIDO  REGISTRA LAS ALTAS ANTE ARCA. Irreversible.
+
+    Este script aprieta el PRIMERO y NUNCA el segundo. Confundirlos es el peor error posible de todo
+    el proyecto: daría de alta relaciones laborales de verdad, a nombre de una empresa real, sin que
+    nadie lo haya pedido.
+
+    Por eso `elegirEmpleadora` chequea ELLA MISMA en qué pantalla está antes de tocar nada, además de
+    que solo se la llame desde la rama del selector. Es redundante a propósito: la única protección
+    que sirve acá es la que no depende de que quien llame se acuerde.
+  */
+
+  /**
+   * Elige la empleadora en el selector de CUIT y entra al servicio.
+   *
+   * Es el último paso manual que quedaba además del login, y no tenía por qué serlo: elegir el CUIT
+   * no registra nada, solo define bajo qué empresa se opera.
+   *
+   * Devuelve 'ok' | 'sin_lista' | 'no_esta' | 'sin_boton' — el motivo importa: "tu clave no tiene
+   * acceso a esa empresa" y "no encontré el botón" mandan a hacer cosas distintas.
+   */
+  function elegirEmpleadora(cuitObjetivo) {
+    if (!enSelectorCuit()) return 'sin_lista'; // guard de pantalla: ver el comentario de arriba
+    var sel = document.querySelector('select');
+    if (!sel || !sel.options || !sel.options.length) return 'sin_lista';
+
+    var idx = -1;
+    for (var i = 0; i < sel.options.length; i++) {
+      // El texto de la opción suele venir "30-71029583-9 - FZERO S.R.L": se compara por dígitos y
+      // desde el principio, para no pegarle a un CUIT que aparezca en el medio del nombre.
+      if (String(sel.options[i].text || '').replace(/\D/g, '').indexOf(cuitObjetivo) === 0) { idx = i; break; }
+    }
+    if (idx < 0) return 'no_esta'; // no está en la lista: se avisa, no se adivina
+
+    sel.selectedIndex = idx;
+    try { sel.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {} // ASP.NET puede escucharlo
+
+    // ✅ El «Aceptar» de ESTA pantalla (selector de CUIT): seguro, solo entra al servicio.
+    //    NO es el de Altas.aspx, que registra altas. Ver la tabla de arriba.
+    var btn = botonPorRotulo(/^Aceptar$/i);
+    if (!btn) return 'sin_boton';
+    setTimeout(function () { btn.click(); }, 200);
+    return 'ok';
+  }
+
   /**
    * Qué hacer según dónde cayó la pestaña.
    *
@@ -639,7 +698,10 @@
    */
   function rutearARCA() {
     if (isARCA && enAltas() && !sesionExpirada()) {
-      s(K.nav, { t: Date.now(), n: 0 }); // llegamos: el presupuesto de saltos se renueva
+      // Llegamos: se renuevan los dos presupuestos —saltos y auto-selección de CUIT— porque el
+      // recorrido funcionó. Si más tarde se cae la sesión, la próxima vuelta puede volver a intentarlo.
+      s(K.nav, { t: Date.now(), n: 0 });
+      s(K.autocuit, 0);
       procesarARCA();
       return;
     }
@@ -665,10 +727,40 @@
       return;
     }
     if (enSelectorCuit()) {
+      var lista = g(K.empleadoras, []) || [];
+      var unaSola = lista.length === 1 ? lista[0] : null;
+      var cuitObjetivo = unaSola ? String(unaSola.cuit || '').replace(/\D/g, '') : '';
+      var intentos = Number(g(K.autocuit, 0)) || 0;
+
+      /*
+        Se elige sola SOLO con una empleadora y un CUIT concreto. Con varias no se adivina: una tanda
+        es siempre de una sola empleadora, así que si llegan dos es que algo más arriba salió mal y
+        elegir cualquiera sería operar bajo la empresa equivocada.
+      */
+      if (unaSola && cuitObjetivo.length === 11 && intentos === 0) {
+        s(K.autocuit, 1);
+        var r = elegirEmpleadora(cuitObjetivo);
+        if (r === 'ok') {
+          badge('⏳ Entrando como <b>' + (unaSola.nombre || fmtCuil(cuitObjetivo)) + '</b>…<br><span style="color:#8b949e">Después voy solo a Registrar Nuevas Altas. Quedan ' + quedan + '.</span>', '#1f6feb');
+          return;
+        }
+        if (r === 'no_esta') {
+          // Problema de permisos del organismo, no del script: no hay nada que reintentar.
+          badge(
+            '🚫 Tu clave fiscal no tiene acceso a <b>' + (unaSola.nombre || '') + '</b> (' + fmtCuil(cuitObjetivo) + ').<br>' +
+              '<span style="color:#8b949e">Pedí la delegación de ese CUIT o entrá con otra clave. La tanda de ' + quedan + ' queda esperando.</span>',
+            '#d29922',
+          );
+          return;
+        }
+        // 'sin_lista' / 'sin_boton': la pantalla no es la que esperábamos. Se cae al cartel manual.
+      }
+
       var resaltado = resaltarEmpleadora();
       badge(
         '👉 <b>Elegí ' + (quien || 'el CUIT de la empleadora') + '</b>' +
           (resaltado ? ' — te lo marqué en la lista.' : '.') +
+          (intentos > 0 ? '<br><span style="color:#d29922">Intenté elegirlo solo y la pantalla volvió acá: seguí a mano, no insisto para no quedar apretando botones contra ARCA.</span>' : '') +
           '<br><span style="color:#8b949e">Este es el paso que inicia la sesión de trabajo. Después entrá a <b>Relaciones Laborales → Registrar Nuevas Altas</b> y sigo solo con las ' +
           quedan +
           ' que faltan.</span>',

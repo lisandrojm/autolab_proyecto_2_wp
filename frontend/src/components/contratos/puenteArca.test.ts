@@ -572,3 +572,110 @@ describe("reiniciar la cola envenenada", () => {
     }
   });
 });
+
+describe("los dos «Aceptar» — la línea que no se cruza", () => {
+  /**
+   * ARCA tiene DOS botones que se llaman «Aceptar» y hacen cosas opuestas:
+   *
+   *   IndexContribuyente.aspx  → entra al servicio con ese CUIT. Navegación, reversible.
+   *   Altas.aspx               → REGISTRA LAS ALTAS ANTE EL ORGANISMO. Irreversible.
+   *
+   * El script aprieta el primero y jamás el segundo. Es el peor error posible del proyecto: daría de
+   * alta relaciones laborales reales, a nombre de una empresa real, sin que nadie lo pidiera. Por eso
+   * hay un test y no solo un comentario.
+   */
+  it("en Altas.aspx no toca ningún «Aceptar», ni siquiera con uno a mano", () => {
+    const env = crearEntorno("serviciossegsoc.afip.gob.ar");
+    let aceptarClickeado = false;
+    const botonAceptar: any = { value: "Aceptar", click: () => { aceptarClickeado = true; } };
+    // Pantalla de altas: está el campo de CUIL (es lo que la identifica) y, entre sus botones, un
+    // «Aceptar» — el peligroso, el que registra las altas ante el organismo.
+    const cuilInput = { id: "ctl00_ContentPlaceHolder1_InputCuil_txtCuil", value: "" };
+    env.document.getElementById = (id: string) => (id === cuilInput.id ? cuilInput : null);
+    env.document.querySelectorAll = (sel: string) => (sel.includes("submit") ? [botonAceptar] : []);
+
+    env.almacen.set("os_active", true);
+    env.almacen.set("os_queue", [{ cuil: "27-40073687-7", contractId: "c1" }]);
+    env.almacen.set("os_orden", ["27-40073687-7"]);
+    env.almacen.set("os_hechos", {});
+    correr(env);
+
+    assert.equal(aceptarClickeado, false, "el script apretó «Aceptar» en la pantalla de altas: eso REGISTRA altas ante ARCA");
+  });
+
+  /**
+   * El único lugar del archivo que puede buscar un botón «Aceptar» es `elegirEmpleadora`, que además
+   * se protege sola chequeando en qué pantalla está. Si aparece otra búsqueda de «Aceptar» en
+   * cualquier otro lado, este test se cae — que es exactamente lo que tiene que pasar.
+   */
+  it("solo `elegirEmpleadora` busca un botón «Aceptar»", () => {
+    const apariciones = SCRIPT.split("\n").filter((l) => /Aceptar\$?\/i|\/\^Aceptar/.test(l) && !l.trim().startsWith("*") && !l.trim().startsWith("//"));
+    assert.equal(apariciones.length, 1, `hay ${apariciones.length} búsquedas de «Aceptar» en la lógica; tiene que haber UNA, la del selector de CUIT:\n${apariciones.join("\n")}`);
+
+    const fn = SCRIPT.slice(SCRIPT.indexOf("function elegirEmpleadora"));
+    assert.ok(fn.indexOf("Aceptar") < fn.indexOf("function rutearARCA"), "la búsqueda de «Aceptar» tiene que estar dentro de `elegirEmpleadora`");
+    assert.match(fn.slice(0, 400), /enSelectorCuit\(\)/, "`elegirEmpleadora` tiene que chequear ELLA MISMA que está en el selector antes de tocar nada");
+  });
+});
+
+describe("selector de CUIT — elegir la empleadora sola", () => {
+  /** Arma el selector de ARCA con las opciones dadas y devuelve qué se eligió y si se apretó Aceptar. */
+  function crearSelector(opciones: string[]) {
+    const env = crearEntorno("serviciossegsoc.afip.gob.ar");
+    (env.window.location as any).pathname = "/tramites_con_clave_fiscal/MiSimplificacion/app/login/IndexContribuyente.aspx";
+    let aceptado = false;
+    const select: any = {
+      options: opciones.map((text) => ({ text })),
+      selectedIndex: -1,
+      dispatchEvent: () => true,
+    };
+    const botonAceptar: any = { value: "Aceptar", click: () => { aceptado = true; } };
+    env.document.querySelector = (sel: string) => (sel === "select" ? select : null);
+    env.document.querySelectorAll = (sel: string) => (sel.includes("submit") ? [botonAceptar] : []);
+    env.document.getElementById = () => null; // no hay campo de CUIL: no es la pantalla de altas
+    env.almacen.set("os_active", true);
+    env.almacen.set("os_orden", ["27-40073687-7"]);
+    env.almacen.set("os_hechos", {});
+    return { env, select, elegido: () => aceptado };
+  }
+
+  const FZERO = { nombre: "FZERO S.R.L", cuit: "30-71029583-9" };
+
+  it("elige el CUIT de la tanda y entra sola", () => {
+    const t = crearSelector(["Seleccione...", "20-11111111-2 - OTRA S.A.", "30-71029583-9 - FZERO S.R.L"]);
+    t.env.almacen.set("os_empleadoras", [FZERO]);
+    correr(t.env);
+    assert.equal(t.select.selectedIndex, 2, "tiene que elegir la opción de la empleadora de la tanda");
+    assert.equal(t.elegido(), true, "y apretar el «Aceptar» del selector, que es navegación y no registra nada");
+  });
+
+  it("si el CUIT no está en la lista no elige NADA: es un problema de permisos, no algo que adivinar", () => {
+    const t = crearSelector(["Seleccione...", "20-11111111-2 - OTRA S.A."]);
+    t.env.almacen.set("os_empleadoras", [FZERO]);
+    correr(t.env);
+    assert.equal(t.select.selectedIndex, -1, "elegir una empresa 'parecida' sería operar bajo la equivocada");
+    assert.equal(t.elegido(), false);
+  });
+
+  it("con más de una empleadora no elige: una tanda es de una sola, así que dos es que algo salió mal antes", () => {
+    const t = crearSelector(["Seleccione...", "30-71029583-9 - FZERO S.R.L"]);
+    t.env.almacen.set("os_empleadoras", [FZERO, { nombre: "OTRA S.A.", cuit: "20-11111111-2" }]);
+    correr(t.env);
+    assert.equal(t.select.selectedIndex, -1);
+    assert.equal(t.elegido(), false);
+  });
+
+  it("no reintenta: si la página vuelve al selector, frena y avisa", () => {
+    const t = crearSelector(["Seleccione...", "30-71029583-9 - FZERO S.R.L"]);
+    t.env.almacen.set("os_empleadoras", [FZERO]);
+    correr(t.env);
+    assert.equal(t.elegido(), true, "andamio: el primer intento sí tiene que pasar");
+
+    // La página "vuelve" al selector: segunda carga, mismo estado.
+    const t2 = crearSelector(["Seleccione...", "30-71029583-9 - FZERO S.R.L"]);
+    t2.env.almacen.set("os_empleadoras", [FZERO]);
+    t2.env.almacen.set("os_autocuit", t.env.almacen.get("os_autocuit"));
+    correr(t2.env);
+    assert.equal(t2.elegido(), false, "un bucle de clicks contra AFIP es exactamente lo que no queremos");
+  });
+});

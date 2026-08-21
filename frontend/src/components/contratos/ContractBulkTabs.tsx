@@ -1132,7 +1132,9 @@ export const ContractBulkAfipTab: React.FC<{
         return;
       }
       setValidandoArca(
-        `Validando ${pedidos.length} en ARCA — elegí el CUIT${empleadoras.length === 1 ? ` de ${empleadoras[0].nombre}` : ''} en la pestaña que se abrió y andá a «Registrar Nuevas Altas». Se guardan solas.`,
+        `Validando ${pedidos.length} en ARCA — logueate en la pestaña que se abrió${
+          empleadoras.length === 1 ? ` y el script entra solo como ${empleadoras[0].nombre}` : ' y elegí el CUIT de la empleadora'
+        }. Se guardan solas.`,
       );
     },
     [companies],
@@ -2230,25 +2232,18 @@ export const ContractBulkAfipTab: React.FC<{
                 Tildá los contratos y usá <strong>Validar obras sociales</strong>. El número del botón cuenta solo los que ya tienen empresa: los tildados sin empresa se omiten.
               </li>
               <li>
-                Se abre una pestaña de ARCA <strong>en el selector de CUIT</strong>. Ahí:
-                <ol className="mt-1 space-y-1 list-[lower-alpha] list-inside pl-3 text-[13px]">
-                  <li>Ingresá con tu clave fiscal.</li>
-                  <li>
-                    Entrá a <strong>Simplificación Registral - Empleadores</strong>.
-                  </li>
-                  <li>
-                    <strong>Elegí el CUIT de la empleadora</strong> — este paso es obligatorio: es el que inicia la «sesión de trabajo». Sin él, ARCA rechaza la pantalla de altas y muestra
-                    «su tiempo de sesión ha finalizado», aunque estés perfectamente logueado.
-                  </li>
-                  <li>
-                    Andá a <strong>Relaciones Laborales → Registrar Nuevas Altas</strong>. Con la extensión instalada, el script arranca solo desde ahí; sin extensión, la validación es manual.
-                  </li>
-                </ol>
+                Se abre una pestaña de ARCA. Con la extensión instalada, <strong>tu único paso es el login</strong>: ingresás con tu clave fiscal y el script hace el resto — elige el CUIT de la
+                empleadora, entra al servicio, va a <strong>Registrar Nuevas Altas</strong> y valida. Sin extensión, ese recorrido es a mano y la validación también.
               </li>
             </ol>
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              Mientras vas por ese camino, <strong>la tanda queda esperando</strong>: no hace falta volver a WeProdu ni apretar nada de nuevo. El script te va diciendo en cada pantalla qué falta y
-              cuántas quedan.
+              Mientras tanto <strong>la tanda queda esperando</strong>: no hace falta volver a WeProdu ni apretar nada de nuevo. El script te va diciendo en cada pantalla qué falta y cuántas quedan.
+            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              {/* Se dice explícitamente porque es la pregunta que aparece sola: "¿entonces el script
+                  puede dar de alta gente?". No: el único botón que aprieta es el del selector. */}
+              El script <strong>nunca registra un alta</strong>. Elegir el CUIT es navegación —define bajo qué empresa se opera y se puede deshacer—; el «Aceptar» de la pantalla de altas, que es el
+              que registra ante el organismo, no lo toca nunca. Las altas salen del TXT, no de ahí.
             </p>
             <p className="text-sm text-gray-600 dark:text-gray-300">
               En la columna <strong>Obra Social</strong> —al lado de Empresa Contrato—, las filas que todavía no tienen empresa muestran un <span className="text-amber-600 dark:text-amber-400 font-semibold">ⓘ ámbar</span> en vez del botón «Validar»: tocalo y explica qué falta. Con la empresa asignada, ese ⓘ pasa a ser el botón <strong>Validar</strong>. Lo ya validado se puede quitar con el <strong>tacho</strong> de la misma celda.

@@ -141,8 +141,8 @@ export const GuiaObrasSocialesPage: React.FC = () => (
           Apretás <strong>«Validar obras sociales»</strong>. WeProdu junta los CUIL pendientes de esa empleadora y abre ARCA.
         </p>
         <Clave>
-          <strong>Tu único paso manual es el login.</strong> Entrás con clave fiscal, elegís el CUIT de la empleadora y vas a <strong>Relaciones Laborales → Registrar Nuevas Altas</strong>. Desde ahí el script
-          hace todo: carga cada CUIL, lee la obra social que ARCA precompleta, y sigue con el siguiente. No toques nada mientras corre.
+          <strong>Tu único paso manual es el login.</strong> Entrás con clave fiscal y de ahí en adelante va solo: elige el CUIT de la empleadora, entra al servicio, va a{" "}
+          <strong>Relaciones Laborales → Registrar Nuevas Altas</strong>, carga cada CUIL, lee la obra social que ARCA precompleta y sigue con el siguiente. No toques nada mientras corre.
         </Clave>
         <p>
           Tu clave fiscal <strong>no se guarda en ningún lado</strong>. El script trabaja dentro de la sesión que abriste vos; por eso el login es manual y no se puede saltear.
@@ -221,7 +221,12 @@ export const GuiaObrasSocialesPage: React.FC = () => (
         </Sintoma>
         <Sintoma q="Dice «instalada pero no responde»">El script cargó pero no puede comunicarse. Casi siempre es el mismo permiso. Prendelo, recargá la página y probá de nuevo.</Sintoma>
         <Sintoma q="Se abre ARCA y no arranca solo">
-          Verificá que estés en <strong>Relaciones Laborales → Registrar Nuevas Altas</strong> (no en otra pantalla) y que hayas elegido el CUIT de la empleadora correcta.
+          El script se muestra en cada pantalla del recorrido y dice qué falta: leé el cartelito de abajo a la derecha. Los dos casos más comunes son que todavía no hayas entrado con clave fiscal, o
+          que <strong>tu clave no tenga acceso al CUIT de esa empleadora</strong> —ahí lo dice con todas las letras y hay que pedir la delegación—.
+        </Sintoma>
+        <Sintoma q="¿El script puede dar de alta a alguien por error?">
+          No. El único botón que aprieta en ARCA es el <strong>«Aceptar» del selector de CUIT</strong>, que solo define bajo qué empresa se opera y es reversible. El «Aceptar» de la pantalla de altas —el
+          que registra ante el organismo— no lo toca nunca: las altas salen del TXT, no de ahí.
         </Sintoma>
         <Sintoma q="Prefiero no instalar nada">
           Se puede: copiás los CUIL desde WeProdu, los cargás en ARCA a mano y pegás el resultado en la caja de la pantalla de validación. Es más tedioso pero hace exactamente lo mismo, y siempre está disponible.
