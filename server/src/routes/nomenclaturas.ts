@@ -19,7 +19,8 @@ const esTipo = (t: string): t is TipoNomenclatura => (TIPOS_NOMENCLATURA as read
 const EJEMPLO: Record<string, string> = {
   apellido: "gonzalez-rotstein",
   nombres: "juan-manuel",
-  proyecto: "748",
+  proyecto: "426_LN+",
+  proyectoId: "705",
   tipo: "Contrato",
   contrato: "Jornada-2030-SRL",
   docName: "Acuerdo-de-titularidad-de-la-obra",

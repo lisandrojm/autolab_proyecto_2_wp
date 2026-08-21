@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faXmark, faTriangleExclamation, faLock, faCircleInfo, faChevronDown, faChevronRight, faPenToSquare, faGear } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faXmark, faTriangleExclamation, faLock, faCircleInfo, faChevronDown, faChevronRight, faPenToSquare, faLandmark } from "@fortawesome/free-solid-svg-icons";
 import { ContractOverviewRow } from "../../api/users";
 import { AfipCatalogs, AfipRowResult, AfipFieldCheck, TonoArca, resumenArca, esResuelto } from "./afipCompleteness";
 import { describirRegistro, CampoRegistro } from "./afipTxt";
@@ -85,10 +85,14 @@ const TONO: Record<TonoArca, { icon: typeof faCheck; badge: string; panel: strin
 export const BadgeArca: React.FC<{ result: AfipRowResult; onClick: () => void; prefijo?: string }> = ({ result, onClick, prefijo }) => {
   const { tono, texto } = resumenArca(result);
   const t = TONO[tono];
-  // Tuerca y no alerta: el badge ABRE el formulario, no reporta un problema. El color ya dice la
+  // El ícono del ORGANISMO, el mismo con el que ARCA se identifica en el menú: la columna se llama
+  // "Datos ARCA" y esto es lo que la representa. Era una tuerca —que decía "configuración"— y ese es
+  // otro concepto: acá no se configura nada, se completan los datos de un trámite.
+  //
+  // Y no una alerta: el badge ABRE el formulario, no reporta un problema. El color ya dice la
   // gravedad (rojo si hay algo mal cargado, ámbar si falta). En el encabezado del detalle sí va la
   // alerta, porque ahí no hay nada que clickear: es un estado.
-  const icono = result.completo ? t.icon : faGear;
+  const icono = result.completo ? t.icon : faLandmark;
   return (
     <button type="button" onClick={onClick} title="Ver el detalle de los datos ARCA de este contrato" className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap transition-colors ${t.badge}`}>
       <FontAwesomeIcon icon={icono} className="h-2.5 w-2.5" />

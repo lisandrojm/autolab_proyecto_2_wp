@@ -119,11 +119,21 @@ export const ETIQUETA_TRAMITE: Record<"alta_temprana_afip" | "constancia_cuit", 
  */
 export function datosNombreArchivo(opts: { tipo: string; user: any; up: any; contract: any; docName?: string; extra?: string }): Record<string, string> {
   const { tipo, user, up, contract, docName, extra } = opts;
-  const proyecto = up?.externalProjectId ?? contract?.proyecto_id ?? up?.nombre_proyecto ?? contract?.nombre_proyecto ?? "";
+  /*
+    `proyecto` es el NOMBRE del proyecto ("426_LN+"), no su id externo ("705").
+
+    El nombre del archivo usaba el id externo mientras que la grilla, el PDF y todo lo que una
+    persona mira usan el nombre. Resultado: el archivo decía "705" y nadie lo reconocía — el dato era
+    correcto y aun así inútil, que para un nombre de archivo es lo mismo que estar mal. El id externo
+    sigue disponible como `{{proyectoId}}` para quien lo necesite.
+  */
+  const proyecto = contract?.nombre_proyecto ?? up?.nombre_proyecto ?? "";
+  const proyectoId = up?.externalProjectId ?? contract?.proyecto_id ?? "";
   return {
     apellido: campo(user?.lastName),
     nombres: campo(user?.firstName),
     proyecto: campo(proyecto),
+    proyectoId: campo(proyectoId),
     tipo: campo(tipo),
     docName: campo(docName),
     // El nombre del TIPO de contrato ("Jornada 2030 SRL", "Eventual Crew My secret"). Es distinto de

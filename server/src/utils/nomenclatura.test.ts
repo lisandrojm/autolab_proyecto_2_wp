@@ -18,7 +18,8 @@ import { validarPatron, renderNomenclatura, PATRON_POR_DEFECTO, VARIABLES_POR_TI
 const DATOS = {
   apellido: "gonzalez-rotstein",
   nombres: "juan-manuel",
-  proyecto: "748",
+  proyecto: "426_LN+",
+  proyectoId: "705",
   tipo: "Contrato",
   contrato: "Jornada-2030-SRL",
   docName: "Acuerdo-de-titularidad",
@@ -123,9 +124,9 @@ describe("el default rinde el nombre de siempre", () => {
     const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
     assert.equal(
       nombre,
-      "748_gonzalez-rotstein_juan-manuel_Contrato_Jornada-2030-SRL_Acuerdo-de-titularidad_Alta_20260810_Baja_-_CUIL-20331501027_DNI-33150102_juanmanuel.gonzalezrotstein-gmail.com_Constancia-de-Cuit_FZERO-S.R.L_CUIT-30710295839",
+      "426-LN+_gonzalez-rotstein_juan-manuel_Contrato_Jornada-2030-SRL_Acuerdo-de-titularidad_Alta_20260810_Baja_-_CUIL-20331501027_DNI-33150102_juanmanuel.gonzalezrotstein-gmail.com_Constancia-de-Cuit_FZERO-S.R.L_CUIT-30710295839",
     );
-    assert.ok(nombre.startsWith("748_"), "el proyecto va primero");
+    assert.ok(nombre.startsWith("426-LN+_"), "el proyecto va primero, y por su NOMBRE (no por el id externo)");
     assert.ok(nombre.endsWith("_CUIT-30710295839"), "el CUIT de la empleadora va último");
   });
 
@@ -179,7 +180,7 @@ describe("el default rinde el nombre de siempre", () => {
 
   it("los de pedidos y vacaciones también conservan su identidad", () => {
     const pedido = renderNomenclatura(PATRON_POR_DEFECTO.Pedido, { ...DATOS, tipo: "Pedido" });
-    assert.equal(pedido, "748_gonzalez-rotstein_juan-manuel_Pedido_1042_20260821_CUIL-20331501027_DNI-33150102_juanmanuel.gonzalezrotstein-gmail.com_FZERO-S.R.L_CUIT-30710295839");
+    assert.equal(pedido, "426-LN+_gonzalez-rotstein_juan-manuel_Pedido_1042_20260821_CUIL-20331501027_DNI-33150102_juanmanuel.gonzalezrotstein-gmail.com_FZERO-S.R.L_CUIT-30710295839");
     assert.match(pedido, /(?:^|_)CUIL-(\d{11})/);
   });
 });
@@ -256,5 +257,29 @@ describe("la empleadora y el tipo de contrato en el nombre", () => {
       const nombre = renderNomenclatura(PATRON_POR_DEFECTO[tipo], { ...DATOS, tipo });
       assert.ok(nombre.endsWith("_FZERO-S.R.L_CUIT-30710295839"), `${tipo} termina en: ${nombre.slice(-60)}`);
     }
+  });
+});
+
+describe("el proyecto se nombra como lo ve la gente", () => {
+  /**
+   * `{{proyecto}}` es el NOMBRE ("426_LN+"), no el id externo ("705").
+   *
+   * El nombre del archivo usaba el id mientras que la grilla, el PDF y todo lo que una persona mira
+   * usan el nombre: el archivo decía "705" y nadie lo reconocía. El dato era correcto y aun así
+   * inútil, que para un nombre de archivo es lo mismo que estar mal.
+   */
+  it("el patrón por defecto usa el nombre y no el id", () => {
+    const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Release, { ...DATOS, tipo: "Release" });
+    // El "_" del nombre del proyecto queda como "-": el "_" es el separador de CAMPOS del archivo,
+    // y dejarlo partiría "426_LN+" en dos campos. Ver `campoNomenclatura`.
+    assert.ok(nombre.startsWith("426-LN+_"), `arranca con: ${nombre.slice(0, 30)}`);
+    assert.ok(!nombre.includes("_705_"), "el id externo no va en el nombre por defecto");
+  });
+
+  it("el id externo sigue disponible para quien lo quiera", () => {
+    for (const tipo of TIPOS_NOMENCLATURA) {
+      assert.ok(VARIABLES_POR_TIPO[tipo].some((v) => v.variable === "{{proyectoId}}"), `${tipo} no ofrece {{proyectoId}}`);
+    }
+    assert.equal(renderNomenclatura("{{proyecto}}_{{proyectoId}}", DATOS), "426-LN+_705");
   });
 });

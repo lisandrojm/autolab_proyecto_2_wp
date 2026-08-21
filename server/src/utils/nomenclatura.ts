@@ -65,7 +65,8 @@ const G = {
 };
 
 const V = {
-  proyecto: { variable: "{{proyecto}}", descripcion: "Id externo del proyecto (ej. 748)", grupo: G.proyecto },
+  proyecto: { variable: "{{proyecto}}", descripcion: "Nombre del proyecto, como se ve en la grilla (ej. 426_LN+)", grupo: G.proyecto },
+  proyectoId: { variable: "{{proyectoId}}", descripcion: "Id externo del proyecto (ej. 705)", grupo: G.proyecto },
   apellido: { variable: "{{apellido}}", descripcion: "Apellido de la persona", grupo: G.persona },
   nombres: { variable: "{{nombres}}", descripcion: "Nombres de la persona", grupo: G.persona },
   email: { variable: "{{email}}", descripcion: "Email (el @ va como «-»)", grupo: G.persona },
@@ -100,6 +101,7 @@ export const VARIABLES_POR_TIPO: Record<TipoNomenclatura, VariableNomenclatura[]
   // se desincronizaran.
   const deContrato: VariableNomenclatura[] = [
     V.proyecto,
+    V.proyectoId,
     V.apellido,
     V.nombres,
     V.tipo,
@@ -125,8 +127,8 @@ export const VARIABLES_POR_TIPO: Record<TipoNomenclatura, VariableNomenclatura[]
     // Pedidos y Vacaciones también se firman y vuelven. No tienen período —no son un contrato— así que
     // lo que los ancla es su NÚMERO: es lo que permite decir "este PDF firmado es el pedido 1042 de
     // esta persona" y no solo "es un pedido de esta persona".
-    Pedido: [V.proyecto, V.apellido, V.nombres, V.tipo, { ...V.numero, requerida: true }, V.fecha, { ...V.identidad, requerida: true }, V.email, V.empresa, V.empresaCuit, V.timestamp],
-    Vacacion: [V.proyecto, V.apellido, V.nombres, V.tipo, { ...V.numero, requerida: true }, V.anio, { ...V.identidad, requerida: true }, V.email, V.empresa, V.empresaCuit, V.timestamp],
+    Pedido: [V.proyecto, V.proyectoId, V.apellido, V.nombres, V.tipo, { ...V.numero, requerida: true }, V.fecha, { ...V.identidad, requerida: true }, V.email, V.empresa, V.empresaCuit, V.timestamp],
+    Vacacion: [V.proyecto, V.proyectoId, V.apellido, V.nombres, V.tipo, { ...V.numero, requerida: true }, V.anio, { ...V.identidad, requerida: true }, V.email, V.empresa, V.empresaCuit, V.timestamp],
   };
 })();
 
