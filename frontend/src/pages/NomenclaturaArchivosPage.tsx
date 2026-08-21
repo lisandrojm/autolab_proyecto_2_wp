@@ -42,8 +42,11 @@ const usadasDe = (patron: string): string[] => [...new Set((patron.match(/\{\{\s
  *
  * El texto crudo va abajo igual: es lo que de verdad se va a escribir en el disco, y hay que poder
  * copiarlo y compararlo con un archivo existente.
+ *
+ * Vive solo en el modal. En la card ocupaba el alto entero con algo que únicamente se lee cuando se
+ * está por editar.
  */
-const Previsualizacion: React.FC<{ ejemplo: string; compacto?: boolean }> = ({ ejemplo, compacto }) => {
+const Previsualizacion: React.FC<{ ejemplo: string }> = ({ ejemplo }) => {
   const partes = ejemplo.split("_").filter((p) => p !== "");
   return (
     <div className="space-y-1.5">
@@ -58,11 +61,7 @@ const Previsualizacion: React.FC<{ ejemplo: string; compacto?: boolean }> = ({ e
         ))}
         <span className="font-mono text-[11px] text-gray-400 dark:text-gray-500 ml-1">.pdf</span>
       </div>
-      {!compacto && (
-        <p className="font-mono text-[10px] text-gray-400 dark:text-gray-500 break-all select-all leading-relaxed">
-          {ejemplo}.pdf
-        </p>
-      )}
+      <p className="font-mono text-[10px] text-gray-400 dark:text-gray-500 break-all select-all leading-relaxed">{ejemplo}.pdf</p>
     </div>
   );
 };
@@ -384,38 +383,34 @@ export const NomenclaturaArchivosPage: React.FC = () => {
                 <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{ETIQUETA_TIPO[fila.tipo] || fila.tipo}</span>
               </div>
 
-              {/* Los números que importan al mirar la lista, en la misma línea y con el mismo formato
-                  que el ABM de Contratos ("30 jornadas · Multiplicador 0"): cuántas variables usa el
-                  patrón sobre las disponibles, cuántas son obligatorias, y en cuántos campos termina
-                  partido el nombre. Es lo que permite comparar dos tipos sin abrir ninguno. */}
+              {/*
+                Solo dos números, con el formato del ABM de Contratos ("30 jornadas · Multiplicador 0").
+
+                Estaba también "13 de 13 variables", y se sacó: en un patrón de fábrica los dos números
+                son siempre iguales, así que no informaba nada y competía por la lectura con los dos que
+                sí importan — cuántas piezas tiene el nombre y cuántas de ellas no se pueden tocar.
+
+                El renglón ámbar que explicaba el candado también se fue: decía exactamente lo mismo en
+                las siete cards. Lo dice mejor la palabra "obligatorias", y el porqué está en el ⓘ del
+                encabezado y en el modal, que es donde alguien está por cambiarlo.
+              */}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-400 pt-1 border-t border-gray-100 dark:border-gray-700/60">
-                <span>
-                  <strong>{usadasDe(fila.patron).length}</strong> de {fila.variables.length} variables
-                </span>
-                <span>
+                <span title="Variables que no se pueden sacar: sin ellas el archivo no se puede reconocer al volver">
                   <strong>{fila.variables.filter((v) => v.requerida).length}</strong> obligatorias
                 </span>
-                <span>
+                <span title="En cuántas partes queda dividido el nombre del archivo">
                   <strong>{fila.ejemplo.split("_").filter(Boolean).length}</strong> campos
                 </span>
               </div>
 
-              {fila.seLeeDeVuelta && (
-                <div className="flex items-start gap-1.5 text-[11px] text-amber-700 dark:text-amber-400">
-                  <FontAwesomeIcon icon={faLock} className="h-2.5 w-2.5 shrink-0 mt-1" />
-                  <span>El archivo vuelve por su nombre: hay variables que no se pueden sacar</span>
-                </div>
-              )}
+              {/*
+                La card NO muestra el patrón ni el ejemplo.
 
-              <div className="flex flex-col gap-1 pt-1 border-t border-gray-100 dark:border-gray-700/60">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Patrón</label>
-                <p className="text-[10.5px] font-mono text-gray-600 dark:text-gray-400 break-all line-clamp-3">{fila.patron}</p>
-              </div>
-
-              <div className="flex flex-col gap-1.5 pt-1 border-t border-gray-100 dark:border-gray-700/60">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Así se va a llamar</label>
-                <Previsualizacion ejemplo={fila.ejemplo} compacto />
-              </div>
+                Los dos son texto largo y monoespaciado —200 caracteres cada uno— y llenaban la card
+                entera con algo que solo se lee cuando se está por editar. Con siete cards, la pantalla
+                era un muro de código. Acá quedan el nombre, los dos números que permiten comparar tipos
+                y las acciones; el patrón y su resultado viven en el modal, que es donde se los usa.
+              */}
 
               <div className="flex items-center justify-between gap-2 pt-2 mt-auto border-t border-gray-100 dark:border-gray-700/60">
                 <span className="text-[11px] text-gray-500 dark:text-gray-400">
