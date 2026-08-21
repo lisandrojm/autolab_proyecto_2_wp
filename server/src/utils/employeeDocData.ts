@@ -126,6 +126,10 @@ export function datosNombreArchivo(opts: { tipo: string; user: any; up: any; con
     proyecto: campo(proyecto),
     tipo: campo(tipo),
     docName: campo(docName),
+    // El nombre del TIPO de contrato ("Jornada 2030 SRL", "Eventual Crew My secret"). Es distinto de
+    // `docName`, que es la plantilla con la que se generó el documento: dos contratos del mismo tipo
+    // pueden salir de plantillas distintas, y dos plantillas iguales servir a tipos distintos.
+    contrato: campo(contract?.nombre_contrato),
     // El período va SIEMPRE, con "-" en lo que falte: sin baja significa contrato vigente / sin fin,
     // y sin alta significa dato sin cargar. Omitir el bloque hacía indistinguibles esos dos casos.
     fechaAlta: fechaCompacta(contract?.fecha_alta_contrato) || "-",

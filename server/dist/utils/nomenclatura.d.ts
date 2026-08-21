@@ -24,17 +24,34 @@
 export declare const TIPOS_NOMENCLATURA: readonly ["Contrato", "Release", "AltaAFIP", "ConstanciaCUIT", "Documentacion", "Pedido", "Vacacion"];
 export type TipoNomenclatura = (typeof TIPOS_NOMENCLATURA)[number];
 /**
- * Los que van a Dropbox Sign y vuelven. En estos, el bloque de identidad y las fechas son
- * OBLIGATORIOS: son las dos cosas que el parseo de vuelta necesita para reencontrar a la persona y
- * al contrato.
+ * TODOS los tipos tienen que poder leerse de vuelta. Sin excepción.
+ *
+ * Al principio esto se acotó a "los que van a Dropbox Sign", y estaba mal por los dos lados:
+ *
+ *  - Pedidos y Vacaciones TAMBIÉN se firman y vuelven;
+ *  - la Constancia de CUIT no se firma, pero igual hay que poder levantarla de Dropbox y saber de
+ *    quién es — el archivo llega a la carpeta y lo único que lo identifica es su nombre.
+ *
+ * O sea que la regla no era "se firma", era "el archivo vuelve a entrar al sistema por su nombre", y
+ * eso vale para los siete. Lo que cambia entre tipos no es SI hay datos obligatorios, sino CUÁLES:
+ * un documento de contrato se ancla con las fechas del período, y un pedido con su número.
  */
-export declare const TIPOS_QUE_VUELVEN_DE_LA_FIRMA: TipoNomenclatura[];
+export declare const TIPOS_NOMBRE_SE_LEE_DE_VUELTA: TipoNomenclatura[];
 export interface VariableNomenclatura {
     variable: string;
     descripcion: string;
     /** Sin esta variable el archivo no se puede reencontrar: el ABM no deja guardar sin ella. */
     requerida?: boolean;
+    /**
+     * De qué habla la variable. El editor las agrupa por esto, igual que el de Plantillas de Contrato.
+     *
+     * Doce chips en una sola bolsa se leen como una lista de códigos; agrupados por de dónde sale cada
+     * dato —la persona, el período, la empleadora— se leen como las partes de un nombre.
+     */
+    grupo: string;
 }
+/** El orden en que se muestran los grupos: sigue el orden de los campos en el nombre. */
+export declare const ORDEN_GRUPOS: string[];
 /**
  * Qué variables ofrece cada tipo, y cuáles son obligatorias.
  *

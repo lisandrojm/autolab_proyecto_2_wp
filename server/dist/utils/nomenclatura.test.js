@@ -12,14 +12,15 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { validarPatron, renderNomenclatura, PATRON_POR_DEFECTO, VARIABLES_POR_TIPO, TIPOS_QUE_VUELVEN_DE_LA_FIRMA, campoNomenclatura, TIPOS_NOMENCLATURA, VARIABLES_COMPUESTAS } from "./nomenclatura.js";
+import { validarPatron, renderNomenclatura, PATRON_POR_DEFECTO, VARIABLES_POR_TIPO, TIPOS_NOMBRE_SE_LEE_DE_VUELTA, campoNomenclatura, TIPOS_NOMENCLATURA, VARIABLES_COMPUESTAS } from "./nomenclatura.js";
 /** Los mismos datos que usa la previsualización del ABM. */
 const DATOS = {
     apellido: "gonzalez-rotstein",
     nombres: "juan-manuel",
     proyecto: "748",
     tipo: "Contrato",
-    docName: "",
+    contrato: "Jornada-2030-SRL",
+    docName: "Acuerdo-de-titularidad",
     fechaAlta: "20260810",
     fechaBaja: "-",
     identidad: "CUIL-20331501027_DNI-33150102",
@@ -59,13 +60,33 @@ describe("lo que el archivo necesita para volver de la firma", () => {
         // El punto del ABM: el orden y el resto de los campos son libres.
         assert.deepEqual(validarPatron("Contrato", "{{tipo}}_{{proyecto}}_{{identidad}}_{{fechaAlta}}_{{fechaBaja}}_{{apellido}}"), []);
     });
-    it("todos los tipos que vuelven de la firma exigen identidad y fechas", () => {
-        // Si mañana se agrega un tipo a esa lista y se olvida marcarle las variables, este test lo caza.
-        for (const tipo of TIPOS_QUE_VUELVEN_DE_LA_FIRMA) {
+    /**
+     * TODOS los tipos vuelven a entrar por su nombre — firmados desde Dropbox Sign, o levantados de la
+     * carpeta de Dropbox— así que todos exigen la identidad de la persona. Acotar esto a "los que se
+     * firman" fue el error original: dejaba afuera a Pedidos y Vacaciones (que también se firman) y a
+     * la Constancia de CUIT (que no se firma pero igual hay que poder levantarla de Dropbox).
+     */
+    it("TODOS los tipos exigen la identidad de la persona", () => {
+        assert.equal(TIPOS_NOMBRE_SE_LEE_DE_VUELTA.length, TIPOS_NOMENCLATURA.length, "no puede haber un tipo cuyo nombre no se lea de vuelta");
+        for (const tipo of TIPOS_NOMENCLATURA) {
             const requeridas = VARIABLES_POR_TIPO[tipo].filter((v) => v.requerida).map((v) => v.variable);
             assert.ok(requeridas.includes("{{identidad}}"), `${tipo} no exige {{identidad}}`);
+        }
+    });
+    /**
+     * Lo que cambia entre tipos no es SI hay ancla, es CUÁL: un documento de contrato se ancla con las
+     * fechas del período; un pedido o una vacación, con su número — es lo que distingue "el pedido 1042
+     * de esta persona" de "un pedido de esta persona".
+     */
+    it("cada tipo exige el ancla que le corresponde", () => {
+        for (const tipo of ["Contrato", "Release", "AltaAFIP", "ConstanciaCUIT", "Documentacion"]) {
+            const requeridas = VARIABLES_POR_TIPO[tipo].filter((v) => v.requerida).map((v) => v.variable);
             assert.ok(requeridas.includes("{{fechaAlta}}"), `${tipo} no exige {{fechaAlta}}`);
             assert.ok(requeridas.includes("{{fechaBaja}}"), `${tipo} no exige {{fechaBaja}}`);
+        }
+        for (const tipo of ["Pedido", "Vacacion"]) {
+            const requeridas = VARIABLES_POR_TIPO[tipo].filter((v) => v.requerida).map((v) => v.variable);
+            assert.ok(requeridas.includes("{{numero}}"), `${tipo} no exige {{numero}}`);
         }
     });
     it("cada patrón por defecto pasa su propia validación", () => {
@@ -91,7 +112,7 @@ describe("el default rinde el nombre de siempre", () => {
      */
     it("arranca con el proyecto y termina con la empleadora", () => {
         const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
-        assert.equal(nombre, "748_gonzalez-rotstein_juan-manuel_Contrato_Alta_20260810_Baja_-_CUIL-20331501027_DNI-33150102_juanmanuel.gonzalezrotstein-gmail.com_Constancia-de-Cuit_FZERO-S.R.L_CUIT-30710295839");
+        assert.equal(nombre, "748_gonzalez-rotstein_juan-manuel_Contrato_Jornada-2030-SRL_Acuerdo-de-titularidad_Alta_20260810_Baja_-_CUIL-20331501027_DNI-33150102_juanmanuel.gonzalezrotstein-gmail.com_Constancia-de-Cuit_FZERO-S.R.L_CUIT-30710295839");
         assert.ok(nombre.startsWith("748_"), "el proyecto va primero");
         assert.ok(nombre.endsWith("_CUIT-30710295839"), "el CUIT de la empleadora va último");
     });
@@ -124,8 +145,8 @@ describe("el default rinde el nombre de siempre", () => {
         assert.match(renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS), /_Baja_-_/);
     });
     it("una variable vacía no deja un separador colgando", () => {
-        // `docName` viene vacío en el ejemplo: el nombre no puede tener "__" ni terminar en "_".
-        const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
+        // Sin plantilla ni etiqueta extra, el nombre no puede tener "__" ni terminar en "_".
+        const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, { ...DATOS, docName: "", extra: "" });
         assert.ok(!nombre.includes("__"), nombre);
         assert.ok(!nombre.endsWith("_"), nombre);
     });
@@ -179,5 +200,33 @@ describe("bloques que no se pueden normalizar", () => {
     });
     it("`identidad` está declarada como compuesta", () => {
         assert.ok(VARIABLES_COMPUESTAS.has("identidad"));
+    });
+});
+describe("la empleadora y el tipo de contrato en el nombre", () => {
+    /**
+     * Los dos faltaban en los archivos reales y por motivos distintos:
+     *
+     *  - la EMPLEADORA salía vacía porque se la buscaba por `contract.empresaContratoId`, que es el
+     *    campo correcto para los documentos de ARCA pero no para un Release (que usa las empresas del
+     *    proyecto) ni para un Contrato descargado eligiendo empresa. Ahora quien la tiene resuelta la
+     *    pasa, y solo se deduce cuando no viene;
+     *  - el NOMBRE DEL TIPO DE CONTRATO no existía como variable. `{{docName}}` es la plantilla, que es
+     *    otra cosa: dos contratos del mismo tipo pueden salir de plantillas distintas.
+     */
+    it("el patrón por defecto de los documentos de contrato incluye el tipo de contrato", () => {
+        for (const tipo of ["Contrato", "Release", "AltaAFIP", "ConstanciaCUIT", "Documentacion"]) {
+            assert.match(PATRON_POR_DEFECTO[tipo], /\{\{contrato\}\}/, `${tipo} no incluye {{contrato}}`);
+            assert.ok(VARIABLES_POR_TIPO[tipo].some((v) => v.variable === "{{contrato}}"), `${tipo} no ofrece {{contrato}}`);
+        }
+    });
+    it("`{{contrato}}` y `{{docName}}` son campos distintos y conviven", () => {
+        const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
+        assert.match(nombre, /_Jornada-2030-SRL_Acuerdo-de-titularidad_/);
+    });
+    it("la empleadora cierra el nombre en todos los tipos", () => {
+        for (const tipo of TIPOS_NOMENCLATURA) {
+            const nombre = renderNomenclatura(PATRON_POR_DEFECTO[tipo], { ...DATOS, tipo });
+            assert.ok(nombre.endsWith("_FZERO-S.R.L_CUIT-30710295839"), `${tipo} termina en: ${nombre.slice(-60)}`);
+        }
     });
 });

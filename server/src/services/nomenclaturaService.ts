@@ -12,12 +12,17 @@ import { datosNombreArchivo } from "../utils/employeeDocData.js";
  * los archivos viejos busca justamente un CUIT suelto de once dígitos, así que dejarlo pelado sería
  * poner una trampa para el día que alguien saque `{{identidad}}` del patrón.
  */
+export function empresaAValores(c: any): { empresa: string; empresaCuit: string } {
+  const cuit = String(c?.cuit || "").replace(/\D/g, "");
+  return { empresa: String(c?.razonSocial || ""), empresaCuit: cuit ? `CUIT-${cuit}` : "" };
+}
+
 export async function datosEmpresa(empresaId: unknown, nombreCache?: string): Promise<{ empresa: string; empresaCuit: string }> {
   if (!empresaId) return { empresa: nombreCache || "", empresaCuit: "" };
   try {
     const c: any = await Company.findById(String(empresaId)).select("razonSocial cuit").lean();
-    const cuit = String(c?.cuit || "").replace(/\D/g, "");
-    return { empresa: c?.razonSocial || nombreCache || "", empresaCuit: cuit ? `CUIT-${cuit}` : "" };
+    const v = empresaAValores(c);
+    return { empresa: v.empresa || nombreCache || "", empresaCuit: v.empresaCuit };
   } catch {
     // Sin la empresa el nombre pierde un campo, no se rompe: el resto de los datos sigue estando.
     return { empresa: nombreCache || "", empresaCuit: "" };
@@ -60,8 +65,17 @@ export async function nombreArchivoDocumento(opts: {
   contract: any;
   docName?: string;
   extra?: string;
+  /**
+   * La empleadora YA resuelta, cuando quien llama la tiene.
+   *
+   * Hace falta porque no siempre sale del mismo lado: los documentos de ARCA usan la del contrato
+   * (`empresaContratoId`), pero un Release usa la de `releaseEmpresas` del proyecto y un Contrato la
+   * de `contratoEmpresas` — o la que se eligió al descargar. Deducirla desde acá miraba el campo
+   * equivocado y el nombre salía sin empresa, que es exactamente lo que pasaba.
+   */
+  empresa?: any;
 }): Promise<string> {
-  const { tenantId, tipo, ...resto } = opts;
-  const empresa = await datosEmpresa(resto.contract?.empresaContratoId, resto.contract?.nombre_empresa_contrato);
-  return nombreArchivo(tenantId, tipo, { ...datosNombreArchivo({ tipo, ...resto }), ...empresa });
+  const { tenantId, tipo, empresa, ...resto } = opts;
+  const valoresEmpresa = empresa ? empresaAValores(empresa) : await datosEmpresa(resto.contract?.empresaContratoId, resto.contract?.nombre_empresa_contrato);
+  return nombreArchivo(tenantId, tipo, { ...datosNombreArchivo({ tipo, ...resto }), ...valoresEmpresa });
 }

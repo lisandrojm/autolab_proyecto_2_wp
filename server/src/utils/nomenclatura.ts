@@ -26,37 +26,66 @@ export const TIPOS_NOMENCLATURA = ["Contrato", "Release", "AltaAFIP", "Constanci
 export type TipoNomenclatura = (typeof TIPOS_NOMENCLATURA)[number];
 
 /**
- * Los que van a Dropbox Sign y vuelven. En estos, el bloque de identidad y las fechas son
- * OBLIGATORIOS: son las dos cosas que el parseo de vuelta necesita para reencontrar a la persona y
- * al contrato.
+ * TODOS los tipos tienen que poder leerse de vuelta. Sin excepción.
+ *
+ * Al principio esto se acotó a "los que van a Dropbox Sign", y estaba mal por los dos lados:
+ *
+ *  - Pedidos y Vacaciones TAMBIÉN se firman y vuelven;
+ *  - la Constancia de CUIT no se firma, pero igual hay que poder levantarla de Dropbox y saber de
+ *    quién es — el archivo llega a la carpeta y lo único que lo identifica es su nombre.
+ *
+ * O sea que la regla no era "se firma", era "el archivo vuelve a entrar al sistema por su nombre", y
+ * eso vale para los siete. Lo que cambia entre tipos no es SI hay datos obligatorios, sino CUÁLES:
+ * un documento de contrato se ancla con las fechas del período, y un pedido con su número.
  */
-export const TIPOS_QUE_VUELVEN_DE_LA_FIRMA: TipoNomenclatura[] = ["Contrato", "Release", "AltaAFIP", "ConstanciaCUIT", "Documentacion"];
+export const TIPOS_NOMBRE_SE_LEE_DE_VUELTA: TipoNomenclatura[] = [...TIPOS_NOMENCLATURA];
 
 export interface VariableNomenclatura {
   variable: string;
   descripcion: string;
   /** Sin esta variable el archivo no se puede reencontrar: el ABM no deja guardar sin ella. */
   requerida?: boolean;
+  /**
+   * De qué habla la variable. El editor las agrupa por esto, igual que el de Plantillas de Contrato.
+   *
+   * Doce chips en una sola bolsa se leen como una lista de códigos; agrupados por de dónde sale cada
+   * dato —la persona, el período, la empleadora— se leen como las partes de un nombre.
+   */
+  grupo: string;
 }
 
+const G = {
+  proyecto: "Proyecto",
+  persona: "Persona",
+  documento: "Documento",
+  periodo: "Período del contrato",
+  identificacion: "Identificación",
+  empresa: "Empleadora (se toma del contrato)",
+  otros: "Otros",
+};
+
 const V = {
-  apellido: { variable: "{{apellido}}", descripcion: "Apellido de la persona" },
-  nombres: { variable: "{{nombres}}", descripcion: "Nombres de la persona" },
-  proyecto: { variable: "{{proyecto}}", descripcion: "Id externo del proyecto (ej. 748)" },
-  tipo: { variable: "{{tipo}}", descripcion: "Tipo de documento (Contrato, Release…)" },
-  docName: { variable: "{{docName}}", descripcion: "Nombre de la plantilla usada" },
-  fechaAlta: { variable: "{{fechaAlta}}", descripcion: "Alta del contrato, YYYYMMDD («-» si no hay)" },
-  fechaBaja: { variable: "{{fechaBaja}}", descripcion: "Baja del contrato, YYYYMMDD («-» si no hay)" },
-  identidad: { variable: "{{identidad}}", descripcion: "Bloque CUIL-…_DNI-… de la persona" },
-  email: { variable: "{{email}}", descripcion: "Email (el @ va como «-»)" },
-  extra: { variable: "{{extra}}", descripcion: "Etiqueta extra del trámite" },
-  numero: { variable: "{{numero}}", descripcion: "Número de pedido o de vacación" },
-  timestamp: { variable: "{{timestamp}}", descripcion: "Marca temporal de generación" },
-  anio: { variable: "{{anio}}", descripcion: "Año del período" },
-  fecha: { variable: "{{fecha}}", descripcion: "Fecha de generación, YYYYMMDD" },
-  empresa: { variable: "{{empresa}}", descripcion: "Razón social de la empleadora" },
-  empresaCuit: { variable: "{{empresaCuit}}", descripcion: "CUIT de la empleadora, como CUIT-30710295839" },
+  proyecto: { variable: "{{proyecto}}", descripcion: "Id externo del proyecto (ej. 748)", grupo: G.proyecto },
+  apellido: { variable: "{{apellido}}", descripcion: "Apellido de la persona", grupo: G.persona },
+  nombres: { variable: "{{nombres}}", descripcion: "Nombres de la persona", grupo: G.persona },
+  email: { variable: "{{email}}", descripcion: "Email (el @ va como «-»)", grupo: G.persona },
+  identidad: { variable: "{{identidad}}", descripcion: "Bloque CUIL-…_DNI-… de la persona", grupo: G.identificacion },
+  tipo: { variable: "{{tipo}}", descripcion: "Tipo de documento (Contrato, Release…)", grupo: G.documento },
+  contrato: { variable: "{{contrato}}", descripcion: "Nombre del tipo de contrato (ej. Jornada 2030 SRL)", grupo: G.documento },
+  docName: { variable: "{{docName}}", descripcion: "Nombre de la plantilla usada", grupo: G.documento },
+  numero: { variable: "{{numero}}", descripcion: "Número de pedido o de vacación", grupo: G.documento },
+  extra: { variable: "{{extra}}", descripcion: "Etiqueta extra del trámite", grupo: G.documento },
+  fechaAlta: { variable: "{{fechaAlta}}", descripcion: "Alta del contrato, YYYYMMDD («-» si no hay)", grupo: G.periodo },
+  fechaBaja: { variable: "{{fechaBaja}}", descripcion: "Baja del contrato, YYYYMMDD («-» si no hay)", grupo: G.periodo },
+  empresa: { variable: "{{empresa}}", descripcion: "Razón social de la empleadora", grupo: G.empresa },
+  empresaCuit: { variable: "{{empresaCuit}}", descripcion: "CUIT de la empleadora, como CUIT-30710295839", grupo: G.empresa },
+  anio: { variable: "{{anio}}", descripcion: "Año del período", grupo: G.otros },
+  fecha: { variable: "{{fecha}}", descripcion: "Fecha de generación, YYYYMMDD", grupo: G.otros },
+  timestamp: { variable: "{{timestamp}}", descripcion: "Marca temporal de generación", grupo: G.otros },
 } satisfies Record<string, VariableNomenclatura>;
+
+/** El orden en que se muestran los grupos: sigue el orden de los campos en el nombre. */
+export const ORDEN_GRUPOS = [G.proyecto, G.persona, G.documento, G.periodo, G.identificacion, G.empresa, G.otros];
 
 /**
  * Qué variables ofrece cada tipo, y cuáles son obligatorias.
@@ -74,6 +103,7 @@ export const VARIABLES_POR_TIPO: Record<TipoNomenclatura, VariableNomenclatura[]
     V.apellido,
     V.nombres,
     V.tipo,
+    V.contrato,
     V.docName,
     { ...V.fechaAlta, requerida: true },
     { ...V.fechaBaja, requerida: true },
@@ -92,8 +122,11 @@ export const VARIABLES_POR_TIPO: Record<TipoNomenclatura, VariableNomenclatura[]
     // Pedidos y Vacaciones no vuelven de la firma, así que solo se les exige la identidad: es lo que
     // permite encontrar el PDF de una persona en la carpeta sin abrirlo. El resto de las variables es
     // el mismo esqueleto, con lo que estos documentos sí tienen (un número en vez de un período).
-    Pedido: [V.proyecto, V.apellido, V.nombres, V.tipo, V.numero, V.fecha, { ...V.identidad, requerida: true }, V.email, V.empresa, V.empresaCuit, V.timestamp],
-    Vacacion: [V.proyecto, V.apellido, V.nombres, V.tipo, V.numero, V.anio, V.fecha, { ...V.identidad, requerida: true }, V.email, V.empresa, V.empresaCuit, V.timestamp],
+    // Pedidos y Vacaciones también se firman y vuelven. No tienen período —no son un contrato— así que
+    // lo que los ancla es su NÚMERO: es lo que permite decir "este PDF firmado es el pedido 1042 de
+    // esta persona" y no solo "es un pedido de esta persona".
+    Pedido: [V.proyecto, V.apellido, V.nombres, V.tipo, { ...V.numero, requerida: true }, V.fecha, { ...V.identidad, requerida: true }, V.email, V.empresa, V.empresaCuit, V.timestamp],
+    Vacacion: [V.proyecto, V.apellido, V.nombres, V.tipo, { ...V.numero, requerida: true }, V.anio, { ...V.identidad, requerida: true }, V.email, V.empresa, V.empresaCuit, V.timestamp],
   };
 })();
 
@@ -119,7 +152,7 @@ export const PATRON_POR_DEFECTO: Record<TipoNomenclatura, string> = (() => {
     vacaciones mezclados lee siempre los mismos campos en el mismo lugar. Cada tipo cambia solo en lo
     que de verdad tiene distinto —un período contra un número de pedido— y todo lo demás coincide.
   */
-  const deContrato = "{{proyecto}}_{{apellido}}_{{nombres}}_{{tipo}}_{{docName}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}_{{identidad}}_{{email}}_{{extra}}_{{empresa}}_{{empresaCuit}}";
+  const deContrato = "{{proyecto}}_{{apellido}}_{{nombres}}_{{tipo}}_{{contrato}}_{{docName}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}_{{identidad}}_{{email}}_{{extra}}_{{empresa}}_{{empresaCuit}}";
   return {
     Contrato: deContrato,
     Release: deContrato,
@@ -188,9 +221,7 @@ export function validarPatron(tipo: TipoNomenclatura, patron: string): ErrorPatr
     const lista = faltantes.map((v) => v.variable).join(", ");
     errores.push({
       campo: "patron",
-      motivo: TIPOS_QUE_VUELVEN_DE_LA_FIRMA.includes(tipo)
-        ? `Falta ${lista}. Este documento se manda a firmar y vuelve: sin esos datos en el nombre, el archivo firmado no se puede asociar a ninguna persona ni a ningún contrato, y el error no se ve hasta que alguien lo busca.`
-        : `Falta ${lista}: es lo que permite encontrar el archivo de una persona sin abrirlo.`,
+      motivo: `Falta ${lista}. Este archivo vuelve a entrar al sistema por su nombre —firmado desde Dropbox Sign, o levantado de la carpeta de Dropbox— y sin esos datos no se puede asociar a ninguna persona ni a ningún trámite. El error no se ve hasta que alguien lo busca.`,
     });
   }
 

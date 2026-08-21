@@ -29,6 +29,44 @@ import { nomenclaturasAPI, Nomenclatura, ErrorPatron, ETIQUETA_TIPO } from "../a
  * servidor valida lo mismo: esta pantalla no es la única defensa, es la que lo explica a tiempo.
  */
 
+/** Las variables que un patrón menciona, sin repetir y en orden de aparición. */
+const usadasDe = (patron: string): string[] => [...new Set((patron.match(/\{\{\s*\w+\s*\}\}/g) || []).map((v) => v.replace(/\s/g, "")))];
+
+/**
+ * El nombre resultante, legible.
+ *
+ * Un nombre de archivo real son 150 caracteres sin espacios: como una sola línea de texto corrido es
+ * ilegible, y esa era la queja. Acá se parte por el «_» —que ES el separador de campos— y cada campo
+ * se muestra como una pieza, con los separadores atenuados. Se ve de un vistazo cuántos campos tiene,
+ * dónde termina uno y empieza el otro, y cuál quedó vacío.
+ *
+ * El texto crudo va abajo igual: es lo que de verdad se va a escribir en el disco, y hay que poder
+ * copiarlo y compararlo con un archivo existente.
+ */
+const Previsualizacion: React.FC<{ ejemplo: string; compacto?: boolean }> = ({ ejemplo, compacto }) => {
+  const partes = ejemplo.split("_").filter((p) => p !== "");
+  return (
+    <div className="space-y-1.5">
+      <div className="flex flex-wrap items-center gap-y-1">
+        {partes.map((parte, i) => (
+          <React.Fragment key={i}>
+            {i > 0 && <span className="text-gray-300 dark:text-gray-600 font-mono text-[11px] px-0.5">_</span>}
+            <span className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-white dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 break-all">
+              {parte}
+            </span>
+          </React.Fragment>
+        ))}
+        <span className="font-mono text-[11px] text-gray-400 dark:text-gray-500 ml-1">.pdf</span>
+      </div>
+      {!compacto && (
+        <p className="font-mono text-[10px] text-gray-400 dark:text-gray-500 break-all select-all leading-relaxed">
+          {ejemplo}.pdf
+        </p>
+      )}
+    </div>
+  );
+};
+
 /** Mismo pie de card que el ABM de Contratos: ícono chico con su tooltip arriba. */
 const CardFooterAction: React.FC<{ icon: typeof faEdit; title: string; onClick: () => void }> = ({ icon, title, onClick }) => (
   <div className="relative group/action flex items-center">
@@ -47,7 +85,7 @@ const EditorPatron: React.FC<{ fila: Nomenclatura; onGuardado: (n: Nomenclatura)
   const [ejemplo, setEjemplo] = useState(fila.ejemplo);
   const [errores, setErrores] = useState<ErrorPatron[]>([]);
   const [guardando, setGuardando] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const sucio = patron !== fila.patron;
 
@@ -112,43 +150,69 @@ const EditorPatron: React.FC<{ fila: Nomenclatura; onGuardado: (n: Nomenclatura)
     }
   };
 
-  const usadas = new Set((patron.match(/\{\{\s*\w+\s*\}\}/g) || []).map((v) => v.replace(/\s/g, "")));
+  const usadasEnOrden = usadasDe(patron);
+  const usadas = new Set(usadasEnOrden);
 
   return (
     <div className="space-y-4">
-      {fila.vuelveDeLaFirma && (
+      {fila.seLeeDeVuelta && (
         <p className="text-[12px] text-gray-500 dark:text-gray-400">
-          Este documento se manda a firmar y vuelve: las variables con <FontAwesomeIcon icon={faLock} className="h-2.5 w-2.5" /> son las que permiten reconocerlo al regresar, y no se pueden sacar.
+          Este archivo vuelve a entrar al sistema por su nombre —firmado desde Dropbox Sign, o levantado de la carpeta de Dropbox—. Las variables con{" "}
+          <FontAwesomeIcon icon={faLock} className="h-2.5 w-2.5" /> son las que permiten reconocerlo al volver, y no se pueden sacar.
         </p>
       )}
 
       <div>
         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Patrón</label>
-        <input ref={inputRef} value={patron} onChange={(e) => setPatron(e.target.value)} spellCheck={false} className="input-field w-full text-xs font-mono" placeholder={fila.patronPorDefecto} />
+        {/* Textarea y no input: el patrón mide 200 caracteres y en una línea que scrollea no se ve
+            dónde estás parado. Envuelto, se lee entero. */}
+        <textarea
+          ref={inputRef}
+          value={patron}
+          onChange={(e) => setPatron(e.target.value)}
+          spellCheck={false}
+          rows={3}
+          className="input-field w-full text-xs font-mono leading-relaxed resize-y"
+          placeholder={fila.patronPorDefecto}
+        />
       </div>
 
+      {/* Panel de variables agrupadas, como el editor de Plantillas de Contrato: recuadro propio,
+          rótulo por grupo y los chips adentro. Doce chips en una sola bolsa se leen como una lista de
+          códigos; agrupados por de dónde sale cada dato se leen como las partes de un nombre. */}
       <div>
         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Variables disponibles (click para insertar)</label>
-        <div className="flex flex-wrap gap-1.5">
-          {fila.variables.map((v) => {
-            const puesta = usadas.has(v.variable);
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 p-3 space-y-2.5 max-h-52 overflow-y-auto">
+          {(fila.grupos?.length ? fila.grupos : ["Variables"]).map((grupo) => {
+            const delGrupo = fila.variables.filter((v) => (fila.grupos?.length ? v.grupo === grupo : true));
+            if (delGrupo.length === 0) return null;
             return (
-              <button
-                key={v.variable}
-                type="button"
-                onClick={() => insertar(v.variable)}
-                title={v.requerida ? `${v.descripcion} — OBLIGATORIA: sin esto el archivo no se puede reencontrar` : v.descripcion}
-                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10.5px] font-mono border transition-colors ${
-                  v.requerida
-                    ? "border-amber-300 dark:border-amber-800/70 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300"
-                    : puesta
-                      ? "border-blue-200 dark:border-blue-900/60 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
-                      : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                }`}
-              >
-                {v.requerida && <FontAwesomeIcon icon={faLock} className="h-2.5 w-2.5" />}
-                {v.variable}
-              </button>
+              <div key={grupo}>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">{grupo}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {delGrupo.map((v) => {
+                    const puesta = usadas.has(v.variable);
+                    return (
+                      <button
+                        key={v.variable}
+                        type="button"
+                        onClick={() => insertar(v.variable)}
+                        title={v.requerida ? `${v.descripcion} — OBLIGATORIA: sin esto el archivo no se puede reencontrar al volver` : v.descripcion}
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono border transition-colors ${
+                          v.requerida
+                            ? "border-amber-400/60 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20"
+                            : puesta
+                              ? "border-blue-500/50 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20"
+                              : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        }`}
+                      >
+                        {v.requerida && <FontAwesomeIcon icon={faLock} className="h-2.5 w-2.5" />}
+                        {v.variable}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </div>
@@ -156,10 +220,31 @@ const EditorPatron: React.FC<{ fila: Nomenclatura; onGuardado: (n: Nomenclatura)
 
       {/* El resultado con datos de ejemplo. Es lo único que se lee de verdad al decidir si el patrón
           sirve: el patrón en sí es difícil de imaginar renderizado. */}
-      <div className="rounded-md bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 px-3 py-2">
+      <div className="rounded-lg bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 px-3 py-2.5 space-y-2">
         <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">Así se va a llamar</p>
-        <p className="text-[11px] font-mono text-gray-800 dark:text-gray-200 break-all mt-0.5">{ejemplo || <span className="text-gray-400">—</span>}.pdf</p>
+        {ejemplo ? <Previsualizacion ejemplo={ejemplo} /> : <p className="text-[11px] text-gray-400">—</p>}
       </div>
+
+      {/* De dónde sale cada pieza. Sin esto hay que adivinar qué parte del nombre puso cada variable:
+          «748» y «2026» son los dos números y no se sabe cuál es cuál. */}
+      {usadasEnOrden.length > 0 && (
+        <div>
+          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Con estos datos de ejemplo</label>
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60">
+            {usadasEnOrden.map((v) => (
+              <div key={v} className="flex items-baseline gap-3 px-3 py-1.5">
+                <span className="font-mono text-[10.5px] text-blue-700 dark:text-blue-400 shrink-0 w-32">{v}</span>
+                {/* `valores` puede no venir si el server todavía no tiene la versión que lo devuelve.
+                    En ese caso se muestra "—" y no "vacío": afirmar que un dato está vacío cuando en
+                    realidad no se sabe es peor que no decir nada. */}
+                <span className="font-mono text-[10.5px] text-gray-700 dark:text-gray-300 break-all">
+                  {fila.valores ? fila.valores[v] || <span className="text-gray-400 italic">vacío en el ejemplo</span> : <span className="text-gray-400">—</span>}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {errores.map((e, i) => (
         <p key={i} className="text-[11px] text-red-600 dark:text-red-400 flex items-start gap-1.5">
@@ -259,8 +344,9 @@ export const NomenclaturaArchivosPage: React.FC = () => {
             <div className="rounded-lg border border-amber-300 dark:border-amber-800/70 bg-amber-50/70 dark:bg-amber-950/20 px-4 py-3">
               <p className="font-semibold text-gray-900 dark:text-gray-100">Por qué hay variables con candado</p>
               <p className="mt-1">
-                El nombre del archivo no es solo una etiqueta: <strong>se lee de vuelta</strong>. Cuando un documento firmado regresa de Dropbox Sign, el sistema saca del nombre el{" "}
-                <strong>CUIL y el documento</strong> para saber de quién es, y las <strong>fechas</strong> para saber a qué contrato corresponde.
+                El nombre del archivo no es solo una etiqueta: <strong>se lee de vuelta</strong>. Un documento firmado que regresa de Dropbox Sign, o un archivo que se levanta de la carpeta de Dropbox,
+                se identifican por su nombre: de ahí sale el <strong>CUIL y el documento</strong> para saber de quién es, y el <strong>ancla</strong> para saber de qué trámite — las{" "}
+                <strong>fechas</strong> en los documentos de contrato, el <strong>número</strong> en pedidos y vacaciones.
               </p>
               <p className="mt-1">
                 Un patrón sin esos datos genera archivos que <strong>vuelven de la firma y no se pueden asociar a nadie</strong>. Y no falla ruidosamente: el archivo se crea, se firma, y el problema
@@ -268,7 +354,8 @@ export const NomenclaturaArchivosPage: React.FC = () => {
               </p>
             </div>
             <p className="text-[12px] text-gray-500 dark:text-gray-400">
-              Pedidos y Vacaciones no se mandan a firmar, así que solo se les pide el CUIL: es lo que permite encontrar el PDF de una persona en la carpeta sin abrirlo.
+              Aplica a los <strong>siete</strong> tipos. Pedidos y Vacaciones también se firman y vuelven; y la Constancia de CUIT, aunque no se firme, igual hay que poder levantarla de Dropbox y saber
+              de quién es.
             </p>
           </div>
         ),
@@ -283,20 +370,40 @@ export const NomenclaturaArchivosPage: React.FC = () => {
           {filas.map((fila) => (
             <div key={fila.tipo} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex flex-col gap-3">
               <div className="flex flex-col gap-1.5 min-w-0">
+                {/* Mismos badges que el ABM de Roles: «Sistema» en naranja para lo que trae la
+                    plataforma, y el azul de «Por defecto» para lo que alguien cambió. Que dos
+                    pantallas de configuración usen colores distintos para la misma idea obliga a
+                    reaprender el código de colores en cada una. */}
                 <span
-                  className={`inline-flex items-center w-fit px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${
-                    fila.personalizado ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                  className={`inline-flex items-center w-fit rounded-md px-2 py-1 text-xs font-medium ${
+                    fila.personalizado ? "bg-blue-500/10 text-blue-500 border border-blue-500/50" : "bg-orange-500/10 text-orange-500 border border-orange-500/50"
                   }`}
                 >
-                  {fila.personalizado ? "Personalizado" : "De fábrica"}
+                  {fila.personalizado ? "Personalizado" : "Sistema"}
                 </span>
                 <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{ETIQUETA_TIPO[fila.tipo] || fila.tipo}</span>
               </div>
 
-              {fila.vuelveDeLaFirma && (
-                <div className="flex items-center gap-1.5 text-[11px] text-amber-700 dark:text-amber-400">
-                  <FontAwesomeIcon icon={faLock} className="h-2.5 w-2.5 shrink-0" />
-                  Se firma y vuelve: su nombre tiene que poder leerse al regresar
+              {/* Los números que importan al mirar la lista, en la misma línea y con el mismo formato
+                  que el ABM de Contratos ("30 jornadas · Multiplicador 0"): cuántas variables usa el
+                  patrón sobre las disponibles, cuántas son obligatorias, y en cuántos campos termina
+                  partido el nombre. Es lo que permite comparar dos tipos sin abrir ninguno. */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-400 pt-1 border-t border-gray-100 dark:border-gray-700/60">
+                <span>
+                  <strong>{usadasDe(fila.patron).length}</strong> de {fila.variables.length} variables
+                </span>
+                <span>
+                  <strong>{fila.variables.filter((v) => v.requerida).length}</strong> obligatorias
+                </span>
+                <span>
+                  <strong>{fila.ejemplo.split("_").filter(Boolean).length}</strong> campos
+                </span>
+              </div>
+
+              {fila.seLeeDeVuelta && (
+                <div className="flex items-start gap-1.5 text-[11px] text-amber-700 dark:text-amber-400">
+                  <FontAwesomeIcon icon={faLock} className="h-2.5 w-2.5 shrink-0 mt-1" />
+                  <span>El archivo vuelve por su nombre: hay variables que no se pueden sacar</span>
                 </div>
               )}
 
@@ -305,13 +412,15 @@ export const NomenclaturaArchivosPage: React.FC = () => {
                 <p className="text-[10.5px] font-mono text-gray-600 dark:text-gray-400 break-all line-clamp-3">{fila.patron}</p>
               </div>
 
-              <div className="flex flex-col gap-1 pt-1 border-t border-gray-100 dark:border-gray-700/60">
+              <div className="flex flex-col gap-1.5 pt-1 border-t border-gray-100 dark:border-gray-700/60">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Así se va a llamar</label>
-                <p className="text-[10.5px] font-mono text-gray-800 dark:text-gray-200 break-all line-clamp-3">{fila.ejemplo}.pdf</p>
+                <Previsualizacion ejemplo={fila.ejemplo} compacto />
               </div>
 
               <div className="flex items-center justify-between gap-2 pt-2 mt-auto border-t border-gray-100 dark:border-gray-700/60">
-                <span className="text-[11px] text-gray-500 dark:text-gray-400">{copiado === fila.tipo ? "Patrón copiado" : `${fila.variables.length} variables`}</span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                  {copiado === fila.tipo ? "Patrón copiado" : fila.personalizado ? "Modificado" : "Sin cambios"}
+                </span>
                 <div className="flex items-center gap-1">
                   <CardFooterAction icon={copiado === fila.tipo ? faCheck : faCopy} title="Copiar el patrón" onClick={() => copiar(fila)} />
                   <CardFooterAction icon={faEdit} title="Editar la nomenclatura" onClick={() => setEditando(fila)} />

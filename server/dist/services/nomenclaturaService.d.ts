@@ -8,6 +8,10 @@ import { TipoNomenclatura } from "../utils/nomenclatura.js";
  * los archivos viejos busca justamente un CUIT suelto de once dígitos, así que dejarlo pelado sería
  * poner una trampa para el día que alguien saque `{{identidad}}` del patrón.
  */
+export declare function empresaAValores(c: any): {
+    empresa: string;
+    empresaCuit: string;
+};
 export declare function datosEmpresa(empresaId: unknown, nombreCache?: string): Promise<{
     empresa: string;
     empresaCuit: string;
@@ -32,4 +36,13 @@ export declare function nombreArchivoDocumento(opts: {
     contract: any;
     docName?: string;
     extra?: string;
+    /**
+     * La empleadora YA resuelta, cuando quien llama la tiene.
+     *
+     * Hace falta porque no siempre sale del mismo lado: los documentos de ARCA usan la del contrato
+     * (`empresaContratoId`), pero un Release usa la de `releaseEmpresas` del proyecto y un Contrato la
+     * de `contratoEmpresas` — o la que se eligió al descargar. Deducirla desde acá miraba el campo
+     * equivocado y el nombre salía sin empresa, que es exactamente lo que pasaba.
+     */
+    empresa?: any;
 }): Promise<string>;

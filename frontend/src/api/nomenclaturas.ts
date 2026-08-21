@@ -13,6 +13,8 @@ export interface VariableNomenclatura {
   descripcion: string;
   /** Sin ella no se puede guardar: el archivo dejaría de poder reencontrarse. */
   requerida?: boolean;
+  /** De qué habla: el editor las agrupa por esto, como el de Plantillas de Contrato. */
+  grupo: string;
 }
 
 export interface Nomenclatura {
@@ -21,10 +23,17 @@ export interface Nomenclatura {
   patronPorDefecto: string;
   /** `false` = está usando el patrón de fábrica. */
   personalizado: boolean;
-  /** Va a Dropbox Sign y vuelve: su nombre se parsea, así que tiene variables obligatorias. */
-  vuelveDeLaFirma: boolean;
+  /**
+   * El archivo vuelve a entrar al sistema por su nombre —firmado desde Dropbox Sign, o levantado de
+   * la carpeta de Dropbox—. Es `true` en TODOS los tipos: por eso todos tienen variables obligatorias.
+   */
+  seLeeDeVuelta: boolean;
   variables: VariableNomenclatura[];
+  /** Los grupos presentes en este tipo, en el orden en que se muestran. */
+  grupos: string[];
   ejemplo: string;
+  /** Qué valor toma cada variable en el ejemplo. Es lo que hace legible la previsualización. */
+  valores: Record<string, string>;
   actualizadoEl: string | null;
 }
 
@@ -40,7 +49,7 @@ export const nomenclaturasAPI = {
   },
 
   /** Valida y renderiza sin guardar: es lo que alimenta el preview en vivo. */
-  async previsualizar(tipo: string, patron: string): Promise<{ errores: ErrorPatron[]; ejemplo: string }> {
+  async previsualizar(tipo: string, patron: string): Promise<{ errores: ErrorPatron[]; ejemplo: string; valores: Record<string, string> }> {
     const { data } = await axios.post("/nomenclaturas/previsualizar", { tipo, patron });
     return data;
   },

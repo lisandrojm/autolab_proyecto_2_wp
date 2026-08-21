@@ -11,13 +11,17 @@ import { datosNombreArchivo } from "../utils/employeeDocData.js";
  * los archivos viejos busca justamente un CUIT suelto de once dígitos, así que dejarlo pelado sería
  * poner una trampa para el día que alguien saque `{{identidad}}` del patrón.
  */
+export function empresaAValores(c) {
+    const cuit = String(c?.cuit || "").replace(/\D/g, "");
+    return { empresa: String(c?.razonSocial || ""), empresaCuit: cuit ? `CUIT-${cuit}` : "" };
+}
 export async function datosEmpresa(empresaId, nombreCache) {
     if (!empresaId)
         return { empresa: nombreCache || "", empresaCuit: "" };
     try {
         const c = await Company.findById(String(empresaId)).select("razonSocial cuit").lean();
-        const cuit = String(c?.cuit || "").replace(/\D/g, "");
-        return { empresa: c?.razonSocial || nombreCache || "", empresaCuit: cuit ? `CUIT-${cuit}` : "" };
+        const v = empresaAValores(c);
+        return { empresa: v.empresa || nombreCache || "", empresaCuit: v.empresaCuit };
     }
     catch {
         // Sin la empresa el nombre pierde un campo, no se rompe: el resto de los datos sigue estando.
@@ -50,7 +54,7 @@ export async function nombreArchivo(tenantId, tipo, datos) {
 }
 /** Atajo para los documentos de un contrato: arma los datos y aplica el patrón. */
 export async function nombreArchivoDocumento(opts) {
-    const { tenantId, tipo, ...resto } = opts;
-    const empresa = await datosEmpresa(resto.contract?.empresaContratoId, resto.contract?.nombre_empresa_contrato);
-    return nombreArchivo(tenantId, tipo, { ...datosNombreArchivo({ tipo, ...resto }), ...empresa });
+    const { tenantId, tipo, empresa, ...resto } = opts;
+    const valoresEmpresa = empresa ? empresaAValores(empresa) : await datosEmpresa(resto.contract?.empresaContratoId, resto.contract?.nombre_empresa_contrato);
+    return nombreArchivo(tenantId, tipo, { ...datosNombreArchivo({ tipo, ...resto }), ...valoresEmpresa });
 }

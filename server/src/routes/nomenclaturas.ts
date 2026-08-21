@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import NomenclaturaArchivo from "../models/NomenclaturaArchivo.js";
-import { TIPOS_NOMENCLATURA, TipoNomenclatura, VARIABLES_POR_TIPO, PATRON_POR_DEFECTO, TIPOS_QUE_VUELVEN_DE_LA_FIRMA, validarPatron, renderNomenclatura } from "../utils/nomenclatura.js";
+import { TIPOS_NOMENCLATURA, TipoNomenclatura, VARIABLES_POR_TIPO, PATRON_POR_DEFECTO, TIPOS_NOMBRE_SE_LEE_DE_VUELTA, ORDEN_GRUPOS, validarPatron, renderNomenclatura } from "../utils/nomenclatura.js";
 
 const router = Router();
 router.use(requireTenant, authenticateToken);
@@ -21,7 +21,8 @@ const EJEMPLO: Record<string, string> = {
   nombres: "juan-manuel",
   proyecto: "748",
   tipo: "Contrato",
-  docName: "Jornada-2030",
+  contrato: "Jornada-2030-SRL",
+  docName: "Acuerdo-de-titularidad-de-la-obra",
   fechaAlta: "20260810",
   fechaBaja: "-",
   identidad: "CUIL-20331501027_DNI-33150102",
@@ -31,7 +32,13 @@ const EJEMPLO: Record<string, string> = {
   timestamp: "20260821-143012",
   anio: "2026",
   fecha: "20260821",
+  empresa: "FZERO S.R.L",
+  empresaCuit: "CUIT-30710295839",
 };
+
+/** Solo los valores de las variables que ESE tipo ofrece: mostrar el resto confunde más que ayuda. */
+const valoresDe = (tipo: TipoNomenclatura): Record<string, string> =>
+  Object.fromEntries(VARIABLES_POR_TIPO[tipo].map((v) => [v.variable, EJEMPLO[v.variable.replace(/[{}]/g, "")] ?? ""]));
 
 /**
  * GET /nomenclaturas
@@ -54,9 +61,11 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
           patron,
           patronPorDefecto: PATRON_POR_DEFECTO[tipo],
           personalizado: !!fila,
-          vuelveDeLaFirma: TIPOS_QUE_VUELVEN_DE_LA_FIRMA.includes(tipo),
+          seLeeDeVuelta: TIPOS_NOMBRE_SE_LEE_DE_VUELTA.includes(tipo),
           variables: VARIABLES_POR_TIPO[tipo],
+          grupos: ORDEN_GRUPOS.filter((g) => VARIABLES_POR_TIPO[tipo].some((v) => v.grupo === g)),
           ejemplo: renderNomenclatura(patron, { ...EJEMPLO, tipo }),
+          valores: valoresDe(tipo),
           actualizadoEl: fila?.updatedAt || null,
         };
       }),
@@ -81,7 +90,7 @@ router.post("/previsualizar", async (req: AuthenticatedRequest & TenantRequest, 
     return;
   }
   const patron = String(req.body?.patron ?? "");
-  res.json({ errores: validarPatron(tipo, patron), ejemplo: renderNomenclatura(patron, { ...EJEMPLO, tipo }) });
+  res.json({ errores: validarPatron(tipo, patron), ejemplo: renderNomenclatura(patron, { ...EJEMPLO, tipo }), valores: valoresDe(tipo) });
 });
 
 /**

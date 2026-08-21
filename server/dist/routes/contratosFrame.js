@@ -137,7 +137,7 @@ export async function generarContratoPdf(opts) {
     const buffer = await buildDocPdf(item.content, data, membrete);
     // El nombre sale del patrón que el tenant tenga configurado (Plantillas → Nomenclatura de
     // archivos). Sin configurar, rige el de fábrica, que es exactamente el de antes.
-    const filename = await nombreArchivoDocumento({ tenantId: opts.tenantId, tipo: "Contrato", user, up, contract });
+    const filename = await nombreArchivoDocumento({ tenantId: opts.tenantId, tipo: "Contrato", user, up, contract, empresa });
     return { buffer, filename, empresaIdUsado: chosenId || "" };
 }
 // GET /:id/download-filled?userId=&projectId=&contractIndex=
