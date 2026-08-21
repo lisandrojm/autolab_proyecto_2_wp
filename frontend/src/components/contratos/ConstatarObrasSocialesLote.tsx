@@ -381,7 +381,13 @@ export const ConstatarObrasSocialesLote: React.FC<{
               poder mirarlos mientras se ejecutan. */}
           <ol className="text-[11px] text-gray-600 dark:text-gray-400 space-y-1 list-decimal pl-4">
             <li>
-              El botón de arriba copia los CUIL y abre ARCA. Ahí: entrá con clave fiscal → Simplificación Registral → elegí <strong>{empleadora || 'la empleadora'}</strong> → Relaciones Laborales → <em>Registrar Nuevas Altas</em>.
+              El botón de arriba copia los CUIL y abre ARCA. Ahí: entrá con clave fiscal → <strong>Simplificación Registral - Empleadores</strong> → <strong>elegí el CUIT de {empleadora || 'la empleadora'}</strong>{' '}
+              → Relaciones Laborales → <em>Registrar Nuevas Altas</em>.
+              {/* El paso del CUIT se marca como obligatorio y no como un tránsito más: saltearlo es lo
+                  que hace que ARCA conteste "su tiempo de sesión ha finalizado" con la sesión intacta. */}
+              <span className="block text-amber-700 dark:text-amber-400">
+                Elegir el CUIT no es opcional: es lo que inicia la «sesión de trabajo». Sin ese paso, ARCA rechaza la pantalla de altas aunque estés logueado.
+              </span>
             </li>
             <li>
               Apretá <strong>▶ Constatar obras sociales</strong> (el botón del script, abajo a la derecha) y pegá los CUIL.

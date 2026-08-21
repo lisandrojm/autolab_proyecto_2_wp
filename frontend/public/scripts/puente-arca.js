@@ -87,7 +87,27 @@
   var AUTH_HOST = 'auth.afip.gob.ar';
   var PORTAL_HOST = 'portalcf.cloud.afip.gob.ar';
   var ARCA_ALTAS_URL = 'https://serviciossegsoc.afip.gob.ar/tramites_con_clave_fiscal/MiSimplificacion/app/Contribuyente/RelacionLaboral/Altas.aspx';
+  /*
+    EL PASO QUE FALTABA: la "sesión de trabajo".
+
+    El cartel de ARCA dice dos cosas —«Su tiempo de sesión ha finalizado, O UD. NO HA INICIADO SU
+    SESIÓN DE TRABAJO»— y todo este tiempo se leyó la primera. Es la segunda: Simplificación Registral
+    no acepta deep-links. Entrar directo a Altas.aspx rebota a FinSession SIEMPRE, incluso con el
+    navegador logueado, porque falta pasar por el selector de CUIT — que es lo que crea esa sesión de
+    trabajo.
+
+    El circuito obligatorio es: login → Simplificación Registral → IndexContribuyente (elegir el
+    CUIT) → DatosBasicos → Relaciones Laborales → Altas. Por eso el destino de la pestaña que abre
+    WeProdu es el SELECTOR y no la pantalla de altas: es el primer punto del recorrido que ARCA acepta
+    desde afuera.
+
+    Explica además por qué el error era constante y no intermitente, que es lo que mandó a buscar
+    durante días una sesión vencida que nunca había existido.
+  */
+  var ARCA_SELECTOR_URL = 'https://serviciossegsoc.afip.gob.ar/tramites_con_clave_fiscal/MiSimplificacion/app/login/IndexContribuyente.aspx';
   var AFIP_LOGIN_URL = 'https://auth.afip.gob.ar/contribuyente_/login.xhtml';
+  /** El portal de clave fiscal: la puerta de entrada si ni siquiera el selector se deja abrir. */
+  var AFIP_PORTAL_URL = 'https://portalcf.cloud.afip.gob.ar/portal/app/';
   var K = {
     queue: 'os_queue', // [{cuil, contractId}]
     orden: 'os_orden', // [cuil]
@@ -98,6 +118,10 @@
     errores: 'os_errores', // {cuil:true}
     fase: 'os_fase', // '' | 'limpiando' — el Reiniciar final, para no dejar filas cargadas
     nav: 'os_nav', // {t, n} — saltos automáticos hechos, para no quedar en un loop de redirecciones
+    // [{nombre, cuit}] — las empleadoras de la tanda. Sirven para decir CUÁL CUIT elegir en el
+    // selector y para resaltarlo en la lista: "elegí el CUIT" a secas, con cinco representadas
+    // adelante, no alcanza.
+    empleadoras: 'os_empleadoras',
   };
   function g(k, d) { try { return GM_getValue(k, d); } catch (e) { return d; } }
   function s(k, v) { try { GM_setValue(k, v); } catch (e) {} }
@@ -176,13 +200,22 @@
 
     // 2) cuando WeProdu pide validar, sembrar la cola y empezar a esperar
     escuchar('weprodu-os-start', function (ev) {
-      var lista = (ev && ev.detail) || [];
+      /*
+        El detalle acepta dos formas: el array de pedidos de siempre, y `{pedidos, empleadoras}`, que
+        agrega de qué empleadora es la tanda. Las dos porque el evento lo emite la app y la app se
+        deploya aparte: un front viejo tiene que seguir arrancando una corrida igual, solo que sin
+        poder decir qué CUIT elegir en el selector.
+      */
+      var detalle = (ev && ev.detail) || [];
+      var lista = Array.isArray(detalle) ? detalle : detalle.pedidos || [];
+      var empleadoras = Array.isArray(detalle) ? [] : detalle.empleadoras || [];
       var cuils = [], orden = [];
       lista.forEach(function (it) {
         var c = fmtCuil(it.cuil);
         if (c) { cuils.push({ cuil: c, contractId: it.contractId }); orden.push(c); }
       });
       if (!cuils.length) return;
+      s(K.empleadoras, empleadoras);
       s(K.queue, cuils);
       s(K.orden, orden);
       s(K.hechos, {});
@@ -536,21 +569,79 @@
     var orden = g(K.orden, []), hechos = g(K.hechos, {});
     return orden.filter(function (c) { return !(c in hechos); }).length;
   }
-  function rendirse(quePasa) {
-    badge(
-      '⚠ ' + quePasa + '<br><span style="color:#8b949e">Entrá a mano a <b>Simplificación Registral → Registrar Nuevas Altas</b> (si representás a varias empresas, elegí una: la obra social se consulta por CUIL, sirve cualquiera).<br>' +
-        'Quedan ' + faltanCuantos() + ' — apenas llegues sigo solo.</span>',
-      '#d29922',
-    );
+  /*
+    Antes había acá un `rendirse()` con un texto único para cualquier atasco. Se sacó: cada pantalla
+    del recorrido falla por un motivo distinto y necesita una instrucción distinta, y el mensaje
+    genérico —"entrá a mano a Registrar Nuevas Altas"— era justamente el que omitía el paso que
+    faltaba, elegir el CUIT. Ahora el cartel lo arma cada rama de `rutearARCA`.
+  */
+
+  /** Las empleadoras de la tanda, como texto para los carteles. */
+  function empleadorasTexto() {
+    var e = g(K.empleadoras, []) || [];
+    if (!e.length) return '';
+    return e
+      .map(function (x) {
+        var cuit = String(x.cuit || '').replace(/\D/g, '');
+        return (x.nombre || '') + (cuit ? ' (' + fmtCuil(cuit) + ')' : '');
+      })
+      .join(' o ');
   }
 
   /**
-   * A dónde ir según dónde cayó la pestaña.
+   * ¿Ya se validó alguna en esta tanda?
    *
-   * El disparo desde WeProdu abre Altas.aspx directo, que es lo correcto cuando la sesión de ARCA
-   * está viva. Cuando no lo está —el caso normal si hace rato que no se entra— ARCA rebota a
-   * FinSession, y a partir de ahí este ruteo lleva solo hasta el login y de vuelta. La cola no se
-   * toca en ningún momento: sobrevive al relogin y retoma donde quedó.
+   * Es lo que separa dos problemas que hoy dicen lo mismo y mandan a lugares distintos: si no se
+   * validó ninguna, nunca hubo sesión de trabajo —falta elegir el CUIT—; si ya había validadas, la
+   * sesión existió y se venció. El texto tiene que decir cuál de los dos es.
+   */
+  function yaEmpezo() {
+    return Object.keys(g(K.hechos, {}) || {}).length > 0;
+  }
+
+  /**
+   * Resalta a la empleadora de la tanda en el selector de CUIT.
+   *
+   * En una cuenta que representa a varias empresas, "elegí el CUIT" no alcanza: hay que decir CUÁL y,
+   * mejor, señalarlo. Se busca por CUIT (los dígitos, en cualquier formato) y si no, por nombre.
+   */
+  function resaltarEmpleadora() {
+    var lista = g(K.empleadoras, []) || [];
+    if (!lista.length) return false;
+    var candidatos = document.querySelectorAll('tr, li, a, option, label, div.row');
+    var encontrado = false;
+    for (var i = 0; i < candidatos.length && !encontrado; i++) {
+      var txt = (candidatos[i].textContent || '').trim();
+      if (!txt || txt.length > 300) continue; // un contenedor grande "contiene" todo: no sirve
+      for (var j = 0; j < lista.length; j++) {
+        var cuit = String(lista[j].cuit || '').replace(/\D/g, '');
+        var nombre = String(lista[j].nombre || '').trim();
+        var pega = (cuit && txt.replace(/\D/g, '').indexOf(cuit) >= 0) || (nombre.length > 3 && txt.toUpperCase().indexOf(nombre.toUpperCase()) >= 0);
+        if (!pega) continue;
+        try {
+          candidatos[i].style.outline = '3px solid #1f6feb';
+          candidatos[i].style.background = 'rgba(31,111,235,.12)';
+          candidatos[i].scrollIntoView({ block: 'center' });
+        } catch (e) {}
+        encontrado = true;
+        break;
+      }
+    }
+    return encontrado;
+  }
+
+  function enFinSession() { return /FinSession\.aspx/i.test(location.pathname || '') || sesionExpirada(); }
+  function enSelectorCuit() { return /IndexContribuyente\.aspx/i.test(location.pathname || ''); }
+
+  /**
+   * Qué hacer según dónde cayó la pestaña.
+   *
+   * El recorrido de ARCA no se puede saltear (ver `ARCA_SELECTOR_URL`), así que el script no intenta
+   * forzarlo: acompaña. En cada pantalla dice qué falta y espera; donde puede avanzar solo, avanza.
+   *
+   * LA COLA NO SE DESCARTA NUNCA mientras tanto. Antes el operador veía un error y no tenía forma de
+   * saber que su tanda seguía viva: volvía a WeProdu y la mandaba de nuevo. Ahora cada cartel dice
+   * cuántas quedan esperando, y arrancan solas al llegar a la pantalla correcta.
    */
   function rutearARCA() {
     if (isARCA && enAltas() && !sesionExpirada()) {
@@ -558,25 +649,76 @@
       procesarARCA();
       return;
     }
-    // Sin tanda en curso no se navega nada: nadie pidió ir a ningún lado.
+    // Sin tanda en curso no se dice nada: nadie pidió ir a ningún lado.
     if (!g(K.active, false) && g(K.fase, '') !== 'limpiando') return;
 
+    var quedan = faltanCuantos();
+    var quien = empleadorasTexto();
+    var pasos =
+      '<span style="color:#8b949e">1. Entrá a <b>Simplificación Registral - Empleadores</b>.<br>' +
+      '2. <b>Elegí el CUIT' +
+      (quien ? ' de ' + quien : '') +
+      '</b> — sin este paso ARCA rechaza la pantalla de altas.<br>' +
+      '3. <b>Relaciones Laborales → Registrar Nuevas Altas</b>. Arranco solo.<br>' +
+      'La tanda de ' + quedan + ' sigue en espera.</span>';
+
     if (isAuth) {
-      badge('🔑 Entrá con tu clave fiscal.<br><span style="color:#8b949e">Cuando estés adentro sigo solo con las ' + faltanCuantos() + ' que faltan. No leo ni guardo tu clave.</span>', '#1f6feb');
+      badge('🔑 Entrá con tu clave fiscal.<br>' + pasos, '#1f6feb');
       return;
     }
     if (isPortal) {
-      if (!irA(ARCA_ALTAS_URL)) return rendirse('No pude entrar solo a la pantalla de altas.');
-      badge('✅ Sesión iniciada — voy a <b>Registrar Nuevas Altas</b>…', '#1f6feb');
+      badge('✅ Estás en el portal. Entrá a <b>Simplificación Registral - Empleadores</b>.<br>' + pasos, '#1f6feb');
       return;
     }
-    // ARCA, pero fuera de Altas (FinSession, el menú, una pantalla intermedia).
-    if (sesionExpirada()) {
-      if (!irA(AFIP_LOGIN_URL)) return rendirse('La sesión de ARCA se venció y no pude volver solo al login.');
-      badge('⏸ Se venció la sesión de ARCA — te llevo a iniciar sesión…<br><span style="color:#8b949e">Quedan ' + faltanCuantos() + '. Retomo apenas entres.</span>', '#d29922');
+    if (enSelectorCuit()) {
+      var resaltado = resaltarEmpleadora();
+      badge(
+        '👉 <b>Elegí ' + (quien || 'el CUIT de la empleadora') + '</b>' +
+          (resaltado ? ' — te lo marqué en la lista.' : '.') +
+          '<br><span style="color:#8b949e">Este es el paso que inicia la sesión de trabajo. Después entrá a <b>Relaciones Laborales → Registrar Nuevas Altas</b> y sigo solo con las ' +
+          quedan +
+          ' que faltan.</span>',
+        '#1f6feb',
+      );
       return;
     }
-    if (!irA(ARCA_ALTAS_URL)) rendirse('No pude entrar solo a la pantalla de altas.');
+    if (enFinSession()) {
+      /*
+        Los dos casos que hasta ahora decían lo mismo. Sin ninguna validada, la sesión de trabajo
+        nunca existió —falta elegir el CUIT—; con validadas, existió y se venció. Mandan al mismo
+        lugar pero la explicación cambia, y la equivocada hace buscar donde no está.
+      */
+      var titulo = yaEmpezo()
+        ? '⏸ Se venció la sesión de ARCA. Volvé a entrar y elegí el CUIT' + (quien ? ' de ' + quien : '') + ' — quedan ' + quedan + '.'
+        : '⚠ Falta iniciar la <b>sesión de trabajo</b>: ARCA no deja entrar directo a la pantalla de altas.';
+      /*
+        Escalera de destinos, del más específico al más general, según cuántas veces ya rebotamos.
+
+        No se puede saber de antemano cuál acepta ARCA —depende de si hay clave fiscal puesta y de
+        cuánto tolera cada pantalla que se entre desde afuera—, así que se prueba en orden en vez de
+        fijar uno a ciegas: selector de CUIT → login → portal. Sin esto, con el navegador deslogueado
+        el selector y FinSession se rebotan entre ellos hasta agotar el tope de saltos.
+      */
+      var saltos = (g(K.nav, null) || {}).n || 0;
+      var destino = saltos < 2 ? ARCA_SELECTOR_URL : saltos < 4 ? AFIP_LOGIN_URL : AFIP_PORTAL_URL;
+      var comoSeLlama = saltos < 2 ? 'al selector de CUIT' : saltos < 4 ? 'al login de clave fiscal' : 'al portal de AFIP';
+      if (!irA(destino)) {
+        badge(titulo + '<br>' + pasos, '#d29922');
+        return;
+      }
+      badge(titulo + '<br><span style="color:#8b949e">Te llevo ' + comoSeLlama + '…</span>', '#d29922');
+      return;
+    }
+    /*
+      Otra pantalla interna de ARCA (DatosBasicos, un menú). Acá la sesión de trabajo YA está: el
+      selector se pasó. Así que se intenta el salto a Altas, que es lo único que falta; si ARCA lo
+      rechaza igual, el tope de saltos corta y queda el instructivo.
+    */
+    if (!irA(ARCA_ALTAS_URL)) {
+      badge('👉 Andá a <b>Relaciones Laborales → Registrar Nuevas Altas</b>.<br>' + pasos, '#d29922');
+      return;
+    }
+    badge('✅ Sesión de trabajo iniciada — voy a <b>Registrar Nuevas Altas</b>…<br><span style="color:#8b949e">Quedan ' + quedan + '.</span>', '#1f6feb');
   }
 
   // ======================= arranque =======================

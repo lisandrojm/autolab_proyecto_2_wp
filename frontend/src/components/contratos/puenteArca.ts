@@ -25,13 +25,41 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * sandbox, pero el que tiene que funcionar es `document`.
  */
 
-/** La pantalla de altas, que es donde el script trabaja. Se abre en el mismo click que el disparo. */
+/**
+ * A dónde se abre ARCA: al SELECTOR DE CUIT, no a la pantalla de altas.
+ *
+ * Simplificación Registral no acepta deep-links. Entrar directo a `Altas.aspx` cae SIEMPRE en
+ * `FinSession.aspx` —«Su tiempo de sesión ha finalizado, o ud. no ha iniciado su sesión de trabajo»—
+ * incluso con el navegador logueado, porque falta pasar por el selector de CUIT: ese paso es el que
+ * crea la "sesión de trabajo" que las pantallas internas exigen.
+ *
+ * Durante mucho tiempo se leyó la primera mitad de ese cartel y se buscó una sesión vencida. Era la
+ * segunda mitad, y explica por qué el error era constante y no intermitente: el link estaba mal
+ * armado desde el principio.
+ *
+ * El recorrido obligatorio del organismo:
+ *   login → Simplificación Registral - Empleadores → IndexContribuyente (elegir CUIT) → DatosBasicos
+ *   → Relaciones Laborales → Altas.aspx
+ *
+ * Desde acá se abre el primer punto que ARCA acepta desde afuera; el resto lo acompaña el userscript,
+ * que corre en todas esas pantallas y va diciendo qué falta (ver `puente-arca.js`, `rutearARCA`).
+ */
+export const ARCA_SELECTOR_CUIT_URL =
+  "https://serviciossegsoc.afip.gob.ar/tramites_con_clave_fiscal/MiSimplificacion/app/login/IndexContribuyente.aspx";
+
+/** La pantalla donde el script trabaja. No se abre directo desde acá: ARCA la rechaza (ver arriba). */
 export const ARCA_ALTAS_URL =
   "https://serviciossegsoc.afip.gob.ar/tramites_con_clave_fiscal/MiSimplificacion/app/Contribuyente/RelacionLaboral/Altas.aspx";
 
 export interface PedidoValidacion {
   cuil: string;
   contractId: string;
+}
+
+/** De qué empleadora es la tanda: el script lo usa para decir QUÉ CUIT elegir, y resaltarlo. */
+export interface EmpleadoraValidacion {
+  nombre: string;
+  cuit?: string;
 }
 
 export interface ResultadoValidacion {
@@ -394,7 +422,10 @@ export function useEstadoExtension(): {
  * el navegador como popup, y el operador se queda con la cola sembrada y sin la pestaña donde el
  * script trabaja — esperando algo que nunca arranca.
  */
-export function iniciarValidacionArca(pedidos: PedidoValidacion[]): boolean {
+export function iniciarValidacionArca(
+  pedidos: PedidoValidacion[],
+  empleadoras: EmpleadoraValidacion[] = [],
+): boolean {
   const limpios = pedidos
     .map((p) => ({
       cuil: String(p.cuil || "").replace(/\D/g, ""),
@@ -402,13 +433,13 @@ export function iniciarValidacionArca(pedidos: PedidoValidacion[]): boolean {
     }))
     .filter((p) => p.cuil.length === 11);
   if (limpios.length === 0) return false;
-  document.dispatchEvent(
-    new CustomEvent("weprodu-os-start", { detail: limpios }),
-  );
-  window.dispatchEvent(
-    new CustomEvent("weprodu-os-start", { detail: limpios }),
-  );
-  window.open(ARCA_ALTAS_URL, "_blank", "noopener,noreferrer");
+  // El detalle lleva las empleadoras además de los pedidos: en el selector de ARCA hay que elegir un
+  // CUIT, y con varias representadas "elegí el CUIT" sin decir cuál no alcanza. El script acepta las
+  // dos formas —array pelado y objeto— por si queda corriendo una copia vieja de la lógica.
+  const detail = { pedidos: limpios, empleadoras };
+  document.dispatchEvent(new CustomEvent("weprodu-os-start", { detail }));
+  window.dispatchEvent(new CustomEvent("weprodu-os-start", { detail }));
+  window.open(ARCA_SELECTOR_CUIT_URL, "_blank", "noopener,noreferrer");
   return true;
 }
 

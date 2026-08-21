@@ -1110,16 +1110,33 @@ export const ContractBulkAfipTab: React.FC<{
    * Manda el `contratoId` además del CUIL. No se usa para escribir —eso lo resuelve el server por
    * CUIL, que es lo único que ARCA conoce— pero identifica de qué contrato salió cada pedido.
    */
-  const validarEnArca = useCallback((objetivo: Array<{ row: ImpositivoRow }>) => {
-    const pedidos: PedidoValidacion[] = objetivo
-      .filter((x) => String(x.row.cuit || '').replace(/\D/g, '').length === 11)
-      .map((x) => ({ cuil: x.row.cuit || '', contractId: String(x.row.contratoId || x.row._id) }));
-    if (!iniciarValidacionArca(pedidos)) {
-      sweetAlert.error('Sin CUIL válidos', 'Ninguno de los contratos elegidos tiene un CUIL de 11 dígitos cargado.');
-      return;
-    }
-    setValidandoArca(`Validando ${pedidos.length} en ARCA — dejá esa pestaña abierta. Al terminar se guardan solas.`);
-  }, []);
+  const validarEnArca = useCallback(
+    (objetivo: Array<{ row: ImpositivoRow }>) => {
+      const pedidos: PedidoValidacion[] = objetivo
+        .filter((x) => String(x.row.cuit || '').replace(/\D/g, '').length === 11)
+        .map((x) => ({ cuil: x.row.cuit || '', contractId: String(x.row.contratoId || x.row._id) }));
+      /*
+       * Las empleadoras de la tanda viajan con el pedido.
+       *
+       * ARCA abre en el selector de CUIT —es el paso que crea la sesión de trabajo, sin el cual la
+       * pantalla de altas se rechaza— y ahí hay que elegir uno. Con varias empresas representadas,
+       * un cartel que diga "elegí el CUIT" a secas no dice nada: con esto el script nombra la que
+       * corresponde y la resalta en la lista.
+       */
+      const empleadoras = [...new Set(objetivo.map((x) => String(x.row.empresaContratoId || '')).filter(Boolean))]
+        .map((id) => companies.find((c) => c._id === id))
+        .filter(Boolean)
+        .map((c) => ({ nombre: c!.razonSocial, cuit: c!.cuit }));
+      if (!iniciarValidacionArca(pedidos, empleadoras)) {
+        sweetAlert.error('Sin CUIL válidos', 'Ninguno de los contratos elegidos tiene un CUIL de 11 dígitos cargado.');
+        return;
+      }
+      setValidandoArca(
+        `Validando ${pedidos.length} en ARCA — elegí el CUIT${empleadoras.length === 1 ? ` de ${empleadoras[0].nombre}` : ''} en la pestaña que se abrió y andá a «Registrar Nuevas Altas». Se guardan solas.`,
+      );
+    },
+    [companies],
+  );
 
   /**
    * Guarda lo que devolvió la extensión. ESTO es lo que hace que "se guarde solo".
@@ -2212,8 +2229,27 @@ export const ContractBulkAfipTab: React.FC<{
               <li>
                 Tildá los contratos y usá <strong>Validar obras sociales</strong>. El número del botón cuenta solo los que ya tienen empresa: los tildados sin empresa se omiten.
               </li>
-              <li>Con la extensión de ARCA instalada la corrida es automática (se abre ARCA, te logueás y el resto va solo). Sin extensión, la validación es manual.</li>
+              <li>
+                Se abre una pestaña de ARCA <strong>en el selector de CUIT</strong>. Ahí:
+                <ol className="mt-1 space-y-1 list-[lower-alpha] list-inside pl-3 text-[13px]">
+                  <li>Ingresá con tu clave fiscal.</li>
+                  <li>
+                    Entrá a <strong>Simplificación Registral - Empleadores</strong>.
+                  </li>
+                  <li>
+                    <strong>Elegí el CUIT de la empleadora</strong> — este paso es obligatorio: es el que inicia la «sesión de trabajo». Sin él, ARCA rechaza la pantalla de altas y muestra
+                    «su tiempo de sesión ha finalizado», aunque estés perfectamente logueado.
+                  </li>
+                  <li>
+                    Andá a <strong>Relaciones Laborales → Registrar Nuevas Altas</strong>. Con la extensión instalada, el script arranca solo desde ahí; sin extensión, la validación es manual.
+                  </li>
+                </ol>
+              </li>
             </ol>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Mientras vas por ese camino, <strong>la tanda queda esperando</strong>: no hace falta volver a WeProdu ni apretar nada de nuevo. El script te va diciendo en cada pantalla qué falta y
+              cuántas quedan.
+            </p>
             <p className="text-sm text-gray-600 dark:text-gray-300">
               En la columna <strong>Obra Social</strong> —al lado de Empresa Contrato—, las filas que todavía no tienen empresa muestran un <span className="text-amber-600 dark:text-amber-400 font-semibold">ⓘ ámbar</span> en vez del botón «Validar»: tocalo y explica qué falta. Con la empresa asignada, ese ⓘ pasa a ser el botón <strong>Validar</strong>. Lo ya validado se puede quitar con el <strong>tacho</strong> de la misma celda.
             </p>
