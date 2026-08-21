@@ -530,7 +530,7 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
    * de referencia —qué va a quedar si ARCA no devuelve ninguna—, que se arma abajo.
    */
   const faltaRnos = v.rnosSugerido
-    ? `Validá el CUIL en ARCA (Relaciones Laborales → Registrar Nuevas Altas) y aplicá el resultado en «Constatar obras sociales». Si el organismo no tiene una registrada para esta persona, va a quedar la del ${v.convenioCategoria ? `convenio ${v.convenioCategoria}` : "convenio"}: ${v.rnosSugerido} · ${v.nombreObraSocialSugerida}.`
+    ? `Validá el CUIL en ARCA (Relaciones Laborales → Registrar Nuevas Altas) y aplicá el resultado en «Validar obras sociales». Si el organismo no tiene una registrada para esta persona, va a quedar la del ${v.convenioCategoria ? `convenio ${v.convenioCategoria}` : "convenio"}: ${v.rnosSugerido} · ${v.nombreObraSocialSugerida}.`
     : !v.convenioCategoria
       ? "Validá el CUIL en ARCA. Y ojo: la categoría del contrato no tiene cargado a qué convenio pertenece, así que si ARCA no devuelve ninguna no hay de dónde sacarla — cargásela en Configuración → ARCA → Categorías."
       : v.convenioCategoria === CONVENIO_EXCLUIDO

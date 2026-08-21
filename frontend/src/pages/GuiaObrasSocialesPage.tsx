@@ -110,7 +110,7 @@ export const GuiaObrasSocialesPage: React.FC = () => (
             opcional: es lo que inicia la «sesión de trabajo», y sin ese paso ARCA rechaza la pantalla de altas aunque estés logueado.
           </Paso>
           <Paso n={4} titulo={<>Corré <Cod>npm run validar-obras-sociales</Cod></>}>
-            Con los CUIL a validar: <Cod>-- --cuils cuils.txt</Cod>. Devuelve un <Cod>CUIL,RNOS</Cod> por línea, que se pega en el panel «Constatar obras sociales» de WeProdu.
+            El <Cod>cuils.txt</Cod> lo bajás desde el panel <strong>«Validar obras sociales»</strong> de WeProdu. El script devuelve un <Cod>CUIL,RNOS</Cod> por línea, que se pega en ese mismo panel.
           </Paso>
         </ol>
 
@@ -159,7 +159,7 @@ export const GuiaObrasSocialesPage: React.FC = () => (
 
         <p className="font-semibold text-gray-900 dark:text-gray-100 pt-1">Pegar el resultado</p>
         <p>
-          El script devuelve <Cod>CUIL,RNOS</Cod> por línea. Eso se pega en el panel <strong>«Constatar obras sociales»</strong>, que antes de guardar te muestra la previsualización y valida que cada
+          El script devuelve <Cod>CUIL,RNOS</Cod> por línea. Eso se pega en el panel <strong>«Validar obras sociales»</strong> —el mismo de donde bajaste el <Cod>cuils.txt</Cod>—, que antes de guardar te muestra la previsualización y valida que cada
           obra social esté entre las que la empleadora tiene registradas ante ARCA. Recién ahí queda cargada en cada contrato, con fecha, y deja de figurar como pendiente.
         </p>
       </Seccion>
@@ -240,6 +240,10 @@ export const GuiaObrasSocialesPage: React.FC = () => (
         <Sintoma q="¿El script puede dar de alta a alguien por error?">
           No. En la pantalla de altas aprieta <strong>únicamente</strong> «Agregar» y «Reiniciar». El «Aceptar» —el que registra ante el organismo— no lo toca nunca, y los botones se buscan por su texto
           exacto, jamás por posición. Las altas salen del TXT, no de ahí.
+        </Sintoma>
+        <Sintoma q="Me aparece «El puente falló al arrancar» en todas las pantallas">
+          Es el userscript viejo, de cuando esto se hacía con una extensión: sigue pidiendo un archivo que ya no existe y recibe otra cosa (de ahí el <Cod>Unexpected token '&lt;'</Cod>). Abrí el panel de
+          Tampermonkey y <strong>desinstalá «WeProdu — Puente ARCA»</strong> —y cualquier otra copia del script—: ya no se usa para nada.
         </Sintoma>
         <Sintoma q="Prefiero no abrir Chrome de otra forma">
           Se puede: copiás los CUIL desde WeProdu, los cargás en ARCA a mano y pegás el resultado en la misma caja donde va la salida del script. Es más tedioso pero hace exactamente lo mismo, y siempre
