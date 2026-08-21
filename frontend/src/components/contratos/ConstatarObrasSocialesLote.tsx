@@ -6,7 +6,6 @@ import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatal
 import { projectsAPI } from '../../api/projects';
 import { formatRnos } from '../../utils/rnos';
 import { AfipValues } from './afipCompleteness';
-import { RequisitoExtension } from './RequisitoExtension';
 
 /**
  * Constatar la obra social de MUCHOS contratos de una sentada.
@@ -338,10 +337,6 @@ export const ConstatarObrasSocialesLote: React.FC<{
           <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
         </button>
       </div>
-
-      {/* Va arriba de todo: es el prerrequisito del camino rápido, y sin él la pantalla parece rota
-          en vez de incompleta. Cuando la extensión está, se reduce a una línea verde. */}
-      <RequisitoExtension />
 
       {/*
         * Sin una sola empleadora no se puede aplicar la tanda, y hay que DECIRLO.

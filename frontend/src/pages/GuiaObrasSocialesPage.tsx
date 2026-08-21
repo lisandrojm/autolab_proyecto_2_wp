@@ -2,22 +2,18 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faShieldHeart, faArrowRight, faTriangleExclamation, faBan } from '@fortawesome/free-solid-svg-icons';
 import { PageLayout } from '../components/ui/PageLayout';
-import { RequisitoExtension } from '../components/contratos/RequisitoExtension';
 
 /**
  * Guía de la validación de obras sociales contra ARCA.
  *
  * Es una página hermana de "Cómo funciona" y no una sección suya: aquella explica la cadena de
  * dependencias del alta masiva y el registro de 130 completo; esta explica UN campo —el RNOS, pos.
- * 40-45— y el único trámite del módulo que sale de la app y necesita una extensión del navegador.
- * Mezclarlas obligaría a leer la cadena entera para entender por qué falta un permiso de Chrome.
+ * 40-45— y el único trámite del módulo que sale de la app y se opera contra la web del organismo.
+ * Mezclarlas obligaría a leer la cadena entera para entender por qué hay que abrir Chrome de otra
+ * forma.
  *
  * Se lee una vez y se vuelve cuando algo falla; por eso el troubleshooting de la sección 6 son los
  * síntomas que efectivamente ocurrieron, no casos hipotéticos.
- *
- * El estado de la extensión se muestra EN VIVO (`RequisitoExtension`), con el mismo indicador de tres
- * estados que la pantalla de validación: una guía que dice "instalá la extensión" a quien ya la tiene
- * —o que asegura que está lista cuando el permiso falta— deja de ser confiable para todo lo demás.
  */
 
 const Seccion: React.FC<{ n: number; titulo: string; children: React.ReactNode }> = ({ n, titulo, children }) => (
@@ -91,36 +87,51 @@ export const GuiaObrasSocialesPage: React.FC = () => (
         </p>
       </Seccion>
 
-      <Seccion n={2} titulo="Preparación — se hace una sola vez">
+      <Seccion n={2} titulo="Preparación — cada vez que vas a validar">
         <p>
-          La validación automática necesita una extensión en tu navegador. ARCA no tiene una API que devuelva la obra social, así que el dato se lee de la pantalla del organismo, en tu propia sesión.
+          ARCA no tiene una API que devuelva la obra social de un trabajador: el dato solo existe en la pantalla del organismo, dentro de tu sesión. Así que hay que leerlo de ahí. Lo hace un script que
+          se conecta a <strong>tu propio Chrome</strong>, ya abierto y logueado — no instala nada en el navegador.
         </p>
 
-        {/* El estado real, acá y no solo en la pantalla de validación: es donde alguien llega cuando
-            algo no anda, y lo primero que necesita saber es en cuál de los tres estados está. */}
-        <RequisitoExtension compacto />
-
         <ol className="space-y-4 mt-2">
-          <Paso n={1} titulo={<>Instalá Tampermonkey desde <Cod>tampermonkey.net</Cod></>}>
-            Es la extensión que permite que WeProdu y ARCA se pasen datos. Sin ella no hay puente: son dos sitios distintos y el navegador no deja que uno lea al otro.
+          <Paso n={1} titulo="Cerrá Chrome por completo">
+            No alcanza con cerrar la ventana: tiene que salir del todo, porque el puerto de depuración se abre al arrancar el proceso.
           </Paso>
-          <Paso n={2} id="permiso-chrome" titulo={<>Activá el permiso en Chrome</>}>
-            Entrá a <Cod>chrome://extensions</Cod> → Tampermonkey → <strong>Detalles</strong>, y prendé <strong>«Permitir secuencias de comandos del usuario»</strong>. Sin este permiso la extensión queda
-            instalada pero <strong>no ejecuta nada</strong>, y no siempre lo avisa.
+          <Paso n={2} titulo="Abrilo con el puerto de depuración">
+            <span className="block mt-1">
+              macOS: <Cod>open -a "Google Chrome" --args --remote-debugging-port=9222</Cod>
+            </span>
+            <span className="block mt-1">
+              Windows: <Cod>chrome.exe --remote-debugging-port=9222</Cod>
+            </span>
           </Paso>
-          <Paso n={3} titulo="Instalá el script de WeProdu">
-            Desde el botón «Copiar el script» del bloque de arriba: se pega en Tampermonkey → <em>Crear un nuevo script</em> → guardar. Chrome bloquea la instalación directa de un <Cod>.user.js</Cod> desde
-            cualquier sitio, así que copiar y pegar es el camino, no un rodeo.
+          <Paso n={3} titulo="Entrá a ARCA y dejá abierta la pantalla de altas">
+            Clave fiscal → <strong>Simplificación Registral - Empleadores</strong> → elegí el CUIT de la empleadora → <strong>Relaciones Laborales → Registrar Nuevas Altas</strong>. Elegir el CUIT no es
+            opcional: es lo que inicia la «sesión de trabajo», y sin ese paso ARCA rechaza la pantalla de altas aunque estés logueado.
           </Paso>
-          <Paso n={4} titulo="Probalo">
-            Apretá <strong>«Probar la extensión»</strong>: tiene que decir <strong>«Extensión activa»</strong> en verde. Si dice que está instalada pero no responde, falta el permiso del paso 2.
+          <Paso n={4} titulo={<>Corré <Cod>npm run validar-obras-sociales</Cod></>}>
+            Con los CUIL a validar: <Cod>-- --cuils cuils.txt</Cod>. Devuelve un <Cod>CUIL,RNOS</Cod> por línea, que se pega en el panel «Constatar obras sociales» de WeProdu.
           </Paso>
         </ol>
+
+        <Aviso>
+          Mientras Chrome esté abierto con <Cod>--remote-debugging-port</Cod>, <strong>cualquier programa que corra en tu máquina puede controlarlo</strong>: leer tus pestañas, tu sesión de ARCA, todo.
+          Usalo solo mientras dure la validación y después volvé a abrir Chrome normal. Es la contrapartida honesta de no instalar una extensión.
+        </Aviso>
+
+        <p>
+          El script <strong>nunca pide ni guarda tu clave fiscal</strong>: se cuelga de la sesión que abriste vos. Si la pantalla no está lista, te dice qué falta y termina — no reintenta ni adivina.
+        </p>
+
+        <p className="text-[13px] text-gray-500 dark:text-gray-400">
+          Antes esto se hacía con una extensión de navegador (Tampermonkey). Se abandonó: sus fallas eran todas del mecanismo y no del trámite — el sandbox de la extensión, un permiso de Chrome apagado
+          por defecto, versiones que había que reinstalar a mano, copias duplicadas pisándose entre ellas. Nada de eso existe conectándose al Chrome que ya está abierto.
+        </p>
       </Seccion>
 
       <Seccion n={3} titulo="El circuito, por tanda">
         <div className="flex items-center gap-2 flex-wrap text-[13px] my-1">
-          {['Asignar empleadora', 'Validar obras sociales', 'Login en ARCA', 'El script corre solo', 'Generar TXT'].map((paso, i, arr) => (
+          {['Asignar empleadora', 'Copiar los CUIL', 'Login en ARCA', 'Correr el script', 'Pegar el resultado', 'Generar TXT'].map((paso, i, arr) => (
             <React.Fragment key={paso}>
               <span className={`px-3 py-2 rounded-lg border ${i === 1 ? 'border-blue-400 dark:border-blue-600 text-blue-700 dark:text-blue-300' : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'}`}>
                 {paso}
@@ -138,18 +149,19 @@ export const GuiaObrasSocialesPage: React.FC = () => (
 
         <p className="font-semibold text-gray-900 dark:text-gray-100 pt-1">Validar</p>
         <p>
-          Apretás <strong>«Validar obras sociales»</strong>. WeProdu junta los CUIL pendientes de esa empleadora y abre ARCA.
+          Apretás <strong>«Validar obras sociales»</strong>: WeProdu junta los CUIL pendientes de esa empleadora y te los deja para copiar. Con eso corrés el script (sección 2), que los carga en ARCA de
+          a 10 —el máximo que el organismo acepta—, lee la obra social que precompleta cada fila y deja la pantalla vacía al terminar.
         </p>
         <Clave>
-          <strong>Tu único paso manual es el login.</strong> Entrás con clave fiscal y de ahí en adelante va solo: elige el CUIT de la empleadora, entra al servicio, va a{" "}
-          <strong>Relaciones Laborales → Registrar Nuevas Altas</strong>, carga cada CUIL, lee la obra social que ARCA precompleta y sigue con el siguiente. No toques nada mientras corre.
+          <strong>El script solo lee.</strong> Los únicos botones que aprieta en la pantalla de altas son <strong>Agregar</strong> y <strong>Reiniciar</strong>. <strong>Nunca «Aceptar»</strong>, que es el
+          que registra las altas ante el organismo: esas salen del TXT, no de acá.
         </Clave>
-        <p>
-          Tu clave fiscal <strong>no se guarda en ningún lado</strong>. El script trabaja dentro de la sesión que abriste vos; por eso el login es manual y no se puede saltear.
-        </p>
 
-        <p className="font-semibold text-gray-900 dark:text-gray-100 pt-1">Los resultados vuelven solos</p>
-        <p>Al terminar, cada obra social queda cargada en su contrato, con fecha, y deja de figurar como pendiente.</p>
+        <p className="font-semibold text-gray-900 dark:text-gray-100 pt-1">Pegar el resultado</p>
+        <p>
+          El script devuelve <Cod>CUIL,RNOS</Cod> por línea. Eso se pega en el panel <strong>«Constatar obras sociales»</strong>, que antes de guardar te muestra la previsualización y valida que cada
+          obra social esté entre las que la empleadora tiene registradas ante ARCA. Recién ahí queda cargada en cada contrato, con fecha, y deja de figurar como pendiente.
+        </p>
       </Seccion>
 
       <Seccion n={4} titulo="Los tres estados">
@@ -215,21 +227,23 @@ export const GuiaObrasSocialesPage: React.FC = () => (
       </Seccion>
 
       <Seccion n={6} titulo="Si algo no funciona">
-        <Sintoma q="Dice «No detectada»">
-          El script no está instalado, o Tampermonkey no lo está ejecutando. Revisá el paso 2 de la preparación: el permiso <strong>«Permitir secuencias de comandos del usuario»</strong> es el que más se pasa por
-          alto.
+        <Sintoma q="«No pude conectarme a Chrome»">
+          Chrome no está corriendo con el puerto de depuración. Cerralo <strong>del todo</strong> —no solo la ventana— y volvé a abrirlo con el comando del paso 2. Si lo abriste normal y después ejecutaste
+          el comando, no alcanza: el puerto se abre al arrancar el proceso.
         </Sintoma>
-        <Sintoma q="Dice «instalada pero no responde»">El script cargó pero no puede comunicarse. Casi siempre es el mismo permiso. Prendelo, recargá la página y probá de nuevo.</Sintoma>
-        <Sintoma q="Se abre ARCA y no arranca solo">
-          El script se muestra en cada pantalla del recorrido y dice qué falta: leé el cartelito de abajo a la derecha. Los dos casos más comunes son que todavía no hayas entrado con clave fiscal, o
-          que <strong>tu clave no tenga acceso al CUIT de esa empleadora</strong> —ahí lo dice con todas las letras y hay que pedir la delegación—.
+        <Sintoma q="«No encontré ninguna pestaña de ARCA»">
+          Chrome está en modo depuración pero falta la pestaña. Entrá a Simplificación Registral y dejá abierta <strong>Registrar Nuevas Altas</strong>.
+        </Sintoma>
+        <Sintoma q="«La sesión de ARCA no está activa»">
+          O no entraste con clave fiscal, o falta elegir el CUIT de la empleadora — ese paso es el que inicia la «sesión de trabajo». Si tu clave no tiene acceso a ese CUIT, hay que pedir la delegación.
         </Sintoma>
         <Sintoma q="¿El script puede dar de alta a alguien por error?">
-          No. El único botón que aprieta en ARCA es el <strong>«Aceptar» del selector de CUIT</strong>, que solo define bajo qué empresa se opera y es reversible. El «Aceptar» de la pantalla de altas —el
-          que registra ante el organismo— no lo toca nunca: las altas salen del TXT, no de ahí.
+          No. En la pantalla de altas aprieta <strong>únicamente</strong> «Agregar» y «Reiniciar». El «Aceptar» —el que registra ante el organismo— no lo toca nunca, y los botones se buscan por su texto
+          exacto, jamás por posición. Las altas salen del TXT, no de ahí.
         </Sintoma>
-        <Sintoma q="Prefiero no instalar nada">
-          Se puede: copiás los CUIL desde WeProdu, los cargás en ARCA a mano y pegás el resultado en la caja de la pantalla de validación. Es más tedioso pero hace exactamente lo mismo, y siempre está disponible.
+        <Sintoma q="Prefiero no abrir Chrome de otra forma">
+          Se puede: copiás los CUIL desde WeProdu, los cargás en ARCA a mano y pegás el resultado en la misma caja donde va la salida del script. Es más tedioso pero hace exactamente lo mismo, y siempre
+          está disponible.
         </Sintoma>
         <Sintoma q="Una obra social quedó mal">
           Se corrige con <strong>«Re-validar»</strong>, que repite la consulta. Los valores validados no se editan a mano a propósito: el número tiene que venir del organismo.

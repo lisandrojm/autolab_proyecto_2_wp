@@ -26,8 +26,6 @@ import { ContractDocsColumns, ContractDocsHeaders, ContractActionsButtons, Contr
 import { resolveAfip, resolveAfipValues, AfipRowResult, AfipValues } from './afipCompleteness';
 import { buildAltaRecord, buildAltaTxt, downloadTxt } from './afipTxt';
 import { ConstatarObrasSocialesLote, FilaConstatacion } from './ConstatarObrasSocialesLote';
-import { useExtensionArca, useResultadosArca, iniciarValidacionArca, PedidoValidacion, ResultadoValidacion } from './puenteArca';
-import { ChipExtension } from './RequisitoExtension';
 import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, cuitEsValido, fmtCuit, cuitDisplay, noPoseeCuit } from './ConstanciaBulk';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { cachedFetch, invalidateRefCache, updateRefCache } from '../../utils/refCache';
@@ -1028,9 +1026,7 @@ export const ContractBulkAfipTab: React.FC<{
    * gente bajo la empresa que no es.
    */
   useEffect(() => setTxtGeneradoPara(''), [filterEmpresaId]);
-  const extensionArca = useExtensionArca();
   /** Progreso de la corrida automática, para no dejar la pantalla muda mientras guarda. */
-  const [validandoArca, setValidandoArca] = useState<string>('');
 
   // Filtros de la barra superior (búsqueda + filtro avanzado), sin el trámite ni los toggles propios
   // de cada pestaña: se usa tanto para la tabla como para los contadores de las pestañas, que deben
@@ -1104,97 +1100,21 @@ export const ContractBulkAfipTab: React.FC<{
     return ids.size === 1 ? [...ids][0] : '';
   }, [filasConstatacion]);
 
-  /**
-   * Arranca la validación automática: siembra la cola en la extensión y abre ARCA.
-   *
-   * Manda el `contratoId` además del CUIL. No se usa para escribir —eso lo resuelve el server por
-   * CUIL, que es lo único que ARCA conoce— pero identifica de qué contrato salió cada pedido.
-   */
-  const validarEnArca = useCallback(
-    (objetivo: Array<{ row: ImpositivoRow }>) => {
-      const pedidos: PedidoValidacion[] = objetivo
-        .filter((x) => String(x.row.cuit || '').replace(/\D/g, '').length === 11)
-        .map((x) => ({ cuil: x.row.cuit || '', contractId: String(x.row.contratoId || x.row._id) }));
-      /*
-       * Las empleadoras de la tanda viajan con el pedido.
-       *
-       * ARCA abre en el selector de CUIT —es el paso que crea la sesión de trabajo, sin el cual la
-       * pantalla de altas se rechaza— y ahí hay que elegir uno. Con varias empresas representadas,
-       * un cartel que diga "elegí el CUIT" a secas no dice nada: con esto el script nombra la que
-       * corresponde y la resalta en la lista.
-       */
-      const empleadoras = [...new Set(objetivo.map((x) => String(x.row.empresaContratoId || '')).filter(Boolean))]
-        .map((id) => companies.find((c) => c._id === id))
-        .filter(Boolean)
-        .map((c) => ({ nombre: c!.razonSocial, cuit: c!.cuit }));
-      if (!iniciarValidacionArca(pedidos, empleadoras)) {
-        sweetAlert.error('Sin CUIL válidos', 'Ninguno de los contratos elegidos tiene un CUIL de 11 dígitos cargado.');
-        return;
-      }
-      setValidandoArca(
-        `Validando ${pedidos.length} en ARCA — logueate en la pestaña que se abrió${
-          empleadoras.length === 1 ? ` y el script entra solo como ${empleadoras[0].nombre}` : ' y elegí el CUIT de la empleadora'
-        }. Se guardan solas.`,
-      );
-    },
-    [companies],
-  );
+  /*
+    Acá vivía el disparo de la validación automática por extensión de navegador (Tampermonkey): se
+    sembraba una cola en el almacén de la extensión, se abría ARCA y el script iba devolviendo los
+    RNOS. Se sacó entero.
 
-  /**
-   * Guarda lo que devolvió la extensión. ESTO es lo que hace que "se guarde solo".
-   *
-   * Usa el mismo endpoint de lote que el pegado manual, así hereda sus validaciones: que el RNOS
-   * exista en el catálogo y que la empleadora lo tenga registrado ante ARCA. Guardar de a uno desde
-   * el cliente dejaría la tanda a medias ante cualquier corte y sin forma de saber cuáles entraron.
-   *
-   * Se agrupa por empleadora porque "está entre las registradas" es una regla por CUIT: una tanda
-   * que mezcle dos haría que el mismo RNOS sea válido para unas filas e inválido para otras.
-   */
-  const guardarResultadosArca = useCallback(
-    async (resultados: ResultadoValidacion[]) => {
-      const dig = (v: unknown) => String(v ?? '').replace(/\D/g, '');
-      const porCuil = new Map(resultados.map((r) => [dig(r.cuil), r]));
-      const porEmpresa = new Map<string, Array<{ cuil: string; rnos: string }>>();
-      for (const row of rows) {
-        const cuil = dig(row.cuit);
-        const r = porCuil.get(cuil);
-        const empresaId = String(row.empresaContratoId || '');
-        if (!r || !empresaId) continue;
-        const actuales = porEmpresa.get(empresaId) || [];
-        if (!actuales.some((x) => x.cuil === cuil)) actuales.push({ cuil, rnos: dig(r.rnos) });
-        porEmpresa.set(empresaId, actuales);
-      }
+    No falló el problema: falló el mecanismo. El sandbox de la extensión, el permiso de Chrome que
+    viene apagado, los eventos que no cruzaban, las versiones que había que reinstalar a mano, las
+    copias duplicadas peleándose la misma cola, el contenido mixto al traer la lógica. Cada arreglo
+    destapaba el siguiente y ninguno tenía que ver con leer una obra social.
 
-      if (porEmpresa.size === 0) {
-        setValidandoArca('');
-        sweetAlert.error('No se pudo guardar', 'Los contratos validados no tienen empleadora asignada, así que no hay contra qué CUIT registrar la obra social.');
-        return;
-      }
-
-      setValidandoArca('Guardando los resultados…');
-      let aplicados = 0;
-      const problemas: string[] = [];
-      for (const [empresaId, filas] of porEmpresa) {
-        try {
-          const r = await projectsAPI.aplicarObrasSocialesLote(empresaId, filas, false);
-          aplicados += r.aplicados;
-          if (r.noRegistrada.length) problemas.push(`${r.noRegistrada.length} con una obra social que la empleadora no registró ante ARCA`);
-          if (r.rnosDesconocido.length) problemas.push(`${r.rnosDesconocido.length} con un código que no está en el catálogo`);
-          if (r.yaBloqueados.length) problemas.push(`${r.yaBloqueados.length} ya estaban validadas y no se pisaron`);
-        } catch (e: any) {
-          problemas.push(e?.response?.data?.error || 'error al aplicar una de las empleadoras');
-        }
-      }
-
-      setValidandoArca('');
-      await load(true);
-      if (problemas.length) sweetAlert.error(`Se guardaron ${aplicados}`, `Con observaciones: ${problemas.join(' · ')}. Revisá la columna Obra Social.`);
-      else sweetAlert.success('Listo', `${aplicados} obra(s) social(es) validada(s) y guardada(s).`);
-    },
-    [rows, load],
-  );
-
-  useResultadosArca(guardarResultadosArca);
+    Lo reemplaza `frontend/tools/validar-obras-sociales.mjs`, que se cuelga por CDP del Chrome que el
+    operador ya tiene abierto y logueado. Desde esta pantalla, el botón abre el panel de pegado
+    —`ConstatarObrasSocialesLote`—, que es donde se pega el `CUIL,RNOS` que devuelve ese script y que
+    ya tenía previsualización y validación contra las obras sociales registradas por la empleadora.
+  */
 
   /**
    * Cuántas quedan sin constatar en lo que se está mirando: es el número del botón.
@@ -1378,12 +1298,10 @@ export const ContractBulkAfipTab: React.FC<{
   }, [filtered, selected]);
   const esSeleccionable = useCallback(
     (row: ImpositivoRow, _result: AfipRowResult): boolean => {
-      // Con una corrida en marcha la selección queda congelada: es el conjunto que se está validando.
-      if (validandoArca) return false;
       if (filterTipo !== 'alta_temprana_afip' || !modoSeleccion) return true;
       return modoSeleccion === 'con_empresa' ? !!row.empresaContratoId : !row.empresaContratoId;
     },
-    [validandoArca, filterTipo, modoSeleccion],
+    [filterTipo, modoSeleccion],
   );
   /**
    * Tildada PERO sin empleadora: «Validar obras sociales» la va a omitir.
@@ -1394,7 +1312,6 @@ export const ContractBulkAfipTab: React.FC<{
    */
   const omitidaEnValidacion = (r: ContractOverviewRow) => selected.has(rowKey(r)) && !r.empresaContratoId;
   const tituloCheck = (r: ContractOverviewRow) => {
-    if (validandoArca) return 'Hay una validación de obras sociales en curso: la selección queda congelada hasta que termine.';
     if (filterTipo === 'alta_temprana_afip' && modoSeleccion === 'con_empresa' && !r.empresaContratoId)
       return 'No se puede sumar a esta tanda: ya hay tildados contratos CON Empresa Contrato (para validar obras sociales) y este no tiene empresa, así que no se puede validar. Destildá los otros si querés asignarle una empresa.';
     if (filterTipo === 'alta_temprana_afip' && modoSeleccion === 'sin_empresa' && r.empresaContratoId)
@@ -1447,14 +1364,12 @@ export const ContractBulkAfipTab: React.FC<{
    * Asignación masiva de Empresa (Contrato/Release). Es el mismo bloque en las tres pestañas del
    * trámite impositivo: la empresa hay que cargarla igual en todas, no solo en Alta temprana.
    */
-  /**
-   * Mientras corre la validación de obras sociales no se deja disparar NINGUNA otra acción masiva.
-   *
-   * La corrida trabaja sobre las filas tildadas y va guardando resultados a medida que ARCA
-   * contesta: asignar empresas o generar el TXT en el medio cambiaba, justo, los datos que la
-   * corrida está por escribir. Se bloquean los controles (y la selección) hasta que termine.
-   */
-  const bloqueoPorValidacion = validandoArca ? 'Hay una validación de obras sociales en curso: esperá a que termine para hacer otra acción masiva.' : undefined;
+  /*
+    Ya no hace falta bloquear las acciones masivas mientras se valida: la validación dejó de correr
+    adentro de esta pantalla. Ahora la hace un script aparte contra el Chrome del operador, y lo que
+    vuelve es un pegado de `CUIL,RNOS` — no hay corrida en curso con la que competir.
+  */
+  const bloqueoPorValidacion = undefined;
   const asignacionMasivaEmpresa = (
     <div className="flex flex-wrap items-center gap-2">
       {/* Solo el dato que cambia. El "tildá contratos para asignar Empresa" pasó al ⓘ de cada
@@ -1559,7 +1474,7 @@ export const ContractBulkAfipTab: React.FC<{
         *
         *   1) contadores del listado (qué falta) — solo informan;
         *   2) asignación masiva de Empresa Contrato / Empresa Release;
-        *   3) el circuito ARCA: validar obras sociales (con el chip de la extensión que necesita),
+        *   3) el circuito ARCA: validar obras sociales,
         *      generar el TXT y subirlo a ARCA.
         *
         * Estaban todas en un mismo renglón que envolvía solo: la línea de corte caía donde entrara,
@@ -1577,31 +1492,6 @@ export const ContractBulkAfipTab: React.FC<{
               <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
               {countIncompletos} incompletos
             </button>
-            {/* Mientras la corrida está en marcha en otra pestaña, esta pantalla no puede quedar
-                muda: si no dice nada, se lee como que el botón no hizo nada. */}
-            {validandoArca && (
-              <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60">
-                <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3" />
-                {validandoArca}
-                {/*
-                  * Salida de emergencia. La corrida se da por terminada cuando la extensión avisa
-                  * desde la pestaña de ARCA; si esa pestaña se cierra —o la corrida nunca llega a
-                  * contestar— este estado no se apaga nunca, y como bloquea el resto de las acciones
-                  * masivas dejaba la pantalla entera trabada sin forma de destrabarla salvo
-                  * recargando. Esto solo deja de esperar: no cancela nada en ARCA ni borra lo que ya
-                  * se haya guardado.
-                  */}
-                <button
-                  type="button"
-                  onClick={() => setValidandoArca('')}
-                  title="Dejar de esperar esta corrida y destrabar las acciones masivas. Usalo si cerraste la pestaña de ARCA o si quedó colgada: no cancela lo que ARCA ya haya hecho ni borra lo guardado. Si al arrancar de nuevo sigue sin avanzar, vaciá la cola del script desde el chip de Tampermonkey → «Reiniciar validación»."
-                  aria-label="Dejar de esperar la validación"
-                  className="ml-0.5 text-blue-400 hover:text-blue-700 dark:hover:text-blue-200 transition-colors"
-                >
-                  <FontAwesomeIcon icon={faXmark} className="h-3 w-3" />
-                </button>
-              </span>
-            )}
             {/*
               * Obras sociales: INFORMATIVO, no una acción.
               *
@@ -1631,27 +1521,20 @@ export const ContractBulkAfipTab: React.FC<{
 
           {/* Línea 2 — el circuito ARCA, en el orden en que se hace: validar → TXT → subirlo. */}
           <div className="flex flex-wrap items-center justify-end gap-3">
-            {/* El estado de la extensión, al lado del botón que la necesita. Enterarse de que falta
-                un permiso DESPUÉS de mandar la tanda es enterarse tarde. */}
-            <ChipExtension />
 
             <button
               type="button"
-              disabled={seleccionadosValidables.length === 0 || !!validandoArca}
-              onClick={() => (extensionArca ? validarEnArca(seleccionadosValidables) : setLoteObrasSociales(new Set(seleccionadosValidables.map((x) => rowKey(x.row)))))}
+              disabled={seleccionadosValidables.length === 0}
+              onClick={() => setLoteObrasSociales(new Set(seleccionadosValidables.map((x) => rowKey(x.row))))}
               /* Deshabilitado, el hover tiene que decir el REQUISITO, no solo "tildá algo": la obra
                  social se consulta con el CUIT de la empleadora, así que sin Empresa Contrato no hay
                  validación posible. Es el motivo por el que un contrato tildado no suma al contador. */
               title={
-                validandoArca
-                  ? 'Ya hay una validación en curso: esperá a que termine.'
-                  : seleccionados.length === 0
-                    ? 'Para validar obras sociales, el contrato tiene que tener asignada una Empresa Contrato: la obra social se valida contra el CUIT de la empleadora. Tildá los contratos que ya la tengan y usá este botón.'
-                    : seleccionadosValidables.length === 0
-                      ? 'Ninguno de los contratos tildados tiene Empresa Contrato. Para poder validar la obra social hay que asignarle una empresa al contrato (la validación va contra el CUIT de la empleadora): elegila arriba, en «Empresa Contrato», y después validá.'
-                      : extensionArca
-                        ? `Validar en ARCA la obra social de ${seleccionadosValidables.length} contrato(s). Se abre ARCA, te logueás y el resto es automático.`
-                        : 'Sin la extensión instalada la validación es manual (copiar/pegar). Instalala desde Configuración → ARCA.'
+                seleccionados.length === 0
+                  ? 'Para validar obras sociales, el contrato tiene que tener asignada una Empresa Contrato: la obra social se valida contra el CUIT de la empleadora. Tildá los contratos que ya la tengan y usá este botón.'
+                  : seleccionadosValidables.length === 0
+                    ? 'Ninguno de los contratos tildados tiene Empresa Contrato. Para poder validar la obra social hay que asignarle una empresa al contrato (la validación va contra el CUIT de la empleadora): elegila arriba, en «Empresa Contrato», y después validá.'
+                    : `Abre el panel para validar la obra social de ${seleccionadosValidables.length} contrato(s): copiás los CUIL, los corrés en ARCA y pegás el resultado.`
               }
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
             >
@@ -1668,7 +1551,7 @@ export const ContractBulkAfipTab: React.FC<{
 
             <button
               onClick={() => generarTxt(fuenteTxt, nombreArchivoTxt)}
-              disabled={fuenteTxt.every((x) => !x.result.completo) || !!validandoArca}
+              disabled={fuenteTxt.every((x) => !x.result.completo)}
               title={bloqueoPorValidacion || (seleccionados.length > 0 ? 'Generar el TXT con los contratos seleccionados (solo los completos)' : 'Generar el TXT con los contratos completos del listado (o marcá algunos con el check)')}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
             >
@@ -1680,7 +1563,7 @@ export const ContractBulkAfipTab: React.FC<{
             </button>
             <button
               onClick={() => window.open('https://www.arca.gob.ar', '_blank', 'noopener,noreferrer')}
-              disabled={!txtGeneradoPara || !!validandoArca}
+              disabled={!txtGeneradoPara}
               title={bloqueoPorValidacion || (txtGeneradoPara ? 'Abrir ARCA para subir el TXT que acabás de generar' : 'Primero generá el TXT: este botón abre ARCA para subir ese archivo')}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
             >
@@ -2017,7 +1900,7 @@ export const ContractBulkAfipTab: React.FC<{
                           record={r}
                           valores={resolveAfipValues(r, afipCat)}
                           onAbrir={() => setDetalleRef({ _id: r._id, contractIndex: r.contractIndex })}
-                          onValidar={() => (extensionArca ? validarEnArca([{ row: r }]) : setLoteObrasSociales(new Set([rowKey(r)])))}
+                          onValidar={() => setLoteObrasSociales(new Set([rowKey(r)]))}
                           onSinEmpresa={() => setObraSocialSinEmpresa(r)}
                           onQuitado={(patch) => aplicarCambio(r, patch)}
                         />
@@ -2232,18 +2115,19 @@ export const ContractBulkAfipTab: React.FC<{
                 Tildá los contratos y usá <strong>Validar obras sociales</strong>. El número del botón cuenta solo los que ya tienen empresa: los tildados sin empresa se omiten.
               </li>
               <li>
-                Se abre una pestaña de ARCA. Con la extensión instalada, <strong>tu único paso es el login</strong>: ingresás con tu clave fiscal y el script hace el resto — elige el CUIT de la
-                empleadora, entra al servicio, va a <strong>Registrar Nuevas Altas</strong> y valida. Sin extensión, ese recorrido es a mano y la validación también.
+                Se abre el panel de validación: copiás los CUIL y los corrés contra ARCA. Podés hacerlo a mano —cargando uno por uno en <strong>Registrar Nuevas Altas</strong>— o con el script{" "}
+                <code className="font-mono text-[12.5px]">npm run validar-obras-sociales</code>, que se conecta a tu propio Chrome ya logueado y los procesa de a 10. Los pasos están en{" "}
+                <a href="/arca/guia-obras-sociales" target="_blank" rel="noreferrer" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                  ARCA → Validar obras sociales
+                </a>
+                .
               </li>
             </ol>
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              Mientras tanto <strong>la tanda queda esperando</strong>: no hace falta volver a WeProdu ni apretar nada de nuevo. El script te va diciendo en cada pantalla qué falta y cuántas quedan.
-            </p>
-            <p className="text-sm text-gray-600 dark:text-gray-300">
               {/* Se dice explícitamente porque es la pregunta que aparece sola: "¿entonces el script
                   puede dar de alta gente?". No: el único botón que aprieta es el del selector. */}
-              El script <strong>nunca registra un alta</strong>. Elegir el CUIT es navegación —define bajo qué empresa se opera y se puede deshacer—; el «Aceptar» de la pantalla de altas, que es el
-              que registra ante el organismo, no lo toca nunca. Las altas salen del TXT, no de ahí.
+              El script <strong>nunca registra un alta</strong>: en la pantalla de altas aprieta únicamente «Agregar» y «Reiniciar». El «Aceptar», que es el que registra ante el organismo, no lo toca
+              nunca. Las altas salen del TXT, no de ahí.
             </p>
             <p className="text-sm text-gray-600 dark:text-gray-300">
               En la columna <strong>Obra Social</strong> —al lado de Empresa Contrato—, las filas que todavía no tienen empresa muestran un <span className="text-amber-600 dark:text-amber-400 font-semibold">ⓘ ámbar</span> en vez del botón «Validar»: tocalo y explica qué falta. Con la empresa asignada, ese ⓘ pasa a ser el botón <strong>Validar</strong>. Lo ya validado se puede quitar con el <strong>tacho</strong> de la misma celda.
