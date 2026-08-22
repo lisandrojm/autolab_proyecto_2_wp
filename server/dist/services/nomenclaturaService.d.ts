@@ -2,7 +2,7 @@ import { TipoNomenclatura } from "../utils/nomenclatura.js";
 /**
  * Razón social y CUIT de la empleadora, para el final del nombre.
  *
- * El CUIT sale ETIQUETADO (`CUIT-30710295839`) y no como once dígitos sueltos. Dos motivos, y el
+ * El CUIT sale ETIQUETADO (`CUIT-EMPRESA-30710295839`) y no como once dígitos sueltos. Dos motivos, y el
  * segundo importa: al lado del `CUIL-…` de la persona, dos números de once dígitos sin rótulo son
  * indistinguibles para quien mira la carpeta; y el respaldo que usa `extraerIdentidadDeArchivo` para
  * los archivos viejos busca justamente un CUIT suelto de once dígitos, así que dejarlo pelado sería
@@ -25,8 +25,12 @@ export declare function datosEmpresa(empresaId: unknown, nombreCache?: string): 
  * Ante CUALQUIER problema —la base no responde, el patrón guardado quedó raro, el render sale
  * vacío— cae al default en vez de fallar. Un documento tiene que poder generarse siempre: quedarse
  * sin contrato porque alguien escribió mal una configuración de nombres sería un intercambio pésimo.
+ *
+ * El resultado entra siempre en `MAX_NOMBRE`: si no entra, se recorta lo descriptivo sin tocar los
+ * bloques que los parsers de vuelta necesitan (ver `recortarNombre`). `reservar` es lo que el que
+ * llama va a pegar después y todavía no está en el string — como mínimo la extensión.
  */
-export declare function nombreArchivo(tenantId: unknown, tipo: TipoNomenclatura, datos: Record<string, unknown>): Promise<string>;
+export declare function nombreArchivo(tenantId: unknown, tipo: TipoNomenclatura, datos: Record<string, unknown>, reservar?: number): Promise<string>;
 /** Atajo para los documentos de un contrato: arma los datos y aplica el patrón. */
 export declare function nombreArchivoDocumento(opts: {
     tenantId: unknown;

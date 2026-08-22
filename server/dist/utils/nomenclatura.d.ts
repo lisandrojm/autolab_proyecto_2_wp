@@ -87,6 +87,30 @@ export declare const campoNomenclatura: (v: unknown) => string;
 export declare const VARIABLES_COMPUESTAS: Set<string>;
 /** Las variables que un patrón menciona, en orden y sin repetir. */
 export declare const variablesUsadas: (patron: string) => string[];
+/**
+ * Tope de caracteres de un nombre de archivo en Dropbox.
+ *
+ * Es el límite del servicio, no una preferencia. Un nombre más largo NO se sube: falla, y como el
+ * archivo es la única vía por la que el documento vuelve a entrar al sistema, ese contrato queda
+ * afuera del circuito de firma.
+ */
+export declare const MAX_NOMBRE = 255;
+/**
+ * Deja el nombre dentro del tope de Dropbox.
+ *
+ * Recorta el campo NO ancla más largo, de a un carácter, hasta que entre. Se hace así y no cortando
+ * la cola porque la cola es justamente lo que se agregó para poder leer el nombre —el email y la
+ * empleadora rotulados—: tijeretear ahí devolvería el problema que esto viene a resolver. Recortando
+ * el más largo, el nombre conserva sus catorce bloques y todas sus etiquetas, y lo que se pierde son
+ * caracteres del final de los valores más gordos, que es donde menos información hay.
+ *
+ * `reservar` es lo que el llamador va a pegar después y todavía no está en el string: como mínimo la
+ * extensión.
+ *
+ * Si aun con todo en el piso no entra, avisa y corta la cola. Es el peor caso y no debería pasar
+ * nunca; queda como red y no como comportamiento esperado.
+ */
+export declare function recortarNombre(nombre: string, reservar?: number): string;
 export interface ErrorPatron {
     campo: "patron";
     motivo: string;

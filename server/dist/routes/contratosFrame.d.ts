@@ -17,5 +17,6 @@ export declare function generarContratoPdf(opts: {
     projectId: string;
     contractIndex: number;
     empresaId?: string;
+    extra?: string;
 }): Promise<DocPdfResult>;
 export { router as contratoFrameRoutes };

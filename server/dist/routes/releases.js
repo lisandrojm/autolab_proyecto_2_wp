@@ -169,7 +169,7 @@ export async function generarReleasePdf(opts) {
     const membrete = release.usaMembrete && empresa ? empresaToMembrete(empresa) : undefined;
     const buffer = await buildDocPdf(release.content, data, membrete);
     // Ver `nomenclaturaService`: el patrón es configurable y el default reproduce el nombre de antes.
-    const filename = await nombreArchivoDocumento({ tenantId: opts.tenantId, tipo: "Release", user, up, contract, empresa, docName: release.name });
+    const filename = await nombreArchivoDocumento({ tenantId: opts.tenantId, tipo: "Release", user, up, contract, empresa, docName: release.name, extra: opts.extra });
     return { buffer, filename, empresaIdUsado: chosenId || "" };
 }
 // GET /releases/:id/download-filled?userId=&projectId=&contractIndex=

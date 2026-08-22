@@ -15,6 +15,33 @@
  */
 export declare function buildIdentidadTag(user: any): string;
 /**
+ * Cómo viaja el "@" del email dentro del nombre de archivo.
+ *
+ * No puede ir literal: Dropbox Sign no lo admite en el título de la solicitud de firma y lo
+ * transforma por su cuenta, y ese título es lo que después se lee del asunto del aviso.
+ *
+ * Iba como "-", y eso lo volvía irreconstruible: el guion es legal a los dos lados del "@". Sobre el
+ * padrón real son 6 de 1.566 direcciones las que quedan ambiguas —`ivonne.nino@into-films.com` e
+ * `ivonne.nino-into@films.com` colapsan al mismo texto—, y el modo de falla es mandarle el contrato
+ * a la dirección equivocada.
+ *
+ * Va en MAYÚSCULA a propósito: `campo()` no toca las mayúsculas, así que la marca nunca se confunde
+ * con un "arroba" escrito en minúscula dentro de la propia dirección.
+ */
+export declare const MARCA_ARROBA = "-ARROBA-";
+/**
+ * El email tal como entra al nombre del archivo.
+ *
+ * Es una función única porque el reemplazo estaba copiado en tres lugares —los dos caminos de este
+ * archivo y el de Pedidos/Vacaciones en `pdfGenerator`—, y tres copias de la misma regla es cuestión
+ * de tiempo hasta que una quede atrás.
+ *
+ * Ojo con `campo()`, que colapsa los guiones repetidos: un email terminado en "-" antes del "@"
+ * (`juan-@gmail.com`) queda `juan-ARROBA-gmail.com` y pierde ese guion. Es el único caso en que la
+ * vuelta no es exacta, y no existe en el padrón de hoy.
+ */
+export declare const emailNomenclatura: (email: unknown) => string;
+/**
  * Etiqueta del trámite impositivo para el final del nombre de archivo, para poder distinguir de un
  * vistazo con qué trámite se generó el documento sin abrirlo.
  *
@@ -31,7 +58,7 @@ export declare const ETIQUETA_TRAMITE: Record<"alta_temprana_afip" | "constancia
  *   [CUIL-…]_[DNI-…]_[email]_[extra]
  *
  * ej. `gonzalez-rotstein_juan-manuel_748_Contrato_Alta_20260810_Baja_-_CUIL-20331501027_DNI-33150102_
- *      juanmanuel.gonzalezrotstein-gmail.com_Constancia-de-Cuit`
+ *      EMAIL-juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Constancia-de-Cuit`
  *
  * Decisiones y por qué:
  *
@@ -41,8 +68,8 @@ export declare const ETIQUETA_TRAMITE: Record<"alta_temprana_afip" | "constancia
  *   coincidía con el nombre lógico guardado en la base.
  * - `Alta`/`Baja` van SIEMPRE, aunque el contrato no tenga baja: en ese caso la baja es "-". Omitir
  *   el bloque hacía ambiguo si el contrato era por tiempo indeterminado o si faltaba cargar el dato.
- * - El "@" del email va como "-": Dropbox Sign no lo admite en el título de la solicitud de firma, y
- *   ese título es lo que después se lee del asunto del aviso para detectar el envío.
+ * - El "@" del email va como "-ARROBA-": Dropbox Sign no lo admite en el título de la solicitud de
+ *   firma, y ese título es lo que después se lee del asunto del aviso. Ver `emailNomenclatura`.
  * - `identidad`: bloque `CUIL-...[_DNI-...]` de `buildIdentidadTag()`, común a los PDF de Pedidos y
  *   Vacaciones.
  *

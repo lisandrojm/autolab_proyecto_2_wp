@@ -17,5 +17,6 @@ export declare function generarReleasePdf(opts: {
     projectId: string;
     contractIndex: number;
     empresaId?: string;
+    extra?: string;
 }): Promise<ReleasePdfResult>;
 export { router as ReleaseRoutes };

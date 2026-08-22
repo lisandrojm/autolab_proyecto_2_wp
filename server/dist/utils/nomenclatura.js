@@ -50,7 +50,7 @@ const V = {
     proyectoId: { variable: "{{proyectoId}}", descripcion: "Id externo del proyecto (ej. 705)", grupo: G.proyecto },
     apellido: { variable: "{{apellido}}", descripcion: "Apellido de la persona", grupo: G.persona },
     nombres: { variable: "{{nombres}}", descripcion: "Nombres de la persona", grupo: G.persona },
-    email: { variable: "{{email}}", descripcion: "Email (el @ va como «-»)", grupo: G.persona },
+    email: { variable: "{{email}}", descripcion: "Email; el @ va como -ARROBA- para poder reconstruirlo", grupo: G.persona },
     identidad: { variable: "{{identidad}}", descripcion: "Bloque CUIL-…_DNI-… de la persona", grupo: G.identificacion },
     tipo: { variable: "{{tipo}}", descripcion: "Tipo de documento (Contrato, Release…)", grupo: G.documento },
     contrato: { variable: "{{contrato}}", descripcion: "Nombre del tipo de contrato (ej. Jornada 2030 SRL)", grupo: G.documento },
@@ -60,7 +60,7 @@ const V = {
     fechaAlta: { variable: "{{fechaAlta}}", descripcion: "Alta del contrato, YYYYMMDD («-» si no hay)", grupo: G.periodo },
     fechaBaja: { variable: "{{fechaBaja}}", descripcion: "Baja del contrato, YYYYMMDD («-» si no hay)", grupo: G.periodo },
     empresa: { variable: "{{empresa}}", descripcion: "Razón social de la empleadora", grupo: G.empresa },
-    empresaCuit: { variable: "{{empresaCuit}}", descripcion: "CUIT de la empleadora, como CUIT-30710295839", grupo: G.empresa },
+    empresaCuit: { variable: "{{empresaCuit}}", descripcion: "CUIT de la empleadora, como CUIT-EMPRESA-30710295839", grupo: G.empresa },
     anio: { variable: "{{anio}}", descripcion: "Año del período", grupo: G.otros },
     fecha: { variable: "{{fecha}}", descripcion: "Fecha de generación, YYYYMMDD", grupo: G.otros },
     timestamp: { variable: "{{timestamp}}", descripcion: "Marca temporal de generación", grupo: G.otros },
@@ -132,15 +132,15 @@ export const PATRON_POR_DEFECTO = (() => {
       vacaciones mezclados lee siempre los mismos campos en el mismo lugar. Cada tipo cambia solo en lo
       que de verdad tiene distinto —un período contra un número de pedido— y todo lo demás coincide.
     */
-    const deContrato = "{{proyecto}}_{{apellido}}_{{nombres}}_{{tipo}}_{{contrato}}_{{docName}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}_{{identidad}}_{{email}}_{{extra}}_{{empresa}}_{{empresaCuit}}";
+    const deContrato = "{{proyecto}}_{{apellido}}_{{nombres}}_{{tipo}}_{{contrato}}_{{docName}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}_{{identidad}}_EMAIL-{{email}}_{{extra}}_EMPRESA-{{empresa}}_{{empresaCuit}}";
     return {
         Contrato: deContrato,
         Release: deContrato,
         AltaAFIP: deContrato,
         ConstanciaCUIT: deContrato,
         Documentacion: deContrato,
-        Pedido: "{{proyecto}}_{{apellido}}_{{nombres}}_{{tipo}}_{{numero}}_{{fecha}}_{{identidad}}_{{email}}_{{empresa}}_{{empresaCuit}}",
-        Vacacion: "{{proyecto}}_{{apellido}}_{{nombres}}_{{tipo}}_{{numero}}_{{anio}}_{{identidad}}_{{email}}_{{empresa}}_{{empresaCuit}}",
+        Pedido: "{{proyecto}}_{{apellido}}_{{nombres}}_{{tipo}}_{{numero}}_{{fecha}}_{{identidad}}_EMAIL-{{email}}_EMPRESA-{{empresa}}_{{empresaCuit}}",
+        Vacacion: "{{proyecto}}_{{apellido}}_{{nombres}}_{{tipo}}_{{numero}}_{{anio}}_{{identidad}}_EMAIL-{{email}}_EMPRESA-{{empresa}}_{{empresaCuit}}",
     };
 })();
 /**
@@ -175,6 +175,65 @@ export const VARIABLES_COMPUESTAS = new Set(["identidad"]);
 /** Las variables que un patrón menciona, en orden y sin repetir. */
 export const variablesUsadas = (patron) => [...new Set((String(patron || "").match(/\{\{\s*[\w]+\s*\}\}/g) || []).map((v) => v.replace(/\s/g, "")))];
 /**
+ * Tope de caracteres de un nombre de archivo en Dropbox.
+ *
+ * Es el límite del servicio, no una preferencia. Un nombre más largo NO se sube: falla, y como el
+ * archivo es la única vía por la que el documento vuelve a entrar al sistema, ese contrato queda
+ * afuera del circuito de firma.
+ */
+export const MAX_NOMBRE = 255;
+/** Piso de un campo recortado. Debajo de esto el valor deja de decir nada y solo ocupa lugar. */
+const MINIMO_CAMPO = 8;
+/**
+ * ¿Este campo se puede recortar?
+ *
+ * Los ANCLAS no: son los que leen los parsers de vuelta. Cortar un dígito del CUIL o de una fecha no
+ * acorta el nombre, lo rompe — el archivo se sube igual y después no se puede asociar a nadie.
+ *
+ *   CUIL-20331501027   `extraerIdentidadDeArchivo` → /(?:^|_)CUIL-(\d{11})/
+ *   DNI-33150102       `extraerIdentidadDeArchivo` → /_(DNI|CI|LE|LC|PAS|DOC)-([A-Za-z0-9]+)/
+ *   20260810           `extraerFechasDeNombre`     → tokens de 8 dígitos aislados
+ *   CUIT-EMPRESA-…     `extraerCuitDeNombre`       → primer token de 11 dígitos aislado
+ *
+ * Lo que sí se puede recortar es todo lo descriptivo: proyecto, nombre, tipo de contrato, plantilla,
+ * email y razón social. Ninguno participa del matching (verificado: el email no lo mira nadie).
+ */
+const esAncla = (campo) => /^CUIL-\d{11}$/i.test(campo) || /^(DNI|CI|LE|LC|PAS|DOC)-/i.test(campo) || /^\d{8}$/.test(campo) || /\d{11}/.test(campo) || campo.length <= MINIMO_CAMPO;
+/**
+ * Deja el nombre dentro del tope de Dropbox.
+ *
+ * Recorta el campo NO ancla más largo, de a un carácter, hasta que entre. Se hace así y no cortando
+ * la cola porque la cola es justamente lo que se agregó para poder leer el nombre —el email y la
+ * empleadora rotulados—: tijeretear ahí devolvería el problema que esto viene a resolver. Recortando
+ * el más largo, el nombre conserva sus catorce bloques y todas sus etiquetas, y lo que se pierde son
+ * caracteres del final de los valores más gordos, que es donde menos información hay.
+ *
+ * `reservar` es lo que el llamador va a pegar después y todavía no está en el string: como mínimo la
+ * extensión.
+ *
+ * Si aun con todo en el piso no entra, avisa y corta la cola. Es el peor caso y no debería pasar
+ * nunca; queda como red y no como comportamiento esperado.
+ */
+export function recortarNombre(nombre, reservar = 4) {
+    const tope = MAX_NOMBRE - reservar;
+    if (nombre.length <= tope)
+        return nombre;
+    const campos = nombre.split("_");
+    const recortables = campos.map((c, i) => ({ i, ancla: esAncla(c) })).filter((c) => !c.ancla);
+    while (campos.join("_").length > tope) {
+        // El más largo de los recortables, siempre que todavía esté por encima del piso.
+        const objetivo = recortables.filter((r) => campos[r.i].length > MINIMO_CAMPO).sort((a, b) => campos[b.i].length - campos[a.i].length)[0];
+        if (!objetivo)
+            break;
+        campos[objetivo.i] = campos[objetivo.i].slice(0, -1).replace(/-+$/, "");
+    }
+    const recortado = campos.join("_");
+    if (recortado.length <= tope)
+        return recortado;
+    console.warn(`[NOMENCLATURA] El nombre no entra en ${MAX_NOMBRE} ni recortando todo; se corta la cola: ${nombre}`);
+    return recortado.slice(0, tope).replace(/[_-]+$/, "");
+}
+/**
  * ¿Se puede guardar este patrón?
  *
  * Tres cosas, en orden de gravedad:
@@ -193,6 +252,25 @@ export function validarPatron(tipo, patron) {
         errores.push({
             campo: "patron",
             motivo: `Falta ${lista}. Este archivo vuelve a entrar al sistema por su nombre —firmado desde Dropbox Sign, o levantado de la carpeta de Dropbox— y sin esos datos no se puede asociar a ninguna persona ni a ningún trámite. El error no se ve hasta que alguien lo busca.`,
+        });
+    }
+    /*
+     * El CUIT de la empleadora NO puede ir antes que el bloque de identidad.
+     *
+     * `estadoDropboxCronService.extraerCuitDeNombre()` toma el PRIMER token de 11 dígitos aislado del
+     * nombre, sin exigir la etiqueta. Hoy sale el CUIL de la persona porque `{{identidad}}` va antes;
+     * invertidos, el cron empieza a matchear por el CUIT de la empleadora y ningún candidato coincide.
+     *
+     * Es la misma clase de trampa que previenen las variables requeridas —se guarda bien, se genera
+     * bien, y falla recién cuando el documento vuelve—, con el agravante de que acá el patrón se ve
+     * perfectamente razonable.
+     */
+    const posIdentidad = patron.indexOf("{{identidad}}");
+    const posCuitEmpresa = patron.indexOf("{{empresaCuit}}");
+    if (posIdentidad >= 0 && posCuitEmpresa >= 0 && posCuitEmpresa < posIdentidad) {
+        errores.push({
+            campo: "patron",
+            motivo: "{{empresaCuit}} tiene que ir DESPUÉS de {{identidad}}. El escaneo de Dropbox reconoce a la persona por el primer número de 11 dígitos del nombre: si el CUIT de la empleadora aparece antes, los documentos que vuelvan se van a intentar asociar por la empresa y no van a encontrar a nadie.",
         });
     }
     const conocidas = new Set(disponibles.map((v) => v.variable));
