@@ -76,4 +76,6 @@ export const systemVariables = [
   { variable: "{{cuit}}", description: "CUIT de la empresa" },
   { variable: "{{ciudad}}", description: "Ciudad sede" },
   { variable: "{{fecha}}", description: "Fecha de generación del documento" },
+  // Marcador de dónde firma la persona en Dropbox Sign; rinde `[FIRMA: Nombre Apellido]`.
+  { variable: "{{firma}}", description: "Dónde firma la persona (marcador para Dropbox Sign)" },
 ];

@@ -79,7 +79,7 @@ const V = {
   fechaAlta: { variable: "{{fechaAlta}}", descripcion: "Alta del contrato, YYYYMMDD («-» si no hay)", grupo: G.periodo },
   fechaBaja: { variable: "{{fechaBaja}}", descripcion: "Baja del contrato, YYYYMMDD («-» si no hay)", grupo: G.periodo },
   empresa: { variable: "{{empresa}}", descripcion: "Razón social de la empleadora", grupo: G.empresa },
-  empresaCuit: { variable: "{{empresaCuit}}", descripcion: "CUIT de la empleadora, como CUIT-EMPRESA-30710295839", grupo: G.empresa },
+  empresaCuit: { variable: "{{empresaCuit}}", descripcion: "CUIT de la empleadora, como CUIT-30710295839", grupo: G.empresa },
   anio: { variable: "{{anio}}", descripcion: "Año del período", grupo: G.otros },
   fecha: { variable: "{{fecha}}", descripcion: "Fecha de generación, YYYYMMDD", grupo: G.otros },
   timestamp: { variable: "{{timestamp}}", descripcion: "Marca temporal de generación", grupo: G.otros },
@@ -200,13 +200,20 @@ export const VARIABLES_COMPUESTAS = new Set(["identidad"]);
 export const variablesUsadas = (patron: string): string[] => [...new Set((String(patron || "").match(/\{\{\s*[\w]+\s*\}\}/g) || []).map((v) => v.replace(/\s/g, "")))];
 
 /**
- * Tope de caracteres de un nombre de archivo en Dropbox.
+ * Tope de un nombre de archivo, en BYTES.
  *
- * Es el límite del servicio, no una preferencia. Un nombre más largo NO se sube: falla, y como el
- * archivo es la única vía por la que el documento vuelve a entrar al sistema, ese contrato queda
- * afuera del circuito de firma.
+ * Son dos límites que caen en el mismo número: Dropbox corta en 255 caracteres y el filesystem del
+ * server (ext4) en 255 bytes por componente del path. El que manda es el de bytes, porque siempre es
+ * mayor o igual: si el nombre entra en 255 bytes, entra en 255 caracteres.
+ *
+ * Y la diferencia NO es teórica. Medir en caracteres reventó en producción con
+ * `Carlos-Andrés_…`: 255 caracteres, 256 bytes por la tilde, y el `writeFileSync` falló con
+ * ENAMETOOLONG antes de poder generar el release.
  */
 export const MAX_NOMBRE = 255;
+
+/** Lo que ocupa de verdad. `"é"` es UN carácter y DOS bytes, y el filesystem cuenta bytes. */
+export const largoEnBytes = (s: string): number => new TextEncoder().encode(s).length;
 
 /** Piso de un campo recortado. Debajo de esto el valor deja de decir nada y solo ocupa lugar. */
 const MINIMO_CAMPO = 8;
@@ -220,7 +227,7 @@ const MINIMO_CAMPO = 8;
  *   CUIL-20331501027   `extraerIdentidadDeArchivo` → /(?:^|_)CUIL-(\d{11})/
  *   DNI-33150102       `extraerIdentidadDeArchivo` → /_(DNI|CI|LE|LC|PAS|DOC)-([A-Za-z0-9]+)/
  *   20260810           `extraerFechasDeNombre`     → tokens de 8 dígitos aislados
- *   CUIT-EMPRESA-…     `extraerCuitDeNombre`       → primer token de 11 dígitos aislado
+ *   CUIT-…             `extraerCuitDeNombre`       → primer token de 11 dígitos aislado
  *
  * Lo que sí se puede recortar es todo lo descriptivo: proyecto, nombre, tipo de contrato, plantilla,
  * email y razón social. Ninguno participa del matching (verificado: el email no lo mira nadie).
@@ -228,12 +235,12 @@ const MINIMO_CAMPO = 8;
 const esAncla = (campo: string): boolean => /^CUIL-\d{11}$/i.test(campo) || /^(DNI|CI|LE|LC|PAS|DOC)-/i.test(campo) || /^\d{8}$/.test(campo) || /\d{11}/.test(campo) || campo.length <= MINIMO_CAMPO;
 
 /**
- * Deja el nombre dentro del tope de Dropbox.
+ * Deja el nombre dentro del tope, midiendo en BYTES.
  *
  * Recorta el campo NO ancla más largo, de a un carácter, hasta que entre. Se hace así y no cortando
  * la cola porque la cola es justamente lo que se agregó para poder leer el nombre —el email y la
  * empleadora rotulados—: tijeretear ahí devolvería el problema que esto viene a resolver. Recortando
- * el más largo, el nombre conserva sus catorce bloques y todas sus etiquetas, y lo que se pierde son
+ * el más largo, el nombre conserva todos sus bloques y todas sus etiquetas, y lo que se pierde son
  * caracteres del final de los valores más gordos, que es donde menos información hay.
  *
  * `reservar` es lo que el llamador va a pegar después y todavía no está en el string: como mínimo la
@@ -244,23 +251,29 @@ const esAncla = (campo: string): boolean => /^CUIL-\d{11}$/i.test(campo) || /^(D
  */
 export function recortarNombre(nombre: string, reservar = 4): string {
   const tope = MAX_NOMBRE - reservar;
-  if (nombre.length <= tope) return nombre;
+  if (largoEnBytes(nombre) <= tope) return nombre;
 
   const campos = nombre.split("_");
   const recortables = campos.map((c, i) => ({ i, ancla: esAncla(c) })).filter((c) => !c.ancla);
 
-  while (campos.join("_").length > tope) {
-    // El más largo de los recortables, siempre que todavía esté por encima del piso.
-    const objetivo = recortables.filter((r) => campos[r.i].length > MINIMO_CAMPO).sort((a, b) => campos[b.i].length - campos[a.i].length)[0];
+  while (largoEnBytes(campos.join("_")) > tope) {
+    // El más largo de los recortables, siempre que todavía esté por encima del piso. Se compara por
+    // bytes: un nombre con tildes ocupa más de lo que mide, y es justo el que hay que recortar.
+    const objetivo = recortables.filter((r) => campos[r.i].length > MINIMO_CAMPO).sort((a, b) => largoEnBytes(campos[b.i]) - largoEnBytes(campos[a.i]))[0];
     if (!objetivo) break;
-    campos[objetivo.i] = campos[objetivo.i].slice(0, -1).replace(/-+$/, "");
+    // Se saca un PUNTO DE CÓDIGO, no una unidad UTF-16: `slice(0, -1)` puede partir un par
+    // subrogado al medio y dejar media letra, que es un carácter inválido en el nombre del archivo.
+    campos[objetivo.i] = [...campos[objetivo.i]].slice(0, -1).join("").replace(/-+$/, "");
   }
 
   const recortado = campos.join("_");
-  if (recortado.length <= tope) return recortado;
+  if (largoEnBytes(recortado) <= tope) return recortado;
 
-  console.warn(`[NOMENCLATURA] El nombre no entra en ${MAX_NOMBRE} ni recortando todo; se corta la cola: ${nombre}`);
-  return recortado.slice(0, tope).replace(/[_-]+$/, "");
+  console.warn(`[NOMENCLATURA] El nombre no entra en ${MAX_NOMBRE} bytes ni recortando todo; se corta la cola: ${nombre}`);
+  // Corte duro por bytes: se van sacando puntos de código del final hasta entrar.
+  const chars = [...recortado];
+  while (chars.length > 0 && largoEnBytes(chars.join("")) > tope) chars.pop();
+  return chars.join("").replace(/[_-]+$/, "");
 }
 
 

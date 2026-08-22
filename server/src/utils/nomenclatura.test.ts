@@ -34,7 +34,7 @@ const DATOS = {
   anio: "2026",
   fecha: "20260821",
   empresa: "FZERO S.R.L",
-  empresaCuit: "CUIT-EMPRESA-30710295839",
+  empresaCuit: "CUIT-30710295839",
 };
 
 describe("lo que el archivo necesita para volver de la firma", () => {
@@ -125,10 +125,10 @@ describe("el default rinde el nombre de siempre", () => {
     const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
     assert.equal(
       nombre,
-      "426-LN+_gonzalez-rotstein_juan-manuel_Contrato_Jornada-2030-SRL_Acuerdo-de-titularidad_Alta_20260810_Baja_-_CUIL-20331501027_DNI-33150102_EMAIL-juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Constancia-de-Cuit_EMPRESA-FZERO-S.R.L_CUIT-EMPRESA-30710295839",
+      "426-LN+_gonzalez-rotstein_juan-manuel_Contrato_Jornada-2030-SRL_Acuerdo-de-titularidad_Alta_20260810_Baja_-_CUIL-20331501027_DNI-33150102_EMAIL-juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Constancia-de-Cuit_EMPRESA-FZERO-S.R.L_CUIT-30710295839",
     );
     assert.ok(nombre.startsWith("426-LN+_"), "el proyecto va primero, y por su NOMBRE (no por el id externo)");
-    assert.ok(nombre.endsWith("_CUIT-EMPRESA-30710295839"), "el CUIT de la empleadora va último");
+    assert.ok(nombre.endsWith("_CUIT-30710295839"), "el CUIT de la empleadora va último");
   });
 
   /**
@@ -181,7 +181,7 @@ describe("el default rinde el nombre de siempre", () => {
 
   it("los de pedidos y vacaciones también conservan su identidad", () => {
     const pedido = renderNomenclatura(PATRON_POR_DEFECTO.Pedido, { ...DATOS, tipo: "Pedido" });
-    assert.equal(pedido, "426-LN+_gonzalez-rotstein_juan-manuel_Pedido_1042_20260821_CUIL-20331501027_DNI-33150102_EMAIL-juanmanuel.gonzalezrotstein-ARROBA-gmail.com_EMPRESA-FZERO-S.R.L_CUIT-EMPRESA-30710295839");
+    assert.equal(pedido, "426-LN+_gonzalez-rotstein_juan-manuel_Pedido_1042_20260821_CUIL-20331501027_DNI-33150102_EMAIL-juanmanuel.gonzalezrotstein-ARROBA-gmail.com_EMPRESA-FZERO-S.R.L_CUIT-30710295839");
     assert.match(pedido, /(?:^|_)CUIL-(\d{11})/);
   });
 });
@@ -256,7 +256,7 @@ describe("la empleadora y el tipo de contrato en el nombre", () => {
   it("la empleadora cierra el nombre en todos los tipos", () => {
     for (const tipo of TIPOS_NOMENCLATURA) {
       const nombre = renderNomenclatura(PATRON_POR_DEFECTO[tipo], { ...DATOS, tipo });
-      assert.ok(nombre.endsWith("_EMPRESA-FZERO-S.R.L_CUIT-EMPRESA-30710295839"), `${tipo} termina en: ${nombre.slice(-60)}`);
+      assert.ok(nombre.endsWith("_EMPRESA-FZERO-S.R.L_CUIT-30710295839"), `${tipo} termina en: ${nombre.slice(-60)}`);
     }
   });
 });
@@ -401,7 +401,7 @@ describe("el nombre entra en el tope de Dropbox", () => {
     const recortado = recortarNombre(entero);
     assert.equal(recortado.split("_").length, entero.split("_").length, `se perdieron bloques: ${recortado}`);
     // Las etiquetas son lo que hace legible el nombre: tienen que sobrevivir al recorte.
-    for (const etiqueta of ["EMAIL-", "EMPRESA-", "CUIT-EMPRESA-"]) {
+    for (const etiqueta of ["EMAIL-", "EMPRESA-", "CUIT-"]) {
       assert.ok(recortado.includes(etiqueta), `se perdió la etiqueta ${etiqueta}: ${recortado}`);
     }
   });
@@ -409,5 +409,48 @@ describe("el nombre entra en el tope de Dropbox", () => {
   it("respeta lo que el llamador va a agregar después", () => {
     const nombre = recortarNombre(renderNomenclatura(PATRON_POR_DEFECTO.Contrato, LARGO), 30);
     assert.ok(nombre.length <= MAX_NOMBRE - 30, `quedó en ${nombre.length} con 30 reservados`);
+  });
+});
+
+describe("el tope se mide en BYTES, no en caracteres", () => {
+  /**
+   * El caso exacto que reventó en producción.
+   *
+   * Salía con 255 caracteres —dentro del tope si se cuenta en caracteres— pero 256 bytes por la
+   * tilde de "Andrés", y `writeFileSync` falló con ENAMETOOLONG antes de generar el release. El
+   * filesystem cuenta bytes; medirlo en caracteres deja pasar un nombre por cada tilde que tenga.
+   */
+  const ACENTOS = {
+    ...DATOS,
+    proyecto: "426-LN+",
+    apellido: "Henriquez-aliste",
+    nombres: "Carlos-Andrés",
+    contrato: "Tiempo-Indeterminado-FZERO-SRL",
+    docName: "Acuerdo-de-titularidad-de-la-obra",
+    email: "andreshenriquez-ARROBA-live.com.ar",
+    empresa: "2030 S.R.L.",
+    empresaCuit: "CUIT-30717068374",
+  };
+
+  const bytes = (s: string) => new TextEncoder().encode(s).length;
+
+  it("un nombre con tildes entra en 255 BYTES, no solo en 255 caracteres", () => {
+    const nombre = recortarNombre(renderNomenclatura(PATRON_POR_DEFECTO.Release, { ...ACENTOS, tipo: "Release" })) + ".pdf";
+    assert.ok(bytes(nombre) <= MAX_NOMBRE, `${bytes(nombre)} bytes (${nombre.length} caracteres): ${nombre}`);
+  });
+
+  it("recortar no parte un carácter al medio", () => {
+    // Cortar por unidades UTF-16 puede dejar medio par subrogado, que es un carácter inválido en el
+    // nombre del archivo. Se recorta por puntos de código.
+    const conEmoji = { ...ACENTOS, docName: "Acuerdo-de-titularidad-de-la-obra-🎬🎬🎬🎬🎬🎬🎬🎬" };
+    const nombre = recortarNombre(renderNomenclatura(PATRON_POR_DEFECTO.Release, { ...conEmoji, tipo: "Release" }));
+    assert.ok(!/[\uD800-\uDFFF]/.test(nombre.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, "")), `quedó medio carácter: ${nombre}`);
+    assert.ok(bytes(nombre) + 4 <= MAX_NOMBRE, `${bytes(nombre) + 4} bytes`);
+  });
+
+  it("sigue conservando el CUIL y el documento", () => {
+    const nombre = recortarNombre(renderNomenclatura(PATRON_POR_DEFECTO.Release, { ...ACENTOS, tipo: "Release" }));
+    assert.match(nombre, PARSERS.cuil);
+    assert.match(nombre, PARSERS.documento);
   });
 });

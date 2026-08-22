@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import NomenclaturaArchivo from "../models/NomenclaturaArchivo.js";
-import { TIPOS_NOMENCLATURA, TipoNomenclatura, VARIABLES_POR_TIPO, PATRON_POR_DEFECTO, TIPOS_NOMBRE_SE_LEE_DE_VUELTA, ORDEN_GRUPOS, validarPatron, renderNomenclatura, campoNomenclatura, MAX_NOMBRE } from "../utils/nomenclatura.js";
+import { TIPOS_NOMENCLATURA, TipoNomenclatura, VARIABLES_POR_TIPO, PATRON_POR_DEFECTO, TIPOS_NOMBRE_SE_LEE_DE_VUELTA, ORDEN_GRUPOS, validarPatron, renderNomenclatura, campoNomenclatura, MAX_NOMBRE, largoEnBytes } from "../utils/nomenclatura.js";
 import { emailNomenclatura } from "../utils/employeeDocData.js";
 
 const router = Router();
@@ -36,7 +36,7 @@ const EJEMPLO: Record<string, string> = {
   anio: "2026",
   fecha: "20260821",
   empresa: "FZERO S.R.L",
-  empresaCuit: "CUIT-EMPRESA-30710295839",
+  empresaCuit: "CUIT-30710295839",
 };
 
 /** Solo los valores de las variables que ESE tipo ofrece: mostrar el resto confunde más que ayuda. */
@@ -92,10 +92,11 @@ async function valoresMasLargos(): Promise<Record<string, string>> {
 
 /** Lo que el ABM necesita para pintar el semáforo de largo. Los `+ 4` son la extensión. */
 async function medirLargo(tipo: TipoNomenclatura, patron: string): Promise<{ ejemplo: number; peorCaso: number; maximo: number; recortaria: boolean }> {
-  const ejemplo = renderNomenclatura(patron, { ...EJEMPLO, tipo }).length + 4;
+  // En BYTES, que es como lo mide la guarda: una tilde ocupa dos y el tope del filesystem cuenta bytes.
+  const ejemplo = largoEnBytes(renderNomenclatura(patron, { ...EJEMPLO, tipo })) + 4;
   let peorCaso = ejemplo;
   try {
-    peorCaso = renderNomenclatura(patron, { ...(await valoresMasLargos()), tipo }).length + 4;
+    peorCaso = largoEnBytes(renderNomenclatura(patron, { ...(await valoresMasLargos()), tipo })) + 4;
   } catch (e) {
     // Sin el peor caso el ABM muestra solo el del ejemplo: es peor información, no un error.
     console.warn("[NOMENCLATURA] No pude calcular el peor caso de largo:", (e as any)?.message || e);

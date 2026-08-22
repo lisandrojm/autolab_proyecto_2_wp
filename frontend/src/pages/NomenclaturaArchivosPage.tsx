@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTag, faSpinner, faEdit, faTrash, faCopy, faCheck, faTriangleExclamation, faLock } from "@fortawesome/free-solid-svg-icons";
+import { faTag, faSpinner, faEdit, faTrash, faCopy, faCheck, faTriangleExclamation, faLock, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Modal } from "../components/ui/Modal";
+import { InfoModal } from "../components/ui/InfoModal";
+import { ModalVariables } from "../components/ui/RichTextEditor";
 import { sweetAlert } from "../utils/sweetAlert";
 import { nomenclaturasAPI, Nomenclatura, ErrorPatron, ETIQUETA_TIPO, LargoNomenclatura } from "../api/nomenclaturas";
 
@@ -67,42 +69,110 @@ const Previsualizacion: React.FC<{ ejemplo: string }> = ({ ejemplo }) => {
 };
 
 /**
- * Cuánto mide el nombre contra el tope de Dropbox.
+ * Cuánto mide el nombre contra el tope de 255.
  *
- * Está acá porque es la única forma de enterarse a tiempo. Dropbox no acepta nombres de más de 255
- * caracteres: el archivo no se sube, y como el nombre es la única vía por la que el documento vuelve
- * a entrar al sistema, ese contrato queda afuera del circuito de firma sin que nadie lo note.
+ * Está acá porque es la única forma de enterarse a tiempo. Ni Dropbox ni el disco del servidor
+ * aceptan un nombre más largo: el archivo no se guarda, y como el nombre es la única vía por la que
+ * el documento vuelve a entrar al sistema, ese contrato queda afuera del circuito de firma sin que
+ * nadie lo note.
  *
  * Se muestra el PEOR CASO y no el del ejemplo: el ejemplo usa datos cómodos y un patrón puede verse
  * holgado ahí y pasarse con la persona de nombre más largo del padrón.
+ *
+ * El número viene del server medido en BYTES —lo mismo que corta la guarda—, no en caracteres.
  */
 const MedidorLargo: React.FC<{ largo: LargoNomenclatura }> = ({ largo }) => {
   const { peorCaso, maximo, recortaria } = largo;
+  const [infoAbierto, setInfoAbierto] = useState(false);
   const pct = Math.min(100, Math.round((peorCaso / maximo) * 100));
-  // Ámbar antes del tope: llegar justo al límite no deja margen para un proyecto nuevo con nombre
-  // largo, y esos aparecen todo el tiempo.
-  const tono = recortaria ? { barra: 'bg-red-500', texto: 'text-red-600 dark:text-red-400' } : peorCaso > maximo * 0.9 ? { barra: 'bg-amber-500', texto: 'text-amber-600 dark:text-amber-400' } : { barra: 'bg-green-500', texto: 'text-gray-500 dark:text-gray-400' };
+
+  /*
+   * Tres estados con nombre propio, en vez de un párrafo rojo.
+   *
+   * El párrafo explicaba bien pero ocupaba cuatro renglones fijos debajo de la barra, y lo que hay
+   * que decidir de un vistazo es una sola cosa: si este patrón entra o no. El nombre del estado
+   * responde eso; el porqué está a un click, que es donde va lo que se lee una vez.
+   *
+   * El ámbar arranca ANTES del tope: llegar justo al límite no deja margen para un proyecto nuevo
+   * con nombre largo, y esos aparecen todo el tiempo.
+   */
+  const estado = recortaria
+    ? { nombre: "Se va a acortar", barra: "bg-red-500", texto: "text-red-600 dark:text-red-400" }
+    : peorCaso > maximo * 0.9
+      ? { nombre: "Al límite", barra: "bg-amber-500", texto: "text-amber-600 dark:text-amber-400" }
+      : { nombre: "Entra bien", barra: "bg-green-500", texto: "text-gray-500 dark:text-gray-400" };
 
   return (
-    <div className="space-y-1">
+    <>
       <div className="flex items-center gap-2">
         <div className="h-1 flex-1 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-          <div className={`h-full rounded-full ${tono.barra} transition-all`} style={{ width: `${pct}%` }} />
+          <div className={`h-full rounded-full ${estado.barra} transition-all`} style={{ width: `${pct}%` }} />
         </div>
-        <span className={`text-[10px] font-semibold tabular-nums shrink-0 ${tono.texto}`}>
+        <span className={`text-[10px] font-semibold tabular-nums shrink-0 ${estado.texto}`}>
           {peorCaso} / {maximo}
         </span>
+        <button type="button" onClick={() => setInfoAbierto(true)} title="Qué significa este número" className={`shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold hover:underline ${estado.texto}`}>
+          {estado.nombre}
+          <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+        </button>
       </div>
-      <p className={`text-[10px] leading-relaxed ${tono.texto}`}>
-        {recortaria ? (
-          <>
-            Con los datos más largos que hay hoy en la base, el nombre no entra en el límite de Dropbox y se van a <strong>acortar los campos descriptivos</strong> (proyecto, plantilla, email). El bloque CUIL/DNI y las fechas quedan intactos, así que el archivo se sigue reconociendo al volver.
-          </>
-        ) : (
-          <>Medido con los valores más largos que hay hoy en la base, no con los del ejemplo.</>
-        )}
-      </p>
-    </div>
+
+      {infoAbierto && (
+        <InfoModal
+          isOpen={infoAbierto}
+          onClose={() => setInfoAbierto(false)}
+          title={recortaria ? "El nombre no entra y se va a acortar" : "Cuánto mide el nombre de archivo"}
+          subtitle={`Peor caso: ${peorCaso} de ${maximo}`}
+          size="md"
+          zIndex={90}
+        >
+          <div className="space-y-3 text-sm text-gray-700 dark:text-gray-200">
+            <p>
+              El tope son <strong>{maximo}</strong> y no es una preferencia: Dropbox no acepta un nombre más largo y el disco del servidor tampoco lo puede guardar. Como el archivo vuelve a entrar al sistema por su nombre, uno que no se puede guardar deja ese documento afuera del circuito de firma.
+            </p>
+
+            {/* La diferencia no es un tecnicismo: reventó en producción con un "Andrés" que sumaba
+                255 caracteres pero 256 bytes, y el archivo no se pudo escribir. */}
+            <p className="text-gray-600 dark:text-gray-300">
+              Se mide en <strong>bytes</strong>, no en letras: una <span className="font-mono text-xs">é</span> o una <span className="font-mono text-xs">ñ</span> cuentan por dos. Un nombre de 255 letras con una sola tilde ya se pasa.
+            </p>
+
+            <p>
+              El número es el <strong>peor caso real</strong>, no el del ejemplo de arriba: se arma el mismo patrón con los valores más largos que hoy existen en la base —el proyecto, la persona, el tipo de contrato, la plantilla y la empleadora de nombre más largo—. Un patrón puede verse holgado con los datos de ejemplo y pasarse con la persona equivocada.
+            </p>
+
+            {recortaria ? (
+              <>
+                <div className="rounded-lg border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/30 px-3 py-2.5 space-y-1.5">
+                  <p className="font-semibold text-red-800 dark:text-red-300">Qué va a pasar</p>
+                  <p className="text-red-800/90 dark:text-red-300/90">
+                    Cuando el nombre no entre, se <strong>acortan los campos descriptivos</strong> —proyecto, tipo de contrato, plantilla, email y razón social— empezando por el más largo, hasta que entre. No desaparece ningún bloque: se pierden caracteres del final de los valores más gordos.
+                  </p>
+                  <p className="text-red-800/90 dark:text-red-300/90">
+                    El bloque <span className="font-mono text-xs">CUIL-…_DNI-…</span> y las fechas <strong>no se tocan nunca</strong>. Son lo que permite reconocer el archivo cuando vuelve firmado, y recortarlos no acortaría el nombre: lo rompería.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <p className="font-semibold text-gray-800 dark:text-gray-100">Cómo ganar lugar, si no querés que se acorte</p>
+                  <ul className="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-300">
+                    <li>
+                      Sacá <span className="font-mono text-xs">{"{{docName}}"}</span> del patrón. Es el campo que más ocupa y casi repite a <span className="font-mono text-xs">{"{{contrato}}"}</span>.
+                    </li>
+                    <li>
+                      Sacá <span className="font-mono text-xs">{"{{proyectoId}}"}</span> o <span className="font-mono text-xs">{"{{email}}"}</span> si en esta carpeta no los usás para buscar.
+                    </li>
+                    <li>Acortá los nombres largos en su propio ABM: un tipo de contrato o una plantilla con 49 caracteres se lleva la quinta parte del nombre.</li>
+                  </ul>
+                </div>
+              </>
+            ) : (
+              <p className="text-gray-600 dark:text-gray-300">Con este patrón entra sin recortar nada, incluso en el peor caso. Si más adelante aparece un proyecto o una plantilla con nombre más largo, este número sube solo.</p>
+            )}
+          </div>
+        </InfoModal>
+      )}
+    </>
   );
 };
 
@@ -126,6 +196,7 @@ const EditorPatron: React.FC<{ fila: Nomenclatura; onGuardado: (n: Nomenclatura)
   const [errores, setErrores] = useState<ErrorPatron[]>([]);
   const [guardando, setGuardando] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [variablesAbierto, setVariablesAbierto] = useState(false);
 
   const sucio = patron !== fila.patron;
 
@@ -195,6 +266,12 @@ const EditorPatron: React.FC<{ fila: Nomenclatura; onGuardado: (n: Nomenclatura)
   const usadasEnOrden = usadasDe(patron);
   const usadas = new Set(usadasEnOrden);
 
+  // Las mismas variables que el panel, en la forma que espera el modal compartido con el editor de
+  // Contratos. Se arma acá y no en el modal para que los dos muestren exactamente los mismos grupos.
+  const gruposParaModal = (fila.grupos?.length ? fila.grupos : ["Variables"])
+    .map((grupo) => ({ grupo, vars: fila.variables.filter((v) => (fila.grupos?.length ? v.grupo === grupo : true)).map((v) => v.variable) }))
+    .filter((g) => g.vars.length > 0);
+
   return (
     <div className="space-y-4">
       {fila.seLeeDeVuelta && (
@@ -204,24 +281,13 @@ const EditorPatron: React.FC<{ fila: Nomenclatura; onGuardado: (n: Nomenclatura)
         </p>
       )}
 
-      <div>
-        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Patrón</label>
-        {/* Textarea y no input: el patrón mide 200 caracteres y en una línea que scrollea no se ve
-            dónde estás parado. Envuelto, se lee entero. */}
-        <textarea
-          ref={inputRef}
-          value={patron}
-          onChange={(e) => setPatron(e.target.value)}
-          spellCheck={false}
-          rows={3}
-          className="input-field w-full text-xs font-mono leading-relaxed resize-y"
-          placeholder={fila.patronPorDefecto}
-        />
-      </div>
-
       {/* Panel de variables agrupadas, como el editor de Plantillas de Contrato: recuadro propio,
           rótulo por grupo y los chips adentro. Doce chips en una sola bolsa se leen como una lista de
-          códigos; agrupados por de dónde sale cada dato se leen como las partes de un nombre. */}
+          códigos; agrupados por de dónde sale cada dato se leen como las partes de un nombre.
+
+          Va ARRIBA del patrón, igual que en Contratos y Releases: es el mismo tipo de pantalla
+          —elegir de una lista y armar un texto abajo— y tenerlo al revés obligaba a leer las dos
+          en otro orden. */}
       <div>
         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Variables disponibles (click para insertar)</label>
         <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 p-3 space-y-2.5 max-h-52 overflow-y-auto">
@@ -259,6 +325,57 @@ const EditorPatron: React.FC<{ fila: Nomenclatura; onGuardado: (n: Nomenclatura)
           })}
         </div>
       </div>
+
+      <div>
+        {/*
+         * La misma barra que el editor de Contratos, con lo único que acá aplica.
+         *
+         * NO hay negrita ni cursiva: esto es el NOMBRE de un archivo y en el disco es texto plano.
+         * Un botón de negrita que no puede hacer nada es peor que no tenerlo.
+         *
+         * El de variables sí sirve, y por lo mismo que allá: el recuadro de arriba tiene scroll
+         * propio y hay que buscar adentro de una caja chica; el modal las muestra todas con buscador.
+         */}
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Patrón</label>
+          <button
+            type="button"
+            onClick={() => setVariablesAbierto(true)}
+            title="Buscar una variable e insertarla donde está el cursor"
+            className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+          >
+            <span className="font-mono">{"{{ }}"}</span>
+            Variables
+          </button>
+        </div>
+        {/* Textarea y no input: el patrón mide 200 caracteres y en una línea que scrollea no se ve
+            dónde estás parado. Envuelto, se lee entero. */}
+        <textarea
+          ref={inputRef}
+          value={patron}
+          onChange={(e) => setPatron(e.target.value)}
+          spellCheck={false}
+          rows={3}
+          className="input-field w-full text-xs font-mono leading-relaxed resize-y"
+          placeholder={fila.patronPorDefecto}
+        />
+      </div>
+
+      {variablesAbierto && (
+        <ModalVariables
+          titulo="Variables del nombre de archivo"
+          grupos={gruposParaModal}
+          obligatorias={fila.variables.filter((v) => v.requerida).map((v) => v.variable)}
+          descripciones={Object.fromEntries(fila.variables.map((v) => [v.variable, v.descripcion]))}
+          onElegir={(v) => {
+            setVariablesAbierto(false);
+            // Igual que en el editor de texto: se inserta con el modal ya desmontado, para que el
+            // cursor del textarea vuelva a donde estaba en vez de pelear con el foco del modal.
+            requestAnimationFrame(() => insertar(v));
+          }}
+          onCerrar={() => setVariablesAbierto(false)}
+        />
+      )}
 
       {/* El resultado con datos de ejemplo. Es lo único que se lee de verdad al decidir si el patrón
           sirve: el patrón en sí es difícil de imaginar renderizado. */}

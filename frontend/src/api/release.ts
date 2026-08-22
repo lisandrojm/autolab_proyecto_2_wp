@@ -52,6 +52,12 @@ export const releaseVariables: { grupo: string; vars: string[] }[] = [
     grupo: "Firmante de la empresa",
     vars: ["{{empresaFirmanteNombre}}", "{{empresaFirmanteDni}}", "{{empresaFirmanteCargo}}"],
   },
+  /*
+   * Dónde firma la persona. Es un MARCADOR, no un dato: rinde `[FIRMA: Nombre Apellido]` en el PDF
+   * para que quien arma la solicitud en Dropbox Sign —o la extensión— sepa dónde va el campo y a
+   * quién asignarlo. La firma de la empresa no está acá porque no se firma: viene en el membrete.
+   */
+  { grupo: "Firma", vars: ["{{firma}}"] },
   { grupo: "Otros", vars: ["{{fecha}}"] },
 ];
 

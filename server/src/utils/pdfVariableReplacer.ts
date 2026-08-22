@@ -3,6 +3,7 @@ import { IOrderConfig } from "../models/OrderConfig.js";
 import { IUser } from "../models/User.js";
 import { IVacation } from "../models/Vacation.js";
 import { buildDatosModificadosHtml } from "./personalDataFields.js";
+import { marcaFirma } from "./employeeDocData.js";
 
 interface PdfVariables {
   categoria: string;
@@ -299,6 +300,7 @@ export async function prepareVariables(order: IOrder, category: IOrderConfig, us
     dias,
     nombreCompleto: sanitizeHtml(nombreCompleto),
     nombreUsuario: sanitizeHtml(nombreCompleto),
+    firma: marcaFirma(sanitizeHtml(nombreCompleto)),
     numeroPedido,
     fechaSolicitud,
     fechaAprobacion,
@@ -347,6 +349,7 @@ export function prepareVacationVariables(vacation: IVacation, user: IUser, tenan
     fechaReintegro,
     nombreCompleto: sanitizeHtml(nombreCompleto),
     nombreUsuario: sanitizeHtml(nombreCompleto),
+    firma: marcaFirma(sanitizeHtml(nombreCompleto)),
     numeroPedido,
     numeroOrden: numeroPedido,
     fechaSolicitud,
@@ -399,6 +402,7 @@ export function getDummyVariables(code: string): Record<string, string> {
   const defaults: Record<string, string> = {
     nombreUsuario: "Juan Pérez",
     nombreCompleto: "Juan Pérez",
+    firma: marcaFirma("Juan Pérez"),
     numeroOrden: "ORD-12345",
     tenantName: "Empresa Demo",
     fechaUnica: "10/03/2024, 11/03/2024",
