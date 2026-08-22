@@ -153,7 +153,7 @@ export interface ReleasePdfResult {
  * directo en el handler, reutilizable desde otros routers (p. ej. "Generar" de Firma Digital) sin
  * pasar por un round-trip HTTP.
  */
-export async function generarReleasePdf(opts: { tenantId: string; releaseId: string; userId: string; projectId: string; contractIndex: number; empresaId?: string }): Promise<ReleasePdfResult> {
+export async function generarReleasePdf(opts: { tenantId: string; releaseId: string; userId: string; projectId: string; contractIndex: number; empresaId?: string; extra?: string }): Promise<ReleasePdfResult> {
   const { tenantId, releaseId, userId, projectId, contractIndex, empresaId } = opts;
   const release = await Release.findOne({ _id: releaseId, tenantId });
   if (!release) throw new Error("Release no encontrado");
@@ -184,7 +184,7 @@ export async function generarReleasePdf(opts: { tenantId: string; releaseId: str
   const membrete = release.usaMembrete && empresa ? empresaToMembrete(empresa) : undefined;
   const buffer = await buildDocPdf(release.content, data, membrete);
   // Ver `nomenclaturaService`: el patrón es configurable y el default reproduce el nombre de antes.
-  const filename = await nombreArchivoDocumento({ tenantId: opts.tenantId, tipo: "Release", user, up, contract, empresa, docName: release.name });
+  const filename = await nombreArchivoDocumento({ tenantId: opts.tenantId, tipo: "Release", user, up, contract, empresa, docName: release.name, extra: opts.extra });
   return { buffer, filename, empresaIdUsado: chosenId || "" };
 }
 

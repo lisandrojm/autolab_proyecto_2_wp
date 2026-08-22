@@ -5,7 +5,7 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Modal } from "../components/ui/Modal";
 import { sweetAlert } from "../utils/sweetAlert";
-import { nomenclaturasAPI, Nomenclatura, ErrorPatron, ETIQUETA_TIPO } from "../api/nomenclaturas";
+import { nomenclaturasAPI, Nomenclatura, ErrorPatron, ETIQUETA_TIPO, LargoNomenclatura } from "../api/nomenclaturas";
 
 /**
  * ABM de la nomenclatura de archivos.
@@ -66,6 +66,46 @@ const Previsualizacion: React.FC<{ ejemplo: string }> = ({ ejemplo }) => {
   );
 };
 
+/**
+ * Cuánto mide el nombre contra el tope de Dropbox.
+ *
+ * Está acá porque es la única forma de enterarse a tiempo. Dropbox no acepta nombres de más de 255
+ * caracteres: el archivo no se sube, y como el nombre es la única vía por la que el documento vuelve
+ * a entrar al sistema, ese contrato queda afuera del circuito de firma sin que nadie lo note.
+ *
+ * Se muestra el PEOR CASO y no el del ejemplo: el ejemplo usa datos cómodos y un patrón puede verse
+ * holgado ahí y pasarse con la persona de nombre más largo del padrón.
+ */
+const MedidorLargo: React.FC<{ largo: LargoNomenclatura }> = ({ largo }) => {
+  const { peorCaso, maximo, recortaria } = largo;
+  const pct = Math.min(100, Math.round((peorCaso / maximo) * 100));
+  // Ámbar antes del tope: llegar justo al límite no deja margen para un proyecto nuevo con nombre
+  // largo, y esos aparecen todo el tiempo.
+  const tono = recortaria ? { barra: 'bg-red-500', texto: 'text-red-600 dark:text-red-400' } : peorCaso > maximo * 0.9 ? { barra: 'bg-amber-500', texto: 'text-amber-600 dark:text-amber-400' } : { barra: 'bg-green-500', texto: 'text-gray-500 dark:text-gray-400' };
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-2">
+        <div className="h-1 flex-1 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+          <div className={`h-full rounded-full ${tono.barra} transition-all`} style={{ width: `${pct}%` }} />
+        </div>
+        <span className={`text-[10px] font-semibold tabular-nums shrink-0 ${tono.texto}`}>
+          {peorCaso} / {maximo}
+        </span>
+      </div>
+      <p className={`text-[10px] leading-relaxed ${tono.texto}`}>
+        {recortaria ? (
+          <>
+            Con los datos más largos que hay hoy en la base, el nombre no entra en el límite de Dropbox y se van a <strong>acortar los campos descriptivos</strong> (proyecto, plantilla, email). El bloque CUIL/DNI y las fechas quedan intactos, así que el archivo se sigue reconociendo al volver.
+          </>
+        ) : (
+          <>Medido con los valores más largos que hay hoy en la base, no con los del ejemplo.</>
+        )}
+      </p>
+    </div>
+  );
+};
+
 /** Mismo pie de card que el ABM de Contratos: ícono chico con su tooltip arriba. */
 const CardFooterAction: React.FC<{ icon: typeof faEdit; title: string; onClick: () => void }> = ({ icon, title, onClick }) => (
   <div className="relative group/action flex items-center">
@@ -82,6 +122,7 @@ const CardFooterAction: React.FC<{ icon: typeof faEdit; title: string; onClick: 
 const EditorPatron: React.FC<{ fila: Nomenclatura; onGuardado: (n: Nomenclatura) => void; onCerrar: () => void }> = ({ fila, onGuardado, onCerrar }) => {
   const [patron, setPatron] = useState(fila.patron);
   const [ejemplo, setEjemplo] = useState(fila.ejemplo);
+  const [largo, setLargo] = useState(fila.largo);
   const [errores, setErrores] = useState<ErrorPatron[]>([]);
   const [guardando, setGuardando] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -98,6 +139,7 @@ const EditorPatron: React.FC<{ fila: Nomenclatura; onGuardado: (n: Nomenclatura)
   useEffect(() => {
     if (!sucio) {
       setEjemplo(fila.ejemplo);
+      setLargo(fila.largo);
       setErrores([]);
       return;
     }
@@ -105,13 +147,14 @@ const EditorPatron: React.FC<{ fila: Nomenclatura; onGuardado: (n: Nomenclatura)
       try {
         const r = await nomenclaturasAPI.previsualizar(fila.tipo, patron);
         setEjemplo(r.ejemplo);
+        setLargo(r.largo);
         setErrores(r.errores);
       } catch {
         /* Si el preview no llega, el guardado igual valida del otro lado. */
       }
     }, 350);
     return () => window.clearTimeout(id);
-  }, [patron, sucio, fila.tipo, fila.ejemplo]);
+  }, [patron, sucio, fila.tipo, fila.ejemplo, fila.largo]);
 
   /**
    * Inserta la variable donde está el cursor, con su separador.
@@ -222,6 +265,7 @@ const EditorPatron: React.FC<{ fila: Nomenclatura; onGuardado: (n: Nomenclatura)
       <div className="rounded-lg bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 px-3 py-2.5 space-y-2">
         <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">Así se va a llamar</p>
         {ejemplo ? <Previsualizacion ejemplo={ejemplo} /> : <p className="text-[11px] text-gray-400">—</p>}
+        {largo && <MedidorLargo largo={largo} />}
       </div>
 
       {/* De dónde sale cada pieza. Sin esto hay que adivinar qué parte del nombre puso cada variable:

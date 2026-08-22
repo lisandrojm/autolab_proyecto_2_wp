@@ -1,12 +1,12 @@
 import NomenclaturaArchivo from "../models/NomenclaturaArchivo.js";
 import { Company } from "../models/Company.js";
-import { PATRON_POR_DEFECTO, TipoNomenclatura, renderNomenclatura } from "../utils/nomenclatura.js";
+import { PATRON_POR_DEFECTO, TipoNomenclatura, renderNomenclatura, recortarNombre } from "../utils/nomenclatura.js";
 import { datosNombreArchivo } from "../utils/employeeDocData.js";
 
 /**
  * Razón social y CUIT de la empleadora, para el final del nombre.
  *
- * El CUIT sale ETIQUETADO (`CUIT-30710295839`) y no como once dígitos sueltos. Dos motivos, y el
+ * El CUIT sale ETIQUETADO (`CUIT-EMPRESA-30710295839`) y no como once dígitos sueltos. Dos motivos, y el
  * segundo importa: al lado del `CUIL-…` de la persona, dos números de once dígitos sin rótulo son
  * indistinguibles para quien mira la carpeta; y el respaldo que usa `extraerIdentidadDeArchivo` para
  * los archivos viejos busca justamente un CUIT suelto de once dígitos, así que dejarlo pelado sería
@@ -14,7 +14,7 @@ import { datosNombreArchivo } from "../utils/employeeDocData.js";
  */
 export function empresaAValores(c: any): { empresa: string; empresaCuit: string } {
   const cuit = String(c?.cuit || "").replace(/\D/g, "");
-  return { empresa: String(c?.razonSocial || ""), empresaCuit: cuit ? `CUIT-${cuit}` : "" };
+  return { empresa: String(c?.razonSocial || ""), empresaCuit: cuit ? `CUIT-EMPRESA-${cuit}` : "" };
 }
 
 export async function datosEmpresa(empresaId: unknown, nombreCache?: string): Promise<{ empresa: string; empresaCuit: string }> {
@@ -38,21 +38,26 @@ export async function datosEmpresa(empresaId: unknown, nombreCache?: string): Pr
  * Ante CUALQUIER problema —la base no responde, el patrón guardado quedó raro, el render sale
  * vacío— cae al default en vez de fallar. Un documento tiene que poder generarse siempre: quedarse
  * sin contrato porque alguien escribió mal una configuración de nombres sería un intercambio pésimo.
+ *
+ * El resultado entra siempre en `MAX_NOMBRE`: si no entra, se recorta lo descriptivo sin tocar los
+ * bloques que los parsers de vuelta necesitan (ver `recortarNombre`). `reservar` es lo que el que
+ * llama va a pegar después y todavía no está en el string — como mínimo la extensión.
  */
 export async function nombreArchivo(
   tenantId: unknown,
   tipo: TipoNomenclatura,
   datos: Record<string, unknown>,
+  reservar = 4,
 ): Promise<string> {
   const porDefecto = renderNomenclatura(PATRON_POR_DEFECTO[tipo], datos);
   try {
     const fila = await NomenclaturaArchivo.findOne({ tenantId: tenantId as any, tipo }).select("patron").lean();
-    if (!fila?.patron) return porDefecto;
+    if (!fila?.patron) return recortarNombre(porDefecto, reservar);
     const nombre = renderNomenclatura(fila.patron, datos);
-    return nombre || porDefecto;
+    return recortarNombre(nombre || porDefecto, reservar);
   } catch (e) {
     console.warn("[NOMENCLATURA] No pude leer el patrón configurado; uso el de por defecto:", (e as any)?.message || e);
-    return porDefecto;
+    return recortarNombre(porDefecto, reservar);
   }
 }
 

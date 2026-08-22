@@ -115,7 +115,7 @@ export interface DocPdfResult {
  * directo en el handler, ahora reutilizable desde otros routers (p. ej. "Generar" de Firma Digital)
  * sin pasar por un round-trip HTTP.
  */
-export async function generarContratoPdf(opts: { tenantId: string; templateId: string; userId: string; projectId: string; contractIndex: number; empresaId?: string }): Promise<DocPdfResult> {
+export async function generarContratoPdf(opts: { tenantId: string; templateId: string; userId: string; projectId: string; contractIndex: number; empresaId?: string; extra?: string }): Promise<DocPdfResult> {
   const { tenantId, templateId, userId, projectId, contractIndex, empresaId } = opts;
   const item = await ContratoFrame.findById(templateId);
   if (!item) throw new Error("Contrato no encontrado");
@@ -147,7 +147,7 @@ export async function generarContratoPdf(opts: { tenantId: string; templateId: s
   const buffer = await buildDocPdf(item.content, data, membrete);
   // El nombre sale del patrón que el tenant tenga configurado (Plantillas → Nomenclatura de
   // archivos). Sin configurar, rige el de fábrica, que es exactamente el de antes.
-  const filename = await nombreArchivoDocumento({ tenantId: opts.tenantId, tipo: "Contrato", user, up, contract, empresa });
+  const filename = await nombreArchivoDocumento({ tenantId: opts.tenantId, tipo: "Contrato", user, up, contract, empresa, extra: opts.extra });
   return { buffer, filename, empresaIdUsado: chosenId || "" };
 }
 

@@ -1,8 +1,10 @@
 import { Router } from "express";
+import mongoose from "mongoose";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import NomenclaturaArchivo from "../models/NomenclaturaArchivo.js";
-import { TIPOS_NOMENCLATURA, TipoNomenclatura, VARIABLES_POR_TIPO, PATRON_POR_DEFECTO, TIPOS_NOMBRE_SE_LEE_DE_VUELTA, ORDEN_GRUPOS, validarPatron, renderNomenclatura } from "../utils/nomenclatura.js";
+import { TIPOS_NOMENCLATURA, TipoNomenclatura, VARIABLES_POR_TIPO, PATRON_POR_DEFECTO, TIPOS_NOMBRE_SE_LEE_DE_VUELTA, ORDEN_GRUPOS, validarPatron, renderNomenclatura, campoNomenclatura, MAX_NOMBRE } from "../utils/nomenclatura.js";
+import { emailNomenclatura } from "../utils/employeeDocData.js";
 
 const router = Router();
 router.use(requireTenant, authenticateToken);
@@ -27,19 +29,80 @@ const EJEMPLO: Record<string, string> = {
   fechaAlta: "20260810",
   fechaBaja: "-",
   identidad: "CUIL-20331501027_DNI-33150102",
-  email: "juanmanuel.gonzalezrotstein-gmail.com",
+  email: "juanmanuel.gonzalezrotstein-ARROBA-gmail.com",
   extra: "Alta-Temprana-de-ARCA",
   numero: "1042",
   timestamp: "20260821-143012",
   anio: "2026",
   fecha: "20260821",
   empresa: "FZERO S.R.L",
-  empresaCuit: "CUIT-30710295839",
+  empresaCuit: "CUIT-EMPRESA-30710295839",
 };
 
 /** Solo los valores de las variables que ESE tipo ofrece: mostrar el resto confunde más que ayuda. */
 const valoresDe = (tipo: TipoNomenclatura): Record<string, string> =>
   Object.fromEntries(VARIABLES_POR_TIPO[tipo].map((v) => [v.variable, EJEMPLO[v.variable.replace(/[{}]/g, "")] ?? ""]));
+
+/**
+ * El peor caso REAL de largo, para avisar antes de guardar y no después de generar.
+ *
+ * El ejemplo de la previsualización usa valores cómodos, así que un patrón puede verse holgado ahí y
+ * pasarse del tope de Dropbox con la persona de nombre más largo del padrón. Esto arma el mismo
+ * nombre con los valores más largos que HOY existen en la base — no con valores inventados.
+ *
+ * Sin este número, el problema solo aparece cuando el archivo no se sube, que es la peor forma de
+ * enterarse: el contrato queda afuera del circuito de firma y nadie mira los logs.
+ *
+ * Se cachea unos minutos porque son cinco consultas y el ABM previsualiza en cada tecla.
+ */
+const CACHE_MS = 5 * 60 * 1000;
+let cacheMaximos: { valores: Record<string, string>; venceEn: number } | null = null;
+
+const masLargo = (vs: unknown[]): string => vs.map((v) => campoNomenclatura(v)).sort((a, b) => b.length - a.length)[0] || "";
+
+async function valoresMasLargos(): Promise<Record<string, string>> {
+  if (cacheMaximos && cacheMaximos.venceEn > Date.now()) return cacheMaximos.valores;
+  const db = mongoose.connection.db;
+  const vacio = (): any[] => [];
+  const col = (n: string, f: string): Promise<any[]> => (db ? db.collection(n).find({ [f]: { $type: "string" } }).project({ [f]: 1 }).toArray().catch(vacio) : Promise.resolve([]));
+  const [proyectos, contratos, plantillas, empresas, usuarios] = await Promise.all([
+    col("projects", "name"),
+    col("contratos", "name"),
+    col("contratos-frame", "name"),
+    col("companies", "razonSocial"),
+    db ? db.collection("users").find({}).project({ lastName: 1, firstName: 1, email: 1 }).toArray().catch(vacio) : Promise.resolve([]),
+  ]);
+  // La persona se mide como BLOQUE: apellido, nombres y email salen del mismo registro, así que el
+  // peor caso es el de UNA persona y no la suma de tres máximos de personas distintas.
+  const persona = usuarios
+    .map((u) => ({ apellido: campoNomenclatura(u.lastName), nombres: campoNomenclatura(u.firstName), email: emailNomenclatura(u.email) }))
+    .sort((a, b) => b.apellido.length + b.nombres.length + b.email.length - (a.apellido.length + a.nombres.length + a.email.length))[0];
+
+  const valores: Record<string, string> = {
+    ...EJEMPLO,
+    proyecto: masLargo(proyectos.map((p) => p.name)) || EJEMPLO.proyecto,
+    contrato: masLargo(contratos.map((c) => c.name)) || EJEMPLO.contrato,
+    docName: masLargo(plantillas.map((p) => p.name)) || EJEMPLO.docName,
+    empresa: masLargo(empresas.map((e) => e.razonSocial)) || EJEMPLO.empresa,
+    ...(persona ? { apellido: persona.apellido, nombres: persona.nombres, email: persona.email } : {}),
+  };
+  cacheMaximos = { valores, venceEn: Date.now() + CACHE_MS };
+  return valores;
+}
+
+/** Lo que el ABM necesita para pintar el semáforo de largo. Los `+ 4` son la extensión. */
+async function medirLargo(tipo: TipoNomenclatura, patron: string): Promise<{ ejemplo: number; peorCaso: number; maximo: number; recortaria: boolean }> {
+  const ejemplo = renderNomenclatura(patron, { ...EJEMPLO, tipo }).length + 4;
+  let peorCaso = ejemplo;
+  try {
+    peorCaso = renderNomenclatura(patron, { ...(await valoresMasLargos()), tipo }).length + 4;
+  } catch (e) {
+    // Sin el peor caso el ABM muestra solo el del ejemplo: es peor información, no un error.
+    console.warn("[NOMENCLATURA] No pude calcular el peor caso de largo:", (e as any)?.message || e);
+  }
+  return { ejemplo, peorCaso, maximo: MAX_NOMBRE, recortaria: peorCaso > MAX_NOMBRE };
+}
+
 
 /**
  * GET /nomenclaturas
@@ -54,7 +117,8 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const guardadas = await NomenclaturaArchivo.find({ tenantId: req.tenantObjectId }).lean();
     const porTipo = new Map(guardadas.map((n: any) => [n.tipo, n]));
     res.json(
-      TIPOS_NOMENCLATURA.map((tipo) => {
+      await Promise.all(
+        TIPOS_NOMENCLATURA.map(async (tipo) => {
         const fila: any = porTipo.get(tipo);
         const patron = fila?.patron || PATRON_POR_DEFECTO[tipo];
         return {
@@ -68,8 +132,10 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
           ejemplo: renderNomenclatura(patron, { ...EJEMPLO, tipo }),
           valores: valoresDe(tipo),
           actualizadoEl: fila?.updatedAt || null,
+          largo: await medirLargo(tipo, patron),
         };
-      }),
+        }),
+      ),
     );
   } catch (error) {
     console.error("Nomenclaturas get error:", error);
@@ -91,7 +157,7 @@ router.post("/previsualizar", async (req: AuthenticatedRequest & TenantRequest, 
     return;
   }
   const patron = String(req.body?.patron ?? "");
-  res.json({ errores: validarPatron(tipo, patron), ejemplo: renderNomenclatura(patron, { ...EJEMPLO, tipo }), valores: valoresDe(tipo) });
+  res.json({ errores: validarPatron(tipo, patron), ejemplo: renderNomenclatura(patron, { ...EJEMPLO, tipo }), valores: valoresDe(tipo), largo: await medirLargo(tipo, patron) });
 });
 
 /**

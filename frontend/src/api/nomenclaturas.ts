@@ -17,6 +17,24 @@ export interface VariableNomenclatura {
   grupo: string;
 }
 
+/**
+ * Cuánto mide el nombre contra el tope de Dropbox (255 caracteres).
+ *
+ * `ejemplo` es el del preview, con datos cómodos. `peorCaso` arma el mismo patrón con los valores
+ * más largos que hoy existen en la base — y es el único que sirve para decidir: un patrón puede
+ * verse holgado en el ejemplo y pasarse con la persona de nombre más largo del padrón.
+ *
+ * `recortaria` = con esos valores el nombre no entra y el generador va a acortar los campos
+ * descriptivos. No se pierde nada del bloque que permite reencontrar el archivo, pero conviene
+ * saberlo antes de guardar.
+ */
+export interface LargoNomenclatura {
+  ejemplo: number;
+  peorCaso: number;
+  maximo: number;
+  recortaria: boolean;
+}
+
 export interface Nomenclatura {
   tipo: string;
   patron: string;
@@ -35,6 +53,7 @@ export interface Nomenclatura {
   /** Qué valor toma cada variable en el ejemplo. Es lo que hace legible la previsualización. */
   valores: Record<string, string>;
   actualizadoEl: string | null;
+  largo: LargoNomenclatura;
 }
 
 export interface ErrorPatron {
@@ -49,7 +68,7 @@ export const nomenclaturasAPI = {
   },
 
   /** Valida y renderiza sin guardar: es lo que alimenta el preview en vivo. */
-  async previsualizar(tipo: string, patron: string): Promise<{ errores: ErrorPatron[]; ejemplo: string; valores: Record<string, string> }> {
+  async previsualizar(tipo: string, patron: string): Promise<{ errores: ErrorPatron[]; ejemplo: string; valores: Record<string, string>; largo: LargoNomenclatura }> {
     const { data } = await axios.post("/nomenclaturas/previsualizar", { tipo, patron });
     return data;
   },

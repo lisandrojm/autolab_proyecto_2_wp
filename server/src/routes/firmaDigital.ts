@@ -80,7 +80,16 @@ router.post("/generar-contrato", async (req: AuthenticatedRequest & TenantReques
     const tenantId = String(req.tenantObjectId);
     // Los DOS trámites se etiquetan: antes solo la constancia llevaba sufijo y las altas tempranas
     // quedaban sin nada, así que no se distinguían de un contrato generado fuera de un trámite.
-    const sufijoTramite = tramite ? `_${ETIQUETA_TRAMITE[tramite]}` : "";
+    /*
+     * La etiqueta del trámite viaja por el PATRÓN, como `{{extra}}`.
+     *
+     * Antes se concatenaba acá, después del render. Eso tenía dos consecuencias: `{{extra}}` rendía
+     * vacío en los archivos reales —así que el ABM mostraba una previsualización que no existía— y
+     * la etiqueta caía siempre al final sin importar dónde el patrón la hubiera puesto. Además
+     * quedaba FUERA del presupuesto de `recortarNombre`, que es lo que garantiza que el nombre entre
+     * en el tope de Dropbox.
+     */
+    const etiquetaTramite = tramite ? ETIQUETA_TRAMITE[tramite] : undefined;
 
     const up = await UserProject.findOne({ projectId, userId });
     if (!up || contractIndex < 0 || contractIndex >= up.contracts.length) {
@@ -91,8 +100,8 @@ router.post("/generar-contrato", async (req: AuthenticatedRequest & TenantReques
     const dir = path.join(__dirname, "../../storage", tenantId, userId, "firma");
     fs.mkdirSync(dir, { recursive: true });
 
-    const contratoPdf = await generarContratoPdf({ tenantId, templateId: contratoTemplateId, userId, projectId, contractIndex, empresaId: empresaContratoId });
-    const contratoFilename = `${contratoPdf.filename}${sufijoTramite}.pdf`;
+    const contratoPdf = await generarContratoPdf({ tenantId, templateId: contratoTemplateId, userId, projectId, contractIndex, empresaId: empresaContratoId, extra: etiquetaTramite });
+    const contratoFilename = `${contratoPdf.filename}.pdf`;
     fs.writeFileSync(path.join(dir, contratoFilename), contratoPdf.buffer);
 
     const firmaContratoUrl = `/storage/${tenantId}/${userId}/firma/${contratoFilename}`;
@@ -137,7 +146,16 @@ router.post("/generar-release", async (req: AuthenticatedRequest & TenantRequest
     const tenantId = String(req.tenantObjectId);
     // Los DOS trámites se etiquetan: antes solo la constancia llevaba sufijo y las altas tempranas
     // quedaban sin nada, así que no se distinguían de un contrato generado fuera de un trámite.
-    const sufijoTramite = tramite ? `_${ETIQUETA_TRAMITE[tramite]}` : "";
+    /*
+     * La etiqueta del trámite viaja por el PATRÓN, como `{{extra}}`.
+     *
+     * Antes se concatenaba acá, después del render. Eso tenía dos consecuencias: `{{extra}}` rendía
+     * vacío en los archivos reales —así que el ABM mostraba una previsualización que no existía— y
+     * la etiqueta caía siempre al final sin importar dónde el patrón la hubiera puesto. Además
+     * quedaba FUERA del presupuesto de `recortarNombre`, que es lo que garantiza que el nombre entre
+     * en el tope de Dropbox.
+     */
+    const etiquetaTramite = tramite ? ETIQUETA_TRAMITE[tramite] : undefined;
 
     const up = await UserProject.findOne({ projectId, userId });
     if (!up || contractIndex < 0 || contractIndex >= up.contracts.length) {
@@ -150,8 +168,8 @@ router.post("/generar-release", async (req: AuthenticatedRequest & TenantRequest
 
     const firmaReleases: { releaseId: string; nombre: string; url: string }[] = [];
     for (const releaseId of releaseIds) {
-      const releasePdf = await generarReleasePdf({ tenantId, releaseId, userId, projectId, contractIndex, empresaId: empresaReleaseId });
-      const releaseFilename = `${releasePdf.filename}${sufijoTramite}.pdf`;
+      const releasePdf = await generarReleasePdf({ tenantId, releaseId, userId, projectId, contractIndex, empresaId: empresaReleaseId, extra: etiquetaTramite });
+      const releaseFilename = `${releasePdf.filename}.pdf`;
       fs.writeFileSync(path.join(dir, releaseFilename), releasePdf.buffer);
       firmaReleases.push({ releaseId, nombre: releaseFilename, url: `/storage/${tenantId}/${userId}/firma/${releaseFilename}` });
     }

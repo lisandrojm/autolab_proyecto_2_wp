@@ -7,7 +7,7 @@ import { IPdf } from "../models/Pdf.js";
 import { IUser, User } from "../models/User.js";
 import { IVacation } from "../models/Vacation.js";
 import { savePdfToStorage, savePdfVacationToStorage } from "./pdfStorage.js";
-import { buildIdentidadTag } from "./employeeDocData.js";
+import { buildIdentidadTag, emailNomenclatura } from "./employeeDocData.js";
 import { Company } from "../models/Company.js";
 import { resolveContractEmpresa } from "./contractEmpresa.js";
 import { prepareVariables, prepareVacationVariables, replacePdfVariables, getDummyVariables, getSystemVariables, sanitizeHtml } from "./pdfVariableReplacer.js";
@@ -44,7 +44,7 @@ function datosNombrePdf(user: any, company: any, resolucion: any): Record<string
   return {
     apellido: String(user?.lastName || ""),
     nombres: String(user?.firstName || ""),
-    email: String(user?.email || "").replace(/@/g, "-"),
+    email: emailNomenclatura(user?.email),
     proyecto: String(resolucion?.externalProjectId || resolucion?.projectId || ""),
     empresa: String(company?.razonSocial || ""),
     // Etiquetado, como en los documentos de contrato: al lado del CUIL de la persona, dos números de
