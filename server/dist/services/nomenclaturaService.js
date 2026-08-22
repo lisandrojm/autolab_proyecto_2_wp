@@ -5,7 +5,7 @@ import { datosNombreArchivo } from "../utils/employeeDocData.js";
 /**
  * Razón social y CUIT de la empleadora, para el final del nombre.
  *
- * El CUIT sale ETIQUETADO (`CUIT-EMPRESA-30710295839`) y no como once dígitos sueltos. Dos motivos, y el
+ * El CUIT sale ETIQUETADO (`CUIT-30710295839`) y no como once dígitos sueltos. Dos motivos, y el
  * segundo importa: al lado del `CUIL-…` de la persona, dos números de once dígitos sin rótulo son
  * indistinguibles para quien mira la carpeta; y el respaldo que usa `extraerIdentidadDeArchivo` para
  * los archivos viejos busca justamente un CUIT suelto de once dígitos, así que dejarlo pelado sería
@@ -13,7 +13,7 @@ import { datosNombreArchivo } from "../utils/employeeDocData.js";
  */
 export function empresaAValores(c) {
     const cuit = String(c?.cuit || "").replace(/\D/g, "");
-    return { empresa: String(c?.razonSocial || ""), empresaCuit: cuit ? `CUIT-EMPRESA-${cuit}` : "" };
+    return { empresa: String(c?.razonSocial || ""), empresaCuit: cuit ? `CUIT-${cuit}` : "" };
 }
 export async function datosEmpresa(empresaId, nombreCache) {
     if (!empresaId)

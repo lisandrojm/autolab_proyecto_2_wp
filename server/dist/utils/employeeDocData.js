@@ -86,6 +86,24 @@ export const MARCA_ARROBA = "-ARROBA-";
  */
 export const emailNomenclatura = (email) => campo(String(email ?? "").replace(/@/g, MARCA_ARROBA));
 /**
+ * El marcador de firma que se imprime en el documento.
+ *
+ * Estos PDF se firman en Dropbox Sign, que hoy se opera A MANO: alguien —o la extensión— abre el
+ * documento y tiene que ubicar dónde va el campo de firma. El marcador es esa señal, y lleva el
+ * nombre adentro porque el campo de Dropbox Sign se asigna a UN firmante concreto: sin el nombre hay
+ * que deducirlo del texto de alrededor, y en un contrato con dos partes eso se puede deducir mal.
+ *
+ * Es la firma de la PERSONA. La de la empresa no lleva marcador porque no se firma acá: viene
+ * estampada en el membrete (Plantillas → Empresa/s | Membrete/s y firma).
+ *
+ * Sin nombre cae a `[FIRMA]` a secas: un `[FIRMA: ]` vacío se lee como un dato que falta y no como
+ * un lugar donde firmar.
+ */
+export const marcaFirma = (nombre) => {
+    const n = String(nombre ?? "").trim();
+    return n ? `[FIRMA: ${n}]` : "[FIRMA]";
+};
+/**
  * Etiqueta del trámite impositivo para el final del nombre de archivo, para poder distinguir de un
  * vistazo con qué trámite se generó el documento sin abrirlo.
  *
@@ -260,6 +278,8 @@ export async function buildEmployeeDocData(user, up, contract, empresa) {
         nombre,
         apellido,
         nombreCompleto: `${nombre} ${apellido}`.trim(),
+        // Marcador de dónde firma la persona en Dropbox Sign. Ver `marcaFirma`.
+        firma: marcaFirma(`${nombre} ${apellido}`.trim()),
         dni: meta.documento || "",
         documento: meta.documento || "",
         cuit: meta.cuit || "",

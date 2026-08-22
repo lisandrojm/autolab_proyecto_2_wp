@@ -88,20 +88,26 @@ export declare const VARIABLES_COMPUESTAS: Set<string>;
 /** Las variables que un patrón menciona, en orden y sin repetir. */
 export declare const variablesUsadas: (patron: string) => string[];
 /**
- * Tope de caracteres de un nombre de archivo en Dropbox.
+ * Tope de un nombre de archivo, en BYTES.
  *
- * Es el límite del servicio, no una preferencia. Un nombre más largo NO se sube: falla, y como el
- * archivo es la única vía por la que el documento vuelve a entrar al sistema, ese contrato queda
- * afuera del circuito de firma.
+ * Son dos límites que caen en el mismo número: Dropbox corta en 255 caracteres y el filesystem del
+ * server (ext4) en 255 bytes por componente del path. El que manda es el de bytes, porque siempre es
+ * mayor o igual: si el nombre entra en 255 bytes, entra en 255 caracteres.
+ *
+ * Y la diferencia NO es teórica. Medir en caracteres reventó en producción con
+ * `Carlos-Andrés_…`: 255 caracteres, 256 bytes por la tilde, y el `writeFileSync` falló con
+ * ENAMETOOLONG antes de poder generar el release.
  */
 export declare const MAX_NOMBRE = 255;
+/** Lo que ocupa de verdad. `"é"` es UN carácter y DOS bytes, y el filesystem cuenta bytes. */
+export declare const largoEnBytes: (s: string) => number;
 /**
- * Deja el nombre dentro del tope de Dropbox.
+ * Deja el nombre dentro del tope, midiendo en BYTES.
  *
  * Recorta el campo NO ancla más largo, de a un carácter, hasta que entre. Se hace así y no cortando
  * la cola porque la cola es justamente lo que se agregó para poder leer el nombre —el email y la
  * empleadora rotulados—: tijeretear ahí devolvería el problema que esto viene a resolver. Recortando
- * el más largo, el nombre conserva sus catorce bloques y todas sus etiquetas, y lo que se pierde son
+ * el más largo, el nombre conserva todos sus bloques y todas sus etiquetas, y lo que se pierde son
  * caracteres del final de los valores más gordos, que es donde menos información hay.
  *
  * `reservar` es lo que el llamador va a pegar después y todavía no está en el string: como mínimo la

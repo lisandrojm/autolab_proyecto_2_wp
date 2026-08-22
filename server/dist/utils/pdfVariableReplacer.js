@@ -1,4 +1,5 @@
 import { buildDatosModificadosHtml } from "./personalDataFields.js";
+import { marcaFirma } from "./employeeDocData.js";
 export function sanitizeHtml(str) {
     if (!str)
         return "";
@@ -256,6 +257,7 @@ export async function prepareVariables(order, category, user, tenantName) {
         dias,
         nombreCompleto: sanitizeHtml(nombreCompleto),
         nombreUsuario: sanitizeHtml(nombreCompleto),
+        firma: marcaFirma(sanitizeHtml(nombreCompleto)),
         numeroPedido,
         fechaSolicitud,
         fechaAprobacion,
@@ -298,6 +300,7 @@ export function prepareVacationVariables(vacation, user, tenantName, vacationNum
         fechaReintegro,
         nombreCompleto: sanitizeHtml(nombreCompleto),
         nombreUsuario: sanitizeHtml(nombreCompleto),
+        firma: marcaFirma(sanitizeHtml(nombreCompleto)),
         numeroPedido,
         numeroOrden: numeroPedido,
         fechaSolicitud,
@@ -341,6 +344,7 @@ export function getDummyVariables(code) {
     const defaults = {
         nombreUsuario: "Juan Pérez",
         nombreCompleto: "Juan Pérez",
+        firma: marcaFirma("Juan Pérez"),
         numeroOrden: "ORD-12345",
         tenantName: "Empresa Demo",
         fechaUnica: "10/03/2024, 11/03/2024",
