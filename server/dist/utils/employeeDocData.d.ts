@@ -42,20 +42,24 @@ export declare const MARCA_ARROBA = "-ARROBA-";
  */
 export declare const emailNomenclatura: (email: unknown) => string;
 /**
- * El marcador de firma que se imprime en el documento.
+ * La línea de firma que se imprime en el documento, donde va `{{firma}}`.
  *
- * Estos PDF se firman en Dropbox Sign, que hoy se opera A MANO: alguien —o la extensión— abre el
- * documento y tiene que ubicar dónde va el campo de firma. El marcador es esa señal, y lleva el
- * nombre adentro porque el campo de Dropbox Sign se asigna a UN firmante concreto: sin el nombre hay
- * que deducirlo del texto de alrededor, y en un contrato con dos partes eso se puede deducir mal.
+ * Es una LÍNEA DE FIRMA CLÁSICA y no un placeholder entre corchetes, y la diferencia es funcional:
+ * la detección automática de campos de Dropbox Sign está entrenada con documentos reales, donde una
+ * firma se ve así. Un `[FIRMA: Juan Pérez]` le parece texto del cuerpo y no propone ningún campo —
+ * que es exactamente lo contrario de para lo que existe esto.
  *
- * Es la firma de la PERSONA. La de la empresa no lleva marcador porque no se firma acá: viene
- * estampada en el membrete (Plantillas → Empresa/s | Membrete/s y firma).
+ * Es la firma de la PERSONA. La de la empresa no lleva línea porque no se firma acá: viene estampada
+ * en el membrete (Plantillas → Empresa/s | Membrete/s y firma).
  *
- * Sin nombre cae a `[FIRMA]` a secas: un `[FIRMA: ]` vacío se lee como un dato que falta y no como
- * un lugar donde firmar.
+ * NO lleva el nombre. Lo llevaba, para que quien arma la solicitud supiera a quién asignar el campo;
+ * como en el documento hay UNA sola línea de firma, no había a quién confundir, y el nombre rompía
+ * el patrón que el detector reconoce.
+ *
+ * Los guiones bajos son 30: alcanzan para que se lea como una línea y entran en el ancho de página
+ * sin cortarse.
  */
-export declare const marcaFirma: (nombre?: unknown) => string;
+export declare const MARCA_FIRMA = "Firma: ______________________________";
 /**
  * Etiqueta del trámite impositivo para el final del nombre de archivo, para poder distinguir de un
  * vistazo con qué trámite se generó el documento sin abrirlo.

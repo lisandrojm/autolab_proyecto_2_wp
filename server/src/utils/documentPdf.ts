@@ -1,7 +1,7 @@
 import htmlPdf from "html-pdf-node";
 import path from "path";
 import fs from "fs";
-import { marcaFirma } from "./employeeDocData.js";
+import { MARCA_FIRMA } from "./employeeDocData.js";
 
 /**
  * Generación del PDF de un documento (Release / Contrato) a partir del contenido redactado en la plataforma.
@@ -193,7 +193,7 @@ export function getDummyDocVariables(): Record<string, string> {
     apellido: "Pérez",
     nombreCompleto: "Juan Pérez",
     // Sin esto, "Previsualizar" dejaba {{firma}} sin reemplazar y parecía una variable rota.
-    firma: marcaFirma("Juan Pérez"),
+    firma: MARCA_FIRMA,
     dni: "30.123.456",
     documento: "30.123.456",
     cuit: "20-30123456-3",

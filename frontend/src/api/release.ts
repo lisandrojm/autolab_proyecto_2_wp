@@ -53,9 +53,13 @@ export const releaseVariables: { grupo: string; vars: string[] }[] = [
     vars: ["{{empresaFirmanteNombre}}", "{{empresaFirmanteDni}}", "{{empresaFirmanteCargo}}"],
   },
   /*
-   * Dónde firma la persona. Es un MARCADOR, no un dato: rinde `[FIRMA: Nombre Apellido]` en el PDF
-   * para que quien arma la solicitud en Dropbox Sign —o la extensión— sepa dónde va el campo y a
-   * quién asignarlo. La firma de la empresa no está acá porque no se firma: viene en el membrete.
+   * Dónde firma la persona. Rinde una LÍNEA DE FIRMA clásica en el PDF:
+   *
+   *     Firma: ______________________________
+   *
+   * Clásica a propósito, no por estética: la detección automática de campos de Dropbox Sign está
+   * entrenada con documentos reales. Un placeholder tipo `[FIRMA]` le parece texto del cuerpo y no
+   * propone ningún campo. La firma de la empresa no está acá porque no se firma: viene en el membrete.
    */
   { grupo: "Firma", vars: ["{{firma}}"] },
   { grupo: "Otros", vars: ["{{fecha}}"] },

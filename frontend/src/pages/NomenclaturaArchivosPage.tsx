@@ -6,6 +6,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Modal } from "../components/ui/Modal";
 import { InfoModal } from "../components/ui/InfoModal";
 import { ModalVariables } from "../components/ui/RichTextEditor";
+import { ViewToggle, ViewMode } from "../components/ui/ViewToggle";
 import { sweetAlert } from "../utils/sweetAlert";
 import { nomenclaturasAPI, Nomenclatura, ErrorPatron, ETIQUETA_TIPO, LargoNomenclatura } from "../api/nomenclaturas";
 
@@ -30,6 +31,14 @@ import { nomenclaturasAPI, Nomenclatura, ErrorPatron, ETIQUETA_TIPO, LargoNomenc
  * Por eso las variables obligatorias se marcan con candado y el guardado se BLOQUEA sin ellas. El
  * servidor valida lo mismo: esta pantalla no es la única defensa, es la que lo explica a tiempo.
  */
+
+/** Búsqueda tolerante a acentos y mayúsculas, como en el resto de los ABM. */
+const normalizar = (v: string): string =>
+  (v || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .trim();
 
 /** Las variables que un patrón menciona, sin repetir y en orden de aparición. */
 const usadasDe = (patron: string): string[] => [...new Set((patron.match(/\{\{\s*\w+\s*\}\}/g) || []).map((v) => v.replace(/\s/g, "")))];
@@ -326,40 +335,57 @@ const EditorPatron: React.FC<{ fila: Nomenclatura; onGuardado: (n: Nomenclatura)
         </div>
       </div>
 
-      <div>
+      {/*
+       * Misma caja que el editor de Contratos: recuadro con barra fija arriba y el campo abajo.
+       *
+       * Lo que NO tiene son los botones de formato, y no es una omisión: el patrón ES el nombre del
+       * archivo, y en el disco un nombre es texto plano. No existe un PDF que se llame en negrita.
+       * Cuatro botones que no pueden hacer nada confunden más que su ausencia.
+       *
+       * Sin `overflow-hidden`, por lo mismo que allá: un ancestro con overflow distinto de `visible`
+       * pasa a ser el contenedor de scroll de referencia y el `sticky` deja de pegarse a nada.
+       */}
+      {/*
+       * La barra va SUELTA, no adentro de una caja con el campo.
+       *
+       * Un `sticky` solo viaja dentro de su padre: metida en un recuadro de 100px se despegaba a los
+       * dos scrolls y no servía para nada. Como hermana directa del contenedor del editor, queda fija
+       * durante todo el scroll del modal — que es cuando hace falta, porque uno se da cuenta de que
+       * falta un campo MIRANDO la previsualización de abajo, no mirando el patrón.
+       *
+       * `-top-4` y no `top-0`: el `sticky` se ancla al PADDING BOX del contenedor de scroll, y el
+       * cuerpo del modal tiene `pt-4`. Con `top-0` la barra frena un renglón debajo del título.
+       */}
+      <div className="sticky -top-4 z-20 flex items-center justify-between gap-2 rounded-t-md border border-b-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 px-2 py-1.5 shadow-sm">
+        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Patrón</span>
         {/*
-         * La misma barra que el editor de Contratos, con lo único que acá aplica.
-         *
-         * NO hay negrita ni cursiva: esto es el NOMBRE de un archivo y en el disco es texto plano.
-         * Un botón de negrita que no puede hacer nada es peor que no tenerlo.
-         *
-         * El de variables sí sirve, y por lo mismo que allá: el recuadro de arriba tiene scroll
-         * propio y hay que buscar adentro de una caja chica; el modal las muestra todas con buscador.
+         * Lo que NO hay son botones de formato, y no es una omisión: el patrón ES el nombre del
+         * archivo, y en el disco un nombre es texto plano. No existe un PDF que se llame en negrita.
+         * Cuatro botones que no pueden hacer nada confunden más que su ausencia.
          */}
-        <div className="flex items-center justify-between gap-2 mb-1">
-          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Patrón</label>
-          <button
-            type="button"
-            onClick={() => setVariablesAbierto(true)}
-            title="Buscar una variable e insertarla donde está el cursor"
-            className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-          >
-            <span className="font-mono">{"{{ }}"}</span>
-            Variables
-          </button>
-        </div>
-        {/* Textarea y no input: el patrón mide 200 caracteres y en una línea que scrollea no se ve
-            dónde estás parado. Envuelto, se lee entero. */}
-        <textarea
-          ref={inputRef}
-          value={patron}
-          onChange={(e) => setPatron(e.target.value)}
-          spellCheck={false}
-          rows={3}
-          className="input-field w-full text-xs font-mono leading-relaxed resize-y"
-          placeholder={fila.patronPorDefecto}
-        />
+        <button
+          type="button"
+          onClick={() => setVariablesAbierto(true)}
+          title="Buscar una variable e insertarla donde está el cursor"
+          className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+        >
+          <span className="font-mono">{"{{ }}"}</span>
+          Variables
+        </button>
       </div>
+
+      {/* Textarea y no input: el patrón mide 200 caracteres y en una línea que scrollea no se ve
+          dónde estás parado. Envuelto, se lee entero.
+          `!mt-0` para anular el `space-y-4` del contenedor: la barra y el campo son una sola caja. */}
+      <textarea
+        ref={inputRef}
+        value={patron}
+        onChange={(e) => setPatron(e.target.value)}
+        spellCheck={false}
+        rows={3}
+        className="!mt-0 block w-full rounded-b-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2.5 text-xs font-mono leading-relaxed resize-y outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-600"
+        placeholder={fila.patronPorDefecto}
+      />
 
       {variablesAbierto && (
         <ModalVariables
@@ -438,6 +464,29 @@ export const NomenclaturaArchivosPage: React.FC = () => {
   const [infoAbierto, setInfoAbierto] = useState(false);
   const [editando, setEditando] = useState<Nomenclatura | null>(null);
   const [copiado, setCopiado] = useState("");
+  const [busqueda, setBusqueda] = useState("");
+
+  // Vista Tarjetas/Tabla, igual que Contratos y Releases: se recuerda, y en pantalla chica se fuerza
+  // tarjetas porque una tabla de cinco columnas ahí no se lee.
+  const [viewMode, setViewMode] = useState<ViewMode>("cards");
+  const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
+  useEffect(() => {
+    const onResize = () => {
+      const ahoraGrande = window.innerWidth >= 1024;
+      setIsLarge(ahoraGrande);
+      if (!ahoraGrande) setViewMode("cards");
+    };
+    if (window.innerWidth >= 1024) {
+      const guardado = localStorage.getItem("nomenclaturaViewMode");
+      if (guardado === "table" || guardado === "cards") setViewMode(guardado);
+    }
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  useEffect(() => {
+    if (isLarge) localStorage.setItem("nomenclaturaViewMode", viewMode);
+  }, [viewMode, isLarge]);
+  const vistaEfectiva: ViewMode = isLarge ? viewMode : "cards";
 
   useEffect(() => {
     nomenclaturasAPI
@@ -467,6 +516,20 @@ export const NomenclaturaArchivosPage: React.FC = () => {
    * que borrar: lo único que se puede quitar es la personalización. La confirmación lo dice con esas
    * palabras, y aclara que los archivos ya generados no se renombran.
    */
+  /*
+   * Buscador y vista Tarjetas/Tabla, con la misma mecánica que Plantillas | Contratos.
+   *
+   * Son siete tipos, así que el buscador no es para "encontrar entre muchos": es para no tener que
+   * barrer siete cards con la vista cuando ya sabés cuál venís a tocar. Busca por el nombre del tipo
+   * y TAMBIÉN dentro del patrón, que es lo que sirve para la pregunta real de esta pantalla —
+   * "¿cuáles usan {{docName}}?"— cuando hay que acortar nombres.
+   */
+  const filtradas = React.useMemo(() => {
+    const q = normalizar(busqueda);
+    if (!q) return filas;
+    return filas.filter((f) => normalizar(ETIQUETA_TIPO[f.tipo] || f.tipo).includes(q) || normalizar(f.patron).includes(q));
+  }, [filas, busqueda]);
+
   const restaurar = async (fila: Nomenclatura) => {
     const c = await sweetAlert.confirm(
       "¿Volver al nombre de fábrica?",
@@ -521,13 +584,85 @@ export const NomenclaturaArchivosPage: React.FC = () => {
         ),
       }}
     >
+      <div className="mb-4 flex flex-col md:flex-row gap-4 items-center justify-between">
+        <input
+          type="text"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar por tipo o por una variable del patrón..."
+          className="w-full max-w-md px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white"
+        />
+        {isLarge && <ViewToggle value={viewMode} onChange={setViewMode} />}
+      </div>
+
       {cargando ? (
         <div className="flex items-center justify-center py-20">
           <LoadingSpinner message="Cargando la nomenclatura..." />
         </div>
+      ) : filtradas.length === 0 ? (
+        <p className="text-sm text-gray-500 dark:text-gray-400 py-16 text-center">Ningún tipo de documento coincide con «{busqueda}».</p>
+      ) : vistaEfectiva === "table" ? (
+        /*
+         * La tabla muestra el PATRÓN, que la card no muestra.
+         *
+         * No es una inconsistencia: son dos preguntas distintas. La card responde "qué tipos hay y
+         * cuál voy a tocar"; la tabla responde "en qué se diferencian", y para eso hay que ver los
+         * patrones uno debajo del otro. Es también la vista donde se ve de un saque cuáles se van a
+         * acortar.
+         */
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                <tr className="text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 whitespace-nowrap">Tipo</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Estado</th>
+                  <th className="px-4 py-3">Patrón</th>
+                  <th className="px-4 py-3 whitespace-nowrap" title="Variables que no se pueden sacar / en cuántas partes queda dividido el nombre">
+                    Oblig. · Campos
+                  </th>
+                  <th className="px-4 py-3 whitespace-nowrap" title="Cuánto mide el nombre contra el tope de 255">
+                    Largo
+                  </th>
+                  <th className="px-4 py-3 text-right whitespace-nowrap">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
+                {filtradas.map((fila) => (
+                  <tr key={fila.tipo} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                    <td className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">{ETIQUETA_TIPO[fila.tipo] || fila.tipo}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center w-fit rounded-md px-2 py-1 text-xs font-medium whitespace-nowrap ${
+                          fila.personalizado ? "bg-blue-500/10 text-blue-500 border border-blue-500/50" : "bg-orange-500/10 text-orange-500 border border-orange-500/50"
+                        }`}
+                      >
+                        {fila.personalizado ? "Personalizado" : "Sistema"}
+                      </span>
+                    </td>
+                    {/* `break-all` y no truncado: el patrón es lo que se viene a comparar, y cortado
+                        con puntos suspensivos no se puede comparar nada. */}
+                    <td className="px-4 py-3 font-mono text-[11px] text-gray-600 dark:text-gray-300 break-all min-w-[22rem]">{fila.patron}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                      <strong>{fila.variables.filter((v) => v.requerida).length}</strong> · <strong>{fila.ejemplo.split("_").filter(Boolean).length}</strong>
+                    </td>
+                    <td className="px-4 py-3 min-w-[11rem]">{fila.largo && <MedidorLargo largo={fila.largo} />}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <CardFooterAction icon={copiado === fila.tipo ? faCheck : faCopy} title="Copiar el patrón" onClick={() => copiar(fila)} />
+                        <CardFooterAction icon={faEdit} title="Editar la nomenclatura" onClick={() => setEditando(fila)} />
+                        {fila.personalizado && <CardFooterAction icon={faTrash} title="Volver al nombre de fábrica" onClick={() => restaurar(fila)} />}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filas.map((fila) => (
+          {filtradas.map((fila) => (
             <div key={fila.tipo} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex flex-col gap-3">
               <div className="flex flex-col gap-1.5 min-w-0">
                 {/* Mismos badges que el ABM de Roles: «Sistema» en naranja para lo que trae la

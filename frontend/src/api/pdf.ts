@@ -76,6 +76,7 @@ export const systemVariables = [
   { variable: "{{cuit}}", description: "CUIT de la empresa" },
   { variable: "{{ciudad}}", description: "Ciudad sede" },
   { variable: "{{fecha}}", description: "Fecha de generación del documento" },
-  // Marcador de dónde firma la persona en Dropbox Sign; rinde `[FIRMA: Nombre Apellido]`.
-  { variable: "{{firma}}", description: "Dónde firma la persona (marcador para Dropbox Sign)" },
+  // Rinde una línea de firma clásica (`Firma: ____`), que es lo que la detección automática de
+  // campos de Dropbox Sign reconoce; un placeholder entre corchetes le parece texto del cuerpo.
+  { variable: "{{firma}}", description: "Línea donde firma la persona (la detecta Dropbox Sign)" },
 ];
