@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { PATRON_POR_DEFECTO, TIPOS_NOMENCLATURA, TipoNomenclatura, renderNomenclatura, recortarNombre, campoNomenclatura, largoEnBytes, MAX_NOMBRE, variablesUsadas } from "../utils/nomenclatura.js";
+import { PATRON_POR_DEFECTO, TIPOS_NOMENCLATURA, TipoNomenclatura, renderNomenclatura, campoNomenclatura, largoEnBytes, MAX_NOMBRE, variablesUsadas, TOPES_CAMPO } from "../utils/nomenclatura.js";
 import { emailNomenclatura, buildIdentidadTag } from "../utils/employeeDocData.js";
 
 /**
@@ -46,6 +46,8 @@ async function run() {
   const ups = await db.collection("users_&_projects").find({}).project({ userId: 1, contracts: 1, nombre_proyecto: 1 }).toArray();
 
   let huboExceso = false;
+  // Los valores SIN tope aplicado, para poder decir cuántos se están cortando.
+  const valoresPorCampo = new Map<string, string[]>();
 
   for (const tipo of TIPOS_NOMENCLATURA) {
     const patron = patronDe(tipo);
@@ -81,7 +83,12 @@ async function run() {
         };
         const crudo = renderNomenclatura(patron, datos) + ".pdf";
         const campos: Record<string, number> = {};
-        for (const k of CAMPOS_VARIABLES) if (usa.includes(k)) campos[k] = largoEnBytes(datos[k] || "");
+        for (const k of CAMPOS_VARIABLES) {
+          if (!usa.includes(k)) continue;
+          campos[k] = largoEnBytes(datos[k] || "");
+          if (!valoresPorCampo.has(k)) valoresPorCampo.set(k, []);
+          valoresPorCampo.get(k)!.push(datos[k] || "");
+        }
         medidos.push({ bytes: largoEnBytes(crudo), nombre: crudo, campos });
       }
     }
@@ -105,6 +112,19 @@ async function run() {
     console.log(`   en el peor caso: ${ranking.map(([k, v]) => `${k} ${v}`).join(" · ")} · (patrón fijo ${fijo})`);
     console.log(`   ${peor.nombre}\n`);
   }
+
+  // Cuánto está cortando cada tope: si uno corta demasiado, o el tope quedó chico o hay nombres que
+  // conviene acortar en su propio ABM, que es donde el recorte no pierde información.
+  console.log("Topes por campo — cuántos valores reales se cortan:");
+  for (const [campo, tope] of Object.entries(TOPES_CAMPO)) {
+    const vals = valoresPorCampo.get(campo) || [];
+    if (vals.length === 0) continue;
+    const cortados = vals.filter((v) => [...v].length > tope).length;
+    const masLargo = vals.slice().sort((x, y) => [...y].length - [...x].length)[0] || "";
+    const detalle = cortados > 0 ? `   el más largo: ${[...masLargo].length} «${masLargo}»` : "";
+    console.log(`   ${campo.padEnd(11)} tope ${String(tope).padStart(2)} → corta ${String(cortados).padStart(5)} de ${vals.length} (${((cortados / vals.length) * 100).toFixed(1)}%)${detalle}`);
+  }
+  console.log("   (email, cuit, fechas y CUIT de la empleadora NO tienen tope: ver TOPES_CAMPO)");
 
   await mongoose.disconnect();
   if (huboExceso) {

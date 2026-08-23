@@ -162,7 +162,7 @@ export const PATRON_POR_DEFECTO: Record<TipoNomenclatura, string> = (() => {
     vacaciones mezclados lee siempre los mismos campos en el mismo lugar. Cada tipo cambia solo en lo
     que de verdad tiene distinto —un período contra un número de pedido— y todo lo demás coincide.
   */
-  const deContrato = "{{proyecto}}_{{apellido}}_{{tipo}}_{{contrato}}_Alta-{{fechaAlta}}_Baja-{{fechaBaja}}_{{cuit}}_{{email}}_Empresa-{{empresaCuit}}";
+  const deContrato = "{{proyecto}}_{{apellido}}_{{tipo}}_{{contrato}}_D-{{fechaAlta}}_H-{{fechaBaja}}_{{cuit}}_{{email}}_Empresa-{{empresaCuit}}";
   return {
     Contrato: deContrato,
     Release: deContrato,
@@ -372,6 +372,56 @@ export function validarPatron(tipo: TipoNomenclatura, patron: string): ErrorPatr
 }
 
 /**
+ * Tope de caracteres por campo, para los que dependen de lo que alguien cargó en su ABM.
+ *
+ * Por qué un tope FIJO y no solo el recorte de `recortarNombre`: ese recorta el campo más largo
+ * cuando el total se pasa, así que el MISMO proyecto podía salir entero en un archivo y cortado en
+ * otro, según qué tan largo fuera el resto del nombre. Con un tope por campo, un valor siempre se
+ * escribe igual — y el largo total del nombre es predecible antes de generar nada.
+ *
+ * Los números salen de la distribución real de los 6.780 contratos (`npm run nomenclatura:medir`),
+ * elegidos para que corten poco y solo la cola:
+ *
+ *   proyecto 32 → corta 7,5 %   (el numérico del principio, que es lo que identifica, queda entero)
+ *   apellido 20 → corta 0,01 %  (un solo apellido del padrón)
+ *   contrato 32 → corta 2,3 %
+ *   docName  32 · empresa 24 · extra 24 — no están en los patrones de fábrica, pero se ofrecen
+ *
+ * LO QUE NO TIENE TOPE, y es una decisión:
+ *
+ *  - `email`, aunque sea el campo más largo (44). Un email cortado PARECE una dirección y no lo es:
+ *    quien lo lea —o la extensión que arme la solicitud de firma— le va a escribir a una dirección
+ *    inexistente. Era todo el punto de codificar el "@" como `-ARROBA-`, que se pueda reconstruir.
+ *  - `cuit`, `fechaAlta`, `fechaBaja`, `numero`, `empresaCuit`: son lo que los servicios leen para
+ *    reencontrar el archivo. Cortarles un dígito no acorta el nombre, lo rompe.
+ *  - `tipo`, `fecha`, `anio`, `timestamp`: los define la plataforma y ya son cortos.
+ */
+export const TOPES_CAMPO: Record<string, number> = {
+  proyecto: 32,
+  proyectoId: 12,
+  apellido: 20,
+  nombres: 20,
+  contrato: 32,
+  docName: 32,
+  empresa: 24,
+  extra: 24,
+};
+
+/**
+ * Corta un valor a su tope, por puntos de código y sin dejar un guion colgando.
+ *
+ * Por puntos de código porque `slice` sobre unidades UTF-16 puede partir un par subrogado al medio y
+ * dejar media letra, que es un carácter inválido en el nombre de un archivo.
+ */
+const aplicarTope = (nombre: string, valor: string): string => {
+  const tope = TOPES_CAMPO[nombre];
+  if (!tope) return valor;
+  const chars = [...valor];
+  if (chars.length <= tope) return valor;
+  return chars.slice(0, tope).join("").replace(/-+$/, "");
+};
+
+/**
  * Nombres viejos de variables que siguen funcionando.
  *
  * `{{identidad}}` se renombró a `{{cuit}}` cuando el bloque dejó de tener dos campos. En producción no
@@ -394,7 +444,7 @@ const canonica = (nombre: string): string => ALIAS_VARIABLES[nombre] || nombre;
  */
 export function renderNomenclatura(patron: string, datos: Record<string, unknown>): string {
   const reemplazado = String(patron || "").replace(/\{\{\s*([\w]+)\s*\}\}/g, (_m, nombre) =>
-    VARIABLES_COMPUESTAS.has(nombre) ? String(datos[nombre] ?? datos[canonica(nombre)] ?? "").trim() : campoNomenclatura(datos[nombre] ?? datos[canonica(nombre)]),
+    VARIABLES_COMPUESTAS.has(nombre) ? String(datos[nombre] ?? datos[canonica(nombre)] ?? "").trim() : aplicarTope(nombre, campoNomenclatura(datos[nombre] ?? datos[canonica(nombre)])),
   );
   return reemplazado
     .split("_")

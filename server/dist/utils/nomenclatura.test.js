@@ -12,7 +12,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { validarPatron, renderNomenclatura, PATRON_POR_DEFECTO, VARIABLES_POR_TIPO, TIPOS_NOMBRE_SE_LEE_DE_VUELTA, campoNomenclatura, TIPOS_NOMENCLATURA, VARIABLES_COMPUESTAS, recortarNombre, MAX_NOMBRE } from "./nomenclatura.js";
+import { validarPatron, renderNomenclatura, PATRON_POR_DEFECTO, VARIABLES_POR_TIPO, TIPOS_NOMBRE_SE_LEE_DE_VUELTA, campoNomenclatura, TIPOS_NOMENCLATURA, VARIABLES_COMPUESTAS, recortarNombre, MAX_NOMBRE, TOPES_CAMPO } from "./nomenclatura.js";
 import { emailNomenclatura, MARCA_ARROBA, buildIdentidadTag } from "./employeeDocData.js";
 /** Los mismos datos que usa la previsualización del ABM. */
 const DATOS = {
@@ -114,7 +114,7 @@ describe("el default rinde el nombre de siempre", () => {
      */
     it("arranca con el proyecto y termina con la empleadora", () => {
         const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
-        assert.equal(nombre, "426-LN+_gonzalez-rotstein_Contrato_Jornada-2030-SRL_Alta-20260810_Baja--_CUIL-20331501027_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Empresa-30710295839");
+        assert.equal(nombre, "426-LN+_gonzalez-rotstein_Contrato_Jornada-2030-SRL_D-20260810_H--_CUIL-20331501027_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Empresa-30710295839");
         assert.ok(nombre.startsWith("426-LN+_"), "el proyecto va primero, y por su NOMBRE (no por el id externo)");
         assert.ok(nombre.endsWith("_Empresa-30710295839"), "el CUIT de la empleadora va último");
     });
@@ -144,14 +144,14 @@ describe("el default rinde el nombre de siempre", () => {
         const fechas = nombre.match(/(?<!\d)(?<!(?:DNI|CI|LE|LC|PAS|DOC)-)(\d{8})(?!\d)/g) ?? [];
         assert.deepEqual(fechas, ["20260810"], "el CUIT no puede colarse como fecha");
     });
-    it("el bloque Alta/Baja sobrevive con la baja vacía", () => {
+    it("el bloque desde/hasta sobrevive con la baja vacía", () => {
         // Un "-" NO es basura: distingue "contrato sin fin" de "dato sin cargar". Si la limpieza se lo
-        // comiera, el nombre diría `Baja-` a secas y las dos situaciones serían indistinguibles.
+        // comiera, el nombre diría `H` a secas y las dos situaciones serían indistinguibles.
         //
-        // El `Baja--` doble sale de que la etiqueta ahora va pegada (`Baja-{{fechaBaja}}`) para ahorrar
+        // El `H--` doble sale de que la etiqueta va pegada (`H-{{fechaBaja}}`) para ahorrar
         // un separador: queda feo pero es la única forma de decir "sin baja" sin gastar caracteres.
-        assert.match(renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS), /_Baja--_/);
-        assert.match(renderNomenclatura(PATRON_POR_DEFECTO.Contrato, { ...DATOS, fechaBaja: "20270810" }), /_Baja-20270810_/);
+        assert.match(renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS), /_H--_/);
+        assert.match(renderNomenclatura(PATRON_POR_DEFECTO.Contrato, { ...DATOS, fechaBaja: "20270810" }), /_H-20270810_/);
     });
     it("una variable vacía no deja un separador colgando", () => {
         // Sin plantilla ni etiqueta extra, el nombre no puede tener "__" ni terminar en "_".
@@ -537,5 +537,58 @@ describe("los defaults entran en 255 con los datos reales más largos", () => {
             const crudo = renderNomenclatura(PATRON_POR_DEFECTO[tipo], { ...PEOR_REAL, tipo }) + ".pdf";
             assert.ok(bytes(crudo) <= MAX_NOMBRE - 10, `${tipo} quedó a ${MAX_NOMBRE - bytes(crudo)} bytes del tope`);
         }
+    });
+});
+describe("topes por campo: un valor siempre se escribe igual", () => {
+    /**
+     * El punto de un tope FIJO frente al recorte reactivo de `recortarNombre`: ese recorta el campo más
+     * largo cuando el total se pasa, así que el MISMO proyecto podía salir entero en un archivo y
+     * cortado en otro según qué tan largo fuera el resto. Con tope, un valor se escribe siempre igual.
+     */
+    const LARGO = "701-CCM-PRODUCCION-TECNICA-Y-POST-CANAL-YT"; // 42, el más largo de producción
+    it("el proyecto se corta en 32 y siempre igual", () => {
+        const conNombreCorto = renderNomenclatura("{{proyecto}}_{{apellido}}", { proyecto: LARGO, apellido: "ok" });
+        const conNombreLargo = renderNomenclatura("{{proyecto}}_{{apellido}}", { proyecto: LARGO, apellido: "BARRAGAN-ORDONEZ-DE-LA-TORRE" });
+        assert.equal(conNombreCorto.split("_")[0], conNombreLargo.split("_")[0], "el mismo proyecto tiene que salir igual en los dos");
+        assert.equal(conNombreCorto.split("_")[0], "701-CCM-PRODUCCION-TECNICA-Y-POS");
+    });
+    it("no deja un guion colgando al cortar", () => {
+        // `Eventual-Talento-Surrender-Nudity-rider` cortado en 32 caería justo en un "-".
+        assert.doesNotMatch(renderNomenclatura("{{contrato}}", { contrato: "Eventual-Talento-Surrender-Nudi-rider" }), /-$/);
+    });
+    it("lo que está por debajo del tope no se toca", () => {
+        assert.equal(renderNomenclatura("{{proyecto}}", { proyecto: "426_LN+" }), "426-LN+");
+    });
+    /**
+     * El email NO tiene tope aunque sea el campo más largo, y es una decisión: cortado PARECE una
+     * dirección y no lo es, así que quien lo lea le escribe a una casilla inexistente. Era todo el
+     * punto de codificar el "@" como `-ARROBA-`, que se pueda reconstruir.
+     */
+    it("el email NO se corta, por más largo que sea", () => {
+        const largo = "marcosrodriguezcorbalan120580-ARROBA-gmail.com";
+        assert.equal(renderNomenclatura("{{email}}", { email: largo }), largo);
+        assert.equal(TOPES_CAMPO.email, undefined);
+    });
+    it("los campos que leen los servicios de vuelta tampoco tienen tope", () => {
+        // Cortarle un dígito al CUIL o a una fecha no acorta el nombre: lo vuelve irreconocible.
+        for (const campo of ["cuit", "fechaAlta", "fechaBaja", "numero", "empresaCuit"]) {
+            assert.equal(TOPES_CAMPO[campo], undefined, `${campo} no puede tener tope`);
+        }
+    });
+    it("con los topes puestos, el peor caso teórico del default entra holgado", () => {
+        // Todos los campos variables en su tope a la vez: la combinación no existe, pero es la cota.
+        const enElTope = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, {
+            proyecto: "X".repeat(60),
+            apellido: "Y".repeat(40),
+            tipo: "ConstanciaCUIT",
+            contrato: "Z".repeat(60),
+            fechaAlta: "20260810",
+            fechaBaja: "20270810",
+            cuit: "CUIL-20331501027",
+            email: "marcosrodriguezcorbalan120580-ARROBA-gmail.com",
+            empresaCuit: "30710295839",
+        });
+        const bytes = new TextEncoder().encode(enElTope + ".pdf").length;
+        assert.ok(bytes <= MAX_NOMBRE, `${bytes} bytes: ${enElTope}`);
     });
 });
