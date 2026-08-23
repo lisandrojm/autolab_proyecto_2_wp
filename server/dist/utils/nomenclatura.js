@@ -54,7 +54,7 @@ const V = {
     // Se llamaba `{{identidad}}` cuando el bloque eran dos campos (CUIL + documento). Con el documento
     // afuera es un CUIT y nada más, y `{{cuit}}` dice qué sale sin tener que abrir la ayuda. El nombre
     // viejo sigue funcionando: ver ALIAS.
-    cuit: { variable: "{{cuit}}", descripcion: "CUIT/CUIL de la persona (o su documento, si no tiene CUIL)", grupo: G.identificacion },
+    cuit: { variable: "{{cuit}}", descripcion: "CUIT/CUIL de la persona, 11 dígitos (o su documento, si no tiene CUIL)", grupo: G.identificacion },
     tipo: { variable: "{{tipo}}", descripcion: "Tipo de documento (Contrato, Release…)", grupo: G.documento },
     contrato: { variable: "{{contrato}}", descripcion: "Nombre del tipo de contrato (ej. Jornada 2030 SRL)", grupo: G.documento },
     docName: { variable: "{{docName}}", descripcion: "Nombre de la plantilla usada", grupo: G.documento },

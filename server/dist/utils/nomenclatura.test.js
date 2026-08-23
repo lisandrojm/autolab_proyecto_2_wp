@@ -14,6 +14,14 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { validarPatron, renderNomenclatura, PATRON_POR_DEFECTO, VARIABLES_POR_TIPO, TIPOS_NOMBRE_SE_LEE_DE_VUELTA, campoNomenclatura, TIPOS_NOMENCLATURA, VARIABLES_COMPUESTAS, recortarNombre, MAX_NOMBRE, TOPES_CAMPO } from "./nomenclatura.js";
 import { emailNomenclatura, MARCA_ARROBA, buildIdentidadTag } from "./employeeDocData.js";
+/**
+ * Cómo encuentra el CUIL el servicio de vuelta, hoy.
+ *
+ * `extraerIdentidadDeArchivo` prueba primero `_CUIL-\d{11}` y, si no está, cae a este respaldo: el
+ * primer token de once dígitos aislado. Desde que el CUIL se escribe pelado, el que corre siempre es
+ * el respaldo — por eso los tests assertan contra este y no contra el etiquetado.
+ */
+const PARSERS_CUIL = /(?<!\d)(\d{2}-?\d{8}-?\d)(?!\d)/;
 /** Los mismos datos que usa la previsualización del ABM. */
 const DATOS = {
     apellido: "gonzalez-rotstein",
@@ -25,7 +33,7 @@ const DATOS = {
     docName: "Acuerdo-de-titularidad",
     fechaAlta: "20260810",
     fechaBaja: "-",
-    cuit: "CUIL-20331501027",
+    cuit: "20331501027",
     email: "juanmanuel.gonzalezrotstein-ARROBA-gmail.com",
     extra: "Constancia-de-Cuit",
     numero: "1042",
@@ -114,7 +122,7 @@ describe("el default rinde el nombre de siempre", () => {
      */
     it("arranca con el proyecto y termina con la empleadora", () => {
         const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
-        assert.equal(nombre, "426-LN+_gonzalez-rotstein_Contrato_Jornada-2030-SRL_D-20260810_H--_CUIL-20331501027_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Empresa-30710295839");
+        assert.equal(nombre, "426-LN+_gonzalez-rotstein_Contrato_Jornada-2030-SRL_D-20260810_H--_20331501027_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Empresa-30710295839");
         assert.ok(nombre.startsWith("426-LN+_"), "el proyecto va primero, y por su NOMBRE (no por el id externo)");
         assert.ok(nombre.endsWith("_Empresa-30710295839"), "el CUIT de la empleadora va último");
     });
@@ -140,7 +148,8 @@ describe("el default rinde el nombre de siempre", () => {
      */
     it("el CUIT de la empleadora no interfiere con el parseo de vuelta", () => {
         const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
-        assert.equal(/(?:^|_)CUIL-(\d{11})/.exec(nombre)?.[1], "20331501027", "el CUIL que se extrae tiene que ser el de la PERSONA");
+        // El CUIL va pelado, así que el que corre es el respaldo por posición: el PRIMER 11 dígitos.
+        assert.equal(PARSERS_CUIL.exec(nombre)?.[1], "20331501027", "el primer 11 dígitos tiene que ser el de la PERSONA, no el de la empleadora");
         const fechas = nombre.match(/(?<!\d)(?<!(?:DNI|CI|LE|LC|PAS|DOC)-)(\d{8})(?!\d)/g) ?? [];
         assert.deepEqual(fechas, ["20260810"], "el CUIT no puede colarse como fecha");
     });
@@ -163,7 +172,7 @@ describe("el default rinde el nombre de siempre", () => {
         // Las dos expresiones reales, copiadas de sus servicios. Si alguien toca el render y rompe el
         // formato, esto se cae acá y no seis meses después con un contrato "perdido".
         const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
-        assert.match(nombre, /(?:^|_)CUIL-(\d{11})/, "extraerIdentidadDeArchivo no encontraría el CUIL");
+        assert.match(nombre, PARSERS_CUIL, "extraerIdentidadDeArchivo no encontraría el CUIL");
         // El documento ya NO va cuando hay CUIL: era el mismo número dos veces (ver `buildIdentidadTag`).
         // Lo que sí tiene que seguir pasando es que `buscarEnOutbox` encuentre a la persona por el CUIL.
         const fechas = nombre.match(/(?<!\d)(?<!(?:DNI|CI|LE|LC|PAS|DOC)-)(\d{8})(?!\d)/g) ?? [];
@@ -171,8 +180,8 @@ describe("el default rinde el nombre de siempre", () => {
     });
     it("los de pedidos y vacaciones también conservan su identidad", () => {
         const pedido = renderNomenclatura(PATRON_POR_DEFECTO.Pedido, { ...DATOS, tipo: "Pedido" });
-        assert.equal(pedido, "426-LN+_gonzalez-rotstein_Pedido_1042_20260821_CUIL-20331501027_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Empresa-30710295839");
-        assert.match(pedido, /(?:^|_)CUIL-(\d{11})/);
+        assert.equal(pedido, "426-LN+_gonzalez-rotstein_Pedido_1042_20260821_20331501027_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Empresa-30710295839");
+        assert.match(pedido, PARSERS_CUIL);
     });
 });
 describe("normalización de cada campo", () => {
@@ -295,8 +304,12 @@ describe("el proyecto se nombra como lo ve la gente", () => {
  * test sigue verde. Lo que sí protege es el otro lado, que es el que se toca seguido — el patrón.
  */
 const PARSERS = {
-    /** dropboxSignMailService.extraerIdentidadDeArchivo */
-    cuil: /(?:^|_)CUIL-(\d{11})/,
+    /**
+     * `extraerIdentidadDeArchivo` busca primero `_CUIL-\d{11}` y, si no lo encuentra, cae al RESPALDO:
+     * el primer token de once dígitos aislado. Desde que el CUIL va pelado el que corre es el respaldo,
+     * así que los tests assertan contra ESTE y no contra el etiquetado.
+     */
+    cuil: /(?<!\d)(\d{2}-?\d{8}-?\d)(?!\d)/,
     documento: /_(DNI|CI|LE|LC|PAS|DOC)-([A-Za-z0-9]+)/,
     /** estadoDropboxCronService.extraerCuitDeNombre — PRIMER token de 11 dígitos, sin etiqueta */
     cuitSuelto: /(?<!\d)(\d{2}-?\d{8}-?\d)(?!\d)/,
@@ -368,7 +381,7 @@ describe("el nombre entra en el tope de Dropbox", () => {
         email: "facundoescuderosalinas-ARROBA-gmail.com",
     };
     it("un nombre que ya entra no se toca", () => {
-        const corto = "426-LN+_gonzalez-rotstein_CUIL-20331501027";
+        const corto = "426-LN+_gonzalez-rotstein_20331501027";
         assert.equal(recortarNombre(corto), corto);
     });
     it("el peor caso real queda por debajo de 255", () => {
@@ -435,10 +448,10 @@ describe("el tope se mide en BYTES, no en caracteres", () => {
 });
 describe("la identidad: CUIL solo, y el documento como respaldo", () => {
     const usuario = (cuit, documento, tipoDocumentoId = 1) => ({ metadata: { cuit, documento, tipoDocumentoId } });
-    it("con CUIL, va SOLO el CUIL", () => {
+    it("con CUIL, van los once dígitos pelados y nada más", () => {
         // Iban los dos y era el mismo número dos veces: el CUIL contiene al DNI. Trece caracteres del
         // nombre gastados en repetir, con el tope de 255 encima.
-        assert.equal(buildIdentidadTag(usuario("20-33150102-7", "33150102")), "CUIL-20331501027");
+        assert.equal(buildIdentidadTag(usuario("20-33150102-7", "33150102")), "20331501027");
     });
     it("SIN CUIL, queda el documento: es el único identificador que le queda a esa persona", () => {
         // Son 39 en el padrón real (pasaportes y DNI sin CUIL cargado), 31 con contratos. Sin esto sus
@@ -505,7 +518,7 @@ describe("los defaults entran en 255 con los datos reales más largos", () => {
         docName: "Eventual-Talento-Surrender-Nudity-rider-Reelshort",
         fechaAlta: "20260810",
         fechaBaja: "20270810",
-        cuit: "CUIL-20331501027",
+        cuit: "20331501027",
         email: "marcosrodriguezcorbalan120580-ARROBA-gmail.com",
         extra: "Alta-Temprana-de-ARCA",
         numero: "1042",
@@ -584,7 +597,7 @@ describe("topes por campo: un valor siempre se escribe igual", () => {
             contrato: "Z".repeat(60),
             fechaAlta: "20260810",
             fechaBaja: "20270810",
-            cuit: "CUIL-20331501027",
+            cuit: "20331501027",
             email: "marcosrodriguezcorbalan120580-ARROBA-gmail.com",
             empresaCuit: "30710295839",
         });

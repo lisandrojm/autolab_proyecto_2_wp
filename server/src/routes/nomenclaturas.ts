@@ -30,7 +30,7 @@ const EJEMPLO: Record<string, string> = {
   // Con fecha de baja REAL y no el «-»: el ejemplo tiene que mostrar cómo se ve el caso normal.
   // Un contrato sin baja rinde `H--`, que sin haber visto antes un `H-20270810` no se entiende.
   fechaBaja: "20270810",
-  cuit: "CUIL-20331501027",
+  cuit: "20331501027",
   email: "juanmanuel.gonzalezrotstein-ARROBA-gmail.com",
   extra: "Alta-Temprana-de-ARCA",
   numero: "1042",

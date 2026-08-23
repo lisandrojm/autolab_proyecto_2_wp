@@ -4,13 +4,15 @@
  * con el nombre del archivo —lo único que viaja en el aviso de Dropbox Sign y lo que se ve al listar
  * una carpeta— para saber de quién es un documento sin abrirlo.
  *
- *   `CUIL-{11 dígitos}_{DNI|CI|LE|LC|PAS|DOC}-{número}`   ej. `CUIL-23232274409_DNI-23232274`
+ * Devuelve UNA sola cosa: el CUIL pelado si lo hay, y si no el documento con su sigla.
+ *
+ *   `23232274409`        con CUIL
+ *   `PAS-AAE1450C7`      sin CUIL (39 personas del padrón, 31 de ellas con contratos)
  *
  * Los números van sin puntos ni guiones internos, para que sean tokens aislados y parseables:
- *   /CUIL-(\d{11})/            → CUIL/CUIT
+ *   /(?<!\d)(\d{2}-?\d{8}-?\d)(?!\d)/        → el CUIL, por el respaldo de extraerIdentidadDeArchivo
  *   /(DNI|CI|LE|LC|PAS|DOC)-([A-Za-z0-9]+)/  → tipo y número de documento
  *
- * Cada parte se omite si el dato no está cargado (nunca se escribe una etiqueta con valor vacío).
  * `DOC` es el fallback cuando hay número pero no está cargado el tipo.
  */
 export declare function buildIdentidadTag(user: any): string;
@@ -76,7 +78,7 @@ export declare const ETIQUETA_TRAMITE: Record<"alta_temprana_afip" | "constancia
  *   [apellido]_[nombres]_[proyecto]_[Contrato|Release|…]_[nombreDoc]_Alta_[YYYYMMDD]_Baja_[YYYYMMDD|-]_
  *   [CUIL-…]_[DNI-…]_[email]_[extra]
  *
- * ej. `gonzalez-rotstein_juan-manuel_748_Contrato_Alta_20260810_Baja_-_CUIL-20331501027_DNI-33150102_
+ * ej. `gonzalez-rotstein_juan-manuel_748_Contrato_Alta_20260810_Baja_-_20331501027_
  *      EMAIL-juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Constancia-de-Cuit`
  *
  * Decisiones y por qué:

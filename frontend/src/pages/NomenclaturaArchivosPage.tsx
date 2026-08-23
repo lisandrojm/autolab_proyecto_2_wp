@@ -96,11 +96,16 @@ const MedidorLargo: React.FC<{ largo: LargoNomenclatura }> = ({ largo }) => {
    * El ámbar arranca ANTES del tope: llegar justo al límite no deja margen para un proyecto nuevo
    * con nombre largo, y esos aparecen todo el tiempo.
    */
+  /*
+   * El estado en verde NO lleva etiqueta: la barra verde y el número ya lo dicen, y «Entra bien» era
+   * una palabra más para leer en el caso en que no hay nada que hacer. Los otros dos SÍ la llevan,
+   * porque piden una decisión.
+   */
   const estado = recortaria
     ? { nombre: "Se va a acortar", barra: "bg-red-500", texto: "text-red-600 dark:text-red-400" }
     : peorCaso > maximo * 0.9
       ? { nombre: "Al límite", barra: "bg-amber-500", texto: "text-amber-600 dark:text-amber-400" }
-      : { nombre: "Entra bien", barra: "bg-green-500", texto: "text-gray-500 dark:text-gray-400" };
+      : { nombre: "", barra: "bg-green-500", texto: "text-gray-500 dark:text-gray-400" };
 
   return (
     <>
@@ -112,7 +117,7 @@ const MedidorLargo: React.FC<{ largo: LargoNomenclatura }> = ({ largo }) => {
           {peorCaso} / {maximo}
         </span>
         <button type="button" onClick={() => setInfoAbierto(true)} title="Qué significa este número" className={`shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold hover:underline ${estado.texto}`}>
-          {estado.nombre}
+          {estado.nombre && <span>{estado.nombre}</span>}
           <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
         </button>
       </div>

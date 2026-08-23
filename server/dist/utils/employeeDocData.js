@@ -25,13 +25,15 @@ const SIGLA_TIPO_DOCUMENTO = {
  * con el nombre del archivo —lo único que viaja en el aviso de Dropbox Sign y lo que se ve al listar
  * una carpeta— para saber de quién es un documento sin abrirlo.
  *
- *   `CUIL-{11 dígitos}_{DNI|CI|LE|LC|PAS|DOC}-{número}`   ej. `CUIL-23232274409_DNI-23232274`
+ * Devuelve UNA sola cosa: el CUIL pelado si lo hay, y si no el documento con su sigla.
+ *
+ *   `23232274409`        con CUIL
+ *   `PAS-AAE1450C7`      sin CUIL (39 personas del padrón, 31 de ellas con contratos)
  *
  * Los números van sin puntos ni guiones internos, para que sean tokens aislados y parseables:
- *   /CUIL-(\d{11})/            → CUIL/CUIT
+ *   /(?<!\d)(\d{2}-?\d{8}-?\d)(?!\d)/        → el CUIL, por el respaldo de extraerIdentidadDeArchivo
  *   /(DNI|CI|LE|LC|PAS|DOC)-([A-Za-z0-9]+)/  → tipo y número de documento
  *
- * Cada parte se omite si el dato no está cargado (nunca se escribe una etiqueta con valor vacío).
  * `DOC` es el fallback cuando hay número pero no está cargado el tipo.
  */
 export function buildIdentidadTag(user) {
@@ -44,21 +46,29 @@ export function buildIdentidadTag(user) {
     const documento = String(user?.metadata?.documento ?? "").replace(/[^A-Za-z0-9]/g, "");
     const sigla = SIGLA_TIPO_DOCUMENTO[Number(user?.metadata?.tipoDocumentoId)] || "DOC";
     /*
-     * Con CUIL, el CUIL SOLO. El documento va únicamente cuando no hay CUIL.
+     * DOS decisiones acá, las dos para ganar caracteres contra el tope de 255.
      *
-     * Iban los dos y era información repetida: el CUIL argentino contiene al DNI (20-33150102-7), así
-     * que `CUIL-20331501027_DNI-33150102` gastaba 13 caracteres del nombre en decir lo mismo dos veces
-     * — y el nombre está peleando contra un tope de 255.
+     * 1. Con CUIL va el CUIL SOLO. Iban los dos y era el mismo número dos veces: el CUIL argentino
+     *    contiene al DNI (20-33150102-7). Como desempate tampoco servía — `buscarEnOutbox` filtra
+     *    primero por CUIL, y si una persona tiene dos archivos en Outbox los dos llevan su mismo
+     *    documento—. El documento SÍ queda cuando NO hay CUIL: son 39 personas del padrón, 31 con
+     *    contratos, y sacárselo las dejaría sin ningún identificador en el nombre.
      *
-     * Como desempate tampoco servía: `buscarEnOutbox` filtra primero por CUIL, y si una persona tiene
-     * dos archivos en Outbox los dos llevan su mismo documento, así que no desempata nada.
+     * 2. El CUIL va PELADO, sin el rótulo `CUIL-`. Un número de once dígitos al principio del nombre
+     *    no es otra cosa. Sacarlo mueve la identificación del camino etiquetado al RESPALDO de
+     *    `extraerIdentidadDeArchivo`, que toma el primer token de once dígitos aislado. Funciona
+     *    porque `validarPatron` no deja poner `{{empresaCuit}}` antes que `{{cuit}}`, y porque ningún
+     *    otro campo del nombre trae once dígitos seguidos — verificado sobre el padrón: 0 proyectos,
+     *    0 tipos de contrato, 0 plantillas, 0 apellidos y 0 emails.
      *
-     * El documento SÍ queda cuando no hay CUIL: son 39 personas del padrón —pasaportes y DNI sin CUIL
-     * cargado, 31 de ellas con contratos— y sacárselo las dejaría sin ningún identificador en el
-     * nombre, o sea con documentos que vuelven de la firma y no se pueden asociar a nadie.
+     *    Si algún día un proyecto o un apellido llegara a tener once dígitos seguidos ANTES del CUIL,
+     *    ese número se leería como la persona. Es el precio de sacar el rótulo, y por eso está escrito.
+     *
+     * El DOCUMENTO conserva su sigla: ahí el rótulo NO es redundante —`DNI-43092696` contra
+     * `PAS-AAE1450C7`— y `extraerIdentidadDeArchivo` lo busca justamente por esa sigla.
      */
     if (cuit)
-        return `CUIL-${cuit}`;
+        return cuit;
     return documento ? `${sigla}-${documento}` : "";
 }
 /** Espacios y separadores sueltos dentro de UN campo pasan a "-", para que el "_" quede como único
@@ -134,7 +144,7 @@ export const ETIQUETA_TRAMITE = {
  *   [apellido]_[nombres]_[proyecto]_[Contrato|Release|…]_[nombreDoc]_Alta_[YYYYMMDD]_Baja_[YYYYMMDD|-]_
  *   [CUIL-…]_[DNI-…]_[email]_[extra]
  *
- * ej. `gonzalez-rotstein_juan-manuel_748_Contrato_Alta_20260810_Baja_-_CUIL-20331501027_DNI-33150102_
+ * ej. `gonzalez-rotstein_juan-manuel_748_Contrato_Alta_20260810_Baja_-_20331501027_
  *      EMAIL-juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Constancia-de-Cuit`
  *
  * Decisiones y por qué:
