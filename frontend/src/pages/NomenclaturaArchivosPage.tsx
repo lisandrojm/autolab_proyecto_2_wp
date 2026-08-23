@@ -299,12 +299,36 @@ const EditorPatron: React.FC<{ fila: Nomenclatura; onGuardado: (n: Nomenclatura)
       }
     >
       <div className="space-y-4">
+        {/* El título era la pregunta entera y no entraba en el encabezado: se cortaba en «Por qué hay
+            variables que no se pu…». La pregunta pasó al subtítulo, que sí tiene lugar. */}
         {porQueAbierto && (
-          <InfoModal isOpen={porQueAbierto} onClose={() => setPorQueAbierto(false)} title="Por qué hay variables que no se pueden sacar" size="sm" zIndex={90}>
-            <p className="text-sm text-gray-700 dark:text-gray-200 leading-relaxed">
-              Este archivo vuelve a entrar al sistema por su nombre —firmado desde Dropbox Sign, o levantado de la carpeta de Dropbox—. Las variables con{" "}
-              <FontAwesomeIcon icon={faLock} className="h-3 w-3" /> son las que permiten reconocerlo al volver, y no se pueden sacar.
-            </p>
+          <InfoModal isOpen={porQueAbierto} onClose={() => setPorQueAbierto(false)} title="Variables" subtitle="Por qué hay variables que no se pueden sacar" size="md" zIndex={90}>
+            <div className="space-y-3 text-sm text-gray-700 dark:text-gray-200 leading-relaxed">
+              <p>
+                Porque el nombre del archivo no es solo una etiqueta: <strong>se lee de vuelta</strong>. Un documento firmado que regresa de Dropbox Sign, o uno que se levanta de la carpeta de Dropbox, se
+                identifican por su nombre y por nada más.
+              </p>
+
+              <div className="rounded-lg border border-amber-300 dark:border-amber-800/70 bg-amber-50/70 dark:bg-amber-950/20 px-3 py-2.5 space-y-1.5">
+                <p className="font-semibold text-gray-900 dark:text-gray-100">
+                  Las que tienen <FontAwesomeIcon icon={faLock} className="h-3 w-3" />
+                </p>
+                <p>
+                  <span className="font-mono text-xs">{"{{cuit}}"}</span> dice <strong>de quién</strong> es el documento.
+                </p>
+                <p>
+                  <span className="font-mono text-xs">{"{{fechaAlta}}"}</span> y <span className="font-mono text-xs">{"{{fechaBaja}}"}</span> —o{" "}
+                  <span className="font-mono text-xs">{"{{numero}}"}</span> en pedidos y vacaciones— dicen <strong>de cuál</strong> de sus trámites.
+                </p>
+              </div>
+
+              <p>
+                Un patrón sin ellas genera archivos que <strong>vuelven de la firma y no se pueden asociar a nadie</strong>. Y no falla ruidosamente: el archivo se crea, se firma, y el problema aparece
+                meses después cuando alguien busca un contrato que «se perdió». Por eso el guardado se bloquea.
+              </p>
+
+              <p className="text-gray-600 dark:text-gray-300">El resto de las variables —el proyecto, el tipo, el email— son para leer la carpeta de un vistazo. Esas las sacás y ponés a gusto.</p>
+            </div>
           </InfoModal>
         )}
 
@@ -557,6 +581,34 @@ export const NomenclaturaArchivosPage: React.FC = () => {
                 aparece meses después cuando alguien busca un contrato que «se perdió». Por eso no se puede guardar sin ellas.
               </p>
             </div>
+            {/*
+              El circuito completo, contado acá porque es donde se decide.
+              Las tres pantallas involucradas —esta, Dropbox y DropboxSign— cuentan el mismo circuito
+              desde su lado, para que quien entra por cualquiera de ellas entienda de qué depende.
+            */}
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-3 space-y-2">
+              <p className="font-semibold text-gray-900 dark:text-gray-100">Dónde se lee este nombre</p>
+              <p>
+                La sincronización con Dropbox no consulta ninguna base ni ningún identificador interno: lee <strong>el nombre del archivo</strong>. Hay tres lugares donde eso pasa.
+              </p>
+              <ul className="space-y-1.5 list-disc list-inside marker:text-gray-400">
+                <li>
+                  <strong>Las carpetas de trámites</strong> (<span className="font-mono text-xs">Alta temprana de Afip</span>, <span className="font-mono text-xs">Constancia de cuit</span>,{" "}
+                  <span className="font-mono text-xs">Sin cuit</span>): el escaneo busca el CUIT en el nombre para saber a qué contrato pertenece cada archivo que aparece.
+                </li>
+                <li>
+                  <strong>El asunto del aviso de Dropbox Sign.</strong> Cuando un documento se manda a firmar, el aviso que llega a la casilla trae el nombre del archivo en el asunto — y de ahí sale de
+                  quién es, para moverlo de <span className="font-mono text-xs">Outbox</span> a <span className="font-mono text-xs">Pendbox</span>.
+                </li>
+                <li>
+                  <strong>La carpeta de firmados</strong> (<span className="font-mono text-xs">Requested signatures</span>): el documento vuelve firmado y hay que volver a reconocerlo.
+                </li>
+              </ul>
+              <p className="text-[12px] text-gray-500 dark:text-gray-400">
+                Se configura dónde mira cada una en <strong>Configuración → Dropbox</strong>, y la casilla de avisos en <strong>Configuración → DropboxSign</strong>.
+              </p>
+            </div>
+
             <p className="text-[12px] text-gray-500 dark:text-gray-400">
               Aplica a los <strong>siete</strong> tipos. Pedidos y Vacaciones también se firman y vuelven; y la Constancia de CUIT, aunque no se firme, igual hay que poder levantarla de Dropbox y saber
               de quién es.

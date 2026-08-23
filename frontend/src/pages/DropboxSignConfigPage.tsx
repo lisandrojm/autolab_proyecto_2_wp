@@ -100,8 +100,19 @@ export const DropboxSignConfigPage: React.FC = () => {
               Notificaciones, sin costo).
             </p>
             <p>
-              El sistema lee el <strong>asunto</strong> del aviso (“Se inició el proceso de firma de…”), que trae el nombre del documento con el CUIL y el número de documento adentro. No abre el PDF ni
-              los adjuntos.
+              El sistema lee el <strong>asunto</strong> del aviso (“Se inició el proceso de firma de…”), que trae el <strong>nombre del archivo</strong>, y de ahí saca el CUIT de la persona. No abre el
+              PDF ni los adjuntos.
+            </p>
+            {/* De qué depende. Misma explicación que en Nomenclatura de archivos y en Dropbox, contada
+                desde acá — con el agregado propio de esta pantalla: el asunto pasa por Dropbox Sign,
+                que transforma algunos caracteres, así que el nombre no se compara entero. */}
+            <p className="flex items-start gap-1.5 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300">
+              <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              <span>
+                O sea que esto depende de <strong>lo que diga el nombre del archivo</strong>, igual que el escaneo de carpetas. Y con una vuelta más: el nombre viaja por el asunto de un correo que pasó
+                por Dropbox Sign, que transforma algunos caracteres —por eso el <strong>«@» del email se escribe como «-ARROBA-»</strong> y el nombre nunca se compara entero, solo se buscan los datos
+                que identifican. Qué lleva cada nombre se define en <strong>Plantillas → Nomenclatura de archivos</strong>.
+              </span>
             </p>
             <p>
               Con esos datos busca el archivo en <span className="font-mono text-xs">Outbox</span> y, si está, lo <strong>mueve a</strong> <span className="font-mono text-xs">Pendbox</span>. Ese

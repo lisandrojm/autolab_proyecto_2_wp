@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowsRotate, faBolt, faFolder, faSpinner, faCheck, faStopwatch, faSitemap } from "@fortawesome/free-solid-svg-icons";
+import { faArrowsRotate, faBolt, faFolder, faSpinner, faCheck, faStopwatch, faSitemap, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { faDropbox } from "@fortawesome/free-brands-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { infoAPI, InfoItem } from "../api/info";
@@ -123,8 +123,19 @@ export function EscaneoDropboxConfigPage() {
             </p>
             <p>
               Para identificar el contrato, el sistema prueba en este orden: <strong>1)</strong> el CUIT en el nombre del archivo, <strong>2)</strong> si no lo encuentra ahí, el CUIT dentro del contenido
-              del PDF, y <strong>3)</strong> si tampoco hay CUIT disponible, el nombre y apellido de la persona en el nombre del archivo. Si no logra identificar exactamente un contrato, no hace nada —
-              nunca adivina.
+              del PDF, y <strong>3)</strong> si tampoco hay CUIT disponible, el nombre y apellido de la persona en el nombre del archivo. Si una persona tiene <strong>dos contratos</strong> que podrían
+              ser, desempata con las <strong>fechas</strong> del nombre. Y si no logra identificar exactamente uno, no hace nada — nunca adivina.
+            </p>
+            {/* De qué depende todo esto. Es la misma explicación que está en Nomenclatura de archivos y
+                en DropboxSign, contada desde acá: quien entra por esta pantalla tiene que poder llegar
+                al lugar donde se decide qué dice el nombre. */}
+            <p className="flex items-start gap-1.5 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300">
+              <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              <span>
+                Todo esto depende de <strong>lo que diga el nombre del archivo</strong>: acá no se consulta ninguna base ni ningún identificador interno. Un archivo cuyo nombre no traiga el CUIT —o las
+                fechas, cuando hay que desempatar— aparece en la carpeta y se queda ahí. Qué lleva cada nombre se define en <strong>Plantillas → Nomenclatura de archivos</strong>, que no deja guardar un
+                patrón sin esos datos justamente por esto.
+              </span>
             </p>
           </div>
         ),
