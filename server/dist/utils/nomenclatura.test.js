@@ -114,9 +114,9 @@ describe("el default rinde el nombre de siempre", () => {
      */
     it("arranca con el proyecto y termina con la empleadora", () => {
         const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
-        assert.equal(nombre, "426-LN+_gonzalez-rotstein_Contrato_Jornada-2030-SRL_Alta_20260810_Baja_-_CUIL-20331501027_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Constancia-de-Cuit_EMPRESA-30710295839");
+        assert.equal(nombre, "426-LN+_gonzalez-rotstein_Contrato_Jornada-2030-SRL_Alta-20260810_Baja--_CUIL-20331501027_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Empresa-30710295839");
         assert.ok(nombre.startsWith("426-LN+_"), "el proyecto va primero, y por su NOMBRE (no por el id externo)");
-        assert.ok(nombre.endsWith("_EMPRESA-30710295839"), "el CUIT de la empleadora va último");
+        assert.ok(nombre.endsWith("_Empresa-30710295839"), "el CUIT de la empleadora va último");
     });
     /**
      * Los siete tipos comparten el mismo esqueleto. Quien mira una carpeta con contratos, pedidos y
@@ -146,8 +146,12 @@ describe("el default rinde el nombre de siempre", () => {
     });
     it("el bloque Alta/Baja sobrevive con la baja vacía", () => {
         // Un "-" NO es basura: distingue "contrato sin fin" de "dato sin cargar". Si la limpieza se lo
-        // comiera, el nombre diría `Baja` a secas y las dos situaciones serían indistinguibles.
-        assert.match(renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS), /_Baja_-_/);
+        // comiera, el nombre diría `Baja-` a secas y las dos situaciones serían indistinguibles.
+        //
+        // El `Baja--` doble sale de que la etiqueta ahora va pegada (`Baja-{{fechaBaja}}`) para ahorrar
+        // un separador: queda feo pero es la única forma de decir "sin baja" sin gastar caracteres.
+        assert.match(renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS), /_Baja--_/);
+        assert.match(renderNomenclatura(PATRON_POR_DEFECTO.Contrato, { ...DATOS, fechaBaja: "20270810" }), /_Baja-20270810_/);
     });
     it("una variable vacía no deja un separador colgando", () => {
         // Sin plantilla ni etiqueta extra, el nombre no puede tener "__" ni terminar en "_".
@@ -167,7 +171,7 @@ describe("el default rinde el nombre de siempre", () => {
     });
     it("los de pedidos y vacaciones también conservan su identidad", () => {
         const pedido = renderNomenclatura(PATRON_POR_DEFECTO.Pedido, { ...DATOS, tipo: "Pedido" });
-        assert.equal(pedido, "426-LN+_gonzalez-rotstein_Pedido_1042_20260821_CUIL-20331501027_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_EMPRESA-30710295839");
+        assert.equal(pedido, "426-LN+_gonzalez-rotstein_Pedido_1042_20260821_CUIL-20331501027_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Empresa-30710295839");
         assert.match(pedido, /(?:^|_)CUIL-(\d{11})/);
     });
 });
@@ -258,7 +262,7 @@ describe("la empleadora y el tipo de contrato en el nombre", () => {
     it("la empleadora cierra el nombre en todos los tipos", () => {
         for (const tipo of TIPOS_NOMENCLATURA) {
             const nombre = renderNomenclatura(PATRON_POR_DEFECTO[tipo], { ...DATOS, tipo });
-            assert.ok(nombre.endsWith("_EMPRESA-30710295839"), `${tipo} termina en: ${nombre.slice(-60)}`);
+            assert.ok(nombre.endsWith("_Empresa-30710295839"), `${tipo} termina en: ${nombre.slice(-60)}`);
         }
     });
 });
@@ -383,7 +387,7 @@ describe("el nombre entra en el tope de Dropbox", () => {
         const recortado = recortarNombre(entero);
         assert.equal(recortado.split("_").length, entero.split("_").length, `se perdieron bloques: ${recortado}`);
         // Las etiquetas son lo que hace legible el nombre: tienen que sobrevivir al recorte.
-        for (const etiqueta of ["EMPRESA-"]) {
+        for (const etiqueta of ["Empresa-"]) {
             assert.ok(recortado.includes(etiqueta), `se perdió la etiqueta ${etiqueta}: ${recortado}`);
         }
     });
@@ -485,5 +489,53 @@ describe("la razón social de la empleadora quedó retirada", () => {
     it("pero un patrón guardado con ella sigue rindiendo el nombre de la empresa", () => {
         // Hasta que alguien lo edite: escribir `{{empresa}}` literal adentro del archivo sería peor.
         assert.equal(renderNomenclatura("{{apellido}}_{{empresa}}", DATOS), "gonzalez-rotstein_FZERO-S.R.L");
+    });
+});
+describe("los defaults entran en 255 con los datos reales más largos", () => {
+    /**
+     * Los valores más largos que hoy existen en producción, medidos con `npm run nomenclatura:medir`.
+     * Si mañana alguien crea un proyecto o un tipo de contrato más largo, el script lo detecta contra
+     * la base; este test protege el otro lado — que nadie agrande el patrón hasta pasarse.
+     */
+    const PEOR_REAL = {
+        proyecto: "701-CCM-PRODUCCION-TECNICA-Y-POST-CANAL-YT",
+        apellido: "BARRAGAN-ORDONEZ",
+        nombres: "Facundo-Nahuel-Hugo",
+        contrato: "Eventual-Talento-My-secret-Nudity-rider-Reelshort",
+        docName: "Eventual-Talento-Surrender-Nudity-rider-Reelshort",
+        fechaAlta: "20260810",
+        fechaBaja: "20270810",
+        cuit: "CUIL-20331501027",
+        email: "marcosrodriguezcorbalan120580-ARROBA-gmail.com",
+        extra: "Alta-Temprana-de-ARCA",
+        numero: "1042",
+        fecha: "20260821",
+        anio: "2026",
+        timestamp: "20260821-143012",
+        proyectoId: "705",
+        empresaCuit: "30710295839",
+    };
+    const bytes = (s) => new TextEncoder().encode(s).length;
+    it("ningún tipo se pasa, y sin necesidad de recortar", () => {
+        for (const tipo of TIPOS_NOMENCLATURA) {
+            const crudo = renderNomenclatura(PATRON_POR_DEFECTO[tipo], { ...PEOR_REAL, tipo }) + ".pdf";
+            assert.ok(bytes(crudo) <= MAX_NOMBRE, `${tipo}: ${bytes(crudo)} bytes — ${crudo}`);
+            // Que entre SIN recortar: si hay que recortar, se pierden caracteres del final de los campos.
+            assert.equal(recortarNombre(crudo.replace(/\.pdf$/, "")) + ".pdf", crudo, `${tipo} necesita recorte`);
+        }
+    });
+    it("queda margen para que crezca alguno de los campos", () => {
+        /*
+         * Diez bytes de aire, y el peor caso de acá es SINTÉTICO: combina el proyecto más largo con el
+         * tipo de contrato más largo y el email más largo, que hoy no coinciden en ninguna persona. El
+         * peor caso real que mide `npm run nomenclatura:medir` sobre los 6.780 contratos es 202.
+         *
+         * O sea que el margen verdadero es de ~50 bytes; estos diez son el piso que no se puede cruzar
+         * ni siquiera en la combinación imposible.
+         */
+        for (const tipo of TIPOS_NOMENCLATURA) {
+            const crudo = renderNomenclatura(PATRON_POR_DEFECTO[tipo], { ...PEOR_REAL, tipo }) + ".pdf";
+            assert.ok(bytes(crudo) <= MAX_NOMBRE - 10, `${tipo} quedó a ${MAX_NOMBRE - bytes(crudo)} bytes del tope`);
+        }
     });
 });

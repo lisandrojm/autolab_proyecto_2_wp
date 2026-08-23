@@ -162,15 +162,15 @@ export const PATRON_POR_DEFECTO: Record<TipoNomenclatura, string> = (() => {
     vacaciones mezclados lee siempre los mismos campos en el mismo lugar. Cada tipo cambia solo en lo
     que de verdad tiene distinto —un período contra un número de pedido— y todo lo demás coincide.
   */
-  const deContrato = "{{proyecto}}_{{apellido}}_{{tipo}}_{{contrato}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}_{{cuit}}_{{email}}_{{extra}}_EMPRESA-{{empresaCuit}}";
+  const deContrato = "{{proyecto}}_{{apellido}}_{{tipo}}_{{contrato}}_Alta-{{fechaAlta}}_Baja-{{fechaBaja}}_{{cuit}}_{{email}}_Empresa-{{empresaCuit}}";
   return {
     Contrato: deContrato,
     Release: deContrato,
     AltaAFIP: deContrato,
     ConstanciaCUIT: deContrato,
     Documentacion: deContrato,
-    Pedido: "{{proyecto}}_{{apellido}}_{{tipo}}_{{numero}}_{{fecha}}_{{cuit}}_{{email}}_EMPRESA-{{empresaCuit}}",
-    Vacacion: "{{proyecto}}_{{apellido}}_{{tipo}}_{{numero}}_{{anio}}_{{cuit}}_{{email}}_EMPRESA-{{empresaCuit}}",
+    Pedido: "{{proyecto}}_{{apellido}}_{{tipo}}_{{numero}}_{{fecha}}_{{cuit}}_{{email}}_Empresa-{{empresaCuit}}",
+    Vacacion: "{{proyecto}}_{{apellido}}_{{tipo}}_{{numero}}_{{anio}}_{{cuit}}_{{email}}_Empresa-{{empresaCuit}}",
   };
 })();
 
