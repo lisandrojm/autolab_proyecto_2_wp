@@ -88,7 +88,7 @@ const V = {
    * `{{empresa}}` sigue rindiendo bien en vez de escribir la llave literal en el archivo.
    */
   empresa: { variable: "{{empresa}}", descripcion: "Razón social de la empleadora", grupo: G.empresa },
-  empresaCuit: { variable: "{{empresaCuit}}", descripcion: "CUIT de la empleadora, como CUIT-30710295839", grupo: G.empresa },
+  empresaCuit: { variable: "{{empresaCuit}}", descripcion: "CUIT de la empleadora, solo los 11 dígitos", grupo: G.empresa },
   anio: { variable: "{{anio}}", descripcion: "Año del período", grupo: G.otros },
   fecha: { variable: "{{fecha}}", descripcion: "Fecha de generación, YYYYMMDD", grupo: G.otros },
   timestamp: { variable: "{{timestamp}}", descripcion: "Marca temporal de generación", grupo: G.otros },
@@ -162,15 +162,15 @@ export const PATRON_POR_DEFECTO: Record<TipoNomenclatura, string> = (() => {
     vacaciones mezclados lee siempre los mismos campos en el mismo lugar. Cada tipo cambia solo en lo
     que de verdad tiene distinto —un período contra un número de pedido— y todo lo demás coincide.
   */
-  const deContrato = "{{proyecto}}_{{apellido}}_{{nombres}}_{{tipo}}_{{contrato}}_{{docName}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}_{{cuit}}_EMAIL-{{email}}_{{extra}}_{{empresaCuit}}";
+  const deContrato = "{{proyecto}}_{{apellido}}_{{tipo}}_{{contrato}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}_{{cuit}}_{{email}}_{{extra}}_EMPRESA-{{empresaCuit}}";
   return {
     Contrato: deContrato,
     Release: deContrato,
     AltaAFIP: deContrato,
     ConstanciaCUIT: deContrato,
     Documentacion: deContrato,
-    Pedido: "{{proyecto}}_{{apellido}}_{{nombres}}_{{tipo}}_{{numero}}_{{fecha}}_{{cuit}}_EMAIL-{{email}}_{{empresaCuit}}",
-    Vacacion: "{{proyecto}}_{{apellido}}_{{nombres}}_{{tipo}}_{{numero}}_{{anio}}_{{cuit}}_EMAIL-{{email}}_{{empresaCuit}}",
+    Pedido: "{{proyecto}}_{{apellido}}_{{tipo}}_{{numero}}_{{fecha}}_{{cuit}}_{{email}}_EMPRESA-{{empresaCuit}}",
+    Vacacion: "{{proyecto}}_{{apellido}}_{{tipo}}_{{numero}}_{{anio}}_{{cuit}}_{{email}}_EMPRESA-{{empresaCuit}}",
   };
 })();
 

@@ -36,7 +36,7 @@ const EJEMPLO: Record<string, string> = {
   anio: "2026",
   fecha: "20260821",
   empresa: "FZERO S.R.L",
-  empresaCuit: "CUIT-30710295839",
+  empresaCuit: "30710295839",
 };
 
 /** Solo los valores de las variables que ESE tipo ofrece: mostrar el resto confunde más que ayuda. */

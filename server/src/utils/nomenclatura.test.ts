@@ -34,7 +34,7 @@ const DATOS = {
   anio: "2026",
   fecha: "20260821",
   empresa: "FZERO S.R.L",
-  empresaCuit: "CUIT-30710295839",
+  empresaCuit: "30710295839",
 };
 
 describe("lo que el archivo necesita para volver de la firma", () => {
@@ -125,10 +125,10 @@ describe("el default rinde el nombre de siempre", () => {
     const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
     assert.equal(
       nombre,
-      "426-LN+_gonzalez-rotstein_juan-manuel_Contrato_Jornada-2030-SRL_Acuerdo-de-titularidad_Alta_20260810_Baja_-_CUIL-20331501027_EMAIL-juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Constancia-de-Cuit_CUIT-30710295839",
+      "426-LN+_gonzalez-rotstein_Contrato_Jornada-2030-SRL_Alta_20260810_Baja_-_CUIL-20331501027_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Constancia-de-Cuit_EMPRESA-30710295839",
     );
     assert.ok(nombre.startsWith("426-LN+_"), "el proyecto va primero, y por su NOMBRE (no por el id externo)");
-    assert.ok(nombre.endsWith("_CUIT-30710295839"), "el CUIT de la empleadora va último");
+    assert.ok(nombre.endsWith("_EMPRESA-30710295839"), "el CUIT de la empleadora va último");
   });
 
   /**
@@ -140,8 +140,11 @@ describe("el default rinde el nombre de siempre", () => {
     for (const tipo of TIPOS_NOMENCLATURA) {
       const p = PATRON_POR_DEFECTO[tipo];
       assert.ok(p.startsWith("{{proyecto}}_"), `${tipo} no arranca con el proyecto: ${p}`);
-      assert.ok(p.endsWith("_{{empresaCuit}}"), `${tipo} no termina con el CUIT de la empleadora: ${p}`);
-      assert.match(p, /\{\{apellido\}\}_\{\{nombres\}\}_\{\{tipo\}\}/, `${tipo} no respeta el orden persona → documento`);
+      // Sin el «_» delante: la etiqueta `EMPRESA-` vive en el patrón desde que el CUIT sale pelado.
+      assert.ok(p.endsWith("{{empresaCuit}}"), `${tipo} no termina con el CUIT de la empleadora: ${p}`);
+      // `{{nombres}}` salió del default: con el apellido y el CUIL alcanza para saber de quién es, y
+      // eran los caracteres que faltaban para entrar en 255. Se sigue ofreciendo por si hace falta.
+      assert.match(p, /\{\{apellido\}\}_\{\{tipo\}\}/, `${tipo} no respeta el orden persona → documento`);
     }
   });
 
@@ -182,7 +185,7 @@ describe("el default rinde el nombre de siempre", () => {
 
   it("los de pedidos y vacaciones también conservan su identidad", () => {
     const pedido = renderNomenclatura(PATRON_POR_DEFECTO.Pedido, { ...DATOS, tipo: "Pedido" });
-    assert.equal(pedido, "426-LN+_gonzalez-rotstein_juan-manuel_Pedido_1042_20260821_CUIL-20331501027_EMAIL-juanmanuel.gonzalezrotstein-ARROBA-gmail.com_CUIT-30710295839");
+    assert.equal(pedido, "426-LN+_gonzalez-rotstein_Pedido_1042_20260821_CUIL-20331501027_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_EMPRESA-30710295839");
     assert.match(pedido, /(?:^|_)CUIL-(\d{11})/);
   });
 });
@@ -277,14 +280,16 @@ describe("la empleadora y el tipo de contrato en el nombre", () => {
   });
 
   it("`{{contrato}}` y `{{docName}}` son campos distintos y conviven", () => {
-    const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
-    assert.match(nombre, /_Jornada-2030-SRL_Acuerdo-de-titularidad_/);
+    // `{{docName}}` ya no está en el default —era el campo más largo y casi repetía a
+    // `{{contrato}}`— pero se sigue ofreciendo, y los dos tienen que poder convivir.
+    const nombre = renderNomenclatura("{{contrato}}_{{docName}}", DATOS);
+    assert.equal(nombre, "Jornada-2030-SRL_Acuerdo-de-titularidad");
   });
 
   it("la empleadora cierra el nombre en todos los tipos", () => {
     for (const tipo of TIPOS_NOMENCLATURA) {
       const nombre = renderNomenclatura(PATRON_POR_DEFECTO[tipo], { ...DATOS, tipo });
-      assert.ok(nombre.endsWith("_CUIT-30710295839"), `${tipo} termina en: ${nombre.slice(-60)}`);
+      assert.ok(nombre.endsWith("_EMPRESA-30710295839"), `${tipo} termina en: ${nombre.slice(-60)}`);
     }
   });
 });
@@ -427,7 +432,7 @@ describe("el nombre entra en el tope de Dropbox", () => {
     const recortado = recortarNombre(entero);
     assert.equal(recortado.split("_").length, entero.split("_").length, `se perdieron bloques: ${recortado}`);
     // Las etiquetas son lo que hace legible el nombre: tienen que sobrevivir al recorte.
-    for (const etiqueta of ["EMAIL-", "CUIT-"]) {
+    for (const etiqueta of ["EMPRESA-"]) {
       assert.ok(recortado.includes(etiqueta), `se perdió la etiqueta ${etiqueta}: ${recortado}`);
     }
   });

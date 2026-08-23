@@ -2,11 +2,13 @@ import { TipoNomenclatura } from "../utils/nomenclatura.js";
 /**
  * Razón social y CUIT de la empleadora, para el final del nombre.
  *
- * El CUIT sale ETIQUETADO (`CUIT-30710295839`) y no como once dígitos sueltos. Dos motivos, y el
- * segundo importa: al lado del `CUIL-…` de la persona, dos números de once dígitos sin rótulo son
- * indistinguibles para quien mira la carpeta; y el respaldo que usa `extraerIdentidadDeArchivo` para
- * los archivos viejos busca justamente un CUIT suelto de once dígitos, así que dejarlo pelado sería
- * poner una trampa para el día que alguien saque `{{identidad}}` del patrón.
+ * El CUIT sale PELADO: son los once dígitos y nada más. La etiqueta vive en el PATRÓN
+ * (`EMPRESA-{{empresaCuit}}`), donde se ve y se puede acortar; acá adentro estaba escondida y
+ * costaba cinco caracteres que el nombre no tiene para regalar.
+ *
+ * Lo que impide confundirlo con el CUIL de la persona no es la etiqueta sino el ORDEN:
+ * `extraerCuitDeNombre` toma el primer número de once dígitos, `{{cuit}}` es obligatoria y
+ * `validarPatron` no deja poner `{{empresaCuit}}` antes que ella.
  */
 export declare function empresaAValores(c: any): {
     empresa: string;

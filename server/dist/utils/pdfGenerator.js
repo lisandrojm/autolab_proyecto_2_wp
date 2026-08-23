@@ -44,9 +44,8 @@ function datosNombrePdf(user, company, resolucion) {
         email: emailNomenclatura(user?.email),
         proyecto: String(resolucion?.externalProjectId || resolucion?.projectId || ""),
         empresa: String(company?.razonSocial || ""),
-        // Etiquetado, como en los documentos de contrato: al lado del CUIL de la persona, dos números de
-        // once dígitos sin rótulo son indistinguibles para quien mira la carpeta.
-        empresaCuit: cuit ? `CUIT-${cuit}` : "",
+        // Pelado, como en los documentos de contrato: la etiqueta vive en el patrón (`EMPRESA-…`).
+        empresaCuit: cuit,
     };
 }
 /**
