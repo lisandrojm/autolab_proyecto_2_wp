@@ -8,10 +8,11 @@
  * ⚠ POR QUÉ ESTO NO ES COSMÉTICO
  *
  * El nombre se PARSEA DE VUELTA. Cuando un documento firmado regresa de Dropbox Sign, dos servicios
- * lo leen para saber a quién pertenece:
+ * lo leen para saber a quién pertenece, y los dos leen EXACTAMENTE los campos que acá se marcan como
+ * requeridos —el CUIT y las fechas del período— con las expresiones de `utils/anclasNombre.ts`:
  *
- *   - `dropboxSignMailService.extraerIdentidadDeArchivo()` → `_CUIL-\d{11}` y `_(DNI|CI|…)-\w+`
- *   - `estadoDropboxCronService.extraerFechasDeNombre()`   → tokens sueltos de 8 dígitos (YYYYMMDD)
+ *   - `dropboxSignMailService` → el nombre llega en el asunto de un aviso de Dropbox Sign
+ *   - `estadoDropboxCronService` → el nombre llega del listado de una carpeta de Dropbox
  *
  * Un patrón sin esos bloques hace que los documentos vuelvan de la firma y **no se puedan asociar a
  * ninguna persona**. Y falla en silencio: el archivo se genera igual, se firma igual, y recién se
@@ -20,6 +21,7 @@
  * Por eso `validarPatron()` NO deja guardar un patrón al que le falten esos bloques en los tipos que
  * viajan a la firma. Es la única validación de este archivo que no se puede relajar.
  */
+import { esCampoAncla } from "./anclasNombre.js";
 /** Los tipos de documento que la plataforma nombra. El orden es el que se muestra en el ABM. */
 export const TIPOS_NOMENCLATURA = ["Contrato", "Release", "AltaAFIP", "ConstanciaCUIT", "Documentacion", "Pedido", "Vacacion"];
 /**
@@ -50,6 +52,9 @@ const V = {
     proyectoId: { variable: "{{proyectoId}}", descripcion: "Id externo del proyecto (ej. 705)", grupo: G.proyecto },
     apellido: { variable: "{{apellido}}", descripcion: "Apellido de la persona", grupo: G.persona },
     nombres: { variable: "{{nombres}}", descripcion: "Nombres de la persona", grupo: G.persona },
+    // Obligatoria, y no por prolijidad: es el ÚNICO identificador que TODAS las personas tienen. Sin
+    // CUIL válido hay 39 en el padrón —31 con contratos— y el documento tampoco lo tienen todas
+    // cargado; el email es requerido al registrarse. Ver `mismaPersona` en `anclasNombre.ts`.
     email: { variable: "{{email}}", descripcion: "Email; el @ va como -ARROBA- para poder reconstruirlo", grupo: G.persona },
     // Se llamaba `{{identidad}}` cuando el bloque eran dos campos (CUIL + documento). Con el documento
     // afuera es un CUIT y nada más, y `{{cuit}}` dice qué sale sin tener que abrir la ayuda. El nombre
@@ -98,7 +103,7 @@ export const VARIABLES_POR_TIPO = (() => {
         { ...V.fechaAlta, requerida: true },
         { ...V.fechaBaja, requerida: true },
         { ...V.cuit, requerida: true },
-        V.email,
+        { ...V.email, requerida: true },
         V.extra,
         V.empresaCuit,
     ];
@@ -114,8 +119,8 @@ export const VARIABLES_POR_TIPO = (() => {
         // Pedidos y Vacaciones también se firman y vuelven. No tienen período —no son un contrato— así que
         // lo que los ancla es su NÚMERO: es lo que permite decir "este PDF firmado es el pedido 1042 de
         // esta persona" y no solo "es un pedido de esta persona".
-        Pedido: [V.proyecto, V.proyectoId, V.apellido, V.nombres, V.tipo, { ...V.numero, requerida: true }, V.fecha, { ...V.cuit, requerida: true }, V.email, V.empresaCuit, V.timestamp],
-        Vacacion: [V.proyecto, V.proyectoId, V.apellido, V.nombres, V.tipo, { ...V.numero, requerida: true }, V.anio, { ...V.cuit, requerida: true }, V.email, V.empresaCuit, V.timestamp],
+        Pedido: [V.proyecto, V.proyectoId, V.apellido, V.nombres, V.tipo, { ...V.numero, requerida: true }, V.fecha, { ...V.cuit, requerida: true }, { ...V.email, requerida: true }, V.empresaCuit, V.timestamp],
+        Vacacion: [V.proyecto, V.proyectoId, V.apellido, V.nombres, V.tipo, { ...V.numero, requerida: true }, V.anio, { ...V.cuit, requerida: true }, { ...V.email, requerida: true }, V.empresaCuit, V.timestamp],
     };
 })();
 /**
@@ -215,18 +220,18 @@ const MINIMO_CAMPO = 8;
 /**
  * ¿Este campo se puede recortar?
  *
- * Los ANCLAS no: son los que leen los parsers de vuelta. Cortar un dígito del CUIL o de una fecha no
- * acorta el nombre, lo rompe — el archivo se sube igual y después no se puede asociar a nadie.
- *
- *   CUIL-20331501027   `extraerIdentidadDeArchivo` → /(?:^|_)CUIL-(\d{11})/
- *   DNI-33150102       `extraerIdentidadDeArchivo` → /_(DNI|CI|LE|LC|PAS|DOC)-([A-Za-z0-9]+)/
- *   20260810           `extraerFechasDeNombre`     → tokens de 8 dígitos aislados
- *   CUIT-…             `extraerCuitDeNombre`       → primer token de 11 dígitos aislado
+ * Los ANCLAS no: son los que leen los servicios de vuelta (`esCampoAncla`, en `anclasNombre.ts` —
+ * el mismo archivo del que salen las expresiones que los leen, para que no puedan discrepar).
+ * Cortar un dígito del CUIL o de una fecha no acorta el nombre, lo rompe: el archivo se sube igual y
+ * después no se puede asociar a nadie.
  *
  * Lo que sí se puede recortar es todo lo descriptivo: proyecto, nombre, tipo de contrato, plantilla,
  * email y razón social. Ninguno participa del matching (verificado: el email no lo mira nadie).
+ *
+ * Lo que se suma acá y no es un ancla: los campos ya cortos. Debajo del piso, recortarlos no libera
+ * nada útil y solo los vuelve ilegibles.
  */
-const esAncla = (campo) => /^CUIL-\d{11}$/i.test(campo) || /^(DNI|CI|LE|LC|PAS|DOC)-/i.test(campo) || /^\d{8}$/.test(campo) || /\d{11}/.test(campo) || campo.length <= MINIMO_CAMPO;
+const esAncla = (campo) => esCampoAncla(campo) || campo.length <= MINIMO_CAMPO;
 /**
  * Deja el nombre dentro del tope, midiendo en BYTES.
  *
@@ -309,6 +314,23 @@ export function validarPatron(tipo, patron) {
         errores.push({
             campo: "patron",
             motivo: "{{empresaCuit}} tiene que ir DESPUÉS de {{cuit}}. El escaneo de Dropbox reconoce a la persona por el primer número de 11 dígitos del nombre: si el CUIT de la empleadora aparece antes, los documentos que vuelvan se van a intentar asociar por la empresa y no van a encontrar a nadie.",
+        });
+    }
+    /*
+     * Y además tiene que llevar un RÓTULO pegado adelante (`Empresa-{{empresaCuit}}`).
+     *
+     * El orden solo alcanza mientras `{{cuit}}` escriba algo. Cuando la persona no tiene CUIL —39 en el
+     * padrón— renderiza vacío, su campo desaparece del nombre, y el primer número de once dígitos pasa
+     * a ser el de la empleadora: el archivo se lee como si fuera de la empresa y no matchea con nadie.
+     * El rótulo es lo que deja distinguirlos sin depender de que el campo de al lado exista.
+     *
+     * Es exactamente la clase de falla que este archivo previene en todos lados: se guarda bien, se
+     * genera bien, y falla recién cuando el documento vuelve — y solo para algunas personas.
+     */
+    if (posCuitEmpresa >= 0 && !/[A-Za-z]-\s*$/.test(patron.slice(0, posCuitEmpresa))) {
+        errores.push({
+            campo: "patron",
+            motivo: "{{empresaCuit}} necesita un rótulo pegado adelante, como Empresa-{{empresaCuit}}. Sin él, los documentos de las personas que no tienen CUIL cargado se leen como si fueran de la empleadora: el número de la empresa queda como el primero de 11 dígitos del nombre y no se puede distinguir del de la persona.",
         });
     }
     const conocidas = new Set(disponibles.map((v) => v.variable));

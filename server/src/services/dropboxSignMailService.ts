@@ -1,7 +1,7 @@
 import { ImapFlow } from "imapflow";
 import { Tenant } from "../models/Tenant.js";
 import { decryptSecret } from "../utils/secretCrypto.js";
-import { normalizarCuit } from "../utils/constanciaPdf.js";
+import { leerAnclas, mismoDocumento, AnclasNombre } from "../utils/anclasNombre.js";
 import { resolverCarpetaPorPatron } from "../utils/estadoCarpetas.js";
 import { getTenantDropboxConfig, listFolder, moveEntry } from "./dropboxService.js";
 
@@ -18,7 +18,7 @@ import { getTenantDropboxConfig, listFolder, moveEntry } from "./dropboxService.
  *
  * Qué hace por cada aviso encontrado:
  *  1. Lee del ASUNTO el nombre del documento ("Se inició el proceso de firma de <archivo>").
- *  2. De ese nombre saca el CUIL/documento (la nomenclatura de `buildDocFileName`).
+ *  2. De ese nombre saca quién es (CUIL o email) y de qué período habla (ver `leerAnclas`).
  *  3. Busca ese documento en "Outbox". Si no está, no hace nada: sin respaldo en Outbox el aviso no
  *     se puede atribuir a un documento propio (puede ser de otra cuenta o de un reenvío).
  *  4. Si el documento ya está en "Pendbox", lo saltea. Los avisos se repiten (reenvíos,
@@ -57,25 +57,17 @@ export function extraerArchivoDeAsunto(asunto: string): string {
 }
 
 /**
- * CUIL y documento que van dentro del nombre del archivo (ver `buildIdentidadTag`). Dropbox Sign
- * reemplaza algunos caracteres del nombre original (p. ej. la "@" del mail por "_"), así que se
- * buscan los tokens etiquetados en lugar de intentar reconstruir el nombre completo.
+ * Los campos obligatorios de la nomenclatura que están dentro del nombre del archivo: CUIT, email,
+ * documento y las fechas del período (ver `leerAnclas`). Dropbox Sign reemplaza algunos caracteres
+ * del nombre original, así que se buscan esos datos sueltos en lugar de intentar reconstruir el
+ * nombre completo. Por eso el "@" viaja escrito como `-ARROBA-`: es una palabra, y las letras
+ * atraviesan esa transformación intactas.
+ *
+ * Se mantiene el nombre viejo de la función porque es como se la conoce en los comentarios de todo
+ * el circuito; lo que cambió es que ahora lee también el email y las fechas, y que las expresiones
+ * son las mismas que usa el escaneo de carpetas en vez de una copia.
  */
-export function extraerIdentidadDeArchivo(nombreArchivo: string): { cuit: string; tipoDoc: string; documento: string } {
-  const cuil = /(?:^|_)CUIL-(\d{11})/i.exec(nombreArchivo);
-  // El "_" delante de la etiqueta es obligatorio y NO se admite el inicio de cadena: desde que los
-  // campos usan "-" para sus espacios internos, un apellido como "LE ROY" queda "LE-ROY", y como la
-  // persona va PRIMERA en el nombre, sin este anclaje se leería como tipo LE + número ROY. El bloque
-  // de identidad siempre viene precedido por al menos el apellido, así que el "_" está garantizado.
-  const doc = /_(DNI|CI|LE|LC|PAS|DOC)-([A-Za-z0-9]+)/i.exec(nombreArchivo);
-  // Respaldo para los archivos viejos, anteriores a las etiquetas: un CUIT suelto de 11 dígitos.
-  const suelto = !cuil ? /(?<!\d)(\d{2}-?\d{8}-?\d)(?!\d)/.exec(nombreArchivo) : null;
-  return {
-    cuit: cuil ? cuil[1] : suelto ? normalizarCuit(suelto[1]) : "",
-    tipoDoc: doc ? doc[1].toUpperCase() : "",
-    documento: doc ? doc[2] : "",
-  };
-}
+export const extraerIdentidadDeArchivo = leerAnclas;
 
 /** Solo alfanumérico y en minúsculas: el asunto trae el nombre con caracteres ya transformados. */
 const normalizarNombre = (v: string): string =>
@@ -86,41 +78,60 @@ const normalizarNombre = (v: string): string =>
 
 /**
  * Ubica en Outbox el PDF al que se refiere el aviso. El nombre del asunto NO se puede comparar
- * carácter a carácter: Dropbox Sign reemplaza símbolos del original (la "@" del mail pasa a "_").
- * Por eso se matchea por el bloque CUIL/documento —que es estable— y recién después por el nombre
- * normalizado a solo alfanumérico. Si hay más de un candidato, devuelve null: nunca adivina.
+ * carácter a carácter: Dropbox Sign reemplaza símbolos del original. Por eso se matchea por los
+ * campos obligatorios de la nomenclatura —quién (CUIT o email) y de qué período—, que atraviesan esa
+ * transformación intactos, y recién después por el nombre normalizado a solo alfanumérico. Si queda
+ * más de un candidato, devuelve null: nunca adivina.
+ *
+ * EL CUIT SOLO NO ALCANZA, y era lo que se comparaba antes. Una persona con dos documentos en Outbox
+ * —un contrato y su renovación, dos períodos distintos— daba dos candidatos con el mismo CUIT, y el
+ * aviso se descartaba entero: el contrato se quedaba para siempre en "Para Firmar" pese a haberse
+ * enviado. Las fechas son obligatorias en la nomenclatura justamente para desempatar esto.
  */
-export function buscarEnOutbox(
-  entries: { tag: string; name: string; path: string }[],
-  archivo: string,
-  ident: { cuit: string; documento: string },
-): { name: string; path: string } | null {
+export function buscarEnOutbox(entries: { tag: string; name: string; path: string }[], archivo: string, ident: AnclasNombre): { name: string; path: string } | null {
   // No se exige extensión: los documentos generados por el sistema quedan en Outbox SIN ".pdf"
   // (solo se descartan los JSON, que son los archivos de control del propio circuito).
   const pdfs = entries.filter((e) => e.tag === "file" && !/\.json$/i.test(e.name));
-  if (ident.cuit) {
-    const porCuit = pdfs.filter((e) => e.name.includes(ident.cuit));
-    const conDoc = ident.documento ? porCuit.filter((e) => e.name.includes(ident.documento)) : [];
-    if (conDoc.length === 1) return conDoc[0];
-    if (porCuit.length === 1) return porCuit[0];
-    if (porCuit.length > 1) return null;
-  }
   const objetivo = normalizarNombre(archivo);
+
+  // Alcanza con UNO de los dos identificadores. El email es el que siempre está: hay personas sin
+  // CUIL, y sus archivos quedaban sin nada con que reconocerse.
+  if (ident.cuit || ident.email) {
+    const porAnclas = pdfs.filter((e) => mismoDocumento(ident, leerAnclas(e.name)));
+    if (porAnclas.length === 1) return porAnclas[0];
+    if (porAnclas.length > 1) {
+      // Mismo CUIT y mismo período: es un contrato y su release, o dos copias del mismo documento.
+      // Los campos obligatorios no los distinguen —el `{{tipo}}` no es obligatorio— así que decide
+      // el nombre completo, que sí lo trae. Si tampoco alcanza, se prefiere no mover nada.
+      const exacto = porAnclas.filter((e) => normalizarNombre(e.name) === objetivo);
+      return exacto.length === 1 ? exacto[0] : null;
+    }
+    // Cero por anclas: puede ser un archivo viejo, de antes de que el período fuera obligatorio.
+    // Se sigue al nombre en vez de rendirse acá.
+  }
+
   const porNombre = pdfs.filter((e) => normalizarNombre(e.name) === objetivo);
   return porNombre.length === 1 ? porNombre[0] : null;
 }
 
 /**
- * ¿Ese documento ya está en Pendbox? Se compara por nombre normalizado y, sobre todo, por CUIL: el
- * archivo real suele tener un nombre distinto al del asunto (Dropbox Sign transforma símbolos y el
- * título de la solicitud es editable), así que el nombre solo no alcanza para reconocerlo.
+ * ¿Ese documento ya está en Pendbox? Se compara por nombre normalizado y, si no, por los campos
+ * obligatorios de la nomenclatura: el archivo real suele tener un nombre distinto al del asunto
+ * (Dropbox Sign transforma símbolos y el título de la solicitud es editable), así que el nombre solo
+ * no alcanza para reconocerlo.
+ *
+ * ACÁ EL CUIT SOLO ERA UN FALSO POSITIVO. La condición era "hay algún archivo en Pendbox cuyo nombre
+ * contenga este CUIT", y con eso el SEGUNDO documento de una persona nunca se movía: el aviso de la
+ * renovación se daba por duplicado porque el contrato anterior ya estaba ahí. Se descartaba en
+ * silencio y quedaba registrado como "ya estaba" — la peor forma de perder un envío, porque el log
+ * dice que todo salió bien.
  */
-export function yaEstaEnPendbox(entries: { tag: string; name: string }[], archivo: string, ident: { cuit: string; documento: string }): boolean {
+export function yaEstaEnPendbox(entries: { tag: string; name: string }[], archivo: string, ident: AnclasNombre): boolean {
   const objetivo = normalizarNombre(archivo);
   return entries.some((e) => {
     if (e.tag !== "file") return false;
     if (normalizarNombre(e.name) === objetivo) return true;
-    return Boolean(ident.cuit) && e.name.includes(ident.cuit);
+    return mismoDocumento(ident, leerAnclas(e.name));
   });
 }
 
@@ -246,7 +257,12 @@ export async function leerCasillaDropboxSign(tenantId: string, soloPrueba = fals
           const pdf = buscarEnOutbox(enOutbox, archivo, ident);
           if (!pdf) {
             sinArchivoEnOutbox++;
-            const pistas = ident.cuit ? `No hay ningún archivo en Outbox que contenga el CUIL ${ident.cuit}.` : "El título del aviso no trae CUIL ni documento, y ningún archivo de Outbox coincide por nombre.";
+            // El detalle nombra los datos que SE BUSCARON, no solo el CUIT: si el aviso trae un
+            // período y ningún archivo de Outbox lo tiene, decir "no hay ninguno con este CUIL"
+            // manda a buscar el problema al lado equivocado.
+            const periodo = ident.fechas.length > 0 ? ` del período ${ident.fechas.join(" a ")}` : "";
+            const quien = ident.cuit ? `del CUIL ${ident.cuit}` : ident.email ? `de ${ident.email}` : "";
+            const pistas = quien ? `No hay ningún archivo en Outbox ${quien}${periodo}.` : "El título del aviso no trae CUIL, email ni documento, y ningún archivo de Outbox coincide por nombre.";
             logs.push({ resultado: "sin-archivo", asunto, archivo, cuit: ident.cuit, documento: ident.documento, detalle: `${pistas} Outbox tiene ${enOutbox.filter((e) => e.tag === "file").length} archivo(s).` });
             continue;
           }

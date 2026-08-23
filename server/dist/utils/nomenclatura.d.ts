@@ -8,10 +8,11 @@
  * ⚠ POR QUÉ ESTO NO ES COSMÉTICO
  *
  * El nombre se PARSEA DE VUELTA. Cuando un documento firmado regresa de Dropbox Sign, dos servicios
- * lo leen para saber a quién pertenece:
+ * lo leen para saber a quién pertenece, y los dos leen EXACTAMENTE los campos que acá se marcan como
+ * requeridos —el CUIT y las fechas del período— con las expresiones de `utils/anclasNombre.ts`:
  *
- *   - `dropboxSignMailService.extraerIdentidadDeArchivo()` → `_CUIL-\d{11}` y `_(DNI|CI|…)-\w+`
- *   - `estadoDropboxCronService.extraerFechasDeNombre()`   → tokens sueltos de 8 dígitos (YYYYMMDD)
+ *   - `dropboxSignMailService` → el nombre llega en el asunto de un aviso de Dropbox Sign
+ *   - `estadoDropboxCronService` → el nombre llega del listado de una carpeta de Dropbox
  *
  * Un patrón sin esos bloques hace que los documentos vuelvan de la firma y **no se puedan asociar a
  * ninguna persona**. Y falla en silencio: el archivo se genera igual, se firma igual, y recién se

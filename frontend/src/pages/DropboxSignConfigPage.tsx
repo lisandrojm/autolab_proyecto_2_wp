@@ -100,8 +100,16 @@ export const DropboxSignConfigPage: React.FC = () => {
               Notificaciones, sin costo).
             </p>
             <p>
-              El sistema lee el <strong>asunto</strong> del aviso (“Se inició el proceso de firma de…”), que trae el <strong>nombre del archivo</strong>, y de ahí saca el CUIT de la persona. No abre el
-              PDF ni los adjuntos.
+              El sistema lee el <strong>asunto</strong> del aviso (“Se inició el proceso de firma de…”), que trae el <strong>nombre del archivo</strong>, y de ahí saca los{" "}
+              <strong>campos obligatorios de la nomenclatura</strong>: quién es —CUIT y email— y las fechas del período. No abre el PDF ni los adjuntos.
+            </p>
+            <p>
+              Van los <strong>dos</strong> identificadores porque el CUIT no siempre está: hay personas sin CUIL cargado, y para ellas lo único que identifica es el <strong>email</strong>, que es
+              obligatorio al registrarse.
+            </p>
+            <p>
+              Y saber quién es tampoco alcanza: dos documentos de la misma persona —un contrato y su renovación— son indistinguibles, y son las <strong>fechas</strong> las que dicen de cuál de los dos
+              habla el aviso. Por eso esas variables son obligatorias y el ABM no deja guardar un patrón sin ellas.
             </p>
             {/* De qué depende. Misma explicación que en Nomenclatura de archivos y en Dropbox, contada
                 desde acá — con el agregado propio de esta pantalla: el asunto pasa por Dropbox Sign,

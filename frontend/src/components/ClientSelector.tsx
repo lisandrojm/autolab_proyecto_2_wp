@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { clientsAPI, Client } from "../api/clients";
+import { useAltoDisponible } from "./context/useAltoDisponible";
+import { useScrollAncestroBloqueado } from "./context/useScrollAncestroBloqueado";
 import { useClientContextStore } from "../stores/clientContextStore";
 import { useAuthStore } from "../stores/authStore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -19,6 +21,9 @@ export const ClientSelector: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const rootRef = useRef<HTMLDivElement>(null);
+  const altoDisponible = useAltoDisponible(rootRef, isOpen);
+  // Un solo scroll a la vez: con la lista abierta, el sidebar se congela.
+  useScrollAncestroBloqueado(rootRef, isOpen);
 
   // Cierra el dropdown al hacer click afuera
   useEffect(() => {
@@ -103,10 +108,12 @@ export const ClientSelector: React.FC = () => {
       {/* Mismo componente que el selector de Empresa: son dos ejes en paralelo, no una jerarquía. */}
       <ContextChip eje="Cliente" icono={faUsers} valor={selectedClient?.name} detalle={selectedClient?.company || undefined} placeholder="Elegir cliente" abierto={isOpen} onToggle={() => setIsOpen((v) => !v)} onLimpiar={handleClearClient} />
 
+      {/* El alto lo pone el espacio que queda hasta el borde de la ventana, no un número fijo: ver
+          `useAltoDisponible`. El buscador queda arriba y solo scrollea la lista. */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-lg z-50 max-h-80 overflow-hidden">
+        <div style={{ maxHeight: altoDisponible }} className="absolute top-full left-0 right-0 mt-1 flex flex-col bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-lg z-50 overflow-hidden">
           {/* Search */}
-          <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="shrink-0 p-3 border-b border-gray-200 dark:border-gray-700">
             <div className="relative">
               <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input type="text" placeholder="Buscar cliente..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 pr-3 py-2 text-sm rounded focus:outline-none border border-transparent dark:bg-blue-900/30 dark:text-white dark:border-gray-600 dark:focus:border-blue-600" autoFocus />
@@ -114,7 +121,7 @@ export const ClientSelector: React.FC = () => {
           </div>
 
           {/* Client List */}
-          <div className="max-h-60 overflow-y-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             {loading ? (
               <LoadingSpinner size="sm" message="Cargando..." />
             ) : filteredClients.length === 0 ? (

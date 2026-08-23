@@ -68,7 +68,7 @@ describe("lo que el archivo necesita para volver de la firma", () => {
     });
     it("con los bloques críticos, se guarda aunque cambie todo lo demás", () => {
         // El punto del ABM: el orden y el resto de los campos son libres.
-        assert.deepEqual(validarPatron("Contrato", "{{tipo}}_{{proyecto}}_{{cuit}}_{{fechaAlta}}_{{fechaBaja}}_{{apellido}}"), []);
+        assert.deepEqual(validarPatron("Contrato", "{{tipo}}_{{proyecto}}_{{cuit}}_{{email}}_{{fechaAlta}}_{{fechaBaja}}_{{apellido}}"), []);
     });
     /**
      * TODOS los tipos vuelven a entrar por su nombre — firmados desde Dropbox Sign, o levantados de la
@@ -234,7 +234,7 @@ describe("el nombre viejo de la variable sigue funcionando", () => {
         assert.match(conNombreViejo, PARSERS.cuil, `el nombre viejo tiene que seguir escribiendo el CUIL: ${conNombreViejo}`);
     });
     it("y sigue siendo un patrón válido para guardar", () => {
-        assert.deepEqual(validarPatron("Contrato", "{{proyecto}}_{{identidad}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}"), []);
+        assert.deepEqual(validarPatron("Contrato", "{{proyecto}}_{{identidad}}_{{email}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}"), []);
     });
     it("pero el ABM ofrece el nombre nuevo", () => {
         // El alias se ACEPTA, no se sugiere: dos nombres para lo mismo en la lista sería peor que uno.
@@ -347,7 +347,7 @@ describe("el nombre sigue siendo legible por los servicios de vuelta", () => {
         const errores = validarPatron("Contrato", dadoVuelta);
         assert.ok(errores.some((e) => e.motivo.includes("{{empresaCuit}}")), `debería rechazarse: ${JSON.stringify(errores)}`);
         // Y en el orden correcto tiene que pasar.
-        assert.deepEqual(validarPatron("Contrato", "{{proyecto}}_{{cuit}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}_{{empresaCuit}}"), []);
+        assert.deepEqual(validarPatron("Contrato", "{{proyecto}}_{{cuit}}_{{email}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}_Empresa-{{empresaCuit}}"), []);
     });
 });
 describe("el email se puede reconstruir", () => {
@@ -491,7 +491,7 @@ describe("la razón social de la empleadora quedó retirada", () => {
         }
     });
     it("un patrón que la use no se puede guardar, y el motivo dice qué hacer", () => {
-        const errores = validarPatron("Release", "{{proyecto}}_{{cuit}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}_{{empresa}}_{{empresaCuit}}");
+        const errores = validarPatron("Release", "{{proyecto}}_{{cuit}}_{{email}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}_{{empresa}}_Empresa-{{empresaCuit}}");
         assert.equal(errores.length, 1);
         assert.match(errores[0].motivo, /\{\{empresa\}\}/);
         assert.match(errores[0].motivo, /empresaCuit/, "el motivo tiene que decir con qué se reemplaza");

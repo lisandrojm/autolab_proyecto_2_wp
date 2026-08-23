@@ -6,6 +6,7 @@ import UserProject from "../models/UserProject.js";
 import { getTenantDropboxConfig, listFolder, downloadFileContent } from "./dropboxService.js";
 import { cargarEstadosPorEvento, aplicarTransicion } from "./estadoTransicionAutomaticaService.js";
 import { normalizarCuit, parseConstanciaPdf } from "../utils/constanciaPdf.js";
+import { leerAnclas, normalizarEmail } from "../utils/anclasNombre.js";
 /**
  * Job periódico: revisa, para cada Estado con transición automática "dropbox_carpeta", si aparecieron
  * archivos nuevos en la carpeta de Dropbox configurada, y si matchean a un contrato que está esperando
@@ -85,27 +86,18 @@ function fechaCompacta(s) {
     return m ? `${m[1]}${m[2]}${m[3]}` : "";
 }
 /**
- * Busca en el nombre de archivo un token de 11 dígitos aislado (un CUIT, con o sin guiones, sin
- * pegarse a otros dígitos alrededor — para no capturar un fragmento de un número más largo, como el
- * id de proyecto o una fecha adyacente). "" si no hay ninguno.
+ * El CUIT y las fechas que trae el nombre del archivo — los campos que la nomenclatura marca como
+ * obligatorios justamente para esto.
+ *
+ * Las expresiones viven en `utils/anclasNombre.ts`, compartidas con el circuito de correo de Dropbox
+ * Sign. Antes cada servicio tenía su copia, y eso hacía que un cambio en el patrón por defecto
+ * arreglara un lado y dejara al otro leyendo un formato que ya no se emite.
  */
 function extraerCuitDeNombre(nombreArchivo) {
-    const m = /(?<!\d)(\d{2}-?\d{8}-?\d)(?!\d)/.exec(nombreArchivo);
-    return m ? normalizarCuit(m[1]) : "";
+    return leerAnclas(nombreArchivo).cuit;
 }
-/**
- * Todos los tokens de 8 dígitos aislados del nombre de archivo (candidatos a `YYYYMMDD`).
- * Se excluyen los que vienen etiquetados como número de documento (`DNI-23232274` y variantes, ver
- * `buildIdentidadTag` en employeeDocData.ts): un DNI de 8 dígitos puede parecer una fecha válida
- * (ej. 20010115 → 2001-01-15) y desempataría contra el contrato equivocado.
- */
 function extraerFechasDeNombre(nombreArchivo) {
-    const out = [];
-    const re = /(?<!\d)(?<!(?:DNI|CI|LE|LC|PAS|DOC)-)(\d{8})(?!\d)/g;
-    let m;
-    while ((m = re.exec(nombreArchivo)))
-        out.push(m[1]);
-    return out;
+    return leerAnclas(nombreArchivo).fechas;
 }
 /** El tick del scheduler: por cada tenant conectado a Dropbox, escanea SOLO si ya le toca según su
  *  propio intervalo configurado. */
@@ -221,6 +213,7 @@ async function scanEstadoParaTenant(tenant, cfg, estadoDestino) {
                     userId: String(up.userId),
                     palabras: [],
                     cuit: "",
+                    email: "",
                     fechaAlta: fechaCompacta(c.fecha_alta_contrato),
                     fechaBaja: fechaCompacta(c.fecha_baja_contrato),
                 });
@@ -230,17 +223,19 @@ async function scanEstadoParaTenant(tenant, cfg, estadoDestino) {
     if (candidatosBase.length === 0)
         return 0;
     const users = await User.find({ _id: { $in: [...userIdsSet] } })
-        .select("firstName lastName metadata.cuit")
+        .select("firstName lastName email metadata.cuit")
         .lean();
     const nombrePorUserId = new Map(users.map((u) => [String(u._id), normalizarTexto(`${u.firstName || ""} ${u.lastName || ""}`)]));
     const cuitPorUserId = new Map(users.map((u) => [String(u._id), normalizarCuit(u.metadata?.cuit)]));
+    const emailPorUserId = new Map(users.map((u) => [String(u._id), normalizarEmail(u.email)]));
     for (const c of candidatosBase) {
         c.palabras = (nombrePorUserId.get(c.userId) || "").split(" ").filter(Boolean);
         c.cuit = cuitPorUserId.get(c.userId) || "";
+        c.email = emailPorUserId.get(c.userId) || "";
     }
     // Compartido entre TODAS las carpetas de este estado: un candidato ya avanzado en una carpeta no
     // hace falta seguir buscándolo en las demás.
-    let disponibles = candidatosBase.filter((c) => c.palabras.length > 0 || c.cuit);
+    let disponibles = candidatosBase.filter((c) => c.palabras.length > 0 || c.cuit || c.email);
     if (disponibles.length === 0)
         return 0;
     let transicionesAplicadas = 0;
@@ -261,16 +256,20 @@ async function scanEstadoParaTenant(tenant, cfg, estadoDestino) {
         // parte lenta (baja y parsea PDFs enteros), y no toca `disponibles` — sacarla del loop secuencial de
         // abajo evita que un escaneo con varios archivos sin CUIT en el nombre tarde la suma de todos ellos
         // (riesgo real de superar el timeout del botón "Forzar escaneo ahora").
-        const cuitPorArchivo = new Map();
+        const identidadPorArchivo = new Map();
         await Promise.all(archivos.map(async (file) => {
             // 1) CUIT en el nombre del archivo — la vía más barata y la que van a traer los documentos que
             //    genera el propio sistema (`buildDocFileName`) apenas Dropbox Sign los devuelva firmados.
+            //    El EMAIL sale del mismo lado y en la misma pasada: es el identificador que siempre está,
+            //    porque hay personas sin CUIL y ninguna sin email.
             let cuitEncontrado = extraerCuitDeNombre(file.name);
+            const emailEncontrado = normalizarEmail(leerAnclas(file.name).email);
             let viaCuit = cuitEncontrado ? "nombre" : null;
             // 2) Si el nombre no trae CUIT, intentar leerlo del contenido del PDF (documentos de AFIP que
             //    el usuario sube a mano y que no siguen la convención de nombre, pero sí traen el CUIT como
-            //    texto — mismo parser que ya usa la carga masiva de constancias).
-            if (!cuitEncontrado && /\.pdf$/i.test(file.name)) {
+            //    texto — mismo parser que ya usa la carga masiva de constancias). Solo si tampoco hay email:
+            //    con email ya se sabe de quién es, y bajar y parsear el PDF entero es la parte lenta.
+            if (!cuitEncontrado && !emailEncontrado && /\.pdf$/i.test(file.name)) {
                 try {
                     const buffer = await downloadFileContent(String(tenant._id), cfg, file.path);
                     const datos = await parseConstanciaPdf(buffer);
@@ -283,32 +282,49 @@ async function scanEstadoParaTenant(tenant, cfg, estadoDestino) {
                     console.warn(`[ESTADO-DROPBOX-CRON] No se pudo leer el CUIT del contenido de "${file.path}":`, err?.message || err);
                 }
             }
-            cuitPorArchivo.set(file.path, { cuit: cuitEncontrado, via: viaCuit });
+            identidadPorArchivo.set(file.path, { cuit: cuitEncontrado, email: emailEncontrado, via: viaCuit });
         }));
         for (const file of archivos) {
             const key = `${tenant._id}:${estadoDestino._id}:${file.path}`;
-            const { cuit: cuitEncontrado, via: viaCuit } = cuitPorArchivo.get(file.path) || { cuit: "", via: null };
-            let matches;
+            const { cuit: cuitEncontrado, email: emailEncontrado, via: viaCuit } = identidadPorArchivo.get(file.path) || { cuit: "", email: "", via: null };
+            /*
+             * QUIÉN es, por los dos identificadores obligatorios de la nomenclatura.
+             *
+             * El CUIT primero, que es el fuerte. Si el archivo no lo trae —o lo trae y no hay ningún
+             * candidato con ese CUIT, que es el caso de las 39 personas del padrón sin CUIL válido: su
+             * archivo sale con el CUIT de nadie o sin CUIT— decide el EMAIL. Es el único dato que siempre
+             * está, porque es obligatorio al registrarse.
+             */
+            let matches = [];
+            let viaIdentidad = "nombre";
             if (cuitEncontrado) {
                 matches = disponibles.filter((c) => c.cuit === cuitEncontrado);
-                // Mismo CUIT en más de un candidato (p. ej. dos contratos superpuestos de la misma persona):
-                // desambiguar con las fechas del nombre del archivo antes de rendirse.
-                if (matches.length > 1) {
-                    const fechasArchivo = extraerFechasDeNombre(file.name);
-                    if (fechasArchivo.length > 0) {
-                        const porFecha = matches.filter((c) => (c.fechaAlta && fechasArchivo.includes(c.fechaAlta)) || (c.fechaBaja && fechasArchivo.includes(c.fechaBaja)));
-                        if (porFecha.length > 0)
-                            matches = porFecha;
-                    }
-                }
+                if (matches.length > 0)
+                    viaIdentidad = "cuit";
             }
-            else {
-                // 3) Ningún CUIT disponible (ni nombre ni contenido) → fallback al matching difuso de siempre.
+            if (matches.length === 0 && emailEncontrado) {
+                matches = disponibles.filter((c) => c.email === emailEncontrado);
+                if (matches.length > 0)
+                    viaIdentidad = "email";
+            }
+            if (matches.length === 0 && !cuitEncontrado && !emailEncontrado) {
+                // Ningún identificador (ni nombre ni contenido) → fallback al matching difuso de siempre.
                 const nombreArchivoNormalizado = normalizarTexto(file.name.replace(/\.[^.]+$/, ""));
                 matches = disponibles.filter((c) => c.palabras.length > 0 && c.palabras.every((p) => nombreArchivoNormalizado.includes(p)));
             }
+            // CUÁL de sus contratos. Una misma persona puede tener dos superpuestos, y ahí desempatan las
+            // fechas del nombre — obligatorias en la nomenclatura justamente para esto.
+            if (matches.length > 1) {
+                const fechasArchivo = extraerFechasDeNombre(file.name);
+                if (fechasArchivo.length > 0) {
+                    const porFecha = matches.filter((c) => (c.fechaAlta && fechasArchivo.includes(c.fechaAlta)) || (c.fechaBaja && fechasArchivo.includes(c.fechaBaja)));
+                    if (porFecha.length > 0)
+                        matches = porFecha;
+                }
+            }
             if (matches.length !== 1) {
-                logSiCambio(key, matches.length === 0 ? "sin_candidato" : `ambiguo_${matches.length}`, `[ESTADO-DROPBOX-CRON] ${file.path}: ${matches.length === 0 ? "sin candidato" : `ambiguo (${matches.length} candidatos)`}${cuitEncontrado ? ` (CUIT ${cuitEncontrado} vía ${viaCuit})` : ""} — se omite (destino: ${estadoDestino.name})`);
+                const identificado = cuitEncontrado ? `CUIT ${cuitEncontrado} vía ${viaCuit}` : emailEncontrado ? `email ${emailEncontrado}` : "";
+                logSiCambio(key, matches.length === 0 ? "sin_candidato" : `ambiguo_${matches.length}`, `[ESTADO-DROPBOX-CRON] ${file.path}: ${matches.length === 0 ? "sin candidato" : `ambiguo (${matches.length} candidatos)`}${identificado ? ` (${identificado})` : ""} — se omite (destino: ${estadoDestino.name})`);
                 continue;
             }
             const candidato = matches[0];
@@ -317,7 +333,7 @@ async function scanEstadoParaTenant(tenant, cfg, estadoDestino) {
             if (resultado.aplicada) {
                 lastWarned.delete(key);
                 transicionesAplicadas++;
-                console.log(`[ESTADO-DROPBOX-CRON] ${candidato.userId}: ${resultado.estadoAnteriorId} → ${estadoDestino.name} (archivo: ${file.name}, carpeta: ${ruta}${cuitEncontrado ? `, CUIT vía ${viaCuit}` : ", por nombre"})`);
+                console.log(`[ESTADO-DROPBOX-CRON] ${candidato.userId}: ${resultado.estadoAnteriorId} → ${estadoDestino.name} (archivo: ${file.name}, carpeta: ${ruta}, identificado por ${viaIdentidad === "cuit" ? `CUIT vía ${viaCuit}` : viaIdentidad})`);
             }
         }
     }
