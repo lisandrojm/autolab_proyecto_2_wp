@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTag, faSpinner, faEdit, faTrash, faCopy, faCheck, faTriangleExclamation, faLock, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
+import { faTag, faSpinner, faEdit, faTrash, faCheck, faTriangleExclamation, faLock, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Modal } from "../components/ui/Modal";
@@ -14,7 +14,7 @@ import { nomenclaturasAPI, Nomenclatura, ErrorPatron, ETIQUETA_TIPO, LargoNomenc
  * ABM de la nomenclatura de archivos.
  *
  * Un patrón con `{{variables}}` por tipo de documento — misma mecánica que las Plantillas de PDF,
- * con la lista de variables al lado y click para insertar— pero para el NOMBRE del archivo.
+ * con las variables en un botón de la barra y click para copiarlas— pero para el NOMBRE del archivo.
  *
  * La pantalla sigue la forma del ABM de Contratos: una card por tipo, con sus acciones en el pie, y
  * la edición en un modal. El editor NO va inline a propósito: entre el patrón, las diez variables y
@@ -44,38 +44,29 @@ const normalizar = (v: string): string =>
 const usadasDe = (patron: string): string[] => [...new Set((patron.match(/\{\{\s*\w+\s*\}\}/g) || []).map((v) => v.replace(/\s/g, "")))];
 
 /**
- * El nombre resultante, legible.
+ * El nombre resultante. UNA sola representación, carácter por carácter.
  *
- * Un nombre de archivo real son 150 caracteres sin espacios: como una sola línea de texto corrido es
- * ilegible, y esa era la queja. Acá se parte por el «_» —que ES el separador de campos— y cada campo
- * se muestra como una pieza, con los separadores atenuados. Se ve de un vistazo cuántos campos tiene,
- * dónde termina uno y empieza el otro, y cuál quedó vacío.
+ * Antes había dos —los campos en chips arriba y el texto crudo abajo— y se leían como si fueran dos
+ * resultados distintos. Ahora es una línea sola: exactamente lo que se va a escribir en el disco, con
+ * los «_» atenuados para que se vea dónde termina un campo y empieza el otro sin agregar ni sacar un
+ * carácter. `split("_")` y volver a intercalar el «_» reproduce el string idéntico.
  *
- * El texto crudo va abajo igual: es lo que de verdad se va a escribir en el disco, y hay que poder
- * copiarlo y compararlo con un archivo existente.
- *
- * Vive solo en el modal. En la card ocupaba el alto entero con algo que únicamente se lee cuando se
- * está por editar.
+ * `translate="no"` NO es un detalle. Chrome traduce la página si detecta otro idioma, y con los campos
+ * en elementos separados los traducía uno por uno: `EMAIL-` salía como «CORREO ELECTRÓNICO:» y
+ * `gonzalez-rotstein` como «González-Rotstein». O sea que la previsualización mostraba un nombre que
+ * no era el que se iba a generar, que es lo peor que puede hacer una previsualización.
  */
-const Previsualizacion: React.FC<{ ejemplo: string }> = ({ ejemplo }) => {
-  const partes = ejemplo.split("_").filter((p) => p !== "");
-  return (
-    <div className="space-y-1.5">
-      <div className="flex flex-wrap items-center gap-y-1">
-        {partes.map((parte, i) => (
-          <React.Fragment key={i}>
-            {i > 0 && <span className="text-gray-300 dark:text-gray-600 font-mono text-[11px] px-0.5">_</span>}
-            <span className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-white dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 break-all">
-              {parte}
-            </span>
-          </React.Fragment>
-        ))}
-        <span className="font-mono text-[11px] text-gray-400 dark:text-gray-500 ml-1">.pdf</span>
-      </div>
-      <p className="font-mono text-[10px] text-gray-400 dark:text-gray-500 break-all select-all leading-relaxed">{ejemplo}.pdf</p>
-    </div>
-  );
-};
+const Previsualizacion: React.FC<{ ejemplo: string }> = ({ ejemplo }) => (
+  <p translate="no" className="font-mono text-[11px] text-gray-700 dark:text-gray-200 break-all select-all leading-relaxed">
+    {ejemplo.split("_").map((parte, i) => (
+      <React.Fragment key={i}>
+        {i > 0 && <span className="text-gray-400 dark:text-gray-600">_</span>}
+        {parte}
+      </React.Fragment>
+    ))}
+    <span className="text-gray-400 dark:text-gray-600">.pdf</span>
+  </p>
+);
 
 /**
  * Cuánto mide el nombre contra el tope de 255.
@@ -204,8 +195,9 @@ const EditorPatron: React.FC<{ fila: Nomenclatura; onGuardado: (n: Nomenclatura)
   const [largo, setLargo] = useState(fila.largo);
   const [errores, setErrores] = useState<ErrorPatron[]>([]);
   const [guardando, setGuardando] = useState(false);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
   const [variablesAbierto, setVariablesAbierto] = useState(false);
+  const [porQueAbierto, setPorQueAbierto] = useState(false);
+  const [ejemploAbierto, setEjemploAbierto] = useState(false);
 
   const sucio = patron !== fila.patron;
 
@@ -243,20 +235,6 @@ const EditorPatron: React.FC<{ fila: Nomenclatura; onGuardado: (n: Nomenclatura)
    * pegaba una atrás de otra —`{{timestamp}}{{email}}{{fecha}}`— y eso NO es un detalle estético, es
    * un nombre con los campos fusionados en uno solo, que después nadie puede volver a separar.
    */
-  const insertar = (variable: string) => {
-    const el = inputRef.current;
-    const inicio = el?.selectionStart ?? patron.length;
-    const fin = el?.selectionEnd ?? inicio;
-    const antes = patron.slice(0, inicio);
-    const despues = patron.slice(fin);
-    const sep = antes !== "" && !/[_\-]$/.test(antes) ? "_" : "";
-    const texto = sep + variable;
-    setPatron(antes + texto + despues);
-    window.setTimeout(() => {
-      el?.focus();
-      el?.setSelectionRange(inicio + texto.length, inicio + texto.length);
-    }, 0);
-  };
 
   const guardar = async () => {
     setGuardando(true);
@@ -273,188 +251,198 @@ const EditorPatron: React.FC<{ fila: Nomenclatura; onGuardado: (n: Nomenclatura)
   };
 
   const usadasEnOrden = usadasDe(patron);
-  const usadas = new Set(usadasEnOrden);
 
-  // Las mismas variables que el panel, en la forma que espera el modal compartido con el editor de
-  // Contratos. Se arma acá y no en el modal para que los dos muestren exactamente los mismos grupos.
+  // Las variables en la forma que espera el modal compartido con el editor de Contratos. Se arma acá
+  // y no en el modal para que las dos pantallas muestren exactamente los mismos grupos.
   const gruposParaModal = (fila.grupos?.length ? fila.grupos : ["Variables"])
     .map((grupo) => ({ grupo, vars: fila.variables.filter((v) => (fila.grupos?.length ? v.grupo === grupo : true)).map((v) => v.variable) }))
     .filter((g) => g.vars.length > 0);
 
+  /*
+   * El modal lo arma ESTE componente, no la página.
+   *
+   * Es lo que permite usar el `footer` del `Modal`, que queda fijo abajo como en el resto de la app.
+   * Con los botones adentro del cuerpo se iban con el scroll: en un patrón largo, para guardar había
+   * que bajar hasta el final de la tabla de datos de ejemplo.
+   *
+   * Lo único que necesitaba de la página era el título, y sale de `fila`.
+   */
   return (
-    <div className="space-y-4">
-      {fila.seLeeDeVuelta && (
-        <p className="text-[12px] text-gray-500 dark:text-gray-400">
-          Este archivo vuelve a entrar al sistema por su nombre —firmado desde Dropbox Sign, o levantado de la carpeta de Dropbox—. Las variables con{" "}
-          <FontAwesomeIcon icon={faLock} className="h-2.5 w-2.5" /> son las que permiten reconocerlo al volver, y no se pueden sacar.
-        </p>
-      )}
-
-      {/* Panel de variables agrupadas, como el editor de Plantillas de Contrato: recuadro propio,
-          rótulo por grupo y los chips adentro. Doce chips en una sola bolsa se leen como una lista de
-          códigos; agrupados por de dónde sale cada dato se leen como las partes de un nombre.
-
-          Va ARRIBA del patrón, igual que en Contratos y Releases: es el mismo tipo de pantalla
-          —elegir de una lista y armar un texto abajo— y tenerlo al revés obligaba a leer las dos
-          en otro orden. */}
-      <div>
-        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Variables disponibles (click para insertar)</label>
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 p-3 space-y-2.5 max-h-52 overflow-y-auto">
-          {(fila.grupos?.length ? fila.grupos : ["Variables"]).map((grupo) => {
-            const delGrupo = fila.variables.filter((v) => (fila.grupos?.length ? v.grupo === grupo : true));
-            if (delGrupo.length === 0) return null;
-            return (
-              <div key={grupo}>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">{grupo}</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {delGrupo.map((v) => {
-                    const puesta = usadas.has(v.variable);
-                    return (
-                      <button
-                        key={v.variable}
-                        type="button"
-                        onClick={() => insertar(v.variable)}
-                        title={v.requerida ? `${v.descripcion} — OBLIGATORIA: sin esto el archivo no se puede reencontrar al volver` : v.descripcion}
-                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono border transition-colors ${
-                          v.requerida
-                            ? "border-amber-400/60 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20"
-                            : puesta
-                              ? "border-blue-500/50 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20"
-                              : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        }`}
-                      >
-                        {v.requerida && <FontAwesomeIcon icon={faLock} className="h-2.5 w-2.5" />}
-                        {v.variable}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+    <Modal
+      isOpen
+      onClose={onCerrar}
+      title="Editar nomenclatura"
+      subtitle={ETIQUETA_TIPO[fila.tipo] || fila.tipo}
+      size="lg"
+      zIndex={80}
+      footer={
+        <div className="flex items-center justify-end gap-3 w-full">
+          <button type="button" onClick={onCerrar} className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={guardar}
+            disabled={!sucio || errores.length > 0 || guardando}
+            title={errores.length > 0 ? "Hay que resolver lo de arriba antes de guardar" : !sucio ? "No hay cambios" : "Guardar este patrón"}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <FontAwesomeIcon icon={guardando ? faSpinner : faCheck} spin={guardando} className="h-3.5 w-3.5" />
+            Actualizar
+          </button>
         </div>
-      </div>
+      }
+    >
+      <div className="space-y-4">
+        {porQueAbierto && (
+          <InfoModal isOpen={porQueAbierto} onClose={() => setPorQueAbierto(false)} title="Por qué hay variables que no se pueden sacar" size="sm" zIndex={90}>
+            <p className="text-sm text-gray-700 dark:text-gray-200 leading-relaxed">
+              Este archivo vuelve a entrar al sistema por su nombre —firmado desde Dropbox Sign, o levantado de la carpeta de Dropbox—. Las variables con{" "}
+              <FontAwesomeIcon icon={faLock} className="h-3 w-3" /> son las que permiten reconocerlo al volver, y no se pueden sacar.
+            </p>
+          </InfoModal>
+        )}
 
-      {/*
-       * Misma caja que el editor de Contratos: recuadro con barra fija arriba y el campo abajo.
-       *
-       * Lo que NO tiene son los botones de formato, y no es una omisión: el patrón ES el nombre del
-       * archivo, y en el disco un nombre es texto plano. No existe un PDF que se llame en negrita.
-       * Cuatro botones que no pueden hacer nada confunden más que su ausencia.
-       *
-       * Sin `overflow-hidden`, por lo mismo que allá: un ancestro con overflow distinto de `visible`
-       * pasa a ser el contenedor de scroll de referencia y el `sticky` deja de pegarse a nada.
-       */}
-      {/*
-       * La barra va SUELTA, no adentro de una caja con el campo.
-       *
-       * Un `sticky` solo viaja dentro de su padre: metida en un recuadro de 100px se despegaba a los
-       * dos scrolls y no servía para nada. Como hermana directa del contenedor del editor, queda fija
-       * durante todo el scroll del modal — que es cuando hace falta, porque uno se da cuenta de que
-       * falta un campo MIRANDO la previsualización de abajo, no mirando el patrón.
-       *
-       * `-top-4` y no `top-0`: el `sticky` se ancla al PADDING BOX del contenedor de scroll, y el
-       * cuerpo del modal tiene `pt-4`. Con `top-0` la barra frena un renglón debajo del título.
-       */}
-      <div className="sticky -top-4 z-20 flex items-center justify-between gap-2 rounded-t-md border border-b-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 px-2 py-1.5 shadow-sm">
-        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Patrón</span>
         {/*
-         * Lo que NO hay son botones de formato, y no es una omisión: el patrón ES el nombre del
+         * Misma caja que el editor de Contratos: recuadro con barra fija arriba y el campo abajo.
+         *
+         * Lo que NO tiene son los botones de formato, y no es una omisión: el patrón ES el nombre del
          * archivo, y en el disco un nombre es texto plano. No existe un PDF que se llame en negrita.
          * Cuatro botones que no pueden hacer nada confunden más que su ausencia.
+         *
+         * Sin `overflow-hidden`, por lo mismo que allá: un ancestro con overflow distinto de `visible`
+         * pasa a ser el contenedor de scroll de referencia y el `sticky` deja de pegarse a nada.
          */}
-        <button
-          type="button"
-          onClick={() => setVariablesAbierto(true)}
-          title="Buscar una variable e insertarla donde está el cursor"
-          className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-        >
-          <span className="font-mono">{"{{ }}"}</span>
-          Variables
-        </button>
-      </div>
-
-      {/* Textarea y no input: el patrón mide 200 caracteres y en una línea que scrollea no se ve
-          dónde estás parado. Envuelto, se lee entero.
-          `!mt-0` para anular el `space-y-4` del contenedor: la barra y el campo son una sola caja. */}
-      <textarea
-        ref={inputRef}
-        value={patron}
-        onChange={(e) => setPatron(e.target.value)}
-        spellCheck={false}
-        rows={3}
-        className="!mt-0 block w-full rounded-b-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2.5 text-xs font-mono leading-relaxed resize-y outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-600"
-        placeholder={fila.patronPorDefecto}
-      />
-
-      {variablesAbierto && (
-        <ModalVariables
-          titulo="Variables del nombre de archivo"
-          grupos={gruposParaModal}
-          obligatorias={fila.variables.filter((v) => v.requerida).map((v) => v.variable)}
-          descripciones={Object.fromEntries(fila.variables.map((v) => [v.variable, v.descripcion]))}
-          onElegir={(v) => {
-            setVariablesAbierto(false);
-            // Igual que en el editor de texto: se inserta con el modal ya desmontado, para que el
-            // cursor del textarea vuelva a donde estaba en vez de pelear con el foco del modal.
-            requestAnimationFrame(() => insertar(v));
-          }}
-          onCerrar={() => setVariablesAbierto(false)}
-        />
-      )}
-
-      {/* El resultado con datos de ejemplo. Es lo único que se lee de verdad al decidir si el patrón
-          sirve: el patrón en sí es difícil de imaginar renderizado. */}
-      <div className="rounded-lg bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 px-3 py-2.5 space-y-2">
-        <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">Así se va a llamar</p>
-        {ejemplo ? <Previsualizacion ejemplo={ejemplo} /> : <p className="text-[11px] text-gray-400">—</p>}
-        {largo && <MedidorLargo largo={largo} />}
-      </div>
-
-      {/* De dónde sale cada pieza. Sin esto hay que adivinar qué parte del nombre puso cada variable:
-          «748» y «2026» son los dos números y no se sabe cuál es cuál. */}
-      {usadasEnOrden.length > 0 && (
-        <div>
-          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Con estos datos de ejemplo</label>
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60">
-            {usadasEnOrden.map((v) => (
-              <div key={v} className="flex items-baseline gap-3 px-3 py-1.5">
-                <span className="font-mono text-[10.5px] text-blue-700 dark:text-blue-400 shrink-0 w-32">{v}</span>
-                {/* `valores` puede no venir si el server todavía no tiene la versión que lo devuelve.
-                    En ese caso se muestra "—" y no "vacío": afirmar que un dato está vacío cuando en
-                    realidad no se sabe es peor que no decir nada. */}
-                <span className="font-mono text-[10.5px] text-gray-700 dark:text-gray-300 break-all">
-                  {fila.valores ? fila.valores[v] || <span className="text-gray-400 italic">vacío en el ejemplo</span> : <span className="text-gray-400">—</span>}
-                </span>
-              </div>
-            ))}
-          </div>
+        {/*
+         * La barra va SUELTA, no adentro de una caja con el campo.
+         *
+         * Un `sticky` solo viaja dentro de su padre: metida en un recuadro de 100px se despegaba a los
+         * dos scrolls y no servía para nada. Como hermana directa del contenedor del editor, queda fija
+         * durante todo el scroll del modal — que es cuando hace falta, porque uno se da cuenta de que
+         * falta un campo MIRANDO la previsualización de abajo, no mirando el patrón.
+         *
+         * `-top-4` y no `top-0`: el `sticky` se ancla al PADDING BOX del contenedor de scroll, y el
+         * cuerpo del modal tiene `pt-4`. Con `top-0` la barra frena un renglón debajo del título.
+         */}
+        <div className="sticky -top-4 z-20 flex items-center gap-3 rounded-t-md border border-b-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 px-2 py-1.5 shadow-sm">
+          {/*
+           * Mismo botón y misma posición que la barra del editor de Contratos: a la izquierda y con
+           * relleno sólido, porque es una acción y no un interruptor de formato.
+           *
+           * Botones de formato no hay, y no es una omisión: el patrón ES el nombre del archivo, y en el
+           * disco un nombre es texto plano. No existe un PDF que se llame en negrita.
+           */}
+          <button
+            type="button"
+            onClick={() => setVariablesAbierto(true)}
+            title="Buscar una variable y copiarla al portapapeles"
+            className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors"
+          >
+            <span className="font-mono">{"{{ }}"}</span>
+            Variables
+          </button>
+          <span className="w-px h-5 bg-gray-300 dark:bg-gray-600" />
+          {/*
+           * Acá iba el rótulo «PATRÓN», que no informaba nada: el campo de abajo es lo único que hay.
+           * En su lugar va el porqué de los candados, que era un link suelto arriba de todo ocupando
+           * su propio renglón. Queda al lado de «Variables», que es donde se ven los candados y por
+           * lo tanto donde surge la pregunta.
+           */}
+          {fila.seLeeDeVuelta && (
+            <button
+              type="button"
+              onClick={() => setPorQueAbierto(true)}
+              title="Por qué hay variables que no se pueden sacar"
+              aria-label="Por qué hay variables que no se pueden sacar"
+              className="shrink-0 flex items-center text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+            >
+              <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
-      )}
 
-      {errores.map((e, i) => (
-        <p key={i} className="text-[11px] text-red-600 dark:text-red-400 flex items-start gap-1.5">
-          <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 mt-0.5 shrink-0" />
-          <span>{e.motivo}</span>
-        </p>
-      ))}
+        {/* Textarea y no input: el patrón mide 200 caracteres y en una línea que scrollea no se ve
+            dónde estás parado. Envuelto, se lee entero.
+            `!mt-0` para anular el `space-y-4` del contenedor: la barra y el campo son una sola caja. */}
+        <textarea
+          value={patron}
+          onChange={(e) => setPatron(e.target.value)}
+          spellCheck={false}
+          rows={3}
+          className="!mt-0 block w-full rounded-b-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2.5 text-xs font-mono leading-relaxed resize-y outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-600"
+          placeholder={fila.patronPorDefecto}
+        />
 
-      <div className="flex items-center justify-end gap-3 pt-2 border-t border-gray-200 dark:border-gray-700">
-        <button type="button" onClick={onCerrar} className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-          Cancelar
-        </button>
-        <button
-          type="button"
-          onClick={guardar}
-          disabled={!sucio || errores.length > 0 || guardando}
-          title={errores.length > 0 ? "Hay que resolver lo de arriba antes de guardar" : !sucio ? "No hay cambios" : "Guardar este patrón"}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <FontAwesomeIcon icon={guardando ? faSpinner : faCheck} spin={guardando} className="h-3.5 w-3.5" />
-          Actualizar
-        </button>
+        {variablesAbierto && (
+          <ModalVariables
+            titulo="Variables del nombre de archivo"
+            grupos={gruposParaModal}
+            obligatorias={fila.variables.filter((v) => v.requerida).map((v) => v.variable)}
+            descripciones={Object.fromEntries(fila.variables.map((v) => [v.variable, v.descripcion]))}
+            onCerrar={() => setVariablesAbierto(false)}
+          />
+        )}
+
+        {/* El resultado con datos de ejemplo. Es lo único que se lee de verdad al decidir si el patrón
+            sirve: el patrón en sí es difícil de imaginar renderizado. */}
+        <div className="rounded-lg bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 px-3 py-2.5 space-y-2">
+          <div className="flex items-center gap-1.5">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 leading-none">Ejemplo de nomenclatura</p>
+            {/*
+             * La tabla de "con estos datos de ejemplo" está detrás de este ⓘ.
+             *
+             * Son trece renglones fijos que responden una pregunta puntual —«¿qué parte del nombre
+             * puso cada variable?»— y solo hacen falta cuando algo no cuadra: «748» y «2026» son dos
+             * números y no se sabe cuál es cuál. El resto del tiempo empujaban los botones fuera de
+             * la vista y obligaban a scrollear el modal entero.
+             *
+             * Solo el ícono, pegado al rótulo: un «Con qué datos» al otro extremo era una etiqueta más
+             * para leer en una pantalla que justamente se está tratando de despejar.
+             */}
+            {usadasEnOrden.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setEjemploAbierto(true)}
+                title="Con qué datos de ejemplo se armó: de dónde sale cada pieza del nombre"
+                aria-label="Con qué datos de ejemplo se armó"
+                // Del color del rótulo y no azul: es la ayuda DE ese rótulo, no otro elemento. El azul
+                // lo levantaba por encima del texto al que acompaña. Se ilumina al pasar por encima.
+                className="shrink-0 flex items-center text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+              >
+                <FontAwesomeIcon icon={faCircleInfo} className="h-2.5 w-2.5" />
+              </button>
+            )}
+          </div>
+          {ejemplo ? <Previsualizacion ejemplo={ejemplo} /> : <p className="text-[11px] text-gray-400">—</p>}
+          {largo && <MedidorLargo largo={largo} />}
+        </div>
+
+        {ejemploAbierto && (
+          <InfoModal isOpen={ejemploAbierto} onClose={() => setEjemploAbierto(false)} title="Con estos datos de ejemplo" subtitle="De dónde sale cada pieza del nombre" size="md" zIndex={90}>
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60 max-h-[60vh] overflow-y-auto">
+              {usadasEnOrden.map((v) => (
+                <div key={v} className="flex items-baseline gap-3 px-3 py-1.5">
+                  <span className="font-mono text-[11px] text-blue-700 dark:text-blue-400 shrink-0 w-32">{v}</span>
+                  {/* `valores` puede no venir si el server todavía no tiene la versión que lo devuelve.
+                      En ese caso se muestra "—" y no "vacío": afirmar que un dato está vacío cuando en
+                      realidad no se sabe es peor que no decir nada. */}
+                  <span className="font-mono text-[11px] text-gray-700 dark:text-gray-300 break-all">
+                    {fila.valores ? fila.valores[v] || <span className="text-gray-400 italic">vacío en el ejemplo</span> : <span className="text-gray-400">—</span>}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </InfoModal>
+        )}
+
+        {errores.map((e, i) => (
+          <p key={i} className="text-[11px] text-red-600 dark:text-red-400 flex items-start gap-1.5">
+            <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 mt-0.5 shrink-0" />
+            <span>{e.motivo}</span>
+          </p>
+        ))}
       </div>
-    </div>
+    </Modal>
   );
 };
 
@@ -463,7 +451,6 @@ export const NomenclaturaArchivosPage: React.FC = () => {
   const [cargando, setCargando] = useState(true);
   const [infoAbierto, setInfoAbierto] = useState(false);
   const [editando, setEditando] = useState<Nomenclatura | null>(null);
-  const [copiado, setCopiado] = useState("");
   const [busqueda, setBusqueda] = useState("");
 
   // Vista Tarjetas/Tabla, igual que Contratos y Releases: se recuerda, y en pantalla chica se fuerza
@@ -497,17 +484,6 @@ export const NomenclaturaArchivosPage: React.FC = () => {
   }, []);
 
   const aplicar = (n: Nomenclatura) => setFilas((prev) => prev.map((x) => (x.tipo === n.tipo ? { ...x, ...n } : x)));
-
-  /** Copiar el patrón: sirve para replicarlo en otro tipo sin volver a armarlo variable por variable. */
-  const copiar = async (fila: Nomenclatura) => {
-    try {
-      await navigator.clipboard.writeText(fila.patron);
-      setCopiado(fila.tipo);
-      window.setTimeout(() => setCopiado(""), 2000);
-    } catch {
-      sweetAlert.error("No se pudo copiar", "El navegador bloqueó el portapapeles: copiá el patrón a mano desde la card.");
-    }
-  };
 
   /*
    * "Eliminar" acá es VOLVER AL DE FÁBRICA, no borrar.
@@ -603,12 +579,12 @@ export const NomenclaturaArchivosPage: React.FC = () => {
         <p className="text-sm text-gray-500 dark:text-gray-400 py-16 text-center">Ningún tipo de documento coincide con «{busqueda}».</p>
       ) : vistaEfectiva === "table" ? (
         /*
-         * La tabla muestra el PATRÓN, que la card no muestra.
+         * SIN la columna del patrón, a propósito.
          *
-         * No es una inconsistencia: son dos preguntas distintas. La card responde "qué tipos hay y
-         * cuál voy a tocar"; la tabla responde "en qué se diferencian", y para eso hay que ver los
-         * patrones uno debajo del otro. Es también la vista donde se ve de un saque cuáles se van a
-         * acortar.
+         * Estaba, con la idea de poder comparar los siete patrones uno debajo del otro. En la
+         * práctica son 180 caracteres de `{{llaves}}` por fila: tres renglones de ruido que nadie
+         * lee y que empujan fuera de la vista lo único que la tabla responde bien — qué tipos hay,
+         * cuáles están personalizados y cuáles se van a acortar. El patrón se ve al editar.
          */
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="overflow-x-auto">
@@ -617,7 +593,6 @@ export const NomenclaturaArchivosPage: React.FC = () => {
                 <tr className="text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   <th className="px-4 py-3 whitespace-nowrap">Tipo</th>
                   <th className="px-4 py-3 whitespace-nowrap">Estado</th>
-                  <th className="px-4 py-3">Patrón</th>
                   <th className="px-4 py-3 whitespace-nowrap" title="Variables que no se pueden sacar / en cuántas partes queda dividido el nombre">
                     Oblig. · Campos
                   </th>
@@ -640,16 +615,12 @@ export const NomenclaturaArchivosPage: React.FC = () => {
                         {fila.personalizado ? "Personalizado" : "Sistema"}
                       </span>
                     </td>
-                    {/* `break-all` y no truncado: el patrón es lo que se viene a comparar, y cortado
-                        con puntos suspensivos no se puede comparar nada. */}
-                    <td className="px-4 py-3 font-mono text-[11px] text-gray-600 dark:text-gray-300 break-all min-w-[22rem]">{fila.patron}</td>
                     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
                       <strong>{fila.variables.filter((v) => v.requerida).length}</strong> · <strong>{fila.ejemplo.split("_").filter(Boolean).length}</strong>
                     </td>
                     <td className="px-4 py-3 min-w-[11rem]">{fila.largo && <MedidorLargo largo={fila.largo} />}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <CardFooterAction icon={copiado === fila.tipo ? faCheck : faCopy} title="Copiar el patrón" onClick={() => copiar(fila)} />
                         <CardFooterAction icon={faEdit} title="Editar la nomenclatura" onClick={() => setEditando(fila)} />
                         {fila.personalizado && <CardFooterAction icon={faTrash} title="Volver al nombre de fábrica" onClick={() => restaurar(fila)} />}
                       </div>
@@ -708,16 +679,13 @@ export const NomenclaturaArchivosPage: React.FC = () => {
                 y las acciones; el patrón y su resultado viven en el modal, que es donde se los usa.
               */}
 
-              <div className="flex items-center justify-between gap-2 pt-2 mt-auto border-t border-gray-100 dark:border-gray-700/60">
-                <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                  {copiado === fila.tipo ? "Patrón copiado" : fila.personalizado ? "Modificado" : "Sin cambios"}
-                </span>
-                <div className="flex items-center gap-1">
-                  <CardFooterAction icon={copiado === fila.tipo ? faCheck : faCopy} title="Copiar el patrón" onClick={() => copiar(fila)} />
-                  <CardFooterAction icon={faEdit} title="Editar la nomenclatura" onClick={() => setEditando(fila)} />
-                  {/* Solo si hay algo que descartar: sobre el de fábrica, "restaurar" no significa nada. */}
-                  {fila.personalizado && <CardFooterAction icon={faTrash} title="Volver al nombre de fábrica" onClick={() => restaurar(fila)} />}
-                </div>
+              {/* Sin el renglón de estado: el badge de arriba ya dice «Sistema» o «Personalizado»,
+                  que es lo mismo. Repetirlo abajo con otras palabras —«Sin cambios»— obligaba a
+                  descifrar si hablaban de la misma cosa. */}
+              <div className="flex items-center justify-end gap-1 pt-2 mt-auto border-t border-gray-100 dark:border-gray-700/60">
+                <CardFooterAction icon={faEdit} title="Editar la nomenclatura" onClick={() => setEditando(fila)} />
+                {/* Solo si hay algo que descartar: sobre el de fábrica, "restaurar" no significa nada. */}
+                {fila.personalizado && <CardFooterAction icon={faTrash} title="Volver al nombre de fábrica" onClick={() => restaurar(fila)} />}
               </div>
             </div>
           ))}
@@ -725,9 +693,7 @@ export const NomenclaturaArchivosPage: React.FC = () => {
       )}
 
       {editando && (
-        <Modal isOpen={!!editando} onClose={() => setEditando(null)} title="Editar nomenclatura" subtitle={ETIQUETA_TIPO[editando.tipo] || editando.tipo} size="lg" zIndex={80}>
-          <EditorPatron fila={editando} onGuardado={aplicar} onCerrar={() => setEditando(null)} />
-        </Modal>
+        <EditorPatron fila={editando} onGuardado={aplicar} onCerrar={() => setEditando(null)} />
       )}
     </PageLayout>
   );

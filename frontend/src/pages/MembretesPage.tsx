@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBuilding, faImage, faSignature, faSpinner, faPlus, faFilePdf, faPenToSquare, faIdCard, faTrash, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
+import { faBuilding, faImage, faSignature, faSpinner, faPlus, faFilePdf, faPenToSquare, faIdCard, faTrash, faInfoCircle, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import Swal from 'sweetalert2';
 import { companiesAPI, Company } from '../api/companies';
 import { clientAssetsAPI } from '../api/clientAssets';
@@ -9,6 +9,7 @@ import { useAuthStore } from '../stores/authStore';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { PageLayout } from '../components/ui/PageLayout';
 import { Modal } from '../components/ui/Modal';
+import { InfoModal } from '../components/ui/InfoModal';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { getHelp } from '../data/help/helpContent';
 import { empresaAssetUrl } from '../utils/empresaAssets';
@@ -34,6 +35,7 @@ export function MembretesPage() {
   const [saving, setSaving] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [showInfo, setShowInfo] = useState(false);
+  const [showCubiertoInfo, setShowCubiertoInfo] = useState(false);
   const helpEntry = getHelp('membretes');
 
   // Vista (Tabla por defecto vs Tarjetas)
@@ -231,14 +233,33 @@ export function MembretesPage() {
               <ViewToggle value={viewMode} onChange={setViewMode} />
             </div>
           )}
+          {/*
+            El aviso queda en UN renglón: lo único que hay que saber de un vistazo es que no falta
+            ninguna. El "qué hacer entonces" es una explicación que se lee una vez, así que va al ⓘ y
+            no ocupando un bloque de dos renglones arriba de la tabla en cada visita.
+          */}
           {allCovered && (
-            <div className="mb-6 flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-800 dark:bg-blue-900/20">
-              <FontAwesomeIcon icon={faInfoCircle} className="h-5 w-5 mt-0.5 shrink-0 text-blue-600 dark:text-blue-400" />
-              <div className="text-sm">
-                <p className="font-semibold text-blue-800 dark:text-blue-300">Todas las empresas ya tienen su membrete</p>
-                <p className="text-blue-700 dark:text-blue-300/80 mt-0.5">No es necesario crear más. Para cambiar un membrete, hacé click en la empresa correspondiente y editá su logo, firma o datos.</p>
-              </div>
+            <div className="mb-6 flex items-center gap-2.5 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-800 dark:bg-blue-900/20">
+              <FontAwesomeIcon icon={faInfoCircle} className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+              <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">Todas las empresas ya tienen su membrete</p>
+              <button
+                type="button"
+                onClick={() => setShowCubiertoInfo(true)}
+                title="Qué hacer entonces"
+                aria-label="Más información"
+                className="shrink-0 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+              >
+                <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+              </button>
             </div>
+          )}
+
+          {showCubiertoInfo && (
+            <InfoModal isOpen={showCubiertoInfo} onClose={() => setShowCubiertoInfo(false)} title="Todas las empresas ya tienen su membrete" size="sm" zIndex={80}>
+              <p className="text-sm text-gray-700 dark:text-gray-200 leading-relaxed">
+                No es necesario crear más. Para cambiar un membrete, hacé click en la empresa correspondiente y editá su logo, firma o datos.
+              </p>
+            </InfoModal>
           )}
           {effectiveViewMode === 'table' ? (
             <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">

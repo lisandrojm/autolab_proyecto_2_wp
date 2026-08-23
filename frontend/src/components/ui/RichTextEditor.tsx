@@ -8,6 +8,7 @@ import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
 import { TableKit } from "@tiptap/extension-table";
 import { Modal } from "./Modal";
+import { sweetAlert } from "../../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { faBold, faItalic, faUnderline, faListUl, faListOl, faAlignLeft, faAlignCenter, faAlignRight, faAlignJustify, faTable, faHeading, faRotateLeft, faRotateRight, faMinus, faSearch, faLock } from "@fortawesome/free-solid-svg-icons";
@@ -64,7 +65,7 @@ interface RichTextEditorProps {
   value: string;
   onChange: (html: string) => void;
   /**
-   * Variables clickeables (ej: "{nombre}"); al hacer click se insertan en el cursor.
+   * Variables que se ofrecen en el modal del botón «Variables»; al hacer click se copian.
    * Acepta una lista plana o grupos con título.
    */
   variables?: string[] | VariableGroup[];
@@ -91,23 +92,35 @@ const ToolbarButton: React.FC<{ onClick: () => void; active?: boolean; title: st
 /**
  * Las variables, en un modal que se abre desde la barra.
  *
- * El panel de arriba sirve mientras el documento es corto. En un contrato de veinte carillas hay que
- * volver hasta el principio para insertar una variable, y al volver ya se perdió dónde se estaba
- * escribiendo. Como la barra queda fija, desde acá se llega siempre sin moverse del lugar.
+ * COPIA al portapapeles, no inserta en el cursor. Se probaron las dos y copiar gana por dos motivos
+ * concretos:
  *
- * Inserta en el cursor en vez de copiar al portapapeles: pegar a mano es un paso más y se presta a
- * pegar `{{nombre}}` con un espacio de más adentro, que no lo reemplaza nadie.
+ *  - Los contratos son tablas bilingües: la misma variable va en la celda en inglés y en la española.
+ *    Copiada se pega dos veces; insertándola hay que abrir el modal dos veces.
+ *  - Insertar puede fallar EN SILENCIO. Si el modal se abre sin haber puesto el cursor en el texto,
+ *    el editor enfoca al principio del documento y la variable cae arriba de todo, fuera de la vista.
+ *    Copiando no se modifica nada hasta que la persona pega.
+ *
+ * Si el navegador bloquea el portapapeles, el modal NO se cierra: queda abierto para poder
+ * seleccionar la variable a mano, que es lo único que queda por hacer.
  */
 export const ModalVariables: React.FC<{
   grupos: VariableGroup[];
   titulo: string;
-  onElegir: (v: string) => void;
   onCerrar: () => void;
   /** Variables que no se pueden sacar del patrón; se marcan con candado (lo usa Nomenclatura). */
   obligatorias?: string[];
   /** Ayuda por variable, para el tooltip del chip. */
   descripciones?: Record<string, string>;
-}> = ({ grupos, titulo, onElegir, onCerrar, obligatorias = [], descripciones = {} }) => {
+  /**
+   * Insertar en vez de copiar, cuando el destino sabe hacerlo MEJOR que un pegado a mano.
+   *
+   * El único caso es Nomenclatura: ahí el campo es de una línea, el cursor siempre está donde uno lo
+   * dejó, y al insertar se agrega solo el «_» que separa los campos del nombre. Copiando habría que
+   * acordarse de escribirlo, y un patrón con dos variables pegadas sin separador sale mal.
+   */
+  onElegir?: (v: string) => void;
+}> = ({ grupos, titulo, onCerrar, obligatorias = [], descripciones = {}, onElegir }) => {
   const [q, setQ] = useState("");
   const buscarRef = useRef<HTMLInputElement>(null);
   useEffect(() => buscarRef.current?.focus(), []);
@@ -116,8 +129,25 @@ export const ModalVariables: React.FC<{
   const filtrados = grupos.map((g) => ({ ...g, vars: g.vars.filter((v) => !term || v.toLowerCase().includes(term) || g.grupo.toLowerCase().includes(term)) })).filter((g) => g.vars.length > 0);
   const total = filtrados.reduce((n, g) => n + g.vars.length, 0);
 
+  const elegir = async (v: string) => {
+    if (onElegir) {
+      onElegir(v);
+      onCerrar();
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(v);
+      sweetAlert.success("Variable copiada", `Pegá ${v} donde la necesites`);
+      onCerrar();
+    } catch {
+      // El portapapeles requiere contexto seguro y a veces lo bloquea el navegador. Se avisa y el
+      // modal queda abierto: seleccionar el texto a mano es lo único que queda por hacer.
+      sweetAlert.error("No se pudo copiar", "El navegador bloqueó el portapapeles: seleccioná la variable y copiala a mano.");
+    }
+  };
+
   return (
-    <Modal isOpen onClose={onCerrar} title={titulo} subtitle="Se inserta donde tenías el cursor" size="lg" zIndex={80}>
+    <Modal isOpen onClose={onCerrar} title={titulo} subtitle={onElegir ? "Se inserta donde tenías el cursor" : "Click para copiar; después la pegás donde la necesites"} size="lg" zIndex={80}>
       <div className="space-y-3">
         <div className="relative">
           <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
@@ -138,8 +168,8 @@ export const ModalVariables: React.FC<{
                       <button
                         key={v}
                         type="button"
-                        onClick={() => onElegir(v)}
-                        title={obligatoria ? `${descripciones[v] || ""} — OBLIGATORIA: sin esto el archivo no se puede reencontrar al volver`.trim() : descripciones[v]}
+                        onClick={() => elegir(v)}
+                        title={obligatoria ? `${descripciones[v] || ""} — OBLIGATORIA: sin esto el archivo no se puede reencontrar al volver`.trim() : descripciones[v] || (onElegir ? "Insertar en el cursor" : "Copiar al portapapeles")}
                         className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded border text-xs font-mono transition-colors ${
                           obligatoria
                             ? "border-amber-400/60 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20"
@@ -181,52 +211,25 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, editor]);
 
-  const insertVariable = (v: string) => editor?.chain().focus().insertContent(v).run();
   const groups = toGroups(variables);
   const [variablesAbierto, setVariablesAbierto] = useState(false);
-
-  /**
-   * Cerrar PRIMERO y recién después insertar.
-   *
-   * Mientras el modal está montado se lleva el foco, y el `focus()` del editor pelearía con él. Con
-   * el modal desmontado, TipTap restituye la selección que había guardada y la variable cae donde
-   * estaba el cursor, que es todo el punto de esto.
-   */
-  const elegirDesdeModal = (v: string) => {
-    setVariablesAbierto(false);
-    requestAnimationFrame(() => insertVariable(v));
-  };
 
   if (!editor) return null;
   const e = editor as Editor;
 
   return (
     <div className="space-y-2">
-      {groups.length > 0 && (
-        <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-3">
-          <h4 className="font-semibold text-xs text-gray-600 dark:text-gray-300 mb-3">{variablesTitle}</h4>
-          <div className="space-y-3">
-            {groups.map((g) => (
-              <div key={g.grupo}>
-                {g.grupo && <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">{g.grupo}</p>}
-                <div className="flex flex-wrap gap-1">
-                  {g.vars.map((v) => (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => insertVariable(v)}
-                      title="Insertar en el cursor"
-                      className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:border-blue-400 px-2 py-1 rounded text-xs font-mono text-gray-700 dark:text-gray-300 transition-colors"
-                    >
-                      {v}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/*
+       * Acá había un panel con TODAS las variables desplegadas, arriba del editor.
+       *
+       * Se sacó porque hacía exactamente lo mismo que el botón «Variables» de la barra, y lo hacía
+       * peor: en Contratos son más de 40 chips, así que ocupaba media pantalla, empujaba el texto
+       * fuera de la vista y alargaba el scroll del modal para siempre. El botón está fijo en la
+       * barra, tiene buscador y no le roba alto a nada.
+       *
+       * El prop `variables` no cambió: sigue alimentando el modal, así que las tres pantallas que
+       * usan este editor no tuvieron que tocarse.
+       */}
 
       {/*
        * SIN `overflow-hidden` acá, a propósito.
@@ -248,6 +251,27 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
          * título y por ese hueco seguía pasando texto.
          */}
         <div className="sticky -top-4 z-20 flex flex-wrap items-center gap-0.5 rounded-t-md border-b border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 px-2 py-1.5 shadow-sm">
+          {/*
+           * Va PRIMERO y con relleno sólido, distinto del resto.
+           *
+           * Los demás son interruptores de formato —se prenden y se apagan—; este abre otra cosa y es
+           * la única acción de la barra. Con el mismo aspecto que ellos y al final de la fila se leía
+           * como un botón de formato más, y ahí es donde pasaba desapercibido.
+           */}
+          {groups.length > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={() => setVariablesAbierto(true)}
+                title="Insertar una variable donde está el cursor"
+                className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors"
+              >
+                <span className="font-mono">{"{{ }}"}</span>
+                Variables
+              </button>
+              <span className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1.5" />
+            </>
+          )}
           <ToolbarButton onClick={() => e.chain().focus().toggleBold().run()} active={e.isActive("bold")} title="Negrita" icon={faBold} />
           <ToolbarButton onClick={() => e.chain().focus().toggleItalic().run()} active={e.isActive("italic")} title="Cursiva" icon={faItalic} />
           <ToolbarButton onClick={() => e.chain().focus().toggleUnderline().run()} active={e.isActive("underline")} title="Subrayado" icon={faUnderline} />
@@ -269,20 +293,6 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
           <span className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
           <ToolbarButton onClick={() => e.chain().focus().undo().run()} title="Deshacer" icon={faRotateLeft} />
           <ToolbarButton onClick={() => e.chain().focus().redo().run()} title="Rehacer" icon={faRotateRight} />
-
-          {/* Va al final y separado: no es formato, es insertar contenido. Y va DENTRO de la barra
-              justamente porque la barra es lo único que queda a mano en un documento largo. */}
-          {groups.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setVariablesAbierto(true)}
-              title="Insertar una variable donde está el cursor"
-              className="ml-auto inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-            >
-              <span className="font-mono">{"{{ }}"}</span>
-              Variables
-            </button>
-          )}
         </div>
 
         {/* Área de edición. El click en el padding también enfoca (el editable no cubre ese margen). */}
@@ -312,7 +322,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
         </div>
       </div>
 
-      {variablesAbierto && <ModalVariables grupos={groups} titulo={variablesTitle} onElegir={elegirDesdeModal} onCerrar={() => setVariablesAbierto(false)} />}
+      {variablesAbierto && <ModalVariables grupos={groups} titulo={variablesTitle} onCerrar={() => setVariablesAbierto(false)} />}
     </div>
   );
 };

@@ -51,7 +51,10 @@ const V = {
     apellido: { variable: "{{apellido}}", descripcion: "Apellido de la persona", grupo: G.persona },
     nombres: { variable: "{{nombres}}", descripcion: "Nombres de la persona", grupo: G.persona },
     email: { variable: "{{email}}", descripcion: "Email; el @ va como -ARROBA- para poder reconstruirlo", grupo: G.persona },
-    identidad: { variable: "{{identidad}}", descripcion: "Bloque CUIL-…_DNI-… de la persona", grupo: G.identificacion },
+    // Se llamaba `{{identidad}}` cuando el bloque eran dos campos (CUIL + documento). Con el documento
+    // afuera es un CUIT y nada más, y `{{cuit}}` dice qué sale sin tener que abrir la ayuda. El nombre
+    // viejo sigue funcionando: ver ALIAS.
+    cuit: { variable: "{{cuit}}", descripcion: "CUIT/CUIL de la persona (o su documento, si no tiene CUIL)", grupo: G.identificacion },
     tipo: { variable: "{{tipo}}", descripcion: "Tipo de documento (Contrato, Release…)", grupo: G.documento },
     contrato: { variable: "{{contrato}}", descripcion: "Nombre del tipo de contrato (ej. Jornada 2030 SRL)", grupo: G.documento },
     docName: { variable: "{{docName}}", descripcion: "Nombre de la plantilla usada", grupo: G.documento },
@@ -59,6 +62,12 @@ const V = {
     extra: { variable: "{{extra}}", descripcion: "Etiqueta extra del trámite", grupo: G.documento },
     fechaAlta: { variable: "{{fechaAlta}}", descripcion: "Alta del contrato, YYYYMMDD («-» si no hay)", grupo: G.periodo },
     fechaBaja: { variable: "{{fechaBaja}}", descripcion: "Baja del contrato, YYYYMMDD («-» si no hay)", grupo: G.periodo },
+    /**
+     * La razón social YA NO se ofrece en el ABM: el CUIT identifica a la empleadora igual y sin
+     * gastar 12 caracteres del nombre, que está peleando contra el tope de 255. La definición queda
+     * porque `datosNombreArchivo` sigue proveyendo el valor, así que un patrón guardado con
+     * `{{empresa}}` sigue rindiendo bien en vez de escribir la llave literal en el archivo.
+     */
     empresa: { variable: "{{empresa}}", descripcion: "Razón social de la empleadora", grupo: G.empresa },
     empresaCuit: { variable: "{{empresaCuit}}", descripcion: "CUIT de la empleadora, como CUIT-30710295839", grupo: G.empresa },
     anio: { variable: "{{anio}}", descripcion: "Año del período", grupo: G.otros },
@@ -88,10 +97,9 @@ export const VARIABLES_POR_TIPO = (() => {
         V.docName,
         { ...V.fechaAlta, requerida: true },
         { ...V.fechaBaja, requerida: true },
-        { ...V.identidad, requerida: true },
+        { ...V.cuit, requerida: true },
         V.email,
         V.extra,
-        V.empresa,
         V.empresaCuit,
     ];
     return {
@@ -106,8 +114,8 @@ export const VARIABLES_POR_TIPO = (() => {
         // Pedidos y Vacaciones también se firman y vuelven. No tienen período —no son un contrato— así que
         // lo que los ancla es su NÚMERO: es lo que permite decir "este PDF firmado es el pedido 1042 de
         // esta persona" y no solo "es un pedido de esta persona".
-        Pedido: [V.proyecto, V.proyectoId, V.apellido, V.nombres, V.tipo, { ...V.numero, requerida: true }, V.fecha, { ...V.identidad, requerida: true }, V.email, V.empresa, V.empresaCuit, V.timestamp],
-        Vacacion: [V.proyecto, V.proyectoId, V.apellido, V.nombres, V.tipo, { ...V.numero, requerida: true }, V.anio, { ...V.identidad, requerida: true }, V.email, V.empresa, V.empresaCuit, V.timestamp],
+        Pedido: [V.proyecto, V.proyectoId, V.apellido, V.nombres, V.tipo, { ...V.numero, requerida: true }, V.fecha, { ...V.cuit, requerida: true }, V.email, V.empresaCuit, V.timestamp],
+        Vacacion: [V.proyecto, V.proyectoId, V.apellido, V.nombres, V.tipo, { ...V.numero, requerida: true }, V.anio, { ...V.cuit, requerida: true }, V.email, V.empresaCuit, V.timestamp],
     };
 })();
 /**
@@ -132,15 +140,15 @@ export const PATRON_POR_DEFECTO = (() => {
       vacaciones mezclados lee siempre los mismos campos en el mismo lugar. Cada tipo cambia solo en lo
       que de verdad tiene distinto —un período contra un número de pedido— y todo lo demás coincide.
     */
-    const deContrato = "{{proyecto}}_{{apellido}}_{{nombres}}_{{tipo}}_{{contrato}}_{{docName}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}_{{identidad}}_EMAIL-{{email}}_{{extra}}_EMPRESA-{{empresa}}_{{empresaCuit}}";
+    const deContrato = "{{proyecto}}_{{apellido}}_{{nombres}}_{{tipo}}_{{contrato}}_{{docName}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}_{{cuit}}_EMAIL-{{email}}_{{extra}}_{{empresaCuit}}";
     return {
         Contrato: deContrato,
         Release: deContrato,
         AltaAFIP: deContrato,
         ConstanciaCUIT: deContrato,
         Documentacion: deContrato,
-        Pedido: "{{proyecto}}_{{apellido}}_{{nombres}}_{{tipo}}_{{numero}}_{{fecha}}_{{identidad}}_EMAIL-{{email}}_EMPRESA-{{empresa}}_{{empresaCuit}}",
-        Vacacion: "{{proyecto}}_{{apellido}}_{{nombres}}_{{tipo}}_{{numero}}_{{anio}}_{{identidad}}_EMAIL-{{email}}_EMPRESA-{{empresa}}_{{empresaCuit}}",
+        Pedido: "{{proyecto}}_{{apellido}}_{{nombres}}_{{tipo}}_{{numero}}_{{fecha}}_{{cuit}}_EMAIL-{{email}}_{{empresaCuit}}",
+        Vacacion: "{{proyecto}}_{{apellido}}_{{nombres}}_{{tipo}}_{{numero}}_{{anio}}_{{cuit}}_EMAIL-{{email}}_{{empresaCuit}}",
     };
 })();
 /**
@@ -171,7 +179,21 @@ export const campoNomenclatura = (v) => {
  * "-", el nombre quedaba `CUIL-20331501027-DNI-33150102`, y el documento firmado volvía sin poder
  * identificar el documento de la persona. Se veía perfecto y estaba roto.
  */
-export const VARIABLES_COMPUESTAS = new Set(["identidad"]);
+export const VARIABLES_COMPUESTAS = new Set(["cuit", "identidad"]);
+/**
+ * Variables que EXISTIERON y ya no se ofrecen.
+ *
+ * `{{empresa}}` era la razón social: doce caracteres para decir lo mismo que `{{empresaCuit}}`, con
+ * el nombre peleando contra el tope de 255. No se puede guardar un patrón que la use, pero el valor
+ * se sigue proveyendo: un patrón ya guardado con ella rinde bien hasta que alguien lo edite, en vez
+ * de escribir la llave literal adentro del archivo.
+ *
+ * Se rechazan con su propio motivo y no con el de «variable inventada», que diría que el campo
+ * quedaría vacío — y no es cierto.
+ */
+const VARIABLES_RETIRADAS = {
+    "{{empresa}}": "la empleadora ya se identifica con {{empresaCuit}}, que ocupa la mitad",
+};
 /** Las variables que un patrón menciona, en orden y sin repetir. */
 export const variablesUsadas = (patron) => [...new Set((String(patron || "").match(/\{\{\s*[\w]+\s*\}\}/g) || []).map((v) => v.replace(/\s/g, "")))];
 /**
@@ -259,7 +281,10 @@ export function validarPatron(tipo, patron) {
     const errores = [];
     const disponibles = VARIABLES_POR_TIPO[tipo] || [];
     const usadas = variablesUsadas(patron);
-    const faltantes = disponibles.filter((v) => v.requerida && !usadas.includes(v.variable));
+    // Resueltas por su nombre canónico: un patrón viejo con {{identidad}} cumple igual el requisito de
+    // {{cuit}}, porque rinde exactamente lo mismo (ver ALIAS_VARIABLES).
+    const usadasCanonicas = new Set(usadas.map((v) => `{{${canonica(v.replace(/[{}]/g, ""))}}}`));
+    const faltantes = disponibles.filter((v) => v.requerida && !usadasCanonicas.has(v.variable));
     if (faltantes.length > 0) {
         const lista = faltantes.map((v) => v.variable).join(", ");
         errores.push({
@@ -278,16 +303,22 @@ export function validarPatron(tipo, patron) {
      * bien, y falla recién cuando el documento vuelve—, con el agravante de que acá el patrón se ve
      * perfectamente razonable.
      */
-    const posIdentidad = patron.indexOf("{{identidad}}");
+    const posIdentidad = Math.max(patron.indexOf("{{cuit}}"), patron.indexOf("{{identidad}}"));
     const posCuitEmpresa = patron.indexOf("{{empresaCuit}}");
     if (posIdentidad >= 0 && posCuitEmpresa >= 0 && posCuitEmpresa < posIdentidad) {
         errores.push({
             campo: "patron",
-            motivo: "{{empresaCuit}} tiene que ir DESPUÉS de {{identidad}}. El escaneo de Dropbox reconoce a la persona por el primer número de 11 dígitos del nombre: si el CUIT de la empleadora aparece antes, los documentos que vuelvan se van a intentar asociar por la empresa y no van a encontrar a nadie.",
+            motivo: "{{empresaCuit}} tiene que ir DESPUÉS de {{cuit}}. El escaneo de Dropbox reconoce a la persona por el primer número de 11 dígitos del nombre: si el CUIT de la empleadora aparece antes, los documentos que vuelvan se van a intentar asociar por la empresa y no van a encontrar a nadie.",
         });
     }
     const conocidas = new Set(disponibles.map((v) => v.variable));
-    const inventadas = usadas.filter((v) => !conocidas.has(v));
+    const retiradas = usadas.filter((v) => VARIABLES_RETIRADAS[v]);
+    if (retiradas.length > 0) {
+        const lista = retiradas.map((v) => `${v} (${VARIABLES_RETIRADAS[v]})`).join(", ");
+        errores.push({ campo: "patron", motivo: `${lista}. Sacala del patrón para poder guardar.` });
+    }
+    // El alias no se marca como inventada: un patrón viejo con {{identidad}} sigue siendo válido.
+    const inventadas = usadas.filter((v) => !conocidas.has(v) && !VARIABLES_RETIRADAS[v] && !conocidas.has(`{{${canonica(v.replace(/[{}]/g, ""))}}}`));
     if (inventadas.length > 0) {
         errores.push({ campo: "patron", motivo: `${inventadas.join(", ")} no existe para este tipo de documento: en el archivo real quedaría vacío.` });
     }
@@ -297,13 +328,26 @@ export function validarPatron(tipo, patron) {
     return errores;
 }
 /**
+ * Nombres viejos de variables que siguen funcionando.
+ *
+ * `{{identidad}}` se renombró a `{{cuit}}` cuando el bloque dejó de tener dos campos. En producción no
+ * había ningún patrón guardado con el nombre viejo, pero un patrón que quedara con él generaría
+ * archivos con un `{{identidad}}` literal adentro — o sea, sin el CUIL, que es lo único que permite
+ * reencontrarlos. El alias cuesta dos líneas y esa falla no se ve hasta que un documento vuelve.
+ *
+ * El ABM ofrece el nombre nuevo; el viejo solo se acepta, no se sugiere.
+ */
+const ALIAS_VARIABLES = { identidad: "cuit" };
+/** El nombre canónico de una variable, resolviendo los alias. */
+const canonica = (nombre) => ALIAS_VARIABLES[nombre] || nombre;
+/**
  * Aplica el patrón. Devuelve el nombre SIN extensión.
  *
  * Los segmentos vacíos se colapsan: una variable sin valor no puede dejar un "__" en el medio ni un
  * "_" colgando al final. Es el mismo resultado que daba el `parts.filter(...).join("_")` de antes.
  */
 export function renderNomenclatura(patron, datos) {
-    const reemplazado = String(patron || "").replace(/\{\{\s*([\w]+)\s*\}\}/g, (_m, nombre) => VARIABLES_COMPUESTAS.has(nombre) ? String(datos[nombre] ?? "").trim() : campoNomenclatura(datos[nombre]));
+    const reemplazado = String(patron || "").replace(/\{\{\s*([\w]+)\s*\}\}/g, (_m, nombre) => VARIABLES_COMPUESTAS.has(nombre) ? String(datos[nombre] ?? datos[canonica(nombre)] ?? "").trim() : campoNomenclatura(datos[nombre] ?? datos[canonica(nombre)]));
     return reemplazado
         .split("_")
         .map((s) => s.trim())

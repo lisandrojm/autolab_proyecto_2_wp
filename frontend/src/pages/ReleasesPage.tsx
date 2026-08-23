@@ -1,23 +1,24 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { PageLayout } from '../components/ui/PageLayout';
-import { getHelp, hasHelp } from '../data/help/helpContent';
-import { Card } from '../components/ui/Card';
-import { SearchAndFilters } from '../components/ui/SearchAndFilters';
-import { EmptyState } from '../components/ui/EmptyState';
-import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { PageLayout } from "../components/ui/PageLayout";
+import { getHelp, hasHelp } from "../data/help/helpContent";
+import { Card } from "../components/ui/Card";
+import { SearchAndFilters } from "../components/ui/SearchAndFilters";
+import { EmptyState } from "../components/ui/EmptyState";
+import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash, faRocket, faDownload, faEye } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPlus, faEdit, faTrash, faRocket, faDownload, faEye } from "@fortawesome/free-solid-svg-icons";
 
-import { releasesAPI, Release, releaseVariables } from '../api/release';
-import { releaseTiposAPI, ReleaseTipoItem } from '../api/releaseTipos';
+import { releasesAPI, Release, releaseVariables } from "../api/release";
+import { releaseTiposAPI, ReleaseTipoItem } from "../api/releaseTipos";
 
-import Swal from 'sweetalert2';
-import { Modal } from '../components/ui/Modal';
-import { MembreteToggle } from '../components/MembreteToggle';
-import { RichTextEditor } from '../components/ui/RichTextEditor';
-import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
+import Swal from "sweetalert2";
+import { sweetAlert } from "../utils/sweetAlert";
+import { Modal } from "../components/ui/Modal";
+import { MembreteToggle } from "../components/MembreteToggle";
+import { RichTextEditor } from "../components/ui/RichTextEditor";
+import { ViewToggle, ViewMode } from "../components/ui/ViewToggle";
 
 interface ReleaseFormData {
   name: string;
@@ -30,11 +31,11 @@ interface ReleaseFormData {
 }
 
 const EMPTY_FORM: ReleaseFormData = {
-  name: '',
-  version: '',
-  description: '',
-  content: '',
-  releaseTipoId: '',
+  name: "",
+  version: "",
+  description: "",
+  content: "",
+  releaseTipoId: "",
   isActive: true,
   usaMembrete: false,
 };
@@ -43,14 +44,14 @@ const EMPTY_FORM: ReleaseFormData = {
 const hasContent = (html: string): boolean =>
   !!html &&
   html
-    .replace(/<[^>]*>/g, '')
-    .replace(/&nbsp;/g, ' ')
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
     .trim().length > 0;
 
 export function ReleasesPage() {
   const navigate = useNavigate();
   // data
-  const HELP_KEY = 'releases' as const;
+  const HELP_KEY = "releases" as const;
   const helpEntry = getHelp(HELP_KEY);
   const [showInfo, setShowInfo] = useState(false);
   const [releases, setReleases] = useState<Release[]>([]);
@@ -58,29 +59,29 @@ export function ReleasesPage() {
   const [loading, setLoading] = useState(true);
 
   // filters
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterActive, setFilterActive] = useState<"all" | "active" | "inactive">("all");
 
   // Vista (Tabla vs Tarjetas)
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
   useEffect(() => {
     const handleResize = () => {
       const isNowLarge = window.innerWidth >= 1024;
       setIsLarge(isNowLarge);
-      if (!isNowLarge) setViewMode('cards');
+      if (!isNowLarge) setViewMode("cards");
     };
     if (window.innerWidth >= 1024) {
-      const saved = localStorage.getItem('releasesViewMode_v2');
-      if (saved === 'table' || saved === 'cards') setViewMode(saved as ViewMode);
+      const saved = localStorage.getItem("releasesViewMode_v2");
+      if (saved === "table" || saved === "cards") setViewMode(saved as ViewMode);
     }
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
   useEffect(() => {
-    if (isLarge) localStorage.setItem('releasesViewMode_v2', viewMode);
+    if (isLarge) localStorage.setItem("releasesViewMode_v2", viewMode);
   }, [viewMode, isLarge]);
-  const effectiveViewMode: ViewMode = isLarge ? viewMode : 'cards';
+  const effectiveViewMode: ViewMode = isLarge ? viewMode : "cards";
 
   // modal
   const [showModal, setShowModal] = useState(false);
@@ -106,7 +107,7 @@ export function ReleasesPage() {
       const data = await releasesAPI.getAll();
       setReleases(data);
     } catch {
-      Swal.fire('Error', 'No se pudieron cargar los releases', 'error');
+      Swal.fire("Error", "No se pudieron cargar los releases", "error");
     } finally {
       setLoading(false);
     }
@@ -116,12 +117,12 @@ export function ReleasesPage() {
   const filteredReleases = releases.filter((r) => {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      const match = r.name.toLowerCase().includes(term) || r.version.toLowerCase().includes(term) || (r.description || '').toLowerCase().includes(term);
+      const match = r.name.toLowerCase().includes(term) || r.version.toLowerCase().includes(term) || (r.description || "").toLowerCase().includes(term);
       if (!match) return false;
     }
 
-    if (filterActive === 'active' && !r.isActive) return false;
-    if (filterActive === 'inactive' && r.isActive) return false;
+    if (filterActive === "active" && !r.isActive) return false;
+    if (filterActive === "inactive" && r.isActive) return false;
 
     return true;
   });
@@ -135,13 +136,13 @@ export function ReleasesPage() {
 
   const openEdit = (release: Release) => {
     setEditingRelease(release);
-    const tipoId = typeof release.releaseTipoId === 'object' ? release.releaseTipoId?._id : release.releaseTipoId;
+    const tipoId = typeof release.releaseTipoId === "object" ? release.releaseTipoId?._id : release.releaseTipoId;
     setFormData({
       name: release.name,
       version: release.version,
-      description: release.description || '',
-      content: release.content || '',
-      releaseTipoId: tipoId || '',
+      description: release.description || "",
+      content: release.content || "",
+      releaseTipoId: tipoId || "",
       isActive: release.isActive,
       usaMembrete: release.usaMembrete ?? false,
     });
@@ -151,78 +152,91 @@ export function ReleasesPage() {
 
   const handleDelete = async (release: Release) => {
     const result = await Swal.fire({
-      title: '¿Eliminar release?',
+      title: "¿Eliminar release?",
       text: `Se eliminará el release "${release.name}"`,
-      icon: 'warning',
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Eliminar',
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Eliminar",
     });
 
     if (!result.isConfirmed) return;
 
     try {
       await releasesAPI.delete(release._id);
-      Swal.fire('Eliminado', 'El release ha sido eliminado', 'success');
+      Swal.fire("Eliminado", "El release ha sido eliminado", "success");
       loadReleases();
     } catch {
-      Swal.fire('Error', 'No se pudo eliminar el release', 'error');
+      Swal.fire("Error", "No se pudo eliminar el release", "error");
     }
   };
 
+  /*
+   * Avisan que están trabajando: el PDF lo arma un navegador headless en el server, así que entre el
+   * click y el resultado pasan varios segundos con la pantalla igual que antes. Sin señal, lo que
+   * pasa es que se vuelve a hacer click y se encolan más generaciones.
+   */
   const handleDownload = async (release: Release) => {
     try {
+      sweetAlert.loading("Generando el archivo…", "Puede tardar unos segundos.");
       await releasesAPI.download(release);
     } catch {
-      Swal.fire('Error', 'No se pudo descargar el archivo', 'error');
+      Swal.fire("Error", "No se pudo descargar el archivo", "error");
+    } finally {
+      sweetAlert.close();
     }
   };
 
   /** Abre la previsualización del release (PDF de ejemplo) en una pestaña nueva, sin entrar a editar. */
   const handlePreviewItem = async (release: Release) => {
-    if (!hasContent(release.content || '')) {
-      Swal.fire('Sin contenido', 'Este release no tiene contenido para previsualizar.', 'error');
+    if (!hasContent(release.content || "")) {
+      Swal.fire("Sin contenido", "Este release no tiene contenido para previsualizar.", "error");
       return;
     }
     try {
-      const blob = await releasesAPI.preview(release.content || '', release.usaMembrete);
-      window.open(URL.createObjectURL(blob), '_blank');
+      sweetAlert.loading("Generando la previsualización…", "Se abre en una pestaña nueva cuando esté lista.");
+      const blob = await releasesAPI.preview(release.content || "", release.usaMembrete);
+      window.open(URL.createObjectURL(blob), "_blank");
     } catch {
-      Swal.fire('Error', 'No se pudo generar la previsualización', 'error');
+      Swal.fire("Error", "No se pudo generar la previsualización", "error");
+    } finally {
+      sweetAlert.close();
     }
   };
 
   /** Genera y descarga un PDF de ejemplo con el contenido actual del editor (sin guardar). */
   const handlePreview = async () => {
     if (!hasContent(formData.content)) {
-      Swal.fire('Sin contenido', 'Escribí el contenido del release para previsualizarlo', 'warning');
+      Swal.fire("Sin contenido", "Escribí el contenido del release para previsualizarlo", "warning");
       return;
     }
     try {
       setPreviewing(true);
+      sweetAlert.loading("Generando la previsualización…", "Puede tardar unos segundos.");
       const blob = await releasesAPI.preview(formData.content, formData.usaMembrete);
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.setAttribute('download', `Preview_${formData.name || 'Release'}.pdf`);
+      link.setAttribute("download", `Preview_${formData.name || "Release"}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch {
-      Swal.fire('Error', 'No se pudo generar la previsualización', 'error');
+      Swal.fire("Error", "No se pudo generar la previsualización", "error");
     } finally {
+      sweetAlert.close();
       setPreviewing(false);
     }
   };
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.name.trim()) newErrors.name = 'El nombre es requerido';
-    if (!formData.version.trim()) newErrors.version = 'La versión es requerida';
-    if (!formData.releaseTipoId) newErrors.releaseTipoId = 'El tipo de release es requerido';
-    if (!hasContent(formData.content)) newErrors.content = 'El contenido es requerido';
+    if (!formData.name.trim()) newErrors.name = "El nombre es requerido";
+    if (!formData.version.trim()) newErrors.version = "La versión es requerida";
+    if (!formData.releaseTipoId) newErrors.releaseTipoId = "El tipo de release es requerido";
+    if (!hasContent(formData.content)) newErrors.content = "El contenido es requerido";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -245,16 +259,16 @@ export function ReleasesPage() {
 
       if (editingRelease) {
         await releasesAPI.update(editingRelease._id, payload);
-        Swal.fire('Actualizado', 'El release ha sido actualizado', 'success');
+        Swal.fire("Actualizado", "El release ha sido actualizado", "success");
       } else {
         await releasesAPI.create(payload);
-        Swal.fire('Creado', 'El release ha sido creado', 'success');
+        Swal.fire("Creado", "El release ha sido creado", "success");
       }
       setShowModal(false);
       setEditingRelease(null);
       loadReleases();
     } catch (error: any) {
-      Swal.fire('Error', error.response?.data?.error || 'No se pudo guardar', 'error');
+      Swal.fire("Error", error.response?.data?.error || "No se pudo guardar", "error");
     } finally {
       setSaving(false);
     }
@@ -262,14 +276,14 @@ export function ReleasesPage() {
 
   const getBadge = (release: Release) => {
     if (release.isActive) {
-      return { text: 'Activo', variant: 'green' as const };
+      return { text: "Activo", variant: "green" as const };
     }
-    return { text: 'Inactivo', variant: 'destructive' as const };
+    return { text: "Inactivo", variant: "destructive" as const };
   };
 
   return (
     <PageLayout
-      title="Plantillas | Release"
+      title="Plantillas | Releases"
       itemCount={filteredReleases.length}
       subtitle="Crea y gestiona los releases con sus archivos adjuntos"
       faIcon={{ icon: faRocket }}
@@ -280,7 +294,7 @@ export function ReleasesPage() {
           <button onClick={openCreate} aria-label="Nuevo release" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg transition-colors bg-blue-600 text-white hover:bg-blue-700" title="Nuevo release">
             <FontAwesomeIcon icon={faPlus} />
           </button>
-          <button onClick={() => navigate('/releases-tipos')} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate("/releases-tipos")} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faRocket} />
             <span className="hidden lg:block">Releases</span>
           </button>
@@ -298,9 +312,9 @@ export function ReleasesPage() {
                   value: filterActive,
                   onChange: (v) => setFilterActive(v as any),
                   options: [
-                    { value: 'all', label: 'Todos' },
-                    { value: 'active', label: 'Activos' },
-                    { value: 'inactive', label: 'Inactivos' },
+                    { value: "all", label: "Todos" },
+                    { value: "active", label: "Activos" },
+                    { value: "inactive", label: "Inactivos" },
                   ],
                 },
               ]}
@@ -316,7 +330,7 @@ export function ReleasesPage() {
         </div>
       ) : (
         <>
-          {effectiveViewMode === 'cards' ? (
+          {effectiveViewMode === "cards" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
               {filteredReleases.map((release) => (
                 <Card
@@ -327,7 +341,7 @@ export function ReleasesPage() {
                     icon: faRocket,
                     title: release.name,
                     subtitle: `Versión ${release.version}`,
-                    badges: [getBadge(release), release.usaMembrete ? { text: 'Membrete activo', variant: 'green' as const } : { text: 'Membrete inactivo', variant: 'default' as const }],
+                    badges: [getBadge(release), release.usaMembrete ? { text: "Membrete activo", variant: "green" as const } : { text: "Membrete inactivo", variant: "default" as const }],
                   }}
                   footer={{
                     leftContent: null,
@@ -336,7 +350,7 @@ export function ReleasesPage() {
                         ? [
                             {
                               icon: faEye,
-                              title: 'Previsualizar',
+                              title: "Previsualizar",
                               onClick: (e: any) => {
                                 e.stopPropagation();
                                 handlePreviewItem(release);
@@ -344,7 +358,7 @@ export function ReleasesPage() {
                             },
                             {
                               icon: faDownload,
-                              title: 'Descargar PDF de ejemplo',
+                              title: "Descargar PDF de ejemplo",
                               onClick: (e: any) => {
                                 e.stopPropagation();
                                 handleDownload(release);
@@ -354,7 +368,7 @@ export function ReleasesPage() {
                         : []),
                       {
                         icon: faEdit,
-                        title: 'Editar',
+                        title: "Editar",
                         onClick: (e: any) => {
                           e.stopPropagation();
                           openEdit(release);
@@ -362,7 +376,7 @@ export function ReleasesPage() {
                       },
                       {
                         icon: faTrash,
-                        title: 'Eliminar',
+                        title: "Eliminar",
                         onClick: (e: any) => {
                           e.stopPropagation();
                           handleDelete(release);
@@ -381,8 +395,8 @@ export function ReleasesPage() {
                 onClick={openCreate}
                 header={{
                   icon: faRocket,
-                  title: 'Nuevo Release',
-                  subtitle: 'Crear nuevo release',
+                  title: "Nuevo Release",
+                  subtitle: "Crear nuevo release",
                 }}
               />
             </div>
@@ -394,7 +408,7 @@ export function ReleasesPage() {
                     <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
                     <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Versión</th>
                     <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
-                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Membrete | Firma</th>
+                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Membrete | Firma</th>
                     <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Contenido</th>
                     <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
                   </tr>
@@ -405,17 +419,17 @@ export function ReleasesPage() {
                       <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">{release.name}</td>
                       <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{release.version}</td>
                       <td className="px-5 py-3 text-sm whitespace-nowrap">
-                        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${release.isActive ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'}`}>{release.isActive ? 'Activo' : 'Inactivo'}</span>
+                        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${release.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"}`}>{release.isActive ? "Activo" : "Inactivo"}</span>
                       </td>
                       <td className="px-5 py-3 text-sm whitespace-nowrap">
-                        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${release.usaMembrete ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`}>{release.usaMembrete ? 'Activo' : 'Inactivo'}</span>
+                        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${release.usaMembrete ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"}`}>{release.usaMembrete ? "Activo" : "Inactivo"}</span>
                       </td>
                       <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
-                        {hasContent(release.content || '') ? (
+                        {hasContent(release.content || "") ? (
                           <span className="truncate max-w-[260px] block" title="Contenido redactado">
-                            {(release.content || '')
-                              .replace(/<[^>]*>/g, ' ')
-                              .replace(/&nbsp;/g, ' ')
+                            {(release.content || "")
+                              .replace(/<[^>]*>/g, " ")
+                              .replace(/&nbsp;/g, " ")
                               .trim()
                               .slice(0, 60)}
                             …
@@ -457,7 +471,7 @@ export function ReleasesPage() {
               title="No hay releases"
               description="No hay releases definidos."
               action={{
-                label: 'Nuevo Release',
+                label: "Nuevo Release",
                 onClick: openCreate,
                 icon: faPlus,
               }}
@@ -473,13 +487,13 @@ export function ReleasesPage() {
           setShowModal(false);
           setEditingRelease(null);
         }}
-        title={editingRelease ? 'Editar Release' : 'Nuevo Release'}
+        title={editingRelease ? "Editar Release" : "Nuevo Release"}
         size="lg"
         footer={
           <div className="flex justify-between gap-2 w-full">
             <button type="button" onClick={handlePreview} disabled={previewing} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
               <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
-              {previewing ? 'Generando...' : 'Previsualizar'}
+              {previewing ? "Generando..." : "Previsualizar"}
             </button>
             <div className="flex gap-2">
               <button
@@ -493,7 +507,7 @@ export function ReleasesPage() {
                 Cancelar
               </button>
               <button type="submit" form="release-form" disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                {saving ? 'Guardando...' : editingRelease ? 'Actualizar' : 'Crear'}
+                {saving ? "Guardando..." : editingRelease ? "Actualizar" : "Crear"}
               </button>
             </div>
           </div>
@@ -518,11 +532,11 @@ export function ReleasesPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo de Release *</label>
               <select value={formData.releaseTipoId} onChange={(e) => setFormData({ ...formData, releaseTipoId: e.target.value })} className="input-field w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100">
-                <option value="">{tipos.length ? 'Selecciona un tipo...' : 'No hay tipos cargados'}</option>
+                <option value="">{tipos.length ? "Selecciona un tipo..." : "No hay tipos cargados"}</option>
                 {tipos.map((t) => (
                   <option key={t._id} value={t._id}>
                     {t.name}
-                    {t.isActive === false ? ' (inactivo)' : ''}
+                    {t.isActive === false ? " (inactivo)" : ""}
                   </option>
                 ))}
               </select>
@@ -547,7 +561,7 @@ export function ReleasesPage() {
             {/* Contenido del release */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contenido *</label>
-              <RichTextEditor value={formData.content} onChange={(html) => setFormData((f) => ({ ...f, content: html }))} variables={releaseVariables} variablesTitle="Variables del release (click para insertar)" />
+              <RichTextEditor value={formData.content} onChange={(html) => setFormData((f) => ({ ...f, content: html }))} variables={releaseVariables} variablesTitle="Variables del release" />
               <p className="text-xs text-gray-500 mt-1">Las variables se reemplazan al descargar con los datos de la persona y de la empresa seteada en el proyecto (Empresa del Release).</p>
               {errors.content && <p className="text-sm text-red-500 mt-1">{errors.content}</p>}
             </div>

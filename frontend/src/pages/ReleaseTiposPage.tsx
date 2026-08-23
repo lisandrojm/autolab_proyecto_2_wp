@@ -1,23 +1,23 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { PageLayout } from '../components/ui/PageLayout';
-import { SearchAndFilters } from '../components/ui/SearchAndFilters';
-import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { EmptyState } from '../components/ui/EmptyState';
-import { Card } from '../components/ui/Card';
-import { Modal } from '../components/ui/Modal';
-import { InfoModal } from '../components/ui/InfoModal';
-import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
-import { sweetAlert } from '../utils/sweetAlert';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash, faRocket, faFilePdf, faFileSignature, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
-import { releaseTiposAPI, ReleaseTipoItem } from '../api/releaseTipos';
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { PageLayout } from "../components/ui/PageLayout";
+import { SearchAndFilters } from "../components/ui/SearchAndFilters";
+import { LoadingSpinner } from "../components/ui/LoadingSpinner";
+import { EmptyState } from "../components/ui/EmptyState";
+import { Card } from "../components/ui/Card";
+import { Modal } from "../components/ui/Modal";
+import { InfoModal } from "../components/ui/InfoModal";
+import { ViewToggle, ViewMode } from "../components/ui/ViewToggle";
+import { sweetAlert } from "../utils/sweetAlert";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPlus, faEdit, faTrash, faRocket, faFilePdf, faFileSignature, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
+import { releaseTiposAPI, ReleaseTipoItem } from "../api/releaseTipos";
 
 const normalizar = (s: string): string =>
-  (s || '')
+  (s || "")
     .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .trim();
 
 interface FormState {
@@ -26,18 +26,12 @@ interface FormState {
   requiereFirma: boolean;
 }
 
-const FORM_VACIO: FormState = { name: '', isActive: true, requiereFirma: true };
+const FORM_VACIO: FormState = { name: "", isActive: true, requiereFirma: true };
 
 const BadgeFirma: React.FC<{ activo: boolean }> = ({ activo }) => (
-  <span
-    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
-      activo
-        ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-100 dark:border-green-800'
-        : 'bg-gray-50 text-gray-500 dark:bg-gray-700/30 dark:text-gray-400 border-gray-200 dark:border-gray-700'
-    }`}
-  >
+  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ${activo ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-100 dark:border-green-800" : "bg-gray-50 text-gray-500 dark:bg-gray-700/30 dark:text-gray-400 border-gray-200 dark:border-gray-700"}`}>
     <FontAwesomeIcon icon={faFileSignature} className="h-2.5 w-2.5" />
-    {activo ? 'Se envía a firmar' : 'No se envía a firmar'}
+    {activo ? "Se envía a firmar" : "No se envía a firmar"}
   </span>
 );
 
@@ -46,7 +40,7 @@ export const ReleaseTiposPage: React.FC = () => {
   const [tipos, setTipos] = useState<ReleaseTipoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showFirmaInfo, setShowFirmaInfo] = useState(false);
@@ -54,36 +48,36 @@ export const ReleaseTiposPage: React.FC = () => {
   const [form, setForm] = useState<FormState>(FORM_VACIO);
 
   // Vista tarjetas/tabla, como el resto de los ABM: la tabla solo en pantallas grandes.
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
 
   useEffect(() => {
     const handleResize = () => {
       const isNowLarge = window.innerWidth >= 1024;
       setIsLarge(isNowLarge);
-      if (!isNowLarge) setViewMode('cards');
+      if (!isNowLarge) setViewMode("cards");
     };
     if (window.innerWidth >= 1024) {
-      const saved = localStorage.getItem('releaseTiposViewMode');
-      if (saved === 'table' || saved === 'cards') setViewMode(saved as ViewMode);
+      const saved = localStorage.getItem("releaseTiposViewMode");
+      if (saved === "table" || saved === "cards") setViewMode(saved as ViewMode);
     }
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   useEffect(() => {
-    if (isLarge) localStorage.setItem('releaseTiposViewMode', viewMode);
+    if (isLarge) localStorage.setItem("releaseTiposViewMode", viewMode);
   }, [viewMode, isLarge]);
 
-  const effectiveViewMode: ViewMode = isLarge ? viewMode : 'cards';
+  const effectiveViewMode: ViewMode = isLarge ? viewMode : "cards";
 
   const cargar = async () => {
     try {
       setLoading(true);
       setTipos(await releaseTiposAPI.list());
     } catch (e) {
-      console.error('Error cargando tipos de release:', e);
-      sweetAlert.error('Error', 'No se pudieron cargar los tipos de release.');
+      console.error("Error cargando tipos de release:", e);
+      sweetAlert.error("Error", "No se pudieron cargar los tipos de release.");
     } finally {
       setLoading(false);
     }
@@ -114,7 +108,7 @@ export const ReleaseTiposPage: React.FC = () => {
   const guardar = async () => {
     const name = form.name.trim();
     if (!name) {
-      sweetAlert.error('Falta el nombre', 'El tipo de release necesita un nombre.');
+      sweetAlert.error("Falta el nombre", "El tipo de release necesita un nombre.");
       return;
     }
 
@@ -122,29 +116,29 @@ export const ReleaseTiposPage: React.FC = () => {
       setSaving(true);
       if (editando) {
         await releaseTiposAPI.update(editando._id, { name, isActive: form.isActive, requiereFirma: form.requiereFirma });
-        sweetAlert.success('Tipo actualizado', 'Los cambios se guardaron con éxito.');
+        sweetAlert.success("Tipo actualizado", "Los cambios se guardaron con éxito.");
       } else {
         await releaseTiposAPI.create({ name, isActive: form.isActive, requiereFirma: form.requiereFirma });
-        sweetAlert.success('Tipo creado', 'Ya podés asignarlo en Plantillas | Release.');
+        sweetAlert.success("Tipo creado", "Ya podés asignarlo en Plantillas | Releases.");
       }
       setShowModal(false);
       await cargar();
     } catch (e: any) {
-      sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo guardar el tipo de release.');
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo guardar el tipo de release.");
     } finally {
       setSaving(false);
     }
   };
 
   const eliminar = async (tipo: ReleaseTipoItem) => {
-    const result = await sweetAlert.confirm('¿Eliminar tipo de release?', `Se va a eliminar "${tipo.name}".`);
+    const result = await sweetAlert.confirm("¿Eliminar tipo de release?", `Se va a eliminar "${tipo.name}".`);
     if (!result.isConfirmed) return;
     try {
       await releaseTiposAPI.remove(tipo._id);
-      sweetAlert.success('Eliminado', 'El tipo de release fue eliminado.');
+      sweetAlert.success("Eliminado", "El tipo de release fue eliminado.");
       await cargar();
     } catch (e: any) {
-      sweetAlert.error('No se pudo eliminar', e?.response?.data?.error || 'Intentá de nuevo.');
+      sweetAlert.error("No se pudo eliminar", e?.response?.data?.error || "Intentá de nuevo.");
     }
   };
 
@@ -152,17 +146,17 @@ export const ReleaseTiposPage: React.FC = () => {
     <PageLayout
       title="Releases"
       itemCount={tipos.length}
-      subtitle="Tipos de release. Cada Plantilla de Plantillas | Release pertenece a uno de estos tipos"
+      subtitle="Tipos de release. Cada Plantilla de Plantillas | Releases pertenece a uno de estos tipos"
       faIcon={{ icon: faRocket }}
       infoModal={{
         isOpen: showInfoModal,
         onOpen: () => setShowInfoModal(true),
         onClose: () => setShowInfoModal(false),
-        title: 'Guía de Releases',
+        title: "Guía de Releases",
         content: (
           <div className="space-y-4 text-gray-400">
             <p>
-              Un <strong>tipo de Release</strong> es la categoría que agrupa a las Plantillas de <strong>Plantillas | Release</strong>. Es lo que se elige ahí al crear o editar una Plantilla.
+              Un <strong>tipo de Release</strong> es la categoría que agrupa a las Plantillas de <strong>Plantillas | Releases</strong>. Es lo que se elige ahí al crear o editar una Plantilla.
             </p>
             <div className="space-y-2">
               <h4 className="text-white font-medium">Eliminar</h4>
@@ -173,9 +167,9 @@ export const ReleaseTiposPage: React.FC = () => {
       }}
       headerActions={
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/releases')} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate("/releases")} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faFilePdf} />
-            <span className="hidden lg:block">Plantillas | Release</span>
+            <span className="hidden lg:block">Plantillas | Releases</span>
           </button>
           <button onClick={abrirCrear} title="Nuevo tipo de release" aria-label="Nuevo tipo de release" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
             <FontAwesomeIcon icon={faPlus} />
@@ -196,8 +190,8 @@ export const ReleaseTiposPage: React.FC = () => {
           <LoadingSpinner message="Cargando tipos de release..." />
         </div>
       ) : filtrados.length === 0 ? (
-        <EmptyState icon={faRocket} title={searchTerm ? 'Sin resultados' : 'Todavía no hay tipos de release'} description={searchTerm ? 'Probá con otra búsqueda.' : 'Creá el primer tipo para usarlo en Plantillas | Release.'} />
-      ) : effectiveViewMode === 'cards' ? (
+        <EmptyState icon={faRocket} title={searchTerm ? "Sin resultados" : "Todavía no hay tipos de release"} description={searchTerm ? "Probá con otra búsqueda." : "Creá el primer tipo para usarlo en Plantillas | Releases."} />
+      ) : effectiveViewMode === "cards" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtrados.map((tipo) => (
             <Card
@@ -208,8 +202,8 @@ export const ReleaseTiposPage: React.FC = () => {
                 title: tipo.name,
                 icon: faRocket,
                 badges: [
-                  { text: tipo.isActive === false ? 'Inactivo' : 'Activo', variant: tipo.isActive === false ? 'destructive' : 'green' },
-                  { text: tipo.requiereFirma === false ? 'No se envía a firmar' : 'Se envía a firmar', variant: tipo.requiereFirma === false ? 'default' : 'green', icon: faFileSignature },
+                  { text: tipo.isActive === false ? "Inactivo" : "Activo", variant: tipo.isActive === false ? "destructive" : "green" },
+                  { text: tipo.requiereFirma === false ? "No se envía a firmar" : "Se envía a firmar", variant: tipo.requiereFirma === false ? "default" : "green", icon: faFileSignature },
                 ],
               }}
               footer={{
@@ -220,8 +214,8 @@ export const ReleaseTiposPage: React.FC = () => {
                       e.stopPropagation();
                       abrirEditar(tipo);
                     },
-                    title: 'Editar',
-                    variant: 'default',
+                    title: "Editar",
+                    variant: "default",
                   },
                   {
                     icon: faTrash,
@@ -229,8 +223,8 @@ export const ReleaseTiposPage: React.FC = () => {
                       e.stopPropagation();
                       eliminar(tipo);
                     },
-                    title: 'Eliminar',
-                    variant: 'default',
+                    title: "Eliminar",
+                    variant: "default",
                   },
                 ],
               }}
@@ -254,9 +248,7 @@ export const ReleaseTiposPage: React.FC = () => {
                   <tr key={tipo._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
                     <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100">{tipo.name}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${tipo.isActive === false ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}>
-                        {tipo.isActive === false ? 'Inactivo' : 'Activo'}
-                      </span>
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${tipo.isActive === false ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"}`}>{tipo.isActive === false ? "Inactivo" : "Activo"}</span>
                     </td>
                     <td className="px-4 py-3">
                       <BadgeFirma activo={tipo.requiereFirma !== false} />
@@ -282,8 +274,8 @@ export const ReleaseTiposPage: React.FC = () => {
       <Modal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        title={editando ? 'Editar Tipo de Release' : 'Nuevo Tipo de Release'}
-        subtitle={editando ? editando.name : 'Se va a poder asignar a una o varias Plantillas de Release'}
+        title={editando ? "Editar Tipo de Release" : "Nuevo Tipo de Release"}
+        subtitle={editando ? editando.name : "Se va a poder asignar a una o varias Plantillas de Release"}
         size="sm"
         footer={
           <div className="flex items-center justify-end gap-3 w-full">
@@ -291,7 +283,7 @@ export const ReleaseTiposPage: React.FC = () => {
               Cancelar
             </button>
             <button onClick={guardar} className="btn-primary" disabled={saving}>
-              {saving ? 'Guardando...' : editando ? 'Actualizar' : 'Crear'}
+              {saving ? "Guardando..." : editando ? "Actualizar" : "Crear"}
             </button>
           </div>
         }
@@ -319,14 +311,7 @@ export const ReleaseTiposPage: React.FC = () => {
         </div>
       </Modal>
 
-      <InfoModal
-        isOpen={showFirmaInfo}
-        onClose={() => setShowFirmaInfo(false)}
-        title="Se envía a firmar"
-        size="sm"
-        zIndex={120}
-        actions={[{ label: 'Entendido', onClick: () => setShowFirmaInfo(false), variant: 'primary' }]}
-      >
+      <InfoModal isOpen={showFirmaInfo} onClose={() => setShowFirmaInfo(false)} title="Se envía a firmar" size="sm" zIndex={120} actions={[{ label: "Entendido", onClick: () => setShowFirmaInfo(false), variant: "primary" }]}>
         <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
           <p>
             Con esta opción <strong>activada</strong>, en Contratos del proyecto se va a poder descargar el release de este tipo para enviarlo a firmar.

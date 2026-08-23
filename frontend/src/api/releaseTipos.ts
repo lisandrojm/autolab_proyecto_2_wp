@@ -2,7 +2,7 @@ import axios from "./axiosConfig";
 
 /**
  * ReleaseTipo: el tipo de release (análogo a `ContratoItem` para `ContratoFrame`). Es lo que se
- * elige al crear/editar una Plantilla de "Plantillas | Release" (ver `api/release.ts`).
+ * elige al crear/editar una Plantilla de "Plantillas | Releases" (ver `api/release.ts`).
  */
 export interface ReleaseTipoItem {
   _id: string;

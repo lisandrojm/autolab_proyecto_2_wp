@@ -13,7 +13,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { validarPatron, renderNomenclatura, PATRON_POR_DEFECTO, VARIABLES_POR_TIPO, TIPOS_NOMBRE_SE_LEE_DE_VUELTA, campoNomenclatura, TIPOS_NOMENCLATURA, VARIABLES_COMPUESTAS, recortarNombre, MAX_NOMBRE } from "./nomenclatura.js";
-import { emailNomenclatura, MARCA_ARROBA } from "./employeeDocData.js";
+import { emailNomenclatura, MARCA_ARROBA, buildIdentidadTag } from "./employeeDocData.js";
 /** Los mismos datos que usa la previsualización del ABM. */
 const DATOS = {
     apellido: "gonzalez-rotstein",
@@ -25,7 +25,7 @@ const DATOS = {
     docName: "Acuerdo-de-titularidad",
     fechaAlta: "20260810",
     fechaBaja: "-",
-    identidad: "CUIL-20331501027_DNI-33150102",
+    cuit: "CUIL-20331501027",
     email: "juanmanuel.gonzalezrotstein-ARROBA-gmail.com",
     extra: "Constancia-de-Cuit",
     numero: "1042",
@@ -41,10 +41,10 @@ describe("lo que el archivo necesita para volver de la firma", () => {
      * bloque, el documento firmado vuelve y no se puede asociar a ninguna persona — y no falla ruidoso:
      * el archivo existe, se firmó, y recién se descubre cuando alguien lo busca.
      */
-    it("un patrón sin {{identidad}} NO se puede guardar", () => {
+    it("un patrón sin {{cuit}} NO se puede guardar", () => {
         const errores = validarPatron("Contrato", "{{apellido}}_{{nombres}}_{{tipo}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}");
         assert.equal(errores.length, 1);
-        assert.match(errores[0].motivo, /identidad/);
+        assert.match(errores[0].motivo, /cuit/i);
         assert.match(errores[0].motivo, /no se puede asociar a ninguna persona/i, "el motivo tiene que decir la consecuencia, no solo «falta una variable»");
     });
     /**
@@ -53,14 +53,14 @@ describe("lo que el archivo necesita para volver de la firma", () => {
      * persona — que es peor que no caer en ninguno.
      */
     it("un patrón sin fechas NO se puede guardar", () => {
-        const errores = validarPatron("Contrato", "{{apellido}}_{{nombres}}_{{identidad}}");
+        const errores = validarPatron("Contrato", "{{apellido}}_{{nombres}}_{{cuit}}");
         assert.equal(errores.length, 1);
         assert.match(errores[0].motivo, /fechaAlta/);
         assert.match(errores[0].motivo, /fechaBaja/);
     });
     it("con los bloques críticos, se guarda aunque cambie todo lo demás", () => {
         // El punto del ABM: el orden y el resto de los campos son libres.
-        assert.deepEqual(validarPatron("Contrato", "{{tipo}}_{{proyecto}}_{{identidad}}_{{fechaAlta}}_{{fechaBaja}}_{{apellido}}"), []);
+        assert.deepEqual(validarPatron("Contrato", "{{tipo}}_{{proyecto}}_{{cuit}}_{{fechaAlta}}_{{fechaBaja}}_{{apellido}}"), []);
     });
     /**
      * TODOS los tipos vuelven a entrar por su nombre — firmados desde Dropbox Sign, o levantados de la
@@ -68,11 +68,11 @@ describe("lo que el archivo necesita para volver de la firma", () => {
      * firman" fue el error original: dejaba afuera a Pedidos y Vacaciones (que también se firman) y a
      * la Constancia de CUIT (que no se firma pero igual hay que poder levantarla de Dropbox).
      */
-    it("TODOS los tipos exigen la identidad de la persona", () => {
+    it("TODOS los tipos exigen el CUIT de la persona", () => {
         assert.equal(TIPOS_NOMBRE_SE_LEE_DE_VUELTA.length, TIPOS_NOMENCLATURA.length, "no puede haber un tipo cuyo nombre no se lea de vuelta");
         for (const tipo of TIPOS_NOMENCLATURA) {
             const requeridas = VARIABLES_POR_TIPO[tipo].filter((v) => v.requerida).map((v) => v.variable);
-            assert.ok(requeridas.includes("{{identidad}}"), `${tipo} no exige {{identidad}}`);
+            assert.ok(requeridas.includes("{{cuit}}"), `${tipo} no exige {{cuit}}`);
         }
     });
     /**
@@ -114,7 +114,7 @@ describe("el default rinde el nombre de siempre", () => {
      */
     it("arranca con el proyecto y termina con la empleadora", () => {
         const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
-        assert.equal(nombre, "426-LN+_gonzalez-rotstein_juan-manuel_Contrato_Jornada-2030-SRL_Acuerdo-de-titularidad_Alta_20260810_Baja_-_CUIL-20331501027_DNI-33150102_EMAIL-juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Constancia-de-Cuit_EMPRESA-FZERO-S.R.L_CUIT-30710295839");
+        assert.equal(nombre, "426-LN+_gonzalez-rotstein_juan-manuel_Contrato_Jornada-2030-SRL_Acuerdo-de-titularidad_Alta_20260810_Baja_-_CUIL-20331501027_EMAIL-juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Constancia-de-Cuit_CUIT-30710295839");
         assert.ok(nombre.startsWith("426-LN+_"), "el proyecto va primero, y por su NOMBRE (no por el id externo)");
         assert.ok(nombre.endsWith("_CUIT-30710295839"), "el CUIT de la empleadora va último");
     });
@@ -127,7 +127,7 @@ describe("el default rinde el nombre de siempre", () => {
         for (const tipo of TIPOS_NOMENCLATURA) {
             const p = PATRON_POR_DEFECTO[tipo];
             assert.ok(p.startsWith("{{proyecto}}_"), `${tipo} no arranca con el proyecto: ${p}`);
-            assert.ok(p.endsWith("_EMPRESA-{{empresa}}_{{empresaCuit}}"), `${tipo} no termina con la empleadora: ${p}`);
+            assert.ok(p.endsWith("_{{empresaCuit}}"), `${tipo} no termina con el CUIT de la empleadora: ${p}`);
             assert.match(p, /\{\{apellido\}\}_\{\{nombres\}\}_\{\{tipo\}\}/, `${tipo} no respeta el orden persona → documento`);
         }
     });
@@ -157,13 +157,14 @@ describe("el default rinde el nombre de siempre", () => {
         // formato, esto se cae acá y no seis meses después con un contrato "perdido".
         const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
         assert.match(nombre, /(?:^|_)CUIL-(\d{11})/, "extraerIdentidadDeArchivo no encontraría el CUIL");
-        assert.match(nombre, /_(DNI|CI|LE|LC|PAS|DOC)-([A-Za-z0-9]+)/, "extraerIdentidadDeArchivo no encontraría el documento");
+        // El documento ya NO va cuando hay CUIL: era el mismo número dos veces (ver `buildIdentidadTag`).
+        // Lo que sí tiene que seguir pasando es que `buscarEnOutbox` encuentre a la persona por el CUIL.
         const fechas = nombre.match(/(?<!\d)(?<!(?:DNI|CI|LE|LC|PAS|DOC)-)(\d{8})(?!\d)/g) ?? [];
         assert.ok(fechas.includes("20260810"), `extraerFechasDeNombre no encontraría el alta (encontró ${JSON.stringify(fechas)})`);
     });
     it("los de pedidos y vacaciones también conservan su identidad", () => {
         const pedido = renderNomenclatura(PATRON_POR_DEFECTO.Pedido, { ...DATOS, tipo: "Pedido" });
-        assert.equal(pedido, "426-LN+_gonzalez-rotstein_juan-manuel_Pedido_1042_20260821_CUIL-20331501027_DNI-33150102_EMAIL-juanmanuel.gonzalezrotstein-ARROBA-gmail.com_EMPRESA-FZERO-S.R.L_CUIT-30710295839");
+        assert.equal(pedido, "426-LN+_gonzalez-rotstein_juan-manuel_Pedido_1042_20260821_CUIL-20331501027_EMAIL-juanmanuel.gonzalezrotstein-ARROBA-gmail.com_CUIT-30710295839");
         assert.match(pedido, /(?:^|_)CUIL-(\d{11})/);
     });
 });
@@ -191,8 +192,8 @@ describe("bloques que no se pueden normalizar", () => {
      * campos convierte "_" en "-", así que aplicarla acá producía `CUIL-20331501027-DNI-33150102`: un
      * nombre que se ve perfecto y del que ya no se puede sacar el documento de la persona.
      */
-    it("{{identidad}} conserva su «_» interno", () => {
-        const nombre = renderNomenclatura("{{apellido}}_{{identidad}}", { apellido: "perez", identidad: "CUIL-20331501027_DNI-33150102" });
+    it("{{cuit}} conserva su «_» interno si alguna vez vuelve a tener dos bloques", () => {
+        const nombre = renderNomenclatura("{{apellido}}_{{cuit}}", { apellido: "perez", cuit: "CUIL-20331501027_DNI-33150102" });
         assert.equal(nombre, "perez_CUIL-20331501027_DNI-33150102");
         assert.match(nombre, /_(DNI|CI|LE|LC|PAS|DOC)-([A-Za-z0-9]+)/, "sin el «_» el documento no se puede extraer al volver de la firma");
     });
@@ -200,8 +201,32 @@ describe("bloques que no se pueden normalizar", () => {
         // Un apellido con espacio no puede partir el nombre en dos campos.
         assert.equal(renderNomenclatura("{{apellido}}", { apellido: "LE ROY" }), "LE-ROY");
     });
-    it("`identidad` está declarada como compuesta", () => {
-        assert.ok(VARIABLES_COMPUESTAS.has("identidad"));
+    it("`cuit` está declarada como compuesta", () => {
+        assert.ok(VARIABLES_COMPUESTAS.has("cuit"));
+    });
+});
+describe("el nombre viejo de la variable sigue funcionando", () => {
+    /**
+     * `{{identidad}}` se renombró a `{{cuit}}`. Un patrón guardado con el nombre viejo tiene que seguir
+     * rindiendo el CUIL: si no, generaría archivos con un `{{identidad}}` literal adentro — sin el
+     * número que permite reencontrarlos, y sin ningún error a la vista hasta que uno vuelve de la firma.
+     */
+    it("un patrón con {{identidad}} rinde el mismo CUIL que uno con {{cuit}}", () => {
+        const conNombreViejo = renderNomenclatura("{{apellido}}_{{identidad}}", DATOS);
+        const conNombreNuevo = renderNomenclatura("{{apellido}}_{{cuit}}", DATOS);
+        assert.equal(conNombreViejo, conNombreNuevo);
+        assert.match(conNombreViejo, PARSERS.cuil, `el nombre viejo tiene que seguir escribiendo el CUIL: ${conNombreViejo}`);
+    });
+    it("y sigue siendo un patrón válido para guardar", () => {
+        assert.deepEqual(validarPatron("Contrato", "{{proyecto}}_{{identidad}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}"), []);
+    });
+    it("pero el ABM ofrece el nombre nuevo", () => {
+        // El alias se ACEPTA, no se sugiere: dos nombres para lo mismo en la lista sería peor que uno.
+        for (const tipo of TIPOS_NOMENCLATURA) {
+            const ofrecidas = VARIABLES_POR_TIPO[tipo].map((v) => v.variable);
+            assert.ok(ofrecidas.includes("{{cuit}}"), `${tipo} no ofrece {{cuit}}`);
+            assert.ok(!ofrecidas.includes("{{identidad}}"), `${tipo} sigue ofreciendo el nombre viejo`);
+        }
     });
 });
 describe("la empleadora y el tipo de contrato en el nombre", () => {
@@ -228,7 +253,7 @@ describe("la empleadora y el tipo de contrato en el nombre", () => {
     it("la empleadora cierra el nombre en todos los tipos", () => {
         for (const tipo of TIPOS_NOMENCLATURA) {
             const nombre = renderNomenclatura(PATRON_POR_DEFECTO[tipo], { ...DATOS, tipo });
-            assert.ok(nombre.endsWith("_EMPRESA-FZERO-S.R.L_CUIT-30710295839"), `${tipo} termina en: ${nombre.slice(-60)}`);
+            assert.ok(nombre.endsWith("_CUIT-30710295839"), `${tipo} termina en: ${nombre.slice(-60)}`);
         }
     });
 });
@@ -276,7 +301,6 @@ describe("el nombre sigue siendo legible por los servicios de vuelta", () => {
         for (const tipo of TIPOS_NOMENCLATURA) {
             const nombre = renderNomenclatura(PATRON_POR_DEFECTO[tipo], { ...DATOS, tipo });
             assert.match(nombre, PARSERS.cuil, `${tipo}: no se encontraría el CUIL`);
-            assert.match(nombre, PARSERS.documento, `${tipo}: no se encontraría el documento`);
         }
     });
     it("el primer número de 11 dígitos es el de la PERSONA, no el de la empleadora", () => {
@@ -297,11 +321,11 @@ describe("el nombre sigue siendo legible por los servicios de vuelta", () => {
         }
     });
     it("el patrón no puede poner el CUIT de la empleadora antes que la identidad", () => {
-        const dadoVuelta = "{{proyecto}}_{{empresaCuit}}_{{identidad}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}";
+        const dadoVuelta = "{{proyecto}}_{{empresaCuit}}_{{cuit}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}";
         const errores = validarPatron("Contrato", dadoVuelta);
         assert.ok(errores.some((e) => e.motivo.includes("{{empresaCuit}}")), `debería rechazarse: ${JSON.stringify(errores)}`);
         // Y en el orden correcto tiene que pasar.
-        assert.deepEqual(validarPatron("Contrato", "{{proyecto}}_{{identidad}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}_{{empresaCuit}}"), []);
+        assert.deepEqual(validarPatron("Contrato", "{{proyecto}}_{{cuit}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}_{{empresaCuit}}"), []);
     });
 });
 describe("el email se puede reconstruir", () => {
@@ -345,7 +369,6 @@ describe("el nombre entra en el tope de Dropbox", () => {
     it("recortar no toca el CUIL, el documento ni las fechas", () => {
         const nombre = recortarNombre(renderNomenclatura(PATRON_POR_DEFECTO.Contrato, LARGO));
         assert.match(nombre, PARSERS.cuil, `se perdió el CUIL: ${nombre}`);
-        assert.match(nombre, PARSERS.documento, `se perdió el documento: ${nombre}`);
         const fechas = nombre.match(PARSERS.fechas) ?? [];
         assert.ok(fechas.includes("20260810"), `se perdió la fecha de alta (quedaron ${JSON.stringify(fechas)})`);
         assert.equal(PARSERS.cuitSuelto.exec(nombre)?.[1].replace(/\D/g, ""), "20331501027");
@@ -355,7 +378,7 @@ describe("el nombre entra en el tope de Dropbox", () => {
         const recortado = recortarNombre(entero);
         assert.equal(recortado.split("_").length, entero.split("_").length, `se perdieron bloques: ${recortado}`);
         // Las etiquetas son lo que hace legible el nombre: tienen que sobrevivir al recorte.
-        for (const etiqueta of ["EMAIL-", "EMPRESA-", "CUIT-"]) {
+        for (const etiqueta of ["EMAIL-", "CUIT-"]) {
             assert.ok(recortado.includes(etiqueta), `se perdió la etiqueta ${etiqueta}: ${recortado}`);
         }
     });
@@ -399,6 +422,63 @@ describe("el tope se mide en BYTES, no en caracteres", () => {
     it("sigue conservando el CUIL y el documento", () => {
         const nombre = recortarNombre(renderNomenclatura(PATRON_POR_DEFECTO.Release, { ...ACENTOS, tipo: "Release" }));
         assert.match(nombre, PARSERS.cuil);
-        assert.match(nombre, PARSERS.documento);
+    });
+});
+describe("la identidad: CUIL solo, y el documento como respaldo", () => {
+    const usuario = (cuit, documento, tipoDocumentoId = 1) => ({ metadata: { cuit, documento, tipoDocumentoId } });
+    it("con CUIL, va SOLO el CUIL", () => {
+        // Iban los dos y era el mismo número dos veces: el CUIL contiene al DNI. Trece caracteres del
+        // nombre gastados en repetir, con el tope de 255 encima.
+        assert.equal(buildIdentidadTag(usuario("20-33150102-7", "33150102")), "CUIL-20331501027");
+    });
+    it("SIN CUIL, queda el documento: es el único identificador que le queda a esa persona", () => {
+        // Son 39 en el padrón real (pasaportes y DNI sin CUIL cargado), 31 con contratos. Sin esto sus
+        // documentos vuelven de la firma y no se pueden asociar a nadie.
+        assert.equal(buildIdentidadTag(usuario("", "43092696")), "DNI-43092696");
+        assert.equal(buildIdentidadTag({ metadata: { cuit: "", documento: "AAE1450C7", tipoDocumentoId: 5 } }), "PAS-AAE1450C7");
+    });
+    it("un CUIT de ceros no cuenta como CUIL", () => {
+        // Es el placeholder que quedó cargado en la gente sin CUIL argentino: si se escribiera, el
+        // matching por CUIT daría ambiguo entre todos ellos.
+        assert.equal(buildIdentidadTag(usuario("00-00000000-0", "43092696")), "DNI-43092696");
+    });
+    it("sin CUIL ni documento no se inventa nada", () => {
+        assert.equal(buildIdentidadTag({ metadata: {} }), "");
+    });
+    it("lo que sale sigue siendo parseable por el servicio de vuelta", () => {
+        const conCuil = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, { ...DATOS, cuit: buildIdentidadTag(usuario("20-33150102-7", "33150102")) });
+        assert.match(conCuil, PARSERS.cuil);
+        const sinCuil = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, { ...DATOS, cuit: buildIdentidadTag(usuario("", "43092696")) });
+        assert.match(sinCuil, PARSERS.documento, `sin CUIL hay que poder encontrarlo por el documento: ${sinCuil}`);
+    });
+});
+describe("la razón social de la empleadora quedó retirada", () => {
+    /**
+     * Eran doce caracteres para decir lo mismo que `{{empresaCuit}}`, con el nombre peleando contra el
+     * tope de 255. Ya no se ofrece y no se puede guardar un patrón que la use.
+     */
+    it("ningún patrón por defecto la usa", () => {
+        for (const tipo of TIPOS_NOMENCLATURA)
+            assert.ok(!PATRON_POR_DEFECTO[tipo].includes("{{empresa}}"), `${tipo} todavía la usa: ${PATRON_POR_DEFECTO[tipo]}`);
+    });
+    it("el ABM ya no la ofrece en ningún tipo", () => {
+        for (const tipo of TIPOS_NOMENCLATURA) {
+            const ofrecidas = VARIABLES_POR_TIPO[tipo].map((v) => v.variable);
+            assert.ok(!ofrecidas.includes("{{empresa}}"), `${tipo} sigue ofreciéndola`);
+            assert.ok(ofrecidas.includes("{{empresaCuit}}"), `${tipo} tiene que seguir ofreciendo el CUIT`);
+        }
+    });
+    it("un patrón que la use no se puede guardar, y el motivo dice qué hacer", () => {
+        const errores = validarPatron("Release", "{{proyecto}}_{{cuit}}_Alta_{{fechaAlta}}_Baja_{{fechaBaja}}_{{empresa}}_{{empresaCuit}}");
+        assert.equal(errores.length, 1);
+        assert.match(errores[0].motivo, /\{\{empresa\}\}/);
+        assert.match(errores[0].motivo, /empresaCuit/, "el motivo tiene que decir con qué se reemplaza");
+        // Y NO con el motivo de «variable inventada», que diría que el campo quedaría vacío: no es cierto,
+        // el valor se sigue proveyendo para que los patrones ya guardados rindan bien.
+        assert.doesNotMatch(errores[0].motivo, /quedaría vacío/);
+    });
+    it("pero un patrón guardado con ella sigue rindiendo el nombre de la empresa", () => {
+        // Hasta que alguien lo edite: escribir `{{empresa}}` literal adentro del archivo sería peor.
+        assert.equal(renderNomenclatura("{{apellido}}_{{empresa}}", DATOS), "gonzalez-rotstein_FZERO-S.R.L");
     });
 });

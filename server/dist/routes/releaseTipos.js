@@ -25,7 +25,7 @@ async function buscarOCrearReleaseTipo(tenantId, nombre) {
     }
 }
 /**
- * Backfill idempotente: antes de esta feature, "Plantillas | Release" (colección `Release`) no
+ * Backfill idempotente: antes de esta feature, "Plantillas | Releases" (colección `Release`) no
  * tenía ningún concepto de tipo. Para todo Release del tenant que todavía no tenga
  * `releaseTipoId`, se busca o crea un ReleaseTipo con su mismo nombre y se vincula. Se corre solo
  * (no hace falta un script manual): al no haber pendientes, es un no-op rápido.

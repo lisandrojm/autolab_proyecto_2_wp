@@ -64,10 +64,10 @@ export async function savePdfToStorage(
 
     const timestamp = Date.now();
     const sanitizedOrderNumber = orderNumber.replace(/[^a-zA-Z0-9-]/g, "_");
-    const identidad = (identidadTag || "").replace(/[^a-zA-Z0-9_-]/g, "");
+    const cuit = (identidadTag || "").replace(/[^a-zA-Z0-9_-]/g, "");
     // El patrón lo define el ABM de Nomenclatura de archivos (Plantillas). Sin configurar, el default
     // reproduce exactamente este nombre: por eso esto se pudo soltar sin migrar ni renombrar nada.
-    const filename = `${await nombreArchivo(tenantId, "Pedido", { ...(datosNombre || {}), tipo: "Pedido", numero: sanitizedOrderNumber, identidad, timestamp, fecha: String(timestamp).slice(0, 8) })}.pdf`;
+    const filename = `${await nombreArchivo(tenantId, "Pedido", { ...(datosNombre || {}), tipo: "Pedido", numero: sanitizedOrderNumber, cuit, timestamp, fecha: String(timestamp).slice(0, 8) })}.pdf`;
     console.log("[PDF STORAGE] Filename:", filename);
 
     const filePath = path.join(storageDir, filename);
@@ -135,8 +135,8 @@ export async function savePdfVacationToStorage(
 
     const timestamp = Date.now();
     const sanitizedVacationNumber = vacationNumber.replace(/[^a-zA-Z0-9-]/g, "_");
-    const identidad = (identidadTag || "").replace(/[^a-zA-Z0-9_-]/g, "");
-    const filename = `${await nombreArchivo(tenantId, "Vacacion", { ...(datosNombre || {}), tipo: "Vacacion", numero: sanitizedVacationNumber, identidad, timestamp, fecha: String(timestamp).slice(0, 8), anio: String(timestamp).slice(0, 4) })}.pdf`;
+    const cuit = (identidadTag || "").replace(/[^a-zA-Z0-9_-]/g, "");
+    const filename = `${await nombreArchivo(tenantId, "Vacacion", { ...(datosNombre || {}), tipo: "Vacacion", numero: sanitizedVacationNumber, cuit, timestamp, fecha: String(timestamp).slice(0, 8), anio: String(timestamp).slice(0, 4) })}.pdf`;
     console.log("[PDF STORAGE] Filename:", filename);
 
     const filePath = path.join(storageDir, filename);

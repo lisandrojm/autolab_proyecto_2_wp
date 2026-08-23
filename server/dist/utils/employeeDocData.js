@@ -43,12 +43,23 @@ export function buildIdentidadTag(user) {
     // Se conservan letras porque los pasaportes son alfanuméricos.
     const documento = String(user?.metadata?.documento ?? "").replace(/[^A-Za-z0-9]/g, "");
     const sigla = SIGLA_TIPO_DOCUMENTO[Number(user?.metadata?.tipoDocumentoId)] || "DOC";
-    const partes = [];
+    /*
+     * Con CUIL, el CUIL SOLO. El documento va únicamente cuando no hay CUIL.
+     *
+     * Iban los dos y era información repetida: el CUIL argentino contiene al DNI (20-33150102-7), así
+     * que `CUIL-20331501027_DNI-33150102` gastaba 13 caracteres del nombre en decir lo mismo dos veces
+     * — y el nombre está peleando contra un tope de 255.
+     *
+     * Como desempate tampoco servía: `buscarEnOutbox` filtra primero por CUIL, y si una persona tiene
+     * dos archivos en Outbox los dos llevan su mismo documento, así que no desempata nada.
+     *
+     * El documento SÍ queda cuando no hay CUIL: son 39 personas del padrón —pasaportes y DNI sin CUIL
+     * cargado, 31 de ellas con contratos— y sacárselo las dejaría sin ningún identificador en el
+     * nombre, o sea con documentos que vuelven de la firma y no se pueden asociar a nadie.
+     */
     if (cuit)
-        partes.push(`CUIL-${cuit}`);
-    if (documento)
-        partes.push(`${sigla}-${documento}`);
-    return partes.join("_");
+        return `CUIL-${cuit}`;
+    return documento ? `${sigla}-${documento}` : "";
 }
 /** Espacios y separadores sueltos dentro de UN campo pasan a "-", para que el "_" quede como único
  *  separador de campos. Así el nombre se puede partir por "_" sin ambigüedad. */
@@ -183,7 +194,9 @@ export function datosNombreArchivo(opts) {
         // y sin alta significa dato sin cargar. Omitir el bloque hacía indistinguibles esos dos casos.
         fechaAlta: fechaCompacta(contract?.fecha_alta_contrato) || "-",
         fechaBaja: fechaCompacta(contract?.fecha_baja_contrato) || "-",
-        identidad: buildIdentidadTag(user), // ya viene como CUIL-…_DNI-…, con "_" entre bloques
+        // La variable se llama `{{cuit}}` en el patrón. Sale de `buildIdentidadTag`: el CUIL, o el
+        // documento cuando la persona no tiene CUIL cargado.
+        cuit: buildIdentidadTag(user),
         email: emailNomenclatura(user?.email),
         extra: campo(extra),
     };

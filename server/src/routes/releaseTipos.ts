@@ -16,11 +16,7 @@ const router = Router();
  */
 async function buscarOCrearReleaseTipo(tenantId: Types.ObjectId, nombre: string) {
   try {
-    return await ReleaseTipo.findOneAndUpdate(
-      { tenantId, name: nombre },
-      { $setOnInsert: { tenantId, name: nombre, isActive: true, requiereFirma: true } },
-      { upsert: true, new: true, setDefaultsOnInsert: true },
-    );
+    return await ReleaseTipo.findOneAndUpdate({ tenantId, name: nombre }, { $setOnInsert: { tenantId, name: nombre, isActive: true, requiereFirma: true } }, { upsert: true, new: true, setDefaultsOnInsert: true });
   } catch (error: any) {
     if (error?.code === 11000) {
       const existente = await ReleaseTipo.findOne({ tenantId, name: nombre });
@@ -31,7 +27,7 @@ async function buscarOCrearReleaseTipo(tenantId: Types.ObjectId, nombre: string)
 }
 
 /**
- * Backfill idempotente: antes de esta feature, "Plantillas | Release" (colección `Release`) no
+ * Backfill idempotente: antes de esta feature, "Plantillas | Releases" (colección `Release`) no
  * tenía ningún concepto de tipo. Para todo Release del tenant que todavía no tenga
  * `releaseTipoId`, se busca o crea un ReleaseTipo con su mismo nombre y se vincula. Se corre solo
  * (no hace falta un script manual): al no haber pendientes, es un no-op rápido.

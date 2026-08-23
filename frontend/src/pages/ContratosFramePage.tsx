@@ -198,11 +198,19 @@ export const ContratosFramePage: React.FC = () => {
     }
   };
 
+  /*
+   * Los dos avisan que están trabajando, y no es cosmético: el PDF lo arma un navegador headless en
+   * el server, así que entre el click y el resultado pasan varios segundos con la pantalla igual que
+   * antes. Sin señal, lo que pasa es que se vuelve a hacer click y se encolan más generaciones.
+   */
   const handleDownloadFile = async (item: ContratoFrameItem) => {
     try {
+      sweetAlert.loading('Generando el archivo…', 'Puede tardar unos segundos.');
       await contratoFrameAPI.download(item);
     } catch {
       sweetAlert.error('Error', 'No se pudo descargar el archivo.');
+    } finally {
+      sweetAlert.close();
     }
   };
 
@@ -213,10 +221,13 @@ export const ContratosFramePage: React.FC = () => {
       return;
     }
     try {
+      sweetAlert.loading('Generando la previsualización…', 'Se abre en una pestaña nueva cuando esté lista.');
       const blob = await contratoFrameAPI.preview(item.content || '', item.usaMembrete);
       window.open(URL.createObjectURL(blob), '_blank');
     } catch {
       sweetAlert.error('Error', 'No se pudo generar la previsualización.');
+    } finally {
+      sweetAlert.close();
     }
   };
 
@@ -228,6 +239,9 @@ export const ContratosFramePage: React.FC = () => {
     }
     try {
       setPreviewing(true);
+      // Este botón ya cambia a "Generando...", pero está en el pie del modal y con el editor scrolleado
+      // queda fuera de la vista: el aviso es lo único que se ve desde donde uno estaba mirando.
+      sweetAlert.loading('Generando la previsualización…', 'Puede tardar unos segundos.');
       const blob = await contratoFrameAPI.preview(form.content, usaMembrete);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -238,6 +252,7 @@ export const ContratosFramePage: React.FC = () => {
     } catch {
       sweetAlert.error('Error', 'No se pudo generar la previsualización.');
     } finally {
+      sweetAlert.close();
       setPreviewing(false);
     }
   };
@@ -355,7 +370,7 @@ export const ContratosFramePage: React.FC = () => {
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contrato</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
-                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Membrete | Firma</th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Membrete | Firma</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Contenido</th>
                 <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
               </tr>
@@ -503,7 +518,7 @@ export const ContratosFramePage: React.FC = () => {
             {/* Contenido del contrato */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contenido</label>
-              <RichTextEditor value={form.content} onChange={(html) => setForm((f) => ({ ...f, content: html }))} variables={contratoVariables} variablesTitle="Variables del contrato (click para insertar)" />
+              <RichTextEditor value={form.content} onChange={(html) => setForm((f) => ({ ...f, content: html }))} variables={contratoVariables} variablesTitle="Variables del contrato" />
               <p className="text-xs text-gray-500 mt-1">Opcional: podés crear el contrato y redactarlo más adelante, pero sin contenido no se puede generar el PDF. Las variables se reemplazan al descargar con los datos de la persona y de la empresa seteada en el proyecto (Empresa del Contrato).</p>
             </div>
           </div>

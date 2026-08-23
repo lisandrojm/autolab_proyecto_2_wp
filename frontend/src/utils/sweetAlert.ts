@@ -144,9 +144,21 @@ export const sweetAlert = {
       },
     });
   },
-  loading: (title: string) => {
+  /**
+   * Bloqueante y a propósito: se usa para lo que TARDA y no muestra nada mientras tanto.
+   *
+   * El caso son los PDF, que se arman con un navegador headless del lado del server: entre que se
+   * hace click y que abre la pestaña pasan varios segundos sin ninguna señal, y lo que pasa es que
+   * la gente vuelve a hacer click. Sin `allowOutsideClick` se puede cerrar sin querer y se pierde el
+   * aviso justo cuando hace falta.
+   *
+   * SIEMPRE cerrar con `sweetAlert.close()` en un `finally`: si la promesa falla y nadie lo cierra,
+   * la pantalla queda tapada por un spinner que no termina nunca.
+   */
+  loading: (title: string, text?: string) => {
     return Swal.fire({
       title,
+      text,
       allowOutsideClick: false,
       allowEscapeKey: false,
       showConfirmButton: false,
@@ -155,4 +167,7 @@ export const sweetAlert = {
       },
     });
   },
+
+  /** Cierra el aviso abierto (el de `loading`). Existe para no tener que importar Swal en cada página. */
+  close: () => Swal.close(),
 };

@@ -15,6 +15,7 @@ import { pdfsAPI, Pdf, PdfInput, codeOptions, variablesByCode, systemVariables }
 import { pdfPreviewAPI } from '../api/pdfPreview';
 
 import Swal from 'sweetalert2';
+import { sweetAlert } from '../utils/sweetAlert';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { Modal } from '../components/ui/Modal';
 import { RichTextEditor } from '../components/ui/RichTextEditor';
@@ -171,9 +172,15 @@ export function PdfTemplatesPage({ scope }: { scope: PdfTemplatesScope }) {
     }
   };
 
+  /*
+   * Los dos avisan que están trabajando: el PDF lo arma un navegador headless en el server, así que
+   * entre el click y el resultado pasan varios segundos con la pantalla igual que antes. Sin señal,
+   * lo que pasa es que se vuelve a hacer click y se encolan más generaciones.
+   */
   /** Descarga el PDF de la plantilla ya guardada, con valores de ejemplo (igual que en Releases). */
   const handleDownload = async (template: Pdf) => {
     try {
+      sweetAlert.loading('Generando el PDF…', 'Puede tardar unos segundos.');
       const blob = await pdfPreviewAPI.preview(template.content, template.code, template.title, undefined, template.usaMembrete ?? false);
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -186,17 +193,22 @@ export function PdfTemplatesPage({ scope }: { scope: PdfTemplatesScope }) {
     } catch (error) {
       console.error(error);
       Swal.fire('Error', 'No se pudo generar el PDF de la plantilla', 'error');
+    } finally {
+      sweetAlert.close();
     }
   };
 
   /** Abre la previsualización de la plantilla en una pestaña nueva, sin entrar a editar. */
   const handlePreviewItem = async (template: Pdf) => {
     try {
+      sweetAlert.loading('Generando la previsualización…', 'Se abre en una pestaña nueva cuando esté lista.');
       const blob = await pdfPreviewAPI.preview(template.content, template.code, template.title, undefined, template.usaMembrete ?? false);
       window.open(URL.createObjectURL(blob), '_blank');
     } catch (error) {
       console.error(error);
       Swal.fire('Error', 'No se pudo generar la previsualización', 'error');
+    } finally {
+      sweetAlert.close();
     }
   };
 
@@ -414,7 +426,7 @@ export function PdfTemplatesPage({ scope }: { scope: PdfTemplatesScope }) {
                       <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
                       <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Código</th>
                       <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
-                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Membrete | Firma</th>
+                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Membrete | Firma</th>
                       <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Contenido</th>
                       <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
                     </tr>
@@ -648,7 +660,7 @@ export function PdfTemplatesPage({ scope }: { scope: PdfTemplatesScope }) {
                   { grupo: formData.code === 'vacaciones' ? 'Variables de vacaciones' : 'Variables del pedido', vars: variablesByCode[formData.code] || [] },
                   { grupo: 'Variables de la empresa', vars: systemVariables.map((s) => s.variable) },
                 ]}
-                variablesTitle="Variables disponibles (click para insertar)"
+                variablesTitle={formData.code === 'vacaciones' ? 'Variables de vacaciones' : 'Variables del pedido'}
               />
               {errors.content && <p className="text-sm text-red-500 mt-1">{errors.content}</p>}
             </div>

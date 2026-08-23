@@ -25,7 +25,7 @@ const EJEMPLO = {
     docName: "Acuerdo-de-titularidad-de-la-obra",
     fechaAlta: "20260810",
     fechaBaja: "-",
-    identidad: "CUIL-20331501027_DNI-33150102",
+    cuit: "CUIL-20331501027",
     email: "juanmanuel.gonzalezrotstein-ARROBA-gmail.com",
     extra: "Alta-Temprana-de-ARCA",
     numero: "1042",
