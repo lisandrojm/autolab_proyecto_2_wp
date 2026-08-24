@@ -1,3 +1,4 @@
+import { GRUPO_FIRMA, GrupoVariables } from "./variableFirma";
 import axios from "./axiosConfig";
 
 export interface ContratoFrameItem {
@@ -37,7 +38,7 @@ export interface ContratoFrameInput {
  * Se reemplazan al descargar con los datos de la persona/contrato y de la empresa
  * seteada en el proyecto (Empresa del Contrato).
  */
-export const contratoVariables: { grupo: string; vars: string[] }[] = [
+export const contratoVariables: GrupoVariables[] = [
   {
     grupo: "Datos de la persona",
     vars: ["{{nombre}}", "{{apellido}}", "{{nombreCompleto}}", "{{dni}}", "{{cuit}}", "{{email}}", "{{fechaDeNacimiento}}", "{{estadoCivil}}", "{{telefono}}"],
@@ -70,17 +71,11 @@ export const contratoVariables: { grupo: string; vars: string[] }[] = [
     grupo: "Firmante de la empresa",
     vars: ["{{empresaFirmanteNombre}}", "{{empresaFirmanteDni}}", "{{empresaFirmanteCargo}}"],
   },
-  /*
-   * Dónde firma la persona. Rinde una LÍNEA DE FIRMA clásica en el PDF:
-   *
-   *     Firma: ______________________________
-   *
-   * Clásica a propósito, no por estética: la detección automática de campos de Dropbox Sign está
-   * entrenada con documentos reales. Un placeholder tipo `[FIRMA]` le parece texto del cuerpo y no
-   * propone ningún campo. La firma de la empresa no está acá porque no se firma: viene en el membrete.
-   */
-  { grupo: "Firma", vars: ["{{firma}}"] },
   { grupo: "Otros", vars: ["{{fecha}}"] },
+  // ÚLTIMO a propósito: es lo último que se pega y lo último que va en el documento. Destacada y con
+  // su explicación a la vista del que edita — acá era un comentario del código, o sea invisible justo
+  // para quien tiene que usarla. Ver `GRUPO_FIRMA`.
+  GRUPO_FIRMA,
 ];
 
 const downloadBlob = (data: BlobPart, fileName: string) => {

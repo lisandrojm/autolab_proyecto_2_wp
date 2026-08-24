@@ -71,12 +71,17 @@ export const variablesByCode: Record<string, string[]> = {
   vacaciones: ["{{dias}}", "{{anio}}", "{{fechaInicio}}", "{{fechaFin}}", "{{fechaReintegro}}", "{{nombreUsuario}}"],
 };
 
+/**
+ * Datos de la EMPLEADORA y del documento. Nada que la persona firme.
+ *
+ * `{{firma}}` estaba acá adentro y no correspondía: no es un dato de la empresa sino dónde firma la
+ * persona, y agrupada entre la razón social y el CUIT quedaba escondida justo la variable que decide
+ * si el documento se puede firmar. Vive en `GRUPO_FIRMA`, aparte y destacada, igual que en Contratos
+ * y Releases — que ya lo tenían bien.
+ */
 export const systemVariables = [
   { variable: "{{razonSocial}}", description: "Razón social de la empresa" },
   { variable: "{{cuit}}", description: "CUIT de la empresa" },
   { variable: "{{ciudad}}", description: "Ciudad sede" },
   { variable: "{{fecha}}", description: "Fecha de generación del documento" },
-  // Rinde una línea de firma clásica (`Firma: ____`), que es lo que la detección automática de
-  // campos de Dropbox Sign reconoce; un placeholder entre corchetes le parece texto del cuerpo.
-  { variable: "{{firma}}", description: "Línea donde firma la persona (la detecta Dropbox Sign)" },
 ];

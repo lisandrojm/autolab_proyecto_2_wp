@@ -12,6 +12,7 @@ import { faPlus, faEdit, faTrash, faFileContract, faEye, faList, faInfoCircle, f
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 
 import { pdfsAPI, Pdf, PdfInput, codeOptions, variablesByCode, systemVariables } from '../api/pdf';
+import { GRUPO_FIRMA_PIE_AUTOMATICO } from '../api/variableFirma';
 import { pdfPreviewAPI } from '../api/pdfPreview';
 
 import Swal from 'sweetalert2';
@@ -659,6 +660,15 @@ export function PdfTemplatesPage({ scope }: { scope: PdfTemplatesScope }) {
                 variables={[
                   { grupo: formData.code === 'vacaciones' ? 'Variables de vacaciones' : 'Variables del pedido', vars: variablesByCode[formData.code] || [] },
                   { grupo: 'Variables de la empresa', vars: systemVariables.map((s) => s.variable) },
+                  /*
+                    La variante CON AVISO, y no la de Contratos/Releases.
+
+                    Pedidos y Vacaciones los arma `pdfGenerator.ts`, que cierra el documento con una
+                    línea de firma fija — fuera de cualquier condicional, así que sale con el membrete
+                    apagado también. Acá `{{firma}}` duplica; en Contratos y Releases es la única que
+                    hay. Misma variable, consecuencia opuesta: por eso son dos grupos y no uno.
+                  */
+                  GRUPO_FIRMA_PIE_AUTOMATICO,
                 ]}
                 variablesTitle={formData.code === 'vacaciones' ? 'Variables de vacaciones' : 'Variables del pedido'}
               />
