@@ -157,6 +157,29 @@ const ObrasSocialesBody: React.FC<{ empresa: Company; recargar: () => Promise<vo
     if (os && osId === defaultId) setDefaultId(null);
   };
 
+  /**
+   * Registrar de una vez todas las del catálogo.
+   *
+   * Es una acción de carga, no un atajo de configuración, y por eso pregunta antes: la sección existe
+   * porque cada CUIT declara ante ARCA un SUBCONJUNTO, y con las 496 puestas el chequeo de
+   * consistencia deja de decir nada —cualquier obra social pasa—. El rechazo entonces no lo da la
+   * plataforma sino ARCA, al subir el TXT, que es exactamente lo que este control viene a evitar.
+   *
+   * Solo AGREGA: no toca lo ya registrado ni la default de excluidos. Y como todo en esta pantalla,
+   * no se escribe nada hasta Guardar, así que se puede deshacer saliendo sin guardar.
+   */
+  const registrarTodas = async () => {
+    const faltan = catalogo.filter((o) => !ids.includes(o._id));
+    if (faltan.length === 0) return;
+    const r = await sweetAlert.confirm(
+      `¿Registrar las ${faltan.length} que faltan?`,
+      `Van a quedar registradas las ${catalogo.length} del catálogo. Tené en cuenta que ARCA solo acepta las que este CUIT tenga declaradas en su padrón: con todas puestas, el chequeo de consistencia deja pasar cualquiera y el rechazo aparece recién al subir el TXT. Todavía no se guarda nada.`,
+      "Sí, registrar todas",
+    );
+    if (!r.isConfirmed) return;
+    setIds((prev) => [...prev, ...faltan.map((o) => o._id)]);
+  };
+
   if (cargando) return <LoadingSpinner message="Cargando el catálogo de obras sociales..." />;
 
   return (
@@ -223,14 +246,28 @@ const ObrasSocialesBody: React.FC<{ empresa: Company; recargar: () => Promise<vo
         </summary>
 
         <div className="px-4 pb-4 space-y-3 border-t border-gray-100 dark:border-gray-700/60 pt-3">
-          <div className="relative">
-            <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-            <input type="text" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar en el catálogo para registrar otra…" className="w-full pl-9 pr-9 py-2 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500/30" />
-            {busqueda && (
-              <button type="button" onClick={() => setBusqueda('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
-              </button>
-            )}
+          {/* Buscar de a una y traer todas son las dos formas de poblar esto, así que van juntas. El
+              botón queda a la derecha y en secundario: registrar de a una es lo correcto casi siempre. */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 min-w-0">
+              <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+              <input type="text" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar en el catálogo para registrar otra…" className="w-full pl-9 pr-9 py-2 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500/30" />
+              {busqueda && (
+                <button type="button" onClick={() => setBusqueda('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                  <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={registrarTodas}
+              disabled={registradas.length === catalogo.length}
+              title={registradas.length === catalogo.length ? 'Ya están registradas las del catálogo' : `Registrar las ${catalogo.length - registradas.length} que faltan`}
+              className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
+              Registrar todas
+            </button>
           </div>
 
           {busqueda.trim() && (

@@ -1,10 +1,58 @@
-# Validar obras sociales contra ARCA
+# Obras sociales contra ARCA
+
+Dos comandos, dos pantallas de ARCA, el mismo Chrome dedicado.
+
+| | qué hace | escribe en ARCA |
+|---|---|---|
+| `validar-obras-sociales` | lee qué obra social tiene cada persona | **no** — solo lee |
+| `arca:registrar-obras-sociales` | completa el padrón de obras sociales de la empleadora | **sí** |
 
 ```bash
 npm run chrome-arca                                    # 1. Chrome dedicado (una vez cada varios días)
 npm run validar-obras-sociales -- --empresa <id>       # 2. la corrida
 npm run validar-obras-sociales -- --empresa <id> -n    # ...o en seco, sin escribir nada
 ```
+
+## Registrar obras sociales de la empleadora
+
+Para que ARCA acepte un alta, la obra social declarada tiene que estar **registrada por esa
+empleadora**. Si no lo está, el alta se rechaza. A mano son cientos de altas de a una.
+
+```bash
+npm run arca:registrar-obras-sociales -- --empleadora 30717068374              # dry-run: no escribe
+npm run arca:registrar-obras-sociales -- --empleadora 30717068374 --si         # ejecuta
+npm run arca:registrar-obras-sociales -- --empleadora 30717068374 --si -l 5    # ...de a 5, para probar
+```
+
+Pantalla: **Datos del Empleador → Obras Sociales** (no la de altas de trabajadores).
+
+- **Sin `--si` no escribe nada.** La corrida por defecto informa cuántas faltan y sale.
+- **Verifica el CUIT en pantalla antes de escribir.** Si el pedido no está, aborta. No hay flag para
+  saltearlo: registrar bajo la empleadora equivocada no avisa, y el error aparece recién cuando
+  alguien audita el padrón.
+- **Solo agrega.** Nunca da de baja. Cada fila ya registrada tiene su propio botón de baja en la
+  misma pantalla, y son los dos `input[type=image]`: por eso el de alta se busca por su id exacto
+  (`btnAceptaAltaOS`) y nunca por tipo.
+- **Idempotente.** Recalcula contra lo ya registrado, así que si se corta a la mitad se vuelve a
+  correr y retoma. Correrlo de nuevo con todo registrado no hace nada.
+- **Va de a una**, con ~120 ms entre altas: es ASP.NET con `__VIEWSTATE` y dos postbacks encimados
+  mandan un viewstate viejo.
+- **Confirma por conteo.** Un alta vale si sube el número de registradas — ARCA no siempre avisa
+  cuando algo no toma. La que no sube se anota como fallida y la corrida **sigue**; al final se
+  listan.
+- El catálogo sale de `window.l_OS` de la propia página. No está hardcodeado: las de hoy pueden ser
+  otras mañana.
+
+### Por qué son dos archivos y no un comando más del otro
+
+La protección más fuerte de `validar-obras-sociales` es un test que escanea **su** fuente y falla
+ante cualquier `.click()` fuera de su lista blanca de `Agregar` y `Reiniciar` — la que garantiza que
+nunca se apriete **Aceptar**. Meter ahí adentro un click que sí escribe obligaría a aflojar ese
+escaneo, y el escaneo vale precisamente porque no admite excepciones.
+
+Separados, cada script tiene su propia lista blanca, total y verificada por su propio test: el de
+validación no puede tocar nada de la pantalla de obras sociales, y el de registro no puede tocar nada
+de la de altas. Lo único que se repite son ~30 líneas de conexión CDP.
 
 ## Por qué hay un navegador en el medio
 
@@ -79,8 +127,9 @@ cáscara fina encima. Ese agente necesitaría autenticarse contra WeProdu y acep
 ## Tests
 
 ```bash
-npm run test:validar-obras-sociales      # el script (frontend/)
-npm run test:obras-sociales              # las reglas del server (server/)
+npm run test:validar-obras-sociales           # el script de lectura (frontend/)
+npm run test:arca:registrar-obras-sociales    # el script de escritura (frontend/)
+npm run test:obras-sociales                   # las reglas del server (server/)
 ```
 
 Los cuatro primeros son sobre **Aceptar** y no se tocan: uno prueba que `boton()` se niega, otro que
