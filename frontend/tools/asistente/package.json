@@ -1,0 +1,24 @@
+{
+  "name": "asistente-weprodu",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Servicio local que le deja a WeProdu manejar el Chrome de ARCA con un botón, sin terminal.",
+  "bin": "servidor.mjs",
+  "scripts": {
+    "start": "node servidor.mjs",
+    "test": "node --test seguridad.test.mjs",
+    "empaquetar": "pkg servidor.mjs --targets node18-win-x64,node18-macos-x64,node18-macos-arm64 --output dist/AsistenteWeProdu"
+  },
+  "dependencies": {
+    "playwright-core": "^1.48.0"
+  },
+  "devDependencies": {
+    "pkg": "^5.8.1"
+  },
+  "pkg": {
+    "//": "El motor CDP vive dos carpetas arriba y se importa dinámicamente: `pkg` no lo detecta solo y hay que listarlo, o el ejecutable arranca y falla recién al validar.",
+    "scripts": ["../validar-obras-sociales.mjs", "../registrar-obras-sociales.mjs", "../asistente/*.mjs"],
+    "assets": ["package.json"]
+  }
+}

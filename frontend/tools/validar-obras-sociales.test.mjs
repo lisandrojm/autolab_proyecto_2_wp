@@ -93,7 +93,10 @@ describe("reglas del trámite", () => {
    * significado sobre alguien que ARCA nunca contestó.
    */
   it("los CUIL con error NO se aplican", () => {
-    assert.match(FUENTE, /else errores\.add\(cuil\)/, "la fila que no aparece es un error de ESE CUIL");
+    // Se pinea el CAMINO y no la sintaxis: el `else` de una línea se volvió un `continue` cuando entró
+    // el aviso de progreso del Asistente. Lo que no puede cambiar es que no estar en `filas` termine
+    // en `errores`.
+    assert.match(FUENTE, /if \(cuil in filas\)[\s\S]{0,500}?errores\.add\(cuil\)/, "la fila que no aparece es un error de ESE CUIL");
     // Lo que se manda a la API sale de `hechos` —lo que ARCA efectivamente contestó— y nunca de la
     // lista original: un error emitido como rnos vacío se guardaría como "no tiene obra social".
     const salida = FUENTE.slice(FUENTE.indexOf("const items ="));

@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faSpinner, faCheck, faCopy, faCircleCheck, faXmark, faTriangleExclamation, faPlay, faStop, faKeyboard, faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faSpinner, faCheck, faCopy, faCircleCheck, faXmark, faTriangleExclamation, faPlay, faStop, faKeyboard } from '@fortawesome/free-solid-svg-icons';
 import { ContractOverviewRow } from '../../api/users';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { projectsAPI } from '../../api/projects';
 import { formatRnos } from '../../utils/rnos';
 import { AfipValues } from './afipCompleteness';
+import { asistenteAPI, EventoProgreso } from '../../api/asistente';
+import { BloqueAsistente, useAsistente } from './EstadoAsistente';
+import { sweetAlert } from '../../utils/sweetAlert';
 
 /**
  * Validar obras sociales contra ARCA. UNA pantalla, sirva para 1 o para 20.
@@ -19,25 +22,20 @@ import { AfipValues } from './afipCompleteness';
  * EL PRINCIPIO: la pantalla muestra ESTADO, no instrucciones. Las instrucciones existen —hacen falta
  * la primera vez— pero van colapsadas, porque se hacen una vez y la sesión de ARCA dura días.
  *
- * ⚠ POR QUÉ EL BOTÓN NO DISPARA LA CORRIDA
+ * CÓMO CORRE, SI UNA PÁGINA NO PUEDE EJECUTAR PROGRAMAS
  *
- * El script se cuelga por CDP del Chrome de ARCA que está en la máquina del operador. El navegador no
- * arranca procesos locales y el server no ve ese Chrome, así que desde acá NO se puede lanzar. Haría
- * falta un agente chico corriendo en esa máquina (ver `tools/README.md`), que no está construido.
+ * Por el ASISTENTE WEPRODU: un servicio local que el administrativo ejecuta una vez y queda
+ * corriendo (`tools/asistente/`). Escucha solo en 127.0.0.1, abre el Chrome de ARCA con su perfil
+ * dedicado, y recorre los CUIL con el mismo motor CDP de siempre. Acá adentro no hay ninguna regla
+ * del trámite: las tandas de 10 y el «Aceptar» que no se toca viven en `validar-obras-sociales.mjs`.
  *
- * Lo que sí se puede, y es lo que hace esta pantalla: MIRAR la corrida. El script pide los pendientes
- * a la API y aplica lo que ARCA contesta por la misma vía, así que basta con volver a preguntar cada
- * pocos segundos para que cada fila se complete sola. El botón copia el comando y deja la pantalla
- * esperando; el disparo es una línea en la terminal, una vez.
+ * Quien GUARDA es esta pantalla, no el Asistente. Él lee de ARCA y devuelve los códigos; el `POST`
+ * que los fija sale de acá, con la sesión de quien está sentado adelante. Así el servicio local no
+ * necesita —ni tiene— credenciales de WeProdu.
+ *
+ * Y NO QUEDA NINGÚN COMANDO DE TERMINAL EN ESTA PANTALLA. Quien la usa es administrativo. El camino
+ * por `npm run` sigue existiendo y está documentado en `tools/README.md`, para quien programa.
  */
-
-/**
- * Login de clave fiscal. Es el ÚNICO punto de entrada que sirve siempre.
- *
- * No se enlaza ninguna URL interna de MiSimplificación: todas redirigen a `FinSession.aspx` si no hay
- * una sesión viva DEL SERVICIO, que es propia y no se hereda de estar logueado en ARCA.
- */
-const LOGIN_AFIP_URL = 'https://auth.afip.gob.ar/contribuyente_/login.xhtml';
 
 const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
 
@@ -56,89 +54,7 @@ export type FilaConstatacion = { row: ContractOverviewRow; valores: AfipValues }
 
 type EstadoFila = { guardando?: boolean; error?: string };
 
-/** Cada cuánto se le vuelve a preguntar a la API mientras se mira una corrida. */
-const POLEO_MS = 3000;
-
-/**
- * Cuánto se espera sin ver progreso antes de abrir las instrucciones solas.
- *
- * Es el único momento en que sirven: si pasó medio minuto y no llegó ninguna, lo más probable es que
- * falte la sesión de ARCA o que el comando no se haya corrido. Abrirlas antes sería volver a poner
- * las instrucciones delante de la acción, que es lo que esta pantalla vino a corregir.
- */
-const ESPERA_SIN_PROGRESO_MS = 30000;
-
 // ─────────────────────────────────────────────────────────────── piezas chicas
-
-/**
- * Un comando con botón de copiar.
- *
- * Nadie transcribe `--empresa 6a5fd1cc44faed2e72669f38` a mano, y si lo tipea mal el error no va a
- * ser obvio: el script simplemente no encuentra pendientes para esa empresa.
- */
-const Comando: React.FC<{ texto: string }> = ({ texto }) => {
-  const [copiado, setCopiado] = useState(false);
-  const copiar = async () => {
-    try {
-      await navigator.clipboard.writeText(texto);
-      setCopiado(true);
-      window.setTimeout(() => setCopiado(false), 1800);
-    } catch {
-      /* El navegador bloqueó el portapapeles: el texto está a la vista igual. */
-    }
-  };
-  return (
-    <div className="flex items-center gap-2 rounded-md border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-950/60 px-2.5 py-1.5 my-1.5">
-      <code className="flex-1 min-w-0 truncate font-mono text-[11px] text-blue-700 dark:text-blue-300">{texto}</code>
-      <button type="button" onClick={copiar} className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-        <FontAwesomeIcon icon={copiado ? faCheck : faCopy} className="h-2.5 w-2.5" />
-        {copiado ? 'Copiado' : 'Copiar'}
-      </button>
-    </div>
-  );
-};
-
-/** Cómo se prepara ARCA. Colapsado: se hace una vez y la sesión dura días. */
-const Instrucciones: React.FC<{ empleadora?: string; empresaId?: string; abierto: boolean; onToggle: (v: boolean) => void }> = ({ empleadora, empresaId, abierto, onToggle }) => (
-  <details open={abierto} onToggle={(e) => onToggle((e.currentTarget as HTMLDetailsElement).open)} className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40">
-    <summary className="px-4 py-2.5 cursor-pointer select-none text-[12px] text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
-      ¿Cómo se prepara ARCA? — se hace una vez, la sesión dura días
-    </summary>
-    <div className="px-4 pb-4 text-[11.5px] text-gray-600 dark:text-gray-400 space-y-1">
-      <p>
-        <strong className="text-gray-800 dark:text-gray-200">1.</strong> Levantá el Chrome de ARCA, desde <span className="font-mono text-[10.5px]">frontend/</span>. Es un Chrome aparte, con su propio
-        perfil: no cierres el que estás usando.
-      </p>
-      <Comando texto="npm run chrome-arca" />
-      <p>
-        <strong className="text-gray-800 dark:text-gray-200">2.</strong> Ahí entrá con clave fiscal → <strong>Simplificación Registral - Empleadores</strong> →{' '}
-        <strong>elegí el CUIT de {empleadora || 'la empleadora'}</strong> → Relaciones Laborales → <em>Registrar Nuevas Altas</em>, y dejá esa pantalla abierta.{' '}
-        <a href={LOGIN_AFIP_URL} target="_blank" rel="noreferrer" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-          Abrir el login <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2 w-2" />
-        </a>
-      </p>
-      {/* Saltear el paso del CUIT es lo que hace que ARCA conteste "su tiempo de sesión ha finalizado"
-          con la sesión intacta. Por eso va marcado y no como un tránsito más. */}
-      <p className="text-amber-700 dark:text-amber-400">Elegir el CUIT no es opcional: es lo que inicia la «sesión de trabajo». Sin ese paso ARCA rechaza la pantalla de altas aunque estés logueado.</p>
-      <p className="pt-1">
-        <strong className="text-gray-800 dark:text-gray-200">3.</strong> En otra terminal, desde <span className="font-mono text-[10.5px]">frontend/</span>, corré el comando. Agregale{' '}
-        <span className="font-mono text-[10.5px]">--dry-run</span> para ver qué haría sin escribir nada.
-      </p>
-      {empresaId && <Comando texto={`npm run validar-obras-sociales -- --empresa ${empresaId}`} />}
-      <p className="text-amber-700 dark:text-amber-400 pt-1">
-        <strong>No aprietes Aceptar en ARCA.</strong> Esa pantalla se usa solo para leer: el alta sale del TXT.
-      </p>
-      <p className="text-gray-500 dark:text-gray-500">
-        Mientras ese Chrome esté abierto, cualquier programa de tu máquina puede controlarlo. Como usa un perfil aparte solo alcanza a esa ventana, no a tus otras pestañas; igual, cerralo cuando
-        termines.{' '}
-        <a href="/arca/guia-obras-sociales" target="_blank" rel="noreferrer" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-          Ver la guía
-        </a>
-      </p>
-    </div>
-  </details>
-);
-
 const CeldaCuil: React.FC<{ cuil: string }> = ({ cuil }) => {
   const [copiado, setCopiado] = useState(false);
   if (!cuil) return <span className="text-[11px] text-amber-700 dark:text-amber-400">sin CUIL</span>;
@@ -240,15 +156,21 @@ export const PantallaValidarObrasSociales: React.FC<{
 }> = ({ filas, empleadora, empresaId, onRefrescar, onLoteAplicado, onGuardado }) => {
   const [catalogo, setCatalogo] = useState<SimpleCatalogItem[]>([]);
   const [estados, setEstados] = useState<Record<string, EstadoFila>>({});
-  const [instruccionesAbiertas, setInstruccionesAbiertas] = useState(false);
   /** El camino manual es la SALIDA DE EMERGENCIA: existe, funciona, y no ocupa media pantalla. */
   const [manual, setManual] = useState(false);
   const [pegado, setPegado] = useState('');
   const [aplicando, setAplicando] = useState(false);
   const [resumen, setResumen] = useState<string[] | null>(null);
   const [previsualizacion, setPrevisualizacion] = useState<{ filas: Array<{ cuil: string; rnos: string }>; lineas: string[]; aplicables: number } | null>(null);
-  /** Mirando una corrida del script: se repregunta a la API y las filas se completan solas. */
+  /** Corriendo: el Asistente está recorriendo ARCA y los resultados llegan por su stream. */
   const [mirando, setMirando] = useState(false);
+  const asistente = useAsistente();
+  /**
+   * Lo que el Asistente fue contestando, por CUIL. Vive acá y no en `filas` porque todavía NO está
+   * guardado: se aplica todo junto al final, con la sesión de quien está sentado adelante.
+   */
+  const [enVivo, setEnVivo] = useState<Record<string, { rnos?: string; estado: 'consultando' | 'listo' | 'error' }>>({});
+  const cortarStream = useRef<null | (() => void)>(null);
 
   useEffect(() => {
     obrasSocialesApi
@@ -276,29 +198,8 @@ export const PantallaValidarObrasSociales: React.FC<{
   const sinAfiliacion = visibles.filter((f) => f.valores.constatacion === 'no_figura').length;
   const terminado = total > 0 && pendientes.length === 0;
 
-  /*
-    El poleo, que es lo que convierte esta pantalla en un monitor.
-
-    Se apaga solo al terminar: seguir preguntando cuando ya no queda nada pendiente es gasto puro. Y
-    si pasa medio minuto sin que llegue ninguna, se abren las instrucciones —es el único momento en
-    que sirven, porque lo más probable es que falte la sesión de ARCA o que el comando no se corrió.
-  */
-  const hechasRef = useRef(hechas);
-  useEffect(() => {
-    if (!mirando || !onRefrescar) return;
-    let ultimoAvance = Date.now();
-    hechasRef.current = hechas;
-    const id = window.setInterval(async () => {
-      await onRefrescar();
-      if (hechasRef.current !== hechas) {
-        hechasRef.current = hechas;
-        ultimoAvance = Date.now();
-      } else if (Date.now() - ultimoAvance > ESPERA_SIN_PROGRESO_MS) {
-        setInstruccionesAbiertas(true);
-      }
-    }, POLEO_MS);
-    return () => window.clearInterval(id);
-  }, [mirando, onRefrescar, hechas]);
+  /** Al desmontar, se corta el stream: dejarlo abierto filtra una conexión por cada vez que se abre. */
+  useEffect(() => () => cortarStream.current?.(), []);
 
   useEffect(() => {
     if (terminado) setMirando(false);
@@ -387,6 +288,7 @@ export const PantallaValidarObrasSociales: React.FC<{
       setPrevisualizacion(null);
       setPegado('');
       onLoteAplicado?.();
+      await onRefrescar?.();
     } catch (e: any) {
       setResumen([e?.response?.data?.error || 'No se pudo aplicar el lote.']);
     } finally {
@@ -394,17 +296,69 @@ export const PantallaValidarObrasSociales: React.FC<{
     }
   };
 
-  /** Copia el comando y deja la pantalla esperando. Ver el bloque de arriba: el disparo va afuera. */
-  const empezarAMirar = async () => {
-    if (empresaId) {
-      try {
-        await navigator.clipboard.writeText(`npm run validar-obras-sociales -- --empresa ${empresaId}`);
-      } catch {
-        // Sin portapapeles igual se puede mirar: el comando está en las instrucciones, que se abren.
-        setInstruccionesAbiertas(true);
-      }
+  /**
+   * Arranca la corrida en el Asistente y escucha su progreso.
+   *
+   * Los resultados NO se guardan a medida que llegan: se juntan y se aplican todos al final, por el
+   * mismo endpoint que usa el pegado manual. Ese endpoint valida contra las obras sociales que la
+   * empleadora tiene registradas ante ARCA y devuelve el detalle de lo que rechazó — guardar de a una
+   * saltearía esa red y dejaría a medio aplicar un lote que falló por configuración de la empresa.
+   */
+  const empezarCorrida = async () => {
+    if (!empresaId) return;
+    setResumen(null);
+    setEnVivo({});
+    try {
+      await asistenteAPI.validar(pendientes.map((f) => ({ cuil: soloDigitos(f.row.cuit || '') })));
+    } catch (e: any) {
+      sweetAlert.error('No pude arrancar', e?.message || 'El Asistente no aceptó la corrida.');
+      return;
     }
     setMirando(true);
+
+    const leidos: Array<{ cuil: string; rnos: string }> = [];
+    cortarStream.current = asistenteAPI.progreso(async (ev: EventoProgreso) => {
+      if (ev.tipo === 'consultando') setEnVivo((p) => ({ ...p, [ev.cuil]: { estado: 'consultando' } }));
+      else if (ev.tipo === 'resultado') {
+        leidos.push({ cuil: ev.cuil, rnos: ev.rnos });
+        setEnVivo((p) => ({ ...p, [ev.cuil]: { estado: 'listo', rnos: ev.rnos } }));
+      } else if (ev.tipo === 'error') setEnVivo((p) => ({ ...p, [ev.cuil]: { estado: 'error' } }));
+      else if (ev.tipo === 'fallo') {
+        setMirando(false);
+        sweetAlert.error('Se cortó la corrida', ev.mensaje);
+      } else if (ev.tipo === 'fin') {
+        setMirando(false);
+        // Sesión caída a mitad: lo leído se aplica igual —es lo que ARCA sí contestó— y lo que faltó
+        // queda pendiente. Nunca se marca a nadie como "sin obra social" por haberse cortado.
+        if (ev.sinSesion) sweetAlert.error('Se cortó la sesión de ARCA', `Quedaron ${ev.faltaron} sin consultar. Volvé a entrar en el Chrome de ARCA y corré esto de nuevo.`);
+        if (leidos.length > 0) await aplicarLeidos(leidos);
+      }
+    });
+  };
+
+  /** Fija en WeProdu lo que ARCA contestó, mostrando el detalle de lo que no entró. */
+  const aplicarLeidos = async (leidos: Array<{ cuil: string; rnos: string }>) => {
+    if (!empresaId) return;
+    setAplicando(true);
+    try {
+      const r = await projectsAPI.aplicarObrasSocialesLote(empresaId, leidos, false);
+      setResumen(describir(r, false));
+      onLoteAplicado?.();
+    } catch (e: any) {
+      setResumen([e?.response?.data?.error || 'No se pudo guardar lo que devolvió ARCA.']);
+    } finally {
+      setAplicando(false);
+    }
+  };
+
+  const detener = async () => {
+    try {
+      await asistenteAPI.detener();
+    } catch {
+      /* si el Asistente ya no está, la corrida tampoco */
+    }
+    cortarStream.current?.();
+    setMirando(false);
   };
 
   const cabecera = terminado ? `${total} validada${total === 1 ? '' : 's'}` : mirando ? 'Validando en ARCA…' : 'Validar obras sociales';
@@ -435,12 +389,20 @@ export const PantallaValidarObrasSociales: React.FC<{
           )}
           {!terminado &&
             (mirando ? (
-              <button type="button" onClick={() => setMirando(false)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12.5px] font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-red-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+              <button type="button" onClick={detener} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12.5px] font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-red-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
                 <FontAwesomeIcon icon={faStop} className="h-3 w-3" />
-                Dejar de mirar
+                Detener
               </button>
             ) : (
-              <button type="button" onClick={empezarAMirar} disabled={!empresaId || pendientes.length === 0} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+              <button
+                type="button"
+                onClick={empezarCorrida}
+                /* Sin sesión de ARCA el botón no puede funcionar, y dejarlo apretable haría fallar la
+                   corrida por un motivo que el bloque de arriba ya está explicando. */
+                disabled={!empresaId || pendientes.length === 0 || asistente.estado?.sesionArca !== 'viva' || !!asistente.estado?.corriendo}
+                title={asistente.estado?.sesionArca !== 'viva' ? 'Primero abrí ARCA con el Asistente' : undefined}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
                 <FontAwesomeIcon icon={faPlay} className="h-3 w-3" />
                 {/* El botón dice CUÁNTAS. «Validar» a secas no deja saber si son estas 20 o la de al lado. */}
                 Validar {pendientes.length === 1 ? '1' : `las ${pendientes.length}`}
@@ -449,15 +411,8 @@ export const PantallaValidarObrasSociales: React.FC<{
         </div>
       </div>
 
-      <Instrucciones empleadora={empleadora} empresaId={empresaId} abierto={instruccionesAbiertas} onToggle={setInstruccionesAbiertas} />
-
-      {/* Mientras se mira, el comando queda a la vista: es lo que hay que correr para que esto avance. */}
-      {mirando && empresaId && (
-        <div className="px-4 pt-3 pb-1">
-          <p className="text-[11.5px] text-gray-600 dark:text-gray-400">Copiado. Pegalo en una terminal, desde <span className="font-mono text-[10.5px]">frontend/</span>; las filas se van a ir completando solas.</p>
-          <Comando texto={`npm run validar-obras-sociales -- --empresa ${empresaId}`} />
-        </div>
-      )}
+      {/* Ni un comando de terminal: lo que ve el administrativo es si el Asistente está o no. */}
+      <BloqueAsistente uso={asistente} empleadora={empleadora} />
 
       {/* Barra de progreso: solo mientras corre. Sin nada que mirar es decoración. */}
       {mirando && total > 0 && (
@@ -593,7 +548,21 @@ export const PantallaValidarObrasSociales: React.FC<{
                           sin afiliación → queda <span className="font-mono">{f.valores.rnosSugerido || '—'}</span>
                         </span>
                       ) : mirando ? (
-                        <span className="text-[11px] rounded-full px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900">consultando…</span>
+                        /* Lo que el Asistente fue contestando, todavía sin guardar. El estado real de la fila
+                           llega después, cuando se aplica el lote y `filas` se recarga. */
+                        (() => {
+                          const v = enVivo[soloDigitos(f.row.cuit || '')];
+                          if (v?.estado === 'listo')
+                            return (
+                              <span className="text-[11.5px] text-green-700 dark:text-green-400 inline-flex items-center gap-1.5">
+                                <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />
+                                {v.rnos ? <span className="font-mono">{v.rnos} · afiliación propia</span> : <>sin afiliación → queda <span className="font-mono">{f.valores.rnosSugerido || '—'}</span></>}
+                              </span>
+                            );
+                          if (v?.estado === 'error') return <span className="text-[11.5px] text-red-600 dark:text-red-400">ARCA no devolvió fila</span>;
+                          if (v?.estado === 'consultando') return <span className="text-[11px] rounded-full px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900">consultando…</span>;
+                          return <span className="text-[11px] text-gray-400 dark:text-gray-500">en cola</span>;
+                        })()
                       ) : manual ? (
                         <div className="flex items-center gap-2 min-w-[220px]">
                           <div className="flex-1">

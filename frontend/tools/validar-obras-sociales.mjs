@@ -342,7 +342,19 @@ async function esperarSesion(ctx, minutos) {
  * Separado a propósito: el día que esto se dispare de otra forma —un agente local escuchando un
  * pedido de WeProdu, un cron— se llama a esta función y no hay nada que reescribir.
  */
-export async function validarObrasSociales({ empresa, cuils, dryRun = false, forzar = false, esperaMin = ESPERA_LOGIN_MIN_DEFAULT, cdpUrl = CDP_URL }) {
+/**
+ * `soloLeer` y `onProgreso` existen para el Asistente WeProdu.
+ *
+ * `soloLeer`: devuelve lo que ARCA contestó y NO lo aplica. El asistente corre en la máquina del
+ * administrativo y no tiene —ni tiene por qué tener— credenciales de WeProdu: lee de ARCA, le pasa
+ * el resultado al navegador, y es el navegador, con la sesión de la persona, el que guarda. Una
+ * credencial menos viviendo en un servicio local es una credencial menos que robar.
+ *
+ * `onProgreso`: se llama al empezar cada CUIL y al cerrar cada tanda, para que la pantalla pueda
+ * llenarse fila por fila. La granularidad REAL es por tanda de 10 —la grilla se lee una vez, al
+ * final— así que el aviso de "consultando" es por CUIL y el resultado llega de a diez.
+ */
+export async function validarObrasSociales({ empresa, cuils, dryRun = false, forzar = false, esperaMin = ESPERA_LOGIN_MIN_DEFAULT, cdpUrl = CDP_URL, soloLeer = false, onProgreso, señal }) {
   let chromium;
   try {
     ({ chromium } = await import("playwright-core"));
@@ -395,12 +407,16 @@ export async function validarObrasSociales({ empresa, cuils, dryRun = false, for
       const reencolar = [];
 
       for (const cuil of tanda) {
+        // Cortar desde afuera se trata como una sesión que se cae: se frena, lo pendiente queda
+        // pendiente, y nunca se marca a nadie como "sin obra social" por haber parado.
+        if (señal?.cortada) { sinSesion = true; break; }
         if ((await estadoPantalla(page)) !== "altas") {
           // Sesión caída a mitad de camino: se FRENA. Lo pendiente queda pendiente — jamás se lo marca
           // como vacío, porque vacío significa "ARCA dijo que no tiene obra social" y se guarda validado.
           sinSesion = true;
           break;
         }
+        onProgreso?.({ tipo: "consultando", cuil });
         await agregarCuil(page, cuil);
         if (await topeAlcanzado(page)) {
           reencolar.push(cuil); // no se lo pudo ni intentar
@@ -418,10 +434,15 @@ export async function validarObrasSociales({ empresa, cuils, dryRun = false, for
         }
         for (const cuil of tanda) {
           if (reencolar.includes(cuil)) continue;
-          if (cuil in filas) hechos.set(cuil, filas[cuil]);
+          if (cuil in filas) {
+            hechos.set(cuil, filas[cuil]);
+            onProgreso?.({ tipo: "resultado", cuil, rnos: filas[cuil], hechas: hechos.size, total: cuils.length });
+            continue;
+          }
           // La fila no apareció con la sesión viva y sin tope: es un error DE ESE CUIL (inválido, con
           // relación activa, un popup). Se reporta aparte y no se aplica.
-          else errores.add(cuil);
+          errores.add(cuil);
+          onProgreso?.({ tipo: "error", cuil, hechas: hechos.size, total: cuils.length });
         }
       }
 
@@ -434,7 +455,8 @@ export async function validarObrasSociales({ empresa, cuils, dryRun = false, for
     await reiniciarGrilla(page);
 
     const items = [...hechos.entries()].map(([cuil, rnos]) => ({ cuil, rnos }));
-    const resultado = items.length ? await aplicarLote(empresa, items, { dryRun, forzar }) : { aplicadas: 0, rechazadas: [], dryRun };
+    // Con `soloLeer` la función termina acá: quien guarda es el navegador, con la sesión de la persona.
+    const resultado = soloLeer ? { aplicadas: 0, rechazadas: [], dryRun: true, soloLeer: true } : items.length ? await aplicarLote(empresa, items, { dryRun, forzar }) : { aplicadas: 0, rechazadas: [], dryRun };
     return { items, errores: [...errores], sinSesion, faltaron: cuils.length - hechos.size, resultado };
   } finally {
     await browser.close().catch(() => {});

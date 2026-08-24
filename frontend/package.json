@@ -16,6 +16,8 @@
     "test:validar-obras-sociales": "node --test tools/validar-obras-sociales.test.mjs",
     "arca:registrar-obras-sociales": "node tools/registrar-obras-sociales.mjs",
     "test:arca:registrar-obras-sociales": "node --test tools/registrar-obras-sociales.test.mjs",
+    "asistente": "node tools/asistente/servidor.mjs",
+    "test:asistente": "node --test tools/asistente/seguridad.test.mjs",
     "chrome-arca": "node tools/chrome-arca.mjs"
   },
   "dependencies": {
