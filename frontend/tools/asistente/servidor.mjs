@@ -40,8 +40,17 @@ import { readFileSync } from "node:fs";
 import { ORIGENES_PERMITIDOS, origenPermitido, tokenDeInstalacion, tokenValido } from "./seguridad.mjs";
 import { abrirChrome, chromeAbierto, estadoSesionArca, rutaChrome, guardarRutaChrome, CDP_URL } from "./chrome.mjs";
 
+/**
+ * La versión se INCRUSTA al empaquetar (`--define:__VERSION__`, ver empaquetar.mjs) y solo se lee del
+ * package.json cuando se corre a mano con `node servidor.mjs`.
+ *
+ * Adentro del ejecutable no hay package.json que leer. Cuando lo leía siempre, el binario compilaba
+ * sin una queja y moría al arrancar buscando un archivo que no estaba en el snapshot: la ventana se
+ * abría y se cerraba, sin nada que mirar. Un dato fijo y conocido en tiempo de build no tiene por qué
+ * costar un acceso a disco que puede fallar.
+ */
 const AQUI = dirname(fileURLToPath(import.meta.url));
-const VERSION = JSON.parse(readFileSync(join(AQUI, "package.json"), "utf8")).version;
+const VERSION = typeof __VERSION__ === "string" ? __VERSION__ : JSON.parse(readFileSync(join(AQUI, "package.json"), "utf8")).version;
 
 /**
  * Puerto fijo y alto.

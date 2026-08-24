@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner, faCircleQuestion } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faCircleQuestion, faDownload, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { faWindows as faWin, faApple as faApl } from '@fortawesome/free-brands-svg-icons';
-import { asistenteAPI, tokenAsistente, ErrorAsistente, EstadoAsistente as Estado, DESCARGAS_ASISTENTE } from '../../api/asistente';
+import { asistenteAPI, tokenAsistente, ErrorAsistente, EstadoAsistente as Estado, DESCARGAS_ASISTENTE, descargaDisponible } from '../../api/asistente';
 import { sweetAlert } from '../../utils/sweetAlert';
 
 /**
@@ -68,6 +68,67 @@ export function useAsistente(): UsoAsistente {
 
 const Punto: React.FC<{ color: string }> = ({ color }) => <span className={`inline-block h-2 w-2 rounded-full ${color}`} />;
 
+/** Los tres ejecutables, en el orden en que conviene ofrecerlos. */
+const DESCARGAS = [
+  { url: DESCARGAS_ASISTENTE.windows, icono: faWin, etiqueta: 'Windows', sistema: 'Windows', principal: true },
+  { url: DESCARGAS_ASISTENTE.macAppleSilicon, icono: faApl, etiqueta: 'Mac (Apple Silicon)', sistema: 'Mac con chip Apple', principal: false },
+  { url: DESCARGAS_ASISTENTE.macIntel, icono: faApl, etiqueta: 'Mac (Intel)', sistema: 'Mac con chip Intel', principal: false },
+];
+
+/**
+ * Un botón de descarga que primero comprueba que el archivo exista.
+ *
+ * Mientras chequea no muestra nada: aparecer y desaparecer sería peor que tardar un instante en
+ * aparecer, y el HEAD contra un archivo del mismo origen es inmediato.
+ *
+ * Si no está publicado NO se muestra un botón roto: se dice cuál es el problema. Un botón que se
+ * clickea y no pasa nada —o que baja un HTML disfrazado de .exe— manda a la persona a buscar el error
+ * en su antivirus, en su navegador o en su carpeta de descargas, cuando el problema es que el archivo
+ * nunca se subió. Esa búsqueda la puede terminar acá una línea de texto.
+ *
+ * `download` va porque sin él el navegador puede decidir NAVEGAR al archivo en vez de bajarlo, según
+ * qué content-type mande el servidor. Con `download` la intención es explícita y el nombre del
+ * archivo guardado es el del `href`.
+ */
+const BotonDescarga: React.FC<{ url: string; icono: typeof faWin; etiqueta: string; sistema: string; principal: boolean }> = ({ url, icono, etiqueta, sistema, principal }) => {
+  const [disponible, setDisponible] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let vigente = true;
+    descargaDisponible(url).then((r) => vigente && setDisponible(r));
+    return () => {
+      vigente = false;
+    };
+  }, [url]);
+
+  if (disponible === null) return null;
+
+  if (!disponible) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700" title={`Falta publicar ${url}`}>
+        <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
+        El Asistente todavía no está publicado para {sistema}
+      </span>
+    );
+  }
+
+  return (
+    <a
+      href={url}
+      download
+      className={
+        principal
+          ? 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-blue-600 text-white hover:bg-blue-700'
+          : 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-blue-500'
+      }
+    >
+      <FontAwesomeIcon icon={icono} className="h-3 w-3" />
+      Descargar para {etiqueta}
+      <FontAwesomeIcon icon={faDownload} className="h-2.5 w-2.5 opacity-60" />
+    </a>
+  );
+};
+
 export const BloqueAsistente: React.FC<{ uso: UsoAsistente; empleadora?: string }> = ({ uso, empleadora }) => {
   const { estado, fallo, cargando, refrescar } = uso;
   const [abriendo, setAbriendo] = useState(false);
@@ -118,14 +179,9 @@ export const BloqueAsistente: React.FC<{ uso: UsoAsistente; empleadora?: string 
         </p>
         <p className="text-[11.5px] text-gray-600 dark:text-gray-400 mt-0.5">Descargalo y ejecutalo. Se hace una vez: después queda funcionando y esta pantalla lo encuentra sola.</p>
         <div className="flex items-center gap-2 flex-wrap mt-2">
-          <a href={DESCARGAS_ASISTENTE.windows} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-blue-600 text-white hover:bg-blue-700">
-            <FontAwesomeIcon icon={faWin} className="h-3 w-3" />
-            Descargar para Windows
-          </a>
-          <a href={DESCARGAS_ASISTENTE.mac} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-blue-500">
-            <FontAwesomeIcon icon={faApl} className="h-3 w-3" />
-            Descargar para Mac
-          </a>
+          {DESCARGAS.map((d) => (
+            <BotonDescarga key={d.url} {...d} />
+          ))}
           <a href={DESCARGAS_ASISTENTE.guia} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
             <FontAwesomeIcon icon={faCircleQuestion} className="h-3 w-3" />
             ¿Cómo se instala?

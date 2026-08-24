@@ -1,0 +1,5 @@
+
+# Intermedios de `npm run empaquetar`. Se regeneran solos y no van al repo.
+# Lo que SÍ se publica son los archivos de frontend/public/asistente/, que salen de acá.
+dist/
+servidor.cjs

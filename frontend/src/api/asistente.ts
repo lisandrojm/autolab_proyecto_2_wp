@@ -139,8 +139,48 @@ export const asistenteAPI = {
 };
 
 /** De dónde se bajan los ejecutables. Se sirven desde WeProdu para no depender de un tercero. */
+/**
+ * Los ejecutables, tal como quedan publicados.
+ *
+ * Son ARCHIVOS de verdad en `public/asistente/`, no rutas de la SPA: los arma
+ * `tools/asistente/empaquetar.mjs` y `vite.config.ts` / `vercel.json` se encargan de que ese prefijo
+ * nunca caiga al `index.html`. Antes apuntaban a `/descargas/…`, que no existía en ningún lado y por
+ * lo tanto devolvía el HTML de la app con status 200 — el navegador guardaba un «.exe» de 2 KB que
+ * era una página web.
+ *
+ * Mac va en .zip y separado por arquitectura, y las dos cosas son por el mismo motivo: un binario
+ * suelto pierde el permiso de ejecución al bajarse, y un slice de la arquitectura equivocada arranca
+ * con «bad CPU type». Ver el comentario largo en `empaquetar.mjs` (ahí está también por qué no se
+ * puede unificar con `lipo`).
+ */
 export const DESCARGAS_ASISTENTE = {
-  windows: '/descargas/AsistenteWeProdu.exe',
-  mac: '/descargas/AsistenteWeProdu-mac',
+  windows: '/asistente/AsistenteWeProdu-windows.exe',
+  macAppleSilicon: '/asistente/AsistenteWeProdu-mac-apple-silicon.zip',
+  macIntel: '/asistente/AsistenteWeProdu-mac-intel.zip',
   guia: '/arca/guia-obras-sociales',
 };
+
+/**
+ * ¿El archivo está realmente publicado?
+ *
+ * Un HEAD antes de ofrecer el botón. Sin esto, «el ejecutable no se subió» y «el ejecutable anda» se
+ * ven exactamente igual en pantalla: hay un botón azul, se clickea, y lo que baja es el index.html
+ * renombrado — o no baja nada. El error se descubre en la máquina del que lo instala.
+ *
+ * Se mira el status Y el content-type. El status solo no alcanza: cualquier fallback de SPA contesta
+ * 200 con HTML, y ese es justamente el caso que hay que atrapar. `vite.config.ts` y `vercel.json` ya
+ * cortan ese fallback para `/asistente/`, así que esto es el segundo cinturón: si alguien agrega un
+ * rewrite nuevo arriba, o publica en una plataforma distinta, la UI se entera igual.
+ *
+ * Ante un error de red devuelve `false`: preferimos decir «todavía no está publicado» y quedar cortos
+ * antes que ofrecer una descarga que no sabemos si existe.
+ */
+export async function descargaDisponible(url: string): Promise<boolean> {
+  try {
+    const r = await fetch(url, { method: 'HEAD' });
+    if (!r.ok) return false;
+    return !(r.headers.get('content-type') || '').includes('text/html');
+  } catch {
+    return false;
+  }
+}
