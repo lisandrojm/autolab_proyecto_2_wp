@@ -91,6 +91,19 @@ const AFIP_LOGIN_URL = "https://auth.afip.gob.ar/contribuyente_/login.xhtml";
 const SEL = {
   cuil: "#ctl00_ContentPlaceHolder1_InputCuil_txtCuil",
   obraSocial: 'input[id*="ExtendCodeOS_AutocompleteText"]',
+  /**
+   * La ✖ roja que saca UN bloque de la pantalla.
+   *
+   * Se busca por `title`/`alt` y NO por id: ASP.NET prefija los ids con todo el árbol de controles
+   * (`ctl00_ContentPlaceHolder1_gv_ctl03_…`) y el índice cambia con cada fila, así que un id fijo
+   * anda hoy y falla mañana. El tipo `image` es lo que ARCA usa para estos controles.
+   *
+   * NO ESTÁ CONFIRMADO CONTRA LA PÁGINA REAL: cuando se escribió esto no había sesión de ARCA a mano.
+   * Por eso el que manda no es este selector sino la VERIFICACIÓN de que la pantalla quedó vacía
+   * (`vaciarPantalla`): si la ✖ no aparece o no borra, se cae a «Reiniciar» y sigue. El selector es
+   * el camino preferido, no una dependencia.
+   */
+  borrar: 'input[type=image][title*="limin" i], input[type=image][alt*="limin" i], input[type=image][title*="orrar" i], input[type=image][alt*="orrar" i], input[type=image][title*="uitar" i], input[type=image][alt*="uitar" i]',
 };
 
 export const soloDigitos = (s) => String(s || "").replace(/\D/g, "");
@@ -296,6 +309,63 @@ async function agregarCuil(page, cuil) {
   await page.waitForLoadState("load").catch(() => {});
 }
 
+/** Cuántos bloques de empleado hay abiertos ahora mismo. Es el invariante de todo el ciclo. */
+const bloquesAbiertos = (page) => page.locator(SEL.obraSocial).count();
+
+/**
+ * Saca UN bloque con la ✖ roja.
+ *
+ * ES UN POSTBACK DE ASP.NET: el control postea `name.x`/`name.y` y ARCA devuelve la página entera con
+ * un `__VIEWSTATE` nuevo. Hay que esperar a que termine antes de escribir el CUIL siguiente — sobre
+ * un VIEWSTATE viejo el `Agregar` se pierde sin decir nada, y ese silencio es el que veníamos
+ * persiguiendo.
+ *
+ * LA ✖ NO ES «ACEPTAR», y esto no se deja librado al selector. Antes de apretar se lee el rótulo del
+ * control y se exige que hable de eliminar; cualquier cosa que se parezca a confirmar el trámite
+ * aborta. En esta pantalla «Aceptar» REGISTRA LAS ALTAS ANTE EL ORGANISMO (ver LOS DOS BOTONES) y un
+ * selector que un día empiece a matchear el control equivocado tiene que chocar contra algo.
+ */
+async function borrarBloque(page) {
+  const x = page.locator(SEL.borrar).first();
+  if (!(await x.count())) return false;
+
+  const rotulo = `${(await x.getAttribute("title")) || ""} ${(await x.getAttribute("alt")) || ""}`.trim();
+  if (/aceptar|confirmar|registrar/i.test(rotulo)) {
+    throw new Error(`El control de borrado dice «${rotulo}». No lo aprieto: en esta pantalla confirmar registra las altas ante el organismo.`);
+  }
+  if (!/limin|orrar|uitar/i.test(rotulo)) {
+    throw new Error(`Encontré un control de borrado con un rótulo inesperado («${rotulo}»). No lo aprieto a ciegas.`);
+  }
+
+  await x.click();
+  await page.waitForLoadState("load").catch(() => {});
+  return true;
+}
+
+/**
+ * Deja la pantalla en CERO bloques, y lo comprueba.
+ *
+ * Lo que se garantiza es el RESULTADO, no el método. Primero la ✖ —que es la operación correcta, saca
+ * un bloque sin tocar el resto— y si no alcanza, «Reiniciar», que limpia todo de una. Si después de
+ * las dos siguen quedando bloques, se corta con un error: seguir cargando arriba de bloques viejos
+ * mezcla los resultados, y de ahí sale una obra social guardada sobre la persona equivocada.
+ *
+ * Cada bloque que queda abierto es un alta a medio iniciar esperando que alguien apriete algo. No
+ * dejamos ninguno: lo único que necesitábamos de ARCA —el número que precompleta— ya se leyó.
+ */
+async function vaciarPantalla(page) {
+  if ((await bloquesAbiertos(page)) === 0) return;
+
+  await borrarBloque(page).catch((e) => log(`  (la ✖ no se pudo usar: ${e.message})`));
+  if ((await bloquesAbiertos(page)) === 0) return;
+
+  await reiniciarGrilla(page);
+  const quedan = await bloquesAbiertos(page);
+  if (quedan > 0) {
+    throw new Error(`No pude dejar la pantalla de ARCA vacía: quedan ${quedan} bloque(s) cargados.\n\nVaciala a mano en esa ventana y volvé a intentar: cargar arriba de bloques viejos mezclaría los resultados.`);
+  }
+}
+
 // --------------------------------------------------------------------- salida
 const log = (...a) => console.error(...a); // stderr: stdout queda libre para pipear
 
@@ -426,6 +496,9 @@ export async function validarObrasSociales({ empresa, cuils, dryRun = false, for
     );
   }
 
+  // Fuera del `try` para que el `finally` pueda dejar la pantalla vacía pase lo que pase.
+  let page = null;
+
   try {
     const ctx = browser.contexts()[0];
     if (!ctx) throw new Error("Chrome respondió pero no tiene ninguna ventana abierta.");
@@ -435,7 +508,7 @@ export async function validarObrasSociales({ empresa, cuils, dryRun = false, for
     // saber de qué lado mirar.
     onProgreso?.({ tipo: "conectado" });
 
-    let page = await buscarPaginaArca(ctx);
+    page = await buscarPaginaArca(ctx);
     const estado = page ? await estadoPantalla(page) : "otra";
     if (estado !== "altas") {
       page = await esperarSesion(ctx, esperaMin, onProgreso, señal);
@@ -446,74 +519,99 @@ export async function validarObrasSociales({ empresa, cuils, dryRun = false, for
       }
     }
 
-    log(`Validando ${cuils.length} CUIL en tandas de ${TOPE_ARCA}…`);
+    log(`Validando ${cuils.length} CUIL, de a uno…`);
 
     /** cuil -> rnos ('' = ARCA no tiene afiliación: es una RESPUESTA, no un error). */
     const hechos = new Map();
     /** Los que ARCA no pudo resolver. NO se aplican: ver el filtro final. */
     const errores = new Set();
-    let pendientes = [...cuils];
     let sinSesion = false;
 
-    while (pendientes.length > 0 && !sinSesion) {
-      await reiniciarGrilla(page);
+    /*
+      LA PANTALLA ARRANCA VACÍA, siempre.
 
-      const tanda = pendientes.slice(0, TOPE_ARCA);
-      const reencolar = [];
+      Si quedaron bloques de una corrida anterior —se cortó la sesión, se apretó Detener, se cerró el
+      Chrome— el primer `Agregar` choca contra el tope de 10 de ARCA y falla EN SILENCIO: pinta un
+      cartel rojo y no pasa nada. Sin esta limpieza, la corrida siguiente arranca condenada.
+    */
+    await vaciarPantalla(page);
 
-      for (const cuil of tanda) {
-        // Cortar desde afuera se trata como una sesión que se cae: se frena, lo pendiente queda
-        // pendiente, y nunca se marca a nadie como "sin obra social" por haber parado.
-        if (señal?.cortada) { sinSesion = true; break; }
-        if ((await estadoPantalla(page)) !== "altas") {
-          // Sesión caída a mitad de camino: se FRENA. Lo pendiente queda pendiente — jamás se lo marca
-          // como vacío, porque vacío significa "ARCA dijo que no tiene obra social" y se guarda validado.
-          sinSesion = true;
-          break;
-        }
-        onProgreso?.({ tipo: "consultando", cuil });
-        await agregarCuil(page, cuil);
-        if (await topeAlcanzado(page)) {
-          reencolar.push(cuil); // no se lo pudo ni intentar
-          break;
-        }
+    /*
+      UNA PERSONA A LA VEZ. Nunca más de un bloque abierto.
+
+      Antes se cargaban de a diez y se leía la grilla entera al final. Dos problemas, y el segundo es
+      el grave: ARCA no admite más de 10 relaciones laborales cargadas a la vez —así que la corrida
+      se topaba sola— y, sobre todo, cada bloque abierto es UN ALTA A MEDIO INICIAR esperando que
+      alguien apriete algo. Diez altas en pantalla es un riesgo sin ninguna contrapartida: lo único
+      que se necesita de ARCA es leer el número que precompleta, y una vez leído el bloque no sirve.
+
+      De a uno además hace el progreso real —cada fila cambia de estado cuando le toca, no todas
+      juntas al final— y saca el tope: la corrida puede ser de 20, de 50 o de 200.
+    */
+    for (const cuil of cuils) {
+      // Cortar desde afuera se trata como una sesión que se cae: se frena, lo pendiente queda
+      // pendiente, y nunca se marca a nadie como "sin obra social" por haber parado.
+      if (señal?.cortada) { sinSesion = true; break; }
+      if ((await estadoPantalla(page)) !== "altas") {
+        // Sesión caída a mitad de camino: se FRENA. Lo pendiente queda pendiente — jamás se lo marca
+        // como vacío, porque vacío significa "ARCA dijo que no tiene obra social" y se guarda validado.
+        sinSesion = true;
+        break;
       }
 
-      if (!sinSesion) {
-        const { filas, ambiguas } = await leerFilas(page);
-        if (ambiguas > 0) {
-          // Emparejamiento dudoso: se frena. Seguir sería exportar obras sociales posiblemente
-          // corridas, y del otro lado se guardan fijas, con candado.
-          log(`Frené: no pude emparejar ${ambiguas} fila(s) con su CUIL. La estructura de la grilla cambió.`);
-          break;
-        }
-        for (const cuil of tanda) {
-          if (reencolar.includes(cuil)) continue;
-          if (cuil in filas) {
-            hechos.set(cuil, filas[cuil]);
-            onProgreso?.({ tipo: "resultado", cuil, rnos: filas[cuil], hechas: hechos.size, total: cuils.length });
-            continue;
-          }
-          // La fila no apareció con la sesión viva y sin tope: es un error DE ESE CUIL (inválido, con
-          // relación activa, un popup). Se reporta aparte y no se aplica.
-          errores.add(cuil);
-          onProgreso?.({ tipo: "error", cuil, hechas: hechos.size, total: cuils.length });
-        }
+      onProgreso?.({ tipo: "consultando", cuil });
+      await agregarCuil(page, cuil);
+
+      const { filas, ambiguas } = await leerFilas(page);
+      if (ambiguas > 0) {
+        // Emparejamiento dudoso: se frena. Seguir sería exportar obras sociales posiblemente
+        // corridas, y del otro lado se guardan fijas, con candado.
+        log(`Frené: no pude emparejar ${ambiguas} bloque(s) con su CUIL. La estructura de la pantalla cambió.`);
+        break;
       }
 
-      pendientes = [...reencolar, ...pendientes.slice(tanda.length)];
-      log(`  ${hechos.size}/${cuils.length} leídos${errores.size ? ` · ${errores.size} con error` : ""}`);
+      /*
+        SE EMITE ANTES DE BORRAR, a propósito.
+
+        Si el borrado falla, el dato de esta persona ya está guardado y no hay que volver a ARCA por
+        ella. Al revés —borrar y después emitir— un fallo al borrar tiraría una consulta que ya
+        había salido bien.
+      */
+      if (cuil in filas) {
+        hechos.set(cuil, filas[cuil]);
+        onProgreso?.({ tipo: "resultado", cuil, rnos: filas[cuil], hechas: hechos.size, total: cuils.length });
+      } else {
+        /*
+          El bloque no apareció. ESTO SÍ ES UN ERROR de esta persona, y hay que verificarlo: cuando
+          ARCA rechaza por el tope, `Agregar` no hace nada y sin este chequeo se daría a la persona
+          por procesada sin haber leído nada — la forma exacta de `faltaron: N` sin errores.
+        */
+        const motivo = (await topeAlcanzado(page)) ? "ARCA rechazó por el tope de 10: quedaron bloques de antes en la pantalla." : "ARCA no abrió el bloque para este CUIL.";
+        errores.add(cuil);
+        onProgreso?.({ tipo: "error", cuil, motivo, hechas: hechos.size, total: cuils.length });
+      }
+
+      // Y la pantalla vuelve a cero antes del siguiente. Se verifica, no se supone.
+      await vaciarPantalla(page);
     }
-
-    // Reinicio final: la pantalla de ARCA queda vacía. Filas cargadas son altas a medio hacer que
-    // alguien puede confirmar por error más adelante.
-    await reiniciarGrilla(page);
 
     const items = [...hechos.entries()].map(([cuil, rnos]) => ({ cuil, rnos }));
     // Con `soloLeer` la función termina acá: quien guarda es el navegador, con la sesión de la persona.
     const resultado = soloLeer ? { aplicadas: 0, rechazadas: [], dryRun: true, soloLeer: true } : items.length ? await aplicarLote(empresa, items, { dryRun, forzar }) : { aplicadas: 0, rechazadas: [], dryRun };
     return { items, errores: [...errores], sinSesion, faltaron: cuils.length - hechos.size, resultado };
   } finally {
+    /*
+      LA PANTALLA QUEDA VACÍA SIEMPRE: fin normal, «Detener», o error.
+
+      Está en el `finally` y no al final del camino feliz porque los otros dos son justamente los que
+      dejaban bloques colgados — y un bloque abierto es un alta a medio iniciar que alguien puede
+      confirmar por error más adelante. Es también lo que hacía que la corrida siguiente arrancara
+      condenada: diez bloques viejos y el primer `Agregar` rebotando contra el tope.
+
+      El error de limpieza se anota pero NO se propaga: si veníamos con una excepción, esa es la que
+      tiene que llegar arriba. Taparla con «no pude vaciar la pantalla» perdería el motivo real.
+    */
+    if (page) await vaciarPantalla(page).catch((e) => log(`No pude dejar la pantalla de ARCA vacía: ${e.message}`));
     await browser.close().catch(() => {});
   }
 }

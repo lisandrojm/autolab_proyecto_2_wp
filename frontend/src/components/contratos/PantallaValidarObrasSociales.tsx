@@ -61,6 +61,14 @@ export type FilaConstatacion = { row: ContractOverviewRow; valores: AfipValues }
  */
 type EnVivo = {
   estado: 'consultando' | 'guardando' | 'listo' | 'error';
+  /**
+   * ARCA no devolvió ninguna obra social para esta persona.
+   *
+   * NO es un fallo: significa que no tiene una declarada y rige la del convenio. Se guarda igual, con
+   * su fecha. Se marca aparte porque en la tabla se veía casi igual que un error, y son opuestos —
+   * uno hay que resolverlo, el otro ya está resuelto.
+   */
+  sinDeclarar?: boolean;
   /** El RNOS que devolvió ARCA. Vacío es una RESPUESTA: «no tiene afiliación propia». */
   rnos?: string;
   antes?: string;
@@ -122,6 +130,22 @@ const CeldaEnVivo: React.FC<{ v?: EnVivo; porDefecto: string }> = ({ v, porDefec
         <span>{v.motivo || 'no se pudo validar'}</span>
       </span>
     );
+
+  /*
+    SIN DECLARAR es un resultado, no una media tirada.
+
+    ARCA precompleta la obra social solo cuando la persona ya tiene una; vacío significa que no tiene
+    y rige la del convenio. Se ve distinto de «actualizada» —no hubo cambio que revisar— y sobre todo
+    distinto de un error, que es lo que se le parecía: acá no hay nada que resolver.
+  */
+  if (v.sinDeclarar) {
+    return (
+      <span className="text-[11.5px] text-gray-500 dark:text-gray-400 inline-flex items-center gap-1.5 flex-wrap">
+        <FontAwesomeIcon icon={faCheck} className="h-3 w-3 text-green-600/70 dark:text-green-400/70" />
+        sin declarar en ARCA · queda <span className="font-mono">{v.despues || porDefecto || '—'}</span> del convenio
+      </span>
+    );
+  }
 
   return (
     <span className="text-[11.5px] inline-flex items-center gap-1.5 flex-wrap">
@@ -223,7 +247,7 @@ export const PantallaValidarObrasSociales: React.FC<{
     ? Object.values(enVivo).filter((v) => v.estado === 'listo' && !!v.rnos).length
     : visibles.filter((f) => f.valores.constatacion === 'afiliada').length;
   const sinAfiliacion = mirando
-    ? Object.values(enVivo).filter((v) => v.estado === 'listo' && !v.rnos).length
+    ? Object.values(enVivo).filter((v) => v.estado === 'listo' && v.sinDeclarar).length
     : visibles.filter((f) => f.valores.constatacion === 'no_figura').length;
   const terminado = total > 0 && pendientes.length === 0;
 
@@ -295,7 +319,7 @@ export const PantallaValidarObrasSociales: React.FC<{
       }
       // Sin afiliación propia en ARCA: el valor que queda es el del convenio, que es el que ya estaba.
       const despues = rnos || f.valores.rnosSugerido || '';
-      setEnVivo((p) => ({ ...p, [cuil]: { estado: 'listo', rnos, antes, despues, cambio: antes === despues ? 'igual' : 'actualizada' } }));
+      setEnVivo((p) => ({ ...p, [cuil]: { estado: 'listo', rnos, antes, despues, sinDeclarar: !rnos, cambio: antes === despues ? 'igual' : 'actualizada' } }));
       // El listado se recarga UNA vez al terminar, no por fila: veinte recargas completas mientras
       // corre es tráfico inútil y hace parpadear la tabla que la persona está mirando.
     } catch (e: any) {
@@ -355,7 +379,7 @@ export const PantallaValidarObrasSociales: React.FC<{
         const f = porCuil.get(ev.cuil);
         if (f) await guardarUna(f, ev.cuil, ev.rnos);
       } else if (ev.tipo === 'error') {
-        setEnVivo((p) => ({ ...p, [ev.cuil]: { estado: 'error', motivo: 'ARCA no devolvió fila para este CUIL' } }));
+        setEnVivo((p) => ({ ...p, [ev.cuil]: { estado: 'error', motivo: ev.motivo || 'ARCA no abrió el bloque para este CUIL' } }));
       } else if (ev.tipo === 'fallo') {
         setMirando(false);
         setFaseCorrida('');
@@ -680,7 +704,7 @@ export const PantallaValidarObrasSociales: React.FC<{
           <>Los {total} contrato{total === 1 ? '' : 's'} quedaron con su obra social fija y con fecha. La pantalla de ARCA quedó limpia.</>
         ) : mirando ? (
           <>
-            {conAfiliacion} con obra social propia · {sinAfiliacion} sin afiliación · {Math.max(0, total - resueltas)} por consultar
+            {conAfiliacion} con obra social propia · {sinAfiliacion} sin declarar · {Math.max(0, total - resueltas)} por consultar
           </>
         ) : fallidos.length > 0 ? (
           <>

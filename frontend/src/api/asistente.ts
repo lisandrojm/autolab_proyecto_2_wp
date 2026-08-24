@@ -114,7 +114,14 @@ export type EventoProgreso =
   | { tipo: 'listo' }
   | { tipo: 'consultando'; cuil: string }
   | { tipo: 'resultado'; cuil: string; rnos: string; hechas: number; total: number }
-  | { tipo: 'error'; cuil: string; hechas: number; total: number }
+  /**
+   * ARCA no abrió el bloque para ese CUIL. Es un error DE ESA PERSONA, no de la corrida.
+   *
+   * Distinto de un `resultado` con `rnos` vacío, que es una respuesta: «no tiene obra social
+   * declarada». Las dos cosas se veían casi igual en la tabla y son opuestas — una hay que
+   * resolverla, la otra ya está resuelta.
+   */
+  | { tipo: 'error'; cuil: string; motivo?: string; hechas: number; total: number }
   /**
    * Terminó. OJO: `faltaron > 0` NO es un final exitoso.
    *
