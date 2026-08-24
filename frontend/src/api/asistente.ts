@@ -30,6 +30,14 @@ export const tokenAsistente = {
 export interface EstadoAsistente {
   ok: true;
   version: string;
+  /**
+   * Lo que ESE Asistente sabe hacer.
+   *
+   * WeProdu se actualiza solo; el Asistente no —vive instalado en la máquina de cada persona— así
+   * que la app siempre puede ser más nueva que él. `undefined` significa «Asistente anterior a que
+   * esto existiera»: hay que asumir que no tiene nada nuevo.
+   */
+  operaciones?: string[];
   chromeAbierto: boolean;
   /** `viva` = hay una pestaña en Simplificación Registral. `desconocida` = ni siquiera hay Chrome. */
   sesionArca: 'viva' | 'sin-sesion' | 'desconocida';
@@ -42,7 +50,15 @@ export type FalloAsistente =
   /** No contesta: no está instalado, o no está corriendo. */
   | 'no-detectado'
   /** Contesta, pero este navegador no está emparejado. */
-  | 'sin-emparejar';
+  | 'sin-emparejar'
+  /**
+   * Contesta y está emparejado, pero no conoce esa operación: es de una versión anterior.
+   *
+   * Se distingue de un error común porque la salida es otra —descargar el Asistente nuevo— y porque
+   * el mensaje crudo no le dice nada a nadie: un 404 se leía en pantalla como «No existe esa
+   * operación», que es una frase sobre HTTP dicha a alguien que quería ver su ventana de ARCA.
+   */
+  | 'operacion-desconocida';
 
 export class ErrorAsistente extends Error {
   constructor(
@@ -68,6 +84,7 @@ async function pedir<T>(ruta: string, opciones: RequestInit = {}): Promise<T> {
     throw new ErrorAsistente('no-detectado', 'No encontré el Asistente WeProdu en esta máquina.');
   }
   if (res.status === 401) throw new ErrorAsistente('sin-emparejar', 'Este navegador todavía no está emparejado con el Asistente.');
+  if (res.status === 404) throw new ErrorAsistente('operacion-desconocida', 'El Asistente que tenés instalado es de una versión anterior y no sabe hacer esto. Descargalo de nuevo y volvé a ejecutarlo.');
   const cuerpo = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((cuerpo as { error?: string })?.error || `El Asistente respondió ${res.status}.`);
   return cuerpo as T;
@@ -81,6 +98,15 @@ export type EventoProgreso =
   | { tipo: 'fin'; items: Array<{ cuil: string; rnos: string }>; errores: string[]; sinSesion: boolean; faltaron: number }
   | { tipo: 'fallo'; mensaje: string }
   | { tipo: 'cerrado' };
+
+/**
+ * ¿Este Asistente sabe hacer esta operación?
+ *
+ * Se pregunta ANTES de ofrecer el botón, no después de que falle. Un botón que existe y devuelve un
+ * error es peor que un botón que no está: promete algo, se aprieta, y lo que vuelve es un cartel
+ * rojo que no explica qué hacer.
+ */
+export const asistentePuede = (estado: EstadoAsistente | null, operacion: string): boolean => !!estado?.operaciones?.includes(operacion);
 
 export const asistenteAPI = {
   estado: () => pedir<EstadoAsistente>('/estado'),

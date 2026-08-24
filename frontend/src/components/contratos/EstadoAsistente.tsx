@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faCircleQuestion, faDownload, faTriangleExclamation, faArrowUpRightFromSquare, faFolderOpen } from '@fortawesome/free-solid-svg-icons';
 import { faWindows as faWin, faApple as faApl } from '@fortawesome/free-brands-svg-icons';
-import { asistenteAPI, tokenAsistente, ErrorAsistente, EstadoAsistente as Estado, DESCARGAS_ASISTENTE, descargaDisponible } from '../../api/asistente';
+import { asistenteAPI, asistentePuede, tokenAsistente, ErrorAsistente, EstadoAsistente as Estado, DESCARGAS_ASISTENTE, descargaDisponible } from '../../api/asistente';
 import { sweetAlert } from '../../utils/sweetAlert';
 
 /**
@@ -65,7 +65,9 @@ export function useAsistente(): UsoAsistente {
       setFallo(null);
     } catch (e) {
       setEstado(null);
-      setFallo(e instanceof ErrorAsistente ? e.motivo : 'no-detectado');
+      // `/estado` no puede dar 404 —existe desde siempre—, así que cualquier motivo que no sea
+      // «falta emparejar» significa que no lo tenemos: sin Asistente no hay nada más que averiguar.
+      setFallo(e instanceof ErrorAsistente && e.motivo === 'sin-emparejar' ? 'sin-emparejar' : 'no-detectado');
     } finally {
       setCargando(false);
     }
@@ -341,13 +343,29 @@ export const BloqueAsistente: React.FC<{ uso: UsoAsistente; empleadora?: string 
           <>
             En esa ventana: entrá con tu clave fiscal → <strong>Simplificación Registral - Empleadores</strong> → elegí <strong>{empleadora || 'la empleadora'}</strong> → <strong>Relaciones Laborales</strong> →{' '}
             <strong>Registrar Nuevas Altas</strong>. Esta pantalla se actualiza sola cuando termines.
+            {!asistentePuede(estado, '/chrome/focus') && <> Buscá esa ventana en tu barra de tareas: es un Chrome aparte, solo para ARCA.</>}
           </>
         }
+        /*
+          El botón solo aparece si ESTE Asistente sabe enfocar.
+
+          `/chrome/focus` se agregó después, y los Asistentes instalados antes no la tienen: ofrecerla
+          igual daba 404 y un cartel rojo que decía «No existe esa operación». La persona no puede
+          hacer nada con eso — pero sí puede con «descargá el Asistente de nuevo», que es lo que se
+          ofrece en su lugar. Ver `asistentePuede`.
+        */
         accion={
-          <button type="button" onClick={irAEsaVentana} disabled={abriendo} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
-            {abriendo ? <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3" /> : <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3 w-3" />}
-            Ir a esa ventana
-          </button>
+          asistentePuede(estado, '/chrome/focus') ? (
+            <button type="button" onClick={irAEsaVentana} disabled={abriendo} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+              {abriendo ? <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3" /> : <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3 w-3" />}
+              Ir a esa ventana
+            </button>
+          ) : (
+            <a href={DESCARGAS_ASISTENTE.guia} target="_blank" rel="noreferrer" title={`Tu Asistente es la v${estado.version} y no sabe traer la ventana al frente.`} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-blue-500">
+              <FontAwesomeIcon icon={faDownload} className="h-3 w-3" />
+              Actualizar el Asistente
+            </a>
+          )
         }
       />
     );

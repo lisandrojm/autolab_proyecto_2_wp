@@ -131,6 +131,17 @@ describe("la superficie es chica y fija", () => {
     assert.deepEqual(publicas, ["/emparejar"]);
   });
 
+  /**
+   * `OPERACIONES` es lo que el Asistente le PROMETE a la app. Si se desincroniza de lo que realmente
+   * atiende, la app ofrece un botón que da 404 —o esconde uno que sí funciona— y en los dos casos el
+   * síntoma aparece lejos de la causa: en la pantalla de alguien que no puede hacer su trámite.
+   */
+  it("lo que declara `/estado` es exactamente lo que atiende", async () => {
+    const { OPERACIONES } = await import("./operaciones.mjs");
+    const rutas = [...CODIGO.matchAll(/ruta === "([^"]+)"/g)].map((m) => m[1]).filter((r) => r !== "/emparejar");
+    assert.deepEqual([...OPERACIONES].sort(), rutas.sort(), "`/emparejar` queda afuera: es la página de respaldo, no una operación de la app");
+  });
+
   it("lo que no matchea es 404, no un fallback que adivine", () => {
     assert.match(CODIGO, /return json\(res, 404, \{ error: "No existe esa operación\." \}\)/);
   });

@@ -40,6 +40,7 @@ import { readFileSync } from "node:fs";
 import { ORIGENES_PERMITIDOS, origenPermitido, tokenDeInstalacion, tokenValido } from "./seguridad.mjs";
 import { abrirChrome, enfocarChrome, chromeAbierto, estadoSesionArca, rutaChrome, guardarRutaChrome, CDP_URL } from "./chrome.mjs";
 import { noMorirEnSilencio } from "./diagnostico.mjs";
+import { OPERACIONES } from "./operaciones.mjs";
 import { urlWeProdu, origenAtendido, yaEmparejado, marcarEmparejado, guardarCodigoEnArchivo, abrirNavegador, paginaEmparejar, banner } from "./emparejamiento.mjs";
 
 /**
@@ -130,7 +131,7 @@ const leerCuerpo = (req) =>
 // ─────────────────────────────────────────────────────────────── operaciones
 
 async function estado() {
-  return { ok: true, version: VERSION, chromeAbierto: await chromeAbierto(), sesionArca: await estadoSesionArca(), chromeEncontrado: !!rutaChrome(), corriendo: ocupado() };
+  return { ok: true, version: VERSION, operaciones: OPERACIONES, chromeAbierto: await chromeAbierto(), sesionArca: await estadoSesionArca(), chromeEncontrado: !!rutaChrome(), corriendo: ocupado() };
 }
 
 /**
