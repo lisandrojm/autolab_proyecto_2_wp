@@ -142,11 +142,16 @@ export const asistenteAPI = {
 /**
  * Los ejecutables, tal como quedan publicados.
  *
- * Son ARCHIVOS de verdad en `public/asistente/`, no rutas de la SPA: los arma
+ * Son ARCHIVOS de verdad en `public/asistente/descargas/`, no rutas de la SPA: los arma
  * `tools/asistente/empaquetar.mjs` y `vite.config.ts` / `vercel.json` se encargan de que ese prefijo
  * nunca caiga al `index.html`. Antes apuntaban a `/descargas/…`, que no existía en ningún lado y por
  * lo tanto devolvía el HTML de la app con status 200 — el navegador guardaba un «.exe» de 2 KB que
  * era una página web.
+ *
+ * El prefijo es `/asistente/descargas/` y no `/asistente/` porque `/asistente/emparejar` SÍ es una
+ * ruta de la SPA: es donde aterriza el navegador que abre el Asistente. La regla de «esto es un
+ * archivo, si falta es 404» engloba todo lo que cuelga del prefijo, así que compartirlo dejaba rota
+ * una de las dos cosas.
  *
  * Mac va en .zip y separado por arquitectura, y las dos cosas son por el mismo motivo: un binario
  * suelto pierde el permiso de ejecución al bajarse, y un slice de la arquitectura equivocada arranca
@@ -154,9 +159,9 @@ export const asistenteAPI = {
  * puede unificar con `lipo`).
  */
 export const DESCARGAS_ASISTENTE = {
-  windows: '/asistente/AsistenteWeProdu-windows.exe',
-  macAppleSilicon: '/asistente/AsistenteWeProdu-mac-apple-silicon.zip',
-  macIntel: '/asistente/AsistenteWeProdu-mac-intel.zip',
+  windows: '/asistente/descargas/AsistenteWeProdu-windows.exe',
+  macAppleSilicon: '/asistente/descargas/AsistenteWeProdu-mac-apple-silicon.zip',
+  macIntel: '/asistente/descargas/AsistenteWeProdu-mac-intel.zip',
   guia: '/arca/guia-obras-sociales',
 };
 

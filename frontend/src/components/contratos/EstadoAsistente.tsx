@@ -12,10 +12,16 @@ import { sweetAlert } from '../../utils/sweetAlert';
  * no tiene por qué saber qué es `npm`, ni pegar un hash de 24 caracteres, ni distinguir un error de
  * sesión de uno de sintaxis. Lo que ve es si el Asistente está o no, y qué hacer en cada caso.
  *
+ * El EMPAREJAMIENTO YA NO SE PIDE: al arrancar, el Asistente abre el navegador en
+ * `/asistente/emparejar#token=…` y el token queda guardado solo. El estado `sin-emparejar` quedó como
+ * respaldo —otro navegador, un `localStorage` limpiado— y por eso apunta a la página local del
+ * Asistente, que es de donde de verdad se saca el código. Antes decía «la ventana del Asistente
+ * muestra un código» y no había ninguna ventana: el Asistente es un ejecutable de consola.
+ *
  * Los cuatro estados posibles, en el orden en que se resuelven:
  *
  *   no-detectado   → descargar y ejecutar. Se hace una vez.
- *   sin-emparejar  → pegar el código que el Asistente muestra en su ventana.
+ *   sin-emparejar  → raro: el Asistente empareja solo al arrancar. Queda el respaldo manual.
  *   sin sesión     → botón que abre el Chrome de ARCA. El login lo hace la persona.
  *   conectado      → listo, el botón de validar se habilita.
  *
@@ -136,12 +142,12 @@ export const BloqueAsistente: React.FC<{ uso: UsoAsistente; empleadora?: string 
   /** Pide el código y lo guarda. Se hace una vez por navegador. */
   const emparejar = async () => {
     const r = await sweetAlert.prompt('Emparejar el Asistente', {
-      text: 'Pegá el código que muestra la ventana del Asistente WeProdu.',
+      html: 'El Asistente lo muestra en <a href="http://127.0.0.1:47653/emparejar" target="_blank" rel="noreferrer" style="font-weight:600;color:#2563eb">127.0.0.1:47653/emparejar</a> y también en la consola donde lo ejecutaste.',
       placeholder: '64 caracteres',
       confirmText: 'Emparejar',
       // Se valida acá el formato para no mandar un pegado a medias y recibir un 401 que se lee como
       // «el código está mal» cuando en realidad se copió de menos.
-      validar: (v) => (/^[0-9a-f]{64}$/i.test(v.trim()) ? null : 'El código son 64 caracteres. Copialo entero de la ventana del Asistente.'),
+      validar: (v) => (/^[0-9a-f]{64}$/i.test(v.trim()) ? null : 'El código son 64 caracteres. Copialo entero desde 127.0.0.1:47653/emparejar.'),
     });
     if (!r.isConfirmed || !r.value) return;
     tokenAsistente.guardar(String(r.value));
@@ -177,7 +183,15 @@ export const BloqueAsistente: React.FC<{ uso: UsoAsistente; empleadora?: string 
           <Punto color="bg-gray-400" />
           Asistente no detectado
         </p>
-        <p className="text-[11.5px] text-gray-600 dark:text-gray-400 mt-0.5">Descargalo y ejecutalo. Se hace una vez: después queda funcionando y esta pantalla lo encuentra sola.</p>
+        <p className="text-[11.5px] text-gray-600 dark:text-gray-400 mt-0.5">
+          Descargalo y ejecutalo. Se empareja solo: no hay que copiar ningún código.
+        </p>
+        {/* El «¿ya lo ejecutaste?» va acá y no en la guía porque este es el momento exacto en que la
+            persona cree que lo ejecutó y no pasó nada — y las dos causas más probables son las dos
+            que se nombran: no lo abrió, o el sistema se lo bloqueó sin que lo viera. */}
+        <p className="text-[11.5px] text-gray-600 dark:text-gray-400 mt-0.5">
+          ¿Ya lo ejecutaste? En Mac abrí <strong>AsistenteWeProdu.command</strong>; si te pide permiso, <strong>click derecho → Abrir</strong>.
+        </p>
         <div className="flex items-center gap-2 flex-wrap mt-2">
           {DESCARGAS.map((d) => (
             <BotonDescarga key={d.url} {...d} />
@@ -190,7 +204,7 @@ export const BloqueAsistente: React.FC<{ uso: UsoAsistente; empleadora?: string 
         {/* Windows va a decir «editor desconocido» la primera vez: sin certificado de firma no hay
             forma de evitarlo, y encontrárselo sin aviso hace abandonar la instalación ahí mismo. */}
         <p className="text-[11px] text-gray-500 dark:text-gray-500 mt-2">
-          La primera vez Windows va a avisar que el editor es desconocido: <strong>Más información → Ejecutar de todas formas</strong>. Es normal y está explicado en la guía.
+          La primera vez el sistema va a avisar que el editor es desconocido — el ejecutable no está firmado. En Windows: <strong>Más información → Ejecutar de todas formas</strong>. En Mac: <strong>click derecho → Abrir → Abrir</strong> (con doble click no alcanza). Está explicado con capturas en la guía.
         </p>
       </div>
     );
@@ -205,7 +219,13 @@ export const BloqueAsistente: React.FC<{ uso: UsoAsistente; empleadora?: string 
             <Punto color="bg-amber-500" />
             Falta emparejar este navegador
           </p>
-          <p className="text-[11.5px] text-gray-600 dark:text-gray-400 mt-0.5">La ventana del Asistente muestra un código. Pegalo una vez y no se vuelve a pedir.</p>
+          <p className="text-[11.5px] text-gray-600 dark:text-gray-400 mt-0.5">
+            El Asistente empareja solo al arrancar. Si no lo hizo, cerralo y volvé a ejecutarlo — o abrí{' '}
+            <a href="http://127.0.0.1:47653/emparejar" target="_blank" rel="noreferrer" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+              127.0.0.1:47653/emparejar
+            </a>{' '}
+            y pegá el código a mano.
+          </p>
         </div>
         <button type="button" onClick={emparejar} className="ml-auto px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-blue-600 text-white hover:bg-blue-700">
           Pegar el código

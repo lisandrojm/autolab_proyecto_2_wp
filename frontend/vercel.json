@@ -1,12 +1,21 @@
 {
   "rewrites": [
-    { "source": "/api/v1/:path*", "destination": "https://autolab.fun:7001/api/v1/:path*" },
-    { "source": "/storage/:path*", "destination": "https://autolab.fun:7001/storage/:path*" },
     {
-      "//": "Identidad, y va ANTES del catch-all: corta el fallback de la SPA para las descargas. Vercel aplica la primera regla que matchea y se detiene, así que /asistente/* se resuelve como archivo estático (o 404) y nunca como index.html. Sin esto, un ejecutable que falta se baja como un HTML de 2 KB que no arranca — y no hay ningún error a la vista.",
-      "source": "/asistente/(.*)",
-      "destination": "/asistente/$1"
+      "source": "/api/v1/:path*",
+      "destination": "https://autolab.fun:7001/api/v1/:path*"
     },
-    { "source": "/((?!.*\\.).*)", "destination": "/" }
+    {
+      "source": "/storage/:path*",
+      "destination": "https://autolab.fun:7001/storage/:path*"
+    },
+    {
+      "//": "Identidad, y va ANTES del catch-all: corta el fallback de la SPA para las descargas. Vercel aplica la primera regla que matchea y se detiene, asi que /asistente/descargas/* se resuelve como archivo estatico (o 404) y nunca como index.html. Sin esto, un ejecutable que falta se baja como un HTML de 2 KB que no arranca, y no hay ningun error a la vista. El prefijo es /asistente/descargas/ y no /asistente/ porque /asistente/emparejar es una ruta de la SPA.",
+      "source": "/asistente/descargas/(.*)",
+      "destination": "/asistente/descargas/$1"
+    },
+    {
+      "source": "/((?!.*\\.).*)",
+      "destination": "/"
+    }
   ]
 }

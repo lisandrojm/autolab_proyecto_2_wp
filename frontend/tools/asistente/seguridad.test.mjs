@@ -112,7 +112,23 @@ describe("la superficie es chica y fija", () => {
 
   it("las operaciones son exactamente las que están documentadas", () => {
     const rutas = [...CODIGO.matchAll(/ruta === "([^"]+)"/g)].map((m) => m[1]).sort();
-    assert.deepEqual(rutas, ["/chrome", "/chrome/ruta", "/detener", "/estado", "/progreso", "/registrar-obras-sociales", "/validar"]);
+    assert.deepEqual(rutas, ["/chrome", "/chrome/ruta", "/detener", "/emparejar", "/estado", "/progreso", "/registrar-obras-sociales", "/validar"]);
+  });
+
+  /**
+   * `/emparejar` es la ÚNICA ruta sin token, y tiene que seguir siendo la única.
+   *
+   * Está antes de la guarda a propósito —es de donde se saca el token, así que pedírselo sería un
+   * callejón sin salida— pero eso también la vuelve el lugar donde va a aparecer el próximo endpoint
+   * público «que total no hace nada». Este test es la línea: todo lo que se atienda antes del
+   * `tokenValido` queda expuesto a cualquier proceso de la máquina.
+   *
+   * Ver `emparejamiento.test.mjs` para lo que esa página puede y no puede contener.
+   */
+  it("solo `/emparejar` se atiende antes de la guarda del token", () => {
+    const antesDelToken = CODIGO.slice(0, CODIGO.indexOf("if (!tokenValido("));
+    const publicas = [...antesDelToken.matchAll(/ruta === "([^"]+)"/g)].map((m) => m[1]);
+    assert.deepEqual(publicas, ["/emparejar"]);
   });
 
   it("lo que no matchea es 404, no un fallback que adivine", () => {

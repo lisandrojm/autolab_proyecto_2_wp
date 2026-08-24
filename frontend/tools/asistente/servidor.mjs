@@ -39,6 +39,7 @@ import { dirname, join } from "node:path";
 import { readFileSync } from "node:fs";
 import { ORIGENES_PERMITIDOS, origenPermitido, tokenDeInstalacion, tokenValido } from "./seguridad.mjs";
 import { abrirChrome, chromeAbierto, estadoSesionArca, rutaChrome, guardarRutaChrome, CDP_URL } from "./chrome.mjs";
+import { urlWeProdu, origenAtendido, yaEmparejado, marcarEmparejado, guardarCodigoEnArchivo, abrirNavegador, paginaEmparejar, banner } from "./emparejamiento.mjs";
 
 /**
  * La versión se INCRUSTA al empaquetar (`--define:__VERSION__`, ver empaquetar.mjs) y solo se lee del
@@ -65,6 +66,9 @@ const TOKEN = tokenDeInstalacion();
 
 /** La corrida en curso. Una sola por vez: dos tandas encimadas se pisan la pantalla de ARCA. */
 let corrida = null;
+
+/** ¿Algún navegador ya se emparejó con este token? Decide si el arranque abre una pestaña o no. */
+let emparejado = yaEmparejado(TOKEN);
 
 // ───────────────────────────────────────────────────────────── HTTP, a mano
 
@@ -221,6 +225,34 @@ function abrirProgreso(req, res) {
 const servidor = createServer(async (req, res) => {
   const ruta = new URL(req.url, `http://127.0.0.1:${PUERTO}`).pathname;
 
+  /*
+    LA ÚNICA RUTA SIN TOKEN, y va antes que todo lo demás a propósito.
+
+    Antes de CORS porque una navegación normal del navegador NO manda `Origin`: pasar por `ponerCors`
+    la cortaría con un 403 y el respaldo no serviría para nada.
+
+    Antes del token porque es de donde se saca el token. Que la puerta de entrada pida la llave que
+    hay adentro es exactamente el callejón sin salida que esto viene a arreglar.
+
+    Y sin cabeceras de CORS, deliberadamente: eso deja que la muestre el navegador cuando la persona
+    la escribe, y le impide leerla a cualquier página que la busque con `fetch`. Es lo único que
+    separa «un respaldo para el usuario» de «el token es público para toda la web».
+  */
+  if (req.method === "GET" && ruta === "/emparejar") {
+    const html = paginaEmparejar(TOKEN);
+    res.writeHead(200, {
+      "Content-Type": "text/html; charset=utf-8",
+      "Content-Length": Buffer.byteLength(html),
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+      // Que no la embeba nadie: dentro de un iframe el token queda a la vista de la página de afuera
+      // para cualquiera que le saque una captura, o que engañe a la persona para que lo copie.
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "no-referrer",
+    });
+    return res.end(html);
+  }
+
   const conCors = ponerCors(req, res);
   if (req.method === "OPTIONS") {
     // El preflight se contesta 204 con las cabeceras ya puestas, o 403 pelado si el origen no está.
@@ -237,6 +269,18 @@ const servidor = createServer(async (req, res) => {
   */
   if (!tokenValido(req.headers["x-weprodu-token"], TOKEN)) {
     return json(res, 401, { error: "Falta el código de emparejamiento, o no es el de este Asistente." });
+  }
+
+  /*
+    Un request autorizado ES la prueba de que el emparejamiento funcionó, y la única que hay.
+
+    Por eso la marca se escribe acá y no al abrir el navegador: si se marcara al abrirlo, una pestaña
+    que el usuario cierra sin mirar contaría como emparejada y el Asistente no volvería a ofrecer
+    nada nunca — quedaría esperando a un navegador que no guardó ningún token.
+  */
+  if (!emparejado) {
+    emparejado = true;
+    marcarEmparejado(TOKEN);
   }
 
   try {
@@ -279,20 +323,22 @@ const servidor = createServer(async (req, res) => {
 
 // SOLO 127.0.0.1. La primera de las tres barreras, y la única que no depende del cliente.
 servidor.listen(PUERTO, "127.0.0.1", () => {
-  console.log(`
-  ╔══════════════════════════════════════════════════════════════╗
-  ║   Asistente WeProdu ${VERSION}                                    ║
-  ╚══════════════════════════════════════════════════════════════╝
+  const url = urlWeProdu();
+  const atendido = origenAtendido(url);
+  const archivo = guardarCodigoEnArchivo(TOKEN);
 
-  Ya está funcionando. Dejá esta ventana abierta y volvé a WeProdu.
+  /*
+    Se abre el navegador SOLO si todavía no hay ningún navegador emparejado.
 
-  Si te pide el código de emparejamiento, es este:
+    El emparejamiento es de una vez y para siempre —el token se guarda en el `localStorage` de
+    WeProdu—, así que abrir una pestaña en cada arranque sería ruido puro para alguien que ya lo
+    resolvió hace meses. Y si el token cambiara (se borró el archivo, es otra máquina), la marca deja
+    de coincidir y el flujo se vuelve a disparar solo: no hay nada que reconfigurar.
 
-      ${TOKEN}
-
-  Se pide una sola vez por navegador. No lo compartas: con ese código
-  se puede manejar el Chrome de ARCA de esta máquina.
-`);
+    El `#` es clave: el token va en el FRAGMENTO, que no viaja al servidor. Ver `emparejamiento.mjs`.
+  */
+  const abrio = !emparejado && abrirNavegador(`${url}/asistente/emparejar#token=${TOKEN}`);
+  console.log(banner({ version: VERSION, token: TOKEN, url, archivo, abrio, atendido }));
 });
 
 servidor.on("error", (e) => {

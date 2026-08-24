@@ -54,8 +54,24 @@ import { readFileSync, writeFileSync, rmSync, mkdirSync, copyFileSync, statSync 
 
 const TARGETS = "node18-win-x64,node18-macos-x64,node18-macos-arm64";
 const VERSION = JSON.parse(readFileSync("package.json", "utf8")).version;
-/** Vite sirve public/ tal cual, así que dejar el archivo acá ES publicarlo. */
-const PUBLICO = "../../public/asistente";
+/**
+ * Vite sirve public/ tal cual, así que dejar el archivo acá ES publicarlo.
+ *
+ * Va en `asistente/descargas/` y no en `asistente/` porque `/asistente/emparejar` es una ruta de la
+ * SPA: el middleware que impide el fallback al index.html cuelga de este prefijo y engloba todo lo
+ * que esté abajo. Compartir el prefijo dejaba una de las dos cosas rota.
+ */
+const PUBLICO = "../../public/asistente/descargas";
+
+/**
+ * `.command` y no un binario pelado.
+ *
+ * Un ejecutable Unix sin extensión, al doble click en Finder, no abre Terminal de forma confiable:
+ * el usuario hace doble click, no ve NADA, y concluye que el programa no funciona — cuando en
+ * realidad arrancó, o ni siquiera se lanzó. Con `.command` macOS abre una Terminal y muestra la
+ * salida, que incluye el código de emparejamiento. Es el respaldo visible del auto-emparejamiento.
+ */
+const MAC = "dist/AsistenteWeProdu.command";
 const corre = (cmd, args) => execFileSync(cmd, args, { stdio: "inherit" });
 
 rmSync("dist", { recursive: true, force: true });
@@ -93,10 +109,10 @@ copyFileSync("dist/AsistenteWeProdu-win-x64.exe", `${PUBLICO}/AsistenteWeProdu-w
 // -X: sin metadata de Finder. -q: el listado no aporta nada al lado del resumen de abajo.
 for (const [slice, nombre] of [["macos-x64", "mac-intel"], ["macos-arm64", "mac-apple-silicon"]]) {
   rmSync(`${PUBLICO}/AsistenteWeProdu-${nombre}.zip`, { force: true }); // zip AGREGA al que ya existe
-  corre("cp", [`dist/AsistenteWeProdu-${slice}`, "dist/AsistenteWeProdu"]); // el nombre que ve el usuario
-  corre("zip", ["-j", "-X", "-q", `${PUBLICO}/AsistenteWeProdu-${nombre}.zip`, "dist/AsistenteWeProdu"]);
+  corre("cp", [`dist/AsistenteWeProdu-${slice}`, MAC]);
+  corre("zip", ["-j", "-X", "-q", `${PUBLICO}/AsistenteWeProdu-${nombre}.zip`, MAC]);
 }
-rmSync("dist/AsistenteWeProdu", { force: true });
+rmSync(MAC, { force: true });
 
 const mb = (f) => `${(statSync(f).size / 1024 / 1024).toFixed(1)} MB`;
 for (const f of ["AsistenteWeProdu-windows.exe", "AsistenteWeProdu-mac-intel.zip", "AsistenteWeProdu-mac-apple-silicon.zip"]) {

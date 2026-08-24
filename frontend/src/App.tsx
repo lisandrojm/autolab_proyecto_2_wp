@@ -54,6 +54,7 @@ import { ObrasSocialesPage } from "./pages/ObrasSocialesPage";
 import { ArcaSucursalesPage } from "./pages/ArcaSucursalesPage";
 import { ArcaComoFuncionaPage } from "./pages/ArcaComoFuncionaPage";
 import { GuiaObrasSocialesPage } from "./pages/GuiaObrasSocialesPage";
+import { EmparejarAsistentePage } from "./pages/EmparejarAsistentePage";
 import { NomenclaturaArchivosPage } from "./pages/NomenclaturaArchivosPage";
 import { ArcaActividadesPage } from "./pages/ArcaActividadesPage";
 import { ArcaModalidadesContratacionPage } from "./pages/ArcaModalidadesContratacionPage";
@@ -209,6 +210,11 @@ function App() {
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/register-client" element={<RegisterClientPage />} />
               <Route path="/registro" element={<RegistroPage />} />
+
+              {/* Acá cae el navegador que abre el Asistente. Pública porque el redirect al login se
+                  comería el fragmento con el token, y porque emparejar no necesita sesión: solo
+                  escribe en el localStorage de este navegador. Ver EmparejarAsistentePage. */}
+              <Route path="/asistente/emparejar" element={<EmparejarAsistentePage />} />
             </Route>
 
             {/* Rutas protegidas (CON MobileNavbar) */}

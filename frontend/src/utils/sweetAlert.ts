@@ -70,11 +70,13 @@ export const sweetAlert = {
    */
   prompt: (
     title: string,
-    opts: { text?: string; valorInicial?: string; placeholder?: string; confirmText?: string; cancelText?: string; validar?: (valor: string) => string | null } = {},
+    /** `html` es para cuando el texto necesita un enlace — con `text` el link se ve como texto pelado y no se puede clickear. */
+    opts: { text?: string; html?: string; valorInicial?: string; placeholder?: string; confirmText?: string; cancelText?: string; validar?: (valor: string) => string | null } = {},
   ) => {
     return Swal.fire({
       title,
-      text: opts.text,
+      text: opts.html ? undefined : opts.text,
+      html: opts.html,
       icon: "question",
       input: "text",
       inputValue: opts.valorInicial ?? "",

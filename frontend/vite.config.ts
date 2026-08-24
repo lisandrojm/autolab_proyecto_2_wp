@@ -18,7 +18,14 @@ import { join } from "node:path";
  * Vale como REGLA GENERAL: cualquier ruta de descarga servida desde la SPA necesita este corte, no
  * solo la del Asistente. Por eso el prefijo es una lista y no un `if`.
  */
-const RUTAS_DE_DESCARGA = ["/asistente/"];
+/**
+ * Prefijos que son ARCHIVOS y nunca rutas de la SPA.
+ *
+ * Ojo con el nivel: es `/asistente/descargas/` y no `/asistente/`. `/asistente/emparejar` SÍ es una
+ * ruta de la SPA —la página que recibe el token del Asistente— y meterla bajo esta regla la
+ * convertiría en un 404. Un prefijo que engloba a los dos usos deja siempre uno de los dos roto.
+ */
+const RUTAS_DE_DESCARGA = ["/asistente/descargas/"];
 
 const sinFallbackDeSPA = (): Plugin => ({
   name: "weprodu-descargas-404",

@@ -7,7 +7,7 @@
   "bin": "servidor.mjs",
   "scripts": {
     "start": "node servidor.mjs",
-    "test": "node --test seguridad.test.mjs",
+    "test": "node --test seguridad.test.mjs emparejamiento.test.mjs",
     "empaquetar": "node empaquetar.mjs",
     "verificar": "node verificar-binario.mjs"
   },
