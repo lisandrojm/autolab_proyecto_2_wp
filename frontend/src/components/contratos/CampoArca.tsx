@@ -64,12 +64,36 @@ export const CampoArca: React.FC<{
   falta?: boolean;
   /** Marca el recuadro en rojo: el dato está pero es inconsistente. */
   error?: boolean;
-}> = ({ rotulo, info, rol, etiqueta, valor, nombre, origen, onEditar, accion, guardando, enEspera, falta, error }) => {
+  /**
+   * Nombre corto y estable de este campo, para poder relacionarlo con otros.
+   *
+   * Sale al DOM como `data-campo` y es lo que buscan los `dependeDe` de los demás. No es un id de
+   * React: tiene que ser el mismo nombre en los dos extremos de la relación.
+   */
+  campo?: string;
+  /**
+   * De qué campos depende éste, separados por espacio ("obraSocial grupoTipoServicio").
+   *
+   * Depender es cualquiera de las dos cosas que pasan en este formulario: que el otro FILTRE las
+   * opciones de éste (convenio → categoría) o que lo HABILITE (obra social → casi todo). Las dos se
+   * ven igual desde acá —tocar el otro cambia lo que se puede elegir en éste— y por eso comparten
+   * mecanismo. Ver `.dep-group` y el resaltado en `index.css`.
+   */
+  dependeDe?: string;
+}> = ({ rotulo, info, rol, etiqueta, valor, nombre, origen, onEditar, accion, guardando, enEspera, falta, error, campo, dependeDe }) => {
   const editable = !!onEditar && !enEspera;
   const borde = error ? 'border-red-400 dark:border-red-700 bg-red-50/50 dark:bg-red-950/20' : falta ? 'border-amber-400 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900/40';
+  /*
+   * La línea de ayuda es la que dice de dónde sale el valor y a qué más afecta —"del convenio 0634/11",
+   * "se habilita al validar la obra social"—, y hasta acá estaba solo al lado del control, sin
+   * asociarle. Un lector de pantalla anunciaba "Categoría, botón" y nada más. Con el `id` acá y el
+   * `aria-describedby` en el control, la relación se lee junto con el campo, que es el único indicador
+   * que existe para quien no ve el rail ni el resaltado.
+   */
+  const idAyuda = campo && origen ? `arca-ayuda-${campo}` : undefined;
 
   return (
-    <div className="mb-3">
+    <div className="mb-3" data-campo={campo} data-depende-de={dependeDe}>
       <div className="flex items-center justify-between gap-2 mb-1">
         <span className="text-[12px] text-gray-600 dark:text-gray-400 flex items-center gap-1.5 min-w-0">
           <span className="truncate">{rotulo}</span>
@@ -83,6 +107,7 @@ export const CampoArca: React.FC<{
         tabIndex={editable ? 0 : undefined}
         onClick={editable ? onEditar : undefined}
         onKeyDown={editable ? (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onEditar!()) : undefined}
+        aria-describedby={idAyuda}
         className={`rounded-md border px-2.5 py-1.5 flex items-center justify-between gap-2 transition-colors ${borde} ${editable ? 'cursor-pointer hover:border-blue-500 dark:hover:border-blue-400' : 'cursor-default opacity-70'}`}
       >
         <span className="min-w-0 flex items-baseline gap-2">
@@ -100,7 +125,38 @@ export const CampoArca: React.FC<{
         </span>
       </div>
 
-      {origen && <p className="text-[10.5px] text-gray-500 dark:text-gray-500 mt-1 px-0.5 leading-snug">{origen}</p>}
+      {origen && (
+        <p id={idAyuda} className="text-[10.5px] text-gray-500 dark:text-gray-500 mt-1 px-0.5 leading-snug">
+          {origen}
+        </p>
+      )}
     </div>
   );
 };
+
+/**
+ * Envuelve un par PADRE + HIJO adyacentes de la misma columna: el de arriba filtra las opciones del
+ * de abajo. Hoy son exactamente dos, Convenio → Categoría y Grupo Tipo Servicio → Tipo Servicio.
+ *
+ * Un rail a la izquierda y un fondo apenas teñido que se desvanece hacia la derecha. La dirección la
+ * da el degradado del rail, de arriba (fuerte) hacia abajo (tenue): se lee que el de arriba manda.
+ *
+ * TRES COSAS QUE SE PROBARON Y NO ENTRARON
+ *
+ *  - Un marco completo por par. El modal ya carga badges de posición, badges de filtro, candados,
+ *    bordes ámbar de "falta" y rojos de "mal cargado". Un borde más compite con los que significan
+ *    algo. El rail ocupa 2px y no cierra ninguna figura.
+ *  - Un título o leyenda arriba del grupo. El badge «filtra categoría» del padre y la línea de ayuda
+ *    del hijo ya lo dicen con palabras; el caption quedaba como ruido encima de dos campos que se
+ *    entienden solos.
+ *  - Una flecha «↳» entre padre e hijo. Queda huérfana en su propio renglón y el rail ya agrupa.
+ *
+ * El rail y el fondo son DECORATIVOS y no pueden ser el único indicador: la relación está dicha en
+ * texto en la línea de ayuda de cada campo, y ese texto es el que se asocia por `aria-describedby`.
+ * `aria-label` nombra al grupo para que un lector de pantalla anuncie de qué par se trata.
+ */
+export const DepGroup: React.FC<{ etiqueta: string; children: React.ReactNode }> = ({ etiqueta, children }) => (
+  <div role="group" aria-label={etiqueta} className="dep-group">
+    {children}
+  </div>
+);

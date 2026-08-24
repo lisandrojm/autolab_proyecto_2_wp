@@ -33,6 +33,14 @@ export interface AfipCatalogs {
     obrasSocialesIds?: string[];
     sucursalIds?: string[];
     convenioIds?: string[];
+    /**
+     * La elección habitual de esta empleadora dentro del nomenclador (ARCA → Defaults).
+     *
+     * Es el valor de ARRANQUE, no una regla: si el Tipo de Contrato trae su propio código, manda el
+     * del contrato. Solo entra cuando el tipo de contrato no lo tiene cargado, que hoy deja el campo
+     * vacío y bloquea el TXT.
+     */
+    defaultsArca?: { grupoTipoServicio?: string; tipoServicio?: string; modalidadLiquidacion?: string };
   }>;
   /** Catálogo de Sucursales de ARCA: de acá salen el código de sucursal y las actividades. */
   sucursales?: ArcaSucursal[];
@@ -191,6 +199,8 @@ export interface AfipValues {
   categoriaProf: string; // código ARCA de la categoría
   modalidadContrato: string;
   tipoServicio: string;
+  /** De dónde salió el tipo de servicio: del tipo de contrato, del default de la empleadora, o de ningún lado. */
+  tipoServicioOrigen: "tipo_contrato" | "empresa" | "ninguno";
   actividad: string;
   modalidadLiq: string;
   rnos: string;
@@ -360,7 +370,10 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
     retribucion,
     categoriaProf: categoria?.data?.codigoAfip ? String(categoria.data.codigoAfip) : "",
     modalidadContrato: tipo?.data?.afipModalidadContrato || "",
-    tipoServicio: tipo?.data?.afipTipoServicio || "",
+    // El default de la empleadora entra DESPUÉS del tipo de contrato, nunca antes: es lo que dice
+    // la pantalla de Defaults y es la regla que hace que el default sea seguro de poner.
+    tipoServicio: tipo?.data?.afipTipoServicio || empresa?.defaultsArca?.tipoServicio || "",
+    tipoServicioOrigen: tipo?.data?.afipTipoServicio ? "tipo_contrato" : empresa?.defaultsArca?.tipoServicio ? "empresa" : "ninguno",
     actividad,
     actividadOrigen,
     actividadesDisponibles: actividades,
@@ -496,7 +509,13 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
 
   // --- Tipo de Contrato: los tres códigos salen del mismo lugar, por eso comparten origen.
   checks.push(presencia("modalidadContrato", "Modalidad de contrato", "tipo_contrato", v.modalidadContrato, "El tipo de contrato no tiene cargado su código de modalidad."));
-  checks.push(presencia("tipoServicio", "Tipo de servicio", "tipo_contrato", v.tipoServicio, "El tipo de contrato no tiene cargado su tipo de servicio."));
+  // El origen del tipo de servicio depende de quién lo puso: culpar al tipo de contrato cuando el
+  // valor salió del default de la empleadora manda a corregir al lugar equivocado.
+  checks.push(
+    v.tipoServicioOrigen === "empresa"
+      ? mk("tipoServicio", "Tipo de servicio", "empresa", v.tipoServicio, "ok", "Del default de la empleadora: el tipo de contrato no trae el suyo.")
+      : presencia("tipoServicio", "Tipo de servicio", "tipo_contrato", v.tipoServicio, "El tipo de contrato no tiene cargado su tipo de servicio, y la empleadora no tiene uno por defecto (ARCA → Defaults)."),
+  );
   checks.push(presencia("modalidadLiq", "Modalidad de liquidación", "tipo_contrato", v.modalidadLiq, "El tipo de contrato no tiene cargada su modalidad de liquidación."));
 
   // --- Obra social. Decir de DÓNDE salió no es un detalle: si salió del convenio, corregirla es

@@ -40,7 +40,20 @@ export const CampoObraSocial: React.FC<{
   row: ContractOverviewRow;
   valores: AfipValues;
   onGuardado: (patch?: Partial<ContractOverviewRow>) => void;
-}> = ({ row, valores, onGuardado }) => {
+  /**
+   * Abre la pantalla de validación con ESTA persona sola.
+   *
+   * Es el mismo trámite que el masivo y ahora es la misma pantalla: lo único que cambia es que
+   * trae una fila y el botón dice «Validar 1». Antes acá se desplegaba un panel propio DENTRO del
+   * formulario, que empujaba Sucursal, Actividad y Convenio hacia abajo —se perdía de vista lo que
+   * se estaba mirando— y que además era una segunda UX para la misma tarea: en dos semanas volvían
+   * a divergir.
+   *
+   * Sin esta prop se cae al panel de antes, que sigue funcionando: es lo que ve quien renderice
+   * este campo fuera de la grilla, donde no hay dónde abrir un modal.
+   */
+  onValidarEnPantalla?: () => void;
+}> = ({ row, valores, onGuardado, onValidarEnPantalla }) => {
   const [abierto, setAbierto] = useState(false);
   const [copiado, setCopiado] = useState(false);
   const [pegado, setPegado] = useState('');
@@ -141,7 +154,7 @@ export const CampoObraSocial: React.FC<{
       'Sí, re-validar',
     );
     if (!r.isConfirmed) return;
-    if (await desfijar()) await empezar();
+    if (await desfijar()) onValidarEnPantalla ? onValidarEnPantalla() : await empezar();
   };
 
   /**
@@ -237,7 +250,7 @@ export const CampoObraSocial: React.FC<{
           {!validada && !!row.empresaContratoId && !abierto && (
             <button
               type="button"
-              onClick={empezar}
+              onClick={onValidarEnPantalla || empezar}
               /* `self-center`: la banda crece con el texto de «Qué va a quedar» —que envuelve en dos
                  renglones— y el botón, alineado arriba con el resto, quedaba colgando de la primera
                  línea. Centrado, queda a la altura del bloque que explica lo que va a validar. */

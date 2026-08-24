@@ -570,3 +570,63 @@ describe("obra social — la validación depende de la empleadora", () => {
     assert.equal(resolveAfipValues(row, cat()).rnosSugerido, "120900");
   });
 });
+
+describe("tipo de servicio — el default de la empleadora es el valor de arranque", () => {
+  /**
+   * Hasta acá `defaultsArca` se guardaba en la ficha de la empresa y NO lo leía nadie: la pantalla
+   * decía "no pisan al Tipo de Contrato", pero tampoco entraban cuando el tipo de contrato no traía
+   * el suyo. El campo quedaba vacío y el TXT de esa persona no se podía generar.
+   */
+  const sinTipoServicio = { _id: "t1", name: "Plazo fijo 6x6 2030 SRL", data: { afipModalidadContrato: "021", afipTipoServicio: "", afipModalidadLiquidacion: "1" } };
+  const conDefault = (defaultsArca: Record<string, string>, tipos?: unknown[]) =>
+    catalogos({
+      ...(tipos ? { tipos } : {}),
+      empresas: [{ _id: EMPRESA_ID, obraSocialId: 7, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"], defaultsArca }],
+    } as any);
+
+  it("el tipo de contrato MANDA sobre el default de la empresa", () => {
+    // La regla que la pantalla de Defaults promete. Si se invirtiera, cambiar un default de la
+    // empleadora reescribiría en silencio las posiciones 107-109 de todos sus contratos.
+    const v = resolveAfipValues(fila(), conDefault({ tipoServicio: "514" }));
+    assert.equal(v.tipoServicio, "001");
+    assert.equal(v.tipoServicioOrigen, "tipo_contrato");
+  });
+
+  it("sin código en el tipo de contrato, entra el de la empleadora", () => {
+    const v = resolveAfipValues(fila(), conDefault({ tipoServicio: "514" }, [sinTipoServicio]));
+    assert.equal(v.tipoServicio, "514");
+    assert.equal(v.tipoServicioOrigen, "empresa");
+  });
+
+  it("sin ninguno de los dos, queda vacío y no se inventa nada", () => {
+    const v = resolveAfipValues(fila(), conDefault({}, [sinTipoServicio]));
+    assert.equal(v.tipoServicio, "");
+    assert.equal(v.tipoServicioOrigen, "ninguno");
+  });
+
+  /**
+   * De dónde salió el dato decide a dónde se manda a corregir. Culpar al tipo de contrato cuando el
+   * valor lo puso el default de la empleadora deja a la persona buscando en la pantalla equivocada.
+   */
+  it("el check dice que salió de la empleadora, no del tipo de contrato", () => {
+    const { checks } = resolveAfip(fila(), conDefault({ tipoServicio: "514" }, [sinTipoServicio]));
+    const check = checks.find((c) => c.key === "tipoServicio");
+    assert.equal(check?.origen, "empresa");
+    assert.equal(check?.estado, "ok");
+  });
+
+  it("y cuando no hay ninguno, el motivo nombra las DOS pantallas donde se arregla", () => {
+    const { checks } = resolveAfip(fila(), conDefault({}, [sinTipoServicio]));
+    const check = checks.find((c) => c.key === "tipoServicio");
+    assert.equal(check?.estado, "falta");
+    assert.match(check?.detalle || "", /tipo de contrato/i);
+    assert.match(check?.detalle || "", /Defaults/);
+  });
+
+  /** El código completo llega al TXT: es lo que se escribe en 107-109. */
+  it("el default de la empleadora termina en las posiciones 107-109", () => {
+    const record = buildAltaRecord(fila(), conDefault({ tipoServicio: "514" }, [sinTipoServicio]));
+    assert.ok(record, "el registro tendría que armarse: con el default ya no falta el tipo de servicio");
+    assert.equal(tramo(record as string, 107, 109), "514");
+  });
+});

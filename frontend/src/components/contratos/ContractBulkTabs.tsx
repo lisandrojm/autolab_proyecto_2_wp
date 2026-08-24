@@ -25,7 +25,7 @@ import { Modal } from '../ui/Modal';
 import { ContractDocsColumns, ContractDocsHeaders, ContractActionsButtons, ContractActionsCell, ContractActionsHeader, downloadContractRow, downloadReleaseRow, uploadAltaRow } from './ContractRowDocs';
 import { resolveAfip, resolveAfipValues, AfipRowResult, AfipValues } from './afipCompleteness';
 import { buildAltaRecord, buildAltaTxt, downloadTxt } from './afipTxt';
-import { ConstatarObrasSocialesLote, FilaConstatacion } from './ConstatarObrasSocialesLote';
+import { PantallaValidarObrasSociales, FilaConstatacion } from './PantallaValidarObrasSociales';
 import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, cuitEsValido, fmtCuit, cuitDisplay, noPoseeCuit } from './ConstanciaBulk';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { cachedFetch, invalidateRefCache, updateRefCache } from '../../utils/refCache';
@@ -1960,7 +1960,7 @@ export const ContractBulkAfipTab: React.FC<{
             </div>
           }
         >
-          <DatosArcaDetalle row={detalle.row} result={detalle.result} cat={afipCat} empresas={companies} onGuardado={(patch) => aplicarCambio(detalle.row, patch)} onCambioNivel={() => load(true)} />
+          <DatosArcaDetalle row={detalle.row} result={detalle.result} cat={afipCat} empresas={companies} onGuardado={(patch) => aplicarCambio(detalle.row, patch)} onCambioNivel={() => load(true)} onValidarObraSocial={() => setLoteObrasSociales(new Set([`${detalle.row._id}-${detalle.row.contractIndex}`]))} />
         </Modal>
       )}
 
@@ -1973,10 +1973,11 @@ export const ContractBulkAfipTab: React.FC<{
           size="95"
           zIndex={70}
         >
-          <ConstatarObrasSocialesLote
+          <PantallaValidarObrasSociales
             filas={filasConstatacion}
             empleadora={empresaOptions.find((e) => e.value === empresaDelLote)?.label}
             empresaId={empresaDelLote || undefined}
+            onRefrescar={() => load(true)}
             onLoteAplicado={() => load(true)}
             onGuardado={(row, patch) => aplicarCambio(row, patch)}
           />

@@ -372,9 +372,16 @@ export const DatosArcaDetalle: React.FC<{
   empresas?: Company[];
   /** Algo del TIPO DE CONTRATO cambió: no vive en la fila, hay que recargar el listado. */
   onCambioNivel?: () => void;
+  /**
+   * Abre la pantalla de validación de obras sociales con esta persona sola.
+   *
+   * Viaja desde la grilla, que es la única que sabe abrir el modal. Sin esto, `CampoObraSocial`
+   * despliega su propio panel adentro del formulario y desplaza el resto de los campos.
+   */
+  onValidarObraSocial?: () => void;
   /** Se llama al fijar o quitar la obra social del contrato, para refrescar la fila sin recargar. */
   onGuardado?: (patch?: Partial<ContractOverviewRow>) => void;
-}> = ({ row, result, cat, onGuardado, empresas = [], onCambioNivel }) => {
+}> = ({ row, result, cat, onGuardado, empresas = [], onCambioNivel, onValidarObraSocial }) => {
   const { campos, valores } = useMemo(() => describirRegistro(row, cat), [row, cat]);
   const avisos = result.checks.filter((c) => c.estado === "aviso");
 
@@ -388,7 +395,7 @@ export const DatosArcaDetalle: React.FC<{
       {onGuardado && <BandaEmpleador row={row} empresas={empresas} convenios={(empresaSel?.convenioIds || []).length} domicilios={(empresaSel?.sucursalIds || []).length} onGuardado={onGuardado} />}
 
       {/* El formulario con la forma de ARCA. Todo se resuelve acá adentro: ya no hay "Ir a ↗". */}
-      {onGuardado && <FormularioArca row={row} valores={valores} cat={cat} onGuardado={onGuardado} onCambioNivel={onCambioNivel} />}
+      {onGuardado && <FormularioArca row={row} valores={valores} cat={cat} onGuardado={onGuardado} onCambioNivel={onCambioNivel} onValidarObraSocial={onValidarObraSocial} />}
 
       {/* Los avisos van visibles aunque el contrato esté completo: no bloquean el alta, pero son lo
           que hay que ir limpiando. */}

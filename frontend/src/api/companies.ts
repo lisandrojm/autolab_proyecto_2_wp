@@ -46,6 +46,14 @@ export interface Company {
    * alta. Guarda el código tal cual viaja al TXT.
    */
   defaultsArca?: {
+    /**
+     * Grupo de Tipo de Servicio: "1" CONTINUOS, "2" DISCONTINUOS.
+     *
+     * No viaja al TXT. Filtra el combo de tipo de servicio, igual que en la pantalla de ARCA, donde
+     * primero se elige el grupo y recién ahí se habilita el tipo. El server lo guarda DERIVADO del
+     * código del tipo, así que lo que vuelve del GET siempre es coherente.
+     */
+    grupoTipoServicio?: string;
     tipoServicio?: string;
     modalidadLiquidacion?: string;
   };

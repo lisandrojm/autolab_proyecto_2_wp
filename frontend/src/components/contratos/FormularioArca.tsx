@@ -1,11 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ContractOverviewRow } from '../../api/users';
 import { AfipCatalogs, AfipValues, MODALIDADES_PLAZO_DETERMINADO, MODALIDADES_TIEMPO_INDETERMINADO } from './afipCompleteness';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { contratosAPI, ContratoItem } from '../../api/contratos';
 import { projectsAPI } from '../../api/projects';
 import { sweetAlert } from '../../utils/sweetAlert';
-import { CampoArca } from './CampoArca';
+import { CampoArca, DepGroup } from './CampoArca';
+import { useResaltadoDependencias } from './useResaltadoDependencias';
 import { CampoObraSocial } from './CampoObraSocial';
 import { PickerArca, OpcionPicker } from './PickerArca';
 
@@ -41,8 +42,21 @@ export const FormularioArca: React.FC<{
   onGuardado: (patch?: Partial<ContractOverviewRow>) => void;
   /** Se llama cuando cambia algo del TIPO DE CONTRATO, que no vive en la fila: hay que recargar. */
   onCambioNivel?: () => void;
-}> = ({ row, valores, cat, onGuardado, onCambioNivel }) => {
+  /**
+   * Abre la pantalla de validación de obras sociales con esta persona sola.
+   *
+   * Viaja desde la grilla, que es la única que sabe abrir el modal. Sin esto, `CampoObraSocial`
+   * despliega su propio panel adentro del formulario y desplaza el resto de los campos.
+   */
+  onValidarObraSocial?: () => void;
+}> = ({ row, valores, cat, onGuardado, onCambioNivel, onValidarObraSocial }) => {
   const [abierto, setAbierto] = useState<CampoAbierto>(null);
+  /**
+   * Envuelve la obra social Y las tres columnas: la obra social habilita seis campos de dos
+   * columnas distintas, así que el resaltado tiene que poder llegar de una punta a la otra.
+   */
+  const camposRef = useRef<HTMLDivElement>(null);
+  useResaltadoDependencias(camposRef);
   const [guardando, setGuardando] = useState<string | null>(null);
 
   // Nomencladores universales. Se cargan acá y no en la grilla: solo hacen falta con el modal
@@ -52,7 +66,16 @@ export const FormularioArca: React.FC<{
   const [gruposTS, setGruposTS] = useState<SimpleCatalogItem[]>([]);
   const [modalidadesContrato, setModalidadesContrato] = useState<SimpleCatalogItem[]>([]);
   const [modalidadesLiq, setModalidadesLiq] = useState<SimpleCatalogItem[]>([]);
-  const [grupoTS, setGrupoTS] = useState<string>('');
+  /**
+   * El filtro arranca en el grupo que la empleadora dejó como default (ARCA → Defaults).
+   *
+   * Es solo el punto de partida del combo, no un valor del alta: el grupo no viaja al TXT. Se puede
+   * cambiar o poner en «sin filtrar» acá mismo, y no toca lo que la empresa tenga guardado.
+   */
+  const [grupoTS, setGrupoTS] = useState<string>(() => {
+    const empresa = row.empresaContratoId ? cat.empresas?.find((e) => e._id === row.empresaContratoId) : undefined;
+    return (empresa as { defaultsArca?: { grupoTipoServicio?: string } } | undefined)?.defaultsArca?.grupoTipoServicio || '';
+  });
 
   useEffect(() => {
     tiposServicioApi.list().then(setTiposServicio).catch(() => setTiposServicio([]));
@@ -118,22 +141,24 @@ export const FormularioArca: React.FC<{
 
   const hayEmpresa = !!row.empresaContratoId;
   /**
-   * Nada se toca hasta tener empleadora y la obra social validada.
+   * Lo único que bloquea es la EMPLEADORA. La obra social no bloquea nada.
    *
-   * Es un orden de trabajo impuesto a propósito: los dos primeros datos son los que destraban el
-   * resto —la empleadora define qué sucursales, convenios y obras sociales son elegibles, y la
-   * validación es el único paso que sale de la app— así que llenar los detalles antes lleva a
-   * rehacerlos cuando alguno de los dos cambia.
+   * Antes acá también entraba `constatacion === 'sin_constatar'`, como un orden de trabajo impuesto:
+   * primero la empleadora, después la validación en ARCA, y recién ahí el resto. Era una decisión y no
+   * un descuido —el comentario viejo hasta enumeraba el costo—, pero en uso resultó al revés de lo que
+   * buscaba: convertía el paso MÁS LENTO y más externo del formulario, el único que obliga a salir a
+   * ARCA con clave fiscal, en prerrequisito de cinco campos que no tienen nada que ver con él.
    *
-   * El costo, para que sea una decisión y no un descuido: Tipo de Servicio, Modalidad de Contrato y
-   * Modalidad de Liquidación NO dependen de estos dos —salen del TIPO DE CONTRATO y alcanzan a todos
-   * los contratos de ese tipo—, así que quien entre a configurar el tipo desde acá va a encontrarlos
-   * bloqueados por el estado de UN contrato. Se acepta a cambio de que el orden sea uno solo.
+   * Ninguno de esos cinco depende de la obra social. Sucursal sale de los domicilios de la
+   * empleadora; Actividad, de la sucursal; Grupo/Tipo de Servicio, Modalidad de Contrato y Modalidad
+   * de Liquidación, del TIPO DE CONTRATO. Y la obra social nunca deja al contrato sin dato: si ARCA no
+   * devuelve una propia, rige la del convenio.
+   *
+   * La empleadora sí bloquea, y por una razón distinta: sin ella no existe el conjunto de sucursales,
+   * convenios ni obras sociales elegibles. No es un orden preferido, es que no hay entre qué elegir.
    */
-  const faltaObraSocial = valores.constatacion === 'sin_constatar';
-  const bloqueadoPorPrevios = !hayEmpresa || faltaObraSocial;
-  /** Qué falta, en el mismo orden en que hay que resolverlo. */
-  const motivoBloqueo = !hayEmpresa ? <>se habilita al elegir la empleadora</> : <>se habilita al validar la obra social</>;
+  const bloqueadoPorPrevios = !hayEmpresa;
+  const motivoBloqueo = <>se habilita al elegir la empleadora</>;
   const sucursalElegida = valores.sucursalesDisponibles.find((s) => s._id === row.sucursalArcaId);
 
   // La fecha de fin depende de la modalidad: sin modalidad no se sabe si corresponde.
@@ -142,10 +167,17 @@ export const FormularioArca: React.FC<{
 
   const nombreDe = (lista: SimpleCatalogItem[], codigo: string) => lista.find((x) => String(x.externalId || '').trim() === codigo)?.name || '';
 
-  // El tipo de servicio se filtra por grupo: sin filtrar, 98 nombres se repiten y son
-  // indistinguibles. `_valueToFilter` del catálogo de ARCA es el grupo.
+  /*
+   * El tipo de servicio se filtra por grupo: sin filtrar, 98 nombres se repiten y son
+   * indistinguibles.
+   *
+   * El grupo vive en la RAÍZ del documento (`t.grupo`), no adentro de `data`. Estaba leído como
+   * `t.data.grupo`, que es siempre `undefined`: elegir un grupo dejaba la lista vacía y la columna
+   * del grupo en blanco, o sea que el filtro no filtraba nada y encima parecía roto. Ver
+   * `server/src/models/ArcaTipoServicio.ts`, donde `grupo` es un campo del esquema.
+   */
   const tiposServicioFiltrados = useMemo(() => {
-    const conGrupo = tiposServicio.map((t) => ({ item: t, grupo: String((t.data as { grupo?: string } | undefined)?.grupo || '') }));
+    const conGrupo = tiposServicio.map((t) => ({ item: t, grupo: String((t as { grupo?: unknown }).grupo ?? '') }));
     const lista = grupoTS ? conGrupo.filter((x) => x.grupo === grupoTS) : conGrupo;
     return lista.map((x) => opcion(x.item, x.grupo ? nombreDe(gruposTS, x.grupo) || x.grupo : undefined));
   }, [tiposServicio, gruposTS, grupoTS]);
@@ -156,158 +188,179 @@ export const FormularioArca: React.FC<{
           valor lo pone ARCA, no un catálogo— y adentro de una columna no entraban ni el nombre de la
           obra social ni su línea de estado. Con el mismo formato que la banda de Empleador, el trash
           queda alineado donde el ojo ya lo busca. */}
-      <CampoObraSocial row={row} valores={valores} onGuardado={onGuardado} />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-5">
-        {/* ── Columna 1: relación laboral ─────────────────────────────────────── */}
-        <div>
-          <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Relación laboral</h4>
-
-          <CampoArca
-            rotulo="Sucursal"
-            info="sucursal"
-            rol="campo"
-            etiqueta="74–78"
-            valor={valores.sucursal}
-            nombre={sucursalElegida?.domicilio}
-            falta={hayEmpresa && !valores.sucursal}
-            enEspera={bloqueadoPorPrevios}
-            guardando={guardando === 'sucursal'}
-            onEditar={() => setAbierto('sucursal')}
-            origen={bloqueadoPorPrevios ? motivoBloqueo : <>de los domicilios declarados por la empleadora</>}
-          />
-
-          <CampoArca
-            rotulo="Actividad"
-            info="actividad"
-            rol="campo"
-            etiqueta="79–84"
-            valor={valores.actividad}
-            nombre={valores.actividadesDisponibles.find((a) => a.codigo === valores.actividad)?.descripcion}
-            falta={!!valores.sucursal && !valores.actividad}
-            enEspera={bloqueadoPorPrevios || !valores.sucursal}
-            guardando={guardando === 'actividad'}
-            onEditar={valores.actividadesDisponibles.length > 1 ? () => setAbierto('actividad') : undefined}
-            origen={bloqueadoPorPrevios ? motivoBloqueo : valores.sucursal ? <>declarada en <strong>{valores.nombreSucursal || 'la sucursal'}</strong>{valores.actividadesDisponibles.length === 1 ? ' · única, se hereda' : ''}</> : <>se habilita al elegir la sucursal</>}
-          />
-
-          <CampoArca
-            rotulo="Convenio"
-            info="convenioCategoria"
-            rol="filtra"
-            etiqueta="filtra categoría"
-            valor={valores.convenioCategoria}
-            nombre={cat.convenios?.find((c) => String(c.externalId || '').trim() === valores.convenioCategoria)?.name}
-            falta={!valores.convenioCategoria}
-            origen={<>de la categoría · <strong>no va al archivo</strong></>}
-          />
-
-          <CampoArca
-            rotulo="Categoría"
-            info="categoriaProf"
-            rol="campo"
-            etiqueta="101–106"
-            valor={valores.categoriaProf}
-            nombre={cat.categorias.find((c) => String(c.data?.codigoAfip ?? '') === valores.categoriaProf)?.name}
-            falta={!valores.categoriaProf}
-            origen={valores.convenioCategoria ? <>del convenio <strong>{valores.convenioCategoria}</strong> · se cambia en el contrato del miembro</> : <>se define en el contrato del miembro</>}
-          />
-
-          <CampoArca rotulo="Puesto Desemp." rol="no_va" etiqueta="no va" origen={<>el registro de 130 lo deja vacío</>} />
+      <div ref={camposRef}>
+        <div data-campo="obraSocial" data-depende-de="convenio">
+          <CampoObraSocial row={row} valores={valores} onGuardado={onGuardado} onValidarEnPantalla={onValidarObraSocial} />
         </div>
 
-        {/* ── Columna 2: servicio y liquidación ───────────────────────────────── */}
-        <div>
-          <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Servicio y liquidación</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-5">
+          {/* ── Columna 1: relación laboral ─────────────────────────────────────── */}
+          <div>
+            <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Relación laboral</h4>
 
-          <CampoArca
-            rotulo="Grupo Tipo Servicio"
-            rol="filtra"
-            etiqueta="filtra tipo"
-            valor={grupoTS}
-            nombre={grupoTS ? nombreDe(gruposTS, grupoTS) : 'sin filtrar'}
-            enEspera={bloqueadoPorPrevios}
-            onEditar={() => setAbierto('grupoTipoServicio')}
-            origen={bloqueadoPorPrevios ? motivoBloqueo : <>solo filtra la lista de abajo · <strong>no se guarda</strong></>}
-          />
+            <CampoArca
+              rotulo="Sucursal"
+              campo="sucursal"
+              info="sucursal"
+              rol="campo"
+              etiqueta="74–78"
+              valor={valores.sucursal}
+              nombre={sucursalElegida?.domicilio}
+              falta={hayEmpresa && !valores.sucursal}
+              enEspera={bloqueadoPorPrevios}
+              guardando={guardando === 'sucursal'}
+              onEditar={() => setAbierto('sucursal')}
+              origen={bloqueadoPorPrevios ? motivoBloqueo : <>de los domicilios declarados por la empleadora</>}
+            />
 
-          <CampoArca
-            rotulo="Tipo Servicio"
-            info="tipoServicio"
-            rol="campo"
-            etiqueta="107–109"
-            valor={valores.tipoServicio}
-            nombre={nombreDe(tiposServicio, valores.tipoServicio)}
-            falta={!valores.tipoServicio}
-            guardando={guardando === 'afipTipoServicio'}
-            enEspera={bloqueadoPorPrevios}
-            onEditar={() => setAbierto('tipoServicio')}
-            origen={bloqueadoPorPrevios ? motivoBloqueo : <>del tipo de contrato <strong>«{nombreTipo}»</strong></>}
-          />
+            <CampoArca
+              rotulo="Actividad"
+              campo="actividad"
+              dependeDe="sucursal"
+              info="actividad"
+              rol="campo"
+              etiqueta="79–84"
+              valor={valores.actividad}
+              nombre={valores.actividadesDisponibles.find((a) => a.codigo === valores.actividad)?.descripcion}
+              falta={!!valores.sucursal && !valores.actividad}
+              enEspera={bloqueadoPorPrevios || !valores.sucursal}
+              guardando={guardando === 'actividad'}
+              onEditar={valores.actividadesDisponibles.length > 1 ? () => setAbierto('actividad') : undefined}
+              origen={bloqueadoPorPrevios ? motivoBloqueo : valores.sucursal ? <>declarada en <strong>{valores.nombreSucursal || 'la sucursal'}</strong>{valores.actividadesDisponibles.length === 1 ? ' · única, se hereda' : ''}</> : <>se habilita al elegir la sucursal</>}
+            />
 
-          <CampoArca
-            rotulo="Modalidad Contrato"
-            info="modalidadContrato"
-            rol="campo"
-            etiqueta="17–19"
-            valor={valores.modalidadContrato}
-            nombre={nombreDe(modalidadesContrato, valores.modalidadContrato)}
-            falta={!valores.modalidadContrato}
-            guardando={guardando === 'afipModalidadContrato'}
-            enEspera={bloqueadoPorPrevios}
-            onEditar={() => setAbierto('modalidadContrato')}
-            origen={bloqueadoPorPrevios ? motivoBloqueo : <>del tipo de contrato <strong>«{nombreTipo}»</strong> · define si va la fecha de fin</>}
-          />
+            <DepGroup etiqueta="Convenio y categoría">
+              <CampoArca
+                rotulo="Convenio"
+                campo="convenio"
+                info="convenioCategoria"
+                rol="filtra"
+                etiqueta="filtra categoría"
+                valor={valores.convenioCategoria}
+                nombre={cat.convenios?.find((c) => String(c.externalId || '').trim() === valores.convenioCategoria)?.name}
+                falta={!valores.convenioCategoria}
+                origen={<>de la categoría · <strong>no va al archivo</strong></>}
+              />
 
-          <CampoArca rotulo="Situación Revista" rol="no_va" etiqueta="no va" origen={<>el registro de 130 lo deja vacío</>} />
+              <CampoArca
+                rotulo="Categoría"
+                campo="categoria"
+                dependeDe="convenio"
+                info="categoriaProf"
+                rol="campo"
+                etiqueta="101–106"
+                valor={valores.categoriaProf}
+                nombre={cat.categorias.find((c) => String(c.data?.codigoAfip ?? '') === valores.categoriaProf)?.name}
+                falta={!valores.categoriaProf}
+                origen={valores.convenioCategoria ? <>del convenio <strong>{valores.convenioCategoria}</strong> · se cambia en el contrato del miembro</> : <>se define en el contrato del miembro</>}
+              />
+            </DepGroup>
 
-          <CampoArca
-            rotulo="Mod. Liquidación"
-            info="modalidadLiq"
-            rol="campo"
-            etiqueta="73"
-            valor={valores.modalidadLiq}
-            nombre={nombreDe(modalidadesLiq, valores.modalidadLiq)}
-            falta={!valores.modalidadLiq}
-            guardando={guardando === 'afipModalidadLiquidacion'}
-            enEspera={bloqueadoPorPrevios}
-            onEditar={() => setAbierto('modalidadLiq')}
-            origen={bloqueadoPorPrevios ? motivoBloqueo : <>del tipo de contrato <strong>«{nombreTipo}»</strong></>}
-          />
+            <CampoArca rotulo="Puesto Desemp." rol="no_va" etiqueta="no va" origen={<>el registro de 130 lo deja vacío</>} />
+          </div>
 
-          <CampoArca
-            rotulo="Retribución pactada"
-            info="retribucion"
-            rol="campo"
-            etiqueta="58–72"
-            valor={valores.retribucion > 0 ? valores.retribucion.toLocaleString('es-AR', { minimumFractionDigits: 2 }) : ''}
-            falta={!valores.retribucionOk}
-            origen={<>del grupo salarial del convenio · se actualiza por paritaria</>}
-          />
-        </div>
+          {/* ── Columna 2: servicio y liquidación ───────────────────────────────── */}
+          <div>
+            <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Servicio y liquidación</h4>
 
-        {/* ── Columna 3: vigencia ─────────────────────────────────────────────── */}
-        <div>
-          <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Vigencia</h4>
+            <DepGroup etiqueta="Grupo tipo de servicio y tipo de servicio">
+              <CampoArca
+                rotulo="Grupo Tipo Servicio"
+                campo="grupoTipoServicio"
+                rol="filtra"
+                etiqueta="filtra tipo"
+                valor={grupoTS}
+                nombre={grupoTS ? nombreDe(gruposTS, grupoTS) : 'sin filtrar'}
+                enEspera={bloqueadoPorPrevios}
+                onEditar={() => setAbierto('grupoTipoServicio')}
+                origen={bloqueadoPorPrevios ? motivoBloqueo : <>solo filtra la lista de abajo · <strong>no se guarda</strong></>}
+              />
 
-          <CampoArca rotulo="Trab. agropecuario" rol="constante" etiqueta="constante" valor="N" nombre="no aplica a una productora" origen={<>posición 16, siempre <strong>N</strong></>} />
+              <CampoArca
+                rotulo="Tipo Servicio"
+                campo="tipoServicio"
+                dependeDe="grupoTipoServicio"
+                info="tipoServicio"
+                rol="campo"
+                etiqueta="107–109"
+                valor={valores.tipoServicio}
+                nombre={nombreDe(tiposServicio, valores.tipoServicio)}
+                falta={!valores.tipoServicio}
+                guardando={guardando === 'afipTipoServicio'}
+                enEspera={bloqueadoPorPrevios}
+                onEditar={() => setAbierto('tipoServicio')}
+                origen={bloqueadoPorPrevios ? motivoBloqueo : <>del tipo de contrato <strong>«{nombreTipo}»</strong></>}
+              />
+            </DepGroup>
 
-          <CampoArca rotulo="Fecha de Inicio" info="fechaInicio" rol="campo" etiqueta="20–29" valor={valores.fechaInicio} falta={!valores.fechaInicio} origen={<>del contrato del miembro</>} />
+            <CampoArca
+              rotulo="Modalidad Contrato"
+              campo="modalidadContrato"
+              info="modalidadContrato"
+              rol="campo"
+              etiqueta="17–19"
+              valor={valores.modalidadContrato}
+              nombre={nombreDe(modalidadesContrato, valores.modalidadContrato)}
+              falta={!valores.modalidadContrato}
+              guardando={guardando === 'afipModalidadContrato'}
+              enEspera={bloqueadoPorPrevios}
+              onEditar={() => setAbierto('modalidadContrato')}
+              origen={bloqueadoPorPrevios ? motivoBloqueo : <>del tipo de contrato <strong>«{nombreTipo}»</strong> · define si va la fecha de fin</>}
+            />
 
-          <CampoArca
-            rotulo="Fecha de Fin"
-            info="fechaFin"
-            rol="campo"
-            etiqueta="30–39"
-            valor={valores.fechaFin}
-            nombre={!valores.fechaFin && prohibeFin ? 'en blanco, correcto' : undefined}
-            falta={exigeFin && !valores.fechaFin}
-            error={prohibeFin && !!valores.fechaFin}
-            enEspera={!valores.modalidadContrato}
-            origen={!valores.modalidadContrato ? <>se habilita al elegir la modalidad de contrato</> : exigeFin ? <>la modalidad <strong>{valores.modalidadContrato}</strong> es a plazo determinado: es obligatoria</> : prohibeFin ? <>la modalidad <strong>{valores.modalidadContrato}</strong> es indeterminada: va en blanco</> : <>del contrato del miembro</>}
-          />
+            <CampoArca rotulo="Situación Revista" rol="no_va" etiqueta="no va" origen={<>el registro de 130 lo deja vacío</>} />
 
-          <CampoArca rotulo="Lic. COVID / CCG" rol="constante" etiqueta="constante" valor="0" nombre="sin Lic. COVID / no asociado a CCG" origen={<>posición 130, siempre <strong>0</strong></>} />
+            <CampoArca
+              rotulo="Mod. Liquidación"
+              campo="modalidadLiq"
+              info="modalidadLiq"
+              rol="campo"
+              etiqueta="73"
+              valor={valores.modalidadLiq}
+              nombre={nombreDe(modalidadesLiq, valores.modalidadLiq)}
+              falta={!valores.modalidadLiq}
+              guardando={guardando === 'afipModalidadLiquidacion'}
+              enEspera={bloqueadoPorPrevios}
+              onEditar={() => setAbierto('modalidadLiq')}
+              origen={bloqueadoPorPrevios ? motivoBloqueo : <>del tipo de contrato <strong>«{nombreTipo}»</strong></>}
+            />
+
+            <CampoArca
+              rotulo="Retribución pactada"
+              info="retribucion"
+              rol="campo"
+              etiqueta="58–72"
+              valor={valores.retribucion > 0 ? valores.retribucion.toLocaleString('es-AR', { minimumFractionDigits: 2 }) : ''}
+              falta={!valores.retribucionOk}
+              origen={<>del grupo salarial del convenio · se actualiza por paritaria</>}
+            />
+          </div>
+
+          {/* ── Columna 3: vigencia ─────────────────────────────────────────────── */}
+          <div>
+            <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Vigencia</h4>
+
+            <CampoArca rotulo="Trab. agropecuario" rol="constante" etiqueta="constante" valor="N" nombre="no aplica a una productora" origen={<>posición 16, siempre <strong>N</strong></>} />
+
+            <CampoArca rotulo="Fecha de Inicio" info="fechaInicio" rol="campo" etiqueta="20–29" valor={valores.fechaInicio} falta={!valores.fechaInicio} origen={<>del contrato del miembro</>} />
+
+            <CampoArca
+              rotulo="Fecha de Fin"
+              campo="fechaFin"
+              dependeDe="modalidadContrato"
+              info="fechaFin"
+              rol="campo"
+              etiqueta="30–39"
+              valor={valores.fechaFin}
+              nombre={!valores.fechaFin && prohibeFin ? 'en blanco, correcto' : undefined}
+              falta={exigeFin && !valores.fechaFin}
+              error={prohibeFin && !!valores.fechaFin}
+              enEspera={!valores.modalidadContrato}
+              origen={!valores.modalidadContrato ? <>se habilita al elegir la modalidad de contrato</> : exigeFin ? <>la modalidad <strong>{valores.modalidadContrato}</strong> es a plazo determinado: es obligatoria</> : prohibeFin ? <>la modalidad <strong>{valores.modalidadContrato}</strong> es indeterminada: va en blanco</> : <>del contrato del miembro</>}
+            />
+
+            <CampoArca rotulo="Lic. COVID / CCG" rol="constante" etiqueta="constante" valor="0" nombre="sin Lic. COVID / no asociado a CCG" origen={<>posición 130, siempre <strong>0</strong></>} />
+          </div>
         </div>
       </div>
 

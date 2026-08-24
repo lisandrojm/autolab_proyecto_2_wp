@@ -81,6 +81,14 @@ export interface ICompany extends Document {
      * de ARCA tal cual viaja al TXT.
      */
     defaultsArca?: {
+        /**
+         * Código del Grupo de Tipo de Servicio: "1" continuos, "2" discontinuos.
+         *
+         * NO viaja en el TXT: está para filtrar el combo de tipo de servicio, igual que en la pantalla
+         * de ARCA, donde primero se elige el grupo y recién ahí se habilita el tipo. Es derivable del
+         * código del tipo (ver `utils/grupoTipoServicio.ts`) y se guarda derivado, nunca como llegó.
+         */
+        grupoTipoServicio?: string;
         /** Código de Tipo de Servicio (pos. 107-109 del TXT). */
         tipoServicio?: string;
         /** Código de Modalidad de Liquidación (pos. 73 del TXT). */

@@ -36,6 +36,7 @@ type ConvenioConOS = SimpleCatalogItem & { obraSocialDefaultId?: number | null }
 type Override = { convenioId: string; obraSocialId: number };
 const conveniosApi = createSimpleCatalogApi('/convenios');
 const tiposServicioApi = createSimpleCatalogApi('/arca/tipos-servicio');
+const gruposTipoServicioApi = createSimpleCatalogApi('/arca/grupos-tipo-servicio');
 const modalidadesLiqApi = createSimpleCatalogApi('/arca/modalidades-liquidacion');
 
 /** Botón de guardar compartido: todas estas pantallas guardan un campo de `Company`. */
@@ -756,24 +757,73 @@ export const EmpresaDefaultsPage: React.FC = () => (
   </EmpresaContextLayout>
 );
 
+/**
+ * De qué grupo es un tipo de servicio, según su código: por debajo de 500 CONTINUOS, de ahí para
+ * arriba DISCONTINUOS. Es la regla de ARCA, verificada sobre los 293 tipos sin excepciones, y la
+ * misma que aplica el server al guardar (`server/src/utils/grupoTipoServicio.ts`).
+ *
+ * Acá se usa solo para AUTOCOMPLETAR el grupo cuando alguien elige primero el tipo. Para FILTRAR se
+ * usa el campo `grupo` del catálogo, que es el dato que el nomenclador ya trae cargado.
+ */
+const grupoDelCodigo = (codigo: string): string => {
+  const d = String(codigo || '').replace(/\D/g, '');
+  return d === '' ? '' : Number(d) < 500 ? '1' : '2';
+};
+
+/** El grupo con el que quedó clasificado un tipo en el nomenclador. Vacío = todavía sin clasificar. */
+const grupoDelItem = (t: SimpleCatalogItem): string => String((t as { grupo?: unknown }).grupo ?? '');
+
+const defaultsDe = (empresa: Company) => ({
+  grupoTipoServicio: empresa.defaultsArca?.grupoTipoServicio || '',
+  tipoServicio: empresa.defaultsArca?.tipoServicio || '',
+  modalidadLiquidacion: empresa.defaultsArca?.modalidadLiquidacion || '',
+});
+
 const DefaultsBody: React.FC<{ empresa: Company; recargar: () => Promise<void> }> = ({ empresa, recargar }) => {
   const { guardar, guardando } = useGuardarEmpresa(empresa, recargar);
   const [tipos, setTipos] = useState<SimpleCatalogItem[]>([]);
+  const [grupos, setGrupos] = useState<SimpleCatalogItem[]>([]);
   const [modalidades, setModalidades] = useState<SimpleCatalogItem[]>([]);
   const [cargando, setCargando] = useState(true);
-  const [form, setForm] = useState({ tipoServicio: empresa.defaultsArca?.tipoServicio || '', modalidadLiquidacion: empresa.defaultsArca?.modalidadLiquidacion || '' });
+  const [form, setForm] = useState(defaultsDe(empresa));
 
   useEffect(() => {
-    Promise.all([tiposServicioApi.list().catch(() => []), modalidadesLiqApi.list().catch(() => [])])
-      .then(([t, m]) => {
+    Promise.all([tiposServicioApi.list().catch(() => []), gruposTipoServicioApi.list().catch(() => []), modalidadesLiqApi.list().catch(() => [])])
+      .then(([t, g, m]) => {
         setTipos(t);
+        setGrupos(g);
         setModalidades(m);
       })
       .finally(() => setCargando(false));
   }, []);
-  useEffect(() => setForm({ tipoServicio: empresa.defaultsArca?.tipoServicio || '', modalidadLiquidacion: empresa.defaultsArca?.modalidadLiquidacion || '' }), [empresa]);
+  useEffect(() => setForm(defaultsDe(empresa)), [empresa]);
 
-  const sucio = form.tipoServicio !== (empresa.defaultsArca?.tipoServicio || '') || form.modalidadLiquidacion !== (empresa.defaultsArca?.modalidadLiquidacion || '');
+  /**
+   * El combo de tipo cascadea del grupo, igual que en Simplificación Registral: primero el grupo y
+   * recién ahí el tipo. Sin filtrar son 293 opciones con 49 nombres repetidos entre los dos grupos —
+   * dos filas idénticas de las que una escribe otro número en las posiciones 107-109.
+   */
+  const tiposDelGrupo = useMemo(() => (form.grupoTipoServicio ? tipos.filter((t) => grupoDelItem(t) === form.grupoTipoServicio) : tipos), [tipos, form.grupoTipoServicio]);
+
+  /**
+   * Cambiar el grupo LIMPIA el tipo si ya no pertenece.
+   *
+   * Dejarlo puesto guardaría una combinación imposible —grupo CONTINUOS con un tipo discontinuo—, y
+   * además se vería bien: el select muestra el código igual aunque no esté entre sus opciones. El
+   * server la rechaza con 422, pero llegar hasta ahí para descubrirlo es peor que no ofrecerla.
+   */
+  const elegirGrupo = (grupoTipoServicio: string) => {
+    setForm((p) => {
+      const sigueSiendoDelGrupo = !p.tipoServicio || !grupoTipoServicio || grupoDelCodigo(p.tipoServicio) === grupoTipoServicio;
+      return { ...p, grupoTipoServicio, tipoServicio: sigueSiendoDelGrupo ? p.tipoServicio : '' };
+    });
+  };
+
+  /** Elegir el tipo primero también vale: el grupo se completa solo, derivado del código. */
+  const elegirTipo = (tipoServicio: string) => setForm((p) => ({ ...p, tipoServicio, grupoTipoServicio: tipoServicio ? grupoDelCodigo(tipoServicio) : p.grupoTipoServicio }));
+
+  const original = defaultsDe(empresa);
+  const sucio = form.grupoTipoServicio !== original.grupoTipoServicio || form.tipoServicio !== original.tipoServicio || form.modalidadLiquidacion !== original.modalidadLiquidacion;
 
   const selectClass = 'w-full px-3 py-2 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200';
 
@@ -790,17 +840,41 @@ const DefaultsBody: React.FC<{ empresa: Company; recargar: () => Promise<void> }
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* El grupo va ARRIBA del tipo, y no al lado, porque el orden es la explicación: primero se
+            elige el grupo y recién ahí se habilita el tipo, igual que en Simplificación Registral. */}
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Grupo Tipo Servicio</label>
+          <select value={form.grupoTipoServicio} onChange={(e) => elegirGrupo(e.target.value)} className={selectClass}>
+            <option value="">— Sin valor por defecto —</option>
+            {grupos.map((g) => (
+              <option key={g._id} value={String(g.externalId || '')}>
+                {g.externalId} — {g.name}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">No viaja al TXT: filtra el Tipo de Servicio de acá abajo. Se completa solo si elegís primero el tipo.</p>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de Servicio</label>
-          <select value={form.tipoServicio} onChange={(e) => setForm((p) => ({ ...p, tipoServicio: e.target.value }))} className={selectClass}>
+          <select value={form.tipoServicio} onChange={(e) => elegirTipo(e.target.value)} disabled={tiposDelGrupo.length === 0} className={`${selectClass} disabled:opacity-60`}>
             <option value="">— Sin valor por defecto —</option>
-            {tipos.map((t) => (
+            {tiposDelGrupo.map((t) => (
               <option key={t._id} value={String(t.externalId || '')}>
                 {t.externalId} — {t.name}
               </option>
             ))}
           </select>
-          <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Posiciones 107-109 del TXT de alta.</p>
+          {/* El mismo mensaje que da ARCA cuando el filtro no devuelve nada. Pasa si el nomenclador
+              todavía no tiene clasificado ese grupo (correr `npm run tipos-servicio:grupo`). */}
+          {tiposDelGrupo.length === 0 ? (
+            <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">No hay tipo de servicio para el grupo seleccionado</p>
+          ) : (
+            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+              Posiciones 107-109 del TXT de alta.
+              {form.grupoTipoServicio ? ` ${tiposDelGrupo.length} de ${tipos.length}, filtrados por el grupo.` : ''}
+            </p>
+          )}
         </div>
 
         <div>

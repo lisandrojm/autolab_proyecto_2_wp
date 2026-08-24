@@ -5,6 +5,7 @@ import { Types } from "mongoose";
 import UserProject from "../models/UserProject.js";
 import { Convenio } from "../models/Convenio.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
+import { grupoDeTipoServicio, GRUPO_CONTINUOS, GRUPO_DISCONTINUOS } from "../utils/grupoTipoServicio.js";
 
 // ABM de Empresas / Productoras (datos para armar contratos).
 // Catálogo global (sin tenantId), igual que el resto de config: solo authenticateToken.
@@ -44,11 +45,51 @@ const companySchema = z.object({
   /** Elección habitual de esta empleadora dentro del nomenclador, para no repetirla en cada alta. */
   defaultsArca: z
     .object({
+      grupoTipoServicio: z.string().optional().default(""),
       tipoServicio: z.string().optional().default(""),
       modalidadLiquidacion: z.string().optional().default(""),
     })
     .optional(),
 });
+
+/**
+ * El grupo y el tipo de servicio tienen que ser coherentes, y el que manda es el CÓDIGO.
+ *
+ * El grupo es derivable del tipo (`grupoDeTipoServicio`), así que lo que llega del cliente es a lo
+ * sumo lo que el cliente creía. Guardar la combinación tal cual permitiría dejar, por ejemplo, grupo
+ * CONTINUOS con un tipo 514 —que es discontinuo—, y ese default después precarga un alta que ARCA
+ * rechaza. El error aparecería lejos de acá y sin rastro de dónde se originó.
+ *
+ * Se RECHAZA en vez de corregir en silencio: si el cliente mandó una combinación imposible, algo de
+ * su lado está mal y taparlo lo deja mal para siempre. Lo que sí se completa es el grupo cuando no
+ * vino: ahí no hay nada que contradecir, solo un dato derivado que falta.
+ *
+ * Devuelve el mensaje del rechazo, o `null` si está todo bien.
+ */
+const revisarDefaultsArca = (data: Record<string, any>): string | null => {
+  const defaults = data.defaultsArca;
+  if (!defaults) return null;
+
+  const tipo = String(defaults.tipoServicio || "").trim();
+  const grupo = String(defaults.grupoTipoServicio || "").trim();
+  if (!tipo) {
+    // Sin tipo no hay de qué derivar. El grupo solo se acepta si es uno de los dos que existen: es un
+    // filtro, y un valor inventado dejaría el combo del alta vacío sin explicar por qué.
+    if (grupo && grupo !== GRUPO_CONTINUOS && grupo !== GRUPO_DISCONTINUOS) {
+      return `«${grupo}» no es un Grupo de Tipo de Servicio: los únicos son ${GRUPO_CONTINUOS} (CONTINUOS) y ${GRUPO_DISCONTINUOS} (DISCONTINUOS).`;
+    }
+    return null;
+  }
+
+  const derivado = grupoDeTipoServicio(tipo);
+  if (grupo && grupo !== derivado) {
+    return `El tipo de servicio ${tipo} es del grupo ${derivado} y se está guardando con el grupo ${grupo}. Elegí un tipo de ese grupo, o cambiá el grupo.`;
+  }
+  // El grupo se guarda DERIVADO siempre, incluso cuando vino y coincide: así lo que queda en la base
+  // es lo que dice el código y no lo que mandó el cliente.
+  defaults.grupoTipoServicio = derivado;
+  return null;
+};
 
 /**
  * Traduce el nombre viejo del campo y deja UNA sola forma en la base.
@@ -79,7 +120,10 @@ router.get("/", authenticateToken, async (_req: AuthenticatedRequest, res: Respo
 // POST /companies
 router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const created = await Company.create(normalizar(companySchema.parse(req.body)));
+    const data = normalizar(companySchema.parse(req.body));
+    const problema = revisarDefaultsArca(data);
+    if (problema) return res.status(422).json({ error: problema });
+    const created = await Company.create(data);
     res.status(201).json(created);
   } catch (error: any) {
     if (error?.name === "ZodError") {
@@ -94,6 +138,8 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
 router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const data = normalizar(companySchema.partial().parse(req.body));
+    const problema = revisarDefaultsArca(data);
+    if (problema) return res.status(422).json({ error: problema });
     // `$unset` del nombre viejo en cada guardado: así el documento queda con una sola forma en cuanto
     // se lo toca, sin depender de que la migración haya corrido.
     const updated = await Company.findByIdAndUpdate(req.params.id, { $set: data, $unset: { obraSocialId: "" } }, { new: true });
