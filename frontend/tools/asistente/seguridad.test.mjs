@@ -146,6 +146,18 @@ describe("la superficie es chica y fija", () => {
     assert.match(CODIGO, /return json\(res, 404, \{ error: "No existe esa operación\." \}\)/);
   });
 
+  /**
+   * El stream de progreso se CIERRA cuando la corrida termina.
+   *
+   * Emitir `{tipo:"cerrado"}` no cierra nada: la conexión seguía viva latiendo cada 20 segundos para
+   * siempre. Un cliente que espere el final del cuerpo —cualquiera que no sea el navegador— se cuelga
+   * sin que nada esté roto, y del lado del navegador queda una conexión abierta por corrida.
+   */
+  it("`/progreso` termina la respuesta al cerrar la corrida", () => {
+    const fn = CODIGO.slice(CODIGO.indexOf("function abrirProgreso"));
+    assert.match(fn.slice(0, 2500), /if \(e\?\.tipo !== "cerrado"\) return;[\s\S]{0,200}res\.end\(\)/);
+  });
+
   it("el cuerpo tiene tope: un cliente local no puede llenar la memoria del proceso", () => {
     assert.match(CODIGO, /datos\.length > 1_000_000/);
   });

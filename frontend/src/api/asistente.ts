@@ -161,8 +161,15 @@ export const asistenteAPI = {
    */
   enfocarChrome: () => pedir<EstadoAsistente & { enfocada: boolean }>('/chrome/focus', { method: 'POST' }),
 
-  /** Arranca la corrida. Vuelve enseguida: lo que tarda se sigue por `progreso()`. */
-  validar: (personas: Array<{ cuil: string }>) => pedir<{ arrancada: true; total: number }>('/validar', { method: 'POST', body: JSON.stringify({ personas }) }),
+  /**
+   * Arranca la corrida. Vuelve enseguida: lo que tarda se sigue por `progreso()`.
+   *
+   * `empresaCuit` es lo que le deja al Asistente ELEGIR SOLO la empleadora en ARCA y navegar hasta la
+   * pantalla de altas. Sin él igual funciona: espera a que la persona lo haga a mano, como antes. Y
+   * es exacto por los once dígitos a propósito — con una coincidencia dudosa el Asistente no elige
+   * nada, porque correr contra la empleadora equivocada guarda datos que parecen bien y están mal.
+   */
+  validar: (personas: Array<{ cuil: string }>, empresaCuit = '') => pedir<{ arrancada: true; total: number }>('/validar', { method: 'POST', body: JSON.stringify({ personas, empresaCuit }) }),
 
   detener: () => pedir<{ detenida: boolean }>('/detener', { method: 'POST' }),
 

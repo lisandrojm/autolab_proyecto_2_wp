@@ -82,6 +82,23 @@ describe("la baja — la línea que no se cruza", () => {
   });
 });
 
+describe("espera a ARCA de verdad", () => {
+  /**
+   * Mismo hecho que en la validación: los botones de ARCA no navegan, hacen postbacks AJAX. Con
+   * `waitForLoadState` se leía el listado mientras el organismo todavía procesaba, el conteo no había
+   * subido, y cada alta se reportaba como «falla» aunque hubiera entrado.
+   */
+  it("no usa `waitForLoadState`, que acá no espera nada", () => {
+    assert.ok(!/page\.waitForLoadState\(/.test(FUENTE));
+    assert.match(FUENTE, /from "\.\/arca-postback\.mjs"/);
+  });
+
+  it("espera a que el conteo suba antes de decidir si el alta entró", () => {
+    const fn = FUENTE.slice(FUENTE.indexOf("await btn.click();"));
+    assert.ok(fn.indexOf("esperarEstadoDeArca") < fn.indexOf('estado: ahora > antes ? "ok" : "falla"'), "primero se espera, después se juzga");
+  });
+});
+
 describe("no escribe sin que se lo pidan", () => {
   it("sin --si, `escribir` queda en false", () => {
     assert.equal(parsearArgs(["--empleadora", "30717068374"]).si, false);

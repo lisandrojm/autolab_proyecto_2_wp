@@ -174,12 +174,18 @@ export const PantallaValidarObrasSociales: React.FC<{
   filas: FilaConstatacion[];
   /** Razón social de la empleadora activa, o vacío si están todas. */
   empleadora?: string;
+  /**
+   * CUIT de esa empleadora. Es lo que le deja al Asistente elegirla solo en ARCA.
+   *
+   * Opcional: sin él, el Asistente espera a que la persona la elija a mano, como antes.
+   */
+  empleadoraCuit?: string;
   /** Id de la empleadora activa. Sin ella no se puede aplicar: la validación del RNOS es por CUIT. */
   empresaId?: string;
   /** Vuelve a pedir el listado. Es lo que hace posible mirar la corrida del script. */
   onRefrescar?: () => void | Promise<void>;
   onLoteAplicado?: () => void;
-}> = ({ filas, empleadora, empresaId, onRefrescar, onLoteAplicado }) => {
+}> = ({ filas, empleadora, empleadoraCuit, empresaId, onRefrescar, onLoteAplicado }) => {
   /** Corriendo: el Asistente está recorriendo ARCA y los resultados llegan por su stream. */
   const [mirando, setMirando] = useState(false);
   const asistente = useAsistente();
@@ -350,7 +356,7 @@ export const PantallaValidarObrasSociales: React.FC<{
     });
 
     try {
-      await asistenteAPI.validar(lista.map((cuil) => ({ cuil })));
+      await asistenteAPI.validar(lista.map((cuil) => ({ cuil })), empleadoraCuit || '');
     } catch (e: any) {
       sweetAlert.error('No pude arrancar', e?.message || 'El Asistente no aceptó la corrida.');
       return;

@@ -484,6 +484,26 @@ const ObraSocialCell: React.FC<{
   }[estado];
 
   /*
+    AZUL = esta persona NO lleva la obra social del convenio.
+
+    Es la única fila que hay que mirar de verdad en esta columna. El resto —validadas por defecto,
+    validadas y coincidentes— confirman lo que ya se sabía; estas son las que ARCA cambió, y son
+    justamente las que el circuito entero existe para no declarar mal.
+
+    En verde y con el candado se distinguía del `validada_default` solo por el glifo, que a la
+    velocidad a la que se barre una grilla de 16 columnas es lo mismo que no distinguirse. El color
+    se ve sin leer.
+
+    Sin sugerida del convenio también va azul: si el convenio no aporta ninguna, la que quedó no es
+    «la de por defecto» — no hay ninguna por defecto.
+  */
+  const distintaDelConvenio = estado === 'validada_arca' && codigo !== String(valores.rnosSugerido || '').replace(/\D/g, '');
+  const claseFinal = distintaDelConvenio ? 'text-blue-600 dark:text-blue-400' : clase;
+  const tituloFinal = distintaDelConvenio
+    ? `${titulo} DISTINTA de la del ${delConvenio}${valores.rnosSugerido ? ` (${valores.rnosSugerido}${valores.nombreObraSocialSugerida ? ` · ${valores.nombreObraSocialSugerida}` : ''})` : ' — el convenio no aporta ninguna'}: esta es la que va al TXT.`
+    : titulo;
+
+  /*
    * Sin validar, la celda es UNA sola cosa según se pueda validar o no:
    *
    *  - con Empresa Contrato → el botón «Validar», solo. Decir «sin validar  Validar» era repetir el
@@ -538,7 +558,7 @@ const ObraSocialCell: React.FC<{
 
   return (
     <span className="inline-flex items-center gap-2 whitespace-nowrap">
-      <button type="button" onClick={onAbrir} title={titulo} className={`inline-flex items-center gap-1.5 font-mono text-xs font-semibold hover:underline ${clase}`}>
+      <button type="button" onClick={onAbrir} title={tituloFinal} className={`inline-flex items-center gap-1.5 font-mono text-xs font-semibold hover:underline ${claseFinal}`}>
         {icono && <FontAwesomeIcon icon={icono} className="h-3 w-3 shrink-0" />}
         {codigo || <span className="font-sans font-normal">sin validar</span>}
       </button>
@@ -2005,6 +2025,9 @@ export const ContractBulkAfipTab: React.FC<{
           <PantallaValidarObrasSociales
             filas={filasConstatacion}
             empleadora={empresaOptions.find((e) => e.value === empresaDelLote)?.label}
+            // El CUIT sale del catálogo de empresas y es el mismo dato con el que ARCA identifica a
+            // la empleadora en su selector: con eso el Asistente la elige solo.
+            empleadoraCuit={companies.find((c) => c._id === empresaDelLote)?.cuit || ''}
             empresaId={empresaDelLote || undefined}
             onRefrescar={() => load(true)}
             onLoteAplicado={() => load(true)}

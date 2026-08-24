@@ -46,6 +46,8 @@
     npm run arca:registrar-obras-sociales -- --empleadora 30717068374 --si --limite 5
 */
 
+import { esperarEstado as esperarEstadoDeArca } from "./arca-postback.mjs";
+
 const CDP_URL = process.env.WEPRODU_CDP_URL || "http://localhost:9222";
 
 /** El dominio de Simplificación Registral. La pantalla concreta la decide `esPantallaObrasSociales`. */
@@ -244,7 +246,19 @@ async function registrarUna(page, os, antes) {
   const btn = await botonAlta(page);
   if (!btn) throw new Error('No encontré el botón «Registrar obra social» en la pantalla. ¿Seguís en Datos del Empleador → Obras Sociales?');
   await btn.click();
-  await page.waitForLoadState("load").catch(() => {});
+
+  /*
+    ESPERAR EL POSTBACK, no un evento de carga.
+
+    Acá había un `waitForLoadState("load")` que resolvía al instante —esta pantalla no navega, hace
+    postbacks AJAX— así que se leía el listado mientras ARCA todavía procesaba, el conteo no había
+    subido, y CADA alta se reportaba como «falla» aunque hubiera entrado. Es el mismo bug que en la
+    validación, con un síntoma que no se parece en nada. Ver `arca-postback.mjs`.
+
+    Agotarse sin que suba el conteo y sin que se caiga la sesión SÍ es una falla real de esa obra
+    social; ahí el `estado: "falla"` de abajo dice la verdad.
+  */
+  await esperarEstadoDeArca(async () => (await leerRegistrados(page)).length > antes || (await sinSesion(page)), { que: `que ARCA registre ${os.rnos}`, log });
 
   if (await sinSesion(page)) return { estado: "sin_sesion" };
   const ahora = (await leerRegistrados(page)).length;

@@ -107,8 +107,20 @@ export const EXPLICACIONES: Record<string, ExplicacionCampo> = {
         <p>
           La fuente es <strong>ARCA</strong>: Simplificación Registral → Relaciones Laborales → <em>Registrar Nuevas Altas</em>. Se pone el CUIL y el organismo precompleta la obra social que tiene registrada. Lo que devuelve <strong>queda fijo</strong>: es quien después valida el alta, así que no se corrige a mano. Si no devuelve nada, la persona no tiene afiliación registrada y rige la del convenio.
         </p>
+        {/*
+          El código de colores de la columna, escrito. Sin esto, el azul es una convención que solo
+          conoce quien la pidió: el que llega después ve dos verdes y un azul y no sabe cuál mirar.
+        */}
         <p>
-          Se consulta a mano y no hay forma de automatizarlo desde el server: Simplificación Registral es una aplicación web con clave fiscal, sin webservice, y el servicio de ARCA que sí está conectado (Consulta Padrón) devuelve datos del contribuyente, no la obra social de un trabajador. Lo que sí se automatiza es el tipeo, con una extensión que corre en tu propia sesión.
+          <strong>Los colores de la columna.</strong> <span className="text-blue-600 dark:text-blue-400 font-semibold">Azul</span> es la única que hay que mirar: ARCA devolvió una obra social{' '}
+          <strong>distinta</strong> de la del convenio, así que esa persona no lleva la que se hubiera puesto por defecto. En <span className="text-green-700 dark:text-green-400 font-semibold">verde</span>{' '}
+          van las que confirman lo que ya se sabía —sin afiliación propia, o la misma del convenio—, y en <span className="text-red-600 dark:text-red-400 font-semibold">rojo</span> las que la empleadora no
+          tiene registradas ante ARCA, que hacen rechazar el alta.
+        </p>
+        <p>
+          No hay forma de automatizarlo desde el server: Simplificación Registral es una aplicación web con clave fiscal, sin webservice, y el servicio de ARCA que sí está conectado (Consulta Padrón)
+          devuelve datos del contribuyente, no la obra social de un trabajador. Lo que sí se automatiza es el tipeo: lo hace el <strong>Asistente WeProdu</strong>, un programa que corre en tu máquina y
+          opera tu propia sesión de ARCA con un botón.
         </p>
         <p>
           <a href="/arca/guia-obras-sociales" target="_blank" rel="noreferrer" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">

@@ -156,8 +156,18 @@ async function verificar() {
    * resultado sea LEGIBLE. Un `fin` con `faltaron > 0` y sin `motivo` es el bug, y falla el build.
    */
   async function laCorridaSeExplica() {
-    const r = await pedir("/progreso");
-    const texto = await r.text();
+    /*
+      Con TIMEOUT. `/progreso` es un stream: si la corrida sigue viva, el cuerpo no termina nunca y
+      `r.text()` espera para siempre. Ya colgó un build entero — quince minutos sin que nada estuviera
+      roto, que es la peor forma de fallar que tiene una herramienta de verificación.
+    */
+    let texto = "";
+    try {
+      const r = await pedir("/progreso", { signal: AbortSignal.timeout(15_000) });
+      texto = await r.text();
+    } catch {
+      return console.log("  · la corrida sigue en curso a los 15 s: nada que auditar todavía");
+    }
     const eventos = texto
       .split("\n")
       .filter((l) => l.startsWith("data:"))

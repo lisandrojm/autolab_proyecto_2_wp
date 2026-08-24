@@ -63,7 +63,7 @@ describe("«Aceptar» — la línea que no se cruza", () => {
       // armado en otro lado y sin nadie mirando qué es.
       assert.match(linea, /(btn|x)\.click\(\)/, `este click no pasa por ninguna guarda:\n  ${linea.trim()}`);
     }
-    assert.ok(sospechosas.length > 0 && sospechosas.length <= 3, `esperaba hasta 3 clicks (Agregar, Reiniciar y la ✖), hay ${sospechosas.length}`);
+    assert.ok(sospechosas.length > 0 && sospechosas.length <= 4, `esperaba hasta 4 clicks (Agregar, Reiniciar, la ✖ y el «Aceptar» del selector de CUIT), hay ${sospechosas.length}`);
   });
 
   /**
@@ -84,9 +84,48 @@ describe("«Aceptar» — la línea que no se cruza", () => {
   it("los botones se buscan por texto exacto, nunca por posición", () => {
     // `.first()` está bien: desempata entre rótulos idénticos, no adivina por posición. Lo que no
     // puede aparecer es un índice — `nth(2)`, `[3]` — que es como se termina apretando el de al lado.
-    const fn = FUENTE.slice(FUENTE.indexOf("export async function boton"), FUENTE.indexOf("async function textoPagina"));
+    // Acotado a `boton()` y nada más: entre esa función y `textoPagina` ahora viven otras, con sus
+    // propias guardas y sus propios tests.
+    const fn = FUENTE.slice(FUENTE.indexOf("export async function boton"), FUENTE.indexOf("/*\n  ==========================================================================="  , FUENTE.indexOf("export async function boton")));
     assert.ok(!/\.nth\(|\[\s*\d+\s*\]/.test(fn), "buscar por índice es como se termina apretando el botón equivocado");
     assert.match(FUENTE, /input\[type=submit\]\[value="\$\{rotulo\}"\]/, "el rótulo tiene que ir en el selector");
+  });
+});
+
+describe("«Aceptar» del selector de CUIT — el mismo rótulo, dos pantallas", () => {
+  /**
+   * EL MISMO RÓTULO SIGNIFICA COSAS OPUESTAS SEGÚN LA PANTALLA:
+   *
+   *   IndexContribuyente.aspx   entra al servicio con el CUIT elegido. No registra nada.
+   *   Altas.aspx                REGISTRA LAS ALTAS ANTE EL ORGANISMO. Irreversible.
+   *
+   * Por eso este click no puede estar en `ROTULOS_PERMITIDOS`, que decide por rótulo: acá lo que
+   * distingue las dos pantallas es la URL, y la guarda tiene que ser por URL.
+   */
+  it("solo se aprieta en IndexContribuyente.aspx, y la guarda TIRA", () => {
+    const fn = FUENTE.slice(FUENTE.indexOf("async function aceptarSelectorDeCuit"), FUENTE.indexOf("async function prepararAltas"));
+    assert.match(fn, /if \(!INDEX_CONTRIBUYENTE_RE\.test\(page\.url\(\)\)\) \{\s*\n\s*throw new Error/, "tiene que cortar con excepción, no devolver false: un false lo puede ignorar quien llama");
+    // Y otra vez pegado al click: entre leer las opciones y apretar hubo awaits.
+    const antesDelClick = fn.slice(0, fn.indexOf("btn.click()"));
+    assert.equal((antesDelClick.match(/INDEX_CONTRIBUYENTE_RE\.test/g) || []).length, 2, "se revalida la URL justo antes de apretar");
+  });
+
+  /**
+   * Elegir la empleadora equivocada escribe obras sociales que pasan todas las validaciones y están
+   * mal — y quedan bloqueadas, así que el error sobrevive hasta la rectificativa. Ante cualquier
+   * duda no se elige nada y espera la persona, que es lo que pasaba siempre hasta ahora.
+   */
+  it("no elige el CUIT si no hay exactamente una coincidencia", () => {
+    const fn = FUENTE.slice(FUENTE.indexOf("async function aceptarSelectorDeCuit"), FUENTE.indexOf("async function prepararAltas"));
+    assert.match(fn, /if \(coinciden\.length !== 1\)[\s\S]{0,200}return false;/);
+    assert.match(fn, /soloDigitos\(cuit\)/, "la coincidencia es por los once dígitos, no por el nombre");
+  });
+
+  /** Llegar solo es best-effort: si no se puede, se espera a la persona igual que antes. */
+  it("si no puede llegar solo, devuelve null y no rompe nada", () => {
+    const fn = FUENTE.slice(FUENTE.indexOf("async function prepararAltas"), FUENTE.indexOf("async function textoPagina"));
+    assert.match(fn, /catch \(e\) \{[\s\S]{0,200}return null;/);
+    assert.match(FUENTE, /page = await prepararAltas\(ctx, empresaCuit\);\s*\n\s*if \(!page\) \{\s*\n\s*page = await esperarSesion\(/);
   });
 });
 
@@ -113,10 +152,10 @@ describe("reglas del trámite", () => {
    * hacía que la pantalla pareciera colgada.
    */
   it("si el bloque no aparece, es un error DE ESA PERSONA y dice por qué", () => {
-    const cuerpo = FUENTE.slice(FUENTE.indexOf("if (cuil in filas)"));
-    assert.match(cuerpo.slice(0, 900), /topeAlcanzado\(page\)/, "hay que distinguir el tope del resto");
-    assert.match(cuerpo.slice(0, 900), /errores\.add\(cuil\)/);
-    assert.match(cuerpo.slice(0, 900), /tipo: "error", cuil, motivo/, "el error de la fila tiene que viajar con su motivo");
+    const cuerpo = FUENTE.slice(FUENTE.indexOf("if (porDigitos.has(cuilDigitos))"));
+    assert.match(cuerpo.slice(0, 1400), /topeAlcanzado\(page\)/, "hay que distinguir el tope del resto");
+    assert.match(cuerpo.slice(0, 1400), /errores\.add\(cuil\)/);
+    assert.match(cuerpo.slice(0, 1400), /tipo: "error", cuil, motivo/, "el error de la fila tiene que viajar con su motivo");
   });
 
   /**
@@ -135,9 +174,35 @@ describe("reglas del trámite", () => {
     assert.match(vaciar.slice(0, 800), /throw new Error/, "si no se pudo vaciar hay que cortar, no seguir cargando encima");
   });
 
+  /**
+   * NADA SE ESPERA CON `waitForLoadState`: en esta pantalla no hay navegación.
+   *
+   * Los botones son postbacks AJAX de ASP.NET —velo gris y spinner— así que la página nunca se carga
+   * de nuevo y `waitForLoadState("load")` resuelve en el mismo instante en que se lo llama. Con eso,
+   * el script leía la pantalla mientras ARCA todavía procesaba y reportaba «no abrió el bloque» para
+   * las veinte personas, con ARCA andando perfecto.
+   *
+   * Con el ciclo viejo de a diez el error estaba tapado: entre el primer `Agregar` y la lectura final
+   * pasaban nueve clicks, y ese tiempo alcanzaba de casualidad.
+   */
+  it("espera ESTADOS de la pantalla, nunca un evento de carga", () => {
+    // Se busca la LLAMADA y no la palabra: los comentarios la nombran justamente para explicar por
+    // qué no se usa, y un test que se rompe con su propia explicación no sirve.
+    assert.ok(!/page\.waitForLoadState\(/.test(FUENTE), "waitForLoadState no espera nada acá: los postbacks son AJAX");
+    // El helper vive compartido: el mismo hecho del sitio vale para los dos motores de ARCA, y
+    // arreglarlo en uno solo los dejaría divergiendo.
+    assert.match(FUENTE, /from "\.\/arca-postback\.mjs"/);
+    const compartido = fs.readFileSync(path.resolve("tools/arca-postback.mjs"), "utf8");
+    assert.match(compartido, /export async function esperarEstado\(/);
+    // Y el que agrega tiene que DEVOLVER si apareció: leer la pantalla igual convierte «no esperé lo
+    // suficiente» en «ARCA rechazó a esta persona», que son cosas opuestas.
+    assert.match(FUENTE, /const aparecio = await agregarCuil\(page, cuil\);/);
+    assert.match(FUENTE, /if \(!aparecio && !\(await topeAlcanzado\(page\)\)\)/);
+  });
+
   /** El resultado se emite ANTES de borrar: si el borrado falla, el dato ya está a salvo. */
   it("emite el resultado antes de borrar el bloque", () => {
-    const bucle = FUENTE.slice(FUENTE.indexOf("if (cuil in filas)"), FUENTE.indexOf("const items ="));
+    const bucle = FUENTE.slice(FUENTE.indexOf("if (porDigitos.has(cuilDigitos))"), FUENTE.indexOf("const items ="));
     assert.ok(bucle.indexOf('tipo: "resultado"') < bucle.indexOf("await vaciarPantalla(page);"));
   });
 
@@ -150,7 +215,7 @@ describe("reglas del trámite", () => {
     // Se pinea el CAMINO y no la sintaxis: el `else` de una línea se volvió un `continue` cuando entró
     // el aviso de progreso del Asistente. Lo que no puede cambiar es que no estar en `filas` termine
     // en `errores`.
-    assert.match(FUENTE, /if \(cuil in filas\)[\s\S]{0,1600}?errores\.add\(cuil\)/, "la fila que no aparece es un error de ESE CUIL");
+    assert.match(FUENTE, /if \(porDigitos\.has\(cuilDigitos\)\)[\s\S]{0,1600}?errores\.add\(cuil\)/, "la fila que no aparece es un error de ESE CUIL");
     // Lo que se manda a la API sale de `hechos` —lo que ARCA efectivamente contestó— y nunca de la
     // lista original: un error emitido como rnos vacío se guardaría como "no tiene obra social".
     const salida = FUENTE.slice(FUENTE.indexOf("const items ="));
@@ -188,6 +253,32 @@ describe("reglas del trámite", () => {
   /** Emparejamiento dudoso = frenar: seguir exportaría obras sociales posiblemente corridas. */
   it("si no puede emparejar una fila con su CUIL, frena", () => {
     assert.match(FUENTE, /if \(ambiguas > 0\)/);
+  });
+});
+
+describe("el emparejamiento CUIL ↔ fila", () => {
+  /**
+   * SE COMPARAN LOS DÍGITOS, no el string. Esto hacía fallar TODAS las validaciones del Asistente.
+   *
+   * La pantalla de ARCA muestra los CUIL con guiones (`23-22702067-9`) y `leerFilas` los devuelve
+   * así. La CLI normaliza su entrada con guiones, así que le daba bien; el Asistente los manda
+   * pelados (`23227020679`) y la comparación era falsa siempre, para todas las personas.
+   *
+   * El síntoma no se parecía en nada a la causa: cada fila salía como «ARCA no abrió el bloque»,
+   * que suena a un problema del organismo o de esa persona. ARCA contestaba perfecto.
+   */
+  it("compara por dígitos, así da igual con guiones o sin ellos", () => {
+    assert.match(FUENTE, /new Map\(Object\.entries\(filas\)\.map\(\(\[k, v\]\) => \[soloDigitos\(k\), v\]\)\)/);
+    assert.match(FUENTE, /const cuilDigitos = soloDigitos\(cuil\);/);
+    // Se busca la EXPRESIÓN y no la frase: el comentario de arriba la nombra para explicar por qué
+    // no se usa, y un test que se rompe con su propia explicación no sirve.
+    assert.ok(!/if \(cuil in filas\)/.test(FUENTE), "comparar los strings crudos es lo que estaba roto");
+    assert.ok(!/rnos: filas\[cuil\]/.test(FUENTE), "el rnos del evento sale del mismo lugar que `hechos`, no de una búsqueda cruda");
+  });
+
+  it("el resultado sale con el CUIL en el formato en que entró", () => {
+    // Los eventos y los items se emparejan del otro lado sin traducir nada: quien llamó manda.
+    assert.match(FUENTE, /const rnos = porDigitos\.get\(cuilDigitos\);\s*\n\s*hechos\.set\(cuil, rnos\);/);
   });
 });
 

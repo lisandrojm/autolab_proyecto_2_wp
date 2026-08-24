@@ -159,7 +159,7 @@ async function estado() {
  * `soloLeer` va SIEMPRE en true. Este proceso no guarda nada en WeProdu — no tiene con qué, y es a
  * propósito (ver la cabecera del archivo).
  */
-async function arrancarValidacion({ cuils }) {
+async function arrancarValidacion({ cuils, empresaCuit }) {
   if (ocupado()) throw Object.assign(new Error("Ya hay una corrida en curso."), { codigo: "ocupado" });
   const { validarObrasSociales } = await import("../validar-obras-sociales.mjs");
 
@@ -175,7 +175,7 @@ async function arrancarValidacion({ cuils }) {
 
   // Se lanza sin `await`: la respuesta HTTP tiene que volver ya, o el fetch del navegador se queda
   // colgado los minutos que dure la tanda.
-  validarObrasSociales({ empresa: "", cuils, soloLeer: true, cdpUrl: CDP_URL, onProgreso: emitir, señal })
+  validarObrasSociales({ empresa: "", empresaCuit, cuils, soloLeer: true, cdpUrl: CDP_URL, onProgreso: emitir, señal })
     .then((r) => {
       corrida.resultado = { items: r.items, errores: r.errores, sinSesion: r.sinSesion, faltaron: r.faltaron, motivo: motivoDeQueFaltaran(r) };
       emitir({ tipo: "fin", ...corrida.resultado });
@@ -248,13 +248,33 @@ function abrirProgreso(req, res) {
     enviar({ tipo: "cerrado" });
     return res.end();
   }
-  corrida.oyentes.add(enviar);
+  /*
+    El stream se CIERRA cuando la corrida termina.
+
+    Antes solo se escribía `{tipo:"cerrado"}` y la conexión seguía viva, latiendo cada 20 segundos
+    para siempre. Quien lee esperando el final del cuerpo —cualquier cliente que no sea el navegador,
+    empezando por el verificador de binarios— se queda colgado sin que nada esté roto. Y del lado del
+    navegador queda una conexión abierta por corrida hasta que se cierre la pantalla.
+
+    Emitir el evento de cierre no es cerrar: hay que terminar la respuesta.
+  */
+
   // Un latido cada 20s: sin tráfico, un proxy o el propio navegador pueden dar la conexión por muerta
   // durante una tanda lenta.
   const latido = setInterval(() => res.write(": latido\n\n"), 20000);
+
+  const alTerminar = (e) => {
+    enviar(e);
+    if (e?.tipo !== "cerrado") return;
+    clearInterval(latido);
+    corrida?.oyentes.delete(alTerminar);
+    res.end();
+  };
+
+  corrida.oyentes.add(alTerminar);
   req.on("close", () => {
     clearInterval(latido);
-    corrida?.oyentes.delete(enviar);
+    corrida?.oyentes.delete(alTerminar);
   });
 }
 
@@ -348,10 +368,10 @@ const servidor = createServer(async (req, res) => {
     }
 
     if (req.method === "POST" && ruta === "/validar") {
-      const { personas } = await leerCuerpo(req);
+      const { personas, empresaCuit } = await leerCuerpo(req);
       const cuils = (Array.isArray(personas) ? personas : []).map((p) => String(p?.cuil || "").replace(/\D/g, "")).filter((c) => c.length === 11);
       if (cuils.length === 0) return json(res, 400, { error: "No vino ningún CUIL de 11 dígitos." });
-      return json(res, 200, await arrancarValidacion({ cuils }));
+      return json(res, 200, await arrancarValidacion({ cuils, empresaCuit }));
     }
 
     if (req.method === "POST" && ruta === "/registrar-obras-sociales") {

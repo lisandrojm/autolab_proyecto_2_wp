@@ -63,6 +63,19 @@ async function run() {
         rutaArchivo: String(data.rutaArchivo ?? "").trim(),
         cantidadJornadas: parseNum(data.cantidadJornadas),
         multiplicadorDiario: parseNum(data.multiplicadorDiario),
+        /*
+          Se MIGRA aunque el origen no lo tenga.
+
+          `esTiempoIndeterminado` se agregó a la Plantilla después de escribirse esta migración, y los
+          documentos viejos de `infos` no lo traen. `!!undefined` da `false`, que es el mismo default
+          del schema y la misma coerción que usan las rutas (`!!contrato.data?.esTiempoIndeterminado`):
+          los que sí lo tengan conservan su valor y los que no quedan como contratos a plazo.
+
+          Omitirlo no era una opción: `$set` con un `data` sin este campo pisaría el objeto entero y
+          BORRARÍA el flag en cualquier plantilla que ya lo tuviera — la migración es idempotente y
+          está pensada para volver a correrse.
+        */
+        esTiempoIndeterminado: !!data.esTiempoIndeterminado,
       },
     };
 
@@ -79,7 +92,7 @@ async function run() {
   for (const op of bulkOps) {
     const u = op.updateOne.update.$set;
     console.log(
-      `  • externalId=${u.externalId || "(vacío)"}  id=${u.data.id ?? "-"}  "${u.name}"  jornadas=${u.data.cantidadJornadas}  mult=${u.data.multiplicadorDiario}`
+      `  • externalId=${u.externalId || "(vacío)"}  id=${u.data.id ?? "-"}  "${u.name}"  jornadas=${u.data.cantidadJornadas}  mult=${u.data.multiplicadorDiario}${u.data.esTiempoIndeterminado ? "  tiempo-indeterminado" : ""}`
     );
   }
 

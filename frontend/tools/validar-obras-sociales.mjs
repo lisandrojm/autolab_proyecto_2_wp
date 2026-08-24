@@ -16,9 +16,14 @@
   en `window` que no veían los eventos de `document`, versiones que había que
   reinstalar a mano, copias duplicadas peleándose la misma cola, contenido mixto
   al traer la lógica desde WeProdu, deep-links a pantallas muertas de ARCA.
-  Ninguna existe acá. Playwright espera las navegaciones solo, así que los
-  postbacks de ASP.NET dejan de importar: no hace falta cola persistente, ni
-  reanudación, ni handshake.
+  Ninguna existe acá: no hace falta cola persistente, ni reanudación, ni
+  handshake.
+
+  OJO CON LOS POSTBACKS. Acá decía que «Playwright espera las navegaciones solo,
+  así que los postbacks de ASP.NET dejan de importar». Es FALSO y costó caro:
+  esta pantalla no navega, hace postbacks AJAX —velo gris y spinner— así que no
+  hay ninguna navegación que esperar y `waitForLoadState` resuelve al instante.
+  Todo lo que sigue a un click se espera por ESTADO. Ver `arca-postback.mjs`.
 
   QUÉ NO HACE, NUNCA
 
@@ -49,6 +54,7 @@
   manejar un token de sesión en un script local.
 */
 import { readFileSync, writeFileSync } from "node:fs";
+import { esperarEstado as esperarEstadoDeArca, ESPERA_POSTBACK_MS } from "./arca-postback.mjs";
 
 const CDP_URL = process.env.WEPRODU_CDP_URL || "http://localhost:9222";
 const ALTAS_RE = /serviciossegsoc\.afip\.gob\.ar/i;
@@ -87,6 +93,10 @@ export const ESPERA_LOGIN_MIN_DEFAULT = 5;
 
 /** La pantalla de login de ARCA. Se abre, no se completa: la clave la pone una persona. */
 const AFIP_LOGIN_URL = "https://auth.afip.gob.ar/contribuyente_/login.xhtml";
+
+/** El selector de CUIT de Simplificación Registral, y la pantalla de altas. */
+const INDEX_CONTRIBUYENTE_RE = /\/login\/IndexContribuyente\.aspx/i;
+const ALTAS_ASPX_RE = /\/RelacionLaboral\/Altas\.aspx/i;
 
 const SEL = {
   cuil: "#ctl00_ContentPlaceHolder1_InputCuil_txtCuil",
@@ -211,6 +221,100 @@ export async function boton(page, rotulo) {
   return (await b.count()) ? b : null;
 }
 
+/*
+  ===========================================================================
+  «ACEPTAR» — EL MISMO RÓTULO EN DOS PANTALLAS, Y UNA NO SE TOCA JAMÁS
+  ===========================================================================
+
+    IndexContribuyente.aspx   ✅  «Aceptar» entra al servicio con el CUIT elegido.
+                                  No registra nada ante el organismo.
+    Altas.aspx                🔴  «Aceptar» CONFIRMA LAS ALTAS. Irreversible.
+
+  Por eso este click NO está en `ROTULOS_PERMITIDOS`, que es una lista de rótulos
+  y acá el rótulo no alcanza para decidir: lo que distingue las dos pantallas es
+  la URL. La guarda es por URL, es dura, y tira en vez de devolver `false` — un
+  `false` lo puede ignorar quien llama; una excepción no.
+*/
+async function aceptarSelectorDeCuit(page, cuit) {
+  if (!INDEX_CONTRIBUYENTE_RE.test(page.url())) {
+    throw new Error(`Me pidieron apretar «Aceptar» en ${page.url()}. Solo se aprieta en el selector de CUIT: en la pantalla de altas ese botón registra las altas ante el organismo.`);
+  }
+
+  const digitos = soloDigitos(cuit);
+  if (digitos.length !== 11) return false;
+
+  /*
+    El CUIT se elige por COINCIDENCIA EXACTA de los once dígitos, y si no hay exactamente una
+    opción que coincida no se elige nada.
+
+    Correr contra la empleadora equivocada escribe obras sociales que pasan todas las validaciones y
+    están mal — y quedan bloqueadas, así que el error sobrevive hasta la rectificativa. Ante
+    cualquier duda se deja la pantalla como está y espera la persona, que es lo que pasaba siempre
+    hasta ahora: no se pierde nada, no se arriesga nada.
+  */
+  const opciones = await page.evaluate(() => {
+    const sel = document.querySelector("select");
+    return sel ? [...sel.options].map((o) => ({ value: o.value, texto: o.textContent || "" })) : [];
+  });
+  const coinciden = opciones.filter((o) => soloDigitos(`${o.value} ${o.texto}`).includes(digitos));
+  if (coinciden.length !== 1) {
+    log(`  (no elijo el CUIT solo: ${coinciden.length} opciones coinciden con ${conGuiones(cuit)})`);
+    return false;
+  }
+
+  const [elegida] = coinciden;
+  await page.selectOption("select", elegida.value);
+  const btn = page.locator('input[type=submit][value="Aceptar"], input[type=button][value="Aceptar"]').first();
+  if (!(await btn.count())) return false;
+
+  // Se REVALIDA la URL pegado al click: entre leer las opciones y apretar hubo awaits, y este es el
+  // único botón del proyecto donde equivocarse de pantalla es irreversible.
+  if (!INDEX_CONTRIBUYENTE_RE.test(page.url())) throw new Error("La pantalla cambió mientras elegía el CUIT. No aprieto «Aceptar» a ciegas.");
+  await btn.click();
+  // Se espera un ESTADO —haber salido del selector— y no un evento de carga: es la misma regla que
+  // en el resto del archivo, y acá además confirma que el «Aceptar» hizo lo que tenía que hacer.
+  return esperarEstadoDeArca(async () => !INDEX_CONTRIBUYENTE_RE.test(page.url()), { que: "salir del selector de CUIT", log });
+}
+
+/**
+ * Lleva la ventana de ARCA hasta «Registrar Nuevas Altas», sola.
+ *
+ * Es el «click en empresa, click en el menú, click en altas» que había que hacer a mano en cada
+ * corrida. Lo único que NO se puede automatizar es la clave fiscal: no la pedimos ni la guardamos, y
+ * eso no es una limitación técnica sino la decisión que hace que este programa sea seguro de correr.
+ *
+ * Best-effort: si algo no sale, devuelve null y el que llama cae a esperar a la persona — que es
+ * exactamente lo que hacía antes. Automatizar esto no puede empeorar el camino que ya funcionaba.
+ */
+async function prepararAltas(ctx, empresaCuit) {
+  const page = await buscarPaginaArca(ctx);
+  if (!page) return null;
+  if ((await estadoPantalla(page).catch(() => "otra")) === "altas") return page;
+
+  try {
+    if (INDEX_CONTRIBUYENTE_RE.test(page.url()) && empresaCuit) {
+      if (!(await aceptarSelectorDeCuit(page, empresaCuit))) return null;
+    }
+
+    /*
+      A la pantalla de altas se va por URL y no clickeando el menú.
+
+      El menú es un desplegable con hover: hay que pasar por «Relaciones Laborales» y después acertar
+      un ítem que se dibuja encima del contenido. La URL es un dato estable que ARCA ya expone en ese
+      mismo link. Se arma desde la página ACTUAL —mismo host, mismo /app/— en vez de escribirla fija:
+      el host y la capitalización de la ruta cambian entre las pantallas de ARCA.
+    */
+    const base = page.url().split("/app/")[0];
+    if (!base || base === page.url()) return null;
+    await page.goto(`${base}/app/Contribuyente/RelacionLaboral/Altas.aspx`).catch(() => {});
+
+    return (await estadoPantalla(page).catch(() => "otra")) === "altas" ? page : null;
+  } catch (e) {
+    log(`  (no pude llegar solo a la pantalla de altas: ${e.message})`);
+    return null;
+  }
+}
+
 async function textoPagina(page) {
   return (await page.evaluate(() => document.body?.innerText || "")) || "";
 }
@@ -297,16 +401,23 @@ async function reiniciarGrilla(page) {
     throw new Error("La grilla de ARCA tiene filas cargadas y no encuentro el botón «Reiniciar» para vaciarla.\n\nVaciala a mano en esa ventana y volvé a intentar: cargar arriba de filas viejas mezclaría los resultados.");
   }
   await btn.click();
-  await page.waitForLoadState("load").catch(() => {});
+  await esperarEstadoDeArca(async () => (await bloquesAbiertos(page)) === 0, { que: "que «Reiniciar» vacíe la pantalla", log });
 }
 
-/** Carga un CUIL y espera el postback. */
+/**
+ * Carga un CUIL y ESPERA A QUE EL BLOQUE APAREZCA.
+ *
+ * La espera es por resultado —hay un bloque más, o ARCA se quejó— y no por un evento de carga que en
+ * esta pantalla no ocurre nunca (ver `esperarEstado`). Devuelve si apareció; el que llama decide qué
+ * significa que no, porque puede ser el tope, un CUIL inválido o ARCA lento.
+ */
 async function agregarCuil(page, cuil) {
+  const antes = await bloquesAbiertos(page);
   await page.fill(SEL.cuil, cuil);
   const btn = await boton(page, "Agregar");
   if (!btn) throw new Error("No encontré el botón «Agregar» en la pantalla.");
   await btn.click();
-  await page.waitForLoadState("load").catch(() => {});
+  return esperarEstadoDeArca(async () => (await bloquesAbiertos(page)) > antes || (await topeAlcanzado(page)), { que: `el bloque de ${cuil}`, log });
 }
 
 /** Cuántos bloques de empleado hay abiertos ahora mismo. Es el invariante de todo el ciclo. */
@@ -337,8 +448,9 @@ async function borrarBloque(page) {
     throw new Error(`Encontré un control de borrado con un rótulo inesperado («${rotulo}»). No lo aprieto a ciegas.`);
   }
 
+  const antes = await bloquesAbiertos(page);
   await x.click();
-  await page.waitForLoadState("load").catch(() => {});
+  await esperarEstadoDeArca(async () => (await bloquesAbiertos(page)) < antes, { que: "que el bloque desaparezca", log });
   return true;
 }
 
@@ -376,7 +488,7 @@ const log = (...a) => console.error(...a); // stderr: stdout queda libre para pi
  * pantalla de altas. Al vencerse el plazo NO reintenta: sale y explica. Un reintento ciego contra el
  * organismo no resuelve nada y encima puede endurecer sus defensas.
  */
-async function esperarSesion(ctx, minutos, onProgreso, señal) {
+async function esperarSesion(ctx, minutos, onProgreso, señal, empresaCuit) {
   const hasta = Date.now() + minutos * 60_000;
   let page = await buscarPaginaArca(ctx);
   if (!page) {
@@ -394,9 +506,8 @@ async function esperarSesion(ctx, minutos, onProgreso, señal) {
   log(
     `\nFalta iniciar sesión en ARCA. Te abrí el login en esta ventana de Chrome.\n\n` +
       `  1. Entrá con tu clave fiscal.\n` +
-      `  2. Simplificación Registral - Empleadores → elegí el CUIT de la empleadora.\n` +
-      `     (Ese paso es el que inicia la «sesión de trabajo»: sin él, ARCA rechaza la pantalla de altas.)\n` +
-      `  3. Relaciones Laborales → Registrar Nuevas Altas.\n\n` +
+      `  2. Entrá a «Simplificación Registral - Empleadores».\n\n` +
+      `Del CUIT de la empleadora y del menú me encargo yo.\n\n` +
       `Espero hasta ${minutos} minuto(s) y sigo solo…`,
   );
   /*
@@ -422,6 +533,22 @@ async function esperarSesion(ctx, minutos, onProgreso, señal) {
     */
     if (señal?.cortada) return null;
     onProgreso?.({ tipo: "esperando", que: "pantalla-altas", restanMs: hasta - Date.now() });
+
+    /*
+      En cada vuelta se INTENTA LLEGAR SOLO otra vez.
+
+      Es lo que hace que la persona tenga que hacer una sola cosa: poner la clave fiscal. Apenas
+      entra, en la vuelta siguiente esto elige el CUIT y navega a la pantalla de altas — sin que
+      tenga que acordarse de «Simplificación Registral → la empresa → Relaciones Laborales →
+      Registrar Nuevas Altas», que es el tramo donde se equivoca todo el mundo.
+    */
+    const listo = await prepararAltas(ctx, empresaCuit);
+    if (listo) {
+      log("Sesión lista. Sigo.\n");
+      onProgreso?.({ tipo: "listo" });
+      return listo;
+    }
+
     const p = (await buscarPaginaArca(ctx)) || page;
     if ((await estadoPantalla(p).catch(() => "otra")) === "altas") {
       log("Sesión lista. Sigo.\n");
@@ -471,7 +598,7 @@ async function esperarSesion(ctx, minutos, onProgreso, señal) {
  * llenarse fila por fila. La granularidad REAL es por tanda de 10 —la grilla se lee una vez, al
  * final— así que el aviso de "consultando" es por CUIL y el resultado llega de a diez.
  */
-export async function validarObrasSociales({ empresa, cuils, dryRun = false, forzar = false, esperaMin = ESPERA_LOGIN_MIN_DEFAULT, cdpUrl = CDP_URL, soloLeer = false, onProgreso, señal }) {
+export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, dryRun = false, forzar = false, esperaMin = ESPERA_LOGIN_MIN_DEFAULT, cdpUrl = CDP_URL, soloLeer = false, onProgreso, señal }) {
   let chromium;
   try {
     ({ chromium } = await import("playwright-core"));
@@ -508,10 +635,16 @@ export async function validarObrasSociales({ empresa, cuils, dryRun = false, for
     // saber de qué lado mirar.
     onProgreso?.({ tipo: "conectado" });
 
-    page = await buscarPaginaArca(ctx);
-    const estado = page ? await estadoPantalla(page) : "otra";
-    if (estado !== "altas") {
-      page = await esperarSesion(ctx, esperaMin, onProgreso, señal);
+    /*
+      PRIMERO SE INTENTA LLEGAR SOLO. Ver `prepararAltas`.
+
+      Con la sesión de clave fiscal ya abierta —que dura días en el perfil dedicado— esto elige el
+      CUIT de la empleadora y va a la pantalla de altas sin que nadie toque nada. Recién si no se
+      puede, se le pide a la persona, que es lo que pasaba siempre.
+    */
+    page = await prepararAltas(ctx, empresaCuit);
+    if (!page) {
+      page = await esperarSesion(ctx, esperaMin, onProgreso, señal, empresaCuit);
       if (!page) {
         // Cortado a mano: no es un error, es lo que se pidió. Se vuelve vacío y sin ruido.
         if (señal?.cortada) return { items: [], errores: [], sinSesion: true, faltaron: cuils.length };
@@ -560,9 +693,40 @@ export async function validarObrasSociales({ empresa, cuils, dryRun = false, for
       }
 
       onProgreso?.({ tipo: "consultando", cuil });
-      await agregarCuil(page, cuil);
+      const aparecio = await agregarCuil(page, cuil);
+
+      /*
+        Si el bloque no llegó a aparecer NO se lee la pantalla.
+
+        Leerla igual devolvería «no está» —que es cierto en ese instante— y lo reportaría como si
+        ARCA hubiera rechazado el CUIL. Son cosas distintas: una es un problema de esa persona, la
+        otra es que no esperamos lo suficiente. Confundirlas fue lo que llenó la tabla de rojo con
+        ARCA funcionando perfecto.
+      */
+      if (!aparecio && !(await topeAlcanzado(page))) {
+        errores.add(cuil);
+        onProgreso?.({ tipo: "error", cuil, motivo: `ARCA no respondió a tiempo (${Math.round(ESPERA_POSTBACK_MS / 1000)} s). Puede estar lento: reintentá esta persona.`, hechas: hechos.size, total: cuils.length });
+        await vaciarPantalla(page);
+        continue;
+      }
 
       const { filas, ambiguas } = await leerFilas(page);
+
+      /*
+        EL EMPAREJAMIENTO SE HACE SOBRE LOS DÍGITOS, no sobre el string.
+
+        Acá estaba la causa de que el Asistente no validara NUNCA a nadie. La pantalla de ARCA
+        muestra los CUIL con guiones —`23-22702067-9`— y `leerFilas` los devuelve tal cual. La CLI
+        normaliza su entrada con guiones, así que `cuil in filas` le daba bien. El Asistente los manda
+        pelados —`23227020679`, ver `servidor.mjs`— y esa comparación era falsa siempre, para todas
+        las personas, desde el primer día.
+
+        El síntoma no se parecía a la causa: cada persona salía como «ARCA no abrió el bloque», que
+        suena a un problema del organismo o de esa persona en particular. ARCA contestaba perfecto.
+      */
+      const porDigitos = new Map(Object.entries(filas).map(([k, v]) => [soloDigitos(k), v]));
+      const cuilDigitos = soloDigitos(cuil);
+
       if (ambiguas > 0) {
         // Emparejamiento dudoso: se frena. Seguir sería exportar obras sociales posiblemente
         // corridas, y del otro lado se guardan fijas, con candado.
@@ -577,16 +741,22 @@ export async function validarObrasSociales({ empresa, cuils, dryRun = false, for
         ella. Al revés —borrar y después emitir— un fallo al borrar tiraría una consulta que ya
         había salido bien.
       */
-      if (cuil in filas) {
-        hechos.set(cuil, filas[cuil]);
-        onProgreso?.({ tipo: "resultado", cuil, rnos: filas[cuil], hechas: hechos.size, total: cuils.length });
+      if (porDigitos.has(cuilDigitos)) {
+        // `hechos` se indexa con el CUIL COMO VINO: los eventos y los items salen en el mismo formato
+        // en que el que llama los mandó, y del otro lado se emparejan sin traducir nada.
+        const rnos = porDigitos.get(cuilDigitos);
+        hechos.set(cuil, rnos);
+        // Del mismo lugar que `hechos`: `filas[cuil]` era la búsqueda cruda que fallaba con los CUIL
+        // pelados, y habría mandado `rnos: undefined` — que del otro lado se lee como «no tiene obra
+        // social declarada». Un dato inventado sobre alguien, que es lo peor que puede salir de acá.
+        onProgreso?.({ tipo: "resultado", cuil, rnos, hechas: hechos.size, total: cuils.length });
       } else {
         /*
           El bloque no apareció. ESTO SÍ ES UN ERROR de esta persona, y hay que verificarlo: cuando
           ARCA rechaza por el tope, `Agregar` no hace nada y sin este chequeo se daría a la persona
           por procesada sin haber leído nada — la forma exacta de `faltaron: N` sin errores.
         */
-        const motivo = (await topeAlcanzado(page)) ? "ARCA rechazó por el tope de 10: quedaron bloques de antes en la pantalla." : "ARCA no abrió el bloque para este CUIL.";
+        const motivo = (await topeAlcanzado(page)) ? "ARCA rechazó por el tope de 10: quedaron bloques de antes en la pantalla." : "ARCA abrió un bloque pero no para este CUIL.";
         errores.add(cuil);
         onProgreso?.({ tipo: "error", cuil, motivo, hechas: hechos.size, total: cuils.length });
       }
