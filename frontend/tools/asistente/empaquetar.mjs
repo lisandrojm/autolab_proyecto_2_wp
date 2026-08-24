@@ -20,6 +20,8 @@
  *   __VERSION__      el servidor la leía del package.json de al lado. Adentro del snapshot ese
  *                    archivo no está y el binario moría al arrancar. Se incrusta acá.
  *
+ *   auto-arranque    NO se parcha: se RECHAZA. Ver la guarda de abajo.
+ *
  *   playwright-core  se importa con `await import()` dinámico. `pkg` solo sigue `require()` con
  *                    string literal: con el import dinámico el binario arranca igual y falla recién
  *                    al validar obras sociales, que es peor que fallar al arrancar. Se pasa a
@@ -52,7 +54,12 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, rmSync, mkdirSync, copyFileSync, statSync } from "node:fs";
 
-const TARGETS = "node18-win-x64,node18-macos-x64,node18-macos-arm64";
+/**
+ * `pkg` no tiene runtimes más nuevos que Node 18: `pkg-fetch` solo trae parches hasta v18.5.0. No es
+ * una preferencia, es el techo de la herramienta, y lo que se meta adentro tiene que tolerarlo.
+ */
+const NODE_MAXIMO = 18;
+const TARGETS = `node${NODE_MAXIMO}-win-x64,node${NODE_MAXIMO}-macos-x64,node${NODE_MAXIMO}-macos-arm64`;
 const VERSION = JSON.parse(readFileSync("package.json", "utf8")).version;
 /**
  * Vite sirve public/ tal cual, así que dejar el archivo acá ES publicarlo.
@@ -92,6 +99,32 @@ corre("../../node_modules/.bin/esbuild", [
 ]);
 
 const bundle = readFileSync("servidor.cjs", "utf8");
+
+/*
+  NINGÚN MÓDULO PUEDE ARRANCARSE SOLO DENTRO DEL BUNDLE.
+
+  La guarda habitual de un script de Node es «¿soy yo el archivo que se ejecutó?»:
+
+      if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main()
+
+  Al bundlear, los tres módulos pasan a compartir un único `__filename`, así que esa pregunta da que
+  sí para todos. Ya ocurrió: al apretar «Validar», la CLI de validación se disparaba adentro del
+  Asistente, no encontraba `--empresa` y hacía `process.exit(1)` — matando al servidor en medio del
+  request. Desde WeProdu se veía «conectado» y enseguida «no detectado», sin ningún error a la vista.
+
+  Se corta acá y no en un comentario porque el arreglo real —los entries `*.cli.mjs`— es una
+  convención, y una convención se rompe sola con el tiempo. Esto falla el BUILD, que es antes de que
+  exista un binario que alguien pueda descargar.
+*/
+const autoArranque = /process\.argv\[1\]\s*&&/;
+if (autoArranque.test(bundle)) {
+  throw new Error(
+    "El bundle contiene una guarda de auto-arranque (`process.argv[1] && …`).\n\n" +
+      "Dentro del bundle todos los módulos comparten __filename, así que esa guarda es verdadera para\n" +
+      "todos y la CLI se ejecuta adentro del servidor. Mové el arranque a un entry `*.cli.mjs`.",
+  );
+}
+
 const conRequire = bundle.replaceAll('await import("playwright-core")', 'require("playwright-core")');
 if (conRequire === bundle) throw new Error("No encontré el import dinámico de playwright-core: si cambió de forma, `pkg` lo va a dejar afuera del binario en silencio.");
 writeFileSync("servidor.cjs", conRequire);

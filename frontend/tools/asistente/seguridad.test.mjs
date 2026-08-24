@@ -159,7 +159,20 @@ describe("no toca credenciales", () => {
 describe("una corrida por vez", () => {
   /** Dos tandas encimadas se pisan la misma pantalla de ARCA y el resultado queda corrido. */
   it("la segunda se rechaza con 409, no se encola", () => {
-    assert.match(CODIGO, /if \(corrida\) throw Object\.assign\(new Error\("Ya hay una corrida en curso\."\)/);
+    assert.match(CODIGO, /if \(ocupado\(\)\) throw Object\.assign\(new Error\("Ya hay una corrida en curso\."\)/);
     assert.match(CODIGO, /codigo === "ocupado" \? 409 : 500/);
+  });
+
+  /**
+   * «Una por vez» tiene que significar UNA A LA VEZ, no una por arranque.
+   *
+   * La guarda miraba `if (corrida)` a secas, y `corrida` nunca volvía a null: la primera validación
+   * dejaba el turno tomado para siempre y todo lo que venía después contestaba «Ya hay una corrida en
+   * curso». Desde WeProdu se veía un botón que dejó de funcionar sin ninguna razón visible, y la
+   * única salida era reiniciar el Asistente — que nadie tiene motivo para sospechar.
+   */
+  it("una corrida TERMINADA libera el turno", () => {
+    assert.match(CODIGO, /const ocupado = \(\) => !!corrida && !corrida\.terminada;/);
+    assert.ok(!/if \(corrida\)/.test(CODIGO), "mirar solo si existe deja el turno tomado para siempre");
   });
 });

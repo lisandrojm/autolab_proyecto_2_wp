@@ -39,6 +39,7 @@ import { dirname, join } from "node:path";
 import { readFileSync } from "node:fs";
 import { ORIGENES_PERMITIDOS, origenPermitido, tokenDeInstalacion, tokenValido } from "./seguridad.mjs";
 import { abrirChrome, chromeAbierto, estadoSesionArca, rutaChrome, guardarRutaChrome, CDP_URL } from "./chrome.mjs";
+import { noMorirEnSilencio } from "./diagnostico.mjs";
 import { urlWeProdu, origenAtendido, yaEmparejado, marcarEmparejado, guardarCodigoEnArchivo, abrirNavegador, paginaEmparejar, banner } from "./emparejamiento.mjs";
 
 /**
@@ -62,10 +63,22 @@ const VERSION = typeof __VERSION__ === "string" ? __VERSION__ : JSON.parse(readF
  */
 const PUERTO = 47653;
 
+// Antes que nada: un error suelto no puede llevarse puesto el servicio. Ver `diagnostico.mjs`.
+noMorirEnSilencio();
+
 const TOKEN = tokenDeInstalacion();
 
-/** La corrida en curso. Una sola por vez: dos tandas encimadas se pisan la pantalla de ARCA. */
+/**
+ * La corrida en curso. Una sola por vez: dos tandas encimadas se pisan la pantalla de ARCA.
+ *
+ * La corrida TERMINADA se conserva —`/progreso` reenvía sus eventos a quien llegue tarde— pero deja
+ * de ocupar el turno. Antes la guarda miraba `if (corrida)` a secas, así que la primera validación
+ * dejaba el lugar tomado para siempre: la segunda contestaba «Ya hay una corrida en curso» y el
+ * Asistente quedaba inservible hasta reiniciarlo, sin nada que explicara por qué.
+ */
 let corrida = null;
+
+const ocupado = () => !!corrida && !corrida.terminada;
 
 /** ¿Algún navegador ya se emparejó con este token? Decide si el arranque abre una pestaña o no. */
 let emparejado = yaEmparejado(TOKEN);
@@ -117,7 +130,7 @@ const leerCuerpo = (req) =>
 // ─────────────────────────────────────────────────────────────── operaciones
 
 async function estado() {
-  return { ok: true, version: VERSION, chromeAbierto: await chromeAbierto(), sesionArca: await estadoSesionArca(), chromeEncontrado: !!rutaChrome(), corriendo: !!corrida };
+  return { ok: true, version: VERSION, chromeAbierto: await chromeAbierto(), sesionArca: await estadoSesionArca(), chromeEncontrado: !!rutaChrome(), corriendo: ocupado() };
 }
 
 /**
@@ -127,7 +140,7 @@ async function estado() {
  * propósito (ver la cabecera del archivo).
  */
 async function arrancarValidacion({ cuils }) {
-  if (corrida) throw Object.assign(new Error("Ya hay una corrida en curso."), { codigo: "ocupado" });
+  if (ocupado()) throw Object.assign(new Error("Ya hay una corrida en curso."), { codigo: "ocupado" });
   const { validarObrasSociales } = await import("../validar-obras-sociales.mjs");
 
   const señal = { cortada: false };
@@ -160,7 +173,7 @@ async function arrancarValidacion({ cuils }) {
 }
 
 async function arrancarRegistroObrasSociales({ empresaCuit, dryRun }) {
-  if (corrida) throw Object.assign(new Error("Ya hay una corrida en curso."), { codigo: "ocupado" });
+  if (ocupado()) throw Object.assign(new Error("Ya hay una corrida en curso."), { codigo: "ocupado" });
   const { registrarObrasSociales } = await import("../registrar-obras-sociales.mjs");
 
   const eventos = [];
@@ -311,8 +324,8 @@ const servidor = createServer(async (req, res) => {
     }
 
     if (req.method === "POST" && ruta === "/detener") {
-      if (corrida) corrida.señal.cortada = true;
-      return json(res, 200, { detenida: !!corrida });
+      if (ocupado()) corrida.señal.cortada = true;
+      return json(res, 200, { detenida: ocupado() });
     }
 
     return json(res, 404, { error: "No existe esa operación." });

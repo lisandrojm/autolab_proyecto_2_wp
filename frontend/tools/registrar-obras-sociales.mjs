@@ -45,7 +45,6 @@
     npm run arca:registrar-obras-sociales -- --empleadora 30717068374 --si
     npm run arca:registrar-obras-sociales -- --empleadora 30717068374 --si --limite 5
 */
-import { pathToFileURL } from "node:url";
 
 const CDP_URL = process.env.WEPRODU_CDP_URL || "http://localhost:9222";
 
@@ -399,7 +398,7 @@ export async function registrarObrasSociales({ empleadora, escribir = false, lim
 }
 
 // --------------------------------------------------------------------- CLI
-async function main() {
+export async function main() {
   const args = parsearArgs(process.argv.slice(2));
 
   if (args.empleadora.length !== 11) {
@@ -452,12 +451,4 @@ async function main() {
   }
 
   log(`\nregistradas ${r.registradas} · fallidas ${r.fallidas.length} · total ahora ${r.totalAhora} de ${r.catalogo}`);
-}
-
-/* Solo corre cuando se lo invoca directo: importarlo desde un test no puede abrir una sesión. */
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((e) => {
-    log(`\nError inesperado: ${e?.message || e}`);
-    process.exit(1);
-  });
 }

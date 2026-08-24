@@ -49,7 +49,6 @@
   manejar un token de sesión en un script local.
 */
 import { readFileSync, writeFileSync } from "node:fs";
-import { pathToFileURL } from "node:url";
 
 const CDP_URL = process.env.WEPRODU_CDP_URL || "http://localhost:9222";
 const ALTAS_RE = /serviciossegsoc\.afip\.gob\.ar/i;
@@ -463,7 +462,7 @@ export async function validarObrasSociales({ empresa, cuils, dryRun = false, for
   }
 }
 
-async function main() {
+export async function main() {
   const args = parsearArgs(process.argv.slice(2));
 
   /*
@@ -527,15 +526,4 @@ async function main() {
     log(`\n${rechazadas.length} rechazada(s):`);
     for (const x of rechazadas) log(`  ${x.cuil}${x.rnos ? ` (${x.rnos})` : ""} — ${x.motivo}`);
   }
-}
-
-/*
-  Solo corre cuando se lo invoca directo. Importarlo desde un test no puede disparar una sesión de
-  Playwright contra el Chrome de nadie.
-*/
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((e) => {
-    log(`\nError inesperado: ${e?.message || e}`);
-    process.exit(1);
-  });
 }

@@ -31,9 +31,10 @@
  * funcionó.
  */
 import { spawn } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { CARPETA_DATOS, ORIGENES_PERMITIDOS } from "./seguridad.mjs";
+import { escribirAlLado } from "./diagnostico.mjs";
 
 const ARCHIVO_URL = join(CARPETA_DATOS, "weprodu-url");
 const ARCHIVO_MARCA = join(CARPETA_DATOS, "emparejado");
@@ -87,29 +88,12 @@ export const marcarEmparejado = (token) => {
 /**
  * El código, en un .txt al lado del ejecutable.
  *
- * `process.execPath` es el binario empaquetado; con `node servidor.mjs` es el node del sistema, así
- * que ahí se usa la carpeta de datos. Si la carpeta no deja escribir —un .dmg montado, una descarga
- * en solo lectura— cae a la carpeta de datos en vez de romper el arranque: el archivo es el tercer
- * respaldo, no puede tumbar al primero.
+ * Va al lado del ejecutable porque es donde el usuario lo va a buscar. Ver `escribirAlLado`: si esa
+ * carpeta no deja escribir, cae a la de datos en vez de romper el arranque — el archivo es el tercer
+ * respaldo del emparejamiento, no puede tumbar al primero.
  */
 export function guardarCodigoEnArchivo(token) {
-  const empaquetado = !!process.pkg;
-  const candidatos = empaquetado ? [dirname(process.execPath), CARPETA_DATOS] : [CARPETA_DATOS];
-  for (const carpeta of candidatos) {
-    const destino = join(carpeta, "codigo-de-emparejamiento.txt");
-    try {
-      writeFileSync(destino, `${token}\n`, "utf8");
-      try {
-        chmodSync(destino, 0o600);
-      } catch {
-        /* Windows no tiene permisos POSIX */
-      }
-      return destino;
-    } catch {
-      /* probamos la siguiente */
-    }
-  }
-  return "";
+  return escribirAlLado("codigo-de-emparejamiento.txt", `${token}\n`);
 }
 
 /**
