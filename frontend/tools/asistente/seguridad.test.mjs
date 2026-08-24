@@ -182,6 +182,24 @@ describe("una corrida por vez", () => {
    * curso». Desde WeProdu se veía un botón que dejó de funcionar sin ninguna razón visible, y la
    * única salida era reiniciar el Asistente — que nadie tiene motivo para sospechar.
    */
+  /**
+   * UN FINAL SIN EXPLICACIÓN ES UN BUG, y este es el test que lo impide volver.
+   *
+   * El motor abortaba antes de la primera persona —le faltaba un botón en la pantalla de ARCA—,
+   * salía del bucle con un `break` y devolvía el resultado normal: cero hechas, cero errores,
+   * `sinSesion: false`. El Asistente lo emitía como un `fin` exitoso. La pantalla no tenía nada que
+   * mostrar, las veinte filas se quedaban en «en cola», y desde afuera parecía un cuelgue. El fallo
+   * estaba impreso en la consola y nadie lo miraba porque nada indicaba que hubiera que mirar.
+   */
+  it("el `fin` siempre lleva un motivo, y un fallo imprime el stack", () => {
+    assert.match(CODIGO, /motivo: motivoDeQueFaltaran\(r\)/, "el evento `fin` tiene que poder explicar por qué faltaron");
+    assert.match(CODIGO, /function motivoDeQueFaltaran/);
+    // El caso sin errores NO puede devolver vacío: es justamente el que se veía como un éxito.
+    const fn = CODIGO.slice(CODIGO.indexOf("function motivoDeQueFaltaran"), CODIGO.indexOf("/**\n * La corrida en curso"));
+    assert.match(fn, /return "La corrida terminó sin procesar a nadie/, "faltaron>0 sin errores tiene que decir que nadie explicó nada");
+    assert.match(CODIGO, /console\.error\(`\\n  ✗ La validación falló/, "el stack va a la consola: es la única ventana que el usuario tiene delante");
+  });
+
   it("una corrida TERMINADA libera el turno", () => {
     assert.match(CODIGO, /const ocupado = \(\) => !!corrida && !corrida\.terminada;/);
     assert.ok(!/if \(corrida\)/.test(CODIGO), "mirar solo si existe deja el turno tomado para siempre");

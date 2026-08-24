@@ -123,6 +123,55 @@ async function verificar() {
     console.log(`  ✓ ${que} — ${ruta} → ${r.status}`);
   };
 
+  /**
+   * Detener y COMPROBAR que se detuvo, no solo pedirlo.
+   *
+   * `/detener` iza una bandera; quien tiene que mirarla es el motor. Hubo un tramo —la espera de hasta
+   * cinco minutos a que aparezca la pantalla de altas— donde nadie la miraba: el botón contestaba 200,
+   * la pantalla decía que había parado, y la corrida seguía ocupando el turno, así que la siguiente
+   * recibía «Ya hay una corrida en curso». Pedirlo y seguir de largo daba verde sobre eso.
+   */
+  async function detenerYesperar() {
+    await paso("pide detener", "/detener", { method: "POST", body: "{}" });
+    for (let i = 0; i < 20; i++) {
+      const r = await pedir("/estado");
+      if (r.ok && (await r.clone().json()).corriendo === false) {
+        console.log("  ✓ la corrida se detuvo de verdad");
+        return;
+      }
+      await esperar(500);
+    }
+    terminar(1, "✗ `/detener` contestó 200 pero la corrida sigue en curso 10 s después.");
+  }
+
+  /**
+   * Una corrida que no hace nada tiene que DECIR por qué.
+   *
+   * Este chequeo existe porque el anterior no alcanzaba: comprobaba que el proceso SOBREVIVIERA a un
+   * `/validar`, no que hiciera algo. Y hubo un binario que pasaba ese verde mientras abortaba antes
+   * de la primera persona y devolvía un final exitoso con cero hechas — la pantalla se quedaba con
+   * las filas «en cola» para siempre y parecía colgada. El binario estaba «verificado».
+   *
+   * Acá no se exige que valide (no hay sesión de ARCA en una máquina de build): se exige que el
+   * resultado sea LEGIBLE. Un `fin` con `faltaron > 0` y sin `motivo` es el bug, y falla el build.
+   */
+  async function laCorridaSeExplica() {
+    const r = await pedir("/progreso");
+    const texto = await r.text();
+    const eventos = texto
+      .split("\n")
+      .filter((l) => l.startsWith("data:"))
+      .map((l) => JSON.parse(l.slice(5)));
+    const fin = eventos.find((e) => e.tipo === "fin");
+    const fallo = eventos.find((e) => e.tipo === "fallo");
+    if (fallo) return console.log(`  ✓ la corrida explica por qué no anduvo — "${String(fallo.mensaje).split("\n")[0].slice(0, 70)}"`);
+    if (!fin) return console.log("  · la corrida sigue en curso: nada que auditar todavía");
+    if (fin.faltaron > 0 && !fin.motivo) {
+      return terminar(1, `✗ La corrida terminó con faltaron=${fin.faltaron} y SIN motivo.\n\n  Ese es el fracaso silencioso: desde la pantalla se ve como un cuelgue.`);
+    }
+    console.log(`  ✓ la corrida se explica — faltaron ${fin.faltaron}${fin.motivo ? `: "${fin.motivo.slice(0, 60)}…"` : " (ninguna: salió todo)"}`);
+  }
+
   await esperar(4000);
   await paso("arranca", "/estado");
 
@@ -140,14 +189,15 @@ async function verificar() {
   await paso("sobrevive a un /validar real", "/validar", { method: "POST", body: JSON.stringify({ personas: [{ cuil: "20363972609" }] }) }, aceptado);
   await esperar(2000);
   await paso("sigue vivo después de /validar", "/estado");
-  await paso("detiene la corrida", "/detener", { method: "POST", body: "{}" });
+  await laCorridaSeExplica();
+  await detenerYesperar();
 
   // Con `aceptado` y no con `vivo`: un 409 acá significaría que la corrida anterior dejó el turno
   // tomado, que es un Asistente que solo sirve una vez por arranque. Ya pasó.
   await paso("acepta una SEGUNDA corrida", "/registrar-obras-sociales", { method: "POST", body: JSON.stringify({ empresaCuit: "30710295839", dryRun: true }) }, aceptado);
   await esperar(2000);
   await paso("sigue vivo después de /registrar-obras-sociales", "/estado");
-  await paso("detiene la corrida", "/detener", { method: "POST", body: "{}" });
+  await detenerYesperar();
 
   // Y que aguante. 10 segundos no prueban que sea eterno, pero descartan la muerte diferida por un
   // timer, un handle que se cierra o una promesa que revienta un rato después del arranque.

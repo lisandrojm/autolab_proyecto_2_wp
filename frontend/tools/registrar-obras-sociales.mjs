@@ -263,7 +263,7 @@ async function buscarPaginaArca(ctx) {
 }
 
 /** Espera a que alguien deje abierta la pantalla correcta. No toca la clave de nadie. */
-async function esperarPantalla(ctx, minutos) {
+async function esperarPantalla(ctx, minutos, señal) {
   const hasta = Date.now() + minutos * 60_000;
   let page = await buscarPaginaArca(ctx);
   if (!page) {
@@ -278,6 +278,9 @@ async function esperarPantalla(ctx, minutos) {
       `Espero hasta ${minutos} minuto(s) y sigo solo…`,
   );
   while (Date.now() < hasta) {
+    // Mismo motivo que en `validar-obras-sociales`: sin esto, «Detener» no hace nada durante todo el
+    // tramo más largo de la corrida — hasta cinco minutos con el turno tomado.
+    if (señal?.cortada) return null;
     const p = (await buscarPaginaArca(ctx)) || page;
     if (await esPantallaObrasSociales(p)) {
       log("Pantalla lista. Sigo.\n");
@@ -295,7 +298,7 @@ async function esperarPantalla(ctx, minutos) {
  *
  * `escribir: false` (el default) hace el cálculo completo y no aprieta ningún botón.
  */
-export async function registrarObrasSociales({ empleadora, escribir = false, limite = 0, esperaMin = 5, cdpUrl = CDP_URL, onPaso }) {
+export async function registrarObrasSociales({ empleadora, escribir = false, limite = 0, esperaMin = 5, cdpUrl = CDP_URL, onPaso, señal }) {
   const cuit = soloDigitos(empleadora);
   if (cuit.length !== 11) throw new Error(`«${empleadora}» no es un CUIT de 11 dígitos.`);
 
@@ -324,7 +327,7 @@ export async function registrarObrasSociales({ empleadora, escribir = false, lim
 
     let page = await buscarPaginaArca(ctx);
     if (!page || !(await esPantallaObrasSociales(page))) {
-      page = await esperarPantalla(ctx, esperaMin);
+      page = await esperarPantalla(ctx, esperaMin, señal);
       if (!page) {
         throw new Error(`Pasaron ${esperaMin} minuto(s) y la pantalla «Datos del Empleador → Obras Sociales» sigue sin estar lista.\n\nDejala abierta en esa ventana de Chrome y volvé a correr esto.`);
       }
@@ -372,6 +375,18 @@ export async function registrarObrasSociales({ empleadora, escribir = false, lim
     let cortadoPorSesion = false;
 
     for (const os of faltantes) {
+      /*
+        «Detener» tiene que poder frenar ESTO, que es lo que escribe ante el organismo.
+
+        Se corta ENTRE altas y nunca a mitad de una: `registrarUna` aprieta el botón y espera la
+        respuesta de ARCA: abandonar ahí dejaría un alta hecha que este proceso no llegó a contar, y
+        el conteo es lo que hace idempotente al reintento. Cortar acá no pierde nada — lo registrado
+        queda registrado y una corrida nueva retoma sola.
+      */
+      if (señal?.cortada) {
+        cortadoPorSesion = false;
+        break;
+      }
       const r = await registrarUna(page, os, cuenta);
       if (r.estado === "sin_sesion") {
         // Sesión caída: se FRENA y no se reintenta. Un reintento ciego contra el organismo no

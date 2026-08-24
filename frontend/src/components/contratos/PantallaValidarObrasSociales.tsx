@@ -39,6 +39,15 @@ const soloDigitos = (v: string): string => String(v || '').replace(/\D/g, '');
 const conGuiones = (c: string) => (c.length === 11 ? `${c.slice(0, 2)}-${c.slice(2, 10)}-${c.slice(10)}` : c);
 const formatCuil = (v: string): string => conGuiones(soloDigitos(v));
 
+/**
+ * Cuánto se aguanta sin UN SOLO evento del Asistente antes de cortar y decirlo.
+ *
+ * Generoso porque la espera legítima más larga —que la persona abra la pantalla de altas— late cada
+ * 3 segundos, así que nunca se acerca a este tope. Lo que este número atrapa es el silencio real: un
+ * Asistente que se murió, un stream que se cortó sin avisar.
+ */
+const TOPE_SIN_EVENTOS_MS = 90_000;
+
 /** Una fila del lote: el contrato y los valores ya resueltos por el checklist. */
 export type FilaConstatacion = { row: ContractOverviewRow; valores: AfipValues };
 
@@ -159,6 +168,8 @@ export const PantallaValidarObrasSociales: React.FC<{
    */
   const [enVivo, setEnVivo] = useState<Record<string, EnVivo>>({});
   const cortarStream = useRef<null | (() => void)>(null);
+  /** Marca de tiempo del último evento recibido. Es lo que reinicia la guardia. */
+  const [ultimoEvento, setUltimoEvento] = useState(0);
   /**
    * Lo que quedó sin consultar cuando se corta la sesión de ARCA.
    *
@@ -166,6 +177,23 @@ export const PantallaValidarObrasSociales: React.FC<{
    * acá para reanudar sola cuando la sesión vuelva (ver el efecto de más abajo).
    */
   const [pausadoEn, setPausadoEn] = useState<string[]>([]);
+  /**
+   * Qué está haciendo la corrida AHORA, en una frase.
+   *
+   * Entre apretar «Validar» y el primer resultado puede haber minutos: conectarse al Chrome, y sobre
+   * todo esperar a que la persona abra «Registrar Nuevas Altas» —el motor aguanta hasta 5—. Eso se
+   * veía como veinte filas «en cola» y nada moviéndose, indistinguible de un cuelgue. La barra de
+   * progreso tampoco ayudaba: con 0 de 20 medía 0 px de ancho.
+   */
+  const [faseCorrida, setFaseCorrida] = useState<string>('');
+  /**
+   * La corrida terminó SIN hacer todo lo que se le pidió.
+   *
+   * Antes esto no se guardaba en ningún lado y no se mostraba: un `fin` con `faltaron: 20` se
+   * renderizaba exactamente igual que no haber apretado nada — las filas quedaban «en cola», sin
+   * cartel, sin color, sin botón. Eso es lo que la persona lee como «se cuelga».
+   */
+  const [fracaso, setFracaso] = useState<{ faltaron: number; motivo: string } | null>(null);
 
   const clave = (r: ContractOverviewRow) => `${r._id}-${r.contractIndex}`;
 
@@ -201,6 +229,30 @@ export const PantallaValidarObrasSociales: React.FC<{
 
   /** Al desmontar, se corta el stream: dejarlo abierto filtra una conexión por cada vez que se abre. */
   useEffect(() => () => cortarStream.current?.(), []);
+
+  /**
+   * Guardia: si no llega ningún evento en TOPE_SIN_EVENTOS_MS, se corta y se dice.
+   *
+   * Una pantalla que espera para siempre es un bug aunque el que esté roto sea el otro lado. El
+   * Asistente puede morirse, el stream puede cortarse sin cerrar, o puede aparecer mañana un camino
+   * que no emita nada — y en los tres casos lo que la persona ve es idéntico: filas «en cola» que no
+   * avanzan. Esto pone un piso: pasado ese tiempo hay un cartel y un botón, no una espera muda.
+   *
+   * El reloj se reinicia con CADA evento, incluido el de «esperando»: ese llega cada 3 s durante la
+   * espera de la pantalla de altas, así que una espera larga y legítima no dispara la guardia.
+   */
+  useEffect(() => {
+    if (!mirando) return;
+    const id = window.setTimeout(() => {
+      cortarStream.current?.();
+      setMirando(false);
+      setFaseCorrida('');
+      setFracaso({ faltaron: total - resueltas, motivo: `Pasaron ${Math.round(TOPE_SIN_EVENTOS_MS / 1000)} segundos sin noticias del Asistente. Fijate si su ventana sigue abierta.` });
+    }, TOPE_SIN_EVENTOS_MS);
+    return () => window.clearTimeout(id);
+    // `ultimoEvento` es lo que reinicia el reloj en cada evento recibido.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mirando, ultimoEvento]);
 
   useEffect(() => {
     if (terminado) setMirando(false);
@@ -263,6 +315,8 @@ export const PantallaValidarObrasSociales: React.FC<{
     const lista = cuils && cuils.length > 0 ? cuils : pendientes.map((f) => soloDigitos(f.row.cuit || ''));
     if (lista.length === 0) return;
     setPausadoEn([]);
+    setFracaso(null);
+    setFaseCorrida('Arrancando…');
     // Solo se limpian los que se van a volver a consultar: borrar todo perdería el resultado de los
     // que ya salieron bien, que es justamente lo que un reintento no tiene que tocar.
     setEnVivo((p) => {
@@ -281,7 +335,21 @@ export const PantallaValidarObrasSociales: React.FC<{
 
     const porCuil = new Map(visibles.map((f) => [soloDigitos(f.row.cuit || ''), f]));
     cortarStream.current = asistenteAPI.progreso(async (ev: EventoProgreso) => {
-      if (ev.tipo === 'consultando') {
+      // Cualquier evento reinicia la guardia: lo que se vigila es el SILENCIO, no el progreso.
+      setUltimoEvento((n) => n + 1);
+      if (ev.tipo === 'conectando') {
+        setFaseCorrida('Conectando con el Chrome de ARCA…');
+      } else if (ev.tipo === 'conectado') {
+        setFaseCorrida('Conectado. Buscando la pantalla de ARCA…');
+      } else if (ev.tipo === 'esperando') {
+        // El minuto que falta va en el texto: una espera con final visible se tolera; una sin final
+        // se lee como que se colgó. Es la misma espera, contada.
+        const min = Math.max(1, Math.ceil(ev.restanMs / 60000));
+        setFaseCorrida(`Esperando a que abras «Registrar Nuevas Altas» en la ventana de ARCA — sigo solo apenas aparezca (espero ${min} min más).`);
+      } else if (ev.tipo === 'listo') {
+        setFaseCorrida('Pantalla de ARCA lista. Consultando…');
+      } else if (ev.tipo === 'consultando') {
+        setFaseCorrida('');
         setEnVivo((p) => ({ ...p, [ev.cuil]: { ...p[ev.cuil], estado: 'consultando' } }));
       } else if (ev.tipo === 'resultado') {
         const f = porCuil.get(ev.cuil);
@@ -290,9 +358,11 @@ export const PantallaValidarObrasSociales: React.FC<{
         setEnVivo((p) => ({ ...p, [ev.cuil]: { estado: 'error', motivo: 'ARCA no devolvió fila para este CUIL' } }));
       } else if (ev.tipo === 'fallo') {
         setMirando(false);
+        setFaseCorrida('');
         sweetAlert.error('Se cortó la corrida', ev.mensaje);
       } else if (ev.tipo === 'fin') {
         setMirando(false);
+        setFaseCorrida('');
         /*
           Sesión caída a mitad: se PAUSA, no se aborta.
 
@@ -301,6 +371,20 @@ export const PantallaValidarObrasSociales: React.FC<{
           sobre esas personas que ARCA nunca contestó.
         */
         if (ev.sinSesion) setPausadoEn(lista.filter((c) => !['listo', 'error'].includes(enVivoRef.current[c]?.estado || '')));
+        /*
+          Nadie procesado y sin sesión caída = fracaso, no final.
+
+          Y las filas que quedaron sin tocar pasan a «no se pudo»: dejarlas en «en cola» después de
+          que el stream cerró es afirmar que siguen esperando algo que ya no va a llegar.
+        */
+        if (ev.faltaron > 0 && !ev.sinSesion) {
+          setFracaso({ faltaron: ev.faltaron, motivo: ev.motivo || '' });
+          setEnVivo((p) => {
+            const n = { ...p };
+            for (const c of lista) if (!['listo', 'error'].includes(n[c]?.estado || '')) n[c] = { estado: 'error', motivo: 'no se pudo consultar' };
+            return n;
+          });
+        }
         onLoteAplicado?.();
         await onRefrescar?.();
       }
@@ -318,6 +402,26 @@ export const PantallaValidarObrasSociales: React.FC<{
   useEffect(() => {
     enVivoRef.current = enVivo;
   }, [enVivo]);
+
+  /**
+   * Si el Asistente desaparece, la corrida no puede seguir «en curso».
+   *
+   * El stream muere sin avisar —no llega ningún evento de cierre cuando el proceso se va— así que
+   * `mirando` se quedaba en true para siempre: la cabecera decía «Validando obras sociales» con su
+   * botón Detener, y tres renglones más abajo la misma pantalla decía «Asistente no detectado». Dos
+   * afirmaciones opuestas a la vez, y la de arriba era la falsa.
+   *
+   * Lo que quedó consultado ya está guardado; el resto pasa a `pausadoEn` y se reanuda solo cuando el
+   * Asistente vuelva, que es el mismo camino que la sesión de ARCA caída.
+   */
+  useEffect(() => {
+    if (!mirando || asistente.fallo !== 'no-detectado') return;
+    cortarStream.current?.();
+    setMirando(false);
+    setFaseCorrida('');
+    setPausadoEn(pendientes.map((f) => soloDigitos(f.row.cuit || '')).filter((c) => !['listo', 'error'].includes(enVivoRef.current[c]?.estado || '')));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [asistente.fallo, mirando]);
 
   /** Los que quedaron en rojo. Es lo que ofrece el botón de reintentar. */
   const fallidos = useMemo(() => Object.entries(enVivo).filter(([, v]) => v.estado === 'error').map(([c]) => c), [enVivo]);
@@ -346,6 +450,7 @@ export const PantallaValidarObrasSociales: React.FC<{
     }
     cortarStream.current?.();
     setMirando(false);
+    setFaseCorrida('');
   };
 
   // Con la empleadora en el título: durante la corrida es el dato que dice contra qué CUIT se está
@@ -425,15 +530,41 @@ export const PantallaValidarObrasSociales: React.FC<{
         <div className="px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 bg-amber-50/70 dark:bg-amber-950/20 text-[11.5px] text-gray-700 dark:text-gray-300 flex items-center gap-2">
           <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />
           <span>
-            Se cortó la sesión de ARCA con <strong>{pausadoEn.length}</strong> sin consultar. Lo ya validado quedó guardado. <strong>Sigue solo</strong> apenas vuelvas a entrar en esa ventana.
+            {asistente.fallo === 'no-detectado' ? (
+              <>
+                Se cerró el Asistente con <strong>{pausadoEn.length}</strong> sin consultar. Lo ya validado quedó guardado. <strong>Sigue solo</strong> apenas lo vuelvas a ejecutar.
+              </>
+            ) : (
+              <>
+                Se cortó la sesión de ARCA con <strong>{pausadoEn.length}</strong> sin consultar. Lo ya validado quedó guardado. <strong>Sigue solo</strong> apenas vuelvas a entrar en esa ventana.
+              </>
+            )}
           </span>
         </div>
       )}
 
-      {/* Barra de progreso: solo mientras corre. Sin nada que mirar es decoración. */}
+      {/*
+        La barra, y una línea que dice qué está pasando.
+
+        INDETERMINADA mientras no haya ninguna resuelta: con `width: 0%` la barra medía cero píxeles,
+        así que durante toda la parte lenta —conectarse, esperar la pantalla de altas— no había NADA
+        moviéndose en pantalla. Una barra que no se mueve y una app colgada se ven igual.
+      */}
       {mirando && total > 0 && (
-        <div className="h-1 bg-gray-200 dark:bg-gray-700">
-          <div className="h-full bg-gradient-to-r from-blue-600 to-green-500 transition-[width] duration-500" style={{ width: `${Math.round((hechas / total) * 100)}%` }} />
+        <div className="h-1 bg-gray-200 dark:bg-gray-700 overflow-hidden">
+          {hechas === 0 ? (
+            <div className="h-full w-1/3 bg-gradient-to-r from-blue-600 to-green-500 animate-[barrita_1.4s_ease-in-out_infinite]" />
+          ) : (
+            <div className="h-full bg-gradient-to-r from-blue-600 to-green-500 transition-[width] duration-500" style={{ width: `${Math.round((hechas / total) * 100)}%` }} />
+          )}
+        </div>
+      )}
+
+      {/* Qué está haciendo ahora. Es lo que convierte una espera de minutos en algo que se entiende. */}
+      {mirando && faseCorrida && (
+        <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-blue-50/60 dark:bg-blue-950/20 text-[11.5px] text-gray-700 dark:text-gray-300 flex items-center gap-2">
+          <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3 shrink-0 text-blue-600 dark:text-blue-400" />
+          <span>{faseCorrida}</span>
         </div>
       )}
 
@@ -450,6 +581,29 @@ export const PantallaValidarObrasSociales: React.FC<{
             Los contratos elegidos son de <strong>más de una empleadora</strong>, o todavía no tienen una asignada. La obra social se valida contra el CUIT que la declara, así que la tanda tiene que ser
             de una sola: elegí la empleadora en las pestañas de arriba —o asignásela a estos contratos— y volvé a intentar.
           </span>
+        </div>
+      )}
+
+      {/*
+        La corrida terminó sin validar a nadie. ANTES ESTO NO SE VEÍA.
+
+        Un `fin` con `faltaron: 20` se renderizaba igual que no haber apretado nada: filas «en cola»,
+        sin cartel, sin color, sin botón. La persona se quedaba mirando una pantalla que no afirmaba
+        ni éxito ni fracaso, y lo leía como un cuelgue. Un fracaso silencioso es peor que un error.
+      */}
+      {fracaso && (
+        <div className="mx-4 mt-3 rounded-lg border border-red-300 dark:border-red-800/70 bg-red-50/70 dark:bg-red-950/20 px-3 py-2.5 flex items-start gap-2.5">
+          <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 mt-0.5 shrink-0 text-red-600 dark:text-red-400" />
+          <div className="min-w-0 flex-1 text-[11.5px] text-gray-700 dark:text-gray-300">
+            <p className="font-semibold text-red-700 dark:text-red-400">
+              La corrida terminó sin validar {fracaso.faltaron === total ? `ninguna de las ${total}` : `${fracaso.faltaron} de ${total}`}.
+            </p>
+            <p className="mt-0.5">{fracaso.motivo || 'El Asistente no informó el motivo. El detalle se imprime en su ventana.'}</p>
+          </div>
+          <button type="button" onClick={() => empezarCorrida()} className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold border border-red-300 dark:border-red-800 text-red-700 dark:text-red-400 hover:bg-red-100/60 dark:hover:bg-red-950/40 transition-colors">
+            <FontAwesomeIcon icon={faRotateRight} className="h-3 w-3" />
+            Reintentar
+          </button>
         </div>
       )}
 

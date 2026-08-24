@@ -41,6 +41,13 @@ export interface EstadoAsistente {
   chromeAbierto: boolean;
   /** `viva` = hay una pestaña en Simplificación Registral. `desconocida` = ni siquiera hay Chrome. */
   sesionArca: 'viva' | 'sin-sesion' | 'desconocida';
+  /**
+   * ¿Hay una pestaña en «Registrar Nuevas Altas»? INFORMATIVO: no gatea ningún botón.
+   *
+   * `undefined` en Asistentes anteriores a la v1.1.0 — y también cuando no se pudo mirar. En los dos
+   * casos se calla: una ayuda que no se puede afirmar no se muestra.
+   */
+  pantallaAltas?: boolean;
   chromeEncontrado: boolean;
   corriendo: boolean;
 }
@@ -92,10 +99,30 @@ async function pedir<T>(ruta: string, opciones: RequestInit = {}): Promise<T> {
 
 /** Un evento del progreso de una corrida. Llega por el stream de `/progreso`. */
 export type EventoProgreso =
+  /** Arrancó: se está enganchando al Chrome de ARCA. Antes esto era silencio. */
+  | { tipo: 'conectando' }
+  /**
+   * Está esperando a la PERSONA, no a ARCA.
+   *
+   * El motor aguanta hasta 5 minutos a que aparezca la pantalla de altas. Sin este evento, esa espera
+   * se veía como un cuelgue: veinte filas «en cola» y ningún movimiento. Es lo contrario de un error
+   * —hay algo concreto que hacer y el trabajo sigue después— así que se muestra como instrucción.
+   */
+  | { tipo: 'esperando'; que: 'pantalla-altas'; restanMs: number }
+  /** Enganchado al Chrome. Parte en dos el tramo ciego: antes es conexión, después es la pantalla. */
+  | { tipo: 'conectado' }
+  | { tipo: 'listo' }
   | { tipo: 'consultando'; cuil: string }
   | { tipo: 'resultado'; cuil: string; rnos: string; hechas: number; total: number }
   | { tipo: 'error'; cuil: string; hechas: number; total: number }
-  | { tipo: 'fin'; items: Array<{ cuil: string; rnos: string }>; errores: string[]; sinSesion: boolean; faltaron: number }
+  /**
+   * Terminó. OJO: `faltaron > 0` NO es un final exitoso.
+   *
+   * `motivo` viene del Asistente y nunca está vacío cuando faltaron personas — aunque sea para decir
+   * que ni él sabe por qué. Es lo que impide que un fracaso se renderice como silencio, que es como
+   * se veía antes: filas «en cola» para siempre y ningún cartel.
+   */
+  | { tipo: 'fin'; items: Array<{ cuil: string; rnos: string }>; errores: string[]; sinSesion: boolean; faltaron: number; motivo?: string }
   | { tipo: 'fallo'; mensaje: string }
   | { tipo: 'cerrado' };
 

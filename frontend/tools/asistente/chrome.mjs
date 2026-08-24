@@ -80,13 +80,32 @@ export async function chromeAbierto() {
 export async function estadoSesionArca() {
   if (!(await chromeAbierto())) return "desconocida";
   try {
-    const res = await fetch(`${CDP_URL}/json/list`, { signal: AbortSignal.timeout(1500) });
-    const pestañas = await res.json();
-    const urls = (Array.isArray(pestañas) ? pestañas : []).map((p) => String(p.url || ""));
+    const urls = (await pestañas()).map((p) => String(p.url || ""));
     if (urls.some((u) => /serviciossegsoc\.afip\.gob\.ar/i.test(u))) return "viva";
     return "sin-sesion";
   } catch {
     return "desconocida";
+  }
+}
+
+/**
+ * ¿Hay una pestaña parada en «Registrar Nuevas Altas»?
+ *
+ * ES INFORMATIVO Y NO BLOQUEA NADA. Se agregó por un cuelgue muy concreto: con la sesión de ARCA
+ * abierta pero en la pantalla de datos del empleador, la app decía «Listo para validar», la corrida
+ * arrancaba, y el motor se quedaba HASTA CINCO MINUTOS esperando en silencio a que apareciera la
+ * pantalla correcta. Veinte filas «en cola» y nada moviéndose.
+ *
+ * Se mira la URL y no el DOM porque desde acá solo hay `/json/list`. Por eso mismo no gatea el botón:
+ * si ARCA renombra la pantalla, una heurística de URL equivocada dejaría a alguien sin poder validar
+ * nada. Acá lo peor que puede pasar es que no se muestre una ayuda; el que decide de verdad es
+ * `estadoPantalla` del motor, que busca el campo de CUIL en la página real.
+ */
+export async function enPantallaDeAltas() {
+  try {
+    return (await pestañas()).some((p) => /Altas\.aspx/i.test(String(p.url || "")));
+  } catch {
+    return false;
   }
 }
 

@@ -281,3 +281,17 @@ html.dark [data-campo][data-relacionado] {
     transition: none;
   }
 }
+
+/*
+  Barra de avance INDETERMINADA: se usa mientras todavía no hay ningún resultado.
+
+  Existe por un caso concreto: validar obras sociales puede tardar minutos antes del primer dato
+  —conectarse al Chrome de ARCA y, sobre todo, esperar a que la persona abra la pantalla de altas—.
+  Con la barra proporcional, esa parte medía `width: 0%`, o sea cero píxeles: no había nada
+  moviéndose en pantalla y se leía como una app colgada. Esta se mueve sin afirmar ningún progreso,
+  que es exactamente lo que se sabe en ese momento.
+*/
+@keyframes barrita {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}

@@ -262,12 +262,29 @@ export async function leerFilas(page) {
   }, SEL.obraSocial);
 }
 
+/**
+ * Deja la grilla de ARCA vacía antes de una tanda.
+ *
+ * «REINICIAR» NO EXISTE EN LA PANTALLA VACÍA. ARCA lo dibuja recién cuando hay filas cargadas: con la
+ * grilla limpia los únicos botones son «Agregar» y «Altas Masivas». Esto trataba su ausencia como un
+ * fallo y abortaba la corrida entera ANTES de la primera persona — así que el script solo funcionaba
+ * si alguien había dejado filas de antes, que es justo lo que venía a limpiar.
+ *
+ * Y como el aborto salía por un `break` sin registrar nada, la corrida terminaba «bien» con cero
+ * hechas: la pantalla mostraba veinte filas en cola para siempre y parecía colgada.
+ *
+ * Así que la ausencia del botón ya no es un error POR SÍ SOLA. Lo que importa es el resultado —que
+ * la grilla quede vacía—, no que se haya podido apretar algo. Si hay filas y el botón no está, eso sí
+ * es un problema real y se dice con un error, no con un `false` que alguien tiene que interpretar.
+ */
 async function reiniciarGrilla(page) {
   const btn = await boton(page, "Reiniciar");
-  if (!btn) return false;
+  if (!btn) {
+    if ((await page.locator(SEL.obraSocial).count()) === 0) return; // ya está vacía: no hay nada que hacer
+    throw new Error("La grilla de ARCA tiene filas cargadas y no encuentro el botón «Reiniciar» para vaciarla.\n\nVaciala a mano en esa ventana y volvé a intentar: cargar arriba de filas viejas mezclaría los resultados.");
+  }
   await btn.click();
   await page.waitForLoadState("load").catch(() => {});
-  return true;
 }
 
 /** Carga un CUIL y espera el postback. */
@@ -289,11 +306,19 @@ const log = (...a) => console.error(...a); // stderr: stdout queda libre para pi
  * pantalla de altas. Al vencerse el plazo NO reintenta: sale y explica. Un reintento ciego contra el
  * organismo no resuelve nada y encima puede endurecer sus defensas.
  */
-async function esperarSesion(ctx, minutos) {
+async function esperarSesion(ctx, minutos, onProgreso, señal) {
   const hasta = Date.now() + minutos * 60_000;
   let page = await buscarPaginaArca(ctx);
   if (!page) {
-    page = await ctx.newPage();
+    /*
+      Se REUSA la pestaña de login si ya hay una, en vez de abrir otra.
+
+      Abrir siempre una nueva dejaba una pestaña de AFIP por cada intento fallido: tres intentos, tres
+      logins idénticos en el Chrome de la persona. Además de ser basura, confunde — con cuatro
+      pestañas iguales no se sabe en cuál hay que entrar, que es exactamente lo que el script le está
+      pidiendo que haga.
+    */
+    page = ctx.pages().find((p) => /auth\.afip\.gob\.ar/i.test(p.url())) || (await ctx.newPage());
     await page.goto(AFIP_LOGIN_URL).catch(() => {});
   }
   log(
@@ -304,10 +329,33 @@ async function esperarSesion(ctx, minutos) {
       `  3. Relaciones Laborales → Registrar Nuevas Altas.\n\n` +
       `Espero hasta ${minutos} minuto(s) y sigo solo…`,
   );
+  /*
+    Este bucle puede durar CINCO MINUTOS, y hasta acá no lo contaba nadie.
+
+    El `log()` de arriba va a stderr: sirve en una terminal y no existe para quien abrió el ejecutable
+    desde WeProdu. Desde la pantalla se veía «0 de 20», veinte filas «en cola» y nada moviéndose
+    durante minutos — indistinguible de un cuelgue. Y la causa era simple y resoluble: la persona
+    estaba en otra pantalla de ARCA.
+
+    Por eso el aviso se emite ANTES de la primera espera y en cada vuelta: lo que la pantalla necesita
+    no es un porcentaje, es la frase «te estoy esperando a vos, y esto es lo que falta».
+  */
   while (Date.now() < hasta) {
+    /*
+      «Detener» tiene que detener TAMBIÉN acá.
+
+      Esta espera puede durar cinco minutos, y era el único tramo de la corrida que no miraba la
+      señal: el botón se apretaba, la pantalla decía que había parado, y el motor seguía dando
+      vueltas — con la corrida marcada como en curso, así que la siguiente contestaba «Ya hay una
+      corrida en curso» hasta que se cumpliera el plazo. Un botón que no hace nada durante justo el
+      tramo más largo.
+    */
+    if (señal?.cortada) return null;
+    onProgreso?.({ tipo: "esperando", que: "pantalla-altas", restanMs: hasta - Date.now() });
     const p = (await buscarPaginaArca(ctx)) || page;
     if ((await estadoPantalla(p).catch(() => "otra")) === "altas") {
       log("Sesión lista. Sigo.\n");
+      onProgreso?.({ tipo: "listo" });
       return p;
     }
     await new Promise((r) => setTimeout(r, 3000));
@@ -361,6 +409,10 @@ export async function validarObrasSociales({ empresa, cuils, dryRun = false, for
     throw new Error("Falta la dependencia `playwright-core`.\n\nCorré `npm install` en frontend/ y volvé a intentar.");
   }
 
+  // Antes del primer CUIL hay una conexión CDP y una búsqueda de pestañas. Sin este evento, la
+  // pantalla se queda en «en cola» sin saber si el Asistente siquiera arrancó.
+  onProgreso?.({ tipo: "conectando" });
+
   let browser;
   try {
     browser = await chromium.connectOverCDP(cdpUrl);
@@ -378,11 +430,18 @@ export async function validarObrasSociales({ empresa, cuils, dryRun = false, for
     const ctx = browser.contexts()[0];
     if (!ctx) throw new Error("Chrome respondió pero no tiene ninguna ventana abierta.");
 
+    // Partir el tramo ciego en dos: hasta acá el problema es de conexión; de acá en adelante, de la
+    // pantalla de ARCA. Sin este evento, un reporte que dice «saltó de conectando a fin» no permite
+    // saber de qué lado mirar.
+    onProgreso?.({ tipo: "conectado" });
+
     let page = await buscarPaginaArca(ctx);
     const estado = page ? await estadoPantalla(page) : "otra";
     if (estado !== "altas") {
-      page = await esperarSesion(ctx, esperaMin);
+      page = await esperarSesion(ctx, esperaMin, onProgreso, señal);
       if (!page) {
+        // Cortado a mano: no es un error, es lo que se pidió. Se vuelve vacío y sin ruido.
+        if (señal?.cortada) return { items: [], errores: [], sinSesion: true, faltaron: cuils.length };
         throw new Error(`Pasaron ${esperaMin} minuto(s) y la pantalla «Registrar Nuevas Altas» sigue sin estar lista.\n\nDejala abierta en esa ventana de Chrome y volvé a correr esto.`);
       }
     }
@@ -397,10 +456,7 @@ export async function validarObrasSociales({ empresa, cuils, dryRun = false, for
     let sinSesion = false;
 
     while (pendientes.length > 0 && !sinSesion) {
-      if (!(await reiniciarGrilla(page))) {
-        log("No encontré el botón «Reiniciar»: no puedo vaciar la grilla para la tanda siguiente.");
-        break;
-      }
+      await reiniciarGrilla(page);
 
       const tanda = pendientes.slice(0, TOPE_ARCA);
       const reencolar = [];

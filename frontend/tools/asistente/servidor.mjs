@@ -38,7 +38,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { readFileSync } from "node:fs";
 import { ORIGENES_PERMITIDOS, origenPermitido, tokenDeInstalacion, tokenValido } from "./seguridad.mjs";
-import { abrirChrome, enfocarChrome, chromeAbierto, estadoSesionArca, rutaChrome, guardarRutaChrome, CDP_URL } from "./chrome.mjs";
+import { abrirChrome, enfocarChrome, chromeAbierto, enPantallaDeAltas, estadoSesionArca, rutaChrome, guardarRutaChrome, CDP_URL } from "./chrome.mjs";
 import { noMorirEnSilencio } from "./diagnostico.mjs";
 import { OPERACIONES } from "./operaciones.mjs";
 import { urlWeProdu, origenAtendido, yaEmparejado, marcarEmparejado, guardarCodigoEnArchivo, abrirNavegador, paginaEmparejar, banner } from "./emparejamiento.mjs";
@@ -68,6 +68,25 @@ const PUERTO = 47653;
 noMorirEnSilencio();
 
 const TOKEN = tokenDeInstalacion();
+
+/**
+ * Por qué una corrida terminó sin hacer todo lo que le pidieron.
+ *
+ * UN `fin` CON `faltaron > 0` Y `errores: []` ES UN BUG EN SÍ MISMO, y estuvo escondido: el motor
+ * abortaba antes de la primera persona por un botón que no encontraba, salía del bucle con un
+ * `break`, y devolvía el resultado normal —cero hechas, cero errores, `sinSesion: false`—. El
+ * Asistente lo emitía como un final exitoso, la pantalla no tenía nada que mostrar, y las veinte
+ * filas se quedaban en «en cola» para siempre. Desde afuera: «se cuelga».
+ *
+ * Este es el último filtro: si faltaron personas y nadie dijo por qué, se dice al menos que nadie
+ * dijo por qué. Un final sin explicación tiene que verse como lo que es.
+ */
+function motivoDeQueFaltaran(r) {
+  if (!r.faltaron) return "";
+  if (r.sinSesion) return "Se cortó la sesión de ARCA, o se pidió detener la corrida.";
+  if (r.errores?.length) return `ARCA no devolvió fila para ${r.errores.length} CUIL. Puede que no tengan relación laboral registrada con esta empleadora.`;
+  return "La corrida terminó sin procesar a nadie y el motor no informó ningún error. Mirá la ventana del Asistente: el detalle se imprime ahí.";
+}
 
 /**
  * La corrida en curso. Una sola por vez: dos tandas encimadas se pisan la pantalla de ARCA.
@@ -131,7 +150,7 @@ const leerCuerpo = (req) =>
 // ─────────────────────────────────────────────────────────────── operaciones
 
 async function estado() {
-  return { ok: true, version: VERSION, operaciones: OPERACIONES, chromeAbierto: await chromeAbierto(), sesionArca: await estadoSesionArca(), chromeEncontrado: !!rutaChrome(), corriendo: ocupado() };
+  return { ok: true, version: VERSION, operaciones: OPERACIONES, chromeAbierto: await chromeAbierto(), sesionArca: await estadoSesionArca(), pantallaAltas: await enPantallaDeAltas(), chromeEncontrado: !!rutaChrome(), corriendo: ocupado() };
 }
 
 /**
@@ -158,11 +177,15 @@ async function arrancarValidacion({ cuils }) {
   // colgado los minutos que dure la tanda.
   validarObrasSociales({ empresa: "", cuils, soloLeer: true, cdpUrl: CDP_URL, onProgreso: emitir, señal })
     .then((r) => {
-      corrida.resultado = { items: r.items, errores: r.errores, sinSesion: r.sinSesion, faltaron: r.faltaron };
+      corrida.resultado = { items: r.items, errores: r.errores, sinSesion: r.sinSesion, faltaron: r.faltaron, motivo: motivoDeQueFaltaran(r) };
       emitir({ tipo: "fin", ...corrida.resultado });
     })
     .catch((e) => {
       corrida.error = e?.message || String(e);
+      // El stack va a la CONSOLA del Asistente. Es una app de consola y esa ventana está abierta
+      // adelante de la persona: si el motivo no aparece ahí, no aparece en ningún lado — el usuario
+      // no tiene un log al que entrar ni forma de pedirlo.
+      console.error(`\n  ✗ La validación falló:\n${e?.stack || e?.message || e}\n`);
       emitir({ tipo: "fallo", mensaje: corrida.error });
     })
     .finally(() => {
@@ -185,7 +208,8 @@ async function arrancarRegistroObrasSociales({ empresaCuit, dryRun }) {
   };
   corrida = { señal: { cortada: false }, eventos, oyentes, terminada: false, resultado: null, error: null };
 
-  registrarObrasSociales({ empleadora: empresaCuit, escribir: !dryRun, cdpUrl: CDP_URL, onPaso: (p) => emitir({ tipo: "paso", ...p }) })
+  // `señal` va SIEMPRE: sin ella `/detener` contestaba 200 y la corrida seguía escribiendo en ARCA.
+  registrarObrasSociales({ empleadora: empresaCuit, escribir: !dryRun, cdpUrl: CDP_URL, onPaso: (p) => emitir({ tipo: "paso", ...p }), señal: corrida.señal })
     .then((r) => {
       corrida.resultado = r;
       emitir({ tipo: "fin", ...r });

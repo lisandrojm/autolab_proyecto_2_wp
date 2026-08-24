@@ -40,6 +40,19 @@ import { sweetAlert } from '../../utils/sweetAlert';
 /** Cada cuánto se le vuelve a preguntar mientras la pantalla está abierta. */
 const SONDEO_MS = 3000;
 
+/**
+ * Cada cuánto se pregunta cuando el Asistente NO contesta.
+ *
+ * Un `fetch` que falla deja una línea roja en la consola del navegador aunque esté atrapado en un
+ * `catch` — eso no se puede silenciar desde el código. A 3 segundos, un Asistente apagado escribía
+ * veinte errores por minuto y tapaba cualquier otra cosa que hubiera que mirar ahí.
+ *
+ * Se separa del sondeo normal porque los dos casos son distintos: cuando está conectado, la pantalla
+ * tiene que reaccionar rápido a que la sesión de ARCA aparezca; cuando no está, lo que se espera es
+ * que alguien vaya a ejecutar un programa, y eso no pasa en tres segundos.
+ */
+const SONDEO_CAIDO_MS = 15000;
+
 export interface UsoAsistente {
   estado: Estado | null;
   fallo: 'no-detectado' | 'sin-emparejar' | null;
@@ -75,9 +88,11 @@ export function useAsistente(): UsoAsistente {
 
   useEffect(() => {
     refrescar();
-    const id = window.setInterval(refrescar, SONDEO_MS);
+    // El intervalo se re-arma con el ritmo que corresponde al estado actual: rápido mientras
+    // responde, lento mientras no. Ver `SONDEO_CAIDO_MS`.
+    const id = window.setInterval(refrescar, fallo === 'no-detectado' ? SONDEO_CAIDO_MS : SONDEO_MS);
     return () => window.clearInterval(id);
-  }, [refrescar]);
+  }, [refrescar, fallo]);
 
   return { estado, fallo, cargando, refrescar };
 }
@@ -130,23 +145,56 @@ const DESCARGAS = [
  */
 const BotonDescarga: React.FC<{ url: string; icono: typeof faWin; etiqueta: string; sistema: string; principal: boolean }> = ({ url, icono, etiqueta, sistema, principal }) => {
   const [disponible, setDisponible] = useState<boolean | null>(null);
+  const [verificando, setVerificando] = useState(false);
+
+  /**
+   * Comprueba, y REINTENTA una vez antes de dar por no publicado.
+   *
+   * El "no" de este chequeo apaga un botón que la persona necesita, así que no puede salir de un
+   * solo intento. Ya pasó: la pantalla estaba abierta mientras se republicaba el archivo —hay una
+   * ventana de un segundo entre que se borra el zip viejo y se escribe el nuevo— y el HEAD cayó
+   * justo ahí. La descarga quedó marcada como inexistente en una máquina donde el archivo existía, y
+   * sin manera de volver atrás salvo recargando la página. Un corte de red de un segundo hace lo
+   * mismo en producción.
+   */
+  const verificar = useCallback(async () => {
+    setVerificando(true);
+    let ok = await descargaDisponible(url);
+    if (!ok) {
+      await new Promise((r) => window.setTimeout(r, 1500));
+      ok = await descargaDisponible(url);
+    }
+    setDisponible(ok);
+    setVerificando(false);
+  }, [url]);
 
   useEffect(() => {
-    let vigente = true;
-    descargaDisponible(url).then((r) => vigente && setDisponible(r));
-    return () => {
-      vigente = false;
-    };
-  }, [url]);
+    void verificar();
+    /*
+      Y de nuevo al volver a la pestaña.
+
+      Es cuándo cambia el mundo: la persona se fue a mirar otra cosa, o el archivo se publicó
+      mientras tanto. Un estado negativo que solo se puede corregir recargando la página es un
+      callejón sin salida escondido adentro de la comprobación que existía para evitar callejones.
+    */
+    window.addEventListener('focus', verificar);
+    return () => window.removeEventListener('focus', verificar);
+  }, [verificar]);
 
   if (disponible === null) return null;
 
   if (!disponible) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700" title={`Falta publicar ${url}`}>
-        <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
-        El Asistente todavía no está publicado para {sistema}
-      </span>
+      <button
+        type="button"
+        onClick={verificar}
+        disabled={verificando}
+        title={`No encontré ${url}. Click para volver a comprobar.`}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors disabled:opacity-60"
+      >
+        <FontAwesomeIcon icon={verificando ? faSpinner : faTriangleExclamation} spin={verificando} className="h-3 w-3" />
+        {verificando ? `Comprobando ${sistema}…` : `El Asistente todavía no está publicado para ${sistema} — reintentar`}
+      </button>
     );
   }
 
@@ -366,6 +414,43 @@ export const BloqueAsistente: React.FC<{ uso: UsoAsistente; empleadora?: string 
               Actualizar el Asistente
             </a>
           )
+        }
+      />
+    );
+  }
+
+  /*
+    Sesión viva pero en OTRA pantalla de ARCA.
+
+    Es informativo y no bloquea: `pantallaAltas` sale de mirar la URL de las pestañas, y una
+    heurística de URL equivocada no puede dejar a nadie sin poder validar. El que decide de verdad es
+    el motor, que busca el campo de CUIL en la página real.
+
+    Pero decirlo ANTES vale, porque la alternativa ya pasó: con ARCA en «Registrar Datos Iniciales»,
+    la pantalla decía «Listo para validar», la corrida arrancaba y el motor se quedaba hasta cinco
+    minutos esperando en silencio a que apareciera la pantalla correcta.
+
+    `pantallaAltas === false` y no `!pantallaAltas`: en un Asistente anterior a la v1.1.0 el campo no
+    viene, y de `undefined` no se puede afirmar nada. Una ayuda que no se puede sostener no se muestra.
+  */
+  if (estado && estado.pantallaAltas === false) {
+    return (
+      <Barra
+        punto="bg-amber-500"
+        titulo="Estás en ARCA, pero no en «Registrar Nuevas Altas»"
+        detalle={
+          <>
+            En esa ventana: <strong>Relaciones Laborales</strong> → <strong>Registrar Nuevas Altas</strong>. Podés validar igual —el Asistente espera a que la abras— pero hasta entonces no va a avanzar
+            ninguna fila.
+          </>
+        }
+        accion={
+          asistentePuede(estado, '/chrome/focus') ? (
+            <button type="button" onClick={irAEsaVentana} disabled={abriendo} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+              {abriendo ? <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3" /> : <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3 w-3" />}
+              Ir a esa ventana
+            </button>
+          ) : null
         }
       />
     );
