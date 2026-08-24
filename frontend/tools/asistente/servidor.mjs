@@ -29,7 +29,7 @@
      GUARDA es el navegador, con la sesión de quien está sentado ahí. Por eso
      `/validar` corre con `soloLeer`.
    - No expone ningún endpoint que ejecute un comando arbitrario. Las operaciones
-     son estas seis y nada más.
+     son estas ocho y nada más.
 
   Ver `seguridad.mjs` para las tres barreras y para qué NO cubren.
 */
@@ -38,7 +38,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { readFileSync } from "node:fs";
 import { ORIGENES_PERMITIDOS, origenPermitido, tokenDeInstalacion, tokenValido } from "./seguridad.mjs";
-import { abrirChrome, chromeAbierto, estadoSesionArca, rutaChrome, guardarRutaChrome, CDP_URL } from "./chrome.mjs";
+import { abrirChrome, enfocarChrome, chromeAbierto, estadoSesionArca, rutaChrome, guardarRutaChrome, CDP_URL } from "./chrome.mjs";
 import { noMorirEnSilencio } from "./diagnostico.mjs";
 import { urlWeProdu, origenAtendido, yaEmparejado, marcarEmparejado, guardarCodigoEnArchivo, abrirNavegador, paginaEmparejar, banner } from "./emparejamiento.mjs";
 
@@ -302,6 +302,18 @@ const servidor = createServer(async (req, res) => {
 
     if (req.method === "POST" && ruta === "/chrome") {
       const r = await abrirChrome();
+      return json(res, 200, { ...r, ...(await estado()) });
+    }
+
+    /*
+      Traer al frente la ventana que YA está abierta.
+
+      Separado de `/chrome` a propósito: aquel ABRE y este ENFOCA, y colapsarlos haría que pedir
+      "mostrame la ventana" pudiera terminar lanzando un navegador. Son dos intenciones distintas del
+      usuario y el estado en que se piden es distinto.
+    */
+    if (req.method === "POST" && ruta === "/chrome/focus") {
+      const r = await enfocarChrome();
       return json(res, 200, { ...r, ...(await estado()) });
     }
 

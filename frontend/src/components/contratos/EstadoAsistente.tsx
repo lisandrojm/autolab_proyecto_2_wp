@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner, faCircleQuestion, faDownload, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faCircleQuestion, faDownload, faTriangleExclamation, faArrowUpRightFromSquare, faFolderOpen } from '@fortawesome/free-solid-svg-icons';
 import { faWindows as faWin, faApple as faApl } from '@fortawesome/free-brands-svg-icons';
 import { asistenteAPI, tokenAsistente, ErrorAsistente, EstadoAsistente as Estado, DESCARGAS_ASISTENTE, descargaDisponible } from '../../api/asistente';
 import { sweetAlert } from '../../utils/sweetAlert';
@@ -22,15 +22,23 @@ import { sweetAlert } from '../../utils/sweetAlert';
  *
  *   no-detectado   → descargar y ejecutar. Se hace una vez.
  *   sin-emparejar  → raro: el Asistente empareja solo al arrancar. Queda el respaldo manual.
- *   sin sesión     → botón que abre el Chrome de ARCA. El login lo hace la persona.
+ *   sin Chrome     → «Abrir ARCA». Lanza el navegador con el perfil dedicado.
+ *   Chrome abierto,
+ *   sin sesión     → «Ir a esa ventana». La sesión la inicia la persona.
  *   conectado      → listo, el botón de validar se habilita.
  *
  * Cada uno tiene UNA acción. Mostrar los cuatro juntos, o describirlos en un párrafo, sería volver a
  * poner las instrucciones delante de la acción.
+ *
+ * `chromeAbierto` Y `sesionArca` SON DOS EJES DISTINTOS, y esta pantalla los colapsaba en uno.
+ * Con el navegador ya abierto decía «falta abrir ARCA» y ofrecía un botón que decía «Ya está
+ * abierto» — una respuesta a una pregunta que nadie hizo, sobre un dato que el servidor ya tenía.
+ * La persona sabía que algo faltaba y no tenía forma de saber qué, porque el estado que se le
+ * mostraba era falso. Los estados de abajo están separados justamente por eso.
  */
 
 /** Cada cuánto se le vuelve a preguntar mientras la pantalla está abierta. */
-const SONDEO_MS = 4000;
+const SONDEO_MS = 3000;
 
 export interface UsoAsistente {
   estado: Estado | null;
@@ -73,6 +81,28 @@ export function useAsistente(): UsoAsistente {
 }
 
 const Punto: React.FC<{ color: string }> = ({ color }) => <span className={`inline-block h-2 w-2 rounded-full ${color}`} />;
+
+const RUTA_AYUDA = '/arca/guia-obras-sociales';
+
+/**
+ * La forma de TODOS los estados: punto, qué pasa, qué hacer, un botón.
+ *
+ * Está factorizada porque los cuatro estados tienen que verse iguales. Cuando cada uno se maquetaba
+ * por su cuenta, uno terminó con el botón a la izquierda y otro con el detalle en otro tamaño, y esa
+ * diferencia visual se lee como si fueran cosas de distinta naturaleza — cuando son el mismo eje.
+ */
+const Barra: React.FC<{ punto: string; titulo: React.ReactNode; detalle: React.ReactNode; accion: React.ReactNode }> = ({ punto, titulo, detalle, accion }) => (
+  <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-blue-50/60 dark:bg-blue-950/20 flex items-center gap-3 flex-wrap">
+    <div className="min-w-0 flex-1">
+      <p className="text-[12.5px] font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+        <Punto color={punto} />
+        {titulo}
+      </p>
+      <p className="text-[11.5px] text-gray-600 dark:text-gray-400 mt-0.5">{detalle}</p>
+    </div>
+    <div className="ml-auto shrink-0">{accion}</div>
+  </div>
+);
 
 /** Los tres ejecutables, en el orden en que conviene ofrecerlos. */
 const DESCARGAS = [
@@ -166,6 +196,27 @@ export const BloqueAsistente: React.FC<{ uso: UsoAsistente; empleadora?: string 
     }
   };
 
+  /**
+   * Trae al frente la ventana de ARCA que ya está abierta.
+   *
+   * Si el sistema no la pudo levantar se dice, en vez de no hacer nada: un botón que parece
+   * funcionar y no mueve nada es peor que uno que explica por qué. La ventana existe igual.
+   */
+  const irAEsaVentana = async () => {
+    setAbriendo(true);
+    try {
+      const r = await asistenteAPI.enfocarChrome();
+      if (!r.enfocada) // 6 s y no el default: es una instrucción para ejecutar, no un acuse. Con 1,8 s desaparece
+        // antes de que alguien alcance a leer dónde tiene que buscar.
+        sweetAlert.info('No pude traerla al frente', 'Buscá la ventana de Chrome en tu barra de tareas: está abierta, con la sesión de ARCA.', 6000);
+      await refrescar();
+    } catch (e: any) {
+      sweetAlert.error('No pude enfocar la ventana', e?.message || 'Probá buscándola en la barra de tareas.');
+    } finally {
+      setAbriendo(false);
+    }
+  };
+
   if (cargando) {
     return (
       <div className="px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 text-[12px] text-gray-500 dark:text-gray-400 flex items-center gap-2">
@@ -234,24 +285,71 @@ export const BloqueAsistente: React.FC<{ uso: UsoAsistente; empleadora?: string 
     );
   }
 
-  // ── Conectado, pero sin sesión de ARCA: un botón lo resuelve. ───────────────
+  // ── Conectado, pero Chrome NO está abierto: hay que lanzarlo. ──────────────
+  if (estado && !estado.chromeAbierto && estado.chromeEncontrado) {
+    return (
+      <Barra
+        punto="bg-amber-500"
+        titulo={`Falta abrir el Chrome de ARCA (Asistente v${estado.version})`}
+        detalle="Se abre un Chrome aparte, con su propio perfil. No hace falta cerrar el que estás usando."
+        accion={
+          <button type="button" onClick={abrirArca} disabled={abriendo} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+            {abriendo && <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3" />}
+            Abrir ARCA
+          </button>
+        }
+      />
+    );
+  }
+
+  /*
+    Ni Chrome hay. Es el único estado que esta pantalla no puede resolver sola.
+
+    Se separa de «falta abrirlo» porque la acción es otra: ahí hay algo que lanzar, acá hay que
+    decirle al Asistente dónde está el ejecutable. Ofrecer «Abrir ARCA» sobre un Chrome que no existe
+    devuelve un error que no explica nada.
+  */
+  if (estado && !estado.chromeAbierto && !estado.chromeEncontrado) {
+    return (
+      <Barra
+        punto="bg-red-500"
+        titulo="No encuentro Chrome en esta computadora"
+        detalle="El Asistente lo busca en las rutas habituales. Si lo tenés instalado en otro lado, indicale dónde está y lo recuerda."
+        accion={
+          <a href={RUTA_AYUDA} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-blue-500">
+            <FontAwesomeIcon icon={faFolderOpen} className="h-3 w-3" />
+            Cómo indicar la ruta
+          </a>
+        }
+      />
+    );
+  }
+
+  /*
+    Chrome ABIERTO y sesión SIN INICIAR. Es donde se traba casi todo el mundo.
+
+    El texto dice el camino completo y nombra la empleadora concreta porque el paso de ELEGIR EL CUIT
+    es el que más se saltea, y saltearlo rompe todo lo que sigue: ARCA rechaza la pantalla de altas
+    aunque la persona esté perfectamente logueada. Decir «iniciá sesión» a secas deja ese paso afuera.
+  */
   if (estado && estado.sesionArca !== 'viva') {
     return (
-      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-blue-50/60 dark:bg-blue-950/20 flex items-center gap-3 flex-wrap">
-        <div className="min-w-0">
-          <p className="text-[12.5px] font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-            <Punto color="bg-blue-500" />
-            Asistente conectado (v{estado.version}) · falta abrir ARCA
-          </p>
-          <p className="text-[11.5px] text-gray-600 dark:text-gray-400 mt-0.5">
-            Se abre un Chrome aparte, solo para ARCA. Entrá con tu clave fiscal y <strong>elegí {empleadora || 'la empleadora'}</strong>; esa sesión queda guardada por días.
-          </p>
-        </div>
-        <button type="button" onClick={abrirArca} disabled={abriendo} className="ml-auto inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
-          {abriendo && <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3" />}
-          {estado.chromeAbierto ? 'Ya está abierto' : 'Abrir ARCA'}
-        </button>
-      </div>
+      <Barra
+        punto="bg-amber-500"
+        titulo="El Chrome de ARCA está abierto, pero falta iniciar sesión"
+        detalle={
+          <>
+            En esa ventana: entrá con tu clave fiscal → <strong>Simplificación Registral - Empleadores</strong> → elegí <strong>{empleadora || 'la empleadora'}</strong> → <strong>Relaciones Laborales</strong> →{' '}
+            <strong>Registrar Nuevas Altas</strong>. Esta pantalla se actualiza sola cuando termines.
+          </>
+        }
+        accion={
+          <button type="button" onClick={irAEsaVentana} disabled={abriendo} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+            {abriendo ? <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3" /> : <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3 w-3" />}
+            Ir a esa ventana
+          </button>
+        }
+      />
     );
   }
 
@@ -259,7 +357,7 @@ export const BloqueAsistente: React.FC<{ uso: UsoAsistente; empleadora?: string 
   return (
     <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 text-[12px] text-gray-600 dark:text-gray-400 flex items-center gap-2">
       <Punto color="bg-green-500" />
-      Asistente conectado (v{estado?.version}) · sesión de ARCA lista
+      Listo para validar · Asistente v{estado?.version}
     </div>
   );
 };

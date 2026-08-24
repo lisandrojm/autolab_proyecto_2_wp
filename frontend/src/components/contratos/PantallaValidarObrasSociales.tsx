@@ -1,10 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faSpinner, faCheck, faCopy, faCircleCheck, faXmark, faTriangleExclamation, faPlay, faStop, faKeyboard } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faCheck, faCopy, faCircleCheck, faXmark, faTriangleExclamation, faPlay, faStop, faRotateRight, faArrowRight } from '@fortawesome/free-solid-svg-icons';
 import { ContractOverviewRow } from '../../api/users';
-import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { projectsAPI } from '../../api/projects';
-import { formatRnos } from '../../utils/rnos';
 import { AfipValues } from './afipCompleteness';
 import { asistenteAPI, EventoProgreso } from '../../api/asistente';
 import { BloqueAsistente, useAsistente } from './EstadoAsistente';
@@ -37,14 +35,6 @@ import { sweetAlert } from '../../utils/sweetAlert';
  * por `npm run` sigue existiendo y está documentado en `tools/README.md`, para quien programa.
  */
 
-const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
-
-const sinAcentos = (s: string): string =>
-  String(s || '')
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase();
-
 const soloDigitos = (v: string): string => String(v || '').replace(/\D/g, '');
 const conGuiones = (c: string) => (c.length === 11 ? `${c.slice(0, 2)}-${c.slice(2, 10)}-${c.slice(10)}` : c);
 const formatCuil = (v: string): string => conGuiones(soloDigitos(v));
@@ -52,7 +42,23 @@ const formatCuil = (v: string): string => conGuiones(soloDigitos(v));
 /** Una fila del lote: el contrato y los valores ya resueltos por el checklist. */
 export type FilaConstatacion = { row: ContractOverviewRow; valores: AfipValues };
 
-type EstadoFila = { guardando?: boolean; error?: string };
+/**
+ * El estado de una fila durante la corrida.
+ *
+ * `guardando` es un estado propio y no un detalle: entre que ARCA contesta y WeProdu fija el valor
+ * hay un ida y vuelta que puede fallar por motivos que no tienen nada que ver con ARCA —la obra
+ * social no está registrada por la empleadora, el código no está en el catálogo—. Colapsarlo con
+ * `listo` haría que una fila se vea guardada cuando no se guardó.
+ */
+type EnVivo = {
+  estado: 'consultando' | 'guardando' | 'listo' | 'error';
+  /** El RNOS que devolvió ARCA. Vacío es una RESPUESTA: «no tiene afiliación propia». */
+  rnos?: string;
+  antes?: string;
+  despues?: string;
+  cambio?: 'igual' | 'actualizada';
+  motivo?: string;
+};
 
 // ─────────────────────────────────────────────────────────────── piezas chicas
 const CeldaCuil: React.FC<{ cuil: string }> = ({ cuil }) => {
@@ -80,63 +86,51 @@ const CeldaCuil: React.FC<{ cuil: string }> = ({ cuil }) => {
 };
 
 /**
- * Buscador de la fila: elegir ES guardar.
+ * Lo que le está pasando a una fila, con el ANTES y el DESPUÉS.
  *
- * No hay paso de confirmación a propósito: acá la fuente ya está fijada —se está mirando la pantalla
- * de altas de ARCA— así que un botón extra solo agregaría un click por persona.
+ * Mostrar solo el resultado ocultaba lo único que hay que revisar: si la obra social CAMBIÓ. Con
+ * `120900 → 901402` se ve que a esa persona se le movió el dato; con un tilde verde a secas, no.
+ * «sin cambios» se dice explícito y en gris para que el ojo pase de largo: es el caso mayoritario y
+ * no pide nada de quien mira.
  */
-const PickerFila: React.FC<{ catalogo: SimpleCatalogItem[]; disabled?: boolean; onElegir: (os: SimpleCatalogItem) => void }> = ({ catalogo, disabled, onElegir }) => {
-  const [q, setQ] = useState('');
-  const [foco, setFoco] = useState(false);
+const CeldaEnVivo: React.FC<{ v?: EnVivo; porDefecto: string }> = ({ v, porDefecto }) => {
+  if (!v) return <span className="text-[11px] text-gray-400 dark:text-gray-500">en cola</span>;
 
-  const resultados = useMemo(() => {
-    const term = sinAcentos(q.trim());
-    const digitos = soloDigitos(q);
-    if (!term) return [];
-    return catalogo.filter((o) => (digitos && String(o.externalId || '').includes(digitos)) || sinAcentos(o.name).includes(term)).slice(0, 12);
-  }, [catalogo, q]);
+  if (v.estado === 'consultando') return <span className="text-[11px] rounded-full px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900">consultando…</span>;
+
+  if (v.estado === 'guardando')
+    return (
+      <span className="text-[11.5px] text-gray-500 dark:text-gray-400 inline-flex items-center gap-1.5">
+        <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3 text-blue-500" />
+        guardando…
+      </span>
+    );
+
+  if (v.estado === 'error')
+    return (
+      <span className="text-[11.5px] text-red-600 dark:text-red-400 inline-flex items-start gap-1.5">
+        <FontAwesomeIcon icon={faXmark} className="h-3 w-3 mt-0.5 shrink-0" />
+        <span>{v.motivo || 'no se pudo validar'}</span>
+      </span>
+    );
 
   return (
-    <div className="relative">
-      <FontAwesomeIcon icon={faSearch} className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-      <input
-        value={q}
-        disabled={disabled}
-        onChange={(e) => setQ(e.target.value)}
-        onFocus={() => setFoco(true)}
-        // El blur se demora: sin eso, el click en un resultado cierra la lista antes de dispararse.
-        onBlur={() => window.setTimeout(() => setFoco(false), 150)}
-        placeholder="RNOS o nombre…"
-        className="input-field w-full pl-8 py-1.5 text-xs"
-      />
-      {foco && q.trim() !== '' && (
-        <ul className="absolute z-20 left-0 right-0 mt-1 max-h-56 overflow-y-auto rounded-md border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60 bg-white dark:bg-gray-900 shadow-lg">
-          {resultados.length === 0 ? (
-            <li className="px-3 py-2 text-[11px] text-gray-500 dark:text-gray-400">Sin resultados para «{q}».</li>
-          ) : (
-            resultados.map((o) => (
-              <li key={o._id}>
-                <button
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    setQ('');
-                    setFoco(false);
-                    onElegir(o);
-                  }}
-                  className="w-full text-left px-3 py-1.5 flex items-baseline gap-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
-                >
-                  <span className="font-mono text-[11px] font-bold text-blue-700 dark:text-blue-400 shrink-0" title={`RNOS ${formatRnos(o.externalId)}`}>
-                    {soloDigitos(o.externalId)}
-                  </span>
-                  <span className="text-xs text-gray-800 dark:text-gray-200 min-w-0">{o.name}</span>
-                </button>
-              </li>
-            ))
-          )}
-        </ul>
+    <span className="text-[11.5px] inline-flex items-center gap-1.5 flex-wrap">
+      <span className="font-mono text-gray-500 dark:text-gray-400">{v.antes || porDefecto || '—'}</span>
+      <FontAwesomeIcon icon={faArrowRight} className="h-2.5 w-2.5 text-gray-400" />
+      <span className={`font-mono ${v.cambio === 'actualizada' ? 'font-bold text-blue-700 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'}`}>{v.despues || porDefecto || '—'}</span>
+      {v.cambio === 'actualizada' ? (
+        <span className="text-green-700 dark:text-green-400 inline-flex items-center gap-1">
+          <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />
+          actualizada
+        </span>
+      ) : (
+        <span className="text-gray-400 dark:text-gray-500 inline-flex items-center gap-1">
+          <FontAwesomeIcon icon={faCheck} className="h-3 w-3 text-green-600/70 dark:text-green-400/70" />
+          sin cambios
+        </span>
       )}
-    </div>
+    </span>
   );
 };
 
@@ -152,32 +146,26 @@ export const PantallaValidarObrasSociales: React.FC<{
   /** Vuelve a pedir el listado. Es lo que hace posible mirar la corrida del script. */
   onRefrescar?: () => void | Promise<void>;
   onLoteAplicado?: () => void;
-  onGuardado: (row: ContractOverviewRow, patch: Partial<ContractOverviewRow>) => void;
-}> = ({ filas, empleadora, empresaId, onRefrescar, onLoteAplicado, onGuardado }) => {
-  const [catalogo, setCatalogo] = useState<SimpleCatalogItem[]>([]);
-  const [estados, setEstados] = useState<Record<string, EstadoFila>>({});
-  /** El camino manual es la SALIDA DE EMERGENCIA: existe, funciona, y no ocupa media pantalla. */
-  const [manual, setManual] = useState(false);
-  const [pegado, setPegado] = useState('');
-  const [aplicando, setAplicando] = useState(false);
-  const [resumen, setResumen] = useState<string[] | null>(null);
-  const [previsualizacion, setPrevisualizacion] = useState<{ filas: Array<{ cuil: string; rnos: string }>; lineas: string[]; aplicables: number } | null>(null);
+}> = ({ filas, empleadora, empresaId, onRefrescar, onLoteAplicado }) => {
   /** Corriendo: el Asistente está recorriendo ARCA y los resultados llegan por su stream. */
   const [mirando, setMirando] = useState(false);
   const asistente = useAsistente();
   /**
-   * Lo que el Asistente fue contestando, por CUIL. Vive acá y no en `filas` porque todavía NO está
-   * guardado: se aplica todo junto al final, con la sesión de quien está sentado adelante.
+   * Lo que va pasando con cada CUIL, en vivo.
+   *
+   * Guarda el ANTES y el DESPUÉS, no solo el resultado. Cambiar la obra social de alguien sin que se
+   * vea de qué a qué es exactamente lo que este flujo tiene que hacer visible: el valor que estaba
+   * puesto por convenio y el que ARCA acaba de contestar son datos distintos y la diferencia importa.
    */
-  const [enVivo, setEnVivo] = useState<Record<string, { rnos?: string; estado: 'consultando' | 'listo' | 'error' }>>({});
+  const [enVivo, setEnVivo] = useState<Record<string, EnVivo>>({});
   const cortarStream = useRef<null | (() => void)>(null);
-
-  useEffect(() => {
-    obrasSocialesApi
-      .list()
-      .then(setCatalogo)
-      .catch(() => setCatalogo([]));
-  }, []);
+  /**
+   * Lo que quedó sin consultar cuando se corta la sesión de ARCA.
+   *
+   * No se pierde ni se marca como error: la sesión que se cae no dice nada sobre esas personas. Queda
+   * acá para reanudar sola cuando la sesión vuelva (ver el efecto de más abajo).
+   */
+  const [pausadoEn, setPausadoEn] = useState<string[]>([]);
 
   const clave = (r: ContractOverviewRow) => `${r._id}-${r.contractIndex}`;
 
@@ -193,9 +181,22 @@ export const PantallaValidarObrasSociales: React.FC<{
   const pendientes = useMemo(() => visibles.filter((f) => f.valores.constatacion === 'sin_constatar'), [visibles]);
 
   const total = clavesIniciales.size;
-  const hechas = total - pendientes.length;
-  const conAfiliacion = visibles.filter((f) => f.valores.constatacion === 'afiliada').length;
-  const sinAfiliacion = visibles.filter((f) => f.valores.constatacion === 'no_figura').length;
+
+  /**
+   * El progreso sale de la CORRIDA, no del listado.
+   *
+   * `filas` se recarga una sola vez, al final, así que durante la tanda `pendientes.length` no se
+   * mueve: la barra se quedaba clavada en 0 y el «12 de 20» decía siempre 0 de 20 — justo mientras
+   * pasa lo único que hay que mirar. Terminada la corrida vale lo mismo por los dos caminos.
+   */
+  const resueltas = useMemo(() => Object.values(enVivo).filter((v) => v.estado === 'listo' || v.estado === 'error').length, [enVivo]);
+  const hechas = mirando ? resueltas : total - pendientes.length;
+  const conAfiliacion = mirando
+    ? Object.values(enVivo).filter((v) => v.estado === 'listo' && !!v.rnos).length
+    : visibles.filter((f) => f.valores.constatacion === 'afiliada').length;
+  const sinAfiliacion = mirando
+    ? Object.values(enVivo).filter((v) => v.estado === 'listo' && !v.rnos).length
+    : visibles.filter((f) => f.valores.constatacion === 'no_figura').length;
   const terminado = total > 0 && pendientes.length === 0;
 
   /** Al desmontar, se corta el stream: dejarlo abierto filtra una conexión por cada vez que se abre. */
@@ -205,151 +206,137 @@ export const PantallaValidarObrasSociales: React.FC<{
     if (terminado) setMirando(false);
   }, [terminado]);
 
-  /** Guarda UNA fila desde el camino manual. Lo que ARCA contesta queda fijo. */
-  const guardar = async (f: FilaConstatacion, accion: { obraSocial: SimpleCatalogItem } | { noFigura: true }) => {
-    const k = clave(f.row);
-    setEstados((prev) => ({ ...prev, [k]: { guardando: true } }));
-    try {
-      const ref = f.row.contratoId || f.row.contractIndex;
-      const payload = 'noFigura' in accion ? ({ noFigura: true, constatadaEn: 'arca' } as const) : ({ obraSocialId: Number((accion.obraSocial.data as { id?: number } | undefined)?.id), origen: 'constatada', constatadaEn: 'arca' } as const);
+  /**
+   * Por qué el lote rechazó ESTE CUIL. Sale del mismo detalle que ya devolvía el endpoint.
+   *
+   * Se traduce a una frase corta y accionable porque va adentro de la fila, no en un párrafo al pie:
+   * quien mira la corrida tiene que poder decidir qué hacer con esa persona sin salir de la pantalla.
+   */
+  const motivoDeRechazo = (r: Awaited<ReturnType<typeof projectsAPI.aplicarObrasSocialesLote>>, cuil: string): string => {
+    if (r.noRegistrada.some((x) => x.cuil === cuil)) return `${empleadora || 'la empleadora'} no la tiene registrada en ARCA`;
+    if (r.rnosDesconocido.some((x) => x.cuil === cuil)) return 'el código no está en el catálogo de Obras Sociales';
+    if (r.yaBloqueados.includes(cuil)) return 'ya estaba validada: no se pisa';
+    if (r.sinContrato.includes(cuil)) return 'sin contrato en esta empleadora';
+    return 'no se pudo guardar';
+  };
 
-      if (!('noFigura' in accion) && !Number.isFinite(payload.obraSocialId as number)) {
-        throw new Error('Esa obra social no tiene código interno. Revisala en Configuración → ARCA → Obras Sociales.');
+  /**
+   * Fija en WeProdu lo que ARCA contestó para UNA persona.
+   *
+   * Se guarda de a una y NO todo junto al final, que era como estaba. El motivo del batch era pasar
+   * por la validación del endpoint —que la obra social esté entre las que la empleadora registró—,
+   * pero eso se conserva igual: se llama al MISMO endpoint con un solo item, así que la red sigue
+   * puesta. Lo que se gana es que una fila resuelta ya está guardada: si la sesión se cae en la
+   * persona 12, las 11 anteriores no dependen de que la corrida llegue al final.
+   *
+   * Un rechazo NO corta el lote. La fila queda en rojo con el motivo y la corrida sigue: el problema
+   * es de esa persona —o de la configuración de la empresa— y no de las otras diecinueve.
+   */
+  const guardarUna = async (f: FilaConstatacion, cuil: string, rnos: string) => {
+    const antes = f.valores.rnos || f.valores.rnosSugerido || '';
+    setEnVivo((p) => ({ ...p, [cuil]: { ...p[cuil], estado: 'guardando', rnos } }));
+    try {
+      const r = await projectsAPI.aplicarObrasSocialesLote(empresaId as string, [{ cuil, rnos }], false);
+      if (r.aplicados === 0) {
+        setEnVivo((p) => ({ ...p, [cuil]: { estado: 'error', rnos, antes, motivo: motivoDeRechazo(r, cuil) } }));
+        return;
       }
-
-      const res = await projectsAPI.updateObraSocialContrato(f.row.projectId, f.row.userId, ref as never, payload as never);
-      onGuardado(f.row, {
-        osId: res.obraSocialId ?? null,
-        obraSocialOrigen: (res.obraSocialOrigen || '') as ContractOverviewRow['obraSocialOrigen'],
-        obraSocialConstatadaEn: (res.obraSocialConstatadaEn || '') as ContractOverviewRow['obraSocialConstatadaEn'],
-        obraSocialConstatadaEl: res.obraSocialConstatadaEl || '',
-        obraSocialNoFigura: 'noFigura' in accion,
-        obraSocialBloqueada: true,
-      });
-      setEstados((prev) => ({ ...prev, [k]: {} }));
+      // Sin afiliación propia en ARCA: el valor que queda es el del convenio, que es el que ya estaba.
+      const despues = rnos || f.valores.rnosSugerido || '';
+      setEnVivo((p) => ({ ...p, [cuil]: { estado: 'listo', rnos, antes, despues, cambio: antes === despues ? 'igual' : 'actualizada' } }));
+      // El listado se recarga UNA vez al terminar, no por fila: veinte recargas completas mientras
+      // corre es tráfico inútil y hace parpadear la tabla que la persona está mirando.
     } catch (e: any) {
-      // El error va EN la fila y no en un alert: interrumpir la tanda con un modal por cada obra
-      // social que la empleadora no tiene registrada rompe el ritmo de la consulta.
-      setEstados((prev) => ({ ...prev, [k]: { error: e?.response?.data?.error || e?.message || 'No se pudo guardar.' } }));
-    }
-  };
-
-  /** `CUIL,RNOS` por línea, con el RNOS vacío cuando ARCA no devolvió ninguna. */
-  const parsearPegado = (texto: string) =>
-    texto
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean)
-      .map((l) => {
-        const [a, b] = l.split(/[,;\t]/);
-        return { cuil: soloDigitos(a), rnos: soloDigitos(b) };
-      })
-      .filter((f) => f.cuil.length === 11);
-
-  /** Las líneas del resumen. Las mismas para la previsualización y para el resultado. */
-  const describir = (r: Awaited<ReturnType<typeof projectsAPI.aplicarObrasSocialesLote>>, futuro: boolean) => {
-    const v = (a: string, b: string) => (futuro ? a : b);
-    const lineas = [`${r.aplicados} ${v('se van a validar', 'validadas')} (${r.contratosAlcanzados} contratos)${r.noFigura ? ` · ${r.noFigura} sin afiliación en ARCA: queda la del convenio` : ''}.`];
-    if (r.sinContrato.length) lineas.push(`${r.sinContrato.length} sin contrato en esta empleadora: ${r.sinContrato.map(conGuiones).join(', ')}`);
-    if (r.yaBloqueados.length) lineas.push(`${r.yaBloqueados.length} ya ${v('están', 'estaban')} validadas en ARCA y no se ${v('van a pisar', 'pisaron')}: ${r.yaBloqueados.map(conGuiones).join(', ')}`);
-    if (r.rnosDesconocido.length) lineas.push(`${r.rnosDesconocido.length} con un código que no está en el catálogo de Obras Sociales: ${r.rnosDesconocido.map((x) => `${conGuiones(x.cuil)}→${x.rnos}`).join(', ')}`);
-    if (r.noRegistrada.length)
-      lineas.push(`${r.noRegistrada.length} con una obra social que la empleadora no tiene registrada ante ARCA —el organismo rechazaría el alta—: ${r.noRegistrada.map((x) => `${conGuiones(x.cuil)}→${x.nombre}`).join(', ')}. Registrala en la ficha de la empresa (ARCA → Obras Sociales).`);
-    return lineas;
-  };
-
-  /** Paso 1: mostrar qué va a pasar, sin escribir. Nada se guarda sin verlo antes. */
-  const previsualizar = async () => {
-    if (!empresaId) return;
-    const parsed = parsearPegado(pegado);
-    if (parsed.length === 0) {
-      setResumen(['No encontré ninguna línea con un CUIL de 11 dígitos. El formato es CUIL,RNOS por línea.']);
-      return;
-    }
-    setAplicando(true);
-    setResumen(null);
-    try {
-      const r = await projectsAPI.aplicarObrasSocialesLote(empresaId, parsed, true);
-      setPrevisualizacion({ filas: parsed, lineas: describir(r, true), aplicables: r.aplicados });
-    } catch (e: any) {
-      setResumen([e?.response?.data?.error || 'No se pudo revisar el lote.']);
-    } finally {
-      setAplicando(false);
-    }
-  };
-
-  /** Paso 2: aplicar lo previsualizado. Cada obra social queda fija. */
-  const confirmar = async () => {
-    if (!empresaId || !previsualizacion) return;
-    setAplicando(true);
-    try {
-      const r = await projectsAPI.aplicarObrasSocialesLote(empresaId, previsualizacion.filas, false);
-      setResumen(describir(r, false));
-      setPrevisualizacion(null);
-      setPegado('');
-      onLoteAplicado?.();
-      await onRefrescar?.();
-    } catch (e: any) {
-      setResumen([e?.response?.data?.error || 'No se pudo aplicar el lote.']);
-    } finally {
-      setAplicando(false);
+      setEnVivo((p) => ({ ...p, [cuil]: { estado: 'error', rnos, antes, motivo: e?.response?.data?.error || e?.message || 'no se pudo guardar' } }));
     }
   };
 
   /**
    * Arranca la corrida en el Asistente y escucha su progreso.
    *
-   * Los resultados NO se guardan a medida que llegan: se juntan y se aplican todos al final, por el
-   * mismo endpoint que usa el pegado manual. Ese endpoint valida contra las obras sociales que la
-   * empleadora tiene registradas ante ARCA y devuelve el detalle de lo que rechazó — guardar de a una
-   * saltearía esa red y dejaría a medio aplicar un lote que falló por configuración de la empresa.
+   * `cuils` explícito porque esto se usa para tres cosas: el lote completo, el reintento de los que
+   * fallaron, y la reanudación después de que se caiga la sesión. Son la misma corrida con distinta
+   * lista, y tenerlas como tres funciones distintas era cómo se terminaban comportando distinto.
    */
-  const empezarCorrida = async () => {
+  const empezarCorrida = async (cuils?: string[]) => {
     if (!empresaId) return;
-    setResumen(null);
-    setEnVivo({});
+    const lista = cuils && cuils.length > 0 ? cuils : pendientes.map((f) => soloDigitos(f.row.cuit || ''));
+    if (lista.length === 0) return;
+    setPausadoEn([]);
+    // Solo se limpian los que se van a volver a consultar: borrar todo perdería el resultado de los
+    // que ya salieron bien, que es justamente lo que un reintento no tiene que tocar.
+    setEnVivo((p) => {
+      const n = { ...p };
+      for (const c of lista) delete n[c];
+      return n;
+    });
+
     try {
-      await asistenteAPI.validar(pendientes.map((f) => ({ cuil: soloDigitos(f.row.cuit || '') })));
+      await asistenteAPI.validar(lista.map((cuil) => ({ cuil })));
     } catch (e: any) {
       sweetAlert.error('No pude arrancar', e?.message || 'El Asistente no aceptó la corrida.');
       return;
     }
     setMirando(true);
 
-    const leidos: Array<{ cuil: string; rnos: string }> = [];
+    const porCuil = new Map(visibles.map((f) => [soloDigitos(f.row.cuit || ''), f]));
     cortarStream.current = asistenteAPI.progreso(async (ev: EventoProgreso) => {
-      if (ev.tipo === 'consultando') setEnVivo((p) => ({ ...p, [ev.cuil]: { estado: 'consultando' } }));
-      else if (ev.tipo === 'resultado') {
-        leidos.push({ cuil: ev.cuil, rnos: ev.rnos });
-        setEnVivo((p) => ({ ...p, [ev.cuil]: { estado: 'listo', rnos: ev.rnos } }));
-      } else if (ev.tipo === 'error') setEnVivo((p) => ({ ...p, [ev.cuil]: { estado: 'error' } }));
-      else if (ev.tipo === 'fallo') {
+      if (ev.tipo === 'consultando') {
+        setEnVivo((p) => ({ ...p, [ev.cuil]: { ...p[ev.cuil], estado: 'consultando' } }));
+      } else if (ev.tipo === 'resultado') {
+        const f = porCuil.get(ev.cuil);
+        if (f) await guardarUna(f, ev.cuil, ev.rnos);
+      } else if (ev.tipo === 'error') {
+        setEnVivo((p) => ({ ...p, [ev.cuil]: { estado: 'error', motivo: 'ARCA no devolvió fila para este CUIL' } }));
+      } else if (ev.tipo === 'fallo') {
         setMirando(false);
         sweetAlert.error('Se cortó la corrida', ev.mensaje);
       } else if (ev.tipo === 'fin') {
         setMirando(false);
-        // Sesión caída a mitad: lo leído se aplica igual —es lo que ARCA sí contestó— y lo que faltó
-        // queda pendiente. Nunca se marca a nadie como "sin obra social" por haberse cortado.
-        if (ev.sinSesion) sweetAlert.error('Se cortó la sesión de ARCA', `Quedaron ${ev.faltaron} sin consultar. Volvé a entrar en el Chrome de ARCA y corré esto de nuevo.`);
-        if (leidos.length > 0) await aplicarLeidos(leidos);
+        /*
+          Sesión caída a mitad: se PAUSA, no se aborta.
+
+          Lo ya guardado quedó guardado (cada fila se fijó al llegar). Los que faltaron quedan en
+          `pausadoEn` y se reanudan solos cuando la sesión vuelva. Marcarlos como error diría algo
+          sobre esas personas que ARCA nunca contestó.
+        */
+        if (ev.sinSesion) setPausadoEn(lista.filter((c) => !['listo', 'error'].includes(enVivoRef.current[c]?.estado || '')));
+        onLoteAplicado?.();
+        await onRefrescar?.();
       }
     });
   };
 
-  /** Fija en WeProdu lo que ARCA contestó, mostrando el detalle de lo que no entró. */
-  const aplicarLeidos = async (leidos: Array<{ cuil: string; rnos: string }>) => {
-    if (!empresaId) return;
-    setAplicando(true);
-    try {
-      const r = await projectsAPI.aplicarObrasSocialesLote(empresaId, leidos, false);
-      setResumen(describir(r, false));
-      onLoteAplicado?.();
-    } catch (e: any) {
-      setResumen([e?.response?.data?.error || 'No se pudo guardar lo que devolvió ARCA.']);
-    } finally {
-      setAplicando(false);
-    }
-  };
+  /**
+   * `enVivo` leído desde adentro del callback del stream.
+   *
+   * El callback se crea una vez, al abrir el stream, así que su clausura ve el `enVivo` de ese
+   * instante y no el actual. Sin el ref, la lista de pendientes al pausar se calcularía sobre un
+   * estado vacío y se reintentaría todo, incluido lo que ya se guardó.
+   */
+  const enVivoRef = useRef(enVivo);
+  useEffect(() => {
+    enVivoRef.current = enVivo;
+  }, [enVivo]);
+
+  /** Los que quedaron en rojo. Es lo que ofrece el botón de reintentar. */
+  const fallidos = useMemo(() => Object.entries(enVivo).filter(([, v]) => v.estado === 'error').map(([c]) => c), [enVivo]);
+
+  /**
+   * Reanudar sola cuando vuelve la sesión.
+   *
+   * Es el cierre del estado de pausa: la persona se loguea en la otra ventana y esto sigue donde
+   * estaba, sin que tenga que volver acá y apretar nada. Sin esto, «se pausa y no se aborta» sería
+   * una promesa a medias — el trabajo quedaría esperando un click que nadie sabe que hay que dar.
+   */
+  useEffect(() => {
+    if (pausadoEn.length === 0 || mirando) return;
+    if (asistente.estado?.sesionArca !== 'viva' || asistente.estado?.corriendo) return;
+    const seguir = pausadoEn;
+    setPausadoEn([]);
+    void empezarCorrida(seguir);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [asistente.estado?.sesionArca, asistente.estado?.corriendo, pausadoEn, mirando]);
 
   const detener = async () => {
     try {
@@ -361,11 +348,13 @@ export const PantallaValidarObrasSociales: React.FC<{
     setMirando(false);
   };
 
-  const cabecera = terminado ? `${total} validada${total === 1 ? '' : 's'}` : mirando ? 'Validando en ARCA…' : 'Validar obras sociales';
+  // Con la empleadora en el título: durante la corrida es el dato que dice contra qué CUIT se está
+  // consultando, y es el que hay que reelegir en ARCA si el lote cambia de empresa.
+  const cabecera = terminado ? `${total} validada${total === 1 ? '' : 's'}` : mirando ? `Validando obras sociales${empleadora ? ` — ${empleadora}` : ''}` : 'Validar obras sociales';
   const subcabecera = terminado
     ? `${conAfiliacion} con afiliación propia · ${sinAfiliacion} quedan con la del convenio`
     : mirando
-      ? `${hechas} de ${total} · no cierres el Chrome de ARCA`
+      ? `${hechas} de ${total} · se guardan solas al llegar · no cierres el Chrome de ARCA`
       : `${empleadora ? `${empleadora} · ` : ''}${pendientes.length} pendiente${pendientes.length === 1 ? '' : 's'}`;
 
   return (
@@ -381,10 +370,12 @@ export const PantallaValidarObrasSociales: React.FC<{
         </div>
 
         <div className="ml-auto flex items-center gap-2">
-          {!terminado && (
-            <button type="button" onClick={() => setManual((v) => !v)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12.5px] font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-              <FontAwesomeIcon icon={faKeyboard} className="h-3 w-3" />
-              Cargar a mano
+          {/* Reintentar los que fallaron. Va al lado del principal y no al pie: si hay tres en rojo,
+              la acción que sigue es esa y no volver a correr las veinte. */}
+          {!mirando && fallidos.length > 0 && (
+            <button type="button" onClick={() => empezarCorrida(fallidos)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12.5px] font-semibold border border-red-300 dark:border-red-800 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors">
+              <FontAwesomeIcon icon={faRotateRight} className="h-3 w-3" />
+              Reintentar {fallidos.length === 1 ? 'el que falló' : `los ${fallidos.length} que fallaron`}
             </button>
           )}
           {!terminado &&
@@ -396,16 +387,25 @@ export const PantallaValidarObrasSociales: React.FC<{
             ) : (
               <button
                 type="button"
-                onClick={empezarCorrida}
+                onClick={() => empezarCorrida()}
                 /* Sin sesión de ARCA el botón no puede funcionar, y dejarlo apretable haría fallar la
-                   corrida por un motivo que el bloque de arriba ya está explicando. */
+                   corrida por un motivo que el bloque de arriba ya está explicando — con su propia
+                   acción, que es la que hay que apretar. El `title` nombra el estado REAL: decir
+                   «primero abrí ARCA» con ARCA ya abierto mandaba a la persona a hacer algo que ya
+                   estaba hecho. */
                 disabled={!empresaId || pendientes.length === 0 || asistente.estado?.sesionArca !== 'viva' || !!asistente.estado?.corriendo}
-                title={asistente.estado?.sesionArca !== 'viva' ? 'Primero abrí ARCA con el Asistente' : undefined}
+                title={
+                  asistente.estado?.sesionArca === 'viva'
+                    ? undefined
+                    : asistente.estado?.chromeAbierto
+                      ? 'El Chrome de ARCA está abierto pero falta iniciar sesión: usá «Ir a esa ventana», acá arriba.'
+                      : 'Falta abrir el Chrome de ARCA: usá «Abrir ARCA», acá arriba.'
+                }
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <FontAwesomeIcon icon={faPlay} className="h-3 w-3" />
                 {/* El botón dice CUÁNTAS. «Validar» a secas no deja saber si son estas 20 o la de al lado. */}
-                Validar {pendientes.length === 1 ? '1' : `las ${pendientes.length}`}
+                Validar {pendientes.length === 1 ? '1 obra social' : `${pendientes.length} obras sociales`}
               </button>
             ))}
         </div>
@@ -413,6 +413,22 @@ export const PantallaValidarObrasSociales: React.FC<{
 
       {/* Ni un comando de terminal: lo que ve el administrativo es si el Asistente está o no. */}
       <BloqueAsistente uso={asistente} empleadora={empleadora} />
+
+      {/*
+        Pausado por sesión caída. NO es un error y no se ve como uno.
+
+        Lo que se consultó ya está guardado; lo que falta espera. El bloque de arriba ya está
+        mostrando el estado «falta iniciar sesión» con su botón, así que acá solo se dice qué va a
+        pasar cuando eso se resuelva — que es lo que la persona no puede adivinar.
+      */}
+      {pausadoEn.length > 0 && !mirando && (
+        <div className="px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 bg-amber-50/70 dark:bg-amber-950/20 text-[11.5px] text-gray-700 dark:text-gray-300 flex items-center gap-2">
+          <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />
+          <span>
+            Se cortó la sesión de ARCA con <strong>{pausadoEn.length}</strong> sin consultar. Lo ya validado quedó guardado. <strong>Sigue solo</strong> apenas vuelvas a entrar en esa ventana.
+          </span>
+        </div>
+      )}
 
       {/* Barra de progreso: solo mientras corre. Sin nada que mirar es decoración. */}
       {mirando && total > 0 && (
@@ -434,61 +450,6 @@ export const PantallaValidarObrasSociales: React.FC<{
             Los contratos elegidos son de <strong>más de una empleadora</strong>, o todavía no tienen una asignada. La obra social se valida contra el CUIT que la declara, así que la tanda tiene que ser
             de una sola: elegí la empleadora en las pestañas de arriba —o asignásela a estos contratos— y volvé a intentar.
           </span>
-        </div>
-      )}
-
-      {/* ── El camino manual: existe, funciona, y no compite con el principal ── */}
-      {manual && empresaId && (
-        <div className="m-4 rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2.5">
-          <p className="text-[12px] font-semibold text-gray-800 dark:text-gray-100">Cargar a mano</p>
-          <p className="text-[11.5px] text-gray-500 dark:text-gray-400">
-            El respaldo para cuando el script no está disponible —otra máquina, otra persona, un navegador que no es Chrome—. Cargá los CUIL en ARCA uno por uno y pegá acá el resultado, una línea por
-            persona. También se puede contestar fila por fila en la tabla de abajo.
-          </p>
-          <textarea
-            value={pegado}
-            onChange={(e) => {
-              setPegado(e.target.value);
-              // Cambiar el pegado invalida lo previsualizado: confirmar algo calculado sobre otro
-              // texto aplicaría algo distinto de lo que se está mirando.
-              setPrevisualizacion(null);
-            }}
-            placeholder="CUIL,RNOS — una línea por persona. El RNOS vacío significa que ARCA no devolvió ninguna."
-            className="input-field w-full text-xs font-mono"
-            rows={4}
-          />
-          {previsualizacion ? (
-            <div className="rounded-md border border-blue-200 dark:border-blue-900/60 bg-blue-50/60 dark:bg-blue-950/20 p-2.5 space-y-2">
-              <ul className="text-[11.5px] text-gray-700 dark:text-gray-300 space-y-1">
-                {previsualizacion.lineas.map((l, i) => (
-                  <li key={i} className={i === 0 ? 'font-semibold text-gray-800 dark:text-gray-100' : 'text-amber-700 dark:text-amber-400'}>
-                    {l}
-                  </li>
-                ))}
-              </ul>
-              <div className="flex items-center gap-2 flex-wrap">
-                <button type="button" disabled={aplicando || previsualizacion.aplicables === 0} onClick={confirmar} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
-                  {aplicando ? <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3" /> : <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />}
-                  Confirmar y aplicar
-                </button>
-                <button type="button" disabled={aplicando} onClick={() => setPrevisualizacion(null)} className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button type="button" disabled={aplicando || !pegado.trim()} onClick={previsualizar} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
-              {aplicando ? <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3" /> : <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />}
-              Revisar lo que devolvió ARCA
-            </button>
-          )}
-          {resumen && (
-            <ul className="text-[11.5px] text-gray-700 dark:text-gray-300 space-y-1">
-              {resumen.map((l, i) => (
-                <li key={i}>{l}</li>
-              ))}
-            </ul>
-          )}
         </div>
       )}
 
@@ -514,7 +475,6 @@ export const PantallaValidarObrasSociales: React.FC<{
             ) : (
               visibles.map((f) => {
                 const k = clave(f.row);
-                const est = estados[k] || {};
                 const sugerido = f.valores.rnosSugerido ? `${f.valores.rnosSugerido}${f.valores.nombreObraSocialSugerida ? ` · ${f.valores.nombreObraSocialSugerida}` : ''}` : '';
                 return (
                   <tr key={k} className="border-b border-gray-100 dark:border-gray-700/60 align-middle">
@@ -524,13 +484,14 @@ export const PantallaValidarObrasSociales: React.FC<{
                     </td>
                     <td className="px-3 py-2.5 text-[11.5px] text-gray-500 dark:text-gray-400 font-mono">{sugerido || <span className="text-amber-700 dark:text-amber-400">sin default · el convenio no tiene obra social</span>}</td>
                     <td className="px-3 py-2.5">
-                      {est.error ? (
-                        <span className="text-[11.5px] text-red-600 dark:text-red-400 inline-flex items-start gap-1.5">
-                          <FontAwesomeIcon icon={faXmark} className="h-3 w-3 mt-0.5 shrink-0" />
-                          {est.error}
-                        </span>
-                      ) : est.guardando ? (
-                        <FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3 text-blue-500" />
+                      {/*
+                        Si esta corrida tocó esta fila, se muestra lo que la corrida dijo — incluso
+                        después de recargar el listado. El estado recargado diría «afiliación propia»
+                        y perdería el dato que importa revisar: DE QUÉ a qué cambió. Ese registro
+                        tiene que sobrevivir hasta que se cierre la pantalla.
+                      */}
+                      {enVivo[soloDigitos(f.row.cuit || '')] ? (
+                        <CeldaEnVivo v={enVivo[soloDigitos(f.row.cuit || '')]} porDefecto={f.valores.rnosSugerido || ''} />
                       ) : f.valores.constatacion === 'afiliada' ? (
                         <span className="text-[11.5px] text-green-700 dark:text-green-400 font-mono inline-flex items-center gap-1.5">
                           <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />
@@ -547,33 +508,8 @@ export const PantallaValidarObrasSociales: React.FC<{
                           <FontAwesomeIcon icon={faCheck} className="h-3 w-3 text-green-600 dark:text-green-400" />
                           sin afiliación → queda <span className="font-mono">{f.valores.rnosSugerido || '—'}</span>
                         </span>
-                      ) : mirando ? (
-                        /* Lo que el Asistente fue contestando, todavía sin guardar. El estado real de la fila
-                           llega después, cuando se aplica el lote y `filas` se recarga. */
-                        (() => {
-                          const v = enVivo[soloDigitos(f.row.cuit || '')];
-                          if (v?.estado === 'listo')
-                            return (
-                              <span className="text-[11.5px] text-green-700 dark:text-green-400 inline-flex items-center gap-1.5">
-                                <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />
-                                {v.rnos ? <span className="font-mono">{v.rnos} · afiliación propia</span> : <>sin afiliación → queda <span className="font-mono">{f.valores.rnosSugerido || '—'}</span></>}
-                              </span>
-                            );
-                          if (v?.estado === 'error') return <span className="text-[11.5px] text-red-600 dark:text-red-400">ARCA no devolvió fila</span>;
-                          if (v?.estado === 'consultando') return <span className="text-[11px] rounded-full px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900">consultando…</span>;
-                          return <span className="text-[11px] text-gray-400 dark:text-gray-500">en cola</span>;
-                        })()
-                      ) : manual ? (
-                        <div className="flex items-center gap-2 min-w-[220px]">
-                          <div className="flex-1">
-                            <PickerFila catalogo={catalogo} onElegir={(os) => guardar(f, { obraSocial: os })} />
-                          </div>
-                          <button type="button" onClick={() => guardar(f, { noFigura: true })} title="ARCA no devolvió ninguna: rige la del convenio" className="shrink-0 text-[11px] px-2 py-1.5 rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-blue-500 hover:text-blue-600 transition-colors">
-                            No tiene
-                          </button>
-                        </div>
                       ) : (
-                        <span className="text-[11px] rounded-full px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/70">pendiente</span>
+                        <CeldaEnVivo v={enVivo[soloDigitos(f.row.cuit || '')]} porDefecto={f.valores.rnosSugerido || ''} />
                       )}
                     </td>
                   </tr>
@@ -590,7 +526,11 @@ export const PantallaValidarObrasSociales: React.FC<{
           <>Los {total} contrato{total === 1 ? '' : 's'} quedaron con su obra social fija y con fecha. La pantalla de ARCA quedó limpia.</>
         ) : mirando ? (
           <>
-            {conAfiliacion} con obra social propia · {sinAfiliacion} sin afiliación · {pendientes.length} por consultar
+            {conAfiliacion} con obra social propia · {sinAfiliacion} sin afiliación · {Math.max(0, total - resueltas)} por consultar
+          </>
+        ) : fallidos.length > 0 ? (
+          <>
+            {fallidos.length} sin validar por el motivo que dice cada fila. Lo demás quedó guardado.
           </>
         ) : (
           <>Se guardan solas al llegar. Nada se pisa sin mostrarte antes qué cambia.</>

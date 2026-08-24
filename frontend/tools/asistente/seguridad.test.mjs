@@ -112,7 +112,7 @@ describe("la superficie es chica y fija", () => {
 
   it("las operaciones son exactamente las que están documentadas", () => {
     const rutas = [...CODIGO.matchAll(/ruta === "([^"]+)"/g)].map((m) => m[1]).sort();
-    assert.deepEqual(rutas, ["/chrome", "/chrome/ruta", "/detener", "/emparejar", "/estado", "/progreso", "/registrar-obras-sociales", "/validar"]);
+    assert.deepEqual(rutas, ["/chrome", "/chrome/focus", "/chrome/ruta", "/detener", "/emparejar", "/estado", "/progreso", "/registrar-obras-sociales", "/validar"]);
   });
 
   /**

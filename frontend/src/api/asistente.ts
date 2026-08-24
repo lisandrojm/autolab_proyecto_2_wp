@@ -88,6 +88,19 @@ export const asistenteAPI = {
   /** Abre el Chrome de ARCA. Idempotente: si ya está, devuelve `yaEstaba`. */
   abrirChrome: () => pedir<EstadoAsistente & { yaEstaba: boolean }>('/chrome', { method: 'POST' }),
 
+  /**
+   * Trae al frente la ventana de ARCA que ya está abierta.
+   *
+   * Es la acción del estado más frecuente —«Chrome abierto, falta iniciar sesión»—, donde antes solo
+   * había un botón que decía «Ya está abierto»: una respuesta a una pregunta que nadie hizo. Una
+   * página web no puede enfocar una ventana del sistema, así que sin este endpoint ese estado se
+   * quedaba sin ninguna acción posible.
+   *
+   * `enfocada: false` significa que no se pudo levantar la ventana, no que algo se rompió: la ventana
+   * sigue existiendo y la persona puede ir a mano. La pantalla dice cuál es igual.
+   */
+  enfocarChrome: () => pedir<EstadoAsistente & { enfocada: boolean }>('/chrome/focus', { method: 'POST' }),
+
   /** Arranca la corrida. Vuelve enseguida: lo que tarda se sigue por `progreso()`. */
   validar: (personas: Array<{ cuil: string }>) => pedir<{ arrancada: true; total: number }>('/validar', { method: 'POST', body: JSON.stringify({ personas }) }),
 

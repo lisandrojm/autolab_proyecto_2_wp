@@ -1348,6 +1348,30 @@ export const ContractBulkAfipTab: React.FC<{
    * empresa es justamente cómo se les asigna una en masa, que es el paso anterior a poder validarlas.
    */
   const seleccionadosValidables = useMemo(() => seleccionados.filter((x) => !!x.row.empresaContratoId), [seleccionados]);
+
+  /**
+   * TODO lo que se puede validar de lo que se está mirando, sin haber tildado nada.
+   *
+   * Es el mismo corte que `countSinConstatar` —misma función, mismos filtros— pero devolviendo las
+   * filas y no el número: el contador y el botón no pueden discrepar.
+   */
+  const pendientesValidables = useMemo(
+    () => rowsPorFiltrosComunes.filter((x) => x.row._tipo === 'alta_temprana_afip' && !!x.row.empresaContratoId && estadoObraSocial(x.row, resolveAfipValues(x.row, afipCat)) === 'sin_validar'),
+    [rowsPorFiltrosComunes, afipCat],
+  );
+
+  /**
+   * A quiénes agarra el botón: LA SELECCIÓN ACOTA, NO HABILITA.
+   *
+   * Antes el botón exigía tildar filas y quedaba deshabilitado con el hover «tildá los contratos que
+   * ya la tengan y usá este botón». Con 20 pendientes que YA tenían empleadora, eso era pedirle a la
+   * persona que tilde 20 casillas para solicitar algo que el sistema ya sabía que había que hacer —y
+   * la condición del hover se cumplía en las 20, así que el mensaje además no explicaba nada.
+   *
+   * Ahora arranca habilitado sobre todos los pendientes. Tildar sirve para hacer MENOS, que es el
+   * caso raro, y por eso es el que pide un gesto extra.
+   */
+  const objetivoValidacion = useMemo(() => (seleccionados.length > 0 ? seleccionadosValidables : pendientesValidables), [seleccionados, seleccionadosValidables, pendientesValidables]);
   /** Aplica en la tabla (y en la caché) los cambios de una asignación masiva de empresa. */
   const aplicarPatchesEmpresa = useCallback(
     (patches: { row: ContractOverviewRow; patch: Partial<ContractOverviewRow> }[]) => {
@@ -1504,7 +1528,7 @@ export const ContractBulkAfipTab: React.FC<{
               <span
                 title={`${countObraSocialValidadas} con la obra social validada contra ARCA · ${countSinConstatar} sin validar${
                   countSinEmpleadora > 0 ? ` (de esas, ${countSinEmpleadora} esperan que se les elija la empleadora)` : ''
-                }. Para validar: tildá las filas y usá «Validar obras sociales».`}
+                }. «Validar obras sociales» agarra a todas las pendientes; tildá filas solo si querés validar menos.`}
                 className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
               >
                 <FontAwesomeIcon icon={faStethoscope} className="h-3 w-3" />
@@ -1524,22 +1548,27 @@ export const ContractBulkAfipTab: React.FC<{
 
             <button
               type="button"
-              disabled={seleccionadosValidables.length === 0}
-              onClick={() => setLoteObrasSociales(new Set(seleccionadosValidables.map((x) => rowKey(x.row))))}
-              /* Deshabilitado, el hover tiene que decir el REQUISITO, no solo "tildá algo": la obra
-                 social se consulta con el CUIT de la empleadora, así que sin Empresa Contrato no hay
-                 validación posible. Es el motivo por el que un contrato tildado no suma al contador. */
+              /* Deshabilitado SOLO si no hay a quién validar. Y ahí el hover dice por qué es cero, que
+                 casi siempre es «les falta la empleadora» — un dato accionable, no una instrucción. */
+              disabled={objetivoValidacion.length === 0}
+              onClick={() => setLoteObrasSociales(new Set(objetivoValidacion.map((x) => rowKey(x.row))))}
               title={
-                seleccionados.length === 0
-                  ? 'Para validar obras sociales, el contrato tiene que tener asignada una Empresa Contrato: la obra social se valida contra el CUIT de la empleadora. Tildá los contratos que ya la tengan y usá este botón.'
-                  : seleccionadosValidables.length === 0
-                    ? 'Ninguno de los contratos tildados tiene Empresa Contrato. Para poder validar la obra social hay que asignarle una empresa al contrato (la validación va contra el CUIT de la empleadora): elegila arriba, en «Empresa Contrato», y después validá.'
-                    : `Abre el panel para validar la obra social de ${seleccionadosValidables.length} contrato(s): copiás los CUIL, los corrés en ARCA y pegás el resultado.`
+                objetivoValidacion.length > 0
+                  ? seleccionados.length > 0
+                    ? `Valida la obra social de los ${objetivoValidacion.length} contratos tildados que tienen Empresa Contrato.`
+                    : `Valida las ${objetivoValidacion.length} obras sociales pendientes que se están mirando. Tildá filas si querés validar solo algunas.`
+                  : seleccionados.length > 0
+                    ? 'Ninguno de los contratos tildados tiene Empresa Contrato. La obra social se valida contra el CUIT de la empleadora: asignásela arriba, en «Empresa Contrato».'
+                    : countSinEmpleadora > 0
+                      ? `Los ${countSinEmpleadora} contratos sin validar no tienen Empresa Contrato asignada. La obra social se valida contra el CUIT de la empleadora.`
+                      : 'No hay obras sociales pendientes de validar en lo que se está mirando.'
               }
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
             >
               <FontAwesomeIcon icon={faStethoscope} className="h-3.5 w-3.5" />
-              Validar obras sociales{seleccionadosValidables.length > 0 ? ` (${seleccionadosValidables.length})` : ''}
+              {/* El número va ADENTRO de la etiqueta: «Validar obras sociales» a secas no deja saber si
+                  son estas 20 o alguna otra cosa, y ese es justamente el dato que decide si apretarlo. */}
+              {objetivoValidacion.length > 0 ? `Validar ${objetivoValidacion.length} obras sociales` : 'Validar obras sociales'}
             </button>
             {/* Mismo tono que el texto del botón al que acompaña: en azul se leía como otra acción,
                 independiente de «Validar obras sociales», y no como su explicación. */}
@@ -1979,7 +2008,6 @@ export const ContractBulkAfipTab: React.FC<{
             empresaId={empresaDelLote || undefined}
             onRefrescar={() => load(true)}
             onLoteAplicado={() => load(true)}
-            onGuardado={(row, patch) => aplicarCambio(row, patch)}
           />
         </Modal>
       )}

@@ -91,6 +91,93 @@ export async function estadoSesionArca() {
 }
 
 /**
+ * Trae al frente la ventana de ARCA que ya está abierta.
+ *
+ * POR QUÉ HACE FALTA UN ENDPOINT PARA ESTO
+ *
+ * El estado más frecuente no es «falta abrir Chrome» sino «Chrome está abierto y falta loguearse»,
+ * y ahí la ventana suele estar detrás de todo. Sin esto, la única acción posible era un botón que
+ * decía «Ya está abierto» — una respuesta, no una acción. La persona sabe QUÉ le falta y no tiene
+ * cómo llegar; el navegador no se puede enfocar desde una página web.
+ *
+ * Se hace en dos pasos y los dos importan: `Page.bringToFront` por CDP levanta la VENTANA, y
+ * `Target.activateTarget` elige la PESTAÑA correcta dentro de ella. Traer al frente una ventana
+ * parada en otra pestaña deja a la persona igual de perdida.
+ *
+ * Se prefiere una pestaña de AFIP si hay alguna; si no, la primera que haya. Ante cualquier fallo se
+ * devuelve `{ enfocada: false }` en vez de tirar: no poder enfocar es una molestia, no un error que
+ * justifique una pantalla roja — la ventana existe y la persona puede ir a mano.
+ */
+/**
+ * Las pestañas reales del Chrome de ARCA.
+ *
+ * Se filtra por `type === "page"`: `/json/list` también devuelve service workers y extensiones, que
+ * no son ventanas y no se pueden enfocar ni mostrar.
+ */
+async function pestañas() {
+  try {
+    const res = await fetch(`${CDP_URL}/json/list`, { signal: AbortSignal.timeout(1500) });
+    const lista = await res.json();
+    return (Array.isArray(lista) ? lista : []).filter((p) => p.type === "page");
+  } catch {
+    return [];
+  }
+}
+
+export async function enfocarChrome() {
+  if (!(await chromeAbierto())) return { enfocada: false, motivo: "chrome_cerrado" };
+  try {
+    const abiertas = await pestañas();
+    const elegida = abiertas.find((p) => /afip\.gob\.ar/i.test(String(p.url || ""))) || abiertas[0];
+    if (!elegida) return { enfocada: false, motivo: "sin_pestanas" };
+
+    // Paso 1, universal y sin dependencias: elegir la PESTAÑA. `/json/activate/<id>` es el atajo HTTP
+    // de `Target.activateTarget`, así que no hace falta abrir un websocket — que además no se podría:
+    // el binario corre sobre Node 18, donde `WebSocket` global todavía no existe.
+    await fetch(`${CDP_URL}/json/activate/${elegida.id}`, { signal: AbortSignal.timeout(1500) });
+
+    // Paso 2: levantar la VENTANA por encima del resto de las aplicaciones. Eso ya no es CDP —Chrome
+    // no expone nada que suba su propia ventana en el escritorio— así que lo hace el sistema.
+    return { enfocada: await levantarVentana(elegida.url), url: elegida.url };
+  } catch {
+    return { enfocada: false, motivo: "error" };
+  }
+}
+
+/**
+ * Sube la ventana de Chrome por encima de las demás aplicaciones.
+ *
+ * En macOS `open -a` activa la app y listo. En Windows y Linux se relanza el binario contra el MISMO
+ * `--user-data-dir`: Chrome es de instancia única, así que el segundo proceso le pasa el pedido al
+ * que ya corre y ese levanta la ventana. Va con la URL de la pestaña elegida —y no vacío— porque sin
+ * URL Chrome abre una pestaña nueva en blanco y tapa justo la que se quería mostrar.
+ *
+ * Lo que esto NO garantiza, dicho para que sea una decisión: Chrome puede terminar abriendo una
+ * segunda pestaña en la misma dirección en vez de reusar la que ya estaba. Dos pestañas de ARCA es un
+ * costo menor frente a que la persona no encuentre la ventana; y el texto de la pantalla igual dice
+ * cuál es la ventana, así que el enfoque es una ayuda, nunca el único camino.
+ *
+ * Devuelve `false` en vez de tirar: no poder enfocar es una molestia, no un error. La ventana existe.
+ */
+async function levantarVentana(url) {
+  const binario = rutaChrome();
+  try {
+    if (process.platform === "darwin") {
+      // De ".../Google Chrome.app/Contents/MacOS/Google Chrome" al .app, que es lo que `open -a` toma.
+      const app = binario.replace(/\.app\/Contents\/MacOS\/.*$/, ".app");
+      if (!app.endsWith(".app")) return false;
+      spawn("open", ["-a", app], { detached: true, stdio: "ignore" }).unref();
+      return true;
+    }
+    if (!binario) return false;
+    spawn(binario, [`--user-data-dir=${PERFIL}`, url], { detached: true, stdio: "ignore" }).unref();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Abre el Chrome de ARCA. IDEMPOTENTE: si ya está, no abre otro.
  *
  * Abrir un segundo Chrome sobre el mismo `--user-data-dir` no levanta una instancia nueva: se lo pasa
@@ -98,7 +185,30 @@ export async function estadoSesionArca() {
  * ningún puerto, con el Asistente informando que todo salió bien.
  */
 export async function abrirChrome() {
-  if (await chromeAbierto()) return { yaEstaba: true };
+  /*
+    "El puerto contesta" no es lo mismo que "hay una ventana".
+
+    Un Chrome al que le cerraron todas las ventanas sigue vivo y sigue atendiendo el puerto de
+    depuración, pero con CERO pestañas. Ese estado era un callejón sin salida perfecto: `/estado`
+    informaba `chromeAbierto: true`, la pantalla decía «está abierto, falta iniciar sesión», «Abrir
+    ARCA» contestaba `yaEstaba: true` sin abrir nada, y «Ir a esa ventana» no encontraba ninguna
+    ventana que traer al frente. Tres afirmaciones correctas por separado y ninguna salida.
+
+    Con pestañas no hay nada que hacer; sin pestañas se relanza igual, y como Chrome es de instancia
+    única el proceso que ya corre abre la ventana en vez de arrancar un segundo navegador.
+  */
+  if (await chromeAbierto()) {
+    if ((await pestañas()).length > 0) return { yaEstaba: true };
+    const binario = rutaChrome();
+    if (binario) {
+      spawn(binario, [`--user-data-dir=${PERFIL}`, INICIO], { detached: true, stdio: "ignore" }).unref();
+      for (let i = 0; i < 20; i++) {
+        if ((await pestañas()).length > 0) return { yaEstaba: true, ventanaRecuperada: true };
+        await new Promise((r) => setTimeout(r, 250));
+      }
+    }
+    return { yaEstaba: true, sinVentana: true };
+  }
 
   const binario = rutaChrome();
   if (!binario) {
