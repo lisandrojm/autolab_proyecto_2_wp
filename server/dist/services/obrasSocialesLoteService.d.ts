@@ -111,4 +111,5 @@ export declare function pendientesObraSocial(tenantObjectId: unknown, empresaId:
     contratoId: string;
     cuil: string;
     nombre: string;
+    userId: string;
 }>>;

@@ -50,6 +50,8 @@ export interface IArcaObrasSocialesLog extends Document {
   /** Si la corrida entera se cayó (no pudo abrir el navegador, no pudo entrar a ARCA…). */
   error?: string;
   detalle: Array<{ cuil: string; rnos?: string; error?: string }>;
+  /** Nombres que se corrigieron con los de ARCA durante esta corrida. */
+  renombrados: Array<{ cuil?: string; antes: string; ahora: string }>;
   createdAt: Date;
 }
 
@@ -71,6 +73,7 @@ const schema = new Schema<IArcaObrasSocialesLog>(
     duracionMs: { type: Number, default: 0 },
     error: { type: String },
     detalle: [{ _id: false, cuil: String, rnos: String, error: String }],
+    renombrados: [{ _id: false, cuil: String, antes: String, ahora: String }],
     createdAt: { type: Date, default: Date.now, expires: 60 * 60 * 24 * 30 },
   },
   { collection: "arca_obras_sociales_logs" },

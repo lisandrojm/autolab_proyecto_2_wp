@@ -19,6 +19,7 @@ import { requireTenant } from "../middleware/tenant.js";
 import { requireAnyRole } from "../middleware/requireAnyRole.js";
 import { Types } from "mongoose";
 import { aplicarLoteObrasSociales, pendientesObraSocial, LoteObrasSocialesError } from "../services/obrasSocialesLoteService.js";
+import { confirmarNombresConElPadron, userIdsDeCuils } from "../services/arca/nombreArca.js";
 import { Area } from "../models/Area.js";
 import { Position } from "../models/Position.js";
 import { Level } from "../models/Level.js";
@@ -1742,7 +1743,27 @@ router.post("/projects/obras-sociales/aplicar-lote", requireTenant, authenticate
             origen: "panel",
             usuarioId: req.user?.userId,
         });
-        res.json(resultado);
+        /*
+          El mismo chequeo de nombre que hace la corrida del servidor, para que los dos caminos dejen a
+          la persona igual: por acá entra el Asistente, que lee las obras sociales desde el Chrome de
+          alguien y después manda las filas.
+    
+          No en la previsualización: previsualizar no escribe nada, y confirmar un nombre escribe.
+          Se espera el resultado (el cliente refresca enseguida y con `void` vería el nombre viejo), pero
+          cualquier fallo se traga: corregir un nombre no puede hacer fallar la aplicación del lote.
+        */
+        let renombrados = [];
+        if (req.body?.previsualizar !== true) {
+            try {
+                const cuils = (Array.isArray(req.body?.filas) ? req.body.filas : []).map((f) => String(f?.cuil || ""));
+                const userIds = await userIdsDeCuils(req.tenantObjectId, cuils);
+                renombrados = (await confirmarNombresConElPadron({ tenantObjectId: req.tenantObjectId, tenantId: String(req.tenantObjectId), userIds })).renombrados;
+            }
+            catch {
+                /* best-effort */
+            }
+        }
+        res.json({ ...resultado, renombrados });
     }
     catch (error) {
         if (error instanceof LoteObrasSocialesError) {
@@ -1780,6 +1801,9 @@ router.post("/contratos/obras-sociales/validar-servidor", requireTenant, authent
             empresaId,
             cuils,
             usuarioId: req.user?.userId,
+            // Las personas de esta corrida: además de la obra social se les confirma el nombre contra el
+            // padrón, con la misma regla que «Validar CUIT».
+            userIds: [...new Set(pendientes.map((p) => p.userId).filter(Boolean))],
         });
         res.json({ arrancada: true, ...r });
     }

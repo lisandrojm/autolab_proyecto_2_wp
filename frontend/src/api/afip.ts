@@ -152,6 +152,8 @@ export interface CorridaObrasSocialesLog {
   /** La corrida entera se cayó. */
   error?: string;
   detalle: Array<{ cuil: string; rnos?: string; error?: string }>;
+  /** Nombres que se corrigieron con los de ARCA durante esta corrida. */
+  renombrados?: Array<{ antes: string; ahora: string }>;
   createdAt: string;
 }
 

@@ -72,7 +72,8 @@ type EnVivo = {
    * uno hay que resolverlo, el otro ya está resuelto.
    */
   sinDeclarar?: boolean;
-  /** El RNOS que devolvió ARCA. Vacío es una RESPUESTA: «no tiene afiliación propia». */
+  
+/** El RNOS que devolvió ARCA. Vacío es una RESPUESTA: «no tiene afiliación propia». */
   rnos?: string;
   antes?: string;
   despues?: string;
@@ -81,6 +82,37 @@ type EnVivo = {
 };
 
 // ─────────────────────────────────────────────────────────────── piezas chicas
+/**
+ * El nombre, y qué dijo ARCA sobre él.
+ *
+ * Tres estados y no dos, porque el que falta es el que genera la duda:
+ *
+ *   corregido  → ámbar, con el nombre viejo tachado al lado. Es un dato de una persona que cambió
+ *                sin que nadie lo escribiera: tiene que verse, y tiene que verse DE QUÉ cambió.
+ *   confirmado → tilde verde a secas. ARCA lo miró y ya estaba bien.
+ *   sin dato   → nada. Todavía no se confirmó, o no se pudo — y eso NO es lo mismo que «está bien»,
+ *                así que no se le pone tilde: un tilde de más miente sobre un dato que se declara
+ *                ante el organismo.
+ */
+const CeldaPersona: React.FC<{ nombre: string; nombreArca?: { antes?: string; ahora?: string } }> = ({ nombre, nombreArca }) => {
+  if (!nombreArca) return <span>{nombre}</span>;
+  if (!nombreArca.antes) {
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        {nombre}
+        <FontAwesomeIcon icon={faCheck} title="El nombre coincide con el que ARCA tiene registrado" className="h-3 w-3 shrink-0 text-green-600 dark:text-green-500" />
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+      <span className="text-amber-700 dark:text-amber-400 font-semibold">{nombreArca.ahora}</span>
+      <FontAwesomeIcon icon={faCheck} title="Nombre corregido con el del Padrón de ARCA" className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-500" />
+      <span className="text-[11px] text-gray-400 line-through">{nombreArca.antes}</span>
+    </span>
+  );
+};
+
 const CeldaCuil: React.FC<{ cuil: string }> = ({ cuil }) => {
   const [copiado, setCopiado] = useState(false);
   if (!cuil) return <span className="text-[11px] text-amber-700 dark:text-amber-400">sin CUIL</span>;
@@ -225,6 +257,16 @@ export const PantallaValidarObrasSociales: React.FC<{
    */
   const [enVivo, setEnVivo] = useState<Record<string, EnVivo>>({});
   const cortarStream = useRef<null | (() => void)>(null);
+  /**
+   * Qué dijo el padrón sobre el nombre de cada persona, por CUIL.
+   *
+   * Se guarda el resultado para las DOS respuestas —«se corrigió» y «ya coincidía»—, porque la
+   * pregunta que se hace quien mira la tabla es «¿me tocó los nombres?», y un blanco no la contesta:
+   * no distingue «estaba bien» de «no se pudo confirmar».
+   */
+  const [nombres, setNombres] = useState<Record<string, { antes?: string; ahora?: string }>>({});
+  /** Espejo del anterior: el aviso se dispara dentro del intervalo, donde el estado todavía no llegó. */
+  const nombresRef = useRef<Record<string, { antes?: string; ahora?: string }>>({});
   /** Marca de tiempo del último evento recibido. Es lo que reinicia la guardia. */
   const [ultimoEvento, setUltimoEvento] = useState(0);
   /**
@@ -404,6 +446,8 @@ export const PantallaValidarObrasSociales: React.FC<{
       setUltimoEvento((n) => n + 1);
 
       const vivo: Record<string, EnVivo> = {};
+      // Se reconstruye en cada vuelta, igual que `vivo`: el seguimiento relee TODOS los eventos.
+      let nuevosNombres: Record<string, { antes?: string; ahora?: string }> | null = null;
       for (const ev of r.eventos as any[]) {
         if (ev.tipo === 'abriendo') setFaseCorrida('Abriendo ARCA en el servidor…');
         else if (ev.tipo === 'conectado') setFaseCorrida('Adentro de ARCA. Buscando la pantalla de altas…');
@@ -413,8 +457,18 @@ export const PantallaValidarObrasSociales: React.FC<{
         else if (ev.tipo === 'guardando') setFaseCorrida('Guardando lo que devolvió ARCA…');
         else if (ev.tipo === 'fallo') setFracaso({ faltaron: total, motivo: ev.mensaje });
         else if (ev.tipo === 'fin' && ev.faltaron > 0) setFracaso({ faltaron: ev.faltaron, motivo: ev.motivo });
+        else if (ev.tipo === 'nombres') {
+          const m: Record<string, { antes?: string; ahora?: string }> = {};
+          for (const c of ev.confirmados || []) m[soloDigitos(c)] = {};
+          for (const r of ev.renombrados || []) m[soloDigitos(r.cuil || '')] = { antes: r.antes, ahora: r.ahora };
+          nuevosNombres = m;
+        }
       }
       setEnVivo(vivo);
+      if (nuevosNombres) {
+        nombresRef.current = nuevosNombres;
+        setNombres(nuevosNombres);
+      }
 
       if (!r.corriendo) {
         window.clearInterval(id);
@@ -423,6 +477,23 @@ export const PantallaValidarObrasSociales: React.FC<{
         setFaseCorrida('');
         onLoteAplicado?.();
         await onRefrescar?.();
+        /*
+          El resumen va AL FINAL y después de refrescar, no cuando llega el evento: mientras la
+          corrida avanza hay una pantalla de progreso que se está mirando, y taparla con un modal a
+          mitad de camino es interrumpir justo lo que se vino a ver.
+
+          El detalle fila por fila queda en la tabla, que no se va; esto es solo el aviso de que
+          pasó, para el que no estaba mirando.
+        */
+        const cambiados = Object.entries(nombresRef.current).filter(([, v]) => v.antes);
+        if (cambiados.length > 0) {
+          const n = cambiados.length;
+          await sweetAlert.warningAlert(
+            `Se corrigi${n === 1 ? 'ó 1 nombre' : `eron ${n} nombres`} con los de ARCA`,
+            `El Padrón tenía registrado otro nombre para est${n === 1 ? 'a persona' : 'as personas'}, y ese es el que vale para el trámite. Quedaron tal cual los devuelve ARCA, en mayúsculas.\n\n` +
+              `Cuáles cambiaron está marcado en ámbar en la columna Persona, con el nombre anterior tachado al lado.`,
+          );
+        }
       }
     }, 2000);
     // Se reusa `cortarStream` para que «Detener» y el desmontaje corten los dos caminos igual.
@@ -513,6 +584,23 @@ export const PantallaValidarObrasSociales: React.FC<{
         }
         onLoteAplicado?.();
         await onRefrescar?.();
+        /*
+          El resumen va AL FINAL y después de refrescar, no cuando llega el evento: mientras la
+          corrida avanza hay una pantalla de progreso que se está mirando, y taparla con un modal a
+          mitad de camino es interrumpir justo lo que se vino a ver.
+
+          El detalle fila por fila queda en la tabla, que no se va; esto es solo el aviso de que
+          pasó, para el que no estaba mirando.
+        */
+        const cambiados = Object.entries(nombresRef.current).filter(([, v]) => v.antes);
+        if (cambiados.length > 0) {
+          const n = cambiados.length;
+          await sweetAlert.warningAlert(
+            `Se corrigi${n === 1 ? 'ó 1 nombre' : `eron ${n} nombres`} con los de ARCA`,
+            `El Padrón tenía registrado otro nombre para est${n === 1 ? 'a persona' : 'as personas'}, y ese es el que vale para el trámite. Quedaron tal cual los devuelve ARCA, en mayúsculas.\n\n` +
+              `Cuáles cambiaron está marcado en ámbar en la columna Persona, con el nombre anterior tachado al lado.`,
+          );
+        }
       }
     });
   };
@@ -838,7 +926,7 @@ export const PantallaValidarObrasSociales: React.FC<{
         </div>
       )}
 
-      {/* ── La tabla ────────────────────────────────────────────────────────── */}
+  {/* ── La tabla ────────────────────────────────────────────────────────── */}
       <div className="overflow-x-auto">
         <table className="w-full text-[13px]">
           <thead>
@@ -863,7 +951,9 @@ export const PantallaValidarObrasSociales: React.FC<{
                 const sugerido = f.valores.rnosSugerido ? `${f.valores.rnosSugerido}${f.valores.nombreObraSocialSugerida ? ` · ${f.valores.nombreObraSocialSugerida}` : ''}` : '';
                 return (
                   <tr key={k} className="border-b border-gray-100 dark:border-gray-700/60 align-middle">
-                    <td className="px-4 py-2.5 text-gray-800 dark:text-gray-200">{f.row.userName}</td>
+                    <td className="px-4 py-2.5 text-gray-800 dark:text-gray-200">
+                      <CeldaPersona nombre={f.row.userName} nombreArca={nombres[soloDigitos(f.row.cuit || '')]} />
+                    </td>
                     <td className="px-3 py-2.5">
                       <CeldaCuil cuil={f.row.cuit || ''} />
                     </td>

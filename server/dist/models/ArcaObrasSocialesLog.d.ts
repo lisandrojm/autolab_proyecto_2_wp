@@ -53,6 +53,12 @@ export interface IArcaObrasSocialesLog extends Document {
         rnos?: string;
         error?: string;
     }>;
+    /** Nombres que se corrigieron con los de ARCA durante esta corrida. */
+    renombrados: Array<{
+        cuil?: string;
+        antes: string;
+        ahora: string;
+    }>;
     createdAt: Date;
 }
 export declare const ArcaObrasSocialesLog: Model<IArcaObrasSocialesLog>;

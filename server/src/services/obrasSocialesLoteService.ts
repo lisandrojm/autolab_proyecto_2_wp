@@ -256,7 +256,7 @@ export async function aplicarLoteObrasSociales(opts: OpcionesLoteOS): Promise<Re
  * del lado del server para que el script no tenga que replicar la regla — replicarla es cómo se
  * termina validando gente que ya estaba, o salteando gente que faltaba.
  */
-export async function pendientesObraSocial(tenantObjectId: unknown, empresaId: string): Promise<Array<{ contratoId: string; cuil: string; nombre: string }>> {
+export async function pendientesObraSocial(tenantObjectId: unknown, empresaId: string): Promise<Array<{ contratoId: string; cuil: string; nombre: string; userId: string }>> {
   if (!Types.ObjectId.isValid(empresaId)) {
     throw new LoteObrasSocialesError("Falta la empleadora: los pendientes son siempre de un CUIT.");
   }
@@ -272,7 +272,10 @@ export async function pendientesObraSocial(tenantObjectId: unknown, empresaId: s
     .select("userId contracts")
     .lean();
 
-  const out: Array<{ contratoId: string; cuil: string; nombre: string }> = [];
+  // `userId` va incluido porque la corrida confirma además el NOMBRE de cada persona contra el
+  // padrón (ver `services/arca/nombreArca.ts`): sin esto habría que volver a resolver CUIT → usuario
+  // del otro lado, que es resolver dos veces lo mismo.
+  const out: Array<{ contratoId: string; cuil: string; nombre: string; userId: string }> = [];
   const vistos = new Set<string>();
   for (const up of ups as any[]) {
     const u = porId.get(String(up.userId));
@@ -286,7 +289,7 @@ export async function pendientesObraSocial(tenantObjectId: unknown, empresaId: s
       // contratos en la misma empleadora. Repetirlo desperdiciaría lugares de la tanda de 10.
       if (vistos.has(cuil)) continue;
       vistos.add(cuil);
-      out.push({ contratoId: String(c._id || ""), cuil, nombre: [u?.firstName, u?.lastName].filter(Boolean).join(" ") });
+      out.push({ contratoId: String(c._id || ""), cuil, nombre: [u?.firstName, u?.lastName].filter(Boolean).join(" "), userId: String(up.userId) });
     }
   }
   return out;

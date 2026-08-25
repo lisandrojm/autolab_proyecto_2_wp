@@ -40,8 +40,45 @@ const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
  * el trámite. Por eso también aparece cuando el nombre no hizo falta cambiarlo — lo que sella es la
  * confirmación contra ARCA, no el cambio.
  */
-const NombreValidadoArca: React.FC<{ ok?: boolean }> = ({ ok }) =>
-  ok ? <FontAwesomeIcon icon={faCircleCheck} title="Nombre tomado del Padrón de ARCA" className="h-3 w-3 shrink-0 text-green-600 dark:text-green-500" /> : null;
+const NombreValidadoArca: React.FC<{ ok?: boolean }> = ({ ok }) => {
+  const [abierto, setAbierto] = useState(false);
+  if (!ok) return null;
+  return (
+    <>
+      <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3 shrink-0 text-green-600 dark:text-green-500" />
+      {/* `stopPropagation` porque la fila entera es clickeable: sin esto, pedir la explicación abriría
+          además el detalle del contrato. */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setAbierto(true);
+        }}
+        title="Qué significa este tilde"
+        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0"
+      >
+        <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+      </button>
+      {abierto && (
+        <Modal isOpen onClose={() => setAbierto(false)} title="Nombre validado con ARCA" size="sm" zIndex={80}>
+          <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300" onClick={(e) => e.stopPropagation()}>
+            <p>
+              Este nombre <strong>es el que ARCA tiene registrado</strong> para el CUIT de la persona. Se trajo del Padrón al validar y se guarda tal cual lo devuelve el organismo — por eso está en
+              mayúsculas y sin acomodar.
+            </p>
+            <p>
+              Si lo que había cargado no coincidía, <strong>se reemplazó por el de ARCA</strong>: estos contratos terminan en un trámite ante el mismo organismo, y un nombre que no coincide con el
+              padrón es el que hace que el alta se rechace.
+            </p>
+            <p className="text-[13px] text-gray-500 dark:text-gray-400">
+              El cambio es sobre la persona, así que se ve también en sus otros contratos. Se vuelve a confirmar cada vez que se valida el CUIT o se validan las obras sociales.
+            </p>
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+};
 // Solo para traducir los convenioIds de la empresa a códigos de CCT y validar la Categoría.
 const conveniosApi = createSimpleCatalogApi('/convenios');
 

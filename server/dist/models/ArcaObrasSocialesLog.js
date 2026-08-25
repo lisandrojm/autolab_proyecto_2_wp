@@ -16,6 +16,7 @@ const schema = new Schema({
     duracionMs: { type: Number, default: 0 },
     error: { type: String },
     detalle: [{ _id: false, cuil: String, rnos: String, error: String }],
+    renombrados: [{ _id: false, cuil: String, antes: String, ahora: String }],
     createdAt: { type: Date, default: Date.now, expires: 60 * 60 * 24 * 30 },
 }, { collection: "arca_obras_sociales_logs" });
 schema.index({ tenantId: 1, createdAt: -1 });

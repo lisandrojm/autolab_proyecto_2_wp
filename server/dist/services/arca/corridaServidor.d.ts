@@ -1,3 +1,4 @@
+import { Renombre } from "./nombreArca.js";
 export type EventoCorrida = {
     tipo: "abriendo";
 } | {
@@ -27,6 +28,10 @@ export type EventoCorrida = {
     total: number;
 } | {
     tipo: "guardando";
+} | {
+    tipo: "nombres";
+    renombrados: Renombre[];
+    confirmados: string[];
 } | {
     tipo: "fin";
     validadas: number;
@@ -63,6 +68,7 @@ export declare function arrancarCorrida(opts: {
     empresaId: string;
     cuils: string[];
     usuarioId?: string;
+    userIds?: string[];
 }): Promise<{
     total: number;
 }>;

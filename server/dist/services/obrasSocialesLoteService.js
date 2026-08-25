@@ -195,6 +195,9 @@ export async function pendientesObraSocial(tenantObjectId, empresaId) {
     })
         .select("userId contracts")
         .lean();
+    // `userId` va incluido porque la corrida confirma además el NOMBRE de cada persona contra el
+    // padrón (ver `services/arca/nombreArca.ts`): sin esto habría que volver a resolver CUIT → usuario
+    // del otro lado, que es resolver dos veces lo mismo.
     const out = [];
     const vistos = new Set();
     for (const up of ups) {
@@ -213,7 +216,7 @@ export async function pendientesObraSocial(tenantObjectId, empresaId) {
             if (vistos.has(cuil))
                 continue;
             vistos.add(cuil);
-            out.push({ contratoId: String(c._id || ""), cuil, nombre: [u?.firstName, u?.lastName].filter(Boolean).join(" ") });
+            out.push({ contratoId: String(c._id || ""), cuil, nombre: [u?.firstName, u?.lastName].filter(Boolean).join(" "), userId: String(up.userId) });
         }
     }
     return out;

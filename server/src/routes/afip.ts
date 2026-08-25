@@ -13,6 +13,7 @@ import UserProject from "../models/UserProject.js";
 import { Info } from "../models/Info.js";
 import { AfipLog } from "../models/AfipLog.js";
 import { ArcaObrasSocialesLog } from "../models/ArcaObrasSocialesLog.js";
+import { aplicarNombreDeArca } from "../services/arca/nombreArca.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { encryptSecret } from "../utils/secretCrypto.js";
@@ -481,50 +482,26 @@ router.post("/consulta-padron/bulk", async (req: AuthenticatedRequest & TenantRe
             if (resultado.estado === "desconocido") {
               console.warn(`AFIP: estado desconocido para CUIT ${cuit} (encontrado=${resultado.encontrado}, faultCode=${resultado.faultCode || "-"}, faultString=${resultado.faultString || "-"}). Raw:`, JSON.stringify(resultado.raw));
             }
-            /*
-              EL NOMBRE DE ARCA MANDA.
-
-              Si lo que ARCA tiene registrado para este CUIT no es lo que hay cargado, gana ARCA y se
-              pisa el nombre de la persona. La razón es que estos contratos terminan en un trámite ante
-              el organismo: un nombre que no coincide con el padrón es el que hace que el alta se
-              rechace, y hasta ahora esa diferencia no se veía en ningún lado — la constancia se
-              archivaba igual, con el nombre viejo.
-
-              SE GUARDA TAL CUAL VIENE, en mayúsculas y sin acomodar nada. Cualquier prolijidad que le
-              agreguemos (capitalizar, reordenar) lo aleja de lo que dice el organismo, que es
-              exactamente el valor que tiene el dato.
-
-              Se sella `nombreValidadoArcaAt` aunque el nombre ya coincidiera: el tilde verde de la
-              tabla afirma «esto es lo que ARCA tiene», no «esto se cambió».
-            */
+            // El nombre de ARCA manda. La regla vive en `services/arca/nombreArca.ts`, compartida con
+            // la validación de obras sociales para que los dos caminos escriban el mismo nombre.
             let renombrado: { antes: string; ahora: string } | undefined;
-            if (resultado.encontrado && resultado.nombre && resultado.apellido) {
-              const idsDeEstaTanda = [...new Set(matches.map((t) => t.userId))];
-              for (const uid of idsDeEstaTanda) {
+            if (resultado.encontrado) {
+              for (const uid of [...new Set(matches.map((t) => t.userId))]) {
                 const u = userById.get(uid);
                 if (!u) continue;
-                const antes = `${u.firstName || ""} ${u.lastName || ""}`.trim();
-                const ahora = `${resultado.nombre} ${resultado.apellido}`.trim();
-                const cambia = (u.firstName || "") !== resultado.nombre || (u.lastName || "") !== resultado.apellido;
-                await User.updateOne(
-                  { _id: uid, tenantId: req.tenantObjectId },
-                  {
-                    $set: {
-                      ...(cambia ? { firstName: resultado.nombre, lastName: resultado.apellido } : {}),
-                      // `metadata.nombre`/`apellido` son la copia que trae FRAME. Si se actualiza solo
-                      // `firstName`/`lastName`, las dos versiones quedan diciendo cosas distintas sobre
-                      // la misma persona y no hay forma de saber cuál se está mirando.
-                      ...(cambia ? { "metadata.nombre": resultado.nombre, "metadata.apellido": resultado.apellido } : {}),
-                      "metadata.nombreValidadoArcaAt": new Date(),
-                    },
-                  },
-                );
-                if (cambia) {
+                const cambio = await aplicarNombreDeArca({
+                  tenantObjectId: req.tenantObjectId,
+                  userId: uid,
+                  cuil: cuit,
+                  actual: { firstName: (u as any).firstName, lastName: (u as any).lastName },
+                  arca: { nombre: resultado.nombre, apellido: resultado.apellido },
+                });
+                if (cambio) {
                   // El cache local se actualiza para que el nombre del JSON que se archiva en Dropbox
-                  // sea el nuevo, y no el que acabamos de reemplazar.
+                  // sea el nuevo, y no el que se acaba de reemplazar.
                   (u as any).firstName = resultado.nombre;
                   (u as any).lastName = resultado.apellido;
-                  renombrado = { antes: antes || "(sin nombre cargado)", ahora };
+                  renombrado = { antes: cambio.antes, ahora: cambio.ahora };
                 }
               }
             }

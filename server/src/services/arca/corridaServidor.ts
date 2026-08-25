@@ -4,6 +4,7 @@ import { Company } from "../../models/Company.js";
 import { ArcaObrasSocialesLog } from "../../models/ArcaObrasSocialesLog.js";
 import { aplicarLoteObrasSociales } from "../obrasSocialesLoteService.js";
 import { abrirSesionArca, credencialesDe } from "./navegador.js";
+import { confirmarNombresConElPadron, Renombre } from "./nombreArca.js";
 
 /**
  * Validar obras sociales contra ARCA desde el SERVIDOR, sin que nadie tenga que instalar nada.
@@ -43,6 +44,7 @@ export type EventoCorrida =
   | { tipo: "resultado"; cuil: string; rnos: string; hechas: number; total: number }
   | { tipo: "error"; cuil: string; motivo?: string; hechas: number; total: number }
   | { tipo: "guardando" }
+  | { tipo: "nombres"; renombrados: Renombre[]; confirmados: string[] }
   | { tipo: "fin"; validadas: number; faltaron: number; motivo: string; detalle: string[] }
   | { tipo: "fallo"; mensaje: string };
 
@@ -88,8 +90,8 @@ export function detenerCorrida(tenantId: string): boolean {
  * No se espera a que termine: son minutos, y un request HTTP colgado ese tiempo se corta solo en
  * cualquier proxy. El progreso se sigue por `corridaDe`.
  */
-export async function arrancarCorrida(opts: { tenantId: string; tenantObjectId: any; empresaId: string; cuils: string[]; usuarioId?: string }): Promise<{ total: number }> {
-  const { tenantId, tenantObjectId, empresaId, cuils, usuarioId } = opts;
+export async function arrancarCorrida(opts: { tenantId: string; tenantObjectId: any; empresaId: string; cuils: string[]; usuarioId?: string; userIds?: string[] }): Promise<{ total: number }> {
+  const { tenantId, tenantObjectId, empresaId, cuils, usuarioId, userIds = [] } = opts;
 
   if (corriendo(tenantId)) throw new Error("Ya hay una validación en curso.");
   if (cuils.length === 0) throw new Error("No hay ninguna persona para validar.");
@@ -105,9 +107,28 @@ export async function arrancarCorrida(opts: { tenantId: string; tenantObjectId: 
   corridas.set(tenantId, corrida);
   const emitir = (e: EventoCorrida) => corrida.eventos.push(e);
 
+  /*
+    LOS NOMBRES SE CONFIRMAN EN PARALELO, NO AL FINAL.
+
+    Cada persona se confirma con una consulta al padrón (ver `nombreArca.ts`) — la misma verificación
+    que hace «Validar CUIT». Hacerla después de la corrida sumaba su tiempo al de ARCA y se notaba:
+    la pantalla ya había terminado de leer obras sociales y seguía esperando.
+
+    Son dos servicios distintos del organismo —webservice por certificado contra navegador con clave
+    fiscal— así que no se estorban, y escriben en documentos distintos: esto toca `User`, la corrida
+    toca `UserProject`. Arranca acá, corre mientras ARCA trabaja, y se recoge al final: para cuando la
+    corrida termina de leer a veinte personas, esto hace rato que está listo.
+  */
+  const nombresEnCurso = confirmarNombresConElPadron({ tenantObjectId, tenantId, userIds }).catch(() => ({
+    renombrados: [] as Renombre[],
+    confirmados: [] as string[],
+    consultados: 0,
+  }));
+
   // Sin `await`: la corrida sigue por su cuenta y este request vuelve ya.
   void (async () => {
     let sesion: Awaited<ReturnType<typeof abrirSesionArca>> | null = null;
+    let renombrados: Renombre[] = [];
     // Lo que va al log. Se completa a medida que se sabe, para que una corrida que se cae a la mitad
     // igual deje registro: es JUSTO la que hay que poder mirar después.
     const log = {
@@ -145,6 +166,12 @@ export async function arrancarCorrida(opts: { tenantId: string; tenantObjectId: 
       log.errores = r.errores?.length || 0;
       log.faltaron = r.faltaron;
       log.motivo = motivoDeQueFaltaran(r);
+
+      // Ya terminó ARCA: los nombres se recogen acá, y a esta altura la promesa está resuelta hace
+      // rato. El `await` es de sincronización, no de espera.
+      const nombres = await nombresEnCurso;
+      renombrados = nombres.renombrados;
+      emitir({ tipo: "nombres", renombrados: nombres.renombrados, confirmados: nombres.confirmados });
 
       if (r.items.length > 0) {
         emitir({ tipo: "guardando" });
@@ -195,6 +222,7 @@ export async function arrancarCorrida(opts: { tenantId: string; tenantObjectId: 
         seLogueo: log.seLogueo,
         duracionMs: Date.now() - corrida.arrancadaEl.getTime(),
         error: log.error,
+        renombrados,
         detalle: detallePorPersona(corrida.eventos),
       }).catch(() => {});
     }

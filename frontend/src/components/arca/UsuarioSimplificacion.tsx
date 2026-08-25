@@ -141,6 +141,18 @@ export const UsuarioSimplificacion: React.FC<{
                       Duró {Math.round(log.duracionMs / 1000)} s · {log.seLogueo ? 'tuvo que iniciar sesión' : 'usó la sesión guardada'}
                       {log.empresaCuit ? ` · CUIT ${log.empresaCuit}` : ''}
                     </p>
+                    {(log.renombrados?.length || 0) > 0 && (
+                      <div className="rounded-lg border border-amber-200 dark:border-amber-800/70 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2">
+                        <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">Nombres corregidos con los de ARCA</p>
+                        <ul className="mt-1 space-y-0.5">
+                          {log.renombrados!.map((r, i) => (
+                            <li key={i} className="text-[11.5px] text-gray-700 dark:text-gray-300">
+                              <span className="text-gray-400 line-through">{r.antes}</span> <span className="text-gray-400">→</span> <span className="font-semibold">{r.ahora}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                     {log.detalle.length === 0 ? (
                       <p className="text-[11px] text-gray-400">No se llegó a leer a nadie.</p>
                     ) : (
