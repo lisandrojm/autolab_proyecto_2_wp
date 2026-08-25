@@ -23,4 +23,4 @@
  * como efecto del import. Un dato que existe para ser verificado tiene que poder leerse sin
  * consecuencias.
  */
-export const OPERACIONES = ["/estado", "/progreso", "/chrome", "/chrome/focus", "/chrome/ruta", "/validar", "/registrar-obras-sociales", "/detener"];
+export const OPERACIONES = ["/estado", "/progreso", "/chrome", "/chrome/focus", "/chrome/ruta", "/inicio-automatico", "/validar", "/registrar-obras-sociales", "/detener"];

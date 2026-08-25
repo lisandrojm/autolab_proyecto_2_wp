@@ -10,6 +10,7 @@ import { Project } from "../models/Project.js";
 import { Client } from "../models/Client.js";
 import { User } from "../models/User.js";
 import { Info } from "../models/Info.js";
+import { agruparContratosPorDocumento, partirClaveDocumento } from "../utils/agruparContratos.js";
 import { buscarCategoriaCompatPorLegacyId } from "../utils/categoriaCompat.js";
 import UserProject from "../models/UserProject.js";
 
@@ -1779,6 +1780,95 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/obra-social"
     });
   } catch (error) {
     console.error("Update contract obra-social error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * POST /projects/obras-sociales/quitar-lote
+ *
+ * Saca la obra social de varios contratos de una vez. Body:
+ *   { contratos: [{ projectId, userId, contratoId }] }
+ *
+ * Cada contrato vuelve a quedar SIN VALIDAR: el valor lo resuelve otra vez la cascada del convenio y
+ * el TXT no se puede generar hasta validarlo de nuevo en ARCA.
+ *
+ * POR QUÉ ES UN ENDPOINT Y NO UN BUCLE EN EL CLIENTE
+ *
+ * Es el mismo argumento que ya justifica `aplicar-lote`, y acá pesa más: veinte requests desde el
+ * navegador dejan el resultado a mitad de camino ante cualquier corte, y sin forma de saber cuáles
+ * entraron. En una operación que BORRA, quedarse sin saber qué se borró es el peor final posible.
+ *
+ * SIEMPRE FUERZA, y por eso el pedido tiene que llegar confirmado desde la UI. Lo que ARCA devolvió
+ * queda fijo (ver el PATCH de más arriba, que contesta 409); quitar es justamente la puerta de salida
+ * cuando el dato quedó mal, así que exigir `forzar` acá sería pedir dos veces lo mismo. Lo que no se
+ * pierde es información de ARCA: el valor lo devuelve el organismo, no se carga a mano, y volver a
+ * validar lo recupera.
+ *
+ * Devuelve `quitados` y el detalle de los que no se pudieron tocar, para que la pantalla pueda decir
+ * exactamente qué pasó con cada uno en vez de un "listo" que puede ser mentira.
+ */
+router.post("/projects/obras-sociales/quitar-lote", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const pedidos = Array.isArray(req.body?.contratos) ? req.body.contratos : [];
+    if (pedidos.length === 0) {
+      res.status(400).json({ error: "No vino ningún contrato." });
+      return;
+    }
+
+    const quitados: Array<{ projectId: string; userId: string; contratoId: string }> = [];
+    const fallidos: Array<{ projectId: string; userId: string; contratoId: string; motivo: string }> = [];
+
+    // Ver `agruparContratosPorDocumento`: agrupar no es una optimización, es lo que evita que una
+    // operación masiva pierda cambios en silencio. Está aparte para poder probarlo sin base de datos.
+    const { porDocumento, invalidos } = agruparContratosPorDocumento(pedidos);
+    for (const it of invalidos) fallidos.push({ ...it, motivo: "Faltan datos del contrato." });
+
+    for (const [clave, items] of porDocumento) {
+      const { projectId, userId } = partirClaveDocumento(clave);
+      const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("_id").lean();
+      if (!project) {
+        for (const it of items) fallidos.push({ ...it, motivo: "El proyecto no existe o es de otro tenant." });
+        continue;
+      }
+      const up = await UserProject.findOne({ projectId, userId });
+      if (!up) {
+        for (const it of items) fallidos.push({ ...it, motivo: "La persona no está en ese proyecto." });
+        continue;
+      }
+
+      let toco = false;
+      for (const it of items) {
+        const idx = resolverIndiceContrato(up, it.contratoId);
+        if (idx < 0) {
+          fallidos.push({ ...it, motivo: "Contrato no encontrado." });
+          continue;
+        }
+        const contrato = (up.contracts[idx] as any).toObject ? (up.contracts[idx] as any).toObject() : up.contracts[idx];
+        up.contracts[idx] = {
+          ...contrato,
+          obraSocialId: null,
+          // Se borra también el rastro: dejar el origen y la fecha de un valor que ya no está solo
+          // confunde. Es lo mismo que hace el PATCH de a uno al desfijarla.
+          obraSocialOrigen: undefined,
+          obraSocialConstatadaEn: undefined,
+          obraSocialConstatadaEl: null,
+          obraSocialNoFigura: false,
+          obraSocialBloqueada: false,
+        } as any;
+        quitados.push(it);
+        toco = true;
+      }
+
+      if (toco) {
+        up.markModified("contracts");
+        await up.save();
+      }
+    }
+
+    res.json({ quitados: quitados.length, fallidos });
+  } catch (error) {
+    console.error("Quitar lote obras sociales error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

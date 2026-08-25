@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner, faCircleQuestion, faDownload, faTriangleExclamation, faArrowUpRightFromSquare, faFolderOpen } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faCircleQuestion, faDownload, faTriangleExclamation, faArrowUpRightFromSquare, faFolderOpen, faPowerOff } from '@fortawesome/free-solid-svg-icons';
 import { faWindows as faWin, faApple as faApl } from '@fortawesome/free-brands-svg-icons';
 import { asistenteAPI, asistentePuede, tokenAsistente, ErrorAsistente, EstadoAsistente as Estado, DESCARGAS_ASISTENTE, descargaDisponible, versionPublicada, esPosterior } from '../../api/asistente';
 import { sweetAlert } from '../../utils/sweetAlert';
@@ -120,6 +120,66 @@ export function useAsistente(): UsoAsistente {
 const Punto: React.FC<{ color: string }> = ({ color }) => <span className={`inline-block h-2 w-2 rounded-full ${color}`} />;
 
 const RUTA_AYUDA = '/arca/guia-obras-sociales';
+
+/**
+ * El interruptor de «que arranque solo al prender la computadora».
+ *
+ * Activado se ve APAGADO y discreto —es el estado bueno, no hay nada que hacer— y desactivado es un
+ * ofrecimiento, no una advertencia: dejar la ventana abierta funciona perfecto, solo que molesta.
+ */
+const BotonInicioAutomatico: React.FC<{ activo: boolean; refrescar: () => Promise<void> }> = ({ activo, refrescar }) => {
+  const [cambiando, setCambiando] = useState(false);
+
+  const alternar = async () => {
+    /*
+      Desactivar APAGA el Asistente, no solo le saca el arranque automático: en macOS el servicio y
+      el proceso son el mismo, y bajarlo del inicio lo baja. Se pregunta antes porque el resultado
+      sorprende — la pantalla pasa de «listo para validar» a «falta instalar» en un segundo — y
+      porque es reversible pero no gratis: hay que volver a ejecutarlo a mano.
+    */
+    if (activo) {
+      const r = await sweetAlert.confirm(
+        '¿Que deje de arrancar solo?',
+        'El Asistente se va a apagar. Para volver a usarlo vas a tener que ejecutarlo a mano — no hay que descargarlo de nuevo.',
+        'Sí, apagarlo',
+      );
+      if (!r.isConfirmed) return;
+    }
+
+    setCambiando(true);
+    try {
+      await asistenteAPI.inicioAutomatico(!activo);
+      if (!activo) sweetAlert.success('Listo', 'El Asistente va a arrancar solo cuando prendas la computadora. Ya podés cerrar su ventana.');
+      /*
+        El refresco va DESPUÉS del cartel y sin `await` bloqueante: en los dos sentidos el Asistente
+        se reinicia o se apaga, así que el sondeo normal —cada 3 segundos— es el que va a encontrar
+        el estado nuevo. Esperarlo acá solo agregaría un error de red que no significa nada.
+      */
+      void refrescar();
+    } catch (e: any) {
+      sweetAlert.error('No se pudo', e?.message || 'No pude cambiar el arranque automático.');
+    } finally {
+      setCambiando(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={alternar}
+      disabled={cambiando}
+      title={activo ? 'Arranca solo al prender la computadora. Tocá para que deje de hacerlo.' : 'Para no tener que ejecutarlo ni dejar su ventana abierta.'}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold transition-colors ${
+        activo
+          ? 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+          : 'border border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40'
+      } disabled:opacity-50`}
+    >
+      <FontAwesomeIcon icon={cambiando ? faSpinner : faPowerOff} spin={cambiando} className="h-2.5 w-2.5" />
+      {activo ? 'Arranca solo' : 'Que arranque solo'}
+    </button>
+  );
+};
 
 /**
  * La forma de TODOS los estados: punto, qué pasa, qué hacer, un botón.
@@ -508,6 +568,17 @@ export const BloqueAsistente: React.FC<{ uso: UsoAsistente; empleadora?: string 
     <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 text-[12px] text-gray-600 dark:text-gray-400 flex items-center gap-2 flex-wrap">
       <Punto color="bg-green-500" />
       Listo para validar · Asistente v{estado?.version}
+      {/*
+        Que arranque solo. Se ofrece ACÁ —con todo funcionando— y no durante la instalación.
+
+        En medio de instalar, una casilla más es una decisión más que tomar sin contexto. Con el
+        Asistente ya andando, en cambio, la persona acaba de ver la ventana negra que tiene que dejar
+        abierta: es el momento en que la oferta se entiende sola.
+
+        Solo aparece si ESTE Asistente sabe hacerlo (`soportado`): en Linux, o corriéndolo con `node`,
+        el botón diría que quedó activado y no arrancaría nada.
+      */}
+      {estado?.inicioAutomatico?.soportado && <BotonInicioAutomatico activo={estado.inicioAutomatico.activo} refrescar={refrescar} />}
       {/*
         Hay una versión nueva. Va acá, DISCRETO y sin bloquear nada.
 

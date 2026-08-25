@@ -41,6 +41,7 @@ import { ORIGENES_PERMITIDOS, origenPermitido, tokenDeInstalacion, tokenValido }
 import { abrirChrome, enfocarChrome, chromeAbierto, enPantallaDeAltas, estadoSesionArca, rutaChrome, guardarRutaChrome, CDP_URL } from "./chrome.mjs";
 import { noMorirEnSilencio } from "./diagnostico.mjs";
 import { OPERACIONES } from "./operaciones.mjs";
+import { soportaInicioAutomatico, inicioAutomaticoActivo, activarInicioAutomatico, desactivarInicioAutomatico, arrancarServicio } from "./inicio-automatico.mjs";
 import { urlWeProdu, origenAtendido, yaEmparejado, marcarEmparejado, guardarCodigoEnArchivo, abrirNavegador, paginaEmparejar, banner } from "./emparejamiento.mjs";
 
 /**
@@ -150,7 +151,7 @@ const leerCuerpo = (req) =>
 // ─────────────────────────────────────────────────────────────── operaciones
 
 async function estado() {
-  return { ok: true, version: VERSION, operaciones: OPERACIONES, chromeAbierto: await chromeAbierto(), sesionArca: await estadoSesionArca(), pantallaAltas: await enPantallaDeAltas(), chromeEncontrado: !!rutaChrome(), corriendo: ocupado() };
+  return { ok: true, version: VERSION, operaciones: OPERACIONES, chromeAbierto: await chromeAbierto(), sesionArca: await estadoSesionArca(), pantallaAltas: await enPantallaDeAltas(), chromeEncontrado: !!rutaChrome(), corriendo: ocupado(), inicioAutomatico: { soportado: soportaInicioAutomatico() && !!process.pkg, activo: inicioAutomaticoActivo() } };
 }
 
 /**
@@ -362,6 +363,64 @@ const servidor = createServer(async (req, res) => {
       return json(res, 200, { ...r, ...(await estado()) });
     }
 
+    /*
+      Que arranque solo al prender la computadora, o que deje de hacerlo.
+
+      Se activa DESDE ACÁ y nunca solo: meterse en el arranque sin preguntar es lo que hace que la
+      gente desconfíe de instalar cosas, y este programa ya viene con la desventaja de no estar
+      firmado. El que decide es quien aprieta el botón en WeProdu.
+    */
+    if (req.method === "POST" && ruta === "/inicio-automatico") {
+      const { activar } = await leerCuerpo(req);
+      /*
+        Desactivar APAGA el Asistente, y eso hay que decirlo (lo dice la app antes de preguntar).
+
+        En macOS `launchctl unload` baja el servicio además de desregistrarlo, y el servicio es este
+        mismo proceso: si se llamara derecho, moriría antes de contestar y la app mostraría un error
+        sobre una operación que en realidad salió bien. Se contesta primero, igual que al activar.
+      */
+      if (!activar) {
+        json(res, 200, { activo: false, seApaga: process.platform === "darwin" && inicioAutomaticoActivo(), ...(await estado()) });
+        setTimeout(() => {
+          const r = desactivarInicioAutomatico();
+          // En Windows nada nos apagó: el proceso sigue en su ventana hasta que alguien la cierre.
+          if (process.platform === "darwin") process.exit(0);
+          void r;
+        }, 300);
+        return;
+      }
+
+      const r = activarInicioAutomatico();
+      json(res, 200, { ...r, ...(await estado()) });
+
+      /*
+        EL RELEVO. Este proceso se aparta para que arranque el que va a quedar.
+
+        El orden es todo. Este Asistente tiene tomado el puerto, que es fijo y no se cae a otro; si el
+        servicio arrancara ahora, chocaría y se apagaría, y al cerrar la ventana no quedaría nadie.
+        Y si este se fuera antes de arrancar el servicio, habría un hueco en el que la app no
+        encuentra a nadie.
+
+        Entonces: se contesta primero (la respuesta de arriba ya salió), se sueltan las conexiones
+        —el stream de progreso mantendría el `close` esperando para siempre—, se arranca el servicio
+        con el puerto libre, y recién ahí este proceso termina. La app lo vuelve a encontrar en el
+        próximo sondeo, que es cada 3 segundos.
+
+        En Windows NO se hace: la entrada de inicio recién corre en el próximo login, así que apartarse
+        dejaría a la persona sin Asistente hasta que reinicie.
+      */
+      if (r.arrancaYa) {
+        setTimeout(() => {
+          servidor.closeAllConnections?.();
+          servidor.close(() => {
+            arrancarServicio();
+            process.exit(0);
+          });
+        }, 300);
+      }
+      return;
+    }
+
     if (req.method === "POST" && ruta === "/chrome/ruta") {
       const { ruta: nueva } = await leerCuerpo(req);
       return json(res, 200, { ruta: guardarRutaChrome(nueva) });
@@ -411,9 +470,49 @@ servidor.listen(PUERTO, "127.0.0.1", () => {
   console.log(banner({ version: VERSION, token: TOKEN, url, archivo, abrio, atendido }));
 });
 
-servidor.on("error", (e) => {
+/**
+ * ¿Lo que ocupa el puerto es OTRO Asistente, o es algo ajeno?
+ *
+ * Se pregunta por `/emparejar`, la única ruta sin token: si contesta nuestra página, del otro lado
+ * hay un Asistente. Cualquier otra cosa —o nada— significa que el puerto lo tomó un programa que no
+ * es este, y eso sí es un problema.
+ */
+async function elPuertoLoTieneOtroAsistente() {
+  try {
+    const r = await fetch(`http://127.0.0.1:${PUERTO}/emparejar`, { signal: AbortSignal.timeout(1500) });
+    return r.ok && (await r.text()).includes("Código de emparejamiento");
+  } catch {
+    return false;
+  }
+}
+
+servidor.on("error", async (e) => {
   if (e.code === "EADDRINUSE") {
-    console.error(`\n  El puerto ${PUERTO} ya está ocupado.\n\n  Probablemente el Asistente ya esté corriendo en otra ventana: usá esa.\n`);
+    /*
+      «Ya hay un Asistente andando» NO ES UN FALLO, y la diferencia importa por dos motivos.
+
+      Con el arranque automático, launchd levanta el servicio en el momento de activarlo — mientras
+      la copia que la persona ejecutó a mano todavía tiene el puerto. Si esto sale con código 1,
+      launchd lo trata como caída, lo reintenta, y cada intento escribe en `asistente-errores.txt`:
+      el archivo que existe para que un fallo REAL se encuentre se llena de fallas esperadas. Ya pasó:
+      tres entradas por activarlo una vez.
+
+      Y para quien lo abre a mano dos veces, tampoco es un error: lo que quería —que el Asistente
+      esté andando— ya está. Salir con 0 es decir la verdad.
+
+      Que el puerto lo tenga otra cosa sí es una falla, y ahí sí sale con 1.
+    */
+    const nuestro = await elPuertoLoTieneOtroAsistente();
+    const solo = inicioAutomaticoActivo();
+    if (nuestro) {
+      console.error(
+        solo
+          ? `\n  El Asistente ya está andando (arranca solo con la computadora).\n\n  No hace falta ejecutarlo a mano.\n\n  ¿Bajaste una versión nueva? En WeProdu tocá «Arranca solo» para desactivarlo,\n  después ejecutá este archivo, y volvé a activarlo.\n`
+          : `\n  El Asistente ya está andando en otra ventana: usá esa.\n`,
+      );
+      process.exit(0);
+    }
+    console.error(`\n  El puerto ${PUERTO} está ocupado por otro programa.\n\n  El Asistente no puede arrancar hasta que ese puerto quede libre.\n`);
     process.exit(1);
   }
   console.error("\n  No pude arrancar:", e?.message || e, "\n");

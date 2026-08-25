@@ -190,6 +190,9 @@ export function banner({ version, token, url, archivo, abrio, atendido }) {
 
   Ya está funcionando. Dejá esta ventana abierta y volvé a WeProdu.
 
+  (Si no querés dejarla abierta: en WeProdu, cuando diga «Listo para validar»,
+   tocá «Que arranque solo». Después esta ventana se puede cerrar.)
+
   ${abrio ? `Te abrí WeProdu en el navegador para emparejarlo solo:\n\n      ${url}` : `Abrí WeProdu y, si te pide el código, entrá a:\n\n      http://127.0.0.1:47653/emparejar`}
 ${atendido ? "" : `\n  ⚠ ${url} no está entre los orígenes que este Asistente atiende.\n    Corregí la URL en ~/.weprodu-arca/weprodu-url o el emparejamiento no va a servir de nada.\n`}
   ${linea}

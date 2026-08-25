@@ -42,7 +42,8 @@
     "test:obras-sociales": "tsx --test src/services/obrasSocialesLoteService.test.ts",
     "test:nomenclatura": "tsx --test src/utils/nomenclatura.test.ts",
     "test:anclas": "tsx --test src/utils/anclasNombre.test.ts",
-    "test:grupo-tipo-servicio": "tsx --test src/utils/grupoTipoServicio.test.ts"
+    "test:grupo-tipo-servicio": "tsx --test src/utils/grupoTipoServicio.test.ts",
+    "test:agrupar-contratos": "tsx --test src/utils/agruparContratos.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",

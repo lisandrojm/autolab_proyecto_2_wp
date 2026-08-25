@@ -1392,6 +1392,59 @@ export const ContractBulkAfipTab: React.FC<{
    * caso raro, y por eso es el que pide un gesto extra.
    */
   const objetivoValidacion = useMemo(() => (seleccionados.length > 0 ? seleccionadosValidables : pendientesValidables), [seleccionados, seleccionadosValidables, pendientesValidables]);
+  /**
+   * A quiénes alcanza el borrado masivo: SOLO lo tildado, y solo lo que está validado.
+   *
+   * ES A PROPÓSITO LO CONTRARIO DEL BOTÓN DE VALIDAR, que sin tildar nada agarra a todos los
+   * pendientes. Validar es aditivo y se puede repetir; borrar tira trabajo hecho contra ARCA — cada
+   * una de esas obras sociales costó una consulta real al organismo, y recuperarlas es volver a
+   * correr la tanda entera. Un botón que sin tildar nada borrara las 843 sería una sola pulsación
+   * entre el trabajo de una semana y cero.
+   */
+  const objetivoBorrado = useMemo(
+    () => seleccionados.filter((x) => ['validada_arca', 'validada_default', 'no_registrada'].includes(estadoObraSocial(x.row, resolveAfipValues(x.row, afipCat)))),
+    [seleccionados, afipCat],
+  );
+
+  const [borrandoOs, setBorrandoOs] = useState(false);
+
+  /**
+   * Saca la obra social de los contratos tildados.
+   *
+   * La confirmación dice el NÚMERO y qué queda después, no un «¿estás seguro?». Y dice lo que hace
+   * que sea reversible —el valor lo devuelve ARCA, no se carga a mano— porque sin eso la operación
+   * parece más destructiva de lo que es y nadie la usa; con eso, se entiende que el costo es volver
+   * a correr la validación.
+   */
+  const quitarObrasSocialesEnLote = useCallback(async () => {
+    if (objetivoBorrado.length === 0) return;
+    const r = await sweetAlert.confirm(
+      `¿Quitar ${objetivoBorrado.length} obra${objetivoBorrado.length === 1 ? '' : 's'} social${objetivoBorrado.length === 1 ? '' : 'es'}?`,
+      `Esos contratos vuelven a quedar SIN VALIDAR y no entran en el TXT hasta validarlos de nuevo en ARCA. No se pierde ningún dato propio: el valor lo devuelve el organismo, así que se recupera volviendo a validar.`,
+      'Sí, quitar',
+    );
+    if (!r.isConfirmed) return;
+
+    setBorrandoOs(true);
+    try {
+      const res = await projectsAPI.quitarObrasSocialesLote(
+        objetivoBorrado.map((x) => ({ projectId: x.row.projectId, userId: x.row.userId, contratoId: String(x.row.contratoId || x.row.contractIndex) })),
+      );
+      await load(true);
+      if (res.fallidos.length > 0) {
+        // Se dicen los que NO entraron, no solo cuántos sí: un «listo» sobre un borrado parcial deja
+        // a alguien creyendo que la tabla quedó limpia cuando no.
+        sweetAlert.error('Quedaron algunos sin quitar', `Se quitaron ${res.quitados}. No se pudo con ${res.fallidos.length}: ${res.fallidos[0].motivo}`);
+      } else {
+        sweetAlert.success('Listo', `${res.quitados} volvieron a quedar sin validar.`);
+      }
+    } catch (e: any) {
+      sweetAlert.error('No se pudo', e?.response?.data?.error || 'No se pudieron quitar las obras sociales.');
+    } finally {
+      setBorrandoOs(false);
+    }
+  }, [objetivoBorrado, load]);
+
   /** Aplica en la tabla (y en la caché) los cambios de una asignación masiva de empresa. */
   const aplicarPatchesEmpresa = useCallback(
     (patches: { row: ContractOverviewRow; patch: Partial<ContractOverviewRow> }[]) => {
@@ -1590,6 +1643,25 @@ export const ContractBulkAfipTab: React.FC<{
                   son estas 20 o alguna otra cosa, y ese es justamente el dato que decide si apretarlo. */}
               {objetivoValidacion.length > 0 ? `Validar ${objetivoValidacion.length} obras sociales` : 'Validar obras sociales'}
             </button>
+            {/*
+              Quitar en masa. Aparece SOLO con filas tildadas que tengan obra social.
+
+              No está siempre visible a propósito: es la acción destructiva de esta barra y no tiene
+              por qué competir por atención con las tres que se usan todos los días. Cuando hay algo
+              que quitar, aparece; el resto del tiempo no ocupa lugar ni tienta.
+            */}
+            {objetivoBorrado.length > 0 && (
+              <button
+                type="button"
+                onClick={quitarObrasSocialesEnLote}
+                disabled={borrandoOs}
+                title={`Saca la obra social de los ${objetivoBorrado.length} contratos tildados que la tengan. Vuelven a quedar sin validar.`}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-red-300 dark:border-red-800 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-50 transition-colors shrink-0"
+              >
+                <FontAwesomeIcon icon={borrandoOs ? faSpinner : faTrash} spin={borrandoOs} className="h-3.5 w-3.5" />
+                Quitar {objetivoBorrado.length} obra{objetivoBorrado.length === 1 ? '' : 's'} social{objetivoBorrado.length === 1 ? '' : 'es'}
+              </button>
+            )}
             {/* Mismo tono que el texto del botón al que acompaña: en azul se leía como otra acción,
                 independiente de «Validar obras sociales», y no como su explicación. */}
             <button type="button" onClick={() => setValidarObrasSocialesInfoOpen(true)} title="Cómo se validan las obras sociales" className="text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white shrink-0">

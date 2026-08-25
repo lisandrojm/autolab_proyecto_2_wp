@@ -48,6 +48,13 @@ export interface EstadoAsistente {
    * casos se calla: una ayuda que no se puede afirmar no se muestra.
    */
   pantallaAltas?: boolean;
+  /**
+   * Si el Asistente puede arrancar solo al prender la computadora, y si está activado.
+   *
+   * `undefined` en Asistentes anteriores a la v1.7.0. `soportado: false` cuando el sistema no lo
+   * admite (Linux) o cuando se está corriendo con `node servidor.mjs` en vez del ejecutable.
+   */
+  inicioAutomatico?: { soportado: boolean; activo: boolean };
   chromeEncontrado: boolean;
   corriendo: boolean;
 }
@@ -160,6 +167,17 @@ export const asistenteAPI = {
    * sigue existiendo y la persona puede ir a mano. La pantalla dice cuál es igual.
    */
   enfocarChrome: () => pedir<EstadoAsistente & { enfocada: boolean }>('/chrome/focus', { method: 'POST' }),
+
+  /**
+   * Registra (o saca) el Asistente del arranque de la computadora.
+   *
+   * Existe porque la ventana de Terminal ES el programa: cerrarla lo apaga, y había que dejarla
+   * abierta todo el día. Registrado en el inicio de sesión no hay ventana ni hay que acordarse.
+   *
+   * Se pide desde acá y el Asistente nunca lo hace solo: meterse en el arranque de la máquina de
+   * alguien sin preguntar es lo que hace que después no se quiera instalar nada.
+   */
+  inicioAutomatico: (activar: boolean) => pedir<EstadoAsistente & { activo: boolean }>('/inicio-automatico', { method: 'POST', body: JSON.stringify({ activar }) }),
 
   /**
    * Arranca la corrida. Vuelve enseguida: lo que tarda se sigue por `progreso()`.

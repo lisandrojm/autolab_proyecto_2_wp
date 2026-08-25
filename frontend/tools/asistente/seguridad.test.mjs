@@ -31,7 +31,21 @@ describe("escucha solo en la máquina", () => {
   it("el puerto es fijo y no se cae a otro si está ocupado", () => {
     assert.match(CODIGO, /const PUERTO = 47653;/);
     // Buscar otro puerto libre haría que "algo más ya está escuchando acá" pase desapercibido.
-    assert.match(CODIGO, /EADDRINUSE[\s\S]{0,300}process\.exit\(1\)/);
+    assert.match(CODIGO, /EADDRINUSE[\s\S]{0,2000}process\.exit\(1\)/);
+  });
+
+  /**
+   * «Ya hay un Asistente andando» sale con 0; «el puerto lo tiene otro programa» sale con 1.
+   *
+   * No es una sutileza: con el arranque automático, launchd levanta el servicio mientras la copia
+   * ejecutada a mano todavía tiene el puerto. Con código 1 lo trata como caída, lo reintenta, y cada
+   * intento ensucia `asistente-errores.txt` — el archivo que existe para que un fallo REAL se
+   * encuentre. Ya pasó: tres entradas por activarlo una sola vez.
+   */
+  it("que el puerto lo tenga otro Asistente no se reporta como caída", () => {
+    const bloque = CODIGO.slice(CODIGO.indexOf('if (e.code === "EADDRINUSE")'));
+    assert.match(bloque.slice(0, 2000), /elPuertoLoTieneOtroAsistente\(\)/, "hay que distinguir quién tiene el puerto");
+    assert.match(bloque.slice(0, 2000), /if \(nuestro\) \{[\s\S]{0,600}process\.exit\(0\)/, "si es otro Asistente, no es un fallo");
   });
 });
 
@@ -112,7 +126,7 @@ describe("la superficie es chica y fija", () => {
 
   it("las operaciones son exactamente las que están documentadas", () => {
     const rutas = [...CODIGO.matchAll(/ruta === "([^"]+)"/g)].map((m) => m[1]).sort();
-    assert.deepEqual(rutas, ["/chrome", "/chrome/focus", "/chrome/ruta", "/detener", "/emparejar", "/estado", "/progreso", "/registrar-obras-sociales", "/validar"]);
+    assert.deepEqual(rutas, ["/chrome", "/chrome/focus", "/chrome/ruta", "/detener", "/emparejar", "/estado", "/inicio-automatico", "/progreso", "/registrar-obras-sociales", "/validar"]);
   });
 
   /**

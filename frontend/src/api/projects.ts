@@ -553,6 +553,24 @@ class ProjectsAPI {
   }
 
   /**
+   * Saca la obra social de varios contratos de una vez. Cada uno vuelve a quedar SIN VALIDAR.
+   *
+   * Es un endpoint y no un bucle de `updateObraSocialContrato` por el mismo motivo que
+   * `aplicarObrasSocialesLote`: veinte requests desde el navegador dejan el resultado a mitad de
+   * camino ante cualquier corte, y sin forma de saber cuáles entraron. En algo que BORRA, quedarse
+   * sin saber qué se borró es el peor final posible.
+   *
+   * Devuelve los que no se pudieron tocar con su motivo, para poder decir qué pasó con cada uno.
+   */
+  async quitarObrasSocialesLote(contratos: Array<{ projectId: string; userId: string; contratoId: string }>): Promise<{
+    quitados: number;
+    fallidos: Array<{ projectId: string; userId: string; contratoId: string; motivo: string }>;
+  }> {
+    const { data } = await axios.post(`/projects/obras-sociales/quitar-lote`, { contratos }, { headers: this.getHeaders() });
+    return data;
+  }
+
+  /**
    * Elige la actividad del domicilio de desempeño de un contrato puntual. Solo hace falta cuando la
    * sucursal tiene más de una actividad declarada; con una sola se hereda. Pasar "" para desasignarla.
    */

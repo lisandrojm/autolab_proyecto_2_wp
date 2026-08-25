@@ -62,6 +62,10 @@ export const PasosInstalacion: React.FC<{ sistema: Sistema; compacto?: boolean }
         </Paso>
         <Paso n={3} titulo="Se abre una ventana negra: dejala abierta">
           <p>Es el Asistente corriendo. Se empareja solo — no hay ningún código que copiar — y esta pantalla se pone en verde sola.</p>
+          <p>
+            <strong>Esa ventana ES el programa: si la cerrás, se apaga.</strong> Apenas la pantalla se ponga en verde vas a ver el botón <strong>«Que arranque solo»</strong>: con eso queda andando
+            siempre, sin ventana y sin tener que ejecutarlo nunca más.
+          </p>
         </Paso>
       </>
     ) : (
@@ -87,6 +91,15 @@ export const PasosInstalacion: React.FC<{ sistema: Sistema; compacto?: boolean }
         </Paso>
         <Paso n={3} titulo="Se abre una ventana de Terminal: dejala abierta">
           <p>Es el Asistente corriendo. Se empareja solo — no hay ningún código que copiar — y esta pantalla se pone en verde sola.</p>
+          {/*
+            La pregunta que hace todo el mundo apenas ve la ventana es «¿y si la cierro?». Se contesta
+            acá, con la salida al lado: decir solo «dejala abierta» deja la molestia sin resolver y
+            hace que alguien la cierre igual y después no entienda por qué dejó de andar.
+          */}
+          <p>
+            <strong>Esa ventana ES el programa: si la cerrás, se apaga.</strong> Apenas la pantalla se ponga en verde vas a ver el botón <strong>«Que arranque solo»</strong>: con eso queda andando
+            siempre, sin ventana y sin tener que ejecutarlo nunca más.
+          </p>
         </Paso>
       </>
     )}
