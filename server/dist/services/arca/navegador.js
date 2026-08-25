@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { decryptSecret, encryptSecret } from "../../utils/secretCrypto.js";
 import { Tenant } from "../../models/Tenant.js";
+import { clasificarPantalla } from "./pantallaArca.js";
 /**
  * Un Chromium en el SERVIDOR que entra a ARCA con clave fiscal y deja la pantalla de altas lista.
  *
@@ -34,6 +35,27 @@ import { Tenant } from "../../models/Tenant.js";
  */
 const AFIP_LOGIN_URL = "https://auth.afip.gob.ar/contribuyente_/login.xhtml";
 const SIMPLIFICACION_URL = "https://serviciossegsoc.afip.gob.ar/tramites_con_clave_fiscal/MiSimplificacion/app/login/IndexContribuyente.aspx";
+/*
+  ===========================================================================
+  AL SERVICIO SE ENTRA POR EL PORTAL, NO POR LA URL
+  ===========================================================================
+
+  Loguearse en AFIP NO alcanza para abrir Simplificación Registral. El login deja una sesión del
+  portal de clave fiscal; el servicio vive en otro dominio (`serviciossegsoc.afip.gob.ar`) y tiene su
+  propia sesión, que se abre cuando el portal le entrega el usuario al entrar por el listado de
+  servicios. Ir derecho a la URL profunda salta ese paso.
+
+  COMPROBADO, no deducido: un GET a `IndexContribuyente.aspx` sin sesión de servicio redirige a
+  `.../app/ErrorPage.aspx`, que contesta 200, se queda en el MISMO dominio y dice solo «Ha ocurrido un
+  error». Por eso el chequeo de acá abajo es positivo y mira la URL final: el negativo anterior
+  —«está en serviciossegsoc y no dice que la sesión venció»— daba por buena esa pantalla de error.
+
+  Es también el paso que la persona hacía a mano y nadie había tenido que escribir: en el camino del
+  Asistente, quien abría el servicio desde el portal era ella, y el programa se enganchaba a una
+  pestaña que YA estaba adentro.
+*/
+const PORTAL_URL = "https://portalcf.cloud.afip.gob.ar/portal/app/";
+const NOMBRE_SERVICIO = /simplificaci[oó]n\s*registral/i;
 /*
   Selectores del login de AFIP.
 
@@ -162,12 +184,109 @@ async function guardarSesion(tenantId, ctx) {
         },
     });
 }
-/** ¿La pestaña está adentro de Simplificación Registral, o AFIP la mandó al login? */
-async function dentroDeSimplificacion(page) {
-    if (!/serviciossegsoc\.afip\.gob\.ar/i.test(page.url()))
-        return false;
+/**
+ * Navega aguantando las redirecciones encadenadas de AFIP.
+ *
+ * `page.goto` tira «Navigation to X is interrupted by another navigation to Y» cuando, mientras
+ * cargaba, la página arrancó sola para otro lado. En AFIP eso no es una falla: es el portal
+ * mandándote adonde corresponde, y la navegación que interrumpe ES la buena. Tratarlo como error hizo
+ * fallar una corrida entera con un mensaje de Playwright en inglés y sin ninguna pista.
+ *
+ * Tampoco tira si no llega: vuelve, y el estado de la pantalla lo decide quien llama — que puede
+ * decir dónde terminó, en vez de dónde no pudo entrar.
+ */
+async function irA(page, url) {
+    for (let intento = 1; intento <= 3; intento++) {
+        try {
+            await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+            return;
+        }
+        catch (e) {
+            if (!/interrupted by another navigation/i.test(String(e?.message || e)))
+                throw e;
+            // Se deja terminar la cadena antes de volver a intentar: reintentar encima de una navegación en
+            // curso es pedir la misma interrupción de nuevo.
+            await page.waitForLoadState("domcontentloaded").catch(() => { });
+        }
+    }
+}
+/**
+ * En qué pantalla estamos, dicho en positivo.
+ *
+ * Distinguir «error del servicio» de «me mandó al login» de «esto no es ARCA» es lo que permite que
+ * el mensaje diga qué pasó. El chequeo anterior era negativo —«¿el texto NO dice que la sesión
+ * venció?»— y por eso daba por buena `ErrorPage.aspx`, que no lo dice.
+ *
+ * La regla en sí vive en `pantallaArca.ts`, sin Playwright, para poder probarla.
+ */
+async function pantallaDe(page) {
     const texto = await page.evaluate(() => document.body?.innerText || "").catch(() => "");
-    return !/sesi[oó]n ha finalizado|no ha iniciado su sesi[oó]n|ingrese con su clave fiscal/i.test(texto);
+    return clasificarPantalla(page.url(), texto);
+}
+/**
+ * Abre «Simplificación Registral» desde el listado de servicios del portal, como lo hace la persona.
+ *
+ * Los servicios se buscan de tres formas y no de una: por el link al dominio del servicio, por el
+ * rótulo, y —si el portal los tiene escondidos— tipeando en el buscador. Es una pantalla de un
+ * organismo que cambia sin avisar y que no podemos ver desde acá sin una clave fiscal: una sola
+ * estrategia se rompe con el próximo rediseño y se lleva puesta la única forma de entrar.
+ *
+ * Devuelve la pestaña que quedó adentro (el portal abre algunos servicios en una nueva), o `null` si
+ * el servicio no aparece — que es el ÚNICO caso en que tiene sentido preguntar por la delegación.
+ */
+async function abrirServicioDesdeElPortal(ctx, page) {
+    await irA(page, PORTAL_URL);
+    /*
+      EL PORTAL ES UNA SPA: el HTML llega vacío y la lista de servicios aparece después.
+  
+      Comprobado: sin sesión, `portal/app/` se queda en la misma URL con el body en blanco y recién
+      entonces se va sola a `/expiredSession` y de ahí al login. Buscar el servicio apenas termina el
+      `domcontentloaded` es buscarlo en una página que todavía no existe — y devolver `null` ahí sería
+      decir «el usuario no tiene el servicio delegado» por haber preguntado demasiado rápido.
+    */
+    await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => { });
+    let enlace = await esperarEnlaceDelServicio(page, 15_000);
+    if (!enlace) {
+        for (const sel of ['input[type="search"]', 'input[placeholder*="usc" i]', "#buscadorInput", 'input[name*="busc" i]']) {
+            const campo = page.locator(sel).first();
+            if (!(await campo.count().catch(() => 0)))
+                continue;
+            // Sin tilde: el buscador del portal filtra por texto y así entra igual escriba AFIP
+            // «Simplificación» o «Simplificacion».
+            await campo.fill("Simplificacion Registral").catch(() => { });
+            enlace = await esperarEnlaceDelServicio(page, 10_000);
+            if (enlace)
+                break;
+        }
+    }
+    if (!enlace)
+        return null;
+    // Puede abrir pestaña nueva o navegar en la misma: se espera la nueva sin exigirla.
+    const [nueva] = await Promise.all([ctx.waitForEvent("page", { timeout: 15_000 }).catch(() => null), enlace.click().catch(() => { })]);
+    const destino = nueva || page;
+    await destino.waitForLoadState("domcontentloaded").catch(() => { });
+    return destino;
+}
+/** Espera a que el servicio aparezca, hasta `ms`. Devuelve `null` recién cuando de verdad no está. */
+async function esperarEnlaceDelServicio(page, ms) {
+    const hasta = Date.now() + ms;
+    for (;;) {
+        const e = await enlaceDelServicio(page);
+        if (e)
+            return e;
+        if (Date.now() >= hasta)
+            return null;
+        await page.waitForTimeout(500);
+    }
+}
+async function enlaceDelServicio(page) {
+    const porHref = page.locator('a[href*="serviciossegsoc"], a[href*="MiSimplificacion"]').first();
+    if (await porHref.count().catch(() => 0))
+        return porHref;
+    const porRotulo = page.locator("a, button").filter({ hasText: NOMBRE_SERVICIO }).first();
+    if (await porRotulo.count().catch(() => 0))
+        return porRotulo;
+    return null;
 }
 /**
  * Completa el login de clave fiscal.
@@ -181,7 +300,8 @@ async function dentroDeSimplificacion(page) {
  * cuenta bloqueada, que es mucho peor que una corrida fallida.
  */
 async function loguear(page, cred) {
-    await page.goto(AFIP_LOGIN_URL, { waitUntil: "domcontentloaded" });
+    // Por `irA` y no `page.goto`: el login de AFIP también encadena redirecciones.
+    await irA(page, AFIP_LOGIN_URL);
     await page.fill(SEL_LOGIN.cuit, cred.cuitUsuario.replace(/\D/g, ""));
     await page.click(SEL_LOGIN.siguiente);
     await page.waitForLoadState("domcontentloaded").catch(() => { });
@@ -235,16 +355,27 @@ export async function abrirSesionArca(tenantId, cred) {
     }
     const guardada = await sesionGuardada(tenantId);
     const ctx = await browser.newContext(guardada ? { storageState: guardada } : {});
-    const page = await ctx.newPage();
-    await page.goto(SIMPLIFICACION_URL, { waitUntil: "domcontentloaded" }).catch(() => { });
-    if (await dentroDeSimplificacion(page))
+    let page = await ctx.newPage();
+    /*
+      Camino rápido: con la sesión guardada la URL profunda entra derecho, porque la sesión DEL SERVICIO
+      viaja en el `storageState`. Si venció, ARCA devuelve `FinSession.aspx` y se cae al login de abajo.
+    */
+    await irA(page, SIMPLIFICACION_URL).catch(() => { });
+    if ((await pantallaDe(page)) === "servicio")
         return { browser, ctx, page, seLogueo: false };
     try {
         await loguear(page, cred);
-        await page.goto(SIMPLIFICACION_URL, { waitUntil: "domcontentloaded" });
-        if (!(await dentroDeSimplificacion(page))) {
-            throw new Error("Entré a AFIP pero Simplificación Registral no abrió. ¿El usuario tiene ese servicio delegado en Administrador de Relaciones?");
+        const destino = await abrirServicioDesdeElPortal(ctx, page);
+        if (!destino) {
+            throw new Error("Entré a AFIP con ese usuario, pero «Simplificación Registral» no aparece entre sus servicios en el portal. " +
+                "Delegáselo desde Administrador de Relaciones con el CUIT de la empleadora, o revisá que la delegación esté aceptada.");
         }
+        const estadoPantalla = await pantallaDe(destino);
+        if (estadoPantalla !== "servicio") {
+            // Se dice DÓNDE terminó. Un «no abrió» a secas mandó a revisar la delegación, que estaba bien.
+            throw new Error(`Abrí «Simplificación Registral» desde el portal pero la pantalla que apareció no es la del servicio (${estadoPantalla}): ${destino.url()}`);
+        }
+        page = destino;
         await guardarSesion(tenantId, ctx);
         await Tenant.findByIdAndUpdate(tenantId, {
             $set: { "integrations.arcaSimplificacion.ultimoLoginAt": new Date(), "integrations.arcaSimplificacion.ultimoError": "" },
