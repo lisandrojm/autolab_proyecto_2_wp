@@ -7,6 +7,7 @@ import { AfipValues } from './afipCompleteness';
 import { asistenteAPI, EventoProgreso } from '../../api/asistente';
 import { BloqueAsistente, useAsistente } from './EstadoAsistente';
 import { sweetAlert } from '../../utils/sweetAlert';
+import { NombreArca } from '../arca/NombreArca';
 import { afipAPI } from '../../api/afip';
 import { Modal } from '../ui/Modal';
 import { UsuarioSimplificacion } from '../arca/UsuarioSimplificacion';
@@ -89,46 +90,22 @@ type EnVivo = {
  * anterior tachado ensanchaban la columna y se leían como una sola cosa. Separado se escanea de
  * arriba a abajo, que es la pregunta real: «¿me tocó algún nombre?».
  *
- * CUATRO ESTADOS, y ninguno sobra:
- *
- *   coincide  → lo que ARCA muestra en la pantalla es lo que hay guardado. No costó ninguna consulta.
- *   corregido → se reemplazó por el del padrón, y se muestra el anterior tachado: sin eso,
- *               «corregido» avisa que algo cambió pero no deja revisar qué.
- *   difiere   → ARCA muestra otro nombre, pero el padrón no pudo confirmarlo (certificado sin
- *               conectar, o no contestó). NO se toca el dato y NO se pone tilde: se avisa y listo.
- *   sin dato  → una raya. Todavía no se leyó a esta persona, o ARCA no mostró su nombre. Que no es
- *               lo mismo que «está bien», así que tampoco lleva tilde.
+ * El indicador es el MISMO que en Usuarios y en Contratos (`NombreArca`): un solo dato no puede
+ * tener tres formas de mostrarse. Acá se usan dos estados más, propios de una corrida en curso —
+ * `corregido` y `difiere`—, con los mismos colores e íconos que allá.
  */
-type EstadoNombre = { estado: 'coincide' | 'corregido' | 'difiere'; antes?: string; ahora?: string };
-
 const CeldaNombreArca: React.FC<{ nombreArca?: EstadoNombre }> = ({ nombreArca }) => {
   if (!nombreArca) return <span className="text-[11.5px] text-gray-400">—</span>;
-  if (nombreArca.estado === 'coincide') {
-    return (
-      <span className="text-[11.5px] text-green-700 dark:text-green-400 inline-flex items-center gap-1.5">
-        <FontAwesomeIcon icon={faCheck} className="h-3 w-3 shrink-0" />
-        coincide
-      </span>
-    );
-  }
-  if (nombreArca.estado === 'difiere') {
-    return (
-      <span className="text-[11.5px] text-amber-700 dark:text-amber-400 inline-flex items-center gap-1.5" title="ARCA muestra otro nombre y no se pudo confirmar contra el Padrón: no se cambió nada.">
-        <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 shrink-0" />
-        difiere
-      </span>
-    );
-  }
+  if (nombreArca.estado === 'coincide') return <NombreArca estado="validado" conTexto />;
+  if (nombreArca.estado === 'difiere') return <NombreArca estado="difiere" conTexto />;
   return (
     <span className="flex flex-col gap-0.5">
-      <span className="text-[11.5px] text-amber-700 dark:text-amber-400 font-semibold inline-flex items-center gap-1.5">
-        <FontAwesomeIcon icon={faCheck} className="h-3 w-3 shrink-0" />
-        corregido
-      </span>
-      <span className="text-[11px] text-gray-400 line-through">{nombreArca.antes}</span>
+      <NombreArca estado="corregido" antes={nombreArca.antes} conTexto />
     </span>
   );
 };
+
+type EstadoNombre = { estado: 'coincide' | 'corregido' | 'difiere'; antes?: string; ahora?: string };
 
 const CeldaCuil: React.FC<{ cuil: string }> = ({ cuil }) => {
   const [copiado, setCopiado] = useState(false);
@@ -281,7 +258,16 @@ export const PantallaValidarObrasSociales: React.FC<{
    * pregunta que se hace quien mira la tabla es «¿me tocó los nombres?», y un blanco no la contesta:
    * no distingue «estaba bien» de «no se pudo confirmar».
    */
-  const [nombres, setNombres] = useState<Record<string, EstadoNombre>>({});
+  /*
+    Arranca con lo que YA venía validado, no en blanco.
+
+    El sello de cada persona viene en la fila (`userNombreValidadoArca`). Sin esto, todas las filas
+    empezaban en «—» aunque el nombre estuviera confirmado hace meses, y la pantalla parecía decir
+    «esto está sin validar» justo antes de correr un proceso que no hacía falta para ellas.
+  */
+  const [nombres, setNombres] = useState<Record<string, EstadoNombre>>(() =>
+    Object.fromEntries(filas.filter((f) => f.row.userNombreValidadoArca && f.row.cuit).map((f) => [soloDigitos(f.row.cuit || ''), { estado: 'coincide' as const }])),
+  );
   /** Espejo del anterior: el aviso se dispara dentro del intervalo, donde el estado todavía no llegó. */
   const nombresRef = useRef<Record<string, EstadoNombre>>({});
   /** Marca de tiempo del último evento recibido. Es lo que reinicia la guardia. */
@@ -467,7 +453,8 @@ export const PantallaValidarObrasSociales: React.FC<{
 
       const vivo: Record<string, EnVivo> = {};
       // Se reconstruye en cada vuelta, igual que `vivo`: el seguimiento relee TODOS los eventos.
-      const parciales: Record<string, EstadoNombre> = {};
+      // Se parte de lo ya sellado: la corrida agrega, no borra lo que estaba confirmado de antes.
+      const parciales: Record<string, EstadoNombre> = { ...nombresRef.current };
       for (const ev of r.eventos as any[]) {
         if (ev.tipo === 'abriendo') setFaseCorrida('Abriendo ARCA en el servidor…');
         else if (ev.tipo === 'conectado') setFaseCorrida('Adentro de ARCA. Buscando la pantalla de altas…');

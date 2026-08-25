@@ -88,7 +88,7 @@ export async function arrancarCorrida(opts) {
       apellido y nombre por separado, y la pantalla los muestra pegados.
     */
     const personas = await User.find({ _id: { $in: userIds }, tenantId: tenantObjectId })
-        .select("_id firstName lastName metadata.cuit")
+        .select("_id firstName lastName metadata.cuit metadata.nombreValidadoArcaAt")
         .lean();
     const porCuil = new Map(personas.map((u) => [String(u?.metadata?.cuit || "").replace(/\D/g, ""), u]));
     const nombresOk = [];
@@ -97,6 +97,19 @@ export async function arrancarCorrida(opts) {
         if (e.tipo === "resultado" && e.nombreArca) {
             const u = porCuil.get(String(e.cuil).replace(/\D/g, ""));
             if (u) {
+                /*
+                  EL SELLO ES LA COMPUERTA: quien ya tiene el nombre validado no se vuelve a mirar.
+        
+                  `nombreValidadoArcaAt` significa que ARCA ya confirmó ese nombre. Volver a compararlo y —peor—
+                  volver a consultarle al organismo es hacer trabajar al sistema para llegar a la conclusión
+                  que ya estaba guardada. Se lo cuenta como confirmado y se sigue.
+                */
+                if (u?.metadata?.nombreValidadoArcaAt) {
+                    e.nombreOk = true;
+                    nombresOk.push(String(e.cuil).replace(/\D/g, ""));
+                    corrida.eventos.push(e);
+                    return;
+                }
                 const guardado = `${u.firstName || ""} ${u.lastName || ""}`.trim();
                 const ok = mismoNombre(e.nombreArca, guardado);
                 // El veredicto viaja en el MISMO evento: así la pantalla marca cada persona apenas se la lee,

@@ -13,7 +13,7 @@ import UserProject from "../models/UserProject.js";
 import { Info } from "../models/Info.js";
 import { AfipLog } from "../models/AfipLog.js";
 import { ArcaObrasSocialesLog } from "../models/ArcaObrasSocialesLog.js";
-import { aplicarNombreDeArca } from "../services/arca/nombreArca.js";
+import { aplicarNombreDeArca, confirmarNombresConElPadron } from "../services/arca/nombreArca.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { encryptSecret } from "../utils/secretCrypto.js";
@@ -256,6 +256,59 @@ router.get("/simplificacion/logs", async (req, res) => {
     catch (error) {
         console.error("ARCA obras sociales logs error:", error);
         res.status(500).json({ error: "Internal server error" });
+    }
+});
+/**
+ * POST /afip/nombres/validar — confirma nombres contra el Padrón, en masa, desde Usuarios.
+ *
+ * USA LA CONEXIÓN DE «CONSTANCIA DE CUIT» (el certificado), no la de obras sociales: el nombre y el
+ * apellido separados los devuelve el webservice del padrón, y es el único lugar donde vienen partidos.
+ *
+ * A QUIÉNES ALCANZA: por defecto, SOLO a los que todavía no tienen el sello. Revalidar a los 1564 en
+ * cada corrida serían 1564 consultas al organismo para confirmar lo que ya se sabía; los nombres no
+ * cambian solos. Con `revalidar: true` se puede forzar sobre un conjunto concreto.
+ *
+ * POR QUÉ VIENE DE A TANDAS Y NO «TODOS»: son consultas SOAP reales, de a seis en paralelo. Mil
+ * quinientas en un request es una espera de minutos que cualquier proxy corta a la mitad, y ahí no se
+ * sabe qué alcanzó a hacerse. Se hace una tanda, se informa cuántos quedan, y se vuelve a apretar —
+ * cada tanda que termina, queda guardada.
+ */
+router.post("/nombres/validar", async (req, res) => {
+    try {
+        if (!isAdmin(req)) {
+            res.status(403).json({ error: "Solo un administrador puede validar nombres contra ARCA." });
+            return;
+        }
+        const limite = Math.min(Math.max(Number(req.body?.limite) || 100, 1), 300);
+        const idsPedidos = Array.isArray(req.body?.userIds) ? req.body.userIds.filter((x) => Types.ObjectId.isValid(String(x))).map(String) : [];
+        const revalidar = req.body?.revalidar === true;
+        const filtro = {
+            tenantId: req.tenantObjectId,
+            "metadata.cuit": { $exists: true, $ne: "" },
+            // Quien declaró no tener CUIT/CUIL argentino va por el circuito «Sin CUIT»: no hay nada que
+            // consultarle al padrón.
+            "metadata.sinCuit": { $ne: true },
+        };
+        if (idsPedidos.length > 0)
+            filtro._id = { $in: idsPedidos };
+        if (!revalidar)
+            filtro["metadata.nombreValidadoArcaAt"] = { $exists: false };
+        const candidatos = await User.find(filtro).select("_id metadata.cuit").lean();
+        // Un CUIT que no pasa el dígito verificador no se consulta: AFIP solo devuelve error, nunca
+        // recibe el sello, y volvería a salir elegido en todas las tandas siguientes para siempre.
+        const validos = candidatos.filter((u) => cuitEsValido(normalizarCuit(u?.metadata?.cuit)));
+        const invalidos = candidatos.length - validos.length;
+        const tanda = validos.slice(0, limite).map((u) => String(u._id));
+        const r = await confirmarNombresConElPadron({ tenantObjectId: req.tenantObjectId, tenantId: String(req.tenantObjectId), userIds: tanda });
+        res.json({
+            ...r,
+            pendientes: Math.max(0, validos.length - tanda.length),
+            cuitInvalido: invalidos,
+        });
+    }
+    catch (error) {
+        console.error("AFIP validar nombres error:", error);
+        res.status(500).json({ error: String(error?.message || "No se pudieron validar los nombres.") });
     }
 });
 // POST /afip/verificar-servicio - re-corre la autoconsulta de prueba contra Padrón A13 con las

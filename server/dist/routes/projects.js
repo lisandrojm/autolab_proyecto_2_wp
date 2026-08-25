@@ -1768,7 +1768,8 @@ router.post("/projects/obras-sociales/aplicar-lote", requireTenant, authenticate
                     const users = await usuariosDeCuils(req.tenantObjectId, filas.map((f) => String(f.cuil || "")));
                     const difieren = filas
                         .map((f) => ({ f, u: users.get(String(f.cuil || "").replace(/\D/g, "")) }))
-                        .filter(({ f, u }) => u && !mismoNombre(String(f.nombreArca), `${u.firstName || ""} ${u.lastName || ""}`))
+                        // Quien ya tiene el sello no se vuelve a consultar: ARCA ya confirmó ese nombre.
+                        .filter(({ f, u }) => u && !u?.metadata?.nombreValidadoArcaAt && !mismoNombre(String(f.nombreArca), `${u.firstName || ""} ${u.lastName || ""}`))
                         .map(({ u }) => String(u._id));
                     if (difieren.length > 0) {
                         renombrados = (await confirmarNombresConElPadron({ tenantObjectId: req.tenantObjectId, tenantId: String(req.tenantObjectId), userIds: difieren })).renombrados;

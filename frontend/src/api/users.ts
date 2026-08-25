@@ -273,6 +273,15 @@ export interface User {
     generoId?: number;
     tipoDocumentoId?: number;
     cuit?: string;
+    /**
+     * Cuándo se tomó el nombre del Padrón de ARCA como el bueno.
+     *
+     * Es un sello del ORGANISMO, no una revisión interna: afirma que `firstName`/`lastName` son
+     * literalmente lo que ARCA tiene registrado para ese CUIT. Hoy lo ponen «Validar CUIT» y la
+     * validación de obras sociales; más adelante, el alta por link y una validación masiva desde
+     * Usuarios.
+     */
+    nombreValidadoArcaAt?: string;
     /** Declaró no tener CUIT/CUIL argentino (extranjeros). */
     sinCuit?: boolean;
     estadoCivil?: string;

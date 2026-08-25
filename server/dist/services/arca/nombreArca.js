@@ -150,7 +150,7 @@ export async function usuariosDeCuils(tenantObjectId, cuils) {
     if (buscados.size === 0)
         return out;
     const users = await User.find({ tenantId: tenantObjectId, "metadata.cuit": { $exists: true, $ne: "" } })
-        .select("_id firstName lastName metadata.cuit")
+        .select("_id firstName lastName metadata.cuit metadata.nombreValidadoArcaAt")
         .lean();
     for (const u of users) {
         const d = String(u?.metadata?.cuit || "").replace(/\D/g, "");

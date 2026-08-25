@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { usersAPI, User } from '../api/users';
+import { afipAPI } from '../api/afip';
+import { cuitEsValido } from '../utils/cuit';
+import { NombreArca, estadoNombreArca } from '../components/arca/NombreArca';
 import { registroLinksAPI, RegistroLink, buildRegistroUrl, registroLinkDaysLeft, isRegistroLinkExpired, registroLinkExpiry } from '../api/registroLinks';
 import { rolesAPI, Role } from '../api/roles';
 import { positionsAPI, Position } from '../api/positions';
@@ -23,7 +26,7 @@ import { UserFormModal } from '../components/users/UserFormModal';
 import { Card } from '../components/ui/Card';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faLayerGroup, faHourglassHalf, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faUserPlus, faCopy, faCheck, faBan, faBell, faSort, faSortUp, faSortDown } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faLayerGroup, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faUserPlus, faCopy, faCheck, faBan, faBell, faSort, faSortUp, faSortDown, faLandmark, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getImageUrl } from '../utils/imageHelpers';
@@ -134,6 +137,15 @@ export const UsersPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [limit] = useState(25);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
+  const [validandoNombres, setValidandoNombres] = useState(false);
+  /**
+   * A quiénes se les va a validar el nombre. La acción es SOLO sobre lo tildado.
+   *
+   * Sin selección el botón queda apagado, igual que «Validar obras sociales» en Contratos: son
+   * consultas reales a un organismo que además reescriben el nombre de una persona, y arrancarlas
+   * sobre un conjunto que nadie eligió deja la duda de qué se está por mandar.
+   */
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
   const [isXXL, setIsXXL] = useState(window.innerWidth >= 1200);
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
 
@@ -368,6 +380,96 @@ export const UsersPage: React.FC = () => {
       setUserLookup(map);
     } catch (error) {
       console.error('Error fetching user lookup:', error);
+    }
+  };
+
+  /**
+   * Confirma nombres contra el Padrón de ARCA, de a tandas.
+   *
+   * Usa la conexión de «Constancia de CUIT» (el certificado): es la única que devuelve nombre y
+   * apellido SEPARADOS, que es lo que hace falta para escribirlos.
+   *
+   * Toma solo a los que no tienen el sello todavía, y de a 100. Mil quinientas consultas SOAP en un
+   * request son minutos que cualquier proxy corta a la mitad, y ahí no se sabe qué alcanzó a hacerse.
+   * Cada tanda que termina queda guardada, y el aviso dice cuántos quedan para volver a apretar.
+   */
+  /**
+   * A quién se le PUEDE validar el nombre. Dos condiciones, y las dos apagan el check:
+   *
+   *   1. Que tenga un CUIT válido. El Padrón se consulta POR CUIT: sin uno, la consulta solo devuelve
+   *      error. Dejar tildar algo que la acción después saltea es lo que hace dudar de si el botón
+   *      cuenta mal — tildás 10 y dice 7.
+   *   2. Que NO esté validado ya. El sello significa que ARCA confirmó ese nombre; volver a
+   *      preguntárselo es hacer trabajar al sistema y al organismo para llegar a la conclusión que ya
+   *      estaba guardada.
+   *
+   * Si alguna vez hiciera falta forzar una revalidación, el endpoint la acepta (`revalidar: true`),
+   * pero no se ofrece desde acá: sería la única forma de gastar consultas sin necesidad.
+   */
+  const puedeValidarse = (u: User) => !!u.metadata?.cuit && !u.metadata?.sinCuit && cuitEsValido(u.metadata.cuit) && !u.metadata?.nombreValidadoArcaAt;
+  const validablesEnPantalla = users.filter(puedeValidarse);
+  const todosTildados = validablesEnPantalla.length > 0 && validablesEnPantalla.every((u) => seleccionados.has(u._id));
+  const alternarUno = (id: string) =>
+    setSeleccionados((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  const alternarTodos = () =>
+    setSeleccionados((prev) => {
+      const n = new Set(prev);
+      if (todosTildados) validablesEnPantalla.forEach((u) => n.delete(u._id));
+      else validablesEnPantalla.forEach((u) => n.add(u._id));
+      return n;
+    });
+
+  const validarNombresEnArca = async () => {
+    const ids = [...seleccionados];
+    if (ids.length === 0) return;
+    const ok = await sweetAlert.confirm(
+      `¿Validar ${ids.length} nombre${ids.length === 1 ? '' : 's'} con ARCA?`,
+      'Se consulta el Padrón por cada persona tildada y, si ARCA tiene otro nombre, se reemplaza por el del organismo. Es el mismo criterio que usa «Validar CUIT».',
+      'Sí, validar',
+    );
+    if (!ok.isConfirmed) return;
+    setValidandoNombres(true);
+    try {
+      // Sin `revalidar`: los que ya tienen el sello no se vuelven a consultar. Igual no pueden estar
+      // acá, porque su check está apagado — esto es el cinturón además de los tirantes.
+      const r = await afipAPI.validarNombres({ userIds: ids, limite: 300 });
+      setSeleccionados(new Set());
+      await fetchUsers({ silent: true });
+      if (r.motivoSinConsultar) {
+        sweetAlert.warningAlert('No se pudo consultar', r.motivoSinConsultar);
+        return;
+      }
+      const cola = [
+        r.consultados > 0 ? `${r.consultados} consultado(s) en ARCA.` : 'No se consultó a nadie.',
+        r.renombrados.length > 0 ? `${r.renombrados.length} nombre(s) corregido(s).` : 'Todos los nombres ya coincidían.',
+        r.pendientes > 0 ? `Quedaron ${r.pendientes} sin consultar (el tope es 300 por vez): tildalos y repetí.` : '',
+        r.cuitInvalido > 0 ? `${r.cuitInvalido} no se consultaron porque su CUIT no es válido (revisá el dato).` : '',
+      ]
+        .filter(Boolean)
+        .join('\n');
+      if (r.renombrados.length > 0) {
+        // Los renombres se listan, no se cuentan: son datos de personas que cambiaron sin que nadie
+        // los escribiera, y «se corrigieron 7» no deja revisar ninguno.
+        const detalle = r.renombrados
+          .slice(0, 20)
+          .map((x: { antes: string; ahora: string }) => `• ${x.antes}  →  ${x.ahora}`)
+          .join('\n');
+        await sweetAlert.warningAlert(
+          `Se corrigieron ${r.renombrados.length} nombre(s) con los de ARCA`,
+          `${cola}\n\nQuedaron tal cual los devuelve el organismo, en mayúsculas.\n\n${detalle}` + (r.renombrados.length > 20 ? `\n…y ${r.renombrados.length - 20} más.` : ''),
+        );
+      } else {
+        sweetAlert.success('Nombres validados', cola);
+      }
+    } catch (e: any) {
+      sweetAlert.error('No se pudo', e?.response?.data?.error || 'No se pudieron validar los nombres contra ARCA.');
+    } finally {
+      setValidandoNombres(false);
     }
   };
 
@@ -1632,6 +1734,29 @@ export const UsersPage: React.FC = () => {
         </div>
       ) : (
         <>
+          {/*
+            La acción vive ACÁ y no en la fila de secciones de arriba: opera sobre las filas tildadas
+            de esta tabla, así que tiene que estar donde está la selección.
+          */}
+          <div className="flex items-center justify-end gap-3 mb-3">
+            {seleccionados.size > 0 && <span className="text-xs text-gray-500 dark:text-gray-400">{seleccionados.size} seleccionado(s)</span>}
+            <button
+              onClick={validarNombresEnArca}
+              disabled={validandoNombres || seleccionados.size === 0}
+              title={
+                seleccionados.size > 0
+                  ? `Confirma el nombre de ${seleccionados.size} persona(s) contra el Padrón de ARCA, con la conexión de Constancia de CUIT.`
+                  : viewMode === 'cards'
+                    ? 'Pasá a la vista de tabla (arriba a la derecha) para elegir a quiénes validar.'
+                    : 'Tildá las personas a las que les querés validar el nombre contra ARCA.'
+              }
+              className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors inline-flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <FontAwesomeIcon icon={validandoNombres ? faSpinner : faLandmark} spin={validandoNombres} className="h-3.5 w-3.5" />
+              {validandoNombres ? 'Validando…' : seleccionados.size > 0 ? `Validar ${seleccionados.size} nombre${seleccionados.size === 1 ? '' : 's'} en ARCA` : 'Validar nombres en ARCA'}
+            </button>
+          </div>
+
           <div className="relative">
             {isFetching && (
               <div className="absolute inset-0 z-10 bg-white/50 dark:bg-gray-900/50 rounded-xl backdrop-blur-[1px]">
@@ -1730,6 +1855,16 @@ export const UsersPage: React.FC = () => {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-gray-50/50 dark:bg-gray-900/30 border-b border-gray-100 dark:border-gray-800">
+                      <th className="py-4 px-6 w-10">
+                        <input
+                          type="checkbox"
+                          checked={todosTildados}
+                          onChange={alternarTodos}
+                          disabled={validablesEnPantalla.length === 0}
+                          title="Tildar todos los de esta página que estén sin validar y tengan CUIT válido"
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        />
+                      </th>
                       <SortableTh columna="name" activa={sortBy} direccion={sortDir} onSort={toggleSort}>Usuario</SortableTh>
                       <SortableTh columna="roles" activa={sortBy} direccion={sortDir} onSort={toggleSort} className="hidden md:table-cell">Roles</SortableTh>
                       <SortableTh columna="cuit" activa={sortBy} direccion={sortDir} onSort={toggleSort} className="hidden lg:table-cell">CUIT</SortableTh>
@@ -1741,12 +1876,34 @@ export const UsersPage: React.FC = () => {
                   <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                     {users.map((user) => (
                       <tr key={user._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/20 transition-colors cursor-pointer" onClick={() => openView(user)}>
+                        {/* `stopPropagation`: la fila entera abre la ficha, y tildar no es abrir. */}
+                        <td className="py-4 px-6" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={seleccionados.has(user._id)}
+                            onChange={() => alternarUno(user._id)}
+                            disabled={!puedeValidarse(user)}
+                            title={
+                              puedeValidarse(user)
+                                ? 'Tildar para validar su nombre contra ARCA'
+                                : user.metadata?.nombreValidadoArcaAt
+                                  ? 'El nombre ya está validado en ARCA: no hace falta volver a consultarlo'
+                                  : 'Sin un CUIT válido no se puede consultar el Padrón'
+                            }
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                          />
+                        </td>
                         <td className="py-4 px-6">
                           <div className="flex items-center gap-3">
                             <FontAwesomeIcon icon={faUser} className="text-blue-600" />
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <p className="text-sm font-semibold">{user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : user.email.split('@')[0]}</p>
+                                <NombreArca
+                                  estado={estadoNombreArca({ cuit: user.metadata?.cuit, sinCuit: user.metadata?.sinCuit, validadoAt: user.metadata?.nombreValidadoArcaAt })}
+                                  fecha={user.metadata?.nombreValidadoArcaAt}
+                                  conInfo
+                                />
                                 {(() => {
                                   const activeVac = getUserActiveVacation(user._id);
                                   if (!activeVac) return null;

@@ -173,6 +173,25 @@ export const afipAPI = {
     return data;
   },
 
+  /**
+   * Confirma nombres contra el Padrón, en masa. Usa la conexión de «Constancia de CUIT».
+   *
+   * Trabaja de a tandas: devuelve `pendientes` para poder seguir. Sin `userIds` toma a los que
+   * todavía no tienen el sello — revalidar a todos en cada corrida sería consultarle al organismo
+   * miles de veces lo que ya se sabía.
+   */
+  async validarNombres(opts?: { userIds?: string[]; limite?: number; revalidar?: boolean }): Promise<{
+    renombrados: Array<{ userId: string; cuil?: string; antes: string; ahora: string }>;
+    confirmados: string[];
+    consultados: number;
+    pendientes: number;
+    cuitInvalido: number;
+    motivoSinConsultar?: string;
+  }> {
+    const { data } = await axios.post("/afip/nombres/validar", opts || {});
+    return data;
+  },
+
   /** Las últimas 50 corridas. Aparte de `logs()`, que es la otra conexión (el webservice del padrón). */
   async logsSimplificacion(): Promise<CorridaObrasSocialesLog[]> {
     const { data } = await axios.get("/afip/simplificacion/logs");

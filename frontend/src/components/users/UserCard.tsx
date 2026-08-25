@@ -1,8 +1,9 @@
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUsers, faUserShield, faLayerGroup, faUserTie, faUserGraduate, faClock, faBuilding, faIdCard, faBriefcase, faFileContract, faUmbrellaBeach, faChevronDown, faChevronUp, faLock, faInfoCircle, faBell, faTriangleExclamation, faFileInvoice } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUsers, faUserShield, faLayerGroup, faUserTie, faUserGraduate, faClock, faBuilding, faIdCard, faBriefcase, faFileContract, faUmbrellaBeach, faChevronDown, faChevronUp, faLock, faInfoCircle, faBell, faTriangleExclamation, faFileInvoice, faCircleCheck } from "@fortawesome/free-solid-svg-icons";
 import { formatCuit } from "../../utils/cuit";
 import { noPoseeCuit } from "../contratos/ConstanciaBulk";
+import { NombreArca, estadoNombreArca } from "../arca/NombreArca";
 import { User } from "../../api/users";
 import { Project } from "../../api/projects";
 import { Client } from "../../api/clients";
@@ -328,6 +329,28 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
             </label>
             <div className="text-gray-900 dark:text-gray-100 text-sm font-semibold cursor-text select-all" title="Haz clic para copiar">
               {formatCuit(user.metadata.cuit)}
+            </div>
+          </div>
+        )}
+        {/*
+          El nombre, validado contra ARCA o no. Mismo indicador que en Usuarios (tabla), en Contratos
+          y en Validar obras sociales: un solo dato no puede tener tres formas de mostrarse.
+
+          Se muestra SIEMPRE que haya CUIT, sobre todo cuando NO está validado: un campo que aparece
+          solo cuando está bien no permite contestar «¿cuáles me faltan?».
+        */}
+        {user.metadata?.cuit && !user.metadata?.sinCuit && (
+          <div>
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
+              <FontAwesomeIcon icon={faCircleCheck} className="text-gray-300" />
+              Nombre
+            </label>
+            <div className="text-sm">
+              <NombreArca
+                estado={estadoNombreArca({ cuit: user.metadata?.cuit, sinCuit: user.metadata?.sinCuit, validadoAt: user.metadata?.nombreValidadoArcaAt })}
+                fecha={user.metadata?.nombreValidadoArcaAt}
+                conTexto
+              />
             </div>
           </div>
         )}

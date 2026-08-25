@@ -27,58 +27,12 @@ import { resolveAfip, resolveAfipValues, AfipRowResult, AfipValues } from './afi
 import { buildAltaRecord, buildAltaTxt, downloadTxt } from './afipTxt';
 import { PantallaValidarObrasSociales, FilaConstatacion } from './PantallaValidarObrasSociales';
 import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, cuitEsValido, fmtCuit, cuitDisplay, noPoseeCuit } from './ConstanciaBulk';
+import { NombreArca, estadoNombreArca } from '../arca/NombreArca';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { cachedFetch, invalidateRefCache, updateRefCache } from '../../utils/refCache';
 
 const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
 
-/**
- * Tilde verde al lado del nombre: dice que ese nombre es el que ARCA tiene para el CUIT.
- *
- * No afirma «alguien lo revisó» sino «se lo trajo del Padrón al validar», que es una diferencia que
- * importa: lo que se ve escrito ahí es literalmente lo que va a decir el organismo cuando se presente
- * el trámite. Por eso también aparece cuando el nombre no hizo falta cambiarlo — lo que sella es la
- * confirmación contra ARCA, no el cambio.
- */
-const NombreValidadoArca: React.FC<{ ok?: boolean }> = ({ ok }) => {
-  const [abierto, setAbierto] = useState(false);
-  if (!ok) return null;
-  return (
-    <>
-      <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3 shrink-0 text-green-600 dark:text-green-500" />
-      {/* `stopPropagation` porque la fila entera es clickeable: sin esto, pedir la explicación abriría
-          además el detalle del contrato. */}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          setAbierto(true);
-        }}
-        title="Qué significa este tilde"
-        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0"
-      >
-        <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-      </button>
-      {abierto && (
-        <Modal isOpen onClose={() => setAbierto(false)} title="Nombre validado con ARCA" size="sm" zIndex={80}>
-          <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300" onClick={(e) => e.stopPropagation()}>
-            <p>
-              Este nombre <strong>es el que ARCA tiene registrado</strong> para el CUIT de la persona. Se trajo del Padrón al validar y se guarda tal cual lo devuelve el organismo — por eso está en
-              mayúsculas y sin acomodar.
-            </p>
-            <p>
-              Si lo que había cargado no coincidía, <strong>se reemplazó por el de ARCA</strong>: estos contratos terminan en un trámite ante el mismo organismo, y un nombre que no coincide con el
-              padrón es el que hace que el alta se rechace.
-            </p>
-            <p className="text-[13px] text-gray-500 dark:text-gray-400">
-              El cambio es sobre la persona, así que se ve también en sus otros contratos. Se vuelve a confirmar cada vez que se valida el CUIT o se validan las obras sociales.
-            </p>
-          </div>
-        </Modal>
-      )}
-    </>
-  );
-};
 // Solo para traducir los convenioIds de la empresa a códigos de CCT y validar la Categoría.
 const conveniosApi = createSimpleCatalogApi('/convenios');
 
@@ -1812,9 +1766,9 @@ export const ContractBulkAfipTab: React.FC<{
                     <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!esSeleccionable(r, result)} onChange={() => toggleSel(rowKey(r))} title={tituloCheck(r)} className={`rounded border-gray-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0 ${omitidaEnValidacion(r) ? 'text-amber-500 focus:ring-amber-500' : 'text-emerald-600 focus:ring-emerald-500'}`} />
                     <FontAwesomeIcon icon={faUser} className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0" />
                     <div className="min-w-0">
-                      <p className={`text-sm font-bold truncate inline-flex items-center gap-1.5 ${r.userNombreValidadoArca ? 'text-green-700 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'}`}>
+                      <p className="text-sm font-bold truncate inline-flex items-center gap-1.5 text-gray-900 dark:text-gray-100">
                         <span className="truncate">{r.userName}</span>
-                        <NombreValidadoArca ok={r.userNombreValidadoArca} />
+                        <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} conInfo />
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{r.userEmail}</p>
                       {fmtCuit(r.cuit) && <p className="text-[10px] text-gray-400 font-mono truncate">CUIT {fmtCuit(r.cuit)}</p>}
@@ -2051,9 +2005,9 @@ export const ContractBulkAfipTab: React.FC<{
                     )}
                     {filterTipo !== 'sin_cuit' && <ContractDocsColumns record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onDownloadContract={handleDownloadContract} onDownloadRelease={handleDownloadRelease} onUploadAlta={handleUploadAlta} showContrato={false} showRelease={false} hideAltaLabel onConstanciaEliminada={() => load(true)} />}
                     <td className="px-4 py-3">
-                      <p className={`text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 ${r.userNombreValidadoArca ? 'text-green-700 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
+                      <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
                         {r.userName}
-                        <NombreValidadoArca ok={r.userNombreValidadoArca} />
+                        <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} conInfo />
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
                     </td>
@@ -3075,9 +3029,9 @@ export const ContractBulkFirmaTab: React.FC<{
                         <FirmaReleaseCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} releasesAplicables={releasesQueFirman} onGenerado={(patch) => aplicarCambio(r, patch)} />
                       </td>
                       <td className="px-4 py-3">
-                        <p className={`text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 ${r.userNombreValidadoArca ? 'text-green-700 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
+                        <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
                         {r.userName}
-                        <NombreValidadoArca ok={r.userNombreValidadoArca} />
+                        <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} conInfo />
                       </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
                       </td>

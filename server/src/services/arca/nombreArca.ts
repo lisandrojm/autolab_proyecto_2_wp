@@ -193,7 +193,7 @@ export async function usuariosDeCuils(tenantObjectId: any, cuils: string[]): Pro
   const out = new Map<string, any>();
   if (buscados.size === 0) return out;
   const users: any[] = await User.find({ tenantId: tenantObjectId, "metadata.cuit": { $exists: true, $ne: "" } })
-    .select("_id firstName lastName metadata.cuit")
+    .select("_id firstName lastName metadata.cuit metadata.nombreValidadoArcaAt")
     .lean();
   for (const u of users) {
     const d = String(u?.metadata?.cuit || "").replace(/\D/g, "");
