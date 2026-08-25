@@ -1739,6 +1739,24 @@ export const UsersPage: React.FC = () => {
             de esta tabla, así que tiene que estar donde está la selección.
           */}
           <div className="flex items-center justify-end gap-3 mb-3">
+            {/*
+              El «tildar todos» de la vista de tarjetas.
+
+              En la tabla vive en la cabecera de la columna de checks; en tarjetas no hay cabecera, así
+              que si no estuviera acá habría que tildar de a una para validar una página entera.
+            */}
+            {viewMode === 'cards' && validablesEnPantalla.length > 0 && (
+              <label className="inline-flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={todosTildados}
+                  onChange={alternarTodos}
+                  title="Tildar todos los de esta página que estén sin validar y tengan CUIT válido"
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                Tildar todos
+              </label>
+            )}
             {seleccionados.size > 0 && <span className="text-xs text-gray-500 dark:text-gray-400">{seleccionados.size} seleccionado(s)</span>}
             <button
               onClick={validarNombresEnArca}
@@ -1746,9 +1764,7 @@ export const UsersPage: React.FC = () => {
               title={
                 seleccionados.size > 0
                   ? `Confirma el nombre de ${seleccionados.size} persona(s) contra el Padrón de ARCA, con la conexión de Constancia de CUIT.`
-                  : viewMode === 'cards'
-                    ? 'Pasá a la vista de tabla (arriba a la derecha) para elegir a quiénes validar.'
-                    : 'Tildá las personas a las que les querés validar el nombre contra ARCA.'
+                  : 'Tildá las personas a las que les querés validar el nombre contra ARCA.'
               }
               className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors inline-flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -1789,6 +1805,10 @@ export const UsersPage: React.FC = () => {
                     allClients={allClients}
                     vacations={allVacations}
                     onClick={() => openView(user)}
+                    seleccionado={seleccionados.has(user._id)}
+                    seleccionable={puedeValidarse(user)}
+                    motivoNoSeleccionable={user.metadata?.nombreValidadoArcaAt ? 'El nombre ya está validado en ARCA: no hace falta volver a consultarlo' : 'Sin un CUIT válido no se puede consultar el Padrón'}
+                    onToggleSeleccion={() => alternarUno(user._id)}
                     userLookup={userLookup}
                     allRoleFrames={allRoleFrames}
                     actions={

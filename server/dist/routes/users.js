@@ -635,7 +635,11 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         const userIds = [...new Set(memberships.map((m) => String(m.userId || "")))].filter((id) => Types.ObjectId.isValid(id));
         const [usersList, clientsList] = await Promise.all([
             User.find({ _id: { $in: userIds } })
-                .select("firstName lastName email roles metadata.activo metadata.id metadata.cuit metadata.sinCuit")
+                // OJO: este `select` es campo por campo. Cualquier dato de `metadata` que la fila de contratos
+                // necesite hay que PEDIRLO acá: si no, llega `undefined` y la pantalla lo muestra como si el
+                // dato no existiera. Así estuvo `nombreValidadoArcaAt`, y el mismo nombre salía validado en
+                // Usuarios y sin validar en Contratos.
+                .select("firstName lastName email roles metadata.activo metadata.id metadata.cuit metadata.sinCuit metadata.nombreValidadoArcaAt")
                 .populate({ path: "roles", select: "name", model: Role })
                 .lean(),
             Client.find({ _id: { $in: [...new Set(projectsList.map((p) => String(p.clientId?._id || p.clientId || "")))].filter((id) => Types.ObjectId.isValid(id)) } })

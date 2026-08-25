@@ -22,6 +22,17 @@ interface UserCardProps {
   userLookup?: Map<number | string, string>; // Mapa para buscar nombres de empleados reemplazados
   allRoleFrames?: RoleFrameItem[];
   onClick?: () => void;
+  /**
+   * Selección masiva, la misma que en la vista de tabla.
+   *
+   * Las tres van juntas o no va ninguna: sin `onToggleSeleccion` no se dibuja el check, porque un
+   * check que no se puede tildar es peor que no tenerlo. `seleccionable` en `false` lo dibuja
+   * apagado, con su motivo — que es lo que evita el «tildé 10 y dice 7».
+   */
+  seleccionado?: boolean;
+  seleccionable?: boolean;
+  motivoNoSeleccionable?: string;
+  onToggleSeleccion?: () => void;
   actions?: {
     icon: any;
     title: string;
@@ -30,7 +41,7 @@ interface UserCardProps {
   }[];
 }
 
-export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClients, vacations = [], projectContext, userConfig, userLookup, allRoleFrames = [], onClick, actions }) => {
+export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClients, vacations = [], projectContext, userConfig, userLookup, allRoleFrames = [], onClick, actions, seleccionado, seleccionable = true, motivoNoSeleccionable, onToggleSeleccion }) => {
   const [vacationModalOpen, setVacationModalOpen] = React.useState(false);
   const [selectedVacationUser, setSelectedVacationUser] = React.useState<{ id: string; name: string } | null>(null);
 
@@ -234,6 +245,21 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
       header={{
         title: (
           <div className="flex items-center gap-2 flex-wrap">
+            {/* `stopPropagation` porque la tarjeta entera abre la ficha, y tildar no es abrir. */}
+            {onToggleSeleccion && (
+              <input
+                type="checkbox"
+                checked={!!seleccionado}
+                disabled={!seleccionable}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  onToggleSeleccion();
+                }}
+                title={seleccionable ? "Tildar para las acciones masivas" : motivoNoSeleccionable}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+              />
+            )}
             <span className="truncate">{fullName}</span>
             {(() => {
               const activeVac = getUserActiveVacation(user._id);
