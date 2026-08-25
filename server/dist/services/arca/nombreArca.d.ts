@@ -39,6 +39,18 @@ export declare function aplicarNombreDeArca(opts: {
         apellido?: string;
     };
 }): Promise<Renombre | null>;
+/**
+ * ¿Es el mismo nombre, aunque venga escrito distinto?
+ *
+ * Se compara como CONJUNTO DE PALABRAS, normalizadas: ARCA muestra «STOLTZING MICAELA SOL» —apellido
+ * primero, todo en mayúsculas— y WeProdu guarda «Micaela Sol» + «Stoltzing». Comparar los strings
+ * daría distinto SIEMPRE, y mandaría a consultar el padrón por las veinte personas en cada corrida.
+ *
+ * Comparar el conjunto y no la secuencia es a propósito: el orden apellido/nombre cambia según la
+ * pantalla, y no es una diferencia de dato. Lo que sí importa —que falte o sobre una palabra— se
+ * detecta igual.
+ */
+export declare function mismoNombre(a: string, b: string): boolean;
 export interface ResultadoNombres {
     renombrados: Renombre[];
     /** CUIL a los que ARCA les confirmó el nombre, HAYA CAMBIADO O NO. */
@@ -47,15 +59,20 @@ export interface ResultadoNombres {
     motivoSinConsultar?: string;
 }
 /**
- * Confirma contra el Padrón el nombre de un conjunto de personas.
+ * Resuelve contra el Padrón el nombre de unas pocas personas.
  *
- * POR QUÉ LA VALIDACIÓN DE OBRAS SOCIALES PREGUNTA ACÁ Y NO MIRA LA PANTALLA QUE TIENE ADELANTE
+ * SOLO SE LLAMA POR LOS QUE DIFIEREN, y esa es toda la diferencia de costo.
  *
- * La corrida de obras sociales trabaja sobre la pantalla de altas de Simplificación Registral, que
- * muestra el nombre de la persona — pero ENTERO, en un solo campo. Para escribirlo hacen falta nombre
- * y apellido por separado, y partir «MARIA DEL CORAZON DE JESUS SORIA» por un espacio es adivinar
- * dónde termina uno y empieza el otro. El padrón (`ws_sr_padron_a13`) los devuelve separados y es el
- * mismo organismo, así que la respuesta autoritativa ya existe: se pregunta ahí.
+ * La corrida de obras sociales ya lee el nombre de la pantalla de altas —ARCA lo precompleta al lado
+ * del CUIL— así que comparar es gratis. Pero la pantalla lo muestra ENTERO: para ESCRIBIRLO hacen
+ * falta nombre y apellido por separado, y partir «MARIA DEL CORAZON DE JESUS SORIA» por un espacio es
+ * adivinar dónde termina uno y empieza el otro. El padrón (`ws_sr_padron_a13`) los devuelve separados
+ * y es el mismo organismo.
+ *
+ * Antes esto se corría por TODAS las personas de la corrida, en paralelo con el navegador: veinte
+ * consultas SOAP y veinte handshakes TLS peleando por el mismo VPS con el Chromium que estaba
+ * cargando el login de AFIP. Ahora se llama por los pocos que de verdad difieren — casi siempre,
+ * ninguno.
  *
  * Best-effort de punta a punta: si el certificado no está conectado, o una consulta falla, quien
  * llama no se entera. Corregir un nombre no puede costar la validación entera.
@@ -66,10 +83,13 @@ export declare function confirmarNombresConElPadron(opts: {
     userIds: string[];
 }): Promise<ResultadoNombres>;
 /**
- * Los `userId` de un conjunto de CUIL.
+ * Los usuarios de un conjunto de CUIL, indexados por CUIL en dígitos.
  *
  * Se compara por DÍGITOS y no por string: `metadata.cuit` se guarda con o sin guiones según de dónde
  * vino. Es el mismo emparejamiento que hace `pendientesObraSocial`, y comparar crudo es exactamente
  * lo que hacía que la validación de obras sociales no encontrara a nadie.
+ *
+ * Devuelve el usuario entero y no solo el id porque quien llama necesita el nombre guardado para
+ * compararlo: con los ids sueltos habría que volver a leer los mismos documentos.
  */
-export declare function userIdsDeCuils(tenantObjectId: any, cuils: string[]): Promise<string[]>;
+export declare function usuariosDeCuils(tenantObjectId: any, cuils: string[]): Promise<Map<string, any>>;

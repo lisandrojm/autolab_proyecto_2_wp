@@ -154,10 +154,10 @@ describe("reglas del trámite", () => {
    * hacía que la pantalla pareciera colgada.
    */
   it("si el bloque no aparece, es un error DE ESA PERSONA y dice por qué", () => {
-    const cuerpo = FUENTE.slice(FUENTE.indexOf("if (porDigitos.has(cuilDigitos))"));
-    assert.match(cuerpo.slice(0, 1400), /topeAlcanzado\(page\)/, "hay que distinguir el tope del resto");
-    assert.match(cuerpo.slice(0, 1400), /errores\.add\(cuil\)/);
-    assert.match(cuerpo.slice(0, 1400), /tipo: "error", cuil, motivo/, "el error de la fila tiene que viajar con su motivo");
+    const cuerpo = FUENTE.slice(FUENTE.indexOf("if (porDigitos.has(cuilDigitos))"), FUENTE.indexOf("await vaciarPantalla(page);", FUENTE.indexOf("if (porDigitos.has(cuilDigitos))")));
+    assert.match(cuerpo, /topeAlcanzado\(page\)/, "hay que distinguir el tope del resto");
+    assert.match(cuerpo, /errores\.add\(cuil\)/);
+    assert.match(cuerpo, /tipo: "error", cuil, motivo/, "el error de la fila tiene que viajar con su motivo");
   });
 
   /**
@@ -280,7 +280,24 @@ describe("el emparejamiento CUIL ↔ fila", () => {
 
   it("el resultado sale con el CUIL en el formato en que entró", () => {
     // Los eventos y los items se emparejan del otro lado sin traducir nada: quien llamó manda.
-    assert.match(FUENTE, /const rnos = porDigitos\.get\(cuilDigitos\);\s*\n\s*hechos\.set\(cuil, rnos\);/);
+    // Entre las dos líneas se lee el nombre del bloque, así que se permite lo que haya en el medio
+    // mientras las dos sigan estando: lo que el test cuida es de DÓNDE sale el rnos.
+    assert.match(FUENTE, /const rnos = porDigitos\.get\(cuilDigitos\);[\s\S]{0,200}?hechos\.set\(cuil, rnos\);/);
+  });
+
+  it("el nombre se lee del MISMO bloque, no de otra consulta", () => {
+    // Si esto se rompe, alguien movió la lectura del nombre a otro servicio: son dos consultas al
+    // mismo organismo por la misma persona, que es lo que este diseño evita.
+    assert.match(FUENTE, /nombresPorDigitos\.get\(cuilDigitos\)/);
+    assert.match(FUENTE, /tipo: "resultado", cuil, rnos, nombreArca/, "el nombre viaja en el mismo evento que la obra social");
+  });
+
+  it("el nombre de ARCA no se parte en nombre y apellido", () => {
+    // ARCA lo muestra como APELLIDO + NOMBRES pegados. Dónde termina el apellido no se puede saber
+    // («DEL VALLE ROJAS ANA»), y partirlo mal escribe el nombre de una persona al revés. Este motor
+    // solo lo LEE; el que difiera se resuelve con el padrón, que los devuelve separados.
+    const leer = FUENTE.slice(FUENTE.indexOf("const nombreDeLaFila"), FUENTE.indexOf("const out = {};"));
+    assert.ok(!/\.split\(/.test(leer), "partir el nombre acá es adivinar dónde termina el apellido");
   });
 });
 

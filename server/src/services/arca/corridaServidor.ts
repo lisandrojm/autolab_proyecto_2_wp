@@ -4,7 +4,8 @@ import { Company } from "../../models/Company.js";
 import { ArcaObrasSocialesLog } from "../../models/ArcaObrasSocialesLog.js";
 import { aplicarLoteObrasSociales } from "../obrasSocialesLoteService.js";
 import { abrirSesionArca, credencialesDe } from "./navegador.js";
-import { confirmarNombresConElPadron, Renombre } from "./nombreArca.js";
+import { confirmarNombresConElPadron, mismoNombre, Renombre } from "./nombreArca.js";
+import { User } from "../../models/User.js";
 
 /**
  * Validar obras sociales contra ARCA desde el SERVIDOR, sin que nadie tenga que instalar nada.
@@ -41,7 +42,7 @@ export type EventoCorrida =
   | { tipo: "esperando"; que: string; restanMs: number }
   | { tipo: "listo" }
   | { tipo: "consultando"; cuil: string }
-  | { tipo: "resultado"; cuil: string; rnos: string; hechas: number; total: number }
+  | { tipo: "resultado"; cuil: string; rnos: string; nombreArca?: string; /** El nombre guardado coincide con el que ARCA muestra. `false` = hay que resolverlo con el padrón. */ nombreOk?: boolean; hechas: number; total: number }
   | { tipo: "error"; cuil: string; motivo?: string; hechas: number; total: number }
   | { tipo: "guardando" }
   | { tipo: "nombres"; renombrados: Renombre[]; confirmados: string[] }
@@ -105,25 +106,39 @@ export async function arrancarCorrida(opts: { tenantId: string; tenantObjectId: 
 
   const corrida: Corrida = { tenantId, empresaId, total: cuils.length, eventos: [], terminada: false, señal: { cortada: false }, arrancadaEl: new Date() };
   corridas.set(tenantId, corrida);
-  const emitir = (e: EventoCorrida) => corrida.eventos.push(e);
 
   /*
-    LOS NOMBRES SE CONFIRMAN EN PARALELO, NO AL FINAL.
+    EL NOMBRE SE COMPARA CON EL QUE YA TRAJO LA PANTALLA.
 
-    Cada persona se confirma con una consulta al padrón (ver `nombreArca.ts`) — la misma verificación
-    que hace «Validar CUIT». Hacerla después de la corrida sumaba su tiempo al de ARCA y se notaba:
-    la pantalla ya había terminado de leer obras sociales y seguía esperando.
+    ARCA precompleta el nombre en el mismo bloque del que se lee la obra social, así que el motor lo
+    devuelve en el mismo evento (ver `leerFilas`). Comparar acá no cuesta ninguna consulta: es un
+    string contra otro, en memoria, mientras la corrida sigue.
 
-    Son dos servicios distintos del organismo —webservice por certificado contra navegador con clave
-    fiscal— así que no se estorban, y escriben en documentos distintos: esto toca `User`, la corrida
-    toca `UserProject`. Arranca acá, corre mientras ARCA trabaja, y se recoge al final: para cuando la
-    corrida termina de leer a veinte personas, esto hace rato que está listo.
+    Solo los que DIFIEREN van al padrón, y solo al final — porque para escribir el nombre hacen falta
+    apellido y nombre por separado, y la pantalla los muestra pegados.
   */
-  const nombresEnCurso = confirmarNombresConElPadron({ tenantObjectId, tenantId, userIds }).catch(() => ({
-    renombrados: [] as Renombre[],
-    confirmados: [] as string[],
-    consultados: 0,
-  }));
+  const personas: any[] = await User.find({ _id: { $in: userIds }, tenantId: tenantObjectId })
+    .select("_id firstName lastName metadata.cuit")
+    .lean();
+  const porCuil = new Map(personas.map((u) => [String(u?.metadata?.cuit || "").replace(/\D/g, ""), u]));
+  const nombresOk: string[] = [];
+  const nombresQueDifieren = new Map<string, string>(); // userId → cuil
+
+  const emitir = (e: EventoCorrida) => {
+    if (e.tipo === "resultado" && e.nombreArca) {
+      const u = porCuil.get(String(e.cuil).replace(/\D/g, ""));
+      if (u) {
+        const guardado = `${u.firstName || ""} ${u.lastName || ""}`.trim();
+        const ok = mismoNombre(e.nombreArca, guardado);
+        // El veredicto viaja en el MISMO evento: así la pantalla marca cada persona apenas se la lee,
+        // en vez de quedarse en blanco hasta que termine toda la corrida.
+        e.nombreOk = ok;
+        if (ok) nombresOk.push(String(e.cuil).replace(/\D/g, ""));
+        else nombresQueDifieren.set(String(u._id), String(e.cuil).replace(/\D/g, ""));
+      }
+    }
+    corrida.eventos.push(e);
+  };
 
   // Sin `await`: la corrida sigue por su cuenta y este request vuelve ya.
   void (async () => {
@@ -167,11 +182,20 @@ export async function arrancarCorrida(opts: { tenantId: string; tenantObjectId: 
       log.faltaron = r.faltaron;
       log.motivo = motivoDeQueFaltaran(r);
 
-      // Ya terminó ARCA: los nombres se recogen acá, y a esta altura la promesa está resuelta hace
-      // rato. El `await` es de sincronización, no de espera.
-      const nombres = await nombresEnCurso;
-      renombrados = nombres.renombrados;
-      emitir({ tipo: "nombres", renombrados: nombres.renombrados, confirmados: nombres.confirmados });
+      /*
+        Los que difieren, y NADA MÁS que esos.
+
+        En una corrida donde los nombres están bien —lo normal— acá no sale ni una consulta: la
+        comparación ya se hizo contra lo que la pantalla mostró. Se paga una consulta por cada persona
+        cuyo nombre de verdad hay que corregir.
+      */
+      if (nombresQueDifieren.size > 0) {
+        const r2 = await confirmarNombresConElPadron({ tenantObjectId, tenantId, userIds: [...nombresQueDifieren.keys()] });
+        renombrados = r2.renombrados;
+        // Los que el padrón confirmó también quedan como confirmados en la pantalla.
+        nombresOk.push(...r2.confirmados);
+      }
+      corrida.eventos.push({ tipo: "nombres", renombrados, confirmados: nombresOk });
 
       if (r.items.length > 0) {
         emitir({ tipo: "guardando" });

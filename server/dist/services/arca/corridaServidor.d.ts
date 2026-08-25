@@ -18,6 +18,8 @@ export type EventoCorrida = {
     tipo: "resultado";
     cuil: string;
     rnos: string;
+    nombreArca?: string; /** El nombre guardado coincide con el que ARCA muestra. `false` = hay que resolverlo con el padrón. */
+    nombreOk?: boolean;
     hechas: number;
     total: number;
 } | {

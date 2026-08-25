@@ -349,33 +349,67 @@ async function topeAlcanzado(page) {
 export async function leerFilas(page) {
   return page.evaluate((selOS) => {
     const RE_CUIL = /\d{2}-\d{8}-\d/g;
-    const cuilDeLaFila = (input) => {
+    /** El ancestro de la fila y el CUIL que le corresponde, en una sola pasada. */
+    const filaDe = (input) => {
       let node = input;
       for (let up = 0; up < 8 && node.parentElement; up++) {
         node = node.parentElement;
         const todos = (node.textContent || "").match(RE_CUIL) || [];
-        if (todos.length === 1) return todos[0];
+        if (todos.length === 1) return { node, cuil: todos[0] };
         if (todos.length > 1) return null;
       }
       return null;
     };
+
+    /*
+      EL NOMBRE SALE DEL MISMO BLOQUE QUE LA OBRA SOCIAL.
+
+      ARCA lo precompleta al lado del CUIL, con la forma `Empleado: 27-40073687-7 - STOLTZING MICAELA
+      SOL`. Leerlo acá no cuesta NADA: es la misma pantalla que ya se está leyendo para el RNOS, en la
+      misma pasada. Preguntárselo aparte a otro servicio sería consultar dos veces al mismo organismo
+      por la misma persona.
+
+      Viene APELLIDO + NOMBRES pegados y NO se parte: dónde termina el apellido no se puede saber
+      («DEL VALLE ROJAS ANA»), y partirlo mal escribe el nombre de una persona al revés. Lo que sale
+      de acá alcanza para COMPARAR; el que difiera se resuelve con el padrón, que los devuelve
+      separados.
+    */
+    const ETIQUETAS = /\b(Obra\s*Social|Sucursal|Actividad|Convenio|Categor[ií]a|Puesto|Grupo|Tipo\s*Servicio|Modalidad|Situaci[oó]n|Retribuci[oó]n|Fecha|R[eé]gimen|Trab)\b/i;
+    const nombreDeLaFila = (node, cuil) => {
+      const txt = (node.textContent || "").replace(/\s+/g, " ");
+      const i = txt.indexOf(cuil);
+      if (i < 0) return "";
+      const m = txt.slice(i + cuil.length).match(/^\s*-\s*([^0-9:]+)/);
+      if (!m) return "";
+      // Se corta en la primera etiqueta del formulario: el textContent del bloque sigue con «Obra
+      // Social», «Sucursal», etc., y sin este corte el nombre se llevaría media pantalla puesta.
+      const et = m[1].search(ETIQUETAS);
+      const crudo = (et >= 0 ? m[1].slice(0, et) : m[1]).trim();
+      // Un nombre con dígitos o de una sola letra es basura de parseo: mejor nada que un dato inventado.
+      return /\d/.test(crudo) || crudo.length < 3 ? "" : crudo;
+    };
+
     const out = {};
+    const nombres = {};
     let ambiguas = 0;
     let total = 0;
     for (const input of document.querySelectorAll(selOS)) {
       total++;
-      const cuil = cuilDeLaFila(input);
+      const fila = filaDe(input);
+      const cuil = fila && fila.cuil;
       if (!cuil) {
         ambiguas++;
         continue;
       }
+      const nombre = nombreDeLaFila(fila.node, cuil);
+      if (nombre) nombres[cuil] = nombre;
       // El código real vive en el input oculto `_AutocompleteValue`; el visible trae la descripción.
       const oculto = document.getElementById(input.id.replace("_AutocompleteText", "_AutocompleteValue"));
       let code = oculto && oculto.value ? oculto.value.replace(/\D/g, "") : "";
       if (!code) code = (input.value || "").replace(/\D/g, "");
       out[cuil] = code;
     }
-    return { filas: out, ambiguas, total };
+    return { filas: out, nombres, ambiguas, total };
   }, SEL.obraSocial);
 }
 
@@ -687,6 +721,8 @@ export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, d
     /** Los que ARCA no pudo resolver. NO se aplican: ver el filtro final. */
     const errores = new Set();
     let sinSesion = false;
+    /** Lo que ARCA muestra como nombre de cada persona, tal cual, sin partir. */
+    const nombresLeidos = new Map();
 
     /*
       LA PANTALLA ARRANCA VACÍA, siempre.
@@ -738,7 +774,7 @@ export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, d
         continue;
       }
 
-      const { filas, ambiguas } = await leerFilas(page);
+      const { filas, nombres, ambiguas } = await leerFilas(page);
 
       /*
         EL EMPAREJAMIENTO SE HACE SOBRE LOS DÍGITOS, no sobre el string.
@@ -753,6 +789,7 @@ export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, d
         suena a un problema del organismo o de esa persona en particular. ARCA contestaba perfecto.
       */
       const porDigitos = new Map(Object.entries(filas).map(([k, v]) => [soloDigitos(k), v]));
+      const nombresPorDigitos = new Map(Object.entries(nombres || {}).map(([k, v]) => [soloDigitos(k), v]));
       const cuilDigitos = soloDigitos(cuil);
 
       if (ambiguas > 0) {
@@ -773,11 +810,15 @@ export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, d
         // `hechos` se indexa con el CUIL COMO VINO: los eventos y los items salen en el mismo formato
         // en que el que llama los mandó, y del otro lado se emparejan sin traducir nada.
         const rnos = porDigitos.get(cuilDigitos);
+        const nombreArca = nombresPorDigitos.get(cuilDigitos) || "";
         hechos.set(cuil, rnos);
+        if (nombreArca) nombresLeidos.set(cuil, nombreArca);
         // Del mismo lugar que `hechos`: `filas[cuil]` era la búsqueda cruda que fallaba con los CUIL
         // pelados, y habría mandado `rnos: undefined` — que del otro lado se lee como «no tiene obra
         // social declarada». Un dato inventado sobre alguien, que es lo peor que puede salir de acá.
-        onProgreso?.({ tipo: "resultado", cuil, rnos, hechas: hechos.size, total: cuils.length });
+        // El nombre viaja en el MISMO evento que la obra social: los dos salieron del mismo bloque,
+        // en la misma lectura, y separarlos obligaría a emparejarlos otra vez del otro lado.
+        onProgreso?.({ tipo: "resultado", cuil, rnos, nombreArca, hechas: hechos.size, total: cuils.length });
       } else {
         /*
           El bloque no apareció. ESTO SÍ ES UN ERROR de esta persona, y hay que verificarlo: cuando
@@ -793,7 +834,7 @@ export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, d
       await vaciarPantalla(page);
     }
 
-    const items = [...hechos.entries()].map(([cuil, rnos]) => ({ cuil, rnos }));
+    const items = [...hechos.entries()].map(([cuil, rnos]) => ({ cuil, rnos, nombreArca: nombresLeidos.get(cuil) || "" }));
     // Con `soloLeer` la función termina acá: quien guarda es el navegador, con la sesión de la persona.
     const resultado = soloLeer ? { aplicadas: 0, rechazadas: [], dryRun: true, soloLeer: true } : items.length ? await aplicarLote(empresa, items, { dryRun, forzar }) : { aplicadas: 0, rechazadas: [], dryRun };
     return { items, errores: [...errores], sinSesion, faltaron: cuils.length - hechos.size, resultado };

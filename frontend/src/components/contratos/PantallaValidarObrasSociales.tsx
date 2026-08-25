@@ -83,28 +83,39 @@ type EnVivo = {
 
 // ─────────────────────────────────────────────────────────────── piezas chicas
 /**
- * Qué dijo el Padrón sobre el nombre de esta persona.
+ * En qué quedó el nombre de esta persona.
  *
  * COLUMNA PROPIA Y NO UN ÍCONO PEGADO AL NOMBRE: metido en «Persona», el nombre corregido y el
- * anterior tachado ensanchaban la columna y se leían como una sola cosa confusa. Separado, se
- * escanea de arriba a abajo — que es la pregunta real: «¿me tocó algún nombre?».
+ * anterior tachado ensanchaban la columna y se leían como una sola cosa. Separado se escanea de
+ * arriba a abajo, que es la pregunta real: «¿me tocó algún nombre?».
  *
- * TRES ESTADOS, no dos, porque el que falta es el que genera la duda:
+ * CUATRO ESTADOS, y ninguno sobra:
  *
- *   corregido  → ámbar, con el nombre que quedó y el anterior tachado abajo. Es un dato de una
- *                persona que cambió sin que nadie lo escribiera: tiene que verse DE QUÉ cambió.
- *   coincide   → tilde verde. ARCA lo miró y ya estaba bien.
- *   sin dato   → una raya. Todavía no se confirmó, o no se pudo — y eso NO es lo mismo que «está
- *                bien», así que no lleva tilde: uno de más miente sobre un dato que se declara ante
- *                el organismo.
+ *   coincide  → lo que ARCA muestra en la pantalla es lo que hay guardado. No costó ninguna consulta.
+ *   corregido → se reemplazó por el del padrón, y se muestra el anterior tachado: sin eso,
+ *               «corregido» avisa que algo cambió pero no deja revisar qué.
+ *   difiere   → ARCA muestra otro nombre, pero el padrón no pudo confirmarlo (certificado sin
+ *               conectar, o no contestó). NO se toca el dato y NO se pone tilde: se avisa y listo.
+ *   sin dato  → una raya. Todavía no se leyó a esta persona, o ARCA no mostró su nombre. Que no es
+ *               lo mismo que «está bien», así que tampoco lleva tilde.
  */
-const CeldaNombreArca: React.FC<{ nombreArca?: { antes?: string; ahora?: string } }> = ({ nombreArca }) => {
+type EstadoNombre = { estado: 'coincide' | 'corregido' | 'difiere'; antes?: string; ahora?: string };
+
+const CeldaNombreArca: React.FC<{ nombreArca?: EstadoNombre }> = ({ nombreArca }) => {
   if (!nombreArca) return <span className="text-[11.5px] text-gray-400">—</span>;
-  if (!nombreArca.antes) {
+  if (nombreArca.estado === 'coincide') {
     return (
       <span className="text-[11.5px] text-green-700 dark:text-green-400 inline-flex items-center gap-1.5">
         <FontAwesomeIcon icon={faCheck} className="h-3 w-3 shrink-0" />
         coincide
+      </span>
+    );
+  }
+  if (nombreArca.estado === 'difiere') {
+    return (
+      <span className="text-[11.5px] text-amber-700 dark:text-amber-400 inline-flex items-center gap-1.5" title="ARCA muestra otro nombre y no se pudo confirmar contra el Padrón: no se cambió nada.">
+        <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 shrink-0" />
+        difiere
       </span>
     );
   }
@@ -114,7 +125,6 @@ const CeldaNombreArca: React.FC<{ nombreArca?: { antes?: string; ahora?: string 
         <FontAwesomeIcon icon={faCheck} className="h-3 w-3 shrink-0" />
         corregido
       </span>
-      {/* El nombre anterior se muestra siempre: sin él, «corregido» no se puede revisar. */}
       <span className="text-[11px] text-gray-400 line-through">{nombreArca.antes}</span>
     </span>
   );
@@ -271,9 +281,9 @@ export const PantallaValidarObrasSociales: React.FC<{
    * pregunta que se hace quien mira la tabla es «¿me tocó los nombres?», y un blanco no la contesta:
    * no distingue «estaba bien» de «no se pudo confirmar».
    */
-  const [nombres, setNombres] = useState<Record<string, { antes?: string; ahora?: string }>>({});
+  const [nombres, setNombres] = useState<Record<string, EstadoNombre>>({});
   /** Espejo del anterior: el aviso se dispara dentro del intervalo, donde el estado todavía no llegó. */
-  const nombresRef = useRef<Record<string, { antes?: string; ahora?: string }>>({});
+  const nombresRef = useRef<Record<string, EstadoNombre>>({});
   /** Marca de tiempo del último evento recibido. Es lo que reinicia la guardia. */
   const [ultimoEvento, setUltimoEvento] = useState(0);
   /**
@@ -390,11 +400,14 @@ export const PantallaValidarObrasSociales: React.FC<{
    * Un rechazo NO corta el lote. La fila queda en rojo con el motivo y la corrida sigue: el problema
    * es de esa persona —o de la configuración de la empresa— y no de las otras diecinueve.
    */
-  const guardarUna = async (f: FilaConstatacion, cuil: string, rnos: string) => {
+  const guardarUna = async (f: FilaConstatacion, cuil: string, rnos: string, nombreArca?: string) => {
     const antes = f.valores.rnos || f.valores.rnosSugerido || '';
     setEnVivo((p) => ({ ...p, [cuil]: { ...p[cuil], estado: 'guardando', rnos } }));
     try {
-      const r = await projectsAPI.aplicarObrasSocialesLote(empresaId as string, [{ cuil, rnos }], false);
+      // `nombreArca` viaja con la fila: es el nombre que el Asistente leyó en la MISMA pantalla de la
+      // que sacó el RNOS, y del otro lado se compara con el guardado. Sin él, el server tendría que
+      // preguntarle al padrón por cada persona «por las dudas».
+      const r = await projectsAPI.aplicarObrasSocialesLote(empresaId as string, [{ cuil, rnos, nombreArca }], false);
       if (r.aplicados === 0) {
         setEnVivo((p) => ({ ...p, [cuil]: { estado: 'error', rnos, antes, motivo: motivoDeRechazo(r, cuil) } }));
         return;
@@ -454,28 +467,32 @@ export const PantallaValidarObrasSociales: React.FC<{
 
       const vivo: Record<string, EnVivo> = {};
       // Se reconstruye en cada vuelta, igual que `vivo`: el seguimiento relee TODOS los eventos.
-      let nuevosNombres: Record<string, { antes?: string; ahora?: string }> | null = null;
+      const parciales: Record<string, EstadoNombre> = {};
       for (const ev of r.eventos as any[]) {
         if (ev.tipo === 'abriendo') setFaseCorrida('Abriendo ARCA en el servidor…');
         else if (ev.tipo === 'conectado') setFaseCorrida('Adentro de ARCA. Buscando la pantalla de altas…');
         else if (ev.tipo === 'consultando') { vivo[ev.cuil] = { estado: 'consultando' }; setFaseCorrida(''); }
-        else if (ev.tipo === 'resultado') vivo[ev.cuil] = { estado: 'listo', rnos: ev.rnos, sinDeclarar: !ev.rnos, despues: ev.rnos };
+        else if (ev.tipo === 'resultado') {
+          vivo[ev.cuil] = { estado: 'listo', rnos: ev.rnos, sinDeclarar: !ev.rnos, despues: ev.rnos };
+          // El veredicto del nombre viene en el mismo evento: la fila se marca apenas se la lee, sin
+          // esperar a que termine la corrida entera.
+          if (ev.nombreOk === true) parciales[soloDigitos(ev.cuil)] = { estado: 'coincide' };
+          else if (ev.nombreOk === false) parciales[soloDigitos(ev.cuil)] = { estado: 'difiere' };
+        }
         else if (ev.tipo === 'error') vivo[ev.cuil] = { estado: 'error', motivo: ev.motivo };
         else if (ev.tipo === 'guardando') setFaseCorrida('Guardando lo que devolvió ARCA…');
         else if (ev.tipo === 'fallo') setFracaso({ faltaron: total, motivo: ev.mensaje });
         else if (ev.tipo === 'fin' && ev.faltaron > 0) setFracaso({ faltaron: ev.faltaron, motivo: ev.motivo });
         else if (ev.tipo === 'nombres') {
-          const m: Record<string, { antes?: string; ahora?: string }> = {};
-          for (const c of ev.confirmados || []) m[soloDigitos(c)] = {};
-          for (const r of ev.renombrados || []) m[soloDigitos(r.cuil || '')] = { antes: r.antes, ahora: r.ahora };
-          nuevosNombres = m;
+          // El cierre: lo que quedó pendiente de resolver se resuelve acá. Lo que sigue en `difiere`
+          // es lo que el padrón no pudo contestar — y se muestra así, no como si estuviera bien.
+          for (const c of ev.confirmados || []) parciales[soloDigitos(c)] = { estado: 'coincide' };
+          for (const r of ev.renombrados || []) parciales[soloDigitos(r.cuil || '')] = { estado: 'corregido', antes: r.antes, ahora: r.ahora };
         }
       }
       setEnVivo(vivo);
-      if (nuevosNombres) {
-        nombresRef.current = nuevosNombres;
-        setNombres(nuevosNombres);
-      }
+      nombresRef.current = parciales;
+      setNombres(parciales);
 
       if (!r.corriendo) {
         window.clearInterval(id);
@@ -492,7 +509,7 @@ export const PantallaValidarObrasSociales: React.FC<{
           El detalle fila por fila queda en la tabla, que no se va; esto es solo el aviso de que
           pasó, para el que no estaba mirando.
         */
-        const cambiados = Object.entries(nombresRef.current).filter(([, v]) => v.antes);
+        const cambiados = Object.entries(nombresRef.current).filter(([, v]) => v.estado === 'corregido');
         if (cambiados.length > 0) {
           const n = cambiados.length;
           await sweetAlert.warningAlert(
@@ -557,7 +574,7 @@ export const PantallaValidarObrasSociales: React.FC<{
         setEnVivo((p) => ({ ...p, [ev.cuil]: { ...p[ev.cuil], estado: 'consultando' } }));
       } else if (ev.tipo === 'resultado') {
         const f = porCuil.get(ev.cuil);
-        if (f) await guardarUna(f, ev.cuil, ev.rnos);
+        if (f) await guardarUna(f, ev.cuil, ev.rnos, ev.nombreArca);
       } else if (ev.tipo === 'error') {
         setEnVivo((p) => ({ ...p, [ev.cuil]: { estado: 'error', motivo: ev.motivo || 'ARCA no abrió el bloque para este CUIL' } }));
       } else if (ev.tipo === 'fallo') {
@@ -599,7 +616,7 @@ export const PantallaValidarObrasSociales: React.FC<{
           El detalle fila por fila queda en la tabla, que no se va; esto es solo el aviso de que
           pasó, para el que no estaba mirando.
         */
-        const cambiados = Object.entries(nombresRef.current).filter(([, v]) => v.antes);
+        const cambiados = Object.entries(nombresRef.current).filter(([, v]) => v.estado === 'corregido');
         if (cambiados.length > 0) {
           const n = cambiados.length;
           await sweetAlert.warningAlert(

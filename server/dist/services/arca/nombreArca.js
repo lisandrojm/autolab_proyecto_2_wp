@@ -40,15 +40,44 @@ export async function aplicarNombreDeArca(opts) {
     return cambia ? { userId, cuil, antes: antes || "(sin nombre cargado)", ahora } : null;
 }
 /**
- * Confirma contra el Padrón el nombre de un conjunto de personas.
+ * ¿Es el mismo nombre, aunque venga escrito distinto?
  *
- * POR QUÉ LA VALIDACIÓN DE OBRAS SOCIALES PREGUNTA ACÁ Y NO MIRA LA PANTALLA QUE TIENE ADELANTE
+ * Se compara como CONJUNTO DE PALABRAS, normalizadas: ARCA muestra «STOLTZING MICAELA SOL» —apellido
+ * primero, todo en mayúsculas— y WeProdu guarda «Micaela Sol» + «Stoltzing». Comparar los strings
+ * daría distinto SIEMPRE, y mandaría a consultar el padrón por las veinte personas en cada corrida.
  *
- * La corrida de obras sociales trabaja sobre la pantalla de altas de Simplificación Registral, que
- * muestra el nombre de la persona — pero ENTERO, en un solo campo. Para escribirlo hacen falta nombre
- * y apellido por separado, y partir «MARIA DEL CORAZON DE JESUS SORIA» por un espacio es adivinar
- * dónde termina uno y empieza el otro. El padrón (`ws_sr_padron_a13`) los devuelve separados y es el
- * mismo organismo, así que la respuesta autoritativa ya existe: se pregunta ahí.
+ * Comparar el conjunto y no la secuencia es a propósito: el orden apellido/nombre cambia según la
+ * pantalla, y no es una diferencia de dato. Lo que sí importa —que falte o sobre una palabra— se
+ * detecta igual.
+ */
+export function mismoNombre(a, b) {
+    const partes = (x) => String(x || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // los acentos no son una diferencia de nombre
+        .toUpperCase()
+        .replace(/[^A-Z\s]/g, " ")
+        .split(/\s+/)
+        .filter(Boolean)
+        .sort()
+        .join(" ");
+    const pa = partes(a);
+    return pa.length > 0 && pa === partes(b);
+}
+/**
+ * Resuelve contra el Padrón el nombre de unas pocas personas.
+ *
+ * SOLO SE LLAMA POR LOS QUE DIFIEREN, y esa es toda la diferencia de costo.
+ *
+ * La corrida de obras sociales ya lee el nombre de la pantalla de altas —ARCA lo precompleta al lado
+ * del CUIL— así que comparar es gratis. Pero la pantalla lo muestra ENTERO: para ESCRIBIRLO hacen
+ * falta nombre y apellido por separado, y partir «MARIA DEL CORAZON DE JESUS SORIA» por un espacio es
+ * adivinar dónde termina uno y empieza el otro. El padrón (`ws_sr_padron_a13`) los devuelve separados
+ * y es el mismo organismo.
+ *
+ * Antes esto se corría por TODAS las personas de la corrida, en paralelo con el navegador: veinte
+ * consultas SOAP y veinte handshakes TLS peleando por el mismo VPS con el Chromium que estaba
+ * cargando el login de AFIP. Ahora se llama por los pocos que de verdad difieren — casi siempre,
+ * ninguno.
  *
  * Best-effort de punta a punta: si el certificado no está conectado, o una consulta falla, quien
  * llama no se entera. Corregir un nombre no puede costar la validación entera.
@@ -106,18 +135,27 @@ export async function confirmarNombresConElPadron(opts) {
     return { renombrados, confirmados, consultados };
 }
 /**
- * Los `userId` de un conjunto de CUIL.
+ * Los usuarios de un conjunto de CUIL, indexados por CUIL en dígitos.
  *
  * Se compara por DÍGITOS y no por string: `metadata.cuit` se guarda con o sin guiones según de dónde
  * vino. Es el mismo emparejamiento que hace `pendientesObraSocial`, y comparar crudo es exactamente
  * lo que hacía que la validación de obras sociales no encontrara a nadie.
+ *
+ * Devuelve el usuario entero y no solo el id porque quien llama necesita el nombre guardado para
+ * compararlo: con los ids sueltos habría que volver a leer los mismos documentos.
  */
-export async function userIdsDeCuils(tenantObjectId, cuils) {
+export async function usuariosDeCuils(tenantObjectId, cuils) {
     const buscados = new Set(cuils.map((c) => String(c || "").replace(/\D/g, "")).filter((c) => c.length === 11));
+    const out = new Map();
     if (buscados.size === 0)
-        return [];
+        return out;
     const users = await User.find({ tenantId: tenantObjectId, "metadata.cuit": { $exists: true, $ne: "" } })
-        .select("_id metadata.cuit")
+        .select("_id firstName lastName metadata.cuit")
         .lean();
-    return users.filter((u) => buscados.has(String(u?.metadata?.cuit || "").replace(/\D/g, ""))).map((u) => String(u._id));
+    for (const u of users) {
+        const d = String(u?.metadata?.cuit || "").replace(/\D/g, "");
+        if (buscados.has(d))
+            out.set(d, u);
+    }
+    return out;
 }

@@ -20,7 +20,7 @@ import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { requireAnyRole } from "../middleware/requireAnyRole.js";
 import { Types } from "mongoose";
 import { aplicarLoteObrasSociales, pendientesObraSocial, LoteObrasSocialesError } from "../services/obrasSocialesLoteService.js";
-import { confirmarNombresConElPadron, userIdsDeCuils, Renombre } from "../services/arca/nombreArca.js";
+import { confirmarNombresConElPadron, usuariosDeCuils, mismoNombre, Renombre } from "../services/arca/nombreArca.js";
 import { Area } from "../models/Area.js";
 import { Position } from "../models/Position.js";
 import { Level } from "../models/Level.js";
@@ -1924,9 +1924,25 @@ router.post("/projects/obras-sociales/aplicar-lote", requireTenant, authenticate
     let renombrados: Renombre[] = [];
     if (req.body?.previsualizar !== true) {
       try {
-        const cuils = (Array.isArray(req.body?.filas) ? req.body.filas : []).map((f: any) => String(f?.cuil || ""));
-        const userIds = await userIdsDeCuils(req.tenantObjectId, cuils);
-        renombrados = (await confirmarNombresConElPadron({ tenantObjectId: req.tenantObjectId, tenantId: String(req.tenantObjectId), userIds })).renombrados;
+        /*
+          Se compara con el nombre que ARCA mostró en la pantalla y que viene en cada fila, y SOLO se
+          consulta el padrón por los que difieren — igual que la corrida del servidor.
+
+          Sin `nombreArca` no se consulta nada: preguntarle al padrón por las veinte personas «por las
+          dudas» es el doble de trabajo contra el mismo organismo para confirmar lo que la pantalla
+          que se acaba de leer ya decía.
+        */
+        const filas = (Array.isArray(req.body?.filas) ? req.body.filas : []).filter((f: any) => f?.nombreArca);
+        if (filas.length > 0) {
+          const users = await usuariosDeCuils(req.tenantObjectId, filas.map((f: any) => String(f.cuil || "")));
+          const difieren = filas
+            .map((f: any) => ({ f, u: users.get(String(f.cuil || "").replace(/\D/g, "")) }))
+            .filter(({ f, u }: any) => u && !mismoNombre(String(f.nombreArca), `${u.firstName || ""} ${u.lastName || ""}`))
+            .map(({ u }: any) => String(u._id));
+          if (difieren.length > 0) {
+            renombrados = (await confirmarNombresConElPadron({ tenantObjectId: req.tenantObjectId, tenantId: String(req.tenantObjectId), userIds: difieren })).renombrados;
+          }
+        }
       } catch {
         /* best-effort */
       }

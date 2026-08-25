@@ -535,7 +535,9 @@ class ProjectsAPI {
    */
   async aplicarObrasSocialesLote(
     empresaId: string,
-    filas: Array<{ cuil: string; rnos: string }>,
+    /** `nombreArca`: el nombre que ARCA mostró en la misma pantalla, para que el server lo compare
+     *  con el guardado sin tener que volver a preguntarle al padrón por cada persona. */
+    filas: Array<{ cuil: string; rnos: string; nombreArca?: string }>,
     /** `true` calcula el mismo resultado sin escribir nada: es la previsualización. */
     previsualizar?: boolean,
   ): Promise<{

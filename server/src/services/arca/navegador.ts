@@ -57,6 +57,15 @@ const SIMPLIFICACION_URL = "https://serviciossegsoc.afip.gob.ar/tramites_con_cla
   Asistente, quien abría el servicio desde el portal era ella, y el programa se enganchaba a una
   pestaña que YA estaba adentro.
 */
+/**
+ * Cuánto se le da a AFIP para abrir una página, por intento.
+ *
+ * 60 s y no los 30 de fábrica de Playwright: el login de AFIP tardó más que eso en el VPS y la
+ * corrida entera murió con un `Timeout 30000ms exceeded` antes de la primera persona. El sitio del
+ * organismo es lento, y esperar un rato más es infinitamente más barato que volver a correr todo.
+ */
+const NAVEGACION_MS = 60_000;
+
 const PORTAL_URL = "https://portalcf.cloud.afip.gob.ar/portal/app/";
 const NOMBRE_SERVICIO = /simplificaci[oó]n\s*registral/i;
 
@@ -215,17 +224,32 @@ async function guardarSesion(tenantId: string, ctx: BrowserContext): Promise<voi
  * decir dónde terminó, en vez de dónde no pudo entrar.
  */
 async function irA(page: Page, url: string): Promise<void> {
+  let ultimo: any = null;
   for (let intento = 1; intento <= 3; intento++) {
     try {
-      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: NAVEGACION_MS });
       return;
     } catch (e: any) {
-      if (!/interrupted by another navigation/i.test(String(e?.message || e))) throw e;
-      // Se deja terminar la cadena antes de volver a intentar: reintentar encima de una navegación en
-      // curso es pedir la misma interrupción de nuevo.
+      ultimo = e;
+      const msg = String(e?.message || e);
+      // Los dos motivos por los que se reintenta, y ninguno es un error de nuestro lado:
+      //   - la cadena de redirecciones de AFIP interrumpió la navegación (la que interrumpe ES la buena);
+      //   - AFIP tardó más que el timeout, que en horario pico pasa.
+      if (!/interrupted by another navigation|Timeout .* exceeded/i.test(msg)) throw e;
+      // Se deja terminar lo que haya en curso antes de volver a intentar: reintentar encima de una
+      // navegación viva es pedir la misma interrupción de nuevo.
       await page.waitForLoadState("domcontentloaded").catch(() => {});
     }
   }
+  /*
+    Se agotaron los intentos. El mensaje de Playwright es un `Timeout 30000ms exceeded` con un call
+    log en inglés que no dice NADA accionable: se reemplaza por lo que de verdad pasó y por lo único
+    que se puede hacer al respecto.
+  */
+  if (/Timeout .* exceeded/i.test(String(ultimo?.message || ultimo))) {
+    throw new Error(`AFIP no terminó de abrir ${url} en ${Math.round((NAVEGACION_MS / 1000) * 3)} segundos (3 intentos).\n\nSuele ser el sitio del organismo lento o caído: probá de nuevo en un rato. Si pasa siempre, revisá que el VPS tenga salida a auth.afip.gob.ar.`);
+  }
+  throw ultimo;
 }
 
 /**
