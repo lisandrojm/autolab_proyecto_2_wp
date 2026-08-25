@@ -106,7 +106,7 @@ export const ClientSelector: React.FC = () => {
   return (
     <div className="relative" ref={rootRef}>
       {/* Mismo componente que el selector de Empresa: son dos ejes en paralelo, no una jerarquía. */}
-      <ContextChip eje="Cliente" icono={faUsers} valor={selectedClient?.name} detalle={selectedClient?.company || undefined} placeholder="Elegir cliente" abierto={isOpen} onToggle={() => setIsOpen((v) => !v)} onLimpiar={handleClearClient} />
+      <ContextChip eje="Cliente" icono={faUsers} valor={selectedClient?.name} detalle={selectedClient?.company || undefined} /* solo tooltip: ver ContextChip */ placeholder="Elegir cliente" abierto={isOpen} onToggle={() => setIsOpen((v) => !v)} onLimpiar={handleClearClient} />
 
       {/* El alto lo pone el espacio que queda hasta el borde de la ventana, no un número fijo: ver
           `useAltoDisponible`. El buscador queda arriba y solo scrollea la lista. */}

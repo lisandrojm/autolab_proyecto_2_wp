@@ -18,7 +18,8 @@
     "test:arca:registrar-obras-sociales": "node --test tools/registrar-obras-sociales.test.mjs",
     "asistente": "node tools/asistente/servidor.mjs",
     "test:asistente": "node --test tools/asistente/seguridad.test.mjs",
-    "chrome-arca": "node tools/chrome-arca.mjs"
+    "chrome-arca": "node tools/chrome-arca.mjs",
+    "test:asistente-version": "tsx --test src/api/asistente.test.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

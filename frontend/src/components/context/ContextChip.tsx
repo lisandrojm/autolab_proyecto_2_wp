@@ -21,7 +21,16 @@ interface Props {
   icono: IconDefinition;
   /** Lo elegido; vacío = todavía no se eligió. */
   valor?: string;
-  /** Segunda línea del elegido (CUIT, razón social). Opcional. */
+  /**
+   * Dato secundario del elegido (razón social, CUIT). Va SOLO en el tooltip, nunca en el chip.
+   *
+   * Era una segunda línea debajo del nombre y hacía el chip el doble de alto. Con la ficha de cliente
+   * abierta, ese alto de más empuja hacia abajo todo el menú —secciones, Admin GENERAL,
+   * Configuración— y es alto permanente a cambio de un dato que ya se leyó al elegir: el desplegable
+   * muestra la empresa debajo de cada cliente, que es donde sirve para distinguir dos parecidos.
+   *
+   * No se borró porque no cuesta nada donde está: un tooltip no ocupa lugar.
+   */
   detalle?: string;
   /** Texto cuando no hay nada elegido. Va explícito ("Elegir empresa"), no un "Seleccionar…" genérico. */
   placeholder: string;
@@ -45,10 +54,7 @@ export const ContextChip: React.FC<Props> = ({ eje, icono, valor, detalle, place
 
     <span className="min-w-0 flex-1 text-left">
       {valor ? (
-        <>
-          <span className="block truncate font-medium text-gray-900 dark:text-white">{valor}</span>
-          {detalle && <span className="block truncate text-[11px] text-gray-500 dark:text-gray-400">{detalle}</span>}
-        </>
+        <span className="block truncate font-medium text-gray-900 dark:text-white">{valor}</span>
       ) : (
         <span className="block truncate text-gray-500 dark:text-gray-400">{placeholder}</span>
       )}

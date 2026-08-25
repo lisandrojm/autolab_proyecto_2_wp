@@ -2,8 +2,10 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faCircleQuestion, faDownload, faTriangleExclamation, faArrowUpRightFromSquare, faFolderOpen } from '@fortawesome/free-solid-svg-icons';
 import { faWindows as faWin, faApple as faApl } from '@fortawesome/free-brands-svg-icons';
-import { asistenteAPI, asistentePuede, tokenAsistente, ErrorAsistente, EstadoAsistente as Estado, DESCARGAS_ASISTENTE, descargaDisponible } from '../../api/asistente';
+import { asistenteAPI, asistentePuede, tokenAsistente, ErrorAsistente, EstadoAsistente as Estado, DESCARGAS_ASISTENTE, descargaDisponible, versionPublicada, esPosterior } from '../../api/asistente';
 import { sweetAlert } from '../../utils/sweetAlert';
+import { detectarSistema, Sistema } from '../../utils/sistemaOperativo';
+import { PasosInstalacion, NotaSinFirma } from '../asistente/PasosInstalacion';
 
 /**
  * El estado del Asistente WeProdu, arriba de la pantalla de validación.
@@ -57,6 +59,8 @@ export interface UsoAsistente {
   estado: Estado | null;
   fallo: 'no-detectado' | 'sin-emparejar' | null;
   cargando: boolean;
+  /** Versión publicada, si es POSTERIOR a la instalada. Vacío = no hay nada que avisar. */
+  versionNueva: string;
   refrescar: () => Promise<void>;
 }
 
@@ -71,6 +75,14 @@ export function useAsistente(): UsoAsistente {
   const [estado, setEstado] = useState<Estado | null>(null);
   const [fallo, setFallo] = useState<'no-detectado' | 'sin-emparejar' | null>(null);
   const [cargando, setCargando] = useState(true);
+  /**
+   * La versión publicada. Se pide UNA vez por montaje y no en cada sondeo: cambia cuando alguien
+   * publica un build, no cada tres segundos, y el sondeo es cada 3 s.
+   */
+  const [publicada, setPublicada] = useState('');
+  useEffect(() => {
+    void versionPublicada().then(setPublicada);
+  }, []);
 
   const refrescar = useCallback(async () => {
     try {
@@ -94,7 +106,15 @@ export function useAsistente(): UsoAsistente {
     return () => window.clearInterval(id);
   }, [refrescar, fallo]);
 
-  return { estado, fallo, cargando, refrescar };
+  /*
+    Solo se avisa si la publicada es POSTERIOR a la que está corriendo.
+
+    Y solo con el Asistente conectado: si no está detectado, la pantalla ya le está pidiendo que lo
+    instale — decirle además que hay una versión nueva de algo que no tiene es ruido.
+  */
+  const versionNueva = estado?.version && publicada && esPosterior(publicada, estado.version) ? publicada : '';
+
+  return { estado, fallo, cargando, versionNueva, refrescar };
 }
 
 const Punto: React.FC<{ color: string }> = ({ color }) => <span className={`inline-block h-2 w-2 rounded-full ${color}`} />;
@@ -121,11 +141,18 @@ const Barra: React.FC<{ punto: string; titulo: React.ReactNode; detalle: React.R
   </div>
 );
 
-/** Los tres ejecutables, en el orden en que conviene ofrecerlos. */
+/**
+ * Los ejecutables, con el sistema al que pertenece cada uno.
+ *
+ * El `sistema` es lo que permite mostrar UNO —el que corresponde— y guardar el resto detrás de
+ * «otras descargas». Antes se mostraban los tres siempre, y uno de ellos exigía saber si la Mac es
+ * Apple Silicon o Intel: una pregunta que casi nadie puede contestar y que, contestada mal, da «bad
+ * CPU type in executable» en vez de un error entendible.
+ */
 const DESCARGAS = [
-  { url: DESCARGAS_ASISTENTE.windows, icono: faWin, etiqueta: 'Windows', sistema: 'Windows', principal: true },
-  { url: DESCARGAS_ASISTENTE.macAppleSilicon, icono: faApl, etiqueta: 'Mac (Apple Silicon)', sistema: 'Mac con chip Apple', principal: false },
-  { url: DESCARGAS_ASISTENTE.macIntel, icono: faApl, etiqueta: 'Mac (Intel)', sistema: 'Mac con chip Intel', principal: false },
+  { so: 'windows' as Sistema, url: DESCARGAS_ASISTENTE.windows, icono: faWin, etiqueta: 'Windows' },
+  { so: 'mac' as Sistema, url: DESCARGAS_ASISTENTE.macAppleSilicon, icono: faApl, etiqueta: 'Mac (Apple Silicon)' },
+  { so: 'mac' as Sistema, url: DESCARGAS_ASISTENTE.macIntel, icono: faApl, etiqueta: 'Mac (Intel)' },
 ];
 
 /**
@@ -143,7 +170,7 @@ const DESCARGAS = [
  * qué content-type mande el servidor. Con `download` la intención es explícita y el nombre del
  * archivo guardado es el del `href`.
  */
-const BotonDescarga: React.FC<{ url: string; icono: typeof faWin; etiqueta: string; sistema: string; principal: boolean }> = ({ url, icono, etiqueta, sistema, principal }) => {
+const BotonDescarga: React.FC<{ url: string; icono: typeof faWin; etiqueta: string; principal?: boolean }> = ({ url, icono, etiqueta, principal }) => {
   const [disponible, setDisponible] = useState<boolean | null>(null);
   const [verificando, setVerificando] = useState(false);
 
@@ -193,7 +220,7 @@ const BotonDescarga: React.FC<{ url: string; icono: typeof faWin; etiqueta: stri
         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors disabled:opacity-60"
       >
         <FontAwesomeIcon icon={verificando ? faSpinner : faTriangleExclamation} spin={verificando} className="h-3 w-3" />
-        {verificando ? `Comprobando ${sistema}…` : `El Asistente todavía no está publicado para ${sistema} — reintentar`}
+        {verificando ? `Comprobando ${etiqueta}…` : `Todavía no está publicado para ${etiqueta} — reintentar`}
       </button>
     );
   }
@@ -216,7 +243,7 @@ const BotonDescarga: React.FC<{ url: string; icono: typeof faWin; etiqueta: stri
 };
 
 export const BloqueAsistente: React.FC<{ uso: UsoAsistente; empleadora?: string }> = ({ uso, empleadora }) => {
-  const { estado, fallo, cargando, refrescar } = uso;
+  const { estado, fallo, cargando, versionNueva, refrescar } = uso;
   const [abriendo, setAbriendo] = useState(false);
 
   /** Pide el código y lo guarda. Se hace una vez por navegador. */
@@ -278,35 +305,55 @@ export const BloqueAsistente: React.FC<{ uso: UsoAsistente; empleadora?: string 
 
   // ── No está: descargarlo. Es el único estado que pide salir de la app. ──────
   if (fallo === 'no-detectado') {
+    /*
+      Se ofrece UN botón —el del sistema que se está usando— y las instrucciones de ESE sistema.
+
+      Antes esto era: tres botones, dos párrafos de advertencias y un link, todo junto. La persona
+      tenía que leer las seis cosas para saber cuál le tocaba, y una de las decisiones que se le
+      pedía —Apple Silicon o Intel— no la puede tomar casi nadie.
+
+      Si el sistema no se puede afirmar (Linux, una tablet, un navegador raro), NO se elige uno: se
+      muestran todos al mismo nivel. Un botón primario es una afirmación, y una afirmación que no se
+      puede sostener no se muestra. Es el mismo criterio que `pantallaAltas === false` más abajo.
+    */
+    const sistema = detectarSistema();
+    const suyas = DESCARGAS.filter((d) => d.so === sistema);
+    const otras = DESCARGAS.filter((d) => !suyas.includes(d));
+    const principales = suyas.length > 0 ? suyas : DESCARGAS;
+
     return (
       <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-amber-50/60 dark:bg-amber-950/20">
         <p className="text-[12.5px] font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
           <Punto color="bg-gray-400" />
-          Asistente no detectado
+          Falta instalar el Asistente
         </p>
-        <p className="text-[11.5px] text-gray-600 dark:text-gray-400 mt-0.5">
-          Descargalo y ejecutalo. Se empareja solo: no hay que copiar ningún código.
-        </p>
-        {/* El «¿ya lo ejecutaste?» va acá y no en la guía porque este es el momento exacto en que la
-            persona cree que lo ejecutó y no pasó nada — y las dos causas más probables son las dos
-            que se nombran: no lo abrió, o el sistema se lo bloqueó sin que lo viera. */}
-        <p className="text-[11.5px] text-gray-600 dark:text-gray-400 mt-0.5">
-          ¿Ya lo ejecutaste? En Mac abrí <strong>AsistenteWeProdu.command</strong>; si te pide permiso, <strong>click derecho → Abrir</strong>.
-        </p>
+        <p className="text-[11.5px] text-gray-600 dark:text-gray-400 mt-0.5">Se hace una vez. Se empareja solo: no hay ningún código que copiar.</p>
+
         <div className="flex items-center gap-2 flex-wrap mt-2">
-          {DESCARGAS.map((d) => (
-            <BotonDescarga key={d.url} {...d} />
+          {principales.map((d, i) => (
+            <BotonDescarga key={d.url} url={d.url} icono={d.icono} etiqueta={d.etiqueta} principal={i === 0} />
           ))}
           <a href={DESCARGAS_ASISTENTE.guia} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
             <FontAwesomeIcon icon={faCircleQuestion} className="h-3 w-3" />
             ¿Cómo se instala?
           </a>
         </div>
-        {/* Windows va a decir «editor desconocido» la primera vez: sin certificado de firma no hay
-            forma de evitarlo, y encontrárselo sin aviso hace abandonar la instalación ahí mismo. */}
-        <p className="text-[11px] text-gray-500 dark:text-gray-500 mt-2">
-          La primera vez el sistema va a avisar que el editor es desconocido — el ejecutable no está firmado. En Windows: <strong>Más información → Ejecutar de todas formas</strong>. En Mac: <strong>click derecho → Abrir → Abrir</strong> (con doble click no alcanza). Está explicado con capturas en la guía.
-        </p>
+
+        {sistema !== 'otro' && <PasosInstalacion sistema={sistema} compacto />}
+        <NotaSinFirma />
+
+        {/* El escape cuando la detección se equivoca, o cuando alguien baja el archivo para otra
+            máquina. Plegado: es el caso raro y no tiene que competir con el camino normal. */}
+        {otras.length > 0 && (
+          <details className="mt-2">
+            <summary className="text-[11.5px] text-gray-500 dark:text-gray-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400">Otras descargas</summary>
+            <div className="flex items-center gap-2 flex-wrap mt-2">
+              {otras.map((d) => (
+                <BotonDescarga key={d.url} url={d.url} icono={d.icono} etiqueta={d.etiqueta} />
+              ))}
+            </div>
+          </details>
+        )}
       </div>
     );
   }
@@ -458,9 +505,29 @@ export const BloqueAsistente: React.FC<{ uso: UsoAsistente; empleadora?: string 
 
   // ── Todo listo. Una línea, sin ruido. ──────────────────────────────────────
   return (
-    <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 text-[12px] text-gray-600 dark:text-gray-400 flex items-center gap-2">
+    <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 text-[12px] text-gray-600 dark:text-gray-400 flex items-center gap-2 flex-wrap">
       <Punto color="bg-green-500" />
       Listo para validar · Asistente v{estado?.version}
+      {/*
+        Hay una versión nueva. Va acá, DISCRETO y sin bloquear nada.
+
+        El Asistente viejo sigue funcionando, así que interrumpir el trabajo con un modal por una
+        actualización opcional sería exactamente la clase de molestia que se está tratando de sacar.
+        Pero tampoco puede quedar invisible: hasta ahora el desfasaje se descubría cuando un botón
+        devolvía 404 — o sea por un error, y sin ninguna pista de que había que actualizar.
+      */}
+      {versionNueva && (
+        <a
+          href={DESCARGAS_ASISTENTE.guia}
+          target="_blank"
+          rel="noreferrer"
+          title={`Tenés la v${estado?.version} y está publicada la v${versionNueva}. Podés seguir usando esta.`}
+          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold border border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
+        >
+          <FontAwesomeIcon icon={faDownload} className="h-2.5 w-2.5" />
+          Hay una versión nueva (v{versionNueva})
+        </a>
+      )}
     </div>
   );
 };

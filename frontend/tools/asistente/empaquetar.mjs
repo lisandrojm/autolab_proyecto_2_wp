@@ -129,7 +129,7 @@ const conRequire = bundle.replaceAll('await import("playwright-core")', 'require
 if (conRequire === bundle) throw new Error("No encontré el import dinámico de playwright-core: si cambió de forma, `pkg` lo va a dejar afuera del binario en silencio.");
 writeFileSync("servidor.cjs", conRequire);
 
-console.log("\n[2/3] pkg…");
+console.log("\n[2/4] pkg…");
 corre("node_modules/.bin/pkg", ["servidor.cjs", "--targets", TARGETS, "--no-bytecode", "--public", "--output", "dist/AsistenteWeProdu"]);
 
 console.log("\n[3/4] Verificación: corriendo el binario nativo…");
@@ -147,8 +147,28 @@ for (const [slice, nombre] of [["macos-x64", "mac-intel"], ["macos-arm64", "mac-
 }
 rmSync(MAC, { force: true });
 
+/*
+  QUÉ VERSIÓN ESTÁ PUBLICADA, para que la app pueda avisar que la instalada quedó vieja.
+
+  WeProdu se actualiza sola —es una web— y el Asistente no: vive instalado en la máquina de cada
+  persona y se queda en la versión del día que la bajó. Hasta ahora nada avisaba del desfasaje: se
+  descubría cuando un botón devolvía 404, o sea por un error y no por un aviso.
+
+  SE ESCRIBE ACÁ, en el mismo paso que copia los binarios, y no en una constante del frontend, porque
+  el criterio es que no se pueda desincronizar: publicar una versión sin actualizar el número deja de
+  ser posible cuando lo escribe el mismo comando que la genera. Una constante en el código del front
+  son dos fuentes de verdad, y se olvida de actualizar justo cuando importa.
+
+  Cae bajo `/asistente/descargas/`, que ya tiene la regla de «esto es un archivo, si falta es 404»
+  (ver `RUTAS_DE_DESCARGA` en vite.config.ts y el rewrite de vercel.json). Sin esa regla, un deploy
+  sin este archivo devolvería el index.html con status 200 y el `JSON.parse` del otro lado fallaría
+  con un error que no se parece en nada a la causa.
+*/
+writeFileSync(`${PUBLICO}/version.json`, `${JSON.stringify({ version: VERSION }, null, 2)}\n`, "utf8");
+
 const mb = (f) => `${(statSync(f).size / 1024 / 1024).toFixed(1)} MB`;
 for (const f of ["AsistenteWeProdu-windows.exe", "AsistenteWeProdu-mac-intel.zip", "AsistenteWeProdu-mac-apple-silicon.zip"]) {
   console.log(`  ✓ ${PUBLICO}/${f}  ${mb(`${PUBLICO}/${f}`)}`);
 }
+console.log(`  ✓ ${PUBLICO}/version.json  → ${VERSION}`);
 console.log("");

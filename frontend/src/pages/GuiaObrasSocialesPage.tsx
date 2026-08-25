@@ -2,6 +2,7 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faShieldHeart, faArrowRight, faTriangleExclamation, faBan } from '@fortawesome/free-solid-svg-icons';
 import { PageLayout } from '../components/ui/PageLayout';
+import { PasosInstalacion, NotaSinFirma } from '../components/asistente/PasosInstalacion';
 
 /**
  * Guía de la validación de obras sociales contra ARCA.
@@ -56,26 +57,6 @@ const Cod: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <code className="font-mono text-[12.5px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-blue-700 dark:text-blue-300">{children}</code>
 );
 
-/**
- * El menú contextual de macOS, dibujado.
- *
- * Va dibujado y no como captura de pantalla porque una imagen de macOS envejece con cada versión del
- * sistema y termina mostrando un menú que ya no se parece al que la persona tiene delante. Lo que
- * tiene que quedar claro es UNA cosa —hay que usar el botón derecho y elegir «Abrir»— y para eso el
- * dibujo alcanza y siempre va a estar actualizado.
- */
-const MenuMac: React.FC = () => (
-  <div className="shrink-0 w-44 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm overflow-hidden text-[12px] select-none">
-    <div className="px-3 py-1.5 text-gray-400 dark:text-gray-500">Abrir con</div>
-    <div className="px-3 py-1.5 bg-blue-600 text-white font-semibold flex items-center justify-between">
-      Abrir
-      <FontAwesomeIcon icon={faArrowRight} className="h-2.5 w-2.5" />
-    </div>
-    <div className="px-3 py-1.5 text-gray-400 dark:text-gray-500">Mover a la papelera</div>
-    <div className="px-3 py-1.5 text-gray-400 dark:text-gray-500">Obtener información</div>
-  </div>
-);
-
 const Sintoma: React.FC<{ q: string; children: React.ReactNode }> = ({ q, children }) => (
   <div>
     <p className="font-semibold text-gray-900 dark:text-gray-100 mt-4">{q}</p>
@@ -124,35 +105,26 @@ export const GuiaObrasSocialesPage: React.FC = () => (
           igual: cartel de advertencia y nada más. No es un aviso sobre este programa en particular — es el aviso por defecto para cualquier programa sin certificado.
         </Aviso>
 
-        <ol className="space-y-4 mt-2">
-          <Paso n={1} titulo="Descargalo desde la pantalla de validación">
-            Elegí tu sistema. En Mac hay dos: <strong>Apple Silicon</strong> (M1 en adelante) e <strong>Intel</strong>. Si elegís el que no es, no arranca y dice «bad CPU type»; en ese caso bajá el otro.
-            Lo mirás en <strong></strong> → Acerca de esta Mac.
-          </Paso>
+        {/*
+          LOS MISMOS PASOS QUE MUESTRA LA APP, no una segunda redacción.
 
-          <Paso n={2} titulo="Mac: click derecho sobre el archivo → Abrir → Abrir">
-            <span className="block">
-              Descomprimí el .zip y vas a tener <Cod>AsistenteWeProdu.command</Cod>. <strong>Con doble click no alcanza</strong>: macOS lo bloquea y solo ofrece «Mover a la papelera». Con el botón
-              derecho aparece «Abrir», y esa vía sí deja la opción de abrirlo igual. Se hace una vez: después el doble click funciona siempre.
-            </span>
-            <span className="mt-3 flex items-start gap-3 flex-wrap">
-              <MenuMac />
-              <span className="text-[12.5px] text-gray-500 dark:text-gray-400 max-w-xs">
-                Botón derecho sobre el archivo → <strong>Abrir</strong>. En el cartel que sale después, otra vez <strong>Abrir</strong>.
-              </span>
-            </span>
-          </Paso>
-
-          <Paso n={3} titulo="Windows: Más información → Ejecutar de todas formas">
-            SmartScreen muestra «Windows protegió su PC» y un solo botón visible, <strong>No ejecutar</strong>. El link <strong>Más información</strong> —arriba, en letra chica— revela el botón{' '}
-            <strong>Ejecutar de todas formas</strong>. También se hace una vez.
-          </Paso>
-
-          <Paso n={4} titulo="Listo: se abre WeProdu solo y queda conectado">
-            Se abre una ventana negra de consola —dejala abierta, es el Asistente corriendo— y el navegador va a WeProdu. La pantalla de validación pasa a decir{' '}
-            <strong>Asistente conectado</strong>. Si el navegador no se abrió, entrá a <Cod>127.0.0.1:47653/emparejar</Cod>: ahí está el código para pegarlo a mano.
-          </Paso>
-        </ol>
+          Antes esta guía tenía su propia versión del trámite y la pantalla de validación tenía otra.
+          Dos textos del mismo procedimiento se desincronizan solos — y ya pasó con «click derecho →
+          Abrir», que quedó escrito en los dos lados y desactualizado en los dos cuando macOS Sequoia
+          sacó ese atajo. Acá se muestran los dos sistemas porque la guía se lee sin saber desde qué
+          máquina; la app muestra solo el que corresponde.
+        */}
+        <div className="grid md:grid-cols-2 gap-6 mt-2">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">En Mac</p>
+            <PasosInstalacion sistema="mac" />
+          </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">En Windows</p>
+            <PasosInstalacion sistema="windows" />
+          </div>
+        </div>
+        <NotaSinFirma />
 
         <Clave>
           <strong>El emparejamiento es por navegador y de una sola vez.</strong> Si después usás WeProdu desde otro navegador o borrás los datos del sitio, hay que volver a emparejar — y ahí sirve{' '}

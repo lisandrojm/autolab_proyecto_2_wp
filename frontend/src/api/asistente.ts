@@ -245,6 +245,86 @@ export const DESCARGAS_ASISTENTE = {
   guia: '/arca/guia-obras-sociales',
 };
 
+/** Qué versión hay publicada. La escribe `empaquetar.mjs`; ver `versionPublicada()`. */
+const VERSION_PUBLICADA_URL = '/asistente/descargas/version.json';
+
+/** Qué build le corresponde a esta máquina. `desconocido` = no se pudo averiguar. */
+export type SistemaProbable = 'windows' | 'mac-arm' | 'mac-intel' | 'desconocido';
+
+/**
+ * Qué versión del Asistente hay que ofrecerle a quien está mirando la pantalla.
+ *
+ * Existe para no hacer una pregunta que la persona no puede contestar. Elegir mal entre las dos Macs
+ * no da un error entendible: da «bad CPU type in executable», y ahí la instalación se abandona.
+ *
+ * LA REGLA DE DESEMPATE ES ASIMÉTRICA, y es lo importante de esta función: ante cualquier duda en
+ * Mac se devuelve `mac-intel`. El build de Intel corre en las dos —Rosetta lo traduce— y el de Apple
+ * Silicon NO puede correr en una Intel. Equivocarse hacia Intel cuesta a lo sumo un prompt de
+ * Rosetta; equivocarse hacia arm64 deja a alguien sin poder instalar nada.
+ *
+ * Por eso mismo un Chrome corriendo bajo Rosetta en una Mac con chip Apple —que reporta `x86`— es un
+ * falso positivo benigno: se le ofrece el de Intel y le funciona.
+ *
+ * `getHighEntropyValues` es de Chromium y hace falta para saber la arquitectura; en Safari o Firefox
+ * no existe y solo se puede saber el sistema. No pasa nada: la asimetría de arriba cubre ese caso.
+ */
+export async function sistemaProbable(): Promise<SistemaProbable> {
+  const uaData = (navigator as any).userAgentData;
+  const plataforma = String(uaData?.platform || navigator.platform || '').toLowerCase();
+
+  if (plataforma.includes('win')) return 'windows';
+  if (!plataforma.includes('mac')) return 'desconocido';
+
+  try {
+    const { architecture } = await uaData.getHighEntropyValues(['architecture']);
+    return architecture === 'arm' ? 'mac-arm' : 'mac-intel';
+  } catch {
+    return 'mac-intel';
+  }
+}
+
+/**
+ * La versión del Asistente que está publicada hoy.
+ *
+ * La escribe `tools/asistente/empaquetar.mjs` en el mismo paso que copia los binarios, así que no se
+ * puede desincronizar de lo que hay para descargar.
+ *
+ * DEVUELVE `''` ANTE CUALQUIER PROBLEMA, y eso es deliberado: un aviso de «hay una versión nueva»
+ * disparado por un error de red o por un deploy a medias es peor que no avisar. Manda a actualizar
+ * algo que quizá ya está actualizado, y la persona pierde el rato bajando 39 MB por nada.
+ *
+ * `no-store` porque es justamente el archivo cuyo valor cambia cuando se publica: servido desde caché
+ * diría que no hay nada nuevo el día que lo hay.
+ */
+export async function versionPublicada(): Promise<string> {
+  try {
+    const r = await fetch(VERSION_PUBLICADA_URL, { cache: 'no-store' });
+    if (!r.ok || !(r.headers.get('content-type') || '').includes('json')) return '';
+    const { version } = (await r.json()) as { version?: string };
+    return typeof version === 'string' ? version : '';
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * ¿`a` es una versión posterior a `b`?
+ *
+ * Compara SEGMENTO A SEGMENTO y no como texto: `'1.10.0' > '1.9.0'` es falso comparando strings —el
+ * `1` de `10` pierde contra el `9`— y el aviso desaparecería justo al pasar de la 9 a la 10.
+ *
+ * Estrictamente posterior: si la instalada es más nueva que la publicada (alguien probando un build
+ * local) no hay nada que avisar, y mandarlo a «actualizar» hacia atrás sería un consejo malo.
+ */
+export function esPosterior(a: string, b: string): boolean {
+  const partes = (v: string) => String(v || '').split('.').map((n) => parseInt(n, 10) || 0);
+  const [x, y] = [partes(a), partes(b)];
+  for (let i = 0; i < Math.max(x.length, y.length); i++) {
+    if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0);
+  }
+  return false;
+}
+
 /**
  * ¿El archivo está realmente publicado?
  *

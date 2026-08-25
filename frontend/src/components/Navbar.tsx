@@ -112,6 +112,22 @@ const USUARIOS_PATH = '/users';
 const USUARIOS_PATHS = [USUARIOS_PATH, '/areas', '/positions', '/levels', '/roles'];
 
 /**
+ * Subgrupo "Documentos" (dentro de Configuración): la integración con Dropbox, entera.
+ *
+ * Eran dos ítems sueltos y consecutivos, con el mismo ícono y nombres casi iguales —"Dropbox" y
+ * "DropboxSign"—, que es la forma más fácil de entrar a la pantalla equivocada. Juntos ocupan una
+ * línea y se abren cuando hacen falta.
+ *
+ * Se llama "Documentos" y no "Dropbox" porque nombra lo que se administra y no al proveedor: es lo
+ * mismo que hace "ARCA" con sus nomencladores. El ícono de la marca queda igual, que es lo que dice
+ * de un vistazo con qué servicio se hace.
+ *
+ * El orden es el del circuito, no alfabético: primero la cuenta y el escaneo de carpetas, después la
+ * firma, que depende de que lo anterior esté conectado.
+ */
+const DOCUMENTOS_PATHS = ["/escaneo-dropbox", "/dropbox-sign"];
+
+/**
  * Subgrupos colapsables de Configuración. `storageKey` persiste el abierto/cerrado y
  * `paths` decide qué items se sacan del listado plano para meterlos adentro del grupo.
  */
@@ -119,6 +135,7 @@ const CONFIG_GROUPS = [
   { key: 'plantillas', storageKey: 'configPlantillasOpen', paths: PLANTILLAS_PATHS },
   { key: 'arca', storageKey: 'configArcaOpen', paths: ARCA_PATHS },
   { key: 'usuarios', storageKey: 'configUsuariosOpen', paths: USUARIOS_PATHS },
+  { key: 'documentos', storageKey: 'configDocumentosOpen', paths: DOCUMENTOS_PATHS },
 ] as const;
 
 /** El subgrupo al que pertenece una ruta (o `undefined` si no está en ninguno). */
@@ -153,7 +170,7 @@ export const MobileNavbar: React.FC = () => {
     else localStorage.removeItem('adminOpenSection');
   };
 
-  // Subgrupos colapsables dentro de Configuración ("Plantillas", "ARCA"). Su estado vive acá
+  // Subgrupos colapsables dentro de Configuración ("Plantillas", "ARCA", "Usuarios", "Documentos"). Su estado vive acá
   // (y no en NavMenu) porque NavMenu se redefine en cada render del padre y perdería el estado interno.
   // Cada uno arranca abierto si lo dejaste abierto, o si entrás directo a una de sus páginas.
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => Object.fromEntries(CONFIG_GROUPS.map((g) => [g.key, localStorage.getItem(g.storageKey) === 'true' || grupoDeRuta(location.pathname)?.key === g.key])));
@@ -307,10 +324,10 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission('config_contratos:view') || hasPermission('config_estados:view') || hasPermission('config_contratos_frame:view')) base.push({ path: '/contratos', icon: faFileContract, label: 'Contratos', scope: 'global' });
       if (hasPermission('config_empresas:view')) base.push({ path: '/empresas', icon: faBuilding, label: 'Empresas', scope: 'global' });
       if (hasPermission('config_membretes:view')) base.push({ path: '/empresas-membretes', icon: faFilePdf, label: 'Empresa/s | Membrete/s y firma', scope: 'global' });
-      // Las dos configuran la integración con Dropbox y se nombran por el servicio, a secas: qué
-      // configura cada una —la conexión y el escaneo de carpetas acá, la casilla de avisos de firma
-      // en la de abajo— lo dice el subtítulo de su pantalla, que es donde hay lugar para explicarlo.
-      // El ícono de la marca hace el resto: se ve de un vistazo que son la misma integración.
+      // Las dos viven adentro del subgrupo "Documentos" (ver DOCUMENTOS_PATHS) y ahí es el grupo el
+      // que dice de qué se trata. Cada una se sigue nombrando por el SERVICIO, a secas: qué configura
+      // —la cuenta y el escaneo de carpetas acá, la casilla de avisos de firma en la de abajo— lo
+      // dice el subtítulo de su pantalla, que es donde hay lugar para explicarlo.
       if (hasPermission('config_escaneo_dropbox:view')) base.push({ path: '/escaneo-dropbox', icon: faDropbox, label: 'Dropbox', scope: 'global' });
       // Comparte permiso con el escaneo de Dropbox: las dos configuran la misma integración.
       if (hasPermission('config_escaneo_dropbox:view')) base.push({ path: '/dropbox-sign', icon: faDropbox, label: 'DropboxSign', scope: 'global' });
@@ -401,8 +418,9 @@ export const MobileNavbar: React.FC = () => {
     // subgrupo de Configuración (ver `usuariosGroup`), así arriba queda solo el módulo de trabajo.
     const generalAdminItems = (isSuperAdminTenant ? adminItems.filter((item) => ['/tenants'].includes(item.path)) : adminItems.filter((item) => ['/admin/projects', '/admin/contracts', '/orders', '/vacations', '/requests', '/documents'].includes(item.path))).sort(byLabel);
 
-    // Ojo: los paths de CONFIG_GROUPS (Plantillas, ARCA) NO van acá, se agrupan aparte en su subgrupo.
-    const configPaths = ['/requests/config', '/order-types', '/shifts', '/vacations-rules', '/holidays', '/clients', '/centros-costo', '/bancos', '/contratos', '/releases-tipos', '/admin/sedes', '/escaneo-dropbox', '/dropbox-sign'];
+    // Ojo: los paths de CONFIG_GROUPS (Plantillas, ARCA, Usuarios, Documentos) NO van acá: se sacan
+    // del listado plano para meterlos adentro de su subgrupo, y dejarlos también acá los duplicaría.
+    const configPaths = ['/requests/config', '/order-types', '/shifts', '/vacations-rules', '/holidays', '/clients', '/centros-costo', '/bancos', '/contratos', '/releases-tipos', '/admin/sedes'];
     // "Mi Perfil" está en los DOS lados a propósito: como atajo en la barra de arriba (junto al
     // usuario) y acá, para quien lo busca recorriendo el menú. Entra en el orden alfabético.
     const profileItem = { path: '/mi-perfil', icon: faIdCard, label: 'Mi Perfil', scope: 'global' as const };
@@ -432,6 +450,10 @@ export const MobileNavbar: React.FC = () => {
     }
     const arcaGroup = { path: '#arca', groupKey: 'arca', icon: faLandmark, label: 'ARCA', scope: 'global' as const, children: arcaChildren };
 
+    // Subgrupo "Documentos": en el orden del circuito (ver DOCUMENTOS_PATHS), no alfabético.
+    const documentosChildren = DOCUMENTOS_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems;
+    const documentosGroup = { path: '#documentos', groupKey: 'documentos', icon: faDropbox, label: 'Documentos', scope: 'global' as const, children: documentosChildren };
+
     // Subgrupo "Usuarios": la entidad primero y sus catálogos detrás, en el orden de USUARIOS_PATHS.
     const usuariosChildren = USUARIOS_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems;
     const usuariosGroup = { path: '#usuarios', groupKey: 'usuarios', icon: faUserGear, label: 'Usuarios', scope: 'global' as const, children: usuariosChildren };
@@ -451,6 +473,7 @@ export const MobileNavbar: React.FC = () => {
       ...(plantillasChildren.length > 0 ? [plantillasGroup] : []),
       ...(arcaChildren.length > 0 ? [arcaGroup] : []),
       ...(usuariosChildren.length > 0 ? [usuariosGroup] : []),
+      ...(documentosChildren.length > 0 ? [documentosGroup] : []),
       ...(empresasItem ? [empresasItem] : []),
     ].sort(byLabel) as any[];
     // "Import WP" es un módulo temporal → va al FINAL de Configuración (después del orden alfabético).
