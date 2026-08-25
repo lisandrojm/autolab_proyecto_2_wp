@@ -15,7 +15,12 @@ import { sweetAlert } from '../../utils/sweetAlert';
  * Con esto cargado, validar obras sociales deja de necesitar un programa instalado en la máquina de
  * cada administrativo: lo hace el servidor.
  */
-export const UsuarioSimplificacion: React.FC = () => {
+export const UsuarioSimplificacion: React.FC<{
+  /** Se llama al guardar bien. Lo usa el modal de la pantalla de validar para cerrarse y seguir. */
+  onGuardado?: () => void;
+  /** En el modal el encabezado ya lo pone el modal: repetirlo dos veces no explica nada. */
+  sinEncabezado?: boolean;
+}> = ({ onGuardado, sinEncabezado }) => {
   const [estado, setEstado] = useState<SimplificacionStatus | null>(null);
   const [cuit, setCuit] = useState('');
   const [clave, setClave] = useState('');
@@ -40,6 +45,7 @@ export const UsuarioSimplificacion: React.FC = () => {
       // navegador ni quedar en un campo que alguien pueda revelar con el ojito del password.
       setClave('');
       await cargar();
+      onGuardado?.();
       sweetAlert.success('Listo', 'La próxima validación de obras sociales la va a hacer el servidor solo.');
     } catch (e: any) {
       sweetAlert.error('No se pudo guardar', e?.response?.data?.error || 'Revisá el CUIT y la clave.');
@@ -66,11 +72,13 @@ export const UsuarioSimplificacion: React.FC = () => {
   if (!estado) return null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 max-w-2xl">
-      <p className="text-[13px] font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-        <FontAwesomeIcon icon={faUserLock} className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-        Usuario para Simplificación Registral
-      </p>
+    <div className={sinEncabezado ? '' : 'bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 max-w-2xl'}>
+      {!sinEncabezado && (
+        <p className="text-[13px] font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+          <FontAwesomeIcon icon={faUserLock} className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          Usuario para Simplificación Registral
+        </p>
+      )}
       <p className="text-[12px] text-gray-500 dark:text-gray-400 mt-1">
         Es <strong>otra cosa</strong> que el certificado de arriba. Aquel sirve para consultar el padrón por webservice; este es un login de clave fiscal, y hace falta porque la obra social de un
         trabajador no la devuelve ninguna API: solo aparece en la pantalla de altas. Con esto cargado, validar obras sociales deja de necesitar el Asistente en cada computadora.

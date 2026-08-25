@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner, faCheck, faCopy, faCircleCheck, faXmark, faTriangleExclamation, faPlay, faStop, faRotateRight, faArrowRight } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faCheck, faCopy, faCircleCheck, faXmark, faTriangleExclamation, faPlay, faStop, faRotateRight, faArrowRight, faKey } from '@fortawesome/free-solid-svg-icons';
 import { ContractOverviewRow } from '../../api/users';
 import { projectsAPI } from '../../api/projects';
 import { AfipValues } from './afipCompleteness';
@@ -8,6 +8,8 @@ import { asistenteAPI, EventoProgreso } from '../../api/asistente';
 import { BloqueAsistente, useAsistente } from './EstadoAsistente';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { afipAPI } from '../../api/afip';
+import { Modal } from '../ui/Modal';
+import { UsuarioSimplificacion } from '../arca/UsuarioSimplificacion';
 
 /**
  * Validar obras sociales contra ARCA. UNA pantalla, sirva para 1 o para 20.
@@ -202,6 +204,7 @@ export const PantallaValidarObrasSociales: React.FC<{
    * por defecto haría parpadear un bloque de instalación que quizá no hace falta.
    */
   const [servidorListo, setServidorListo] = useState<boolean | null>(null);
+  const [pidiendoCredenciales, setPidiendoCredenciales] = useState(false);
   useEffect(() => {
     afipAPI
       .simplificacionStatus()
@@ -647,19 +650,79 @@ export const PantallaValidarObrasSociales: React.FC<{
       </div>
 
       {/*
-        El bloque del Asistente solo aparece si el servidor NO puede hacerlo.
+        SIN CREDENCIALES, LO QUE SE OFRECE ES CARGARLAS — no instalar un programa.
 
-        Cuando está configurado, todo eso —instalar, emparejar, abrir Chrome, la ventana que no hay
-        que cerrar— deja de existir para el que usa la pantalla, y mostrarlo sería pedirle que
-        resuelva un problema que ya no tiene. `null` es «todavía no sé»: no se muestra nada hasta
-        saberlo, para no hacer parpadear un bloque de instalación que quizá no hace falta.
+        Antes acá aparecía el circuito entero del Asistente: tres botones de descarga, los pasos de
+        Gatekeeper, el dibujo del menú de macOS. Eso convertía «me falta una configuración de una vez»
+        en «instalá un programa en tu computadora», que es justo lo que se está tratando de evitar y
+        además es la salida cara: hay que hacerlo en CADA máquina.
+
+        Cargar el usuario de clave fiscal se hace UNA vez para toda la organización y desde ahí el
+        servidor valida solo. Por eso es el botón primario, y el Asistente pasa a estar plegado como
+        lo que es: el respaldo para quien prefiera correrlo con su propia sesión.
       */}
-      {servidorListo === false && <BloqueAsistente uso={asistente} empleadora={empleadora} />}
+      {servidorListo === false && (
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-amber-50/60 dark:bg-amber-950/20">
+          <p className="text-[12.5px] font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+            <span className="inline-block h-2 w-2 rounded-full bg-gray-400" />
+            Falta configurar ARCA
+          </p>
+          <p className="text-[11.5px] text-gray-600 dark:text-gray-400 mt-0.5">
+            Cargá una vez el usuario de clave fiscal y el servidor valida solo, sin que nadie instale nada ni deje ninguna ventana abierta.
+          </p>
+          <div className="flex items-center gap-2 flex-wrap mt-2">
+            <button
+              type="button"
+              onClick={() => setPidiendoCredenciales(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-blue-600 text-white hover:bg-blue-700"
+            >
+              <FontAwesomeIcon icon={faKey} className="h-3 w-3" />
+              Cargar credenciales de ARCA
+            </button>
+            <span className="text-[11px] text-gray-500 dark:text-gray-400">Se hace una sola vez, para toda la organización.</span>
+          </div>
+
+          {/* El Asistente queda como respaldo, plegado: sigue sirviendo para quien prefiera usar su
+              propia sesión de ARCA, pero dejó de ser el camino que se propone primero. */}
+          <details className="mt-2">
+            <summary className="text-[11.5px] text-gray-500 dark:text-gray-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400">¿Preferís hacerlo desde tu computadora?</summary>
+            <div className="mt-1 -mx-4">
+              <BloqueAsistente uso={asistente} empleadora={empleadora} />
+            </div>
+          </details>
+        </div>
+      )}
       {servidorListo === true && (
         <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 text-[12px] text-gray-600 dark:text-gray-400 flex items-center gap-2">
           <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
           Lo hace el servidor · no hace falta instalar nada
         </div>
+      )}
+
+      {/*
+        El mismo formulario que vive en Configuración → ARCA → Conexión, sin encabezado.
+
+        Es el MISMO componente y no una copia: son las mismas credenciales, con la misma advertencia
+        sobre usar un usuario delegado. Dos formularios para lo mismo se separan, y el que se queda
+        atrás es siempre el que tiene la advertencia.
+      */}
+      {pidiendoCredenciales && (
+        <Modal
+          isOpen
+          onClose={() => setPidiendoCredenciales(false)}
+          title="Credenciales de ARCA"
+          subtitle="Con esto el servidor valida las obras sociales solo. Después se administra en Configuración → ARCA → Conexión."
+          size="lg"
+          zIndex={80}
+        >
+          <UsuarioSimplificacion
+            sinEncabezado
+            onGuardado={() => {
+              setServidorListo(true);
+              setPidiendoCredenciales(false);
+            }}
+          />
+        </Modal>
       )}
 
       {/*
