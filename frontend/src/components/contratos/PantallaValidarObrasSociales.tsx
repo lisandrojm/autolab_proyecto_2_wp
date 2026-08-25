@@ -191,7 +191,6 @@ export const PantallaValidarObrasSociales: React.FC<{
 }> = ({ filas, empleadora, empleadoraCuit, empresaId, onRefrescar, onLoteAplicado }) => {
   /** Corriendo: el Asistente está recorriendo ARCA y los resultados llegan por su stream. */
   const [mirando, setMirando] = useState(false);
-  const asistente = useAsistente();
   /**
    * ¿El servidor puede validar solo?
    *
@@ -205,6 +204,12 @@ export const PantallaValidarObrasSociales: React.FC<{
    */
   const [servidorListo, setServidorListo] = useState<boolean | null>(null);
   const [pidiendoCredenciales, setPidiendoCredenciales] = useState(false);
+  /*
+    Con el servidor configurado no se sondea al Asistente: nadie lo instaló —y está bien— así que
+    preguntar por él cada 15 segundos solo deja errores de red en la consola. Con `null` todavía se
+    sondea, porque hasta saberlo puede hacer falta.
+  */
+  const asistente = useAsistente(servidorListo !== true);
   useEffect(() => {
     afipAPI
       .simplificacionStatus()
@@ -536,13 +541,22 @@ export const PantallaValidarObrasSociales: React.FC<{
    * Asistente vuelva, que es el mismo camino que la sesión de ARCA caída.
    */
   useEffect(() => {
+    /*
+      SOLO en el camino del Asistente.
+
+      Con el servidor haciendo el trabajo, «el Asistente no está» es lo NORMAL —nadie lo instaló, y
+      justamente de eso se trata— así que esta guarda se disparaba apenas arrancaba una corrida del
+      VPS: cortaba el polling, la marcaba como pausada y mostraba «Se cerró el Asistente con 20 sin
+      consultar». Peor todavía, la corrida seguía andando del otro lado sin nadie mirándola.
+    */
+    if (servidorListo) return;
     if (!mirando || asistente.fallo !== 'no-detectado') return;
     cortarStream.current?.();
     setMirando(false);
     setFaseCorrida('');
     setPausadoEn(pendientes.map((f) => soloDigitos(f.row.cuit || '')).filter((c) => !['listo', 'error'].includes(enVivoRef.current[c]?.estado || '')));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [asistente.fallo, mirando]);
+  }, [asistente.fallo, mirando, servidorListo]);
 
   /** Los que quedaron en rojo. Es lo que ofrece el botón de reintentar. */
   const fallidos = useMemo(() => Object.entries(enVivo).filter(([, v]) => v.estado === 'error').map(([c]) => c), [enVivo]);

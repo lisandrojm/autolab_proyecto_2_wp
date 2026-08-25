@@ -71,7 +71,7 @@ export interface UsoAsistente {
  * pantalla —ese es justamente el camino de la primera vez— y quedarse en «no detectado» hasta un
  * refresh manual haría pensar que no funcionó.
  */
-export function useAsistente(): UsoAsistente {
+export function useAsistente(activo = true): UsoAsistente {
   const [estado, setEstado] = useState<Estado | null>(null);
   const [fallo, setFallo] = useState<'no-detectado' | 'sin-emparejar' | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -85,6 +85,17 @@ export function useAsistente(): UsoAsistente {
   }, []);
 
   const refrescar = useCallback(async () => {
+    /*
+      `activo: false` es para cuando el trabajo lo hace el servidor.
+
+      Ahí nadie instaló el Asistente —y está bien que así sea— pero el sondeo seguía preguntando por
+      él cada 15 segundos, y un `fetch` que no conecta deja una línea roja en la consola que no se
+      puede silenciar. Eran errores permanentes por buscar algo que a propósito no está.
+    */
+    if (!activo) {
+      setCargando(false);
+      return;
+    }
     try {
       setEstado(await asistenteAPI.estado());
       setFallo(null);
@@ -96,15 +107,16 @@ export function useAsistente(): UsoAsistente {
     } finally {
       setCargando(false);
     }
-  }, []);
+  }, [activo]);
 
   useEffect(() => {
+    if (!activo) return;
     refrescar();
     // El intervalo se re-arma con el ritmo que corresponde al estado actual: rápido mientras
     // responde, lento mientras no. Ver `SONDEO_CAIDO_MS`.
     const id = window.setInterval(refrescar, fallo === 'no-detectado' ? SONDEO_CAIDO_MS : SONDEO_MS);
     return () => window.clearInterval(id);
-  }, [refrescar, fallo]);
+  }, [refrescar, fallo, activo]);
 
   /*
     Solo se avisa si la publicada es POSTERIOR a la que está corriendo.
