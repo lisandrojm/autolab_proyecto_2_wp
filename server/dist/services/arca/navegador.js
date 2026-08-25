@@ -1,3 +1,6 @@
+import { existsSync, readdirSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { decryptSecret, encryptSecret } from "../../utils/secretCrypto.js";
 import { Tenant } from "../../models/Tenant.js";
@@ -49,16 +52,80 @@ const SEL_LOGIN = {
     ingresar: "input[type=submit], button[type=submit]",
 };
 /**
- * Dónde está el Chromium.
+ * Dónde está el Chromium, buscando en orden de preferencia.
  *
- * En el VPS se instala con `npx playwright install chromium`. Las dependencias de sistema ya están
- * porque el server genera PDFs con puppeteer, que es el mismo Chromium con otro envoltorio — ese era
- * el costo grande de infraestructura y ya estaba pagado.
+ * SE BUSCA EN VEZ DE EXIGIR UN PASO DE INSTALACIÓN. La primera corrida en el VPS falló justamente
+ * por eso: Playwright tiró su cartel de «Please run npx playwright install», que es correcto pero
+ * llega tarde —cuando alguien ya apretó Validar y esperó— y en un idioma que no es el de la app.
  *
- * `CHROMIUM_PATH` permite apuntar a uno del sistema (`/usr/bin/chromium`) sin recompilar nada.
+ * El orden va del más compatible al más disponible:
+ *
+ *   1. `CHROMIUM_PATH`, para cuando el servidor tiene uno puesto a propósito. Manda siempre.
+ *   2. El de Playwright, si está bajado. Es el que mejor se lleva con esta versión de la librería.
+ *   3. Uno del sistema (`/usr/bin/chromium`, `google-chrome`…), que en un Linux con Chrome ya está.
+ *   4. El que bajó puppeteer para generar los PDF. Existe en este servidor desde siempre, así que es
+ *      el que hace que esto ande sin instalar nada — pero es de 2021, así que va último: sirve como
+ *      red, no como plan.
+ *
+ * `undefined` deja que Playwright use el suyo, que es lo correcto cuando está.
  */
-const rutaChromium = () => process.env.CHROMIUM_PATH || undefined;
-/** Lee y descifra las credenciales del tenant. `null` si no están cargadas. */
+function rutaChromium() {
+    if (process.env.CHROMIUM_PATH)
+        return process.env.CHROMIUM_PATH;
+    try {
+        const propio = chromium.executablePath();
+        if (propio && existsSync(propio))
+            return undefined;
+    }
+    catch {
+        /* algunas versiones tiran si no hay browser instalado: se sigue buscando */
+    }
+    const delSistema = ["/usr/bin/chromium", "/usr/bin/chromium-browser", "/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"];
+    for (const r of delSistema)
+        if (existsSync(r))
+            return r;
+    const dePuppeteer = chromiumDePuppeteer();
+    if (dePuppeteer)
+        return dePuppeteer;
+    return undefined;
+}
+/**
+ * El Chromium que puppeteer bajó para generar los PDF.
+ *
+ * Se busca a mano y no con `require("puppeteer")` porque importarlo levanta toda la librería para
+ * quedarse con una ruta. El nombre de la carpeta lleva la revisión (`linux-901912`), que cambia con
+ * la versión, así que se lee el directorio en vez de escribirla fija.
+ */
+function chromiumDePuppeteer() {
+    const base = resolve(dirname(fileURLToPath(import.meta.url)), "../../../node_modules/puppeteer/.local-chromium");
+    if (!existsSync(base))
+        return undefined;
+    for (const rev of readdirSync(base)) {
+        for (const rel of ["chrome-linux/chrome", "chrome-mac/Chromium.app/Contents/MacOS/Chromium", "chrome-win/chrome.exe"]) {
+            const r = resolve(base, rev, rel);
+            if (existsSync(r))
+                return r;
+        }
+    }
+    return undefined;
+}
+/**
+ * Traduce el cartel de Playwright a algo accionable, en castellano.
+ *
+ * El original es un recuadro de arte ASCII con un comando en inglés que, metido en una franja de
+ * error de la app, sale desarmado e ilegible — y no dice DÓNDE hay que correr ese comando, que es lo
+ * único que hace falta saber.
+ */
+function errorDeChromium(e) {
+    const msg = String(e?.message || e);
+    if (/Executable doesn't exist|Please run the following command/i.test(msg)) {
+        return new Error("Falta el navegador en el servidor. Entrá al VPS y corré, dentro de la carpeta `server/`:\n\n" +
+            "    npx playwright install chromium\n\n" +
+            "Si el servidor ya tiene un Chromium instalado, alcanza con apuntarle: `CHROMIUM_PATH=/usr/bin/chromium`.");
+    }
+    return e instanceof Error ? e : new Error(msg);
+}
+/** Lee y descifra las credenciales del tenant./** Lee y descifra las credenciales del tenant. `null` si no están cargadas. */
 export async function credencialesDe(tenantId) {
     const t = await Tenant.findById(tenantId).select("integrations.arcaSimplificacion").lean();
     const cfg = t?.integrations?.arcaSimplificacion;
@@ -156,7 +223,16 @@ async function loguear(page, cred) {
  * Chromium vivo comiéndose la memoria del VPS.
  */
 export async function abrirSesionArca(tenantId, cred) {
-    const browser = await chromium.launch({ headless: true, executablePath: rutaChromium() });
+    let browser;
+    try {
+        browser = await chromium.launch({ headless: true, executablePath: rutaChromium() });
+    }
+    catch (e) {
+        // El «falta el navegador» tiene que llegar como instrucción, no como el cartel de Playwright.
+        const err = errorDeChromium(e);
+        await Tenant.findByIdAndUpdate(tenantId, { $set: { "integrations.arcaSimplificacion.ultimoError": err.message } });
+        throw err;
+    }
     const guardada = await sesionGuardada(tenantId);
     const ctx = await browser.newContext(guardada ? { storageState: guardada } : {});
     const page = await ctx.newPage();

@@ -194,7 +194,7 @@ export const PantallaValidarObrasSociales: React.FC<{
   /**
    * ¿El servidor puede validar solo?
    *
-   * Cuando hay un usuario de clave fiscal cargado (Configuración → ARCA → Conexión), la validación
+   * Cuando hay un usuario de clave fiscal cargado (ARCA → Conexión → Obras sociales), la validación
    * la hace el VPS con su propio Chromium y NADIE tiene que instalar el Asistente ni dejar una
    * ventana abierta. Ese es el camino bueno; el Asistente queda como respaldo para cuando no está
    * configurado — o cuando alguien prefiere correrlo con su propia sesión.
@@ -714,7 +714,7 @@ export const PantallaValidarObrasSociales: React.FC<{
       )}
 
       {/*
-        El mismo formulario que vive en Configuración → ARCA → Conexión, sin encabezado.
+        El mismo formulario que vive en ARCA → Conexión → Obras sociales, sin encabezado.
 
         Es el MISMO componente y no una copia: son las mismas credenciales, con la misma advertencia
         sobre usar un usuario delegado. Dos formularios para lo mismo se separan, y el que se queda
@@ -725,7 +725,7 @@ export const PantallaValidarObrasSociales: React.FC<{
           isOpen
           onClose={() => setPidiendoCredenciales(false)}
           title="Credenciales de ARCA"
-          subtitle="Con esto el servidor valida las obras sociales solo. Después se administra en Configuración → ARCA → Conexión."
+          subtitle="Con esto el servidor valida las obras sociales solo. Después se administra en ARCA → Conexión → Obras sociales."
           size="lg"
           zIndex={80}
         >
@@ -818,9 +818,20 @@ export const PantallaValidarObrasSociales: React.FC<{
             <p className="font-semibold text-red-700 dark:text-red-400">
               La corrida terminó sin validar {fracaso.faltaron === total ? `ninguna de las ${total}` : `${fracaso.faltaron} de ${total}`}.
             </p>
-            <p className="mt-0.5">{fracaso.motivo || 'El Asistente no informó el motivo. El detalle se imprime en su ventana.'}</p>
+            {/*
+              `whitespace-pre-line`: algunos motivos son INSTRUCCIONES de varias líneas —el comando
+              que hay que correr en el servidor, por ejemplo— y aplastadas en un párrafo salen
+              pegadas al texto, ilegibles justo cuando lo único que importa es poder copiarlas.
+            */}
+            <p className="mt-0.5 whitespace-pre-line">{fracaso.motivo || 'El Asistente no informó el motivo. El detalle se imprime en su ventana.'}</p>
           </div>
-          <button type="button" onClick={() => empezarCorrida()} className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold border border-red-300 dark:border-red-800 text-red-700 dark:text-red-400 hover:bg-red-100/60 dark:hover:bg-red-950/40 transition-colors">
+          {/* Reintenta por el MISMO camino que falló: con el servidor configurado, volver a intentar
+              por el Asistente pediría instalar un programa que nadie tiene. */}
+          <button
+            type="button"
+            onClick={() => (servidorListo ? empezarCorridaEnServidor() : empezarCorrida())}
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold border border-red-300 dark:border-red-800 text-red-700 dark:text-red-400 hover:bg-red-100/60 dark:hover:bg-red-950/40 transition-colors"
+          >
             <FontAwesomeIcon icon={faRotateRight} className="h-3 w-3" />
             Reintentar
           </button>

@@ -10,7 +10,7 @@ export interface SesionArca {
     /** `true` si hubo que loguearse; `false` si alcanzó con la sesión guardada. */
     seLogueo: boolean;
 }
-/** Lee y descifra las credenciales del tenant. `null` si no están cargadas. */
+/** Lee y descifra las credenciales del tenant./** Lee y descifra las credenciales del tenant. `null` si no están cargadas. */
 export declare function credencialesDe(tenantId: string): Promise<CredencialesArca | null>;
 /**
  * Abre un navegador con la sesión de ARCA lista, logueándose solo si hace falta.

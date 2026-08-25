@@ -83,6 +83,17 @@ const ARCA_NOMENCLADOR_PATHS = ['/obras-sociales', '/arca/sucursales', '/arca/ac
  */
 const ARCA_CONEXION_PATH = '/afip';
 /**
+ * La otra conexión: la que valida obras sociales.
+ *
+ * Son DOS y funcionan distinto — una habla con un webservice y trae datos del contribuyente; la otra
+ * abre un navegador en el servidor y lee la obra social de un trabajador—. Estaban en una sola
+ * pantalla y no se entendía cuál hacía qué. Van pegadas y con el mismo prefijo para que se lean como
+ * lo que son: dos conexiones del mismo organismo, no dos módulos distintos.
+ */
+const ARCA_CONEXION_OS_PATH = '/arca/conexion-obras-sociales';
+/** Las dos juntas, para el subgrupo «Conexión» que las agrupa adentro de ARCA. */
+const ARCA_CONEXION_PATHS = [ARCA_CONEXION_PATH, ARCA_CONEXION_OS_PATH];
+/**
  * "Cómo funciona" va DESPUÉS de la Conexión, al final de todo.
  *
  * No es un nomenclador ni una configuración: no se toca nada ahí. Es la explicación de la cadena
@@ -92,7 +103,7 @@ const ARCA_CONEXION_PATH = '/afip';
 const ARCA_COMO_FUNCIONA_PATH = '/arca/como-funciona';
 /** Guía del único trámite del módulo que sale de la app: la validación de obras sociales. */
 const ARCA_GUIA_OS_PATH = '/arca/guia-obras-sociales';
-const ARCA_PATHS = [...ARCA_NOMENCLADOR_PATHS, '/convenios', '/arca/categorias', ARCA_CONEXION_PATH, ARCA_COMO_FUNCIONA_PATH, ARCA_GUIA_OS_PATH];
+const ARCA_PATHS = [...ARCA_NOMENCLADOR_PATHS, '/convenios', '/arca/categorias', ARCA_CONEXION_PATH, ARCA_CONEXION_OS_PATH, ARCA_COMO_FUNCIONA_PATH, ARCA_GUIA_OS_PATH];
 
 /** ABM de Empresas. La ficha de cada una vive aparte, en el bloque FICHAS. */
 const EMPRESAS_PATH = '/empresas';
@@ -136,10 +147,25 @@ const CONFIG_GROUPS = [
   { key: 'arca', storageKey: 'configArcaOpen', paths: ARCA_PATHS },
   { key: 'usuarios', storageKey: 'configUsuariosOpen', paths: USUARIOS_PATHS },
   { key: 'documentos', storageKey: 'configDocumentosOpen', paths: DOCUMENTOS_PATHS },
+  /*
+    ANIDADO dentro de «ARCA». Es el único grupo de dos niveles del menú, y se gana el lugar: son dos
+    conexiones al mismo organismo que hacen cosas distintas, y sueltas había que ponerles el prefijo
+    «Conexión | …» a las dos para que se entendiera que van juntas — con lo cual no entraban en el
+    ancho del sidebar y salían cortadas («Conexión | Con…», «Conexión | Obra…»), que es peor que no
+    agruparlas. Agrupadas, el padre dice «Conexión» y los hijos dicen para qué es cada una.
+  */
+  { key: 'arcaConexion', storageKey: 'configArcaConexionOpen', paths: ARCA_CONEXION_PATHS },
 ] as const;
 
 /** El subgrupo al que pertenece una ruta (o `undefined` si no está en ninguno). */
-const grupoDeRuta = (pathname: string) => CONFIG_GROUPS.find((g) => (g.paths as readonly string[]).includes(pathname));
+/**
+ * TODOS los subgrupos a los que pertenece una ruta, no solo el primero.
+ *
+ * Con «Conexión» adentro de «ARCA» una misma ruta cae en dos: si se abriera solo uno, entrar directo
+ * a la conexión dejaría al padre colapsado y el ítem activo escondido adentro — el menú marcando
+ * como abierta una pantalla que no se ve por ningún lado.
+ */
+const gruposDeRuta = (pathname: string) => CONFIG_GROUPS.filter((g) => (g.paths as readonly string[]).includes(pathname));
 
 export const MobileNavbar: React.FC = () => {
   const { user, logout, hasPermission } = useAuthStore();
@@ -173,7 +199,7 @@ export const MobileNavbar: React.FC = () => {
   // Subgrupos colapsables dentro de Configuración ("Plantillas", "ARCA", "Usuarios", "Documentos"). Su estado vive acá
   // (y no en NavMenu) porque NavMenu se redefine en cada render del padre y perdería el estado interno.
   // Cada uno arranca abierto si lo dejaste abierto, o si entrás directo a una de sus páginas.
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => Object.fromEntries(CONFIG_GROUPS.map((g) => [g.key, localStorage.getItem(g.storageKey) === 'true' || grupoDeRuta(location.pathname)?.key === g.key])));
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => Object.fromEntries(CONFIG_GROUPS.map((g) => [g.key, localStorage.getItem(g.storageKey) === 'true' || gruposDeRuta(location.pathname).some((x) => x.key === g.key)])));
   const toggleGroup = (key: string) => {
     const group = CONFIG_GROUPS.find((g) => g.key === key);
     if (!group) return;
@@ -191,8 +217,8 @@ export const MobileNavbar: React.FC = () => {
       groupsMounted.current = true;
       return;
     }
-    const group = grupoDeRuta(location.pathname);
-    if (group) setOpenGroups((prev) => ({ ...prev, [group.key]: true }));
+    const grupos = gruposDeRuta(location.pathname);
+    if (grupos.length > 0) setOpenGroups((prev) => ({ ...prev, ...Object.fromEntries(grupos.map((g) => [g.key, true])) }));
   }, [location.pathname]);
   const [adminCounts, setAdminCounts] = useState<AdminCounts>({ clients: 0, tenants: 0, roles: 0, users: 0, areas: 0, positions: 0, levels: 0, projects: 0 });
   const SHOW_MENU_COUNTS = false;
@@ -335,7 +361,10 @@ export const MobileNavbar: React.FC = () => {
       // El ícono es el de conexión y NO el del organismo: `faLandmark` ya lo lleva el encabezado del
       // grupo, así que repetirlo dejaba dos íconos idénticos uno debajo del otro y no distinguía la
       // pantalla. Es el mismo `faPlug` que la conexión de Dropbox: misma clase de cosa, mismo ícono.
-      if (hasPermission('config_afip:view')) base.push({ path: '/afip', icon: faPlug, label: 'Conexión', scope: 'global' });
+      if (hasPermission('config_afip:view')) base.push({ path: '/afip', icon: faPlug, label: 'Constancia de CUIT', scope: 'global' });
+      // Misma familia, mismo ícono de conexión: lo que cambia es para qué sirve, y eso lo dice el
+      // rótulo. Comparte permiso porque es la misma decisión de quién configura la integración.
+      if (hasPermission('config_afip:view')) base.push({ path: ARCA_CONEXION_OS_PATH, icon: faPlug, label: 'Obras sociales', scope: 'global' });
       // Comparte permiso con la Conexión: quien puede ver cómo se conecta el módulo puede leer cómo
       // funciona. No expone ningún dato — es la explicación del circuito.
       if (hasPermission('config_afip:view')) base.push({ path: ARCA_COMO_FUNCIONA_PATH, icon: faSitemap, label: 'Cómo funciona', scope: 'global' });
@@ -446,6 +475,24 @@ export const MobileNavbar: React.FC = () => {
       // Raya antes de la Conexión: no es un nomenclador y no tiene que leerse como uno más. Solo se
       // dibuja si arriba quedó algo — si no, sería una raya colgada al principio del grupo.
       if (p === ARCA_CONEXION_PATH && arcaChildren.length > 0) arcaChildren.push({ path: '#arca-separador', separador: true });
+
+      /*
+        Las dos conexiones entran en un subgrupo propio, no sueltas.
+
+        Se arma cuando aparece la primera y la segunda se le agrega adentro. Así el orden de
+        `ARCA_PATHS` sigue mandando —la Conexión queda donde estaba— y no hace falta una lista aparte
+        que se pueda desincronizar de aquella.
+      */
+      if (ARCA_CONEXION_PATHS.includes(p)) {
+        let grupo = arcaChildren.find((c) => c.groupKey === 'arcaConexion');
+        if (!grupo) {
+          grupo = { path: '#arca-conexion', groupKey: 'arcaConexion', icon: faPlug, label: 'Conexión', scope: 'global' as const, children: [] as any[] };
+          arcaChildren.push(grupo);
+        }
+        grupo.children.push(item);
+        continue;
+      }
+
       arcaChildren.push(item);
     }
     const arcaGroup = { path: '#arca', groupKey: 'arca', icon: faLandmark, label: 'ARCA', scope: 'global' as const, children: arcaChildren };
@@ -507,9 +554,23 @@ export const MobileNavbar: React.FC = () => {
               className="w-full group flex items-center justify-between px-2 py-2 rounded transition-all text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/50"
             >
               <div className="flex items-center space-x-3 flex-1 min-w-0">
-                <div className="h-8 w-8 flex items-center justify-center rounded-md transition-colors bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 group-hover:bg-gray-300 dark:group-hover:bg-blue-800">
-                  <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
-                </div>
+                {/*
+                  Un subgrupo ANIDADO se dibuja como sus hermanos, con el ícono plano.
+
+                  La caja gris es lo que distingue un grupo de primer nivel de los ítems que cuelgan
+                  de él. Repetirla un nivel más abajo hacía que «Conexión» pesara más que los
+                  nomencladores que tiene al lado, y el menú se leyera como tres jerarquías en vez de
+                  dos. Lo que dice que es un grupo es la flecha de la derecha, que ya está.
+                */}
+                {isChild ? (
+                  <span className="h-8 w-8 flex items-center justify-center shrink-0 text-gray-500 dark:text-gray-400">
+                    <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
+                  </span>
+                ) : (
+                  <div className="h-8 w-8 flex items-center justify-center rounded-md transition-colors bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 group-hover:bg-gray-300 dark:group-hover:bg-blue-800">
+                    <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
+                  </div>
+                )}
                 <span className="font-medium truncate">{item.label}</span>
               </div>
               <FontAwesomeIcon icon={isOpen ? faChevronDown : faChevronRight} className="h-3 w-3 shrink-0" />

@@ -43,6 +43,7 @@ import { DocumentsPage } from "./pages/DocumentsPage";
 import { EscaneoDropboxConfigPage } from "./pages/EscaneoDropboxConfigPage";
 import { DropboxSignConfigPage } from "./pages/DropboxSignConfigPage";
 import { AfipConfigPage } from "./pages/AfipConfigPage";
+import { ArcaObrasSocialesConexionPage } from "./pages/ArcaObrasSocialesConexionPage";
 import { VacationsCalendarPage } from "./pages/VacationsCalendarPage";
 import { PdfTemplatesPage } from "./pages/PdfTemplatesPage";
 import { ReleasesPage } from "./pages/ReleasesPage";
@@ -473,6 +474,16 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <AfipConfigPage />
+                  </ProtectedRoute>
+                }
+              />
+              {/* La otra conexión de ARCA. Vive aparte porque es otra credencial, otro mecanismo y
+                  otro dato: ver el comentario de cabecera de esa página. */}
+              <Route
+                path="/arca/conexion-obras-sociales"
+                element={
+                  <ProtectedRoute>
+                    <ArcaObrasSocialesConexionPage />
                   </ProtectedRoute>
                 }
               />
