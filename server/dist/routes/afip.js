@@ -442,6 +442,51 @@ router.post("/consulta-padron/bulk", async (req, res) => {
                     if (resultado.estado === "desconocido") {
                         console.warn(`AFIP: estado desconocido para CUIT ${cuit} (encontrado=${resultado.encontrado}, faultCode=${resultado.faultCode || "-"}, faultString=${resultado.faultString || "-"}). Raw:`, JSON.stringify(resultado.raw));
                     }
+                    /*
+                      EL NOMBRE DE ARCA MANDA.
+        
+                      Si lo que ARCA tiene registrado para este CUIT no es lo que hay cargado, gana ARCA y se
+                      pisa el nombre de la persona. La razón es que estos contratos terminan en un trámite ante
+                      el organismo: un nombre que no coincide con el padrón es el que hace que el alta se
+                      rechace, y hasta ahora esa diferencia no se veía en ningún lado — la constancia se
+                      archivaba igual, con el nombre viejo.
+        
+                      SE GUARDA TAL CUAL VIENE, en mayúsculas y sin acomodar nada. Cualquier prolijidad que le
+                      agreguemos (capitalizar, reordenar) lo aleja de lo que dice el organismo, que es
+                      exactamente el valor que tiene el dato.
+        
+                      Se sella `nombreValidadoArcaAt` aunque el nombre ya coincidiera: el tilde verde de la
+                      tabla afirma «esto es lo que ARCA tiene», no «esto se cambió».
+                    */
+                    let renombrado;
+                    if (resultado.encontrado && resultado.nombre && resultado.apellido) {
+                        const idsDeEstaTanda = [...new Set(matches.map((t) => t.userId))];
+                        for (const uid of idsDeEstaTanda) {
+                            const u = userById.get(uid);
+                            if (!u)
+                                continue;
+                            const antes = `${u.firstName || ""} ${u.lastName || ""}`.trim();
+                            const ahora = `${resultado.nombre} ${resultado.apellido}`.trim();
+                            const cambia = (u.firstName || "") !== resultado.nombre || (u.lastName || "") !== resultado.apellido;
+                            await User.updateOne({ _id: uid, tenantId: req.tenantObjectId }, {
+                                $set: {
+                                    ...(cambia ? { firstName: resultado.nombre, lastName: resultado.apellido } : {}),
+                                    // `metadata.nombre`/`apellido` son la copia que trae FRAME. Si se actualiza solo
+                                    // `firstName`/`lastName`, las dos versiones quedan diciendo cosas distintas sobre
+                                    // la misma persona y no hay forma de saber cuál se está mirando.
+                                    ...(cambia ? { "metadata.nombre": resultado.nombre, "metadata.apellido": resultado.apellido } : {}),
+                                    "metadata.nombreValidadoArcaAt": new Date(),
+                                },
+                            });
+                            if (cambia) {
+                                // El cache local se actualiza para que el nombre del JSON que se archiva en Dropbox
+                                // sea el nuevo, y no el que acabamos de reemplazar.
+                                u.firstName = resultado.nombre;
+                                u.lastName = resultado.apellido;
+                                renombrado = { antes: antes || "(sin nombre cargado)", ahora };
+                            }
+                        }
+                    }
                     let contratosActualizados = 0;
                     let dropboxSubido;
                     let dropboxError;
@@ -515,7 +560,7 @@ router.post("/consulta-padron/bulk", async (req, res) => {
                     // Se devuelve el raw completo + con qué CUIT representada/ambiente se consultó — para poder
                     // ver en el momento, desde la UI, exactamente qué se mandó y qué contestó AFIP, sin
                     // necesitar acceso a los logs del server ni a la base.
-                    resultados.push({ cuit, estado: resultado.estado, encontrado: resultado.encontrado, denominacion: resultado.denominacion, contratosActualizados, dropboxSubido, dropboxError, cuitRepresentada: cfg.cuitRepresentada, ambiente: cfg.ambiente, raw: resultado.raw, faultCode: resultado.faultCode, faultString: resultado.faultString });
+                    resultados.push({ cuit, estado: resultado.estado, encontrado: resultado.encontrado, denominacion: resultado.denominacion, contratosActualizados, dropboxSubido, dropboxError, cuitRepresentada: cfg.cuitRepresentada, ambiente: cfg.ambiente, raw: resultado.raw, faultCode: resultado.faultCode, faultString: resultado.faultString, renombrado });
                 }
                 catch (e) {
                     resultados.push({ cuit, error: e?.message || "Error al consultar AFIP", contratosActualizados: 0 });

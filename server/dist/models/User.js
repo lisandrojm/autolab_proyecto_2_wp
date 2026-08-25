@@ -32,6 +32,7 @@ const userSchema = new Schema({
         tipoDocumentoId: Number,
         documento: String,
         cuit: String,
+        nombreValidadoArcaAt: Date,
         sinCuit: Boolean,
         estadoCivil: String,
         calle: String,

@@ -67,6 +67,11 @@ export interface ResultadoConsultaPadron {
   faultString?: string;
   /** Respuesta cruda de ARCA (o el Fault, si lo hubo) tal cual la parseó el server. */
   raw?: any;
+  /**
+   * Presente SOLO si el nombre que había cargado no coincidía con el del Padrón y se reemplazó por
+   * el de ARCA. Ausente cuando ya coincidía: ahí no hay nada que avisar.
+   */
+  renombrado?: { antes: string; ahora: string };
 }
 
 export interface ResultadoConsultaPadronBulk {

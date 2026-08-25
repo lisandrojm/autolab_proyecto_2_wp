@@ -778,6 +778,8 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         userName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
         userEmail: user.email,
         userActivo: !!user.metadata?.activo,
+        /** El nombre de esta persona es literalmente el que ARCA tiene para su CUIT. */
+        userNombreValidadoArca: !!user.metadata?.nombreValidadoArcaAt,
         userExternalId: user.metadata?.id ?? null,
         userRoles: (user.roles || []).map((r: any) => ({ _id: String(r._id), name: r.name })),
         clientId,

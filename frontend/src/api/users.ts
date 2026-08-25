@@ -81,6 +81,8 @@ export interface ContractOverviewRow {
   _id: string;
   userId: string;
   userName: string;
+  /** El nombre es el que ARCA tiene registrado para el CUIT: se tomó del Padrón al validar. */
+  userNombreValidadoArca?: boolean;
   userEmail: string;
   userActivo: boolean;
   /** id externo (FRAME) del usuario — para resolver a quién reemplaza otro contrato de la misma página. */

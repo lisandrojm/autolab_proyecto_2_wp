@@ -291,6 +291,8 @@ export async function consultarPadron(tenantId, cfg, cuitConsultado, opts) {
                     estado,
                     tipoPersona: tipoPersona ? String(tipoPersona) : undefined,
                     denominacion: denominacion ? String(denominacion) : undefined,
+                    nombre: nombre ? String(nombre) : undefined,
+                    apellido: apellido ? String(apellido) : undefined,
                     raw: personaReturn,
                 };
             }

@@ -210,11 +210,18 @@ export function AfipConfigPage() {
       ) : status?.connected ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 max-w-xl space-y-4">
           <div className="flex items-center gap-3">
-            <FontAwesomeIcon icon={faLandmark} className="h-7 w-7 text-blue-600" />
-            <div>
+            <FontAwesomeIcon icon={faLandmark} className="h-7 w-7 shrink-0 text-blue-600" />
+            <div className="min-w-0">
               <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">ARCA conectado</h3>
               <p className="text-xs text-gray-500">CUIT representada: {status.cuitRepresentada}</p>
             </div>
+            {/* Arriba a la derecha, igual que en la tarjeta de obras sociales: las dos conexiones se
+                desconectan desde el mismo lugar. */}
+            {status.canManageConnection && (
+              <button onClick={handleDisconnect} className="ml-auto self-start shrink-0 text-sm text-red-500 hover:text-red-600 font-semibold">
+                Desconectar
+              </button>
+            )}
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-300">
             Ambiente: <strong>{status.ambiente === "produccion" ? "Producción" : "Homologación (testing)"}</strong>
@@ -277,9 +284,6 @@ export function AfipConfigPage() {
 
           {status.canManageConnection && (
             <div className="flex items-center gap-4">
-              <button onClick={handleDisconnect} className="text-sm text-red-500 hover:text-red-600 font-semibold">
-                Desconectar
-              </button>
               <button onClick={handleVerificarServicio} disabled={verificando} className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 font-semibold disabled:opacity-50">
                 <FontAwesomeIcon icon={verificando ? faSpinner : faRotate} spin={verificando} className="h-3.5 w-3.5" />
                 {verificando ? "Revalidando..." : "Revalidar servicio"}

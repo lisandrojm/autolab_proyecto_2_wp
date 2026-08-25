@@ -23,6 +23,11 @@ export interface ResultadoPadron {
     estado: "activo" | "inactivo" | "desconocido";
     tipoPersona?: string;
     denominacion?: string;
+    /** Nombre y apellido TAL CUAL los devuelve ARCA (en mayúsculas, sin normalizar), separados.
+     *  `denominacion` los junta, pero para escribirlos en `firstName`/`lastName` hacen falta aparte.
+     *  Vacíos en personas jurídicas, que traen `razonSocial` y no se pueden partir sin adivinar. */
+    nombre?: string;
+    apellido?: string;
     /** Presentes solo si AFIP devolvió un SOAP Fault (encontrado=false por fault, no por respuesta vacía). */
     faultCode?: string;
     faultString?: string;

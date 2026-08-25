@@ -31,6 +31,17 @@ import { sweetAlert } from '../../utils/sweetAlert';
 import { cachedFetch, invalidateRefCache, updateRefCache } from '../../utils/refCache';
 
 const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
+
+/**
+ * Tilde verde al lado del nombre: dice que ese nombre es el que ARCA tiene para el CUIT.
+ *
+ * No afirma «alguien lo revisó» sino «se lo trajo del Padrón al validar», que es una diferencia que
+ * importa: lo que se ve escrito ahí es literalmente lo que va a decir el organismo cuando se presente
+ * el trámite. Por eso también aparece cuando el nombre no hizo falta cambiarlo — lo que sella es la
+ * confirmación contra ARCA, no el cambio.
+ */
+const NombreValidadoArca: React.FC<{ ok?: boolean }> = ({ ok }) =>
+  ok ? <FontAwesomeIcon icon={faCircleCheck} title="Nombre tomado del Padrón de ARCA" className="h-3 w-3 shrink-0 text-green-600 dark:text-green-500" /> : null;
 // Solo para traducir los convenioIds de la empresa a códigos de CCT y validar la Categoría.
 const conveniosApi = createSimpleCatalogApi('/convenios');
 
@@ -798,8 +809,6 @@ export const ContractBulkAfipTab: React.FC<{
   const [detalleRef, setDetalleRef] = useState<{ _id: string; contractIndex: number } | null>(null);
   // Detalle de los datos para la Constancia de CUIT/CUIL (único requisito: el CUIT/CUIL).
   const [constancia, setConstancia] = useState<{ row: ImpositivoRow; cuil: string } | null>(null);
-  // Explicación de qué hace la columna "Verificar (Opc)" (modal informativo).
-  const [verificarInfoOpen, setVerificarInfoOpen] = useState(false);
   // Explicación de qué hacer en ARCA con el TXT ya generado (modal informativo).
   const [cargarArcaInfoOpen, setCargarArcaInfoOpen] = useState(false);
   // Explicación del flujo completo: Generar TXT → Cargar en ARCA → sincronización automática.
@@ -1289,8 +1298,8 @@ export const ContractBulkAfipTab: React.FC<{
   // Qué hace falta para poder tildar una fila depende del trámite: en Alta temprana de ARCA son los
   // datos completos para el TXT; en Constancia de CUIT alcanza con tener el CUIT/CUIL cargado (es lo
   // único que necesita "Validar ARCA Masivo").
-  /** "Sin CUIT" usa el MISMO layout de columnas que "Constancia de CUIT" (Verificar, Datos
-   *  CUIT/CUIL, ARCA, Dropbox...). Lo que cambia es el contenido de la acción, no la tabla. */
+  /** "Sin CUIT" usa el MISMO layout de columnas que "Constancia de CUIT" (Datos CUIT/CUIL, ARCA,
+   *  Dropbox...). Lo que cambia es el contenido de la acción, no la tabla. */
   const layoutConstancia = filterTipo === 'constancia_cuit' || filterTipo === 'sin_cuit';
 
   /**
@@ -1367,7 +1376,17 @@ export const ContractBulkAfipTab: React.FC<{
    * acá en vez de bloquear el check porque el check es de selección GENERAL — tildar filas SIN
    * empresa es justamente cómo se les asigna una en masa, que es el paso anterior a poder validarlas.
    */
-  const seleccionadosValidables = useMemo(() => seleccionados.filter((x) => !!x.row.empresaContratoId), [seleccionados]);
+  /**
+   * Lo tildado que SE PUEDE validar: con empleadora asignada y TODAVÍA SIN VALIDAR.
+   *
+   * El segundo corte es nuevo y es el que evita gastar consultas al pedo: tildar una fila que ya
+   * tiene su obra social no la vuelve a mandar a ARCA. Tildarla sigue sirviendo igual, porque es
+   * como se la quita en masa (ver `objetivoBorrado`) — lo que no hace es entrar en la corrida.
+   */
+  const seleccionadosValidables = useMemo(
+    () => seleccionados.filter((x) => !!x.row.empresaContratoId && estadoObraSocial(x.row, resolveAfipValues(x.row, afipCat)) === 'sin_validar'),
+    [seleccionados, afipCat],
+  );
 
   /**
    * TODO lo que se puede validar de lo que se está mirando, sin haber tildado nada.
@@ -1381,25 +1400,24 @@ export const ContractBulkAfipTab: React.FC<{
   );
 
   /**
-   * A quiénes agarra el botón: LA SELECCIÓN ACOTA, NO HABILITA.
+   * A quiénes agarra el botón: SOLO LO TILDADO.
    *
-   * Antes el botón exigía tildar filas y quedaba deshabilitado con el hover «tildá los contratos que
-   * ya la tengan y usá este botón». Con 20 pendientes que YA tenían empleadora, eso era pedirle a la
-   * persona que tilde 20 casillas para solicitar algo que el sistema ya sabía que había que hacer —y
-   * la condición del hover se cumplía en las 20, así que el mensaje además no explicaba nada.
+   * Esto REVIERTE lo que hacía antes —sin tildar nada agarraba a todos los pendientes del filtro— por
+   * pedido explícito. La corrida no es gratis ni instantánea: abre el navegador del servidor y
+   * consulta a ARCA de a una persona, minutos. Arrancarla sobre un conjunto que nadie eligió deja la
+   * duda de qué se está por mandar, y esa duda aparece justo cuando ya empezó.
    *
-   * Ahora arranca habilitado sobre todos los pendientes. Tildar sirve para hacer MENOS, que es el
-   * caso raro, y por eso es el que pide un gesto extra.
+   * `pendientesValidables` sigue vivo, pero ahora es solo para el hover del botón apagado: sirve para
+   * decir cuántas hay para tildar, que es la pregunta que queda cuando el botón está en cero.
    */
-  const objetivoValidacion = useMemo(() => (seleccionados.length > 0 ? seleccionadosValidables : pendientesValidables), [seleccionados, seleccionadosValidables, pendientesValidables]);
+  const objetivoValidacion = seleccionadosValidables;
   /**
    * A quiénes alcanza el borrado masivo: SOLO lo tildado, y solo lo que está validado.
    *
-   * ES A PROPÓSITO LO CONTRARIO DEL BOTÓN DE VALIDAR, que sin tildar nada agarra a todos los
-   * pendientes. Validar es aditivo y se puede repetir; borrar tira trabajo hecho contra ARCA — cada
-   * una de esas obras sociales costó una consulta real al organismo, y recuperarlas es volver a
-   * correr la tanda entera. Un botón que sin tildar nada borrara las 843 sería una sola pulsación
-   * entre el trabajo de una semana y cero.
+   * Los dos botones trabajan sobre lo tildado, pero este además exige que ya estén validadas: borrar
+   * tira trabajo hecho contra ARCA — cada una de esas obras sociales costó una consulta real al
+   * organismo, y recuperarlas es volver a correr la tanda entera. Un botón que sin tildar nada
+   * borrara las 843 sería una sola pulsación entre el trabajo de una semana y cero.
    */
   const objetivoBorrado = useMemo(
     () => seleccionados.filter((x) => ['validada_arca', 'validada_default', 'no_registrada'].includes(estadoObraSocial(x.row, resolveAfipValues(x.row, afipCat)))),
@@ -1601,7 +1619,7 @@ export const ContractBulkAfipTab: React.FC<{
               <span
                 title={`${countObraSocialValidadas} con la obra social validada contra ARCA · ${countSinConstatar} sin validar${
                   countSinEmpleadora > 0 ? ` (de esas, ${countSinEmpleadora} esperan que se les elija la empleadora)` : ''
-                }. «Validar obras sociales» agarra a todas las pendientes; tildá filas solo si querés validar menos.`}
+                }. «Validar obras sociales» agarra solo lo que tildes: las que ya están validadas no se vuelven a consultar.`}
                 className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
               >
                 <FontAwesomeIcon icon={faStethoscope} className="h-3 w-3" />
@@ -1627,14 +1645,18 @@ export const ContractBulkAfipTab: React.FC<{
               onClick={() => setLoteObrasSociales(new Set(objetivoValidacion.map((x) => rowKey(x.row))))}
               title={
                 objetivoValidacion.length > 0
-                  ? seleccionados.length > 0
-                    ? `Valida la obra social de los ${objetivoValidacion.length} contratos tildados que tienen Empresa Contrato.`
-                    : `Valida las ${objetivoValidacion.length} obras sociales pendientes que se están mirando. Tildá filas si querés validar solo algunas.`
-                  : seleccionados.length > 0
-                    ? 'Ninguno de los contratos tildados tiene Empresa Contrato. La obra social se valida contra el CUIT de la empleadora: asignásela arriba, en «Empresa Contrato».'
-                    : countSinEmpleadora > 0
-                      ? `Los ${countSinEmpleadora} contratos sin validar no tienen Empresa Contrato asignada. La obra social se valida contra el CUIT de la empleadora.`
-                      : 'No hay obras sociales pendientes de validar en lo que se está mirando.'
+                  ? `Valida la obra social de los ${objetivoValidacion.length} contratos tildados que están sin validar.`
+                  : seleccionados.length === 0
+                    ? pendientesValidables.length > 0
+                      ? `Tildá los contratos que querés validar. Hay ${pendientesValidables.length} sin validar en lo que se está mirando.`
+                      : countSinEmpleadora > 0
+                        ? `Los ${countSinEmpleadora} contratos sin validar no tienen Empresa Contrato asignada. La obra social se valida contra el CUIT de la empleadora.`
+                        : 'No hay obras sociales pendientes de validar en lo que se está mirando.'
+                    : /* Hay filas tildadas y aun así el botón está en cero: los dos motivos son
+                         distintos y llevan a acciones distintas, así que se dicen por separado. */
+                      objetivoBorrado.length === seleccionados.length
+                      ? `Los ${seleccionados.length} contratos tildados ya tienen la obra social validada: no se vuelven a consultar en ARCA.`
+                      : 'Ninguno de los contratos tildados se puede validar: sin Empresa Contrato no hay CUIT de empleadora contra el cual consultar.'
               }
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
             >
@@ -1753,7 +1775,10 @@ export const ContractBulkAfipTab: React.FC<{
                     <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!esSeleccionable(r, result)} onChange={() => toggleSel(rowKey(r))} title={tituloCheck(r)} className={`rounded border-gray-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0 ${omitidaEnValidacion(r) ? 'text-amber-500 focus:ring-amber-500' : 'text-emerald-600 focus:ring-emerald-500'}`} />
                     <FontAwesomeIcon icon={faUser} className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0" />
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{r.userName}</p>
+                      <p className={`text-sm font-bold truncate inline-flex items-center gap-1.5 ${r.userNombreValidadoArca ? 'text-green-700 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'}`}>
+                        <span className="truncate">{r.userName}</span>
+                        <NombreValidadoArca ok={r.userNombreValidadoArca} />
+                      </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{r.userEmail}</p>
                       {fmtCuit(r.cuit) && <p className="text-[10px] text-gray-400 font-mono truncate">CUIT {fmtCuit(r.cuit)}</p>}
                     </div>
@@ -1805,7 +1830,6 @@ export const ContractBulkAfipTab: React.FC<{
                       )}
                       <ConstanciaBadge row={r} />
                       <BotonValidarCuit row={r} onConsultado={() => load(true)} compacto />
-                      {constanciaPendiente(r) && <BotonArca cuit={r.cuit} compacto />}
                     </>
                   )}
                   {filterTipo === 'alta_temprana_afip' && (
@@ -1850,20 +1874,12 @@ export const ContractBulkAfipTab: React.FC<{
                   ) : (
                     <th className="sticky top-0 left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]">Acciones</th>
                   )}
-                  {layoutConstancia && (
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                      {filterTipo === 'sin_cuit' ? (
-                        'Validación'
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5">
-                          Verificar (Opc)
-                          <button type="button" onClick={() => setVerificarInfoOpen(true)} title="Qué hace esta columna" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
-                            <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-                          </button>
-                        </span>
-                      )}
-                    </th>
-                  )}
+                  {/* Acá vivía «Verificar (Opc)», una columna entera para un botón que copiaba el CUIT
+                      y abría el portal de ARCA a mano. Se sacó: al lado de «Validar», que consulta el
+                      Padrón sola y deja el resultado archivado, un segundo botón que manda a hacer lo
+                      mismo a mano solo hacía dudar de cuál era el que valía. La columna sobrevive solo
+                      para «Sin CUIT», donde el contenido es otro. */}
+                  {filterTipo === 'sin_cuit' && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Validación</th>}
                   {filterTipo === 'sin_cuit' && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Documentación</th>}
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Alta / Baja</th>
                   {layoutConstancia && (
@@ -1942,19 +1958,9 @@ export const ContractBulkAfipTab: React.FC<{
                         </div>
                       )}
                     </td>
-                    {layoutConstancia && (
+                    {filterTipo === 'sin_cuit' && (
                       <td className="px-4 py-3">
-                        {filterTipo === 'sin_cuit' ? (
-                          <CeldaValidacionSinCuit row={r} onAbrir={() => setValidacionRow(r)} onCambio={(v) => aplicarValidacionSinCuit(r, v)} />
-                        ) : cuitEsValido(r.cuit) ? (
-                          // Es una verificación manual OPCIONAL contra ARCA: se ofrece siempre que haya
-                          // un CUIT con el que buscar. Antes se ocultaba salvo que la constancia figurara
-                          // "pendiente", así que no aparecía justo en los casos dudosos (ej. hay PDF
-                          // cargado pero no se pudo leer su fecha de vigencia).
-                          <BotonArca cuit={r.cuit} compacto />
-                        ) : (
-                          <span className="text-xs text-gray-400">—</span>
-                        )}
+                        <CeldaValidacionSinCuit row={r} onAbrir={() => setValidacionRow(r)} onCambio={(v) => aplicarValidacionSinCuit(r, v)} />
                       </td>
                     )}
                     {filterTipo === 'sin_cuit' && (
@@ -2002,13 +2008,16 @@ export const ContractBulkAfipTab: React.FC<{
                           </td>
                         )}
                         <td className="px-4 py-3">
-                          <DropboxBadge row={r} onEliminado={() => load(true)} />
+                          <DropboxBadge row={r} />
                         </td>
                       </>
                     )}
-                    {filterTipo !== 'sin_cuit' && <ContractDocsColumns record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onDownloadContract={handleDownloadContract} onDownloadRelease={handleDownloadRelease} onUploadAlta={handleUploadAlta} showContrato={false} showRelease={false} hideAltaLabel />}
+                    {filterTipo !== 'sin_cuit' && <ContractDocsColumns record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onDownloadContract={handleDownloadContract} onDownloadRelease={handleDownloadRelease} onUploadAlta={handleUploadAlta} showContrato={false} showRelease={false} hideAltaLabel onConstanciaEliminada={() => load(true)} />}
                     <td className="px-4 py-3">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{r.userName}</p>
+                      <p className={`text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 ${r.userNombreValidadoArca ? 'text-green-700 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
+                        {r.userName}
+                        <NombreValidadoArca ok={r.userNombreValidadoArca} />
+                      </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
@@ -2177,19 +2186,6 @@ export const ContractBulkAfipTab: React.FC<{
           onClose={() => setValidacionRow(null)}
           onChange={(v) => aplicarValidacionSinCuit(validacionRow, v)}
         />
-      )}
-
-      {verificarInfoOpen && (
-        <Modal isOpen={verificarInfoOpen} onClose={() => setVerificarInfoOpen(false)} title="Verificar (Opc)" size="sm" zIndex={80}>
-          <div className="space-y-3">
-            <p className="text-sm text-gray-700 dark:text-gray-200">Botón opcional para cotejar la constancia contra el original en el portal de ARCA, además de la consulta automática al Padrón que ya hace "Validar".</p>
-            <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1.5 list-disc list-inside">
-              <li>Copia el CUIT/CUIL de la persona al portapapeles.</li>
-              <li>Abre el portal de ARCA en una pestaña nueva, listo para pegarlo.</li>
-              <li>Solo aparece cuando la constancia está pendiente (falta, venció, o no se pudo archivar).</li>
-            </ul>
-          </div>
-        </Modal>
       )}
 
       {cargarArcaInfoOpen && (
@@ -3042,7 +3038,10 @@ export const ContractBulkFirmaTab: React.FC<{
                         <FirmaReleaseCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} releasesAplicables={releasesQueFirman} onGenerado={(patch) => aplicarCambio(r, patch)} />
                       </td>
                       <td className="px-4 py-3">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{r.userName}</p>
+                        <p className={`text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 ${r.userNombreValidadoArca ? 'text-green-700 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
+                        {r.userName}
+                        <NombreValidadoArca ok={r.userNombreValidadoArca} />
+                      </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>

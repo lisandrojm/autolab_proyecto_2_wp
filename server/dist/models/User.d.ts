@@ -38,6 +38,16 @@ export interface IUserMetadata {
     tipoDocumentoId?: number;
     documento?: string;
     cuit?: string;
+    /**
+     * Cuándo se tomó el nombre del Padrón de ARCA como el bueno.
+     *
+     * Es lo que habilita el tilde verde al lado del nombre: no dice «alguien lo revisó», dice «esto
+     * es literalmente lo que ARCA tiene registrado para este CUIT». Por eso se sella aunque el nombre
+     * ya coincidiera — el valor del sello es la confirmación contra el organismo, no el cambio.
+     *
+     * NO está en `USER_FRAME_WHITELIST` a propósito: FRAME no tiene nada que decir sobre esto.
+     */
+    nombreValidadoArcaAt?: Date;
     /** La persona NO tiene CUIT/CUIL argentino (típicamente extranjeros). Se declara explícitamente
      *  al darla de alta: es distinto de "todavía no se cargó", y es lo que habilita el circuito de
      *  documentos sin pasar por AFIP (ver routes/afip.ts → habilitar-firma). */

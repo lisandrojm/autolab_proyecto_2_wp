@@ -11,6 +11,7 @@ import { afipAPI } from "../../api/afip";
 import { estadoImpositivoDelContrato, findTemplate, templateHasContent, DownloadMenu } from "../team/ContractCard";
 import { getImageUrl, downloadFileFromUrl } from "../../utils/imageHelpers";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { AccionesConstanciaArchivada } from "./ConstanciaBulk";
 
 /* --------- Handlers de descarga/subida compartidos (tabla Contratos + Gestión de Contratos) --------- */
 
@@ -78,7 +79,22 @@ export const ContractDocsColumns: React.FC<{
   showRelease?: boolean;
   /** Oculta la etiqueta ("Alta ARCA"/"Alta Servicios") dentro de la celda, para no repetir lo que ya dice la cabecera de la columna. */
   hideAltaLabel?: boolean;
-}> = ({ record, contratoFrames, allEstados, activeReleases, onDownloadContract, onDownloadRelease, onUploadAlta, canUploadAlta = true, showContrato = true, showRelease = true, hideAltaLabel = false }) => {
+  /** Recargar la tabla después de borrar la constancia archivada. Sin esto no se ofrece el tacho. */
+  onConstanciaEliminada?: () => void;
+}> = ({
+  record,
+  contratoFrames,
+  allEstados,
+  activeReleases,
+  onDownloadContract,
+  onDownloadRelease,
+  onUploadAlta,
+  canUploadAlta = true,
+  showContrato = true,
+  showRelease = true,
+  hideAltaLabel = false,
+  onConstanciaEliminada,
+}) => {
   const [uploading, setUploading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [abriendoConstancia, setAbriendoConstancia] = useState(false);
@@ -171,16 +187,22 @@ export const ContractDocsColumns: React.FC<{
             <div className="flex items-center gap-2">
               {esConstanciaCuit ? (
                 altaCargada ? (
-                  <button
-                    type="button"
-                    onClick={handleVerConstancia}
-                    disabled={abriendoConstancia}
-                    title="Ver el archivo en Dropbox"
-                    className="text-xs text-gray-700 dark:text-gray-200 flex items-center gap-1.5 min-w-0 hover:underline disabled:opacity-50 disabled:cursor-wait"
-                  >
-                    <FontAwesomeIcon icon={abriendoConstancia ? faSpinner : faFilePdf} spin={abriendoConstancia} className="h-4 w-4 text-violet-600 shrink-0" />
-                    Archivado en Dropbox
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleVerConstancia}
+                      disabled={abriendoConstancia}
+                      title="Ver el archivo en Dropbox"
+                      className="text-xs text-gray-700 dark:text-gray-200 flex items-center gap-1.5 min-w-0 hover:underline disabled:opacity-50 disabled:cursor-wait"
+                    >
+                      <FontAwesomeIcon icon={abriendoConstancia ? faSpinner : faFilePdf} spin={abriendoConstancia} className="h-4 w-4 text-violet-600 shrink-0" />
+                      Archivado en Dropbox
+                    </button>
+                    {/* Las acciones del archivo, pegadas al archivo. Sin `onConstanciaEliminada` sale
+                        solo el ⓘ: borrar exige que la tabla sepa recargarse, o queda mostrando algo
+                        que ya no existe. */}
+                    <AccionesConstanciaArchivada row={record} onEliminado={onConstanciaEliminada} />
+                  </>
                 ) : (
                   <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
                     <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 shrink-0" />

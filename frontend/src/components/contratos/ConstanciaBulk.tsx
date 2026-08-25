@@ -180,9 +180,36 @@ export const ArcaBadge: React.FC<{ row: ContractOverviewRow }> = ({ row }) => {
 };
 
 /** Badge SOLO de si la constancia quedó archivada en Dropbox — independiente del estado en ARCA
- *  (ver `ArcaBadge`). Recién con esto el trámite se considera terminado. */
-export const DropboxBadge: React.FC<{ row: ContractOverviewRow; onEliminado?: () => void }> = ({ row, onEliminado }) => {
+ *  (ver `ArcaBadge`). Recién con esto el trámite se considera terminado.
+ *
+ *  Es solo el estado: el ⓘ y el tacho viven en `AccionesConstanciaArchivada`, al lado del archivo. */
+export const DropboxBadge: React.FC<{ row: ContractOverviewRow }> = ({ row }) => {
   const guardado = !!row.constanciaAfipDropboxSubidaAt;
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap ${
+        guardado
+          ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800"
+          : "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800"
+      }`}
+      title={guardado ? `Archivado ${fmtFechaHora(row.constanciaAfipDropboxSubidaAt)}` : "Todavía no se archivó en Dropbox"}
+    >
+      <FontAwesomeIcon icon={guardado ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
+      {guardado ? "Guardado" : "Sin guardar"}
+    </span>
+  );
+};
+
+/**
+ * El ⓘ y el tacho del archivo de la constancia.
+ *
+ * VAN AL LADO DE «Archivado en Dropbox», no del badge «Guardado». Las dos columnas informan el mismo
+ * hecho, pero estas acciones son sobre EL ARCHIVO —abrir su explicación, borrarlo— y el archivo es lo
+ * que se nombra en la otra columna. Pegado al badge, el tacho se leía como si borrara el estado.
+ *
+ * Se renderiza vacío si no hay nada archivado: no hay archivo del que hablar ni que borrar.
+ */
+export const AccionesConstanciaArchivada: React.FC<{ row: ContractOverviewRow; onEliminado?: () => void }> = ({ row, onEliminado }) => {
   const [borrando, setBorrando] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
 
@@ -207,38 +234,25 @@ export const DropboxBadge: React.FC<{ row: ContractOverviewRow; onEliminado?: ()
     }
   };
 
+  if (!row.constanciaAfipDropboxSubidaAt) return null;
+
   return (
     <span className="inline-flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-      <span
-        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap ${
-          guardado
-            ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800"
-            : "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800"
-        }`}
-        title={guardado ? `Archivado ${fmtFechaHora(row.constanciaAfipDropboxSubidaAt)}` : "Todavía no se archivó en Dropbox"}
-      >
-        <FontAwesomeIcon icon={guardado ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
-        {guardado ? "Guardado" : "Sin guardar"}
-      </span>
-      {guardado && (
-        <>
-          {/* El archivo en Dropbox es lo que dispara el avance de bandeja: conviene decir qué va a
-              pasar, porque no ocurre al instante sino en la próxima sincronización. */}
-          <button type="button" onClick={() => setInfoOpen(true)} title="Qué pasa al sincronizar" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0">
-            <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-          </button>
-          {onEliminado && (
-            <button
-              type="button"
-              onClick={eliminar}
-              disabled={borrando}
-              title="Eliminar el archivo de Dropbox para que NO avance de bandeja"
-              className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50 shrink-0"
-            >
-              <FontAwesomeIcon icon={borrando ? faSpinner : faTrash} spin={borrando} className="h-3 w-3" />
-            </button>
-          )}
-        </>
+      {/* El archivo en Dropbox es lo que dispara el avance de bandeja: conviene decir qué va a pasar,
+          porque no ocurre al instante sino en la próxima sincronización. */}
+      <button type="button" onClick={() => setInfoOpen(true)} title="Qué pasa al sincronizar" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0">
+        <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+      </button>
+      {onEliminado && (
+        <button
+          type="button"
+          onClick={eliminar}
+          disabled={borrando}
+          title="Eliminar el archivo de Dropbox para que NO avance de bandeja"
+          className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50 shrink-0"
+        >
+          <FontAwesomeIcon icon={borrando ? faSpinner : faTrash} spin={borrando} className="h-3 w-3" />
+        </button>
       )}
 
       {infoOpen && (
@@ -262,6 +276,10 @@ export const DropboxBadge: React.FC<{ row: ContractOverviewRow; onEliminado?: ()
   );
 };
 
+/** Los toasts de estado duran ~2 s y SweetAlert muestra uno por vez: sin esta pausa, un modal
+ *  abierto enseguida se come el toast antes de que se llegue a leer. */
+const esperaCorta = () => new Promise((r) => setTimeout(r, 2100));
+
 /** Copia el texto al portapapeles; devuelve false si el navegador no lo permitió. */
 const copiar = async (texto: string): Promise<boolean> => {
   try {
@@ -276,8 +294,13 @@ const copiar = async (texto: string): Promise<boolean> => {
  * Copia el CUIT y abre el formulario de ARCA en otra pestaña. Ese formulario tiene captcha y no
  * acepta el CUIT por querystring, así que lo más rápido que se puede hacer es dejarlo listo para
  * pegar.
+ *
+ * Tenía una variante `compacto` que se rotulaba «Verificar ARCA» y ocupaba una columna entera de la
+ * tabla de contratos. Se sacó: al lado de «Validar», que consulta el Padrón sola y archiva el
+ * resultado, ofrecer además el mismo trámite a mano solo hacía dudar de cuál era el bueno. Queda un
+ * único uso, en el detalle de la constancia, donde abrir ARCA es justamente lo que se fue a buscar.
  */
-export const BotonArca: React.FC<{ cuit?: string; compacto?: boolean; label?: string }> = ({ cuit, compacto, label }) => {
+export const BotonArca: React.FC<{ cuit?: string }> = ({ cuit }) => {
   const formateado = fmtCuit(cuit);
   const digitos = String(cuit || "").replace(/\D/g, "");
 
@@ -297,7 +320,7 @@ export const BotonArca: React.FC<{ cuit?: string; compacto?: boolean; label?: st
       className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap transition-colors bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
     >
       <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
-      {label || (compacto ? "Verificar ARCA" : "Abrir en ARCA")}
+      Abrir en ARCA
     </button>
   );
 };
@@ -327,10 +350,30 @@ export const BotonConsultarAfipBulk: React.FC<{
       const activos = resp.resultados.filter((r) => r.estado === "activo");
       const conError = resp.resultados.filter((r) => r.error).length;
       const sinArchivar = activos.filter((r) => !r.dropboxSubido).length;
+      const renombrados = resp.resultados.filter((r) => r.renombrado);
       sweetAlert.success(
         "Consulta completa",
         `${resp.consultados} CUIT(s) consultado(s) — ${activos.length} activo(s) en ARCA.${conError > 0 ? ` ${conError} con error.` : ""}${sinArchivar > 0 ? ` ${sinArchivar} activo(s) no se pudieron archivar en Dropbox — tocá "Validar" en cada fila para ver el motivo puntual.` : ""}`,
       );
+      /*
+        Los renombres se listan uno por uno, no se resumen en un número.
+
+        «Se corrigieron 7 nombres» no permite revisar ninguno: son datos de personas que cambiaron sin
+        que nadie los escribiera, y quien corrió la tanda tiene que poder ver cuáles fueron. La lista
+        se corta en 20 para que el modal siga siendo legible.
+      */
+      if (renombrados.length > 0) {
+        await esperaCorta();
+        const lista = renombrados
+          .slice(0, 20)
+          .map((r) => `• ${r.renombrado!.antes}  →  ${r.renombrado!.ahora}`)
+          .join("\n");
+        await sweetAlert.warningAlert(
+          `Se corrigieron ${renombrados.length} nombre${renombrados.length === 1 ? "" : "s"} con los de ARCA`,
+          `El Padrón tenía registrado otro nombre para est${renombrados.length === 1 ? "e CUIT" : "os CUIT"}, y ese es el que vale para el trámite. Quedaron tal cual los devuelve ARCA, en mayúsculas.\n\n${lista}` +
+            (renombrados.length > 20 ? `\n\n…y ${renombrados.length - 20} más.` : ""),
+        );
+      }
       onConsultado();
     } catch (e: any) {
       sweetAlert.error("Error", e?.response?.data?.error || "No se pudo consultar ARCA.");
@@ -403,6 +446,23 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
         const faultTxt = resultado?.faultCode || resultado?.faultString ? `\n\nfaultCode: ${resultado?.faultCode || "—"}\nfaultString: ${resultado?.faultString || "—"}` : "";
         const rawTxt = resultado?.raw ? `\n\n--- Respuesta cruda de ARCA ---\ncuitRepresentada: ${resultado.cuitRepresentada || "?"} · ambiente: ${resultado.ambiente || "?"}\n${JSON.stringify(resultado.raw, null, 2)}` : "";
         sweetAlert.warningAlert("Estado no reconocido", explicacion + faultTxt + rawTxt);
+      }
+      /*
+        El renombre se avisa DESPUÉS del estado, y con un modal, no con un toast.
+
+        Se le cambió el nombre a una persona: eso no puede desaparecer solo a los dos segundos
+        mientras alguien mira otra fila. Va segundo porque el estado del CUIT es lo que se fue a
+        buscar al apretar el botón; y va con `await` porque SweetAlert muestra uno por vez, así que
+        sin esperar al primero el segundo lo pisaría y el estado nunca se leería.
+      */
+      if (resultado?.renombrado) {
+        await esperaCorta();
+        await sweetAlert.warningAlert(
+          "Se corrigió el nombre con el de ARCA",
+          `El Padrón tiene registrado otro nombre para el CUIT ${cuit}, y ese es el que vale para el trámite.\n\n` +
+            `Estaba: ${resultado.renombrado.antes}\nQuedó: ${resultado.renombrado.ahora}\n\n` +
+            `Se actualizó en la persona, así que el cambio se ve también en sus otros contratos. Queda tal cual lo devuelve ARCA, en mayúsculas.`,
+        );
       }
       onConsultado();
     } catch (e: any) {

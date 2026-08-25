@@ -170,7 +170,7 @@ export const UsuarioSimplificacion: React.FC<{
   );
 
   const botonInfo = (
-    <button type="button" onClick={() => setInfo(true)} title="Qué es esto y en qué se diferencia del certificado" className="ml-auto text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
+    <button type="button" onClick={() => setInfo(true)} title="Qué es esto y en qué se diferencia del certificado" className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
       <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
     </button>
   );
@@ -205,12 +205,19 @@ export const UsuarioSimplificacion: React.FC<{
     return (
       <div className={`${tarjeta} space-y-4`}>
         <div className="flex items-center gap-3">
-          <FontAwesomeIcon icon={faUserLock} className="h-7 w-7 text-blue-600" />
-          <div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Obras sociales conectado</h3>
+          <FontAwesomeIcon icon={faUserLock} className="h-7 w-7 shrink-0 text-blue-600" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Obras sociales conectado</h3>
+              {botonInfo}
+            </div>
             <p className="text-xs text-gray-500">Usuario de clave fiscal: {estado.cuitUsuario}</p>
           </div>
-          {botonInfo}
+          {/* Arriba a la derecha, no en la fila de abajo: es la única acción destructiva de la
+              tarjeta, y ahí no queda pegada a las que se usan todos los días. */}
+          <button onClick={desconectar} className="ml-auto self-start shrink-0 text-sm text-red-500 hover:text-red-600 font-semibold">
+            Desconectar
+          </button>
         </div>
 
         <p className="text-sm text-gray-600 dark:text-gray-300">
@@ -253,9 +260,6 @@ export const UsuarioSimplificacion: React.FC<{
         )}
 
         <div className="flex items-center gap-4">
-          <button onClick={desconectar} className="text-sm text-red-500 hover:text-red-600 font-semibold">
-            Desconectar
-          </button>
           <button onClick={() => setCambiando(true)} className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 font-semibold">
             <FontAwesomeIcon icon={faRotate} className="h-3.5 w-3.5" />
             Cambiar credenciales
@@ -277,11 +281,13 @@ export const UsuarioSimplificacion: React.FC<{
     <div className={tarjeta}>
       <div className="flex items-center gap-3 mb-4">
         <FontAwesomeIcon icon={faUserLock} className="h-7 w-7 text-blue-600" />
-        <div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Conectar obras sociales</h3>
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Conectar obras sociales</h3>
+            {botonInfo}
+          </div>
           <p className="text-xs text-gray-500">Usuario de clave fiscal de Simplificación Registral — se guarda cifrado.</p>
         </div>
-        {botonInfo}
       </div>
 
       {/*
