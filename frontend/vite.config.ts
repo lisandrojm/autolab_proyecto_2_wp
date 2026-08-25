@@ -17,6 +17,17 @@ import { join } from "node:path";
  *
  * Vale como REGLA GENERAL: cualquier ruta de descarga servida desde la SPA necesita este corte, no
  * solo la del Asistente. Por eso el prefijo es una lista y no un `if`.
+ *
+ * ESTO ES SOLO EL SERVIDOR DE DESARROLLO. En producción el mismo corte lo hace `vercel.json`, con un
+ * rewrite de `/asistente/descargas/(.*)` a sí mismo, y ahí lo que importa es EL ORDEN: Vercel aplica
+ * la primera regla que matchea y se detiene, así que ese rewrite tiene que quedar ANTES del catch-all
+ * `/((?!.*\.).*)`. Movido después, deja de tener efecto y en producción vuelve el HTML de 2 KB —
+ * mientras acá, en desarrollo, todo se sigue viendo bien.
+ *
+ * Esa explicación vivía adentro de `vercel.json`, en una clave `"//"`, y voló un deploy entero:
+ * Vercel valida cada rewrite contra su schema y rechaza cualquier propiedad que no sea suya
+ * («rewrites[2] should NOT have additional property `//`»). JSON no tiene comentarios y ese archivo
+ * no admite ni el truco: lo que haya que explicar de él se explica acá.
  */
 /**
  * Prefijos que son ARCHIVOS y nunca rutas de la SPA.
