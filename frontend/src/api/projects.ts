@@ -553,6 +553,45 @@ class ProjectsAPI {
   }
 
   /**
+   * Dispara la validación contra ARCA DESDE EL SERVIDOR.
+   *
+   * No hace falta instalar nada ni dejar ninguna ventana abierta: el VPS abre su propio Chromium y
+   * entra con el usuario delegado de clave fiscal. Vuelve enseguida — la corrida dura minutos y se
+   * sigue con `estadoValidacionServidor`.
+   *
+   * Los CUIL NO se mandan desde acá: los resuelve el server con la misma función que alimenta el
+   * contador de la grilla. Mandarlos permitiría validar a alguien que la pantalla nunca mostró.
+   */
+  async validarObrasSocialesEnServidor(empresaId: string): Promise<{ arrancada: true; total: number }> {
+    const { data } = await axios.post(`/contratos/obras-sociales/validar-servidor`, { empresaId }, { headers: this.getHeaders() });
+    return data;
+  }
+
+  /**
+   * El estado de la corrida. Se consulta por polling.
+   *
+   * Trae TODOS los eventos y no solo los nuevos: una pantalla que se abre a mitad de camino tiene que
+   * ver lo que ya pasó en vez de arrancar en blanco.
+   */
+  async estadoValidacionServidor(): Promise<{
+    hay: boolean;
+    corriendo: boolean;
+    empresaId?: string;
+    total?: number;
+    arrancadaEl?: string;
+    eventos: Array<Record<string, any>>;
+  }> {
+    const { data } = await axios.get(`/contratos/obras-sociales/validar-servidor`, { headers: this.getHeaders() });
+    return data;
+  }
+
+  /** Corta la corrida. Lo ya validado queda guardado: se aplica de a una persona. */
+  async detenerValidacionServidor(): Promise<{ detenida: boolean }> {
+    const { data } = await axios.post(`/contratos/obras-sociales/validar-servidor/detener`, {}, { headers: this.getHeaders() });
+    return data;
+  }
+
+  /**
    * Saca la obra social de varios contratos de una vez. Cada uno vuelve a quedar SIN VALIDAR.
    *
    * Es un endpoint y no un bucle de `updateObraSocialContrato` por el mismo motivo que

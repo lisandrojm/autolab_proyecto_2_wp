@@ -598,7 +598,20 @@ async function esperarSesion(ctx, minutos, onProgreso, señal, empresaCuit) {
  * llenarse fila por fila. La granularidad REAL es por tanda de 10 —la grilla se lee una vez, al
  * final— así que el aviso de "consultando" es por CUIL y el resultado llega de a diez.
  */
-export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, dryRun = false, forzar = false, esperaMin = ESPERA_LOGIN_MIN_DEFAULT, cdpUrl = CDP_URL, soloLeer = false, onProgreso, señal }) {
+/**
+ * `paginaExistente` es para el navegador del SERVIDOR.
+ *
+ * Cuando WeProdu corre esto en el VPS ya tiene un Chromium abierto y logueado con clave fiscal (ver
+ * `server/src/services/arca/navegador.ts`): no hay ningún Chrome ajeno al que conectarse por CDP, y
+ * la sesión la abrió el propio servidor. En ese caso se le pasa la página y este archivo no abre ni
+ * cierra nada — quien la abrió es el que la cierra.
+ *
+ * Todo lo demás —las reglas del trámite, el «Aceptar» que no se toca, el ciclo de a uno, el vaciado
+ * verificado— es EXACTAMENTE el mismo código en los dos caminos, y esa es la razón de hacerlo así en
+ * vez de escribir una versión para el servidor: dos copias de las reglas del organismo se separan, y
+ * lo que se separa es lo que decide qué obra social se le declara a una persona.
+ */
+export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, dryRun = false, forzar = false, esperaMin = ESPERA_LOGIN_MIN_DEFAULT, cdpUrl = CDP_URL, soloLeer = false, onProgreso, señal, paginaExistente = null }) {
   let chromium;
   try {
     ({ chromium } = await import("playwright-core"));
@@ -610,9 +623,10 @@ export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, d
   // pantalla se queda en «en cola» sin saber si el Asistente siquiera arrancó.
   onProgreso?.({ tipo: "conectando" });
 
-  let browser;
+  let browser = null;
   try {
-    browser = await chromium.connectOverCDP(cdpUrl);
+    // Con página propia no se conecta a nada: el navegador ya está abierto del otro lado.
+    if (!paginaExistente) browser = await chromium.connectOverCDP(cdpUrl);
   } catch {
     // Sin stack trace: el 100% de las veces es que Chrome no está en modo debug.
     throw new Error(
@@ -627,7 +641,7 @@ export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, d
   let page = null;
 
   try {
-    const ctx = browser.contexts()[0];
+    const ctx = paginaExistente ? paginaExistente.context() : browser.contexts()[0];
     if (!ctx) throw new Error("Chrome respondió pero no tiene ninguna ventana abierta.");
 
     // Partir el tramo ciego en dos: hasta acá el problema es de conexión; de acá en adelante, de la
@@ -782,7 +796,8 @@ export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, d
       tiene que llegar arriba. Taparla con «no pude vaciar la pantalla» perdería el motivo real.
     */
     if (page) await vaciarPantalla(page).catch((e) => log(`No pude dejar la pantalla de ARCA vacía: ${e.message}`));
-    await browser.close().catch(() => {});
+    // Solo se cierra lo que se abrió acá. Con `paginaExistente`, el navegador es del que llamó.
+    if (browser) await browser.close().catch(() => {});
   }
 }
 

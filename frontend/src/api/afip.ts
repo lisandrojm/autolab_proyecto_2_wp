@@ -106,7 +106,44 @@ export interface AfipLogEntry {
   createdAt: string;
 }
 
+/**
+ * Estado del usuario de clave fiscal con el que el SERVIDOR opera Simplificación Registral.
+ *
+ * NUNCA trae la clave. Es write-only, igual que la clave privada del certificado: se carga y no se
+ * lee. Lo que se puede saber desde acá es si está configurada y con qué CUIT.
+ */
+export interface SimplificacionStatus {
+  configurado: boolean;
+  cuitUsuario: string;
+  /** Si hay sesión de AFIP guardada, la próxima corrida no necesita loguearse. */
+  sesionGuardadaAt: string | null;
+  ultimoLoginAt: string | null;
+  /** Qué pasó la última vez que intentó entrar, para no ir a buscarlo a los logs del VPS. */
+  ultimoError: string;
+}
+
 export const afipAPI = {
+  /** Ver `SimplificacionStatus`: dice si hay credenciales, no cuáles. */
+  async simplificacionStatus(): Promise<SimplificacionStatus> {
+    const { data } = await axios.get(`/afip/simplificacion`);
+    return data;
+  },
+
+  /**
+   * Guarda el usuario delegado. Reemplazar la clave BORRA la sesión guardada del lado del server:
+   * si no, seguiría entrando con la anterior y rotar la contraseña no tendría ningún efecto.
+   */
+  async guardarSimplificacion(payload: { cuitUsuario: string; clave: string }): Promise<{ configurado: boolean; cuitUsuario: string }> {
+    const { data } = await axios.post(`/afip/simplificacion`, payload);
+    return data;
+  },
+
+  /** Saca las credenciales y también la sesión: cortar una credencial tiene que cortar el acceso. */
+  async borrarSimplificacion(): Promise<{ configurado: boolean }> {
+    const { data } = await axios.delete(`/afip/simplificacion`);
+    return data;
+  },
+
   async status(): Promise<AfipStatus> {
     const { data } = await axios.get("/afip/status");
     return data;

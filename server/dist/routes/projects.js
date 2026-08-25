@@ -11,6 +11,7 @@ import { Client } from "../models/Client.js";
 import { User } from "../models/User.js";
 import { Info } from "../models/Info.js";
 import { agruparContratosPorDocumento, partirClaveDocumento } from "../utils/agruparContratos.js";
+import { arrancarCorrida, corridaDe, detenerCorrida } from "../services/arca/corridaServidor.js";
 import { buscarCategoriaCompatPorLegacyId } from "../utils/categoriaCompat.js";
 import UserProject from "../models/UserProject.js";
 import { authenticateToken } from "../middleware/auth.js";
@@ -1759,6 +1760,61 @@ router.post("/projects/obras-sociales/aplicar-lote", requireTenant, authenticate
  * tenga que replicar el criterio de "sin validar": replicarlo es cómo se termina consultando gente
  * que ya estaba resuelta, o salteando gente que faltaba.
  */
+/**
+ * POST /contratos/obras-sociales/validar-servidor   { empresaId }
+ *
+ * Dispara la validación contra ARCA desde el SERVIDOR, con el usuario delegado de clave fiscal.
+ * Vuelve enseguida: la corrida dura minutos y se sigue por el GET de abajo.
+ *
+ * Los CUIL salen de `pendientesObraSocial`, la MISMA función que alimenta el contador de la grilla:
+ * pedirle al cliente que mande la lista permitiría validar a alguien que la pantalla no mostró.
+ */
+router.post("/contratos/obras-sociales/validar-servidor", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
+    try {
+        const empresaId = String(req.body?.empresaId || "");
+        const pendientes = await pendientesObraSocial(req.tenantObjectId, empresaId);
+        const cuils = pendientes.map((p) => String(p.cuil || "").replace(/\D/g, "")).filter((c) => c.length === 11);
+        const r = await arrancarCorrida({
+            tenantId: String(req.tenantObjectId),
+            tenantObjectId: req.tenantObjectId,
+            empresaId,
+            cuils,
+            usuarioId: req.user?.userId,
+        });
+        res.json({ arrancada: true, ...r });
+    }
+    catch (error) {
+        if (error instanceof LoteObrasSocialesError) {
+            res.status(error.status).json({ error: error.message });
+            return;
+        }
+        // Los errores de esta ruta son casi todos «falta configurar algo» y su texto ES la instrucción:
+        // 400 con el mensaje, no un 500 que obliga a ir a los logs del VPS.
+        res.status(400).json({ error: String(error?.message || "No se pudo arrancar la validación.") });
+    }
+});
+/**
+ * GET /contratos/obras-sociales/validar-servidor
+ *
+ * El estado de la corrida en curso (o de la última). Se consulta por polling y no por SSE a
+ * propósito: son minutos y unos pocos eventos, y un stream abierto contra la API agrega una conexión
+ * viva por pestaña para ahorrar un request cada dos segundos.
+ *
+ * Devuelve TODOS los eventos, no solo los nuevos: así una pantalla que se abre a mitad de camino ve
+ * lo que ya pasó en vez de arrancar en blanco.
+ */
+router.get("/contratos/obras-sociales/validar-servidor", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
+    const c = corridaDe(String(req.tenantObjectId));
+    if (!c) {
+        res.json({ hay: false, corriendo: false, eventos: [] });
+        return;
+    }
+    res.json({ hay: true, corriendo: !c.terminada, empresaId: c.empresaId, total: c.total, arrancadaEl: c.arrancadaEl, eventos: c.eventos });
+});
+/** POST /contratos/obras-sociales/validar-servidor/detener — lo ya guardado queda guardado. */
+router.post("/contratos/obras-sociales/validar-servidor/detener", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
+    res.json({ detenida: detenerCorrida(String(req.tenantObjectId)) });
+});
 router.get("/contratos/obras-sociales/pendientes", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
     try {
         const empresa = String(req.query?.empresa || "");

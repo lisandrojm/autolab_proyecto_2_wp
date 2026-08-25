@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { UsuarioSimplificacion } from "../components/arca/UsuarioSimplificacion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLandmark, faPlug, faSpinner, faTriangleExclamation, faCalendarDays, faFingerprint, faHourglassHalf, faCheck, faRotate, faListUl, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -290,6 +291,11 @@ export function AfipConfigPage() {
               </button>
             </div>
           )}
+          {/* El otro tipo de credencial de ARCA. Va acá abajo, con el certificado conectado, porque
+              sin conexión no hay nada que hacer con Simplificación Registral tampoco. */}
+          <div className="mt-6">
+            <UsuarioSimplificacion />
+          </div>
         </div>
       ) : !status?.canManageConnection ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 text-center text-gray-500 max-w-xl">

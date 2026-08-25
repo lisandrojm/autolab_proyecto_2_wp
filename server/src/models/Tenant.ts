@@ -62,6 +62,47 @@ export interface ITenant extends Document {
       servicioPadronVerificadoAt?: Date;
     };
     /**
+     * Usuario de clave fiscal con el que el SERVIDOR opera Simplificación Registral por su cuenta.
+     *
+     * ES OTRA COSA QUE `afip` DE ARRIBA. Aquel es un certificado X.509 para webservices (Consulta
+     * Padrón A13): no tiene clave fiscal y no puede entrar a ninguna pantalla. Este es un login de
+     * persona, porque la obra social de un trabajador NO la publica ningún webservice — solo aparece
+     * precompletada en la pantalla de altas, adentro de una sesión con clave fiscal.
+     *
+     * ⚠ TIENE QUE SER UN USUARIO DELEGADO, NO EL DEL APODERADO.
+     *
+     * Una clave fiscal no está acotada a esta pantalla: abre presentación de DDJJ, VEP y pagos,
+     * facturación electrónica, domicilio fiscal electrónico y el Administrador de Relaciones —que
+     * permite delegarle servicios a otros CUIT—. Guardar la del apoderado convierte un servidor
+     * comprometido en una identidad tributaria comprometida.
+     *
+     * Lo correcto, y lo que se asumió al construir esto, es un usuario de AFIP aparte al que se le
+     * delegó ÚNICAMENTE «Simplificación Registral» desde Administrador de Relaciones. Así lo peor que
+     * puede pasar es que alguien llegue a una pantalla de altas.
+     *
+     * La app no puede verificar qué servicios tiene delegados ese usuario: eso se controla en AFIP.
+     * Por eso está escrito acá, donde lo va a leer quien mantenga esto.
+     */
+    arcaSimplificacion?: {
+      /** CUIT del usuario delegado. No es el de la empleadora: es con el que se inicia sesión. */
+      cuitUsuario?: string;
+      /** Clave fiscal — cifrada en reposo con `secretCrypto`, igual que el resto de las credenciales. */
+      claveEnc?: string;
+      /**
+       * Sesión de AFIP ya iniciada (`storageState` de Playwright), cifrada.
+       *
+       * Se guarda para no loguearse en cada corrida. Mientras dura es CASI tan poderosa como la
+       * clave: quien la tenga entra sin contraseña. Por eso se cifra igual que la clave y no se
+       * guarda en claro ni en un archivo suelto.
+       */
+      sesionEnc?: string;
+      sesionGuardadaAt?: Date;
+      /** Último login exitoso, para poder decir desde cuándo no entra. */
+      ultimoLoginAt?: Date;
+      /** Qué pasó la última vez, para que un fallo no haya que ir a buscarlo a los logs. */
+      ultimoError?: string;
+    };
+    /**
      * Casilla de correo que recibe las copias de "documento enviado" de Dropbox Sign (se activa en
      * Dropbox Sign → Configuración → Perfil → Notificaciones). Leyéndola se detecta qué contratos ya
      * se enviaron a firmar, para moverlos de "Outbox" a "Pendbox" sin que nadie toque archivos.
@@ -201,6 +242,16 @@ const tenantSchema = new Schema<ITenant>(
         servicioPadronFaultCode: { type: String },
         servicioPadronFaultString: { type: String },
         servicioPadronVerificadoAt: { type: Date },
+      },
+      // Usuario DELEGADO de clave fiscal para operar Simplificación Registral. Ver el comentario
+      // largo en la interfaz, arriba: no puede ser el del apoderado.
+      arcaSimplificacion: {
+        cuitUsuario: { type: String },
+        claveEnc: { type: String },
+        sesionEnc: { type: String },
+        sesionGuardadaAt: { type: Date },
+        ultimoLoginAt: { type: Date },
+        ultimoError: { type: String },
       },
       dropboxSign: {
         email: { type: String },

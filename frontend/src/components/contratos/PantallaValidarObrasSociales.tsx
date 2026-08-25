@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faCheck, faCopy, faCircleCheck, faXmark, faTriangleExclamation, faPlay, faStop, faRotateRight, faArrowRight } from '@fortawesome/free-solid-svg-icons';
 import { ContractOverviewRow } from '../../api/users';
@@ -7,6 +7,7 @@ import { AfipValues } from './afipCompleteness';
 import { asistenteAPI, EventoProgreso } from '../../api/asistente';
 import { BloqueAsistente, useAsistente } from './EstadoAsistente';
 import { sweetAlert } from '../../utils/sweetAlert';
+import { afipAPI } from '../../api/afip';
 
 /**
  * Validar obras sociales contra ARCA. UNA pantalla, sirva para 1 o para 20.
@@ -190,6 +191,24 @@ export const PantallaValidarObrasSociales: React.FC<{
   const [mirando, setMirando] = useState(false);
   const asistente = useAsistente();
   /**
+   * ¿El servidor puede validar solo?
+   *
+   * Cuando hay un usuario de clave fiscal cargado (Configuración → ARCA → Conexión), la validación
+   * la hace el VPS con su propio Chromium y NADIE tiene que instalar el Asistente ni dejar una
+   * ventana abierta. Ese es el camino bueno; el Asistente queda como respaldo para cuando no está
+   * configurado — o cuando alguien prefiere correrlo con su propia sesión.
+   *
+   * `null` mientras no se sabe: hasta tenerlo no se puede elegir camino, y mostrar el del Asistente
+   * por defecto haría parpadear un bloque de instalación que quizá no hace falta.
+   */
+  const [servidorListo, setServidorListo] = useState<boolean | null>(null);
+  useEffect(() => {
+    afipAPI
+      .simplificacionStatus()
+      .then((r) => setServidorListo(r.configurado))
+      .catch(() => setServidorListo(false));
+  }, []);
+  /**
    * Lo que va pasando con cada CUIL, en vivo.
    *
    * Guarda el ANTES y el DESPUÉS, no solo el resultado. Cambiar la obra social de alguien sin que se
@@ -334,6 +353,75 @@ export const PantallaValidarObrasSociales: React.FC<{
   };
 
   /**
+   * La corrida DEL SERVIDOR: el VPS abre su propio Chromium, entra a ARCA y valida.
+   *
+   * Nadie instala nada y no hay ninguna ventana que dejar abierta. Los CUIL no se mandan desde acá:
+   * los resuelve el server con la misma función que alimenta el contador de la grilla.
+   *
+   * El progreso llega por polling y no por stream: son minutos y unos pocos eventos, y una conexión
+   * viva por pestaña para ahorrar un request cada dos segundos no se paga sola.
+   */
+  const empezarCorridaEnServidor = async () => {
+    if (!empresaId) return;
+    setPausadoEn([]);
+    setFracaso(null);
+    setEnVivo({});
+    setFaseCorrida('Abriendo ARCA en el servidor…');
+    try {
+      await projectsAPI.validarObrasSocialesEnServidor(empresaId);
+    } catch (e: any) {
+      setFaseCorrida('');
+      sweetAlert.error('No pude arrancar', e?.response?.data?.error || 'El servidor no aceptó la corrida.');
+      return;
+    }
+    setMirando(true);
+    seguirCorridaDelServidor();
+  };
+
+  /**
+   * Consume los eventos de la corrida del servidor.
+   *
+   * Se reprocesan TODOS los eventos en cada vuelta —el server los devuelve enteros— porque son
+   * pocos y así una pantalla que se abre a mitad de camino ve lo que ya pasó. Reconstruir el estado
+   * desde el principio es además lo que hace que no importe si se pierde una vuelta del polling.
+   */
+  const seguirCorridaDelServidor = useCallback(() => {
+    const id = window.setInterval(async () => {
+      let r: Awaited<ReturnType<typeof projectsAPI.estadoValidacionServidor>>;
+      try {
+        r = await projectsAPI.estadoValidacionServidor();
+      } catch {
+        return; // un traspié de red no tiene que matar el seguimiento; la próxima vuelta reintenta
+      }
+      setUltimoEvento((n) => n + 1);
+
+      const vivo: Record<string, EnVivo> = {};
+      for (const ev of r.eventos as any[]) {
+        if (ev.tipo === 'abriendo') setFaseCorrida('Abriendo ARCA en el servidor…');
+        else if (ev.tipo === 'conectado') setFaseCorrida('Adentro de ARCA. Buscando la pantalla de altas…');
+        else if (ev.tipo === 'consultando') { vivo[ev.cuil] = { estado: 'consultando' }; setFaseCorrida(''); }
+        else if (ev.tipo === 'resultado') vivo[ev.cuil] = { estado: 'listo', rnos: ev.rnos, sinDeclarar: !ev.rnos, despues: ev.rnos };
+        else if (ev.tipo === 'error') vivo[ev.cuil] = { estado: 'error', motivo: ev.motivo };
+        else if (ev.tipo === 'guardando') setFaseCorrida('Guardando lo que devolvió ARCA…');
+        else if (ev.tipo === 'fallo') setFracaso({ faltaron: total, motivo: ev.mensaje });
+        else if (ev.tipo === 'fin' && ev.faltaron > 0) setFracaso({ faltaron: ev.faltaron, motivo: ev.motivo });
+      }
+      setEnVivo(vivo);
+
+      if (!r.corriendo) {
+        window.clearInterval(id);
+        cortarStream.current = null;
+        setMirando(false);
+        setFaseCorrida('');
+        onLoteAplicado?.();
+        await onRefrescar?.();
+      }
+    }, 2000);
+    // Se reusa `cortarStream` para que «Detener» y el desmontaje corten los dos caminos igual.
+    cortarStream.current = () => window.clearInterval(id);
+  }, [total, onLoteAplicado, onRefrescar]);
+
+  /**
    * Arranca la corrida en el Asistente y escucha su progreso.
    *
    * `cuils` explícito porque esto se usa para tres cosas: el lote completo, el reintento de los que
@@ -473,10 +561,18 @@ export const PantallaValidarObrasSociales: React.FC<{
   }, [asistente.estado?.sesionArca, asistente.estado?.corriendo, pausadoEn, mirando]);
 
   const detener = async () => {
+    /*
+      Se corta el camino que está corriendo. Son dos y no uno.
+
+      `cortarStream` es el mismo en los dos —corta el stream del Asistente o el polling del
+      servidor— pero el pedido de frenar va a lugares distintos: cortar solo del lado del navegador
+      dejaría al VPS abriendo pantallas de ARCA sin nadie mirando.
+    */
     try {
-      await asistenteAPI.detener();
+      if (servidorListo) await projectsAPI.detenerValidacionServidor();
+      else await asistenteAPI.detener();
     } catch {
-      /* si el Asistente ya no está, la corrida tampoco */
+      /* si del otro lado ya no hay corrida, no hay nada que frenar */
     }
     cortarStream.current?.();
     setMirando(false);
@@ -522,15 +618,19 @@ export const PantallaValidarObrasSociales: React.FC<{
             ) : (
               <button
                 type="button"
-                onClick={() => empezarCorrida()}
+                onClick={() => (servidorListo ? empezarCorridaEnServidor() : empezarCorrida())}
                 /* Sin sesión de ARCA el botón no puede funcionar, y dejarlo apretable haría fallar la
                    corrida por un motivo que el bloque de arriba ya está explicando — con su propia
                    acción, que es la que hay que apretar. El `title` nombra el estado REAL: decir
                    «primero abrí ARCA» con ARCA ya abierto mandaba a la persona a hacer algo que ya
                    estaba hecho. */
-                disabled={!empresaId || pendientes.length === 0 || asistente.estado?.sesionArca !== 'viva' || !!asistente.estado?.corriendo}
+                /* Con el servidor configurado el botón no depende del Asistente: no hay ninguna
+                   sesión local que mirar, la abre el VPS. */
+                disabled={!empresaId || pendientes.length === 0 || (!servidorListo && (asistente.estado?.sesionArca !== 'viva' || !!asistente.estado?.corriendo))}
                 title={
-                  asistente.estado?.sesionArca === 'viva'
+                  servidorListo
+                    ? 'Lo hace el servidor: no hace falta instalar nada ni dejar ninguna ventana abierta.'
+                    : asistente.estado?.sesionArca === 'viva'
                     ? undefined
                     : asistente.estado?.chromeAbierto
                       ? 'El Chrome de ARCA está abierto pero falta iniciar sesión: usá «Ir a esa ventana», acá arriba.'
@@ -546,8 +646,21 @@ export const PantallaValidarObrasSociales: React.FC<{
         </div>
       </div>
 
-      {/* Ni un comando de terminal: lo que ve el administrativo es si el Asistente está o no. */}
-      <BloqueAsistente uso={asistente} empleadora={empleadora} />
+      {/*
+        El bloque del Asistente solo aparece si el servidor NO puede hacerlo.
+
+        Cuando está configurado, todo eso —instalar, emparejar, abrir Chrome, la ventana que no hay
+        que cerrar— deja de existir para el que usa la pantalla, y mostrarlo sería pedirle que
+        resuelva un problema que ya no tiene. `null` es «todavía no sé»: no se muestra nada hasta
+        saberlo, para no hacer parpadear un bloque de instalación que quizá no hace falta.
+      */}
+      {servidorListo === false && <BloqueAsistente uso={asistente} empleadora={empleadora} />}
+      {servidorListo === true && (
+        <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 text-[12px] text-gray-600 dark:text-gray-400 flex items-center gap-2">
+          <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
+          Lo hace el servidor · no hace falta instalar nada
+        </div>
+      )}
 
       {/*
         Pausado por sesión caída. NO es un error y no se ve como uno.

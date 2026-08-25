@@ -58,6 +58,16 @@ const tenantSchema = new Schema({
             servicioPadronFaultString: { type: String },
             servicioPadronVerificadoAt: { type: Date },
         },
+        // Usuario DELEGADO de clave fiscal para operar Simplificación Registral. Ver el comentario
+        // largo en la interfaz, arriba: no puede ser el del apoderado.
+        arcaSimplificacion: {
+            cuitUsuario: { type: String },
+            claveEnc: { type: String },
+            sesionEnc: { type: String },
+            sesionGuardadaAt: { type: Date },
+            ultimoLoginAt: { type: Date },
+            ultimoError: { type: String },
+        },
         dropboxSign: {
             email: { type: String },
             imapHost: { type: String },

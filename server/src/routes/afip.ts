@@ -153,6 +153,103 @@ router.post("/disconnect", async (req: AuthenticatedRequest & TenantRequest, res
   }
 });
 
+/*
+  ===========================================================================
+  USUARIO DE CLAVE FISCAL PARA SIMPLIFICACIÓN REGISTRAL
+  ===========================================================================
+
+  Es OTRA COSA que el certificado de arriba. Aquel es para webservices (Consulta Padrón A13) y no
+  puede entrar a ninguna pantalla. Este es un login de persona, y hace falta porque la obra social de
+  un trabajador no la publica ningún webservice: solo aparece precompletada en la pantalla de altas.
+
+  ⚠ TIENE QUE SER UN USUARIO DELEGADO. Una clave fiscal no está acotada a esa pantalla: abre DDJJ,
+  pagos, facturación electrónica y el Administrador de Relaciones. Lo correcto es un usuario de AFIP
+  creado aparte con «Simplificación Registral» como único servicio delegado. La app no puede
+  verificarlo —los servicios delegados se ven en AFIP— así que queda escrito acá y en el modelo.
+
+  LA CLAVE NUNCA VUELVE AL NAVEGADOR. Se escribe y no se lee, igual que la clave privada del
+  certificado: el GET dice si está cargada y con qué CUIT, nunca su contenido.
+*/
+
+// GET /afip/simplificacion - ¿hay credenciales cargadas? Sin devolver la clave, obviamente.
+router.get("/simplificacion", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const tenant: any = await Tenant.findById(req.tenantObjectId).select("integrations.arcaSimplificacion").lean();
+    const c = tenant?.integrations?.arcaSimplificacion;
+    res.json({
+      configurado: !!(c?.cuitUsuario && c?.claveEnc),
+      cuitUsuario: c?.cuitUsuario || "",
+      // Si hay sesión guardada, la próxima corrida no necesita loguearse.
+      sesionGuardadaAt: c?.sesionGuardadaAt || null,
+      ultimoLoginAt: c?.ultimoLoginAt || null,
+      ultimoError: c?.ultimoError || "",
+    });
+  } catch (error) {
+    console.error("AFIP simplificacion status error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /afip/simplificacion - guarda (o reemplaza) el usuario delegado. Solo admin.
+router.post("/simplificacion", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    if (!isAdmin(req)) {
+      res.status(403).json({ error: "Solo un administrador puede cargar las credenciales de ARCA." });
+      return;
+    }
+    const cuitUsuario = String(req.body?.cuitUsuario || "").replace(/\D/g, "");
+    const clave = String(req.body?.clave || "");
+    if (cuitUsuario.length !== 11) {
+      res.status(400).json({ error: "El CUIT del usuario tiene que tener 11 dígitos. Es el del usuario con clave fiscal, no el de la empleadora." });
+      return;
+    }
+    if (!clave) {
+      res.status(400).json({ error: "Falta la clave fiscal." });
+      return;
+    }
+
+    /*
+      Cambiar credenciales BORRA la sesión guardada.
+
+      La sesión anterior es de otro usuario, o de la misma clave que se acaba de rotar. Dejarla haría
+      que la próxima corrida siga entrando con la vieja y que el cambio no tenga ningún efecto
+      visible — el peor resultado posible para alguien que acaba de rotar una contraseña.
+    */
+    await Tenant.updateOne(
+      { _id: req.tenantObjectId },
+      {
+        $set: {
+          "integrations.arcaSimplificacion.cuitUsuario": cuitUsuario,
+          "integrations.arcaSimplificacion.claveEnc": encryptSecret(clave),
+          "integrations.arcaSimplificacion.ultimoError": "",
+        },
+        $unset: { "integrations.arcaSimplificacion.sesionEnc": "", "integrations.arcaSimplificacion.sesionGuardadaAt": "" },
+      },
+    );
+    res.json({ configurado: true, cuitUsuario });
+  } catch (error) {
+    console.error("AFIP simplificacion save error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// DELETE /afip/simplificacion - saca las credenciales Y la sesión. Solo admin.
+router.delete("/simplificacion", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    if (!isAdmin(req)) {
+      res.status(403).json({ error: "Solo un administrador puede sacar las credenciales de ARCA." });
+      return;
+    }
+    // Se borra también la sesión: sin eso, quitar la clave dejaría al servidor entrando igual con la
+    // sesión guardada, que es exactamente lo que alguien quiere cortar cuando saca una credencial.
+    await Tenant.updateOne({ _id: req.tenantObjectId }, { $unset: { "integrations.arcaSimplificacion": "" } });
+    res.json({ configurado: false });
+  } catch (error) {
+    console.error("AFIP simplificacion delete error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // POST /afip/verificar-servicio - re-corre la autoconsulta de prueba contra Padrón A13 con las
 // credenciales YA guardadas (no hace falta re-pegar certificado/clave) — para revalidar después de
 // arreglar la autorización del servicio en el Administrador de Relaciones de AFIP.
