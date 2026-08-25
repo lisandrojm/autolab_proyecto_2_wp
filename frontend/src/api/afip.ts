@@ -122,6 +122,34 @@ export interface SimplificacionStatus {
   ultimoError: string;
 }
 
+/**
+ * Una corrida de validación de obras sociales contra ARCA.
+ *
+ * `validadas` y `guardadas` son dos números distintos a propósito: ARCA puede contestar y el dato no
+ * guardarse igual (la persona no tiene contrato en esa empleadora, ya estaba validada con candado,
+ * el código no está en el catálogo). Mostrar uno solo esconde justo lo que hay que revisar.
+ */
+export interface CorridaObrasSocialesLog {
+  _id: string;
+  empresaRazonSocial?: string;
+  empresaCuit?: string;
+  total: number;
+  validadas: number;
+  guardadas: number;
+  /** ARCA contestó que no tienen afiliación propia: rige la del convenio. No es una falla. */
+  sinDeclarar: number;
+  errores: number;
+  faltaron: number;
+  motivo?: string;
+  /** `false` si alcanzó con la sesión guardada y no hubo que volver a loguearse. */
+  seLogueo: boolean;
+  duracionMs: number;
+  /** La corrida entera se cayó. */
+  error?: string;
+  detalle: Array<{ cuil: string; rnos?: string; error?: string }>;
+  createdAt: string;
+}
+
 export const afipAPI = {
   /** Ver `SimplificacionStatus`: dice si hay credenciales, no cuáles. */
   async simplificacionStatus(): Promise<SimplificacionStatus> {
@@ -136,6 +164,12 @@ export const afipAPI = {
   async guardarSimplificacion(payload: { cuitUsuario: string; clave: string }): Promise<{ configurado: boolean; cuitUsuario: string }> {
     const { data } = await axios.post(`/afip/simplificacion`, payload);
     return data;
+  },
+
+  /** Las últimas 50 corridas. Aparte de `logs()`, que es la otra conexión (el webservice del padrón). */
+  async logsSimplificacion(): Promise<CorridaObrasSocialesLog[]> {
+    const { data } = await axios.get("/afip/simplificacion/logs");
+    return data?.logs || [];
   },
 
   /** Saca las credenciales y también la sesión: cortar una credencial tiene que cortar el acceso. */

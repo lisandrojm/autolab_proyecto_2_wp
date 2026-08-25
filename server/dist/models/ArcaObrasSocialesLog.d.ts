@@ -26,7 +26,17 @@ export interface IArcaObrasSocialesLog extends Document {
     /** Quién la disparó. */
     usuarioId?: Types.ObjectId;
     total: number;
+    /** Cuántas personas ARCA contestó con un código de obra social. */
     validadas: number;
+    /**
+     * Cuántas quedaron efectivamente guardadas en WeProdu.
+     *
+     * Es un número distinto de `validadas` y por eso están los dos: ARCA puede contestar y el dato no
+     * guardarse igual —la persona no tiene contrato en esa empleadora, ya estaba validada con candado,
+     * el código no está en el catálogo—. Con un solo número, esa diferencia se vuelve invisible y la
+     * pregunta «ARCA me lo devolvió, ¿por qué no lo veo?» no tiene respuesta.
+     */
+    guardadas: number;
     /** ARCA contestó que no tienen afiliación propia: rige la del convenio. Es una respuesta, no un error. */
     sinDeclarar: number;
     errores: number;

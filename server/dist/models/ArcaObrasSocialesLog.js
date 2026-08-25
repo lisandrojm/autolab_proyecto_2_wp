@@ -7,6 +7,7 @@ const schema = new Schema({
     usuarioId: { type: Schema.Types.ObjectId, ref: "User" },
     total: { type: Number, default: 0 },
     validadas: { type: Number, default: 0 },
+    guardadas: { type: Number, default: 0 },
     sinDeclarar: { type: Number, default: 0 },
     errores: { type: Number, default: 0 },
     faltaron: { type: Number, default: 0 },

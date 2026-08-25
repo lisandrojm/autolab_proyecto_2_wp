@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { Company } from "../../models/Company.js";
+import { ArcaObrasSocialesLog } from "../../models/ArcaObrasSocialesLog.js";
 import { aplicarLoteObrasSociales } from "../obrasSocialesLoteService.js";
 import { abrirSesionArca, credencialesDe } from "./navegador.js";
 
@@ -107,9 +108,22 @@ export async function arrancarCorrida(opts: { tenantId: string; tenantObjectId: 
   // Sin `await`: la corrida sigue por su cuenta y este request vuelve ya.
   void (async () => {
     let sesion: Awaited<ReturnType<typeof abrirSesionArca>> | null = null;
+    // Lo que va al log. Se completa a medida que se sabe, para que una corrida que se cae a la mitad
+    // igual deje registro: es JUSTO la que hay que poder mirar después.
+    const log = {
+      seLogueo: false,
+      validadas: 0,
+      guardadas: 0,
+      sinDeclarar: 0,
+      errores: 0,
+      faltaron: cuils.length,
+      motivo: "",
+      error: undefined as string | undefined,
+    };
     try {
       emitir({ tipo: "abriendo" });
       sesion = await abrirSesionArca(tenantId, cred);
+      log.seLogueo = sesion.seLogueo;
 
       const { validarObrasSociales } = (await import(MOTOR)) as any;
       const r = await validarObrasSociales({
@@ -124,6 +138,14 @@ export async function arrancarCorrida(opts: { tenantId: string; tenantObjectId: 
         señal: corrida.señal,
       });
 
+      // `rnos` vacío no es un error: ARCA contestó que esa persona no tiene afiliación propia y rige
+      // la del convenio. Se cuenta aparte para que no infle ni los aciertos ni las fallas.
+      log.validadas = r.items.filter((i: any) => i.rnos).length;
+      log.sinDeclarar = r.items.length - log.validadas;
+      log.errores = r.errores?.length || 0;
+      log.faltaron = r.faltaron;
+      log.motivo = motivoDeQueFaltaran(r);
+
       if (r.items.length > 0) {
         emitir({ tipo: "guardando" });
         const aplicado = await aplicarLoteObrasSociales({
@@ -133,6 +155,7 @@ export async function arrancarCorrida(opts: { tenantId: string; tenantObjectId: 
           origen: "panel",
           usuarioId,
         });
+        log.guardadas = aplicado.aplicados;
         emitir({
           tipo: "fin",
           validadas: aplicado.aplicados,
@@ -144,12 +167,36 @@ export async function arrancarCorrida(opts: { tenantId: string; tenantObjectId: 
         emitir({ tipo: "fin", validadas: 0, faltaron: r.faltaron, motivo: motivoDeQueFaltaran(r), detalle: [] });
       }
     } catch (e: any) {
-      emitir({ tipo: "fallo", mensaje: String(e?.message || e) });
+      log.error = String(e?.message || e);
+      emitir({ tipo: "fallo", mensaje: log.error });
     } finally {
       // El navegador lo abrió esta función, así que lo cierra esta función. Cada corrida que se
       // olvide de cerrarlo deja un Chromium vivo comiéndose la memoria del VPS.
       await sesion?.browser.close().catch(() => {});
       corrida.terminada = true;
+
+      // El log se escribe al final y de una sola vez, no evento por evento: una corrida son minutos
+      // y cientos de eventos, y guardar cada uno sería escribir en Mongo mientras se maneja el
+      // navegador de ARCA. `catch` vacío a propósito — que falle el log no puede tumbar la corrida
+      // ni tapar el error real con otro.
+      await ArcaObrasSocialesLog.create({
+        tenantId: tenantObjectId,
+        empresaId,
+        empresaRazonSocial: empresa?.razonSocial,
+        empresaCuit,
+        usuarioId,
+        total: cuils.length,
+        validadas: log.validadas,
+        guardadas: log.guardadas,
+        sinDeclarar: log.sinDeclarar,
+        errores: log.errores,
+        faltaron: log.faltaron,
+        motivo: log.motivo,
+        seLogueo: log.seLogueo,
+        duracionMs: Date.now() - corrida.arrancadaEl.getTime(),
+        error: log.error,
+        detalle: detallePorPersona(corrida.eventos),
+      }).catch(() => {});
     }
   })();
 
@@ -168,6 +215,21 @@ function motivoDeQueFaltaran(r: any): string {
   if (r.sinSesion) return "Se cortó la sesión de ARCA, o se pidió detener la corrida.";
   if (r.errores?.length) return `ARCA no devolvió fila para ${r.errores.length} CUIL. Puede que no tengan relación laboral registrada con esta empleadora.`;
   return "La corrida terminó sin procesar a nadie y el motor no informó ningún error.";
+}
+
+/**
+ * Qué contestó ARCA para cada persona, sacado de los eventos de la corrida.
+ *
+ * Se arma de los eventos y no del resultado final porque los eventos existen aunque la corrida se
+ * caiga: si se cortó la sesión en la persona doce, quedan las once que sí se leyeron.
+ */
+function detallePorPersona(eventos: EventoCorrida[]): Array<{ cuil: string; rnos?: string; error?: string }> {
+  const out: Array<{ cuil: string; rnos?: string; error?: string }> = [];
+  for (const e of eventos) {
+    if (e.tipo === "resultado") out.push({ cuil: e.cuil, rnos: e.rnos });
+    else if (e.tipo === "error") out.push({ cuil: e.cuil, error: e.motivo || "ARCA no devolvió fila." });
+  }
+  return out;
 }
 
 /** Lo que el lote NO pudo aplicar, en frases. Es lo que hace falta para saber qué revisar. */

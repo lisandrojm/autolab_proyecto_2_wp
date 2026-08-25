@@ -12,6 +12,7 @@ import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
 import { Info } from "../models/Info.js";
 import { AfipLog } from "../models/AfipLog.js";
+import { ArcaObrasSocialesLog } from "../models/ArcaObrasSocialesLog.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { encryptSecret } from "../utils/secretCrypto.js";
@@ -246,6 +247,26 @@ router.delete("/simplificacion", async (req: AuthenticatedRequest & TenantReques
     res.json({ configurado: false });
   } catch (error) {
     console.error("AFIP simplificacion delete error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /afip/simplificacion/logs - las últimas corridas de validación de obras sociales.
+//
+// Aparte de `/afip/logs` aunque las dos digan «ARCA»: aquella lista llamados al webservice del
+// padrón y esta, corridas del navegador contra Simplificación Registral. Son dos conexiones
+// distintas, con credenciales distintas, y mezclarlas en una sola lista es lo que hoy hace que no se
+// entienda cuál hizo qué.
+router.get("/simplificacion/logs", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    if (!isAdmin(req)) {
+      res.status(403).json({ error: "Solo un administrador puede ver los logs de ARCA." });
+      return;
+    }
+    const logs = await ArcaObrasSocialesLog.find({ tenantId: req.tenantObjectId }).sort({ createdAt: -1 }).limit(50).lean();
+    res.json({ logs });
+  } catch (error) {
+    console.error("ARCA obras sociales logs error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

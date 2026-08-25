@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUserLock, faSpinner, faTriangleExclamation, faCircleInfo, faCalendarDays, faHourglassHalf, faCheck, faRotate } from '@fortawesome/free-solid-svg-icons';
+import { faUserLock, faSpinner, faTriangleExclamation, faCircleInfo, faCalendarDays, faHourglassHalf, faCheck, faRotate, faListUl, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { InfoModal } from '../ui/InfoModal';
-import { afipAPI, SimplificacionStatus } from '../../api/afip';
+import { Modal } from '../ui/Modal';
+import { afipAPI, SimplificacionStatus, CorridaObrasSocialesLog } from '../../api/afip';
 import { sweetAlert } from '../../utils/sweetAlert';
 
 /**
@@ -32,6 +33,10 @@ export const UsuarioSimplificacion: React.FC<{
   const [info, setInfo] = useState(false);
   /** Con credenciales cargadas, el formulario aparece solo si se pide cambiarlas. */
   const [cambiando, setCambiando] = useState(false);
+  const [verLogs, setVerLogs] = useState(false);
+  const [logs, setLogs] = useState<CorridaObrasSocialesLog[] | null>(null);
+  const [cargandoLogs, setCargandoLogs] = useState(false);
+  const [logAbierto, setLogAbierto] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     try {
@@ -76,6 +81,93 @@ export const UsuarioSimplificacion: React.FC<{
       sweetAlert.error('No se pudo', e?.response?.data?.error || 'No se pudo desconectar.');
     }
   };
+
+  const abrirLogs = async () => {
+    setVerLogs(true);
+    setCargandoLogs(true);
+    try {
+      setLogs(await afipAPI.logsSimplificacion());
+    } catch (e: any) {
+      sweetAlert.error('Error', e?.response?.data?.error || 'No se pudieron cargar los logs.');
+      setLogs([]);
+    } finally {
+      setCargandoLogs(false);
+    }
+  };
+
+  /**
+   * El historial de corridas.
+   *
+   * Hasta acá, lo único que se sabía de una corrida era `ultimoError`: una sola línea, la de la última
+   * vez, que se pisa con la siguiente. Si una validación de sesenta personas dejó cuatro sin dato, no
+   * quedaba en ningún lado qué cuatro ni por qué — y como la obra social se declara ante el organismo
+   * y después queda fija, «¿de dónde salió este código?» tiene que tener respuesta.
+   */
+  const modalLogs = (
+    <Modal isOpen onClose={() => setVerLogs(false)} title="Logs de obras sociales" subtitle="Últimas 50 corridas de validación contra ARCA" size="xl" zIndex={90}>
+      {cargandoLogs ? (
+        <div className="flex justify-center py-10 text-gray-400">
+          <FontAwesomeIcon icon={faSpinner} spin className="mr-2" /> Cargando...
+        </div>
+      ) : !logs || logs.length === 0 ? (
+        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">Todavía no se corrió ninguna validación.</p>
+      ) : (
+        <ul className="divide-y divide-gray-100 dark:divide-gray-700/60 max-h-[65vh] overflow-y-auto custom-scrollbar">
+          {logs.map((log) => {
+            // Verde solo si no faltó nadie y no se cayó. `sinDeclarar` no cuenta como falla: ARCA
+            // contestó, y lo que contestó es que rige la obra social del convenio.
+            const ok = !log.error && log.faltaron === 0;
+            const abierto = logAbierto === log._id;
+            return (
+              <li key={log._id} className="py-2.5">
+                <button type="button" onClick={() => setLogAbierto(abierto ? null : log._id)} className="w-full flex items-start justify-between gap-3 text-left">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <FontAwesomeIcon icon={ok ? faCheck : faXmark} className={`h-3 w-3 ${ok ? 'text-green-500' : 'text-red-500'}`} />
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate">{log.empresaRazonSocial || log.empresaCuit || 'Empleadora sin nombre'}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {log.validadas}/{log.total} con obra social · {log.guardadas} guardadas
+                        {log.sinDeclarar > 0 ? ` · ${log.sinDeclarar} sin declarar` : ''}
+                        {log.faltaron > 0 ? ` · ${log.faltaron} sin leer` : ''}
+                      </span>
+                    </div>
+                    {(log.error || log.motivo) && <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5 truncate">{log.error || log.motivo}</p>}
+                  </div>
+                  <span className="text-[11px] text-gray-400 whitespace-nowrap shrink-0">{new Date(log.createdAt).toLocaleString('es-AR')}</span>
+                </button>
+                {abierto && (
+                  <div className="mt-2 space-y-2">
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                      Duró {Math.round(log.duracionMs / 1000)} s · {log.seLogueo ? 'tuvo que iniciar sesión' : 'usó la sesión guardada'}
+                      {log.empresaCuit ? ` · CUIT ${log.empresaCuit}` : ''}
+                    </p>
+                    {log.detalle.length === 0 ? (
+                      <p className="text-[11px] text-gray-400">No se llegó a leer a nadie.</p>
+                    ) : (
+                      <ul className="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60 max-h-[40vh] overflow-y-auto custom-scrollbar">
+                        {log.detalle.map((d, i) => (
+                          <li key={`${d.cuil}-${i}`} className="flex items-start justify-between gap-3 px-3 py-1.5 text-[11.5px]">
+                            <span className="font-mono text-gray-600 dark:text-gray-300">{d.cuil}</span>
+                            {d.error ? (
+                              <span className="text-amber-600 dark:text-amber-400 text-right">{d.error}</span>
+                            ) : d.rnos ? (
+                              <span className="font-mono font-semibold text-gray-800 dark:text-gray-100">{d.rnos}</span>
+                            ) : (
+                              <span className="text-gray-400">sin obra social declarada</span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Modal>
+  );
 
   const botonInfo = (
     <button type="button" onClick={() => setInfo(true)} title="Qué es esto y en qué se diferencia del certificado" className="ml-auto text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
@@ -168,9 +260,14 @@ export const UsuarioSimplificacion: React.FC<{
             <FontAwesomeIcon icon={faRotate} className="h-3.5 w-3.5" />
             Cambiar credenciales
           </button>
+          <button onClick={abrirLogs} className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 font-semibold">
+            <FontAwesomeIcon icon={faListUl} className="h-3.5 w-3.5" />
+            Logs
+          </button>
         </div>
 
         {info && modalInfo}
+        {verLogs && modalLogs}
       </div>
     );
   }
