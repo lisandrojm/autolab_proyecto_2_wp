@@ -612,29 +612,43 @@ async function esperarSesion(ctx, minutos, onProgreso, señal, empresaCuit) {
  * lo que se separa es lo que decide qué obra social se le declara a una persona.
  */
 export async function validarObrasSociales({ empresa, empresaCuit = "", cuils, dryRun = false, forzar = false, esperaMin = ESPERA_LOGIN_MIN_DEFAULT, cdpUrl = CDP_URL, soloLeer = false, onProgreso, señal, paginaExistente = null }) {
-  let chromium;
-  try {
-    ({ chromium } = await import("playwright-core"));
-  } catch {
-    throw new Error("Falta la dependencia `playwright-core`.\n\nCorré `npm install` en frontend/ y volvé a intentar.");
-  }
-
   // Antes del primer CUIL hay una conexión CDP y una búsqueda de pestañas. Sin este evento, la
   // pantalla se queda en «en cola» sin saber si el Asistente siquiera arrancó.
   onProgreso?.({ tipo: "conectando" });
 
   let browser = null;
-  try {
-    // Con página propia no se conecta a nada: el navegador ya está abierto del otro lado.
-    if (!paginaExistente) browser = await chromium.connectOverCDP(cdpUrl);
-  } catch {
-    // Sin stack trace: el 100% de las veces es que Chrome no está en modo debug.
-    throw new Error(
-      `No pude conectarme a Chrome en ${cdpUrl}.\n\n` +
-        "Levantá el perfil dedicado con:\n" +
-        "  npm run chrome-arca\n\n" +
-        "Es un Chrome aparte, con su propio perfil: no hace falta cerrar el que estás usando, y el puerto abierto solo alcanza a esa ventana.",
-    );
+
+  /*
+    PLAYWRIGHT SE CARGA ACÁ ADENTRO, Y NO ARRIBA DE LA FUNCIÓN.
+
+    `chromium` se usa en UNA sola línea —el `connectOverCDP` de acá abajo— y solo en el camino del
+    Asistente. Con `paginaExistente`, que es el camino del servidor, el navegador ya está abierto del
+    otro lado y esta librería no se toca nunca.
+
+    Importarla igual hacía que el servidor dependiera de `frontend/node_modules`, que es una carpeta
+    que en el VPS no existe: el frontend se despliega en Vercel y en el servidor solo se instala
+    `server/`. Y donde sí existe, `playwright-core` está como devDependency del frontend, así que un
+    `npm install` de producción tampoco la baja. La corrida moría antes del primer CUIL pidiendo
+    instalar algo que no hacía falta, en una carpeta que no es la que corre.
+  */
+  if (!paginaExistente) {
+    let chromium;
+    try {
+      ({ chromium } = await import("playwright-core"));
+    } catch {
+      throw new Error("Falta la dependencia `playwright-core`.\n\nCorré `npm install` en frontend/ y volvé a intentar.");
+    }
+    try {
+      browser = await chromium.connectOverCDP(cdpUrl);
+    } catch {
+      // Sin stack trace: el 100% de las veces es que Chrome no está en modo debug.
+      throw new Error(
+        `No pude conectarme a Chrome en ${cdpUrl}.\n\n` +
+          "Levantá el perfil dedicado con:\n" +
+          "  npm run chrome-arca\n\n" +
+          "Es un Chrome aparte, con su propio perfil: no hace falta cerrar el que estás usando, y el puerto abierto solo alcanza a esa ventana.",
+      );
+    }
   }
 
   // Fuera del `try` para que el `finally` pueda dejar la pantalla vacía pase lo que pase.

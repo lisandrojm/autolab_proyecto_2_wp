@@ -12,7 +12,9 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { boton, parsearArgs, conGuiones, ROTULOS_PERMITIDOS, TOPE_ARCA } from "./validar-obras-sociales.mjs";
 
 const FUENTE = fs.readFileSync(path.resolve("tools/validar-obras-sociales.mjs"), "utf8");
@@ -290,6 +292,58 @@ describe("no toca la sesión ni abre navegadores", () => {
 
   it("no hay nada parecido a una clave fiscal en el código", () => {
     assert.ok(!/password|contrase|clave\s*=|\.fill\(.*(pass|clave)/i.test(FUENTE.replace(/clave fiscal/gi, "")), "el login es manual, siempre");
+  });
+});
+
+describe("el camino del servidor no arrastra las dependencias del frontend", () => {
+  /*
+    ESTO FALLÓ EN PRODUCCIÓN, y el síntoma no se parecía a la causa: «La corrida terminó sin validar
+    ninguna de las 20 — Falta la dependencia `playwright-core`. Corré `npm install` en frontend/».
+    Correr ese `npm install` no arreglaba nada, dos veces.
+
+    `chromium` se usa en UNA línea, la del `connectOverCDP`, que es del camino del Asistente. El
+    servidor pasa `paginaExistente` y nunca la toca. Pero el import estaba arriba de la función y
+    corría igual, resolviéndose desde `frontend/node_modules` — una carpeta que en el VPS no existe
+    (el frontend va a Vercel) y donde, cuando existe, `playwright-core` es devDependency y un
+    `npm install` de producción no la baja.
+
+    El motor se copia a un directorio sin `node_modules` a la vista para que el import sea imposible:
+    es la forma de probar que NO se hace, en vez de confiar en que la línea está en el lugar correcto.
+  */
+  it("con `paginaExistente` no necesita `playwright-core` ni para arrancar", async (t) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "motor-sin-playwright-"));
+    for (const f of ["validar-obras-sociales.mjs", "arca-postback.mjs"]) {
+      fs.copyFileSync(path.resolve("tools", f), path.join(dir, f));
+    }
+    const copia = path.join(dir, "validar-obras-sociales.mjs");
+
+    try {
+      createRequire(copia).resolve("playwright-core");
+      t.skip("en esta máquina playwright-core se resuelve igual desde /tmp: la prueba no probaría nada");
+      return;
+    } catch {
+      /* es lo que queremos: ahí no se puede resolver */
+    }
+
+    const { validarObrasSociales } = await import(`file://${copia}`);
+    // La página falsa tira apenas la tocan: alcanza para saber que el import quedó atrás.
+    const paginaExistente = {
+      context: () => {
+        throw new Error("LLEGUE-HASTA-CONTEXT");
+      },
+      url: () => "",
+    };
+
+    await assert.rejects(
+      () => validarObrasSociales({ empresa: "", empresaCuit: "30712345678", cuils: ["20-36397260-9"], soloLeer: true, paginaExistente }),
+      (e) => {
+        assert.ok(!/playwright-core/.test(e.message), `no tiene que pedir playwright-core: «${e.message}»`);
+        assert.match(e.message, /LLEGUE-HASTA-CONTEXT/);
+        return true;
+      },
+    );
+
+    fs.rmSync(dir, { recursive: true, force: true });
   });
 });
 
