@@ -83,31 +83,38 @@ type EnVivo = {
 
 // ─────────────────────────────────────────────────────────────── piezas chicas
 /**
- * El nombre, y qué dijo ARCA sobre él.
+ * Qué dijo el Padrón sobre el nombre de esta persona.
  *
- * Tres estados y no dos, porque el que falta es el que genera la duda:
+ * COLUMNA PROPIA Y NO UN ÍCONO PEGADO AL NOMBRE: metido en «Persona», el nombre corregido y el
+ * anterior tachado ensanchaban la columna y se leían como una sola cosa confusa. Separado, se
+ * escanea de arriba a abajo — que es la pregunta real: «¿me tocó algún nombre?».
  *
- *   corregido  → ámbar, con el nombre viejo tachado al lado. Es un dato de una persona que cambió
- *                sin que nadie lo escribiera: tiene que verse, y tiene que verse DE QUÉ cambió.
- *   confirmado → tilde verde a secas. ARCA lo miró y ya estaba bien.
- *   sin dato   → nada. Todavía no se confirmó, o no se pudo — y eso NO es lo mismo que «está bien»,
- *                así que no se le pone tilde: un tilde de más miente sobre un dato que se declara
- *                ante el organismo.
+ * TRES ESTADOS, no dos, porque el que falta es el que genera la duda:
+ *
+ *   corregido  → ámbar, con el nombre que quedó y el anterior tachado abajo. Es un dato de una
+ *                persona que cambió sin que nadie lo escribiera: tiene que verse DE QUÉ cambió.
+ *   coincide   → tilde verde. ARCA lo miró y ya estaba bien.
+ *   sin dato   → una raya. Todavía no se confirmó, o no se pudo — y eso NO es lo mismo que «está
+ *                bien», así que no lleva tilde: uno de más miente sobre un dato que se declara ante
+ *                el organismo.
  */
-const CeldaPersona: React.FC<{ nombre: string; nombreArca?: { antes?: string; ahora?: string } }> = ({ nombre, nombreArca }) => {
-  if (!nombreArca) return <span>{nombre}</span>;
+const CeldaNombreArca: React.FC<{ nombreArca?: { antes?: string; ahora?: string } }> = ({ nombreArca }) => {
+  if (!nombreArca) return <span className="text-[11.5px] text-gray-400">—</span>;
   if (!nombreArca.antes) {
     return (
-      <span className="inline-flex items-center gap-1.5">
-        {nombre}
-        <FontAwesomeIcon icon={faCheck} title="El nombre coincide con el que ARCA tiene registrado" className="h-3 w-3 shrink-0 text-green-600 dark:text-green-500" />
+      <span className="text-[11.5px] text-green-700 dark:text-green-400 inline-flex items-center gap-1.5">
+        <FontAwesomeIcon icon={faCheck} className="h-3 w-3 shrink-0" />
+        coincide
       </span>
     );
   }
   return (
-    <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-      <span className="text-amber-700 dark:text-amber-400 font-semibold">{nombreArca.ahora}</span>
-      <FontAwesomeIcon icon={faCheck} title="Nombre corregido con el del Padrón de ARCA" className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-500" />
+    <span className="flex flex-col gap-0.5">
+      <span className="text-[11.5px] text-amber-700 dark:text-amber-400 font-semibold inline-flex items-center gap-1.5">
+        <FontAwesomeIcon icon={faCheck} className="h-3 w-3 shrink-0" />
+        corregido
+      </span>
+      {/* El nombre anterior se muestra siempre: sin él, «corregido» no se puede revisar. */}
       <span className="text-[11px] text-gray-400 line-through">{nombreArca.antes}</span>
     </span>
   );
@@ -933,6 +940,9 @@ export const PantallaValidarObrasSociales: React.FC<{
             <tr className="text-left text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 border-b border-gray-200 dark:border-gray-700">
               <th className="px-4 py-2.5 font-bold">Persona</th>
               <th className="px-3 py-2.5 font-bold">CUIL</th>
+              {/* El nombre también se valida contra ARCA en esta corrida, con la misma consulta al
+                  Padrón que usa «Validar CUIT». Tiene columna porque es un dato que puede CAMBIAR. */}
+              <th className="px-3 py-2.5 font-bold">Nombre en ARCA</th>
               {/* Qué pasa si NO validás. Es la pregunta que se hace quien duda si vale la pena el trámite. */}
               <th className="px-3 py-2.5 font-bold">Qué va a quedar hoy</th>
               <th className="px-3 py-2.5 font-bold">Resultado</th>
@@ -941,7 +951,7 @@ export const PantallaValidarObrasSociales: React.FC<{
           <tbody>
             {visibles.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-[12px] text-gray-500 dark:text-gray-400">
+                <td colSpan={5} className="px-4 py-6 text-center text-[12px] text-gray-500 dark:text-gray-400">
                   No hay obras sociales pendientes de validar en esta selección.
                 </td>
               </tr>
@@ -951,11 +961,12 @@ export const PantallaValidarObrasSociales: React.FC<{
                 const sugerido = f.valores.rnosSugerido ? `${f.valores.rnosSugerido}${f.valores.nombreObraSocialSugerida ? ` · ${f.valores.nombreObraSocialSugerida}` : ''}` : '';
                 return (
                   <tr key={k} className="border-b border-gray-100 dark:border-gray-700/60 align-middle">
-                    <td className="px-4 py-2.5 text-gray-800 dark:text-gray-200">
-                      <CeldaPersona nombre={f.row.userName} nombreArca={nombres[soloDigitos(f.row.cuit || '')]} />
-                    </td>
+                    <td className="px-4 py-2.5 text-gray-800 dark:text-gray-200">{f.row.userName}</td>
                     <td className="px-3 py-2.5">
                       <CeldaCuil cuil={f.row.cuit || ''} />
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <CeldaNombreArca nombreArca={nombres[soloDigitos(f.row.cuit || '')]} />
                     </td>
                     <td className="px-3 py-2.5 text-[11.5px] text-gray-500 dark:text-gray-400 font-mono">{sugerido || <span className="text-amber-700 dark:text-amber-400">sin default · el convenio no tiene obra social</span>}</td>
                     <td className="px-3 py-2.5">
