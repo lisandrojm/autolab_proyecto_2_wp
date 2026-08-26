@@ -56,11 +56,18 @@ export const SelectorCodigoArca: React.FC<{
   // dato es del usuario— pero se marca, porque ARCA lo va a rechazar.
   const desconocido = !!codigo && !cargando && items.length > 0 && !nombre;
 
+  /*
+    SIN TOPE: se listan TODOS los del nomenclador.
+
+    Estaba cortado en 30 y no se avisaba, así que un catálogo de 293 parecía terminar en la letra A y
+    a los de la mitad del abecedario solo se llegaba adivinando la palabra que los trajera arriba. El
+    mismo corte estaba en el buscador de actividades de un domicilio, y es el que se reportó.
+  */
   const resultados = useMemo(() => {
     const term = q.trim().toLowerCase();
     const digitos = q.replace(/\D/g, '');
-    if (!term) return items.slice(0, 30);
-    return items.filter((i) => (digitos && String(i.externalId || '').includes(digitos)) || String(i.name || '').toLowerCase().includes(term)).slice(0, 30);
+    if (!term) return items;
+    return items.filter((i) => (digitos && String(i.externalId || '').includes(digitos)) || String(i.name || '').toLowerCase().includes(term));
   }, [items, q]);
 
   return (

@@ -58,12 +58,23 @@ const BuscadorActividad: React.FC<{
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => inputRef.current?.focus(), []);
 
+  /*
+    SIN TOPE: la lista muestra TODAS las actividades disponibles.
+
+    Estaba cortada en 30 —con y sin búsqueda— y no se avisaba en ningún lado. El efecto era que el
+    catálogo entero parecía terminar en la letra A: para llegar a una actividad de la mitad del
+    abecedario había que adivinar la palabra exacta que la trajera dentro de las primeras 30. Un
+    nomenclador que no se puede recorrer es un nomenclador del que solo se eligen las de arriba.
+
+    El costo es dibujar el catálogo completo cuando el buscador está vacío. Es una lista de una línea
+    por fila dentro de un scroll, y con la primera letra que se tipea se achica sola.
+  */
   const resultados = useMemo(() => {
     const term = sinAcentos(q.trim());
     const soloDigitos = q.replace(/\D/g, '');
     const disponibles = catalogo.filter((a) => !yaElegidas.includes(pad6(String(a.externalId || ''))));
-    if (!term) return disponibles.slice(0, 30);
-    return disponibles.filter((a) => (soloDigitos && String(a.externalId || '').includes(soloDigitos)) || sinAcentos(a.name || '').includes(term)).slice(0, 30);
+    if (!term) return disponibles;
+    return disponibles.filter((a) => (soloDigitos && String(a.externalId || '').includes(soloDigitos)) || sinAcentos(a.name || '').includes(term));
   }, [catalogo, q, yaElegidas]);
 
   return (
@@ -90,19 +101,25 @@ const BuscadorActividad: React.FC<{
       ) : resultados.length === 0 ? (
         <p className="text-xs text-gray-500 dark:text-gray-400 px-1 py-2">Sin resultados para «{q}».</p>
       ) : (
-        <ul className="max-h-52 overflow-y-auto rounded-md border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60 bg-white dark:bg-gray-900">
-          {resultados.map((a) => {
-            const codigo = pad6(String(a.externalId || ''));
-            return (
-              <li key={a._id}>
-                <button type="button" onClick={() => onElegir({ codigo, descripcion: a.name })} className="w-full text-left px-3 py-2 flex items-baseline gap-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
-                  <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-400 shrink-0">{codigo}</span>
-                  <span className="text-sm text-gray-800 dark:text-gray-200 min-w-0">{a.name}</span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        <>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 px-1">
+            {resultados.length} {resultados.length === 1 ? 'actividad' : 'actividades'}
+            {q.trim() ? ` para «${q.trim()}»` : ' en el catálogo'}
+          </p>
+          <ul className="max-h-72 overflow-y-auto rounded-md border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60 bg-white dark:bg-gray-900">
+            {resultados.map((a) => {
+              const codigo = pad6(String(a.externalId || ''));
+              return (
+                <li key={a._id}>
+                  <button type="button" onClick={() => onElegir({ codigo, descripcion: a.name })} className="w-full text-left px-3 py-2 flex items-baseline gap-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
+                    <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-400 shrink-0">{codigo}</span>
+                    <span className="text-sm text-gray-800 dark:text-gray-200 min-w-0">{a.name}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
     </div>
   );

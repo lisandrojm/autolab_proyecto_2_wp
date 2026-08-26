@@ -303,6 +303,24 @@ export const ProjectTeamPage: React.FC = () => {
   // Se incrementa tras aprobar para que la pestaña Solicitudes recargue su lista.
   const [solicitudesRefresh, setSolicitudesRefresh] = useState(0);
   const [viewingShiftsData, setViewingShiftsData] = useState<{ user: User; areaId: string; areaName: string } | null>(null);
+
+  /* ------------------------- Convenio: FILTRO, no dato -------------------------
+   * El CCT no se guarda en ninguna parte: ARCA lo deduce de la categoría profesional, y el TXT lo
+   * manda en blanco (pos. 91-100). Esto existe porque el encuadre lo terminaba decidiendo quien cargó
+   * las categorías de la función Frame: de 85 funciones, 78 ofrecen un solo convenio, así que
+   * convenios que la empleadora SÍ tiene registrados ante ARCA —y que el organismo acepta— eran
+   * inalcanzables desde el wizard.
+   *
+   * VIVE FUERA DE `wizardData` A PROPÓSITO. El guardado manda `{ ...wizardData }`, así que un campo
+   * puesto ahí se persistiría solo, en silencio, y este no tiene que persistirse.
+   *
+   * `""` = todos los convenios de la empleadora.
+   */
+  const [convenioFiltro, setConvenioFiltro] = useState<string>('');
+  /** Ignora el filtro por función Frame y ofrece TODAS las categorías del convenio elegido. */
+  const [verTodasDelConvenio, setVerTodasDelConvenio] = useState(false);
+  /** Aviso inline cuando el cambio de convenio dejó sin efecto la categoría que estaba elegida. */
+  const [avisoConvenio, setAvisoConvenio] = useState('');
   const [wizardData, setWizardData] = useState({
     // Step 1: Contrato
     rol_frame_id: '',
@@ -928,14 +946,96 @@ export const ProjectTeamPage: React.FC = () => {
     return codigos.length > 0 ? codigos : null;
   }, [companies, allConvenios, wizardData.empresaContratoId]);
 
-  const { categorias: availableCategoriasSat, ocultasPorConvenio: categoriasOcultasPorConvenio } = useMemo(() => {
-    let list: any[] = [];
-    if (wizardData.rol_frame_id) {
-      const selectedRF = allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id));
-      if (selectedRF && Array.isArray(selectedRF.data?.categoriasSat)) {
-        list = [...selectedRF.data.categoriasSat];
-      }
+  /**
+   * Los convenios que se pueden elegir. NUNCA el catálogo entero (~2.669): solo los de la empleadora.
+   *
+   * Se muestra cuántas categorías tiene cada uno porque es lo que dice si elegirlo va a servir de
+   * algo: un convenio registrado ante ARCA pero sin categorías cargadas en WeProdu deja el select de
+   * abajo vacío, y sin el número eso parece un error de la pantalla.
+   *
+   * Un convenio SIN categorías no se ofrece —no hay nada que filtrar con él— salvo que sea el que
+   * está elegido: sacarlo de la lista mientras está seleccionado haría saltar el select a otro valor.
+   */
+  /**
+   * Cambiar de convenio con una categoría ya elegida.
+   *
+   * Si la categoría no es del convenio nuevo se limpia, porque dejarla sería mostrar un encuadre y
+   * guardar otro — y lo que viaja a ARCA es la categoría, no el convenio. Se avisa en la pantalla:
+   * un campo obligatorio que se vacía solo, en silencio, se descubre recién al intentar guardar.
+   *
+   * Los sueldos derivados (neto, bruto, diario, diferencia) se recalculan solos: cuelgan de
+   * `categoria_sat_id` en el efecto de auto-cálculo, y con la categoría vacía vuelven a 0.
+   */
+  const cambiarConvenioFiltro = (nuevo: string) => {
+    setConvenioFiltro(nuevo);
+    // El escape hatch es por convenio: al cambiar de convenio vuelve a su default.
+    setVerTodasDelConvenio(false);
+    setAvisoConvenio('');
+    if (!nuevo || !wizardData.categoria_sat_id) return;
+    const cat = allCategoriasSat.find((c) => String(c.data?.id) === String(wizardData.categoria_sat_id));
+    if (String(cat?.data?.convenio || '').trim() !== nuevo) {
+      setWizardData((prev) => ({ ...prev, categoria_sat_id: '' }));
+      setAvisoConvenio('Se limpió la categoría: no pertenece al convenio elegido.');
     }
+  };
+
+  const conveniosDisponibles = useMemo(() => {
+    const codigos = new Set<string>(conveniosDeLaEmpleadora || []);
+    // Un contrato viejo puede tener una categoría de un convenio que la empleadora ya no tiene
+    // registrado. Se ofrece igual, marcado: esconderlo rompería la edición de ese contrato, y el
+    // error ya lo marca el checklist de Datos ARCA, que es donde corresponde.
+    if (convenioFiltro) codigos.add(convenioFiltro);
+
+    const cantidadPorCct = new Map<string, number>();
+    for (const c of allCategoriasSat) {
+      if (!esElegible(c)) continue;
+      const cct = String(c.data?.convenio || '').trim();
+      if (cct) cantidadPorCct.set(cct, (cantidadPorCct.get(cct) || 0) + 1);
+    }
+    const nombrePorCct = new Map(allConvenios.map((c) => [String(c.externalId || '').trim(), String(c.name || '')]));
+
+    return [...codigos]
+      .map((externalId) => ({
+        externalId,
+        name: nombrePorCct.get(externalId) || '',
+        cantidadCategorias: cantidadPorCct.get(externalId) || 0,
+        registrado: (conveniosDeLaEmpleadora || []).includes(externalId),
+      }))
+      .filter((c) => c.cantidadCategorias > 0 || c.externalId === convenioFiltro)
+      .sort((a, b) => a.externalId.localeCompare(b.externalId));
+  }, [conveniosDeLaEmpleadora, convenioFiltro, allCategoriasSat, allConvenios]);
+
+  const {
+    categorias: availableCategoriasSat,
+    ocultasPorConvenio: categoriasOcultasPorConvenio,
+    ocultasPorFiltroConvenio,
+    rolNoTieneCategoriasDelConvenio,
+  } = useMemo(() => {
+    // El convenio de cada categoría vive SOLO en el catálogo: la copia denormalizada de las funciones
+    // FRAME no lo guarda, así que todo lo que use el CCT se resuelve contra este mapa por `data.id`.
+    const convenioPorId = new Map(allCategoriasSat.map((c) => [String(c.data?.id), String(c.data?.convenio || '').trim()]));
+
+    const delRol: any[] = (() => {
+      if (!wizardData.rol_frame_id) return [];
+      const selectedRF = allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id));
+      return selectedRF && Array.isArray(selectedRF.data?.categoriasSat) ? [...selectedRF.data.categoriasSat] : [];
+    })();
+
+    /*
+      EL CASO QUE BLOQUEA UN CONVENIO ENTERO.
+
+      Si la función Frame tiene categorías cargadas, se usan SOLO esas. Cuando ninguna es del convenio
+      elegido, el cruce da vacío y el convenio queda inalcanzable — que es exactamente lo que pasa con
+      0131/75 (218 categorías en el catálogo, cero ofrecidas). No es un dato faltante del operador: es
+      que la función Frame se cargó con las categorías de otro convenio.
+
+      Se detecta y se sale del filtro por función, avisando. Callarlo dejaría un select vacío sin
+      explicación, que es lo que había.
+    */
+    const rolNoTieneCategoriasDelConvenio = !!wizardData.rol_frame_id && !!convenioFiltro && delRol.length > 0 && !delRol.some((c) => convenioPorId.get(String(c.id)) === convenioFiltro);
+    const ignorarFiltroPorRol = !!convenioFiltro && (verTodasDelConvenio || rolNoTieneCategoriasDelConvenio);
+
+    let list: any[] = ignorarFiltroPorRol ? [] : delRol;
 
     // Fallback: If list is empty but we have allCategoriasSat, use allCategoriasSat as options.
     // Se filtran las no elegibles (alias que existen solo para que resuelvan contratos históricos):
@@ -948,11 +1048,11 @@ export const ProjectTeamPage: React.FC = () => {
       }));
     }
 
-    // Solo las categorías de los convenios de la empleadora. Las funciones FRAME no guardan el
-    // convenio en su copia denormalizada, así que se resuelve contra el catálogo por `data.id`.
+    // Solo las categorías de los convenios de la empleadora. Este filtro es de ARCA, no una
+    // preferencia: el organismo rechaza el alta con una categoría de un convenio que la empleadora no
+    // registró.
     let ocultasPorConvenio = 0;
     if (conveniosDeLaEmpleadora) {
-      const convenioPorId = new Map(allCategoriasSat.map((c) => [String(c.data?.id), String(c.data?.convenio || '').trim()]));
       const antes = list.length;
       // Una categoría SIN convenio tampoco se ofrece: no se puede verificar que ARCA la acepte, y su
       // alta va a salir sin categoría profesional. Se cuenta aparte para poder decirlo.
@@ -961,6 +1061,23 @@ export const ProjectTeamPage: React.FC = () => {
         return !!cct && conveniosDeLaEmpleadora.includes(cct);
       });
       ocultasPorConvenio = antes - list.length;
+    }
+
+    /*
+      El filtro que pidió el operador, aplicado DESPUÉS del de la empleadora.
+
+      Ese orden importa para lo que se cuenta: «ocultas por convenio» son las que ARCA no aceptaría y
+      hay que explicar; «ocultas por el filtro» son las que el propio operador acaba de dejar afuera y
+      destraba solo. Sumarlas en un número las volvería la misma cosa.
+
+      Una categoría SIN convenio cargado sobrevive con el filtro en «todos» pero no cuando hay uno
+      elegido: no se puede afirmar que pertenezca al convenio pedido.
+    */
+    let ocultasPorFiltroConvenio = 0;
+    if (convenioFiltro) {
+      const antes = list.length;
+      list = list.filter((c) => convenioPorId.get(String(c.id)) === convenioFiltro);
+      ocultasPorFiltroConvenio = antes - list.length;
     }
 
     // La categoría ya elegida se muestra siempre, aunque el filtro la haya sacado: esconderla
@@ -987,8 +1104,8 @@ export const ProjectTeamPage: React.FC = () => {
     const codigoPorId = new Map(allCategoriasSat.map((c) => [String(c.data?.id), String(c.data?.codigoArca || '').trim()]));
     const conCodigo = list.map((c) => ({ ...c, codigoArca: codigoPorId.get(String(c.id)) || '' }));
 
-    return { categorias: conCodigo, ocultasPorConvenio };
-  }, [allRoleFrames, allCategoriasSat, wizardData.rol_frame_id, wizardData.categoria_sat_id, conveniosDeLaEmpleadora]);
+    return { categorias: conCodigo, ocultasPorConvenio, ocultasPorFiltroConvenio, rolNoTieneCategoriasDelConvenio };
+  }, [allRoleFrames, allCategoriasSat, wizardData.rol_frame_id, wizardData.categoria_sat_id, conveniosDeLaEmpleadora, convenioFiltro, verTodasDelConvenio]);
 
   const userAssignedRoleFrames = useMemo(() => {
     if (!selectedUserForWizard) return [];
@@ -1491,6 +1608,21 @@ export const ProjectTeamPage: React.FC = () => {
     // Se resetea ACÁ (no en el efecto) para que la primera corrida del auto-set de estado, tras este
     // reset, no confunda "recién abrí el wizard" con "el usuario cambió el Tipo de Contrato".
     prevContratoFrameIdRef.current = initialContratoFrameId;
+
+    /*
+      El filtro arranca en el convenio de la categoría que ya está cargada.
+
+      Al editar un contrato existente —o al precargar desde el último contrato— la categoría YA define
+      un encuadre. Arrancar en «todos» mostraría el catálogo entero de la empleadora con una categoría
+      elegida de uno solo, y el primer cambio de convenio la limpiaría sin que nadie hubiera pedido
+      cambiar de encuadre.
+
+      Sin categoría todavía, queda en «todos»: no hay nada de dónde deducirlo.
+    */
+    const catInicial = initialCatId ? allCategoriasSat.find((c) => String(c.data?.id) === String(initialCatId)) : undefined;
+    setConvenioFiltro(String(catInicial?.data?.convenio || '').trim());
+    setVerTodasDelConvenio(false);
+    setAvisoConvenio('');
 
     // Reset wizard data with pulled data or defaults
     setWizardData({
@@ -3232,9 +3364,46 @@ export const ProjectTeamPage: React.FC = () => {
                       </select>
                     </div>
 
+                    {/*
+                      CONVENIO — es un FILTRO, no un dato del contrato.
+
+                      Replica el flujo de ARCA (convenio → categoría) sin cambiar el modelo: no se
+                      guarda, no viaja en el payload y no toca el TXT. Está acá porque el encuadre lo
+                      terminaba decidiendo quien cargó las categorías de la función Frame, y así había
+                      convenios habilitados por ARCA que no se podían usar.
+                    */}
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Convenio (CCT)</label>
+                      <select className="input-field w-full" value={convenioFiltro} onChange={(e) => cambiarConvenioFiltro(e.target.value)} disabled={!wizardData.empresaContratoId || conveniosDisponibles.length === 0}>
+                        <option value="">Todos los convenios de la empleadora</option>
+                        {conveniosDisponibles.map((c) => (
+                          <option key={c.externalId} value={c.externalId}>
+                            {c.externalId}
+                            {c.name ? ` — ${c.name}` : ''} ({c.cantidadCategorias})
+                            {c.registrado ? '' : ' · no registrado en ARCA'}
+                          </option>
+                        ))}
+                      </select>
+                      {!wizardData.empresaContratoId ? (
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Elegí primero la empresa contratante.</p>
+                      ) : conveniosDisponibles.length === 0 ? (
+                        <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">La empleadora no tiene convenios registrados. Cargalos en Empresas → ARCA.</p>
+                      ) : (
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Filtra las categorías. No se guarda: ARCA lo deduce de la categoría.</p>
+                      )}
+                    </div>
+
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Categoría <span className="text-red-500">*</span></label>
-                      <select className="input-field w-full" value={wizardData.categoria_sat_id} onChange={(e) => setWizardData((prev) => ({ ...prev, categoria_sat_id: e.target.value }))} required>
+                      <select
+                        className="input-field w-full"
+                        value={wizardData.categoria_sat_id}
+                        onChange={(e) => {
+                          setAvisoConvenio('');
+                          setWizardData((prev) => ({ ...prev, categoria_sat_id: e.target.value }));
+                        }}
+                        required
+                      >
                         <option value="">Selecciona categoria...</option>
                         {availableCategoriasSat.map((c: any) => (
                           <option key={c.id} value={c.id}>
@@ -3243,12 +3412,49 @@ export const ProjectTeamPage: React.FC = () => {
                           </option>
                         ))}
                       </select>
-                      {/* El filtro por convenio se dice, no se aplica en silencio: si una categoría que
-                          el operador esperaba ver no está, tiene que saber por qué y qué destraba. */}
+                      {/* La categoría que se limpió sola tiene que decirlo acá y no descubrirse al guardar. */}
+                      {avisoConvenio && <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">{avisoConvenio}</p>}
+
+                      {/*
+                        El escape hatch del filtro por función Frame.
+
+                        Solo aparece con un convenio elegido, porque sin convenio «todas las del
+                        convenio» no quiere decir nada. Cuando la función no tiene NINGUNA categoría de
+                        ese convenio se prende solo y queda fijo: apagarlo dejaría el select vacío, que
+                        es el estado sin explicación que esto viene a sacar.
+                      */}
+                      {convenioFiltro && wizardData.rol_frame_id && (
+                        <label className="flex items-start gap-2 ml-1 text-[11px] text-gray-600 dark:text-gray-300 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={verTodasDelConvenio || rolNoTieneCategoriasDelConvenio}
+                            disabled={rolNoTieneCategoriasDelConvenio}
+                            onChange={(e) => setVerTodasDelConvenio(e.target.checked)}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-0.5 cursor-pointer disabled:cursor-not-allowed"
+                          />
+                          <span>Ver todas las categorías de este convenio (ignora las de la función Frame)</span>
+                        </label>
+                      )}
+                      {rolNoTieneCategoriasDelConvenio && (
+                        <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">
+                          La función Frame «{allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || wizardData.rol_frame_id}» no tiene categorías de este
+                          convenio; se muestran todas las del convenio.
+                        </p>
+                      )}
+
+                      {/*
+                        El filtro se dice, no se aplica en silencio: si una categoría que el operador
+                        esperaba ver no está, tiene que saber por qué y qué la destraba.
+
+                        Las dos causas van separadas porque llevan a acciones distintas: lo que oculta
+                        ARCA no se puede destrabar desde acá (hay que registrar el convenio en la
+                        empleadora); lo que oculta el filtro se destraba cambiando el select de arriba.
+                      */}
                       {conveniosDeLaEmpleadora && (
                         <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
-                          Solo las de los convenios de la empleadora ({conveniosDeLaEmpleadora.join(', ')}).
+                          {convenioFiltro ? `Solo las del convenio ${convenioFiltro}.` : `Solo las de los convenios de la empleadora (${conveniosDeLaEmpleadora.join(', ')}).`}
                           {categoriasOcultasPorConvenio > 0 ? ` Se ocultaron ${categoriasOcultasPorConvenio} de otro convenio: ARCA no las acepta para esta empresa.` : ''}
+                          {ocultasPorFiltroConvenio > 0 ? ` Otras ${ocultasPorFiltroConvenio} quedaron fuera por el convenio elegido: cambiá el filtro para verlas.` : ''}
                         </p>
                       )}
                     </div>

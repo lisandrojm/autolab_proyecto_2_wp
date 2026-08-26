@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLocationDot, faPlus, faEdit, faTrash, faTriangleExclamation, faDownload, faFileImport, faCircleInfo, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faLocationDot, faPlus, faEdit, faTrash, faTriangleExclamation, faDownload, faFileImport, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
@@ -152,14 +152,6 @@ export const ArcaSucursalesPage: React.FC = () => {
           <button onClick={abrirCrear} title="Nueva sucursal" aria-label="Nueva sucursal" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
             <FontAwesomeIcon icon={faPlus} />
           </button>
-        </div>
-      }
-      preSearchContent={
-        <div className="rounded-lg border border-blue-200 dark:border-blue-900/50 bg-blue-50/60 dark:bg-blue-950/20 px-4 py-3 flex items-start gap-3">
-          <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
-          <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
-            Las sucursales y sus actividades <strong>se declaran en ARCA</strong>, en <em>Datos del Empleador → Domicilios de Explotación</em>. Acá solo se <strong>sincronizan</strong>: dar de alta o de baja un domicilio o una actividad en WeProdu no lo cambia en el padrón. Lo recomendable es usar <em>&quot;Exportar lista a archivo&quot;</em> desde esa pantalla e importarlo acá con <strong>Importar de ARCA</strong>. Ojo: el export es <strong>por CUIT</strong>, así que hay que repetirlo logueado con cada empleadora.
-          </p>
         </div>
       }
       searchAndFilters={<SearchAndFilters searchTerm={search} onSearchChange={setSearch} searchPlaceholder="Buscar por código, domicilio o actividad..." />}

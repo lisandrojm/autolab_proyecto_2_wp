@@ -379,12 +379,11 @@ const helpResources = {
       "arcaSucursales.title": "Domicilios de Explotación",
       "arcaSucursales.description": "Domicilios de desempeño del padrón de ARCA (Simplificación Registral).",
       "arcaSucursales.items": [
-        "**Qué es**: El domicilio donde la persona presta servicios, tal como está declarado en el padrón de ARCA. Su **código** de 5 dígitos va en las posiciones 74-78 del TXT de alta.",
-        "**No es una Sede**: las Sedes son los lugares de trabajo con los que opera el sistema (proyectos, personas, contratos). Las Sucursales son entidades del padrón de ARCA. Son cosas distintas y se cargan por separado.",
-        "**Actividades**: cada sucursal declara una o más actividades (pos. 79-84). Con una sola, el contrato la hereda; con varias, el contrato elige cuál declara.",
-        "**No hay lista global de actividades**: ARCA solo acepta las declaradas para ese domicilio, y su propia pantalla de alta arma el combo filtrado por sucursal. Por eso se cargan acá adentro y no se eligen de un catálogo: un código válido en otra sucursal sería rechazado en esta.",
-        "**Por CUIT**: el código sale del padrón de cada empleadora, así que el mismo domicilio declarado por dos empresas se carga como dos sucursales distintas.",
-        "**Uso**: se asignan a cada empresa en Configuración → Empresas, y después cada contrato elige una de las de su empleadora.",
+        "**Qué es**: el domicilio donde la persona presta servicios, según el padrón de ARCA. Su **código** de 5 dígitos va en las posiciones 74-78 del TXT de alta.",
+        "**Actividades**: cada domicilio declara una o más (pos. 79-84). Con una sola, el contrato la hereda; con varias, elige cuál declara. Se cargan adentro del domicilio y no de un catálogo global: ARCA solo acepta las declaradas para ese domicilio, y un código válido en otro sería rechazado acá.",
+        "**Por CUIT**: el código sale del padrón de cada empleadora, así que el mismo domicilio declarado por dos empresas son dos registros distintos.",
+        "**No es una Sede**: las Sedes son los lugares de trabajo con los que opera el sistema. Esto es el padrón de ARCA, y se carga por separado.",
+        "**Uso**: se asignan a cada empresa en Configuración → Empresas, y cada contrato elige una de las de su empleadora.",
       ],
 
       // Tablas oficiales de ARCA (Simplificación Registral)
