@@ -90,6 +90,26 @@ export const FormularioArca: React.FC<{
    */
   const [convenioFiltro, setConvenioFiltro] = useState<string>(valores.convenioCategoria || '');
 
+  /**
+   * Las categorías que el picker ofrece, y el ÚNICO lugar donde se busca la elegida.
+   *
+   * Buscar el código en `cat.categorias` entero era un bug esperando: `codigoAfip` no es único entre
+   * convenios, así que un mismo código presente en otro CCT podía ganar el `find` y guardar una
+   * categoría de un convenio que la persona no eligió. ARCA la aceptaría igual —el código existe— y
+   * el error aparecería recién en el sueldo.
+   */
+  const categoriasOfrecidas = useMemo(
+    () =>
+      cat.categorias
+        .filter((c) => c.isActive !== false)
+        .filter((c) => {
+          const cct = String(c.data?.convenio || '').trim();
+          if (!cct) return false;
+          return convenioFiltro ? cct === convenioFiltro : (valores.conveniosEmpresa || []).includes(cct);
+        }),
+    [cat.categorias, convenioFiltro, valores.conveniosEmpresa],
+  );
+
   useEffect(() => {
     tiposServicioApi.list().then(setTiposServicio).catch(() => setTiposServicio([]));
     gruposTipoServicioApi.list().then(setGruposTS).catch(() => setGruposTS([]));
@@ -259,11 +279,31 @@ export const FormularioArca: React.FC<{
                 info="convenioCategoria"
                 rol="filtra"
                 etiqueta="filtra categoría"
-                valor={valores.convenioCategoria}
-                nombre={cat.convenios?.find((c) => String(c.externalId || '').trim() === valores.convenioCategoria)?.name}
-                falta={!valores.convenioCategoria}
+                /*
+                  Muestra EL FILTRO ELEGIDO, no el convenio derivado de la categoría.
+
+                  Antes el campo era de solo lectura y mostrar el derivado era correcto. Ahora que se
+                  puede elegir, mostrar el derivado significa que elegís 0322/75, la lista de abajo se
+                  filtra bien, y el campo te sigue diciendo 0634/11: se lee como que la elección no se
+                  guardó.
+
+                  Mientras los dos no coincidan, el `origen` lo dice: el convenio del alta lo define la
+                  CATEGORÍA, y hasta que no se elija una del convenio nuevo, la guardada sigue siendo
+                  la de antes. Callar esa diferencia sería peor que la confusión original.
+                */
+                valor={convenioFiltro || valores.convenioCategoria}
+                nombre={cat.convenios?.find((c) => String(c.externalId || '').trim() === (convenioFiltro || valores.convenioCategoria))?.name}
+                falta={!convenioFiltro && !valores.convenioCategoria}
                 onEditar={hayEmpresa ? () => setAbierto('convenio') : undefined}
-                origen={<>de la categoría · <strong>no va al archivo</strong></>}
+                origen={
+                  convenioFiltro && valores.convenioCategoria && convenioFiltro !== valores.convenioCategoria ? (
+                    <>
+                      filtro elegido · la categoría guardada sigue siendo del <strong>{valores.convenioCategoria}</strong>
+                    </>
+                  ) : (
+                    <>de la categoría · <strong>no va al archivo</strong></>
+                  )
+                }
               />
 
               <CampoArca
@@ -457,19 +497,11 @@ export const FormularioArca: React.FC<{
         onCerrar={() => setAbierto(null)}
         titulo="Categoría profesional"
         subtitulo={convenioFiltro ? `Las del convenio ${convenioFiltro}. Cambiarla recalcula el sueldo neto y bruto del contrato.` : 'Las de los convenios de esta empleadora. Cambiarla recalcula el sueldo neto y bruto del contrato.'}
-        opciones={cat.categorias
-          .filter((c) => c.isActive !== false)
-          .filter((c) => {
-            const cct = String(c.data?.convenio || '').trim();
-            if (!cct) return false;
-            if (convenioFiltro) return cct === convenioFiltro;
-            return (valores.conveniosEmpresa || []).includes(cct);
-          })
-          .map((c) => ({ codigo: String(c.data?.codigoAfip ?? ''), nombre: c.name || '', etiqueta: String(c.data?.convenio || '').trim() }))}
+        opciones={categoriasOfrecidas.map((c) => ({ codigo: String(c.data?.codigoAfip ?? ''), nombre: c.name || '', etiqueta: String(c.data?.convenio || '').trim() }))}
         valor={valores.categoriaProf}
         guardando={guardando === 'categoria'}
         onElegir={(o) => {
-          const elegida = cat.categorias.find((c) => String(c.data?.codigoAfip ?? '') === o.codigo);
+          const elegida = categoriasOfrecidas.find((c) => String(c.data?.codigoAfip ?? '') === o.codigo);
           // Al archivo va el código de 6 dígitos, pero lo que se guarda en el contrato es el id del
           // catálogo: son dos números distintos y confundirlos escribe una categoría que no existe.
           if (elegida?.data?.id != null) guardarEnContrato('categoria', String(elegida.data.id));
