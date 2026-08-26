@@ -77,6 +77,19 @@ export const FormularioArca: React.FC<{
     return (empresa as { defaultsArca?: { grupoTipoServicio?: string } } | undefined)?.defaultsArca?.grupoTipoServicio || '';
   });
 
+  /**
+   * Filtro de convenio para el picker de categoría. NO ES UN DATO DEL ALTA.
+   *
+   * Mismo par que Grupo Tipo Servicio → Tipo Servicio, que ya vive en este formulario: uno filtra y no
+   * se guarda, el otro es el que viaja al archivo. El convenio va en blanco en el TXT (pos. 91-100) —
+   * ARCA lo deduce de la categoría, que es lo único que se manda.
+   *
+   * Arranca en el convenio de la categoría que el contrato ya tiene: empezar en «todas» ofrecería
+   * categorías de los cinco convenios de la empleadora mezcladas, que es justo lo que este filtro
+   * viene a evitar.
+   */
+  const [convenioFiltro, setConvenioFiltro] = useState<string>(valores.convenioCategoria || '');
+
   useEffect(() => {
     tiposServicioApi.list().then(setTiposServicio).catch(() => setTiposServicio([]));
     gruposTipoServicioApi.list().then(setGruposTS).catch(() => setGruposTS([]));
@@ -121,10 +134,20 @@ export const FormularioArca: React.FC<{
     }
   };
 
-  const guardarEnContrato = async (campo: 'sucursal' | 'actividad', valor: string) => {
+  const guardarEnContrato = async (campo: 'sucursal' | 'actividad' | 'categoria', valor: string) => {
     setGuardando(campo);
     try {
-      if (campo === 'sucursal') {
+      if (campo === 'categoria') {
+        // El server recalcula los sueldos derivados y los devuelve: la fila de la grilla tiene que
+        // quedar con el sueldo de la categoría nueva, no con el de la anterior.
+        const res = await projectsAPI.updateCategoriaSat(row.projectId, row.userId, row.contractIndex, Number(valor));
+        onGuardado({
+          categoria_sat_id: res.categoria_sat_id,
+          nombre_categoria_sat: res.nombre_categoria_sat,
+          sueldo_neto: res.sueldo_neto,
+          sueldo_bruto: res.sueldo_bruto,
+        } as any);
+      } else if (campo === 'sucursal') {
         const res = await projectsAPI.updateSucursalArca(row.projectId, row.userId, row.contractIndex, valor);
         onGuardado({ sucursalArcaId: res.sucursalArcaId || '', actividadArca: res.actividadArca || '' });
       } else {
@@ -239,6 +262,7 @@ export const FormularioArca: React.FC<{
                 valor={valores.convenioCategoria}
                 nombre={cat.convenios?.find((c) => String(c.externalId || '').trim() === valores.convenioCategoria)?.name}
                 falta={!valores.convenioCategoria}
+                onClick={hayEmpresa ? () => setAbierto('convenio') : undefined}
                 origen={<>de la categoría · <strong>no va al archivo</strong></>}
               />
 
@@ -252,7 +276,9 @@ export const FormularioArca: React.FC<{
                 valor={valores.categoriaProf}
                 nombre={cat.categorias.find((c) => String(c.data?.codigoAfip ?? '') === valores.categoriaProf)?.name}
                 falta={!valores.categoriaProf}
-                origen={valores.convenioCategoria ? <>del convenio <strong>{valores.convenioCategoria}</strong> · se cambia en el contrato del miembro</> : <>se define en el contrato del miembro</>}
+                onClick={hayEmpresa ? () => setAbierto('categoria') : undefined}
+                guardando={guardando === 'categoria'}
+                origen={valores.convenioCategoria ? <>del convenio <strong>{valores.convenioCategoria}</strong> · cambia el sueldo del contrato</> : <>elegí el convenio y después la categoría</>}
               />
             </DepGroup>
 
