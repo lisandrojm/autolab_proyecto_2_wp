@@ -3365,6 +3365,27 @@ export const ProjectTeamPage: React.FC = () => {
                     </div>
 
                     {/*
+                      LA EMPRESA VA ANTES QUE EL CONVENIO, Y ESO NO ES ORDEN ESTÉTICO.
+
+                      La cadena es empresa → convenios registrados por ese CUIT → categorías de esos
+                      convenios. Estaba 200 líneas más abajo, así que quien cargaba de arriba hacia
+                      abajo llegaba a Convenio sin empresa elegida y se encontraba el select apagado
+                      diciéndole que eligiera algo que todavía no había aparecido en pantalla.
+                    */}
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empresa del Contrato</label>
+                      <select className="input-field w-full" value={wizardData.empresaContratoId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaContratoId: e.target.value }))}>
+                        <option value="">{contratoEmpresas.length ? 'Selecciona empresa...' : 'No hay empresas cargadas'}</option>
+                        {contratoEmpresas.map((emp) => (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.label}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Define qué convenios y categorías se pueden elegir abajo.</p>
+                    </div>
+
+                    {/*
                       CONVENIO — es un FILTRO, no un dato del contrato.
 
                       Replica el flujo de ARCA (convenio → categoría) sin cambiar el modelo: no se
@@ -3571,18 +3592,6 @@ export const ProjectTeamPage: React.FC = () => {
                           />
                         </>
                       )}
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empresa del Contrato</label>
-                      <select className="input-field w-full" value={wizardData.empresaContratoId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaContratoId: e.target.value }))}>
-                        <option value="">{contratoEmpresas.length ? 'Selecciona empresa...' : 'No hay empresas cargadas'}</option>
-                        {contratoEmpresas.map((emp) => (
-                          <option key={emp.id} value={emp.id}>
-                            {emp.label}
-                          </option>
-                        ))}
-                      </select>
                     </div>
 
                     <div className="space-y-1.5">
