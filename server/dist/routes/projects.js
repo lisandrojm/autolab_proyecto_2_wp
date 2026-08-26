@@ -27,7 +27,6 @@ import { Shift } from "../models/Shift.js";
 import { Company } from "../models/Company.js";
 import { ObraSocial } from "../models/ObraSocial.js";
 import { ArcaSucursal } from "../models/ArcaSucursal.js";
-import { CategoriaSat } from "../models/CategoriaSat.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
 import { esContratoVigente, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
@@ -2058,7 +2057,19 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/categoria-sa
             res.status(404).json({ error: "Contrato no encontrado" });
             return;
         }
-        const cat = await CategoriaSat.findOne({ "data.id": categoriaSatId }).lean();
+        /*
+          SE RESUELVE POR LA MISMA VISTA QUE LEE EL FRONT, no por la colección `categorias-sat`.
+    
+          Acá había un bug de verdad: consultar `CategoriaSat` directo. El catálogo real ya no es esa
+          colección —es `convenio → grupo (escala) → categoría`, y `categorias-sat` quedó como tabla
+          vieja—; lo que el front lista viene aplanado por `listarCategoriasCompat`. El `findOne` no
+          encontraba nada y la ruta contestaba «esa categoría no existe en el catálogo» para categorías
+          que el usuario estaba viendo en pantalla.
+    
+          `buscarCategoriaCompatPorLegacyId` busca en el modelo nuevo y cae a la tabla vieja si la
+          migración todavía no corrió en esa base — que es la misma regla que usa la lectura.
+        */
+        const cat = await buscarCategoriaCompatPorLegacyId(categoriaSatId);
         if (!cat) {
             res.status(400).json({ error: "Esa categoría no existe en el catálogo." });
             return;
