@@ -31,7 +31,7 @@ const modalidadesContratoApi = createSimpleCatalogApi('/arca/modalidades-contrat
 const modalidadesLiqApi = createSimpleCatalogApi('/arca/modalidades-liquidacion');
 
 /** Qué campo tiene el picker abierto. */
-type CampoAbierto = null | 'sucursal' | 'actividad' | 'modalidadContrato' | 'tipoServicio' | 'modalidadLiq' | 'grupoTipoServicio';
+type CampoAbierto = null | 'sucursal' | 'actividad' | 'modalidadContrato' | 'tipoServicio' | 'modalidadLiq' | 'grupoTipoServicio' | 'convenio' | 'categoria';
 
 const opcion = (c: SimpleCatalogItem, etiqueta?: string): OpcionPicker => ({ codigo: String(c.externalId || '').trim(), nombre: c.name, etiqueta });
 
@@ -262,7 +262,7 @@ export const FormularioArca: React.FC<{
                 valor={valores.convenioCategoria}
                 nombre={cat.convenios?.find((c) => String(c.externalId || '').trim() === valores.convenioCategoria)?.name}
                 falta={!valores.convenioCategoria}
-                onClick={hayEmpresa ? () => setAbierto('convenio') : undefined}
+                onEditar={hayEmpresa ? () => setAbierto('convenio') : undefined}
                 origen={<>de la categoría · <strong>no va al archivo</strong></>}
               />
 
@@ -276,7 +276,7 @@ export const FormularioArca: React.FC<{
                 valor={valores.categoriaProf}
                 nombre={cat.categorias.find((c) => String(c.data?.codigoAfip ?? '') === valores.categoriaProf)?.name}
                 falta={!valores.categoriaProf}
-                onClick={hayEmpresa ? () => setAbierto('categoria') : undefined}
+                onEditar={hayEmpresa ? () => setAbierto('categoria') : undefined}
                 guardando={guardando === 'categoria'}
                 origen={valores.convenioCategoria ? <>del convenio <strong>{valores.convenioCategoria}</strong> · cambia el sueldo del contrato</> : <>elegí el convenio y después la categoría</>}
               />
@@ -415,6 +415,66 @@ export const FormularioArca: React.FC<{
         valor={valores.actividad}
         guardando={guardando === 'actividad'}
         onElegir={(o) => guardarEnContrato('actividad', o.codigo)}
+      />
+
+      {/*
+        CONVENIO — filtra la lista de abajo y NO se guarda.
+
+        Mismo rol que «Grupo de tipo de servicio» unas líneas más abajo. Solo se ofrecen los convenios
+        que esta empleadora tiene registrados ante ARCA (`conveniosEmpresa`): el catálogo entero son
+        ~2.669 y el organismo rechaza el alta con una categoría de un convenio que este CUIT no
+        registró, así que ofrecerlos sería ofrecer errores.
+      */}
+      <PickerArca
+        abierto={abierto === 'convenio'}
+        onCerrar={() => setAbierto(null)}
+        titulo="Convenio colectivo"
+        subtitulo="Solo filtra las categorías de abajo. No se guarda ni va al archivo: ARCA lo deduce de la categoría."
+        opciones={[
+          { codigo: '', nombre: 'Sin filtrar — ver todas las categorías de la empleadora' },
+          ...(valores.conveniosEmpresa || []).map((cct) => {
+            const nombre = cat.convenios?.find((c) => String(c.externalId || '').trim() === cct)?.name || '';
+            const cuantas = cat.categorias.filter((c) => String(c.data?.convenio || '').trim() === cct && c.isActive !== false).length;
+            return { codigo: cct, nombre, etiqueta: `${cuantas} categorías` };
+          }),
+        ]}
+        valor={convenioFiltro}
+        onElegir={(o) => {
+          setConvenioFiltro(o.codigo);
+          setAbierto(null);
+        }}
+        vacio={<>Esta empleadora no tiene convenios registrados. Cargalos en su ficha (ARCA → Convenios): sin convenio no hay categoría que ARCA acepte.</>}
+      />
+
+      {/*
+        CATEGORÍA — esto SÍ es el dato del alta (pos. 101-106) y sí se guarda.
+
+        Cambiarla recalcula los sueldos derivados del contrato, y por eso el subtítulo lo dice: el
+        neto y el bruto salen de la escala del convenio, no se cargan a mano.
+      */}
+      <PickerArca
+        abierto={abierto === 'categoria'}
+        onCerrar={() => setAbierto(null)}
+        titulo="Categoría profesional"
+        subtitulo={convenioFiltro ? `Las del convenio ${convenioFiltro}. Cambiarla recalcula el sueldo neto y bruto del contrato.` : 'Las de los convenios de esta empleadora. Cambiarla recalcula el sueldo neto y bruto del contrato.'}
+        opciones={cat.categorias
+          .filter((c) => c.isActive !== false)
+          .filter((c) => {
+            const cct = String(c.data?.convenio || '').trim();
+            if (!cct) return false;
+            if (convenioFiltro) return cct === convenioFiltro;
+            return (valores.conveniosEmpresa || []).includes(cct);
+          })
+          .map((c) => ({ codigo: String(c.data?.codigoAfip ?? ''), nombre: c.name || '', etiqueta: String(c.data?.convenio || '').trim() }))}
+        valor={valores.categoriaProf}
+        guardando={guardando === 'categoria'}
+        onElegir={(o) => {
+          const elegida = cat.categorias.find((c) => String(c.data?.codigoAfip ?? '') === o.codigo);
+          // Al archivo va el código de 6 dígitos, pero lo que se guarda en el contrato es el id del
+          // catálogo: son dos números distintos y confundirlos escribe una categoría que no existe.
+          if (elegida?.data?.id != null) guardarEnContrato('categoria', String(elegida.data.id));
+        }}
+        vacio={<>No hay categorías para ese convenio en el catálogo. Cargalas en Configuración → ARCA → Categorías.</>}
       />
 
       <PickerArca
