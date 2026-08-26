@@ -27,6 +27,7 @@ import { Shift } from "../models/Shift.js";
 import { Company } from "../models/Company.js";
 import { ObraSocial } from "../models/ObraSocial.js";
 import { ArcaSucursal } from "../models/ArcaSucursal.js";
+import { CategoriaSat } from "../models/CategoriaSat.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
 import { esContratoVigente, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
@@ -2014,6 +2015,82 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/actividad-ar
     }
     catch (error) {
         console.error("Update contract actividad-arca error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+/**
+ * PATCH .../contracts/:index/categoria-sat — cambia la categoría profesional de UN contrato.
+ *
+ * POR QUÉ ES UNA RUTA Y NO UN CAMPO MÁS DEL GUARDADO DEL WIZARD
+ *
+ * La categoría es lo ÚNICO del encuadre convencional que viaja a ARCA (pos. 101-106): el convenio va
+ * en blanco y el organismo lo deduce de ella. Hasta ahora solo se podía cambiar desde el wizard del
+ * miembro, así que desde «Datos ARCA» —que es donde se está mirando el alta— había que salir, abrir
+ * otra pantalla y volver.
+ *
+ * LOS SUELDOS SE RECALCULAN ACÁ, y esa es la razón de que esto no sea un `$set` de un campo.
+ *
+ * El contrato guarda `sueldo_neto`, `sueldo_bruto`, `sueldo_diario_neto` y `diferencia_diaria_neto`
+ * DERIVADOS de la categoría. El wizard los recalcula en un efecto; una ruta que escribiera solo
+ * `categoria_sat_id` dejaría el contrato con la categoría de un convenio y el sueldo de otro, sin que
+ * nada avisara. Las fórmulas son las mismas que las del wizard, a propósito: si alguna vez cambian,
+ * tienen que cambiar en los dos lados.
+ *
+ * `sueldo_mano` y su versión en letras NO se tocan: salen de `sueldo_jornada × jornadas`, que es lo
+ * que se pactó con la persona y no depende de la categoría.
+ */
+router.patch("/projects/:projectId/members/:userId/contracts/:index/categoria-sat", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
+    try {
+        const { projectId, userId, index } = req.params;
+        const categoriaSatId = Number(req.body?.categoriaSatId);
+        if (!Number.isFinite(categoriaSatId) || categoriaSatId <= 0) {
+            res.status(400).json({ error: "Falta la categoría." });
+            return;
+        }
+        const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("_id").lean();
+        if (!project) {
+            res.status(404).json({ error: "Project not found" });
+            return;
+        }
+        const up = await UserProject.findOne({ projectId, userId });
+        const idx = up ? resolverIndiceContrato(up, index) : -1;
+        if (!up || idx < 0) {
+            res.status(404).json({ error: "Contrato no encontrado" });
+            return;
+        }
+        const cat = await CategoriaSat.findOne({ "data.id": categoriaSatId }).lean();
+        if (!cat) {
+            res.status(400).json({ error: "Esa categoría no existe en el catálogo." });
+            return;
+        }
+        // Las no elegibles son alias que existen solo para resolver contratos históricos: sirven para
+        // LEER uno ya cargado, no para elegir. Guardarla acá sería cargar a mano lo que el catálogo marcó
+        // como no ofrecible.
+        if (cat.isActive === false) {
+            res.status(400).json({ error: "Esa categoría no se puede elegir: quedó como alias de una anterior." });
+            return;
+        }
+        const contrato = up.contracts[idx];
+        const jornada = Number(contrato.sueldo_jornada || 0);
+        const sueldo_neto = Number(Number(cat.data?.neto ?? 0).toFixed(2));
+        const sueldo_bruto = Number(Number(cat.data?.sueldoBruto ?? 0).toFixed(2));
+        const sueldo_diario_neto = Number((sueldo_neto / 30).toFixed(2));
+        const diferencia_diaria_neto = Number((jornada - sueldo_diario_neto).toFixed(2));
+        up.contracts[idx] = {
+            ...contrato.toObject(),
+            categoria_sat_id: categoriaSatId,
+            nombre_categoria_sat: cat.name || "",
+            sueldo_neto,
+            sueldo_bruto,
+            sueldo_diario_neto,
+            diferencia_diaria_neto,
+        };
+        up.markModified("contracts");
+        await up.save();
+        res.json({ categoria_sat_id: categoriaSatId, nombre_categoria_sat: cat.name || "", sueldo_neto, sueldo_bruto, sueldo_diario_neto, diferencia_diaria_neto });
+    }
+    catch (error) {
+        console.error("Update contract categoria-sat error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });
