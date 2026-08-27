@@ -2,6 +2,7 @@ import { Router, Response } from "express";
 import multer from "multer";
 import xlsx from "xlsx";
 import { Categoria } from "../models/Categoria.js";
+import { proximoLegacyId } from "../utils/categoriaCompat.js";
 import { ConvenioGrupo } from "../models/ConvenioGrupo.js";
 import { Convenio } from "../models/Convenio.js";
 import { Company } from "../models/Company.js";
@@ -351,6 +352,10 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
     const nueva = await Categoria.create({
       convenio,
       grupoId: grupo._id,
+      // SIN `legacyId` LA CATEGORÍA NACE INELEGIBLE: `contracts.categoria_sat_id` es un número, así
+      // que una categoría sin él se lista en los selectores pero no se puede guardar en ningún
+      // contrato. Así quedaron 226 de 335 en producción, y el síntoma era «clickeo y no pasa nada».
+      legacyId: await proximoLegacyId(),
       codigoArca,
       nombre,
       descripcionArca: String(req.body.descripcionArca || "").trim(),

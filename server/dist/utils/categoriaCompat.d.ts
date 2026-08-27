@@ -45,3 +45,16 @@ export declare const listarCategoriasCompat: () => Promise<CategoriaCompat[]>;
 export declare const resolverCategoriasCompatPorId: (ids: any[]) => Promise<CategoriaCompat[]>;
 /** Una categoría por su id numérico legacy (`categoria_sat_id` de los contratos). */
 export declare const buscarCategoriaCompatPorLegacyId: (legacyId: number) => Promise<CategoriaCompat | null>;
+/**
+ * El próximo `legacyId` libre para una categoría nueva.
+ *
+ * `contracts.categoria_sat_id` es un NÚMERO, así que una categoría sin `legacyId` no se puede asignar
+ * a ningún contrato: el selector la lista, se la clickea y no pasa nada. Así nacieron 226 de las 335
+ * que había en producción, todas creadas desde el ABM nuevo.
+ *
+ * Mira LAS DOS colecciones. `categorias-sat` sigue sirviendo de fallback en la resolución por id
+ * (ver `buscarCategoriaCompatPorLegacyId`), así que reusar un número de ahí haría que dos categorías
+ * distintas respondan al mismo id — y esa ambigüedad se manifestaría como un sueldo equivocado en un
+ * contrato, que es de los errores más caros de encontrar.
+ */
+export declare const proximoLegacyId: () => Promise<number>;

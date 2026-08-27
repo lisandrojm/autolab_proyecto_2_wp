@@ -53,13 +53,47 @@ export const CampoObraSocial: React.FC<{
    * este campo fuera de la grilla, donde no hay dónde abrir un modal.
    */
   onValidarEnPantalla?: () => void;
-}> = ({ row, valores, onGuardado, onValidarEnPantalla }) => {
+  /**
+   * El convenio que se eligió en el filtro pero que TODAVÍA no rige, porque la categoría guardada es
+   * de otro. Vacío cuando coinciden.
+   *
+   * La obra social por defecto cuelga del convenio de la CATEGORÍA, no del filtro: cambiar el filtro
+   * no cambia el default hasta elegir una categoría del convenio nuevo. Sin este aviso, alguien
+   * cambia el gremio, valida, y fija la obra social del convenio anterior creyendo que cambió.
+   */
+  convenioPendiente?: string;
+}> = ({ row, valores, onGuardado, onValidarEnPantalla, convenioPendiente }) => {
   const [abierto, setAbierto] = useState(false);
   const [copiado, setCopiado] = useState(false);
   const [pegado, setPegado] = useState('');
   const [trabajando, setTrabajando] = useState(false);
 
   const validada = valores.constatacion !== 'sin_constatar';
+
+  /**
+   * Se avisa QUÉ VA A QUEDAR si ARCA no devuelve una afiliación propia, antes de arrancar.
+   *
+   * Es la respuesta más común del organismo —la persona no tiene obra social propia— y en ese caso
+   * rige la del CONVENIO. Quien aprieta «Validar» está por fijar ese valor sin haberlo elegido: no
+   * hay una segunda pantalla donde confirmarlo, la corrida guarda sola al llegar. Decirlo acá es la
+   * única oportunidad de que se entere antes y no después.
+   *
+   * El default sale de la misma cascada que el resto del formulario (`rnosSugerido`): obra social
+   * propia → excepción de la empleadora para ese convenio → la del convenio → la de la empresa si es
+   * «excluido de convenio». Por eso se nombra el convenio: es de dónde viene el valor.
+   */
+  const confirmarYValidar = async () => {
+    const arrancar = onValidarEnPantalla || empezar;
+    const rnosDefault = soloDigitos(valores.rnosSugerido);
+    const cuerpo = rnosDefault
+      ? `Si ARCA no devuelve una afiliación propia para esta persona, va a quedar la del convenio ${valores.convenioCategoria || '—'}:\n\n${rnosDefault} · ${valores.nombreObraSocialSugerida || 'sin nombre en el catálogo'}\n\nSe guarda sola al terminar la consulta.`
+      : `Si ARCA no devuelve una afiliación propia, esta persona va a quedar SIN obra social: el convenio ${valores.convenioCategoria || '—'} no tiene una cargada.\n\nSe puede validar igual, pero el alta va a salir sin ese dato.`;
+    const aviso = convenioPendiente
+      ? `\n\n⚠ Elegiste el convenio ${convenioPendiente}, pero la categoría guardada sigue siendo del ${valores.convenioCategoria || '—'}. El default que se aplica es el del convenio de la CATEGORÍA: elegí una categoría del ${convenioPendiente} antes de validar si querés su obra social.`
+      : '';
+    const r = await sweetAlert.confirm('¿Validar la obra social en ARCA?', cuerpo + aviso, 'Sí, validar');
+    if (r.isConfirmed) arrancar();
+  };
   const fecha = fechaCorta(valores.constatadaEl || '');
   const delConvenio = valores.convenioCategoria ? `convenio ${valores.convenioCategoria}` : 'convenio';
 
@@ -250,7 +284,7 @@ export const CampoObraSocial: React.FC<{
           {!validada && !!row.empresaContratoId && !abierto && (
             <button
               type="button"
-              onClick={onValidarEnPantalla || empezar}
+              onClick={confirmarYValidar}
               /* `self-center`: la banda crece con el texto de «Qué va a quedar» —que envuelve en dos
                  renglones— y el botón, alineado arriba con el resto, quedaba colgando de la primera
                  línea. Centrado, queda a la altura del bloque que explica lo que va a validar. */

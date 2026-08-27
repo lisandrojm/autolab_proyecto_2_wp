@@ -2041,8 +2041,17 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/actividad-ar
 router.patch("/projects/:projectId/members/:userId/contracts/:index/categoria-sat", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
     try {
         const { projectId, userId, index } = req.params;
+        /*
+          `null` LIMPIA la categoría, no es un error de entrada.
+    
+          Cambiar de convenio con una categoría de otro deja al contrato en un estado que ARCA rechaza:
+          la categoría manda al archivo y el convenio que el organismo deduce de ella no es el que se
+          eligió. Dejarla ahí «hasta que alguien la corrija» es lo que produce altas rechazadas, así que
+          se limpia y el checklist la marca como faltante — que es lo que de verdad es.
+        */
+        const limpiar = req.body?.categoriaSatId === null;
         const categoriaSatId = Number(req.body?.categoriaSatId);
-        if (!Number.isFinite(categoriaSatId) || categoriaSatId <= 0) {
+        if (!limpiar && (!Number.isFinite(categoriaSatId) || categoriaSatId <= 0)) {
             res.status(400).json({ error: "Falta la categoría." });
             return;
         }
@@ -2069,6 +2078,16 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/categoria-sa
           `buscarCategoriaCompatPorLegacyId` busca en el modelo nuevo y cae a la tabla vieja si la
           migración todavía no corrió en esa base — que es la misma regla que usa la lectura.
         */
+        if (limpiar) {
+            const contrato = up.contracts[idx];
+            // Los sueldos derivados vuelven a 0 con ella: son de la escala de ESA categoría, y dejarlos
+            // sería mostrar el sueldo de un encuadre que ya no está.
+            up.contracts[idx] = { ...contrato.toObject(), categoria_sat_id: null, nombre_categoria_sat: "", sueldo_neto: 0, sueldo_bruto: 0, sueldo_diario_neto: 0, diferencia_diaria_neto: 0 };
+            up.markModified("contracts");
+            await up.save();
+            res.json({ categoria_sat_id: null, nombre_categoria_sat: "", sueldo_neto: 0, sueldo_bruto: 0, sueldo_diario_neto: 0, diferencia_diaria_neto: 0 });
+            return;
+        }
         const cat = await buscarCategoriaCompatPorLegacyId(categoriaSatId);
         if (!cat) {
             res.status(400).json({ error: "Esa categoría no existe en el catálogo." });

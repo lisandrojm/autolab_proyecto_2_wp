@@ -99,7 +99,9 @@ export const CampoArca: React.FC<{
           <span className="truncate">{rotulo}</span>
           {info && <InfoCampo campo={info} />}
         </span>
-        <span className={`shrink-0 text-[9.5px] px-1.5 py-px rounded border tracking-wide ${TAG[rol]}`}>{etiqueta}</span>
+        {/* `uppercase` por CSS y no en cada string: las etiquetas se escriben en prosa («constante»,
+            «no va») y así el estilo es uno solo. Los rangos de posición («74–78») no se ven afectados. */}
+        <span className={`shrink-0 text-[9.5px] px-1.5 py-px rounded border tracking-wide uppercase ${TAG[rol]}`}>{etiqueta}</span>
       </div>
 
       <div

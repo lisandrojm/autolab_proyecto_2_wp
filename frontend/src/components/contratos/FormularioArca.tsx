@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faLock } from '@fortawesome/free-solid-svg-icons';
 import { ContractOverviewRow } from '../../api/users';
 import { AfipCatalogs, AfipValues, MODALIDADES_PLAZO_DETERMINADO, MODALIDADES_TIEMPO_INDETERMINADO } from './afipCompleteness';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
@@ -155,12 +157,13 @@ export const FormularioArca: React.FC<{
   };
 
   const guardarEnContrato = async (campo: 'sucursal' | 'actividad' | 'categoria', valor: string) => {
+    // `valor` vacío en categoría = limpiarla (ver el picker de convenio).
     setGuardando(campo);
     try {
       if (campo === 'categoria') {
         // El server recalcula los sueldos derivados y los devuelve: la fila de la grilla tiene que
         // quedar con el sueldo de la categoría nueva, no con el de la anterior.
-        const res = await projectsAPI.updateCategoriaSat(row.projectId, row.userId, row.contractIndex, Number(valor));
+        const res = await projectsAPI.updateCategoriaSat(row.projectId, row.userId, row.contractIndex, valor === '' ? null : Number(valor));
         onGuardado({
           categoria_sat_id: res.categoria_sat_id,
           nombre_categoria_sat: res.nombre_categoria_sat,
@@ -184,24 +187,45 @@ export const FormularioArca: React.FC<{
 
   const hayEmpresa = !!row.empresaContratoId;
   /**
-   * Lo único que bloquea es la EMPLEADORA. La obra social no bloquea nada.
+   * LA CASCADA. Un solo estado derivado gobierna qué se puede tocar.
    *
-   * Antes acá también entraba `constatacion === 'sin_constatar'`, como un orden de trabajo impuesto:
-   * primero la empleadora, después la validación en ARCA, y recién ahí el resto. Era una decisión y no
-   * un descuido —el comentario viejo hasta enumeraba el costo—, pero en uso resultó al revés de lo que
-   * buscaba: convertía el paso MÁS LENTO y más externo del formulario, el único que obliga a salir a
-   * ARCA con clave fiscal, en prerrequisito de cinco campos que no tienen nada que ver con él.
+   *     empleadora → convenio → categoría → obra social → el resto
    *
-   * Ninguno de esos cinco depende de la obra social. Sucursal sale de los domicilios de la
-   * empleadora; Actividad, de la sucursal; Grupo/Tipo de Servicio, Modalidad de Contrato y Modalidad
-   * de Liquidación, del TIPO DE CONTRATO. Y la obra social nunca deja al contrato sin dato: si ARCA no
-   * devuelve una propia, rige la del convenio.
+   * No es una preferencia de orden: cada eslabón define el conjunto elegible del siguiente. Sin
+   * empleadora no existe la lista de convenios; sin convenio, la de categorías; y la obra social que
+   * rige cuando ARCA no devuelve una propia es LA DEL CONVENIO, así que validarla antes de tener
+   * convenio y categoría es validar contra un default que todavía puede cambiar.
    *
-   * La empleadora sí bloquea, y por una razón distinta: sin ella no existe el conjunto de sucursales,
-   * convenios ni obras sociales elegibles. No es un orden preferido, es que no hay entre qué elegir.
+   * ESTO YA ESTUVO Y SE SACÓ, y conviene saber por qué vuelve. El comentario que lo removió decía que
+   * poner la obra social como prerrequisito convertía «el paso MÁS LENTO y más externo, el único que
+   * obliga a salir a ARCA con clave fiscal», en condición de cinco campos que no dependen de ella. Eso
+   * era cierto entonces. Dejó de serlo: la validación ahora la corre el servidor con su propio usuario
+   * delegado —nadie sale a ARCA ni instala nada— y el costo que justificaba la excepción desapareció.
+   *
+   * El precio que SÍ sigue en pie: los cinco campos del final (Sucursal, Actividad, Grupo/Tipo de
+   * Servicio, Modalidades) no dependen de la obra social por ninguna regla del organismo. Se bloquean
+   * por orden de trabajo, no por dependencia real. Si alguna vez eso vuelve a estorbar, este es el
+   * lugar y `restoHabilitado` es la línea.
    */
-  const bloqueadoPorPrevios = !hayEmpresa;
-  const motivoBloqueo = <>se habilita al elegir la empleadora</>;
+  const convenioElegido = convenioFiltro || valores.convenioCategoria;
+  const cascada = {
+    convenio: hayEmpresa,
+    categoria: hayEmpresa && !!convenioElegido,
+    obraSocial: hayEmpresa && !!convenioElegido && !!valores.categoriaProf,
+    resto: hayEmpresa && !!convenioElegido && !!valores.categoriaProf && valores.constatacion !== 'sin_constatar',
+  };
+
+  /** Por qué un campo está en espera. Siempre el eslabón que falta, nunca «completá lo anterior». */
+  const motivoDe = (paso: keyof typeof cascada): React.ReactNode => {
+    if (!hayEmpresa) return <>se habilita al elegir la empleadora</>;
+    if (paso === 'categoria') return <>se habilita al elegir el convenio</>;
+    if (paso === 'obraSocial') return <>se habilita al elegir la categoría</>;
+    if (paso === 'resto') return !convenioElegido ? <>se habilita al elegir el convenio</> : !valores.categoriaProf ? <>se habilita al elegir la categoría</> : <>se habilita al validar la obra social</>;
+    return <>se habilita al elegir la empleadora</>;
+  };
+
+  const bloqueadoPorPrevios = !cascada.resto;
+  const motivoBloqueo = motivoDe('resto');
   const sucursalElegida = valores.sucursalesDisponibles.find((s) => s._id === row.sucursalArcaId);
 
   // La fecha de fin depende de la modalidad: sin modalidad no se sabe si corresponde.
@@ -233,52 +257,27 @@ export const FormularioArca: React.FC<{
           queda alineado donde el ojo ya lo busca. */}
       <div ref={camposRef}>
         <div data-campo="obraSocial" data-depende-de="convenio">
-          <CampoObraSocial row={row} valores={valores} onGuardado={onGuardado} onValidarEnPantalla={onValidarObraSocial} />
-        </div>
+        {/*
+          BANDA 2 — CONVENIO, con la CATEGORÍA adentro.
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-5">
-          {/* ── Columna 1: relación laboral ─────────────────────────────────────── */}
-          <div>
-            <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Relación laboral</h4>
+          Mismo formato que las bandas de Empleador y Obra Social: ancho completo, borde propio, y el
+          color dice si el paso está resuelto. Los tres van arriba y en el orden en que se resuelven,
+          para que se lea de un vistazo que se elige DE A UNO y que lo de abajo espera.
 
-            <CampoArca
-              rotulo="Sucursal"
-              campo="sucursal"
-              info="sucursal"
-              rol="campo"
-              etiqueta="74–78"
-              valor={valores.sucursal}
-              nombre={sucursalElegida?.domicilio}
-              falta={hayEmpresa && !valores.sucursal}
-              enEspera={bloqueadoPorPrevios}
-              guardando={guardando === 'sucursal'}
-              onEditar={() => setAbierto('sucursal')}
-              origen={bloqueadoPorPrevios ? motivoBloqueo : <>de los domicilios declarados por la empleadora</>}
-            />
-
-            <CampoArca
-              rotulo="Actividad"
-              campo="actividad"
-              dependeDe="sucursal"
-              info="actividad"
-              rol="campo"
-              etiqueta="79–84"
-              valor={valores.actividad}
-              nombre={valores.actividadesDisponibles.find((a) => a.codigo === valores.actividad)?.descripcion}
-              falta={!!valores.sucursal && !valores.actividad}
-              enEspera={bloqueadoPorPrevios || !valores.sucursal}
-              guardando={guardando === 'actividad'}
-              onEditar={valores.actividadesDisponibles.length > 1 ? () => setAbierto('actividad') : undefined}
-              origen={bloqueadoPorPrevios ? motivoBloqueo : valores.sucursal ? <>declarada en <strong>{valores.nombreSucursal || 'la sucursal'}</strong>{valores.actividadesDisponibles.length === 1 ? ' · única, se hereda' : ''}</> : <>se habilita al elegir la sucursal</>}
-            />
-
-            <DepGroup etiqueta="Convenio y categoría">
+          La categoría va dentro de la misma caja, separada por una línea, porque no es un paso
+          aparte: es lo que el convenio condiciona. Sacarla afuera la volvería un cuarto paso y
+          rompería la correspondencia con lo que hace ARCA, donde se elige convenio y en el mismo
+          lugar la categoría de ese convenio.
+        */}
+        <div className="mb-3">
+          <div className={`rounded-lg border px-3 py-2.5 ${valores.categoriaProf ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900/40'}`}>
+            <div>
               <CampoArca
                 rotulo="Convenio"
                 campo="convenio"
                 info="convenioCategoria"
                 rol="filtra"
-                etiqueta="filtra categoría"
+                etiqueta="condiciona categoría y obra social por defecto"
                 /*
                   Muestra EL FILTRO ELEGIDO, no el convenio derivado de la categoría.
 
@@ -294,35 +293,149 @@ export const FormularioArca: React.FC<{
                 valor={convenioFiltro || valores.convenioCategoria}
                 nombre={cat.convenios?.find((c) => String(c.externalId || '').trim() === (convenioFiltro || valores.convenioCategoria))?.name}
                 falta={!convenioFiltro && !valores.convenioCategoria}
-                onEditar={hayEmpresa ? () => setAbierto('convenio') : undefined}
+                enEspera={!cascada.convenio}
+                onEditar={cascada.convenio ? () => setAbierto('convenio') : undefined}
                 origen={
-                  convenioFiltro && valores.convenioCategoria && convenioFiltro !== valores.convenioCategoria ? (
+                  !cascada.convenio ? (
+                    motivoDe('convenio')
+                  ) : convenioFiltro && valores.convenioCategoria && convenioFiltro !== valores.convenioCategoria ? (
                     <>
                       filtro elegido · la categoría guardada sigue siendo del <strong>{valores.convenioCategoria}</strong>
                     </>
                   ) : (
-                    <>de la categoría · <strong>no va al archivo</strong></>
+                    <>
+                      {/* Las dos cosas que cuelgan del convenio. La obra social se nombra acá porque
+                          es la que rige cuando ARCA no devuelve una propia —el caso más común— y
+                          hasta ahora eso solo se descubría al validar. */}
+                      define las <strong>categorías</strong> elegibles y la <strong>obra social por defecto</strong> · no va al archivo
+                    </>
                   )
                 }
               />
 
+              {/* Adentro y DEBAJO, separada por una línea: la categoría es lo que el convenio
+                  condiciona, no un paso aparte. */}
+              <div className="mt-1 pt-2.5 border-t border-gray-200 dark:border-gray-700/60">
+                <CampoArca
+                  rotulo="Categoría"
+                  campo="categoria"
+                  dependeDe="convenio"
+                  info="categoriaProf"
+                  rol="campo"
+                  etiqueta="101–106"
+                  valor={valores.categoriaProf}
+                  nombre={cat.categorias.find((c) => String(c.data?.codigoAfip ?? '') === valores.categoriaProf)?.name}
+                  falta={!valores.categoriaProf}
+                  enEspera={!cascada.categoria}
+                  onEditar={cascada.categoria ? () => setAbierto('categoria') : undefined}
+                  guardando={guardando === 'categoria'}
+                  origen={!cascada.categoria ? motivoDe('categoria') : valores.convenioCategoria ? <>del convenio <strong>{valores.convenioCategoria}</strong> · cambia el sueldo del contrato</> : <>elegí una del convenio {convenioElegido}</>}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+          {/*
+            La obra social va DESPUÉS del convenio y la categoría.
+
+            Cuando ARCA no devuelve una afiliación propia, la que rige es la del CONVENIO. Validar
+            antes de tener convenio y categoría es validar contra un default que todavía puede
+            cambiar: se elige otro convenio y esa validación queda hablando de otra obra social.
+          */}
+          {cascada.obraSocial ? (
+            <CampoObraSocial
+              row={row}
+              valores={valores}
+              onGuardado={onGuardado}
+              onValidarEnPantalla={onValidarObraSocial}
+              convenioPendiente={convenioFiltro && valores.convenioCategoria && convenioFiltro !== valores.convenioCategoria ? convenioFiltro : undefined}
+            />
+          ) : (
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 px-4 py-3 flex items-center gap-3">
+              <FontAwesomeIcon icon={faLock} className="h-3 w-3 shrink-0 text-gray-400" />
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Obra social</p>
+                {/* El motivo concreto, no «completá lo anterior»: lo que falta es UN eslabón y hay que
+                    poder ir a ese. */}
+                <p className="text-[12.5px] text-gray-500 dark:text-gray-400">{motivoDe('obraSocial')}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/*
+          EL RESTO, Y SE VE QUE ESTÁ ESPERANDO.
+
+          Los campos ya salen apagados y con candado uno por uno, pero de a doce eso se lee como «hay
+          muchos datos que faltan» y no como «todavía no es el turno de esto». La franja lo dice una
+          vez, arriba, y el atenuado del bloque separa los tres pasos de arriba —donde SÍ hay que
+          hacer algo— del resto.
+
+          `pointer-events-none` no se usa: cada campo ya decide si es clickeable, y apagar el bloque
+          entero también apagaría los ⓘ, que son lo único que se puede consultar mientras se espera.
+        */}
+        {!cascada.resto && (
+          <div className="mb-3 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 px-3 py-2 flex items-center gap-2.5">
+            <FontAwesomeIcon icon={faLock} className="h-3 w-3 shrink-0 text-gray-400" />
+            <p className="text-[12px] text-gray-500 dark:text-gray-400">
+              Lo de abajo <strong>{motivoDe('resto')}</strong>. Se completa de a un paso: empleadora, convenio y categoría, obra social.
+            </p>
+          </div>
+        )}
+
+        <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-5 transition-opacity ${cascada.resto ? '' : 'opacity-60'}`}>
+          {/* ── Columna 1: relación laboral ─────────────────────────────────────── */}
+          <div>
+            <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Relación laboral</h4>
+
+            {/*
+              Sucursal y Actividad son un PAR, igual que Convenio→Categoría y Grupo→Tipo de Servicio:
+              la actividad solo puede ser una de las declaradas para ese domicilio.
+
+              Van agrupadas pero SIN badge de «filtra», y la diferencia no es cosmética. «Filtra»
+              marca a los campos que NO van al archivo: el Grupo de tipo de servicio y el Convenio
+              existen solo para acotar la lista de abajo. La Sucursal sí viaja al alta (pos. 74-78),
+              así que llamarla filtro diría que no se guarda, que es lo contrario de lo que pasa.
+
+              Lo que las dos comparten es la DEPENDENCIA, y eso es lo que dibuja el grupo.
+            */}
+            <DepGroup etiqueta="Sucursal y actividad">
               <CampoArca
-                rotulo="Categoría"
-                campo="categoria"
-                dependeDe="convenio"
-                info="categoriaProf"
+                rotulo="Sucursal"
+                campo="sucursal"
+                info="sucursal"
                 rol="campo"
-                etiqueta="101–106"
-                valor={valores.categoriaProf}
-                nombre={cat.categorias.find((c) => String(c.data?.codigoAfip ?? '') === valores.categoriaProf)?.name}
-                falta={!valores.categoriaProf}
-                onEditar={hayEmpresa ? () => setAbierto('categoria') : undefined}
-                guardando={guardando === 'categoria'}
-                origen={valores.convenioCategoria ? <>del convenio <strong>{valores.convenioCategoria}</strong> · cambia el sueldo del contrato</> : <>elegí el convenio y después la categoría</>}
+                etiqueta="74–78"
+                valor={valores.sucursal}
+                nombre={sucursalElegida?.domicilio}
+                falta={hayEmpresa && !valores.sucursal}
+                enEspera={bloqueadoPorPrevios}
+                guardando={guardando === 'sucursal'}
+                onEditar={() => setAbierto('sucursal')}
+                origen={bloqueadoPorPrevios ? motivoBloqueo : <>de los domicilios declarados por la empleadora</>}
+              />
+
+              <CampoArca
+                rotulo="Actividad"
+                campo="actividad"
+                dependeDe="sucursal"
+                info="actividad"
+                rol="campo"
+                etiqueta="79–84"
+                valor={valores.actividad}
+                nombre={valores.actividadesDisponibles.find((a) => a.codigo === valores.actividad)?.descripcion}
+                falta={!!valores.sucursal && !valores.actividad}
+                enEspera={bloqueadoPorPrevios || !valores.sucursal}
+                guardando={guardando === 'actividad'}
+                onEditar={valores.actividadesDisponibles.length > 1 ? () => setAbierto('actividad') : undefined}
+                origen={bloqueadoPorPrevios ? motivoBloqueo : valores.sucursal ? <>declarada en <strong>{valores.nombreSucursal || 'la sucursal'}</strong>{valores.actividadesDisponibles.length === 1 ? ' · única, se hereda' : ''}</> : <>se habilita al elegir la sucursal</>}
               />
             </DepGroup>
 
-            <CampoArca rotulo="Puesto Desemp." rol="no_va" etiqueta="no va" origen={<>el registro de 130 lo deja vacío</>} />
+            {/* Va siempre vacío: es tan constante como el «N» de agropecuario o el «0» de Lic. COVID. La
+                línea de origen es la que aclara que la constante acá es el vacío. */}
+            <CampoArca rotulo="Puesto Desemp." rol="no_va" etiqueta="constante" origen={<>el registro de 130 lo deja vacío</>} />
           </div>
 
           {/* ── Columna 2: servicio y liquidación ───────────────────────────────── */}
@@ -334,7 +447,7 @@ export const FormularioArca: React.FC<{
                 rotulo="Grupo Tipo Servicio"
                 campo="grupoTipoServicio"
                 rol="filtra"
-                etiqueta="filtra tipo"
+                etiqueta="condiciona tipo"
                 valor={grupoTS}
                 nombre={grupoTS ? nombreDe(gruposTS, grupoTS) : 'sin filtrar'}
                 enEspera={bloqueadoPorPrevios}
@@ -374,7 +487,7 @@ export const FormularioArca: React.FC<{
               origen={bloqueadoPorPrevios ? motivoBloqueo : <>del tipo de contrato <strong>«{nombreTipo}»</strong> · define si va la fecha de fin</>}
             />
 
-            <CampoArca rotulo="Situación Revista" rol="no_va" etiqueta="no va" origen={<>el registro de 130 lo deja vacío</>} />
+            <CampoArca rotulo="Situación Revista" rol="no_va" etiqueta="constante" origen={<>el registro de 130 lo deja vacío</>} />
 
             <CampoArca
               rotulo="Mod. Liquidación"
@@ -479,9 +592,25 @@ export const FormularioArca: React.FC<{
           }),
         ]}
         valor={convenioFiltro}
-        onElegir={(o) => {
+        onElegir={async (o) => {
           setConvenioFiltro(o.codigo);
           setAbierto(null);
+          /*
+            LA CATEGORÍA DE OTRO CONVENIO SE LIMPIA, y sin preguntar.
+
+            Lo que viaja al archivo es la categoría; el convenio ARCA lo deduce DE ELLA. Un contrato
+            con convenio 0102/90 y categoría del 9999/99 no es un aviso pendiente: es un alta que el
+            organismo va a rechazar, con el agravante de que en pantalla se ve completa.
+
+            SIN CONFIRMACIÓN a propósito: cambiar de convenio ES pedir otra categoría, así que
+            preguntar «¿seguro?» sería preguntar por lo que se acaba de elegir. El cambio se ve solo —
+            la categoría pasa a «Falta» y el picker de abajo ya ofrece las del convenio nuevo—, que es
+            mejor feedback que un cartel que hay que cerrar antes de seguir.
+          */
+          if (!o.codigo || !valores.categoriaProf) return;
+          const cat0 = cat.categorias.find((c) => String(c.data?.codigoAfip ?? '') === valores.categoriaProf);
+          if (String(cat0?.data?.convenio || '').trim() === o.codigo) return;
+          await guardarEnContrato('categoria', '');
         }}
         vacio={<>Esta empleadora no tiene convenios registrados. Cargalos en su ficha (ARCA → Convenios): sin convenio no hay categoría que ARCA acepte.</>}
       />
@@ -504,7 +633,22 @@ export const FormularioArca: React.FC<{
           const elegida = categoriasOfrecidas.find((c) => String(c.data?.codigoAfip ?? '') === o.codigo);
           // Al archivo va el código de 6 dígitos, pero lo que se guarda en el contrato es el id del
           // catálogo: son dos números distintos y confundirlos escribe una categoría que no existe.
-          if (elegida?.data?.id != null) guardarEnContrato('categoria', String(elegida.data.id));
+          if (elegida?.data?.id != null) {
+            guardarEnContrato('categoria', String(elegida.data.id));
+            return;
+          }
+          /*
+            La categoría existe en el catálogo pero NO TIENE id numérico, y sin él no se puede guardar:
+            el contrato la referencia por número. Le pasa a las creadas en el ABM nuevo, que nacían sin
+            ese campo.
+
+            Se dice en voz alta en vez de no hacer nada. El silencio es lo que hacía que esto se
+            leyera como «el botón está roto»: la lista la ofrece, se la clickea, y no pasa nada.
+          */
+          sweetAlert.warningAlert(
+            'Esa categoría todavía no se puede elegir',
+            `«${elegida?.name || o.nombre}» no tiene número interno, y el contrato guarda la categoría por número. Es un dato que falta en el catálogo, no un error de esta pantalla.\n\nSe arregla de una vez corriendo la numeración de categorías en el servidor: npm run categorias:legacy-id`,
+          );
         }}
         vacio={<>No hay categorías para ese convenio en el catálogo. Cargalas en Configuración → ARCA → Categorías.</>}
       />

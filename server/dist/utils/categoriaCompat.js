@@ -86,3 +86,22 @@ export const buscarCategoriaCompatPorLegacyId = async (legacyId) => {
     }
     return (await CategoriaSat.findOne({ "data.id": legacyId }).lean());
 };
+/**
+ * El próximo `legacyId` libre para una categoría nueva.
+ *
+ * `contracts.categoria_sat_id` es un NÚMERO, así que una categoría sin `legacyId` no se puede asignar
+ * a ningún contrato: el selector la lista, se la clickea y no pasa nada. Así nacieron 226 de las 335
+ * que había en producción, todas creadas desde el ABM nuevo.
+ *
+ * Mira LAS DOS colecciones. `categorias-sat` sigue sirviendo de fallback en la resolución por id
+ * (ver `buscarCategoriaCompatPorLegacyId`), así que reusar un número de ahí haría que dos categorías
+ * distintas respondan al mismo id — y esa ambigüedad se manifestaría como un sueldo equivocado en un
+ * contrato, que es de los errores más caros de encontrar.
+ */
+export const proximoLegacyId = async () => {
+    const [nuevo, viejo] = await Promise.all([
+        Categoria.findOne({ legacyId: { $ne: null } }).sort({ legacyId: -1 }).select("legacyId").lean(),
+        CategoriaSat.findOne({ "data.id": { $ne: null } }).sort({ "data.id": -1 }).select("data.id").lean(),
+    ]);
+    return Math.max(Number(nuevo?.legacyId || 0), Number(viejo?.data?.id || 0)) + 1;
+};

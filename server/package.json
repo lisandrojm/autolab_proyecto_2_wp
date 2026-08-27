@@ -45,7 +45,9 @@
     "test:grupo-tipo-servicio": "tsx --test src/utils/grupoTipoServicio.test.ts",
     "test:agrupar-contratos": "tsx --test src/utils/agruparContratos.test.ts",
     "test:arca-pantalla": "tsx --test src/services/arca/pantallaArca.test.ts",
-    "test:nombre-arca": "tsx --test src/services/arca/nombreArca.test.ts"
+    "test:nombre-arca": "tsx --test src/services/arca/nombreArca.test.ts",
+    "categorias:legacy-id:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/backfillLegacyIdCategorias.ts",
+    "categorias:legacy-id": "dotenv -e .env.production -- tsx src/scripts/backfillLegacyIdCategorias.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",

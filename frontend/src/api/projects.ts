@@ -626,7 +626,7 @@ class ProjectsAPI {
    * El server recalcula los sueldos derivados (neto, bruto, diario, diferencia) y devuelve los
    * valores nuevos: guardar solo el id dejaría la categoría de un convenio con el sueldo de otro.
    */
-  async updateCategoriaSat(projectId: string, userId: string, contractIndex: number, categoriaSatId: number): Promise<{ categoria_sat_id: number; nombre_categoria_sat: string; sueldo_neto: number; sueldo_bruto: number; sueldo_diario_neto: number; diferencia_diaria_neto: number }> {
+  async updateCategoriaSat(projectId: string, userId: string, contractIndex: number, categoriaSatId: number | null): Promise<{ categoria_sat_id: number | null; nombre_categoria_sat: string; sueldo_neto: number; sueldo_bruto: number; sueldo_diario_neto: number; diferencia_diaria_neto: number }> {
     const { data } = await axios.patch(`/projects/${projectId}/members/${userId}/contracts/${contractIndex}/categoria-sat`, { categoriaSatId }, { headers: this.getHeaders() });
     return data;
   }
