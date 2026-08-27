@@ -564,8 +564,15 @@ class ProjectsAPI {
    * Los CUIL NO se mandan desde acá: los resuelve el server con la misma función que alimenta el
    * contador de la grilla. Mandarlos permitiría validar a alguien que la pantalla nunca mostró.
    */
-  async validarObrasSocialesEnServidor(empresaId: string): Promise<{ arrancada: true; total: number }> {
-    const { data } = await axios.post(`/contratos/obras-sociales/validar-servidor`, { empresaId }, { headers: this.getHeaders() });
+  /**
+   * Arranca la corrida en el servidor.
+   *
+   * `cuils` ACOTA: el server sigue decidiendo quién está pendiente y solo se queda con la
+   * intersección, así que mandar de más no valida a nadie que la pantalla no haya mostrado. Omitirlo
+   * corre a todos los pendientes de la empleadora.
+   */
+  async validarObrasSocialesEnServidor(empresaId: string, cuils?: string[]): Promise<{ arrancada: true; total: number }> {
+    const { data } = await axios.post(`/contratos/obras-sociales/validar-servidor`, { empresaId, cuils }, { headers: this.getHeaders() });
     return data;
   }
 

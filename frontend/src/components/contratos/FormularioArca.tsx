@@ -90,15 +90,12 @@ export const FormularioArca: React.FC<{
    * categorías de los cinco convenios de la empleadora mezcladas, que es justo lo que este filtro
    * viene a evitar.
    */
-  const [convenioFiltro, setConvenioFiltro] = useState<string>(() => {
-    // Con categoría cargada manda ELLA: el convenio del alta es el suyo, no una preferencia.
-    if (valores.convenioCategoria) return valores.convenioCategoria;
-    // Sin categoría, el filtro arranca en el convenio habitual de la empleadora. Es solo el punto de
-    // partida del combo —el convenio no se guarda— igual que el default de Grupo de Tipo de Servicio.
-    const emp = cat.empresas?.find((e) => e._id === row.empresaContratoId) as { defaultsArca?: { convenioId?: string | null } } | undefined;
-    const id = emp?.defaultsArca?.convenioId;
-    return id ? String(cat.convenios?.find((c) => c._id === String(id))?.externalId || '').trim() : '';
-  });
+  /*
+    Con categoría cargada manda ELLA: el convenio del alta es el de su categoría, no una preferencia.
+    Sin categoría arranca vacío y lo completa el efecto de abajo con el habitual de la empleadora —
+    que puede no estar elegida todavía cuando este componente monta.
+  */
+  const [convenioFiltro, setConvenioFiltro] = useState<string>(valores.convenioCategoria || '');
 
   /**
    * Las categorías que el picker ofrece, y el ÚNICO lugar donde se busca la elegida.
@@ -119,6 +116,54 @@ export const FormularioArca: React.FC<{
         }),
     [cat.categorias, convenioFiltro, valores.conveniosEmpresa],
   );
+
+  /**
+   * Los defaults de la empleadora, y qué pasa cuando la empleadora CAMBIA.
+   *
+   * Estaban en el inicializador de `useState`, que corre UNA vez: si la empleadora se elegía acá
+   * adentro —el caso normal cuando falta— el inicializador ya había corrido en vacío y el default no
+   * se aplicaba nunca.
+   *
+   * Y hay dos situaciones distintas, no una:
+   *
+   *   - MONTAJE: se completa lo que está vacío y no se pisa nada. Un default que sobreescribe una
+   *     elección deja de ser un default.
+   *   - CAMBIO DE EMPLEADORA: el filtro se REHACE. Lo que había era de OTRA empresa —sus convenios
+   *     registrados son otros— así que conservarlo deja filtrando por un CCT que esta no tiene, y la
+   *     lista de categorías sale vacía sin decir por qué. Quitar la empleadora lo deja en blanco por
+   *     el mismo motivo: sin ella no hay conjunto del que elegir.
+   */
+  const empresaAnterior = useRef(row.empresaContratoId);
+  useEffect(() => {
+    const emp = cat.empresas?.find((e) => e._id === row.empresaContratoId) as { defaultsArca?: { convenioId?: string | null; grupoTipoServicio?: string } } | undefined;
+    const id = emp?.defaultsArca?.convenioId;
+    const convenioDefault = id ? String(cat.convenios?.find((c) => c._id === String(id))?.externalId || '').trim() : '';
+    const grupoDefault = emp?.defaultsArca?.grupoTipoServicio || '';
+
+    if (empresaAnterior.current !== row.empresaContratoId) {
+      empresaAnterior.current = row.empresaContratoId;
+      setConvenioFiltro(convenioDefault);
+      setGrupoTS(grupoDefault);
+      /*
+        LA CATEGORÍA TAMBIÉN SE BORRA. Es la parte que escribe, y por eso va acá y no en el render.
+
+        Los convenios registrados son de CADA CUIT: la categoría guardada salía de los de la empresa
+        anterior. Mantenerla deja el contrato declarando una categoría que la empleadora nueva puede
+        no tener habilitada, y eso ARCA lo rechaza — con el agravante de que el sueldo que quedaría es
+        el de la escala del convenio viejo.
+
+        Se borra SIEMPRE que había una, incluso si la empresa nueva registra el mismo convenio y la
+        categoría seguiría siendo válida. Es a propósito: distinguir los dos casos haría que a veces
+        se borre y a veces no, y una regla que depende de datos que no están a la vista se vuelve
+        impredecible justo cuando importa.
+      */
+      if (row.categoria_sat_id) void guardarEnContrato('categoria', '');
+      return;
+    }
+    // Con categoría cargada manda ELLA: el convenio del alta es el de su categoría.
+    if (!valores.convenioCategoria && convenioDefault) setConvenioFiltro((prev) => prev || convenioDefault);
+    if (grupoDefault) setGrupoTS((prev) => prev || grupoDefault);
+  }, [row.empresaContratoId, cat.empresas, cat.convenios, valores.convenioCategoria]);
 
   useEffect(() => {
     tiposServicioApi.list().then(setTiposServicio).catch(() => setTiposServicio([]));
@@ -315,9 +360,9 @@ export const FormularioArca: React.FC<{
                   CATEGORÍA, y hasta que no se elija una del convenio nuevo, la guardada sigue siendo
                   la de antes. Callar esa diferencia sería peor que la confusión original.
                 */
-                valor={convenioFiltro || valores.convenioCategoria}
-                nombre={cat.convenios?.find((c) => String(c.externalId || '').trim() === (convenioFiltro || valores.convenioCategoria))?.name}
-                falta={!convenioFiltro && !valores.convenioCategoria}
+                valor={cascada.convenio ? convenioFiltro || valores.convenioCategoria : ''}
+                nombre={cascada.convenio ? cat.convenios?.find((c) => String(c.externalId || '').trim() === (convenioFiltro || valores.convenioCategoria))?.name : undefined}
+                falta={cascada.convenio && !convenioFiltro && !valores.convenioCategoria}
                 enEspera={!cascada.convenio}
                 onEditar={cascada.convenio ? () => setAbierto('convenio') : undefined}
                 origen={

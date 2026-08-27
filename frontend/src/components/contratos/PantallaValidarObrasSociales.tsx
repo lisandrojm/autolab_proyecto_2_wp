@@ -424,7 +424,13 @@ export const PantallaValidarObrasSociales: React.FC<{
     setEnVivo({});
     setFaseCorrida('Abriendo ARCA en el servidor…');
     try {
-      await projectsAPI.validarObrasSocialesEnServidor(empresaId);
+      // Se mandan los CUIL de las filas que ESTA pantalla está mostrando. Abierta para una sola
+      // persona, la corrida es de una: sin esto el server procesaba a las veinte pendientes de la
+      // empleadora para resolver un dato de una.
+      await projectsAPI.validarObrasSocialesEnServidor(
+        empresaId,
+        visibles.map((f) => soloDigitos(f.row.cuit || '')).filter((c) => c.length === 11),
+      );
     } catch (e: any) {
       setFaseCorrida('');
       sweetAlert.error('No pude arrancar', e?.response?.data?.error || 'El servidor no aceptó la corrida.');

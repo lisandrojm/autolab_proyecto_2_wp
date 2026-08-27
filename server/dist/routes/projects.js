@@ -1810,7 +1810,22 @@ router.post("/projects/obras-sociales/aplicar-lote", requireTenant, authenticate
 router.post("/contratos/obras-sociales/validar-servidor", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
     try {
         const empresaId = String(req.body?.empresaId || "");
-        const pendientes = await pendientesObraSocial(req.tenantObjectId, empresaId);
+        const todosLosPendientes = await pendientesObraSocial(req.tenantObjectId, empresaId);
+        /*
+          LA SELECCIÓN DEL CLIENTE ACOTA, NUNCA AMPLÍA.
+    
+          Los CUIL siguen saliendo de `pendientesObraSocial` —el server decide quién está pendiente, y
+          nadie que la pantalla no haya mostrado puede colarse—, pero si el cliente manda una lista, se
+          INTERSECTA con ella.
+    
+          Sin esto, validar la obra social de UNA persona desde su modal abría ARCA y procesaba a las
+          veinte pendientes de la empleadora: veinte bloques cargados y borrados en el navegador del
+          servidor, minutos, para un dato de una sola. El contador lo mostraba sin disimulo — «20 de 1».
+        */
+        const pedidos = new Set((Array.isArray(req.body?.cuils) ? req.body.cuils : [])
+            .map((c) => String(c || "").replace(/\D/g, ""))
+            .filter((c) => c.length === 11));
+        const pendientes = pedidos.size > 0 ? todosLosPendientes.filter((p) => pedidos.has(String(p.cuil || "").replace(/\D/g, ""))) : todosLosPendientes;
         const cuils = pendientes.map((p) => String(p.cuil || "").replace(/\D/g, "")).filter((c) => c.length === 11);
         const r = await arrancarCorrida({
             tenantId: String(req.tenantObjectId),
