@@ -56,6 +56,16 @@ export interface Company {
     grupoTipoServicio?: string;
     tipoServicio?: string;
     modalidadLiquidacion?: string;
+    /**
+     * El domicilio de desempeño habitual (`_id` de la sucursal).
+     *
+     * NO se autocompleta en el contrato: se marca con ★ en el picker de Sucursal y se ofrece primero.
+     * Un default escrito solo dejaría el formulario viéndose completo con un domicilio que nadie
+     * eligió — y el domicilio decide qué actividades acepta ARCA.
+     */
+    sucursalId?: string | null;
+    /** El convenio habitual. Se ofrece primero en el alta; no impide elegir otro. */
+    convenioId?: string | null;
   };
   createdAt?: string;
   updatedAt?: string;

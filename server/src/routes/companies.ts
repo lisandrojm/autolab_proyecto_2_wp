@@ -48,6 +48,10 @@ const companySchema = z.object({
       grupoTipoServicio: z.string().optional().default(""),
       tipoServicio: z.string().optional().default(""),
       modalidadLiquidacion: z.string().optional().default(""),
+      /** `_id` del domicilio habitual. `null` lo quita. */
+      sucursalId: z.string().nullable().optional(),
+      /** `_id` del convenio habitual. `null` lo quita. */
+      convenioId: z.string().nullable().optional(),
     })
     .optional(),
 });
@@ -69,6 +73,25 @@ const companySchema = z.object({
 const revisarDefaultsArca = (data: Record<string, any>): string | null => {
   const defaults = data.defaultsArca;
   if (!defaults) return null;
+
+  /*
+    El domicilio por defecto tiene que ser UNO DE LOS DE ESTA EMPLEADORA.
+
+    El código de domicilio es por CUIT: el mismo domicilio declarado por dos empresas son dos
+    registros distintos. Un default apuntando a uno que esta empleadora no tiene declarado precarga un
+    alta que ARCA rechaza, y el error aparece lejos de acá.
+
+    Solo se puede validar cuando en el mismo request vienen los `sucursalIds`; si no, se acepta y el
+    chequeo queda en la UI, que es la que muestra la lista de la que se elige.
+  */
+  if (defaults.sucursalId && Array.isArray(data.sucursalIds) && !data.sucursalIds.map(String).includes(String(defaults.sucursalId))) {
+    return "Ese domicilio no está asignado a esta empleadora: elegí uno de los que tiene declarados.";
+  }
+  // Mismo criterio para el convenio: ARCA solo acepta categorías de los convenios que ESTE CUIT
+  // registró, así que sugerir uno que no registró es sugerir un alta rechazada.
+  if (defaults.convenioId && Array.isArray(data.convenioIds) && !data.convenioIds.map(String).includes(String(defaults.convenioId))) {
+    return "Ese convenio no está registrado por esta empleadora: elegí uno de los que tiene.";
+  }
 
   const tipo = String(defaults.tipoServicio || "").trim();
   const grupo = String(defaults.grupoTipoServicio || "").trim();

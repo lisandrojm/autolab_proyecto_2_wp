@@ -90,7 +90,15 @@ export const FormularioArca: React.FC<{
    * categorías de los cinco convenios de la empleadora mezcladas, que es justo lo que este filtro
    * viene a evitar.
    */
-  const [convenioFiltro, setConvenioFiltro] = useState<string>(valores.convenioCategoria || '');
+  const [convenioFiltro, setConvenioFiltro] = useState<string>(() => {
+    // Con categoría cargada manda ELLA: el convenio del alta es el suyo, no una preferencia.
+    if (valores.convenioCategoria) return valores.convenioCategoria;
+    // Sin categoría, el filtro arranca en el convenio habitual de la empleadora. Es solo el punto de
+    // partida del combo —el convenio no se guarda— igual que el default de Grupo de Tipo de Servicio.
+    const emp = cat.empresas?.find((e) => e._id === row.empresaContratoId) as { defaultsArca?: { convenioId?: string | null } } | undefined;
+    const id = emp?.defaultsArca?.convenioId;
+    return id ? String(cat.convenios?.find((c) => c._id === String(id))?.externalId || '').trim() : '';
+  });
 
   /**
    * Las categorías que el picker ofrece, y el ÚNICO lugar donde se busca la elegida.
@@ -227,6 +235,14 @@ export const FormularioArca: React.FC<{
   const bloqueadoPorPrevios = !cascada.resto;
   const motivoBloqueo = motivoDe('resto');
   const sucursalElegida = valores.sucursalesDisponibles.find((s) => s._id === row.sucursalArcaId);
+  /** El domicilio habitual de esta empleadora, si dejó uno marcado (ficha → ARCA → Domicilios). */
+  const sucursalPorDefecto = (cat.empresas?.find((e) => e._id === row.empresaContratoId) as { defaultsArca?: { sucursalId?: string | null } } | undefined)?.defaultsArca?.sucursalId || '';
+  /** El convenio habitual de esta empleadora, en código (ficha → ARCA → Convenios). */
+  const convenioHabitual = (() => {
+    const emp = cat.empresas?.find((e) => e._id === row.empresaContratoId) as { defaultsArca?: { convenioId?: string | null } } | undefined;
+    const id = emp?.defaultsArca?.convenioId;
+    return id ? String(cat.convenios?.find((c) => c._id === String(id))?.externalId || '').trim() : '';
+  })();
 
   // La fecha de fin depende de la modalidad: sin modalidad no se sabe si corresponde.
   const exigeFin = MODALIDADES_PLAZO_DETERMINADO.includes(valores.modalidadContrato);
@@ -269,6 +285,16 @@ export const FormularioArca: React.FC<{
           rompería la correspondencia con lo que hace ARCA, donde se elige convenio y en el mismo
           lugar la categoría de ese convenio.
         */}
+        {/*
+          EL RAIL ABRAZA LOS TRES: convenio → categoría → obra social.
+
+          Es el mismo degradé que usa Sucursal → Actividad, y dice lo mismo: que están encadenadas y
+          en qué dirección (fuerte arriba, tenue abajo, del que manda al que depende). Acá la cadena
+          es de tres eslabones porque la obra social por defecto también cuelga del convenio, y ese
+          era el enlace que no se veía: la validación fija un valor que eligió el convenio, dos cajas
+          más arriba.
+        */}
+        <DepGroup etiqueta="Convenio, categoría y obra social">
         <div className="mb-3">
           <div className={`rounded-lg border px-3 py-2.5 ${valores.categoriaProf ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900/40'}`}>
             <div>
@@ -277,7 +303,6 @@ export const FormularioArca: React.FC<{
                 campo="convenio"
                 info="convenioCategoria"
                 rol="filtra"
-                etiqueta="condiciona categoría y obra social por defecto"
                 /*
                   Muestra EL FILTRO ELEGIDO, no el convenio derivado de la categoría.
 
@@ -362,6 +387,7 @@ export const FormularioArca: React.FC<{
               </div>
             </div>
           )}
+        </DepGroup>
         </div>
 
         {/*
@@ -446,8 +472,8 @@ export const FormularioArca: React.FC<{
               <CampoArca
                 rotulo="Grupo Tipo Servicio"
                 campo="grupoTipoServicio"
+                info="grupoTipoServicio"
                 rol="filtra"
-                etiqueta="condiciona tipo"
                 valor={grupoTS}
                 nombre={grupoTS ? nombreDe(gruposTS, grupoTS) : 'sin filtrar'}
                 enEspera={bloqueadoPorPrevios}
@@ -549,7 +575,21 @@ export const FormularioArca: React.FC<{
         onCerrar={() => setAbierto(null)}
         titulo="Sucursal"
         subtitulo="Domicilios de explotación declarados por esta empleadora ante ARCA."
-        opciones={valores.sucursalesDisponibles.map((s) => ({ codigo: s.codigo, nombre: s.domicilio, etiqueta: s.actividades.length === 0 ? 'sin actividades' : undefined }))}
+        /*
+          El domicilio HABITUAL de la empleadora va primero y marcado con ★.
+
+          No se autocompleta en el contrato a propósito: el domicilio decide qué actividades acepta
+          ARCA, y un default escrito solo dejaría el formulario viéndose completo con uno que nadie
+          miró. Se ofrece primero y se elige con un click, que es la diferencia entre sugerir y decidir
+          por el otro.
+        */
+        opciones={[...valores.sucursalesDisponibles]
+          .sort((a, b) => (a._id === sucursalPorDefecto ? -1 : b._id === sucursalPorDefecto ? 1 : 0))
+          .map((s) => ({
+            codigo: s.codigo,
+            nombre: s.domicilio,
+            etiqueta: s.actividades.length === 0 ? 'sin actividades' : s._id === sucursalPorDefecto ? '★ habitual' : undefined,
+          }))}
         valor={valores.sucursal}
         guardando={guardando === 'sucursal'}
         onElegir={(o) => {
@@ -585,11 +625,14 @@ export const FormularioArca: React.FC<{
         subtitulo="Solo filtra las categorías de abajo. No se guarda ni va al archivo: ARCA lo deduce de la categoría."
         opciones={[
           { codigo: '', nombre: 'Sin filtrar — ver todas las categorías de la empleadora' },
-          ...(valores.conveniosEmpresa || []).map((cct) => {
-            const nombre = cat.convenios?.find((c) => String(c.externalId || '').trim() === cct)?.name || '';
-            const cuantas = cat.categorias.filter((c) => String(c.data?.convenio || '').trim() === cct && c.isActive !== false).length;
-            return { codigo: cct, nombre, etiqueta: `${cuantas} categorías` };
-          }),
+          // El habitual primero y marcado: es sugerencia, los otros siguen elegibles.
+          ...[...(valores.conveniosEmpresa || [])]
+            .sort((a, b) => (a === convenioHabitual ? -1 : b === convenioHabitual ? 1 : 0))
+            .map((cct) => {
+              const nombre = cat.convenios?.find((c) => String(c.externalId || '').trim() === cct)?.name || '';
+              const cuantas = cat.categorias.filter((c) => String(c.data?.convenio || '').trim() === cct && c.isActive !== false).length;
+              return { codigo: cct, nombre, etiqueta: cct === convenioHabitual ? `★ habitual · ${cuantas} categorías` : `${cuantas} categorías` };
+            }),
         ]}
         valor={convenioFiltro}
         onElegir={async (o) => {

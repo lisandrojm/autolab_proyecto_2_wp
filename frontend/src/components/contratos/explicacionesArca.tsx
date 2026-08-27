@@ -173,6 +173,10 @@ export const EXPLICACIONES: Record<string, ExplicacionCampo> = {
           <strong>No es la Sede</strong> del sistema: las Sedes son los lugares de trabajo con los que opera WeProdu y no tienen relación con el padrón. La sucursal es una entidad de ARCA, con su código y sus actividades.
         </p>
         <p>Solo se pueden elegir las sucursales asignadas a la empresa del contrato: el código sale del padrón de ese CUIT, así que una de otra empresa sería un alta mal declarada.</p>
+        <p>
+          <strong>Condiciona la Actividad.</strong> ARCA solo acepta las actividades declaradas para ESE domicilio: si tiene una sola, el contrato la hereda; con varias, hay que elegir cuál
+          declara. Un código válido en otro domicilio se rechaza en este.
+        </p>
       </>
     ),
   },
@@ -219,7 +223,15 @@ export const EXPLICACIONES: Record<string, ExplicacionCampo> = {
           Se chequea igual porque el organismo <strong>solo acepta categorías de los convenios que la empleadora tiene registrados</strong>. Una categoría de otro convenio pasa todos los controles de formato y la rechaza ARCA.
         </p>
         <p>
-          El convenio no se elige: lo determina la categoría. "Excluido de convenio" (<span className="font-mono">9999/99</span>) también es un convenio, no la ausencia de uno.
+          <strong>Condiciona la categoría y la obra social por defecto.</strong> Elegir un convenio deja en la lista de abajo solo sus categorías, y define qué obra social rige si ARCA no
+          devuelve una propia para la persona — que es la respuesta más común del organismo.
+        </p>
+        <p>
+          Cambiarlo <strong>limpia la categoría</strong> si era de otro convenio, junto con el sueldo que sale de su escala: la categoría es lo que viaja al archivo, y una de otro convenio es
+          un alta que ARCA rechaza aunque en pantalla se vea completa.
+        </p>
+        <p>
+          "Excluido de convenio" (<span className="font-mono">9999/99</span>) también es un convenio, no la ausencia de uno.
         </p>
       </>
     ),
@@ -271,6 +283,25 @@ export const EXPLICACIONES: Record<string, ExplicacionCampo> = {
           Lo que no se pudo hacer es constatar que esa obra social esté entre las <strong>registradas por la empleadora en ARCA</strong>, que es la lista contra la que el organismo valida. Sin esa lista cargada, la comprobación queda pendiente.
         </p>
         <p>Se resuelve cargando el padrón de obras sociales de la empresa en su ficha. Es un aviso para ir limpiando, no un freno.</p>
+      </>
+    ),
+  },
+
+  grupoTipoServicio: {
+    titulo: "Grupo de tipo de servicio",
+    origen: "Nomenclador de ARCA",
+    cuerpo: (
+      <>
+        <p>
+          <strong>Condiciona el Tipo de Servicio.</strong> Elegir un grupo deja en la lista de abajo solo los tipos de ese grupo.
+        </p>
+        <p>
+          <strong>No va al archivo</strong> y no se guarda en ningún lado: es solo un filtro de esta pantalla. Existe porque de los 293 tipos de servicio hay <strong>49 nombres repetidos</strong>,
+          y lo único que separa a los dos «TAREAS INSALUBRES» —006 y 506— es el grupo. Sin él, elegir por nombre es elegir a ciegas.
+        </p>
+        <p>
+          Arranca en el grupo que la empleadora dejó como default (ARCA → Defaults). Se puede poner en «sin filtrar» acá mismo, y eso no toca lo que la empresa tenga guardado.
+        </p>
       </>
     ),
   },

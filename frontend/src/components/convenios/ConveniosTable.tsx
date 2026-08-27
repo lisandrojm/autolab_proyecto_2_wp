@@ -1,6 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
+import { faTriangleExclamation, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { SimpleCatalogItem } from '../../api/simpleCatalog';
 import { formatRnos } from '../../utils/rnos';
 
@@ -42,6 +42,13 @@ interface Props {
   obraSocialDe?: (c: ConvenioFila) => ConvenioObraSocial;
   /** Columna extra solo del nomenclador: en cuántas empresas está registrado. */
   renderEmpresas?: (c: ConvenioFila) => React.ReactNode;
+  /**
+   * Columna extra solo de la FICHA: el convenio habitual de esa empleadora.
+   *
+   * No existe en el nomenclador porque el default es POR EMPRESA: el mismo convenio puede ser el
+   * habitual de una y no de otra.
+   */
+  renderPorDefecto?: (c: ConvenioFila) => React.ReactNode;
   /** Acciones de la fila. Es lo único que cambia entre el nomenclador y la ficha. */
   renderAcciones?: (c: ConvenioFila) => React.ReactNode;
   /**
@@ -54,7 +61,7 @@ interface Props {
   ayudaSinObraSocial?: string;
 }
 
-export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, renderEmpresas, renderAcciones, ayudaSinObraSocial }) => (
+export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, renderEmpresas, renderPorDefecto, renderAcciones, ayudaSinObraSocial }) => (
   <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-xl">
     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
       <thead className="bg-gray-50 dark:bg-gray-900/50">
@@ -63,8 +70,25 @@ export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, rende
           <th className="px-4 py-2.5 whitespace-nowrap w-px">Código</th>
           <th className="px-4 py-2.5">Actividad</th>
           <th className="px-4 py-2.5">Signatario</th>
-          <th className="px-4 py-2.5">Obra social</th>
+          {/* «por defecto» y no «obra social» a secas: es la que rige cuando ARCA no devuelve una
+              propia para la persona, no la que va a tener sí o sí. La diferencia importa: la
+              validación contra el padrón puede traer otra. */}
+          <th className="px-4 py-2.5">Obra social por defecto</th>
           {renderEmpresas && <th className="px-4 py-2.5 whitespace-nowrap w-px">Empresas</th>}
+          {renderPorDefecto && (
+            <th className="px-4 py-2.5 whitespace-nowrap w-px">
+              <span className="inline-flex items-center gap-1.5">
+                Por defecto
+                {/* La estrella sola no dice qué hace. Y lo que hace es MENOS de lo que se teme: no
+                    fuerza nada, solo ordena el combo. Decirlo evita que nadie la use por las dudas. */}
+                <FontAwesomeIcon
+                  icon={faCircleInfo}
+                  title="El convenio habitual de esta empleadora: en el alta aparece PRIMERO en el select y marcado con ★. No obliga a usarlo — se puede elegir cualquiera de los otros registrados."
+                  className="h-3 w-3 text-gray-400 normal-case"
+                />
+              </span>
+            </th>
+          )}
           {renderAcciones && <th className="px-4 py-2.5 text-right whitespace-nowrap w-px">Acciones</th>}
         </tr>
       </thead>
@@ -100,6 +124,7 @@ export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, rende
                 )}
               </td>
               {renderEmpresas && <td className="px-4 py-3 align-top text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{renderEmpresas(c)}</td>}
+              {renderPorDefecto && <td className="px-4 py-3 align-top text-center whitespace-nowrap">{renderPorDefecto(c)}</td>}
               {renderAcciones && <td className="px-4 py-3 align-top text-right whitespace-nowrap">{renderAcciones(c)}</td>}
             </tr>
           );

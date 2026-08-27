@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBriefcaseMedical, faFileContract, faLocationDot, faListCheck, faSliders, faSearch, faXmark, faStar, faTriangleExclamation, faArrowUpRightFromSquare, faSpinner, faPlus, faChevronDown, faChevronRight, faCheck, faEdit, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faBriefcaseMedical, faFileContract, faLocationDot, faListCheck, faSliders, faSearch, faXmark, faStar, faCircleInfo, faTriangleExclamation, faArrowUpRightFromSquare, faSpinner, faPlus, faChevronDown, faChevronRight, faCheck, faEdit, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { EmpresaContextLayout, SeccionEmpleador } from '../../components/empresa/EmpresaContextLayout';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { ConvenioSelector } from '../../components/empresas/ConvenioSelector';
@@ -435,11 +435,32 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
   const registradasIds = (empresa.obrasSocialesIds || []).map(String);
 
   const sucio = JSON.stringify([...ids].sort()) !== JSON.stringify([...(empresa.convenioIds || [])].sort()) || JSON.stringify(overrides) !== JSON.stringify(empresa.convenioObraSocialOverrides || []);
+  const convenioPorDefectoId = empresa.defaultsArca?.convenioId || '';
 
-  const guardarTodo = () =>
+  /** Marca o desmarca el convenio habitual. Se guarda con el click. */
+  const marcarConvenioPorDefecto = async (convenioId: string) => {
+    const nuevo = convenioPorDefectoId === convenioId ? null : convenioId;
+    await guardar(
+      { defaultsArca: { ...(empresa.defaultsArca || {}), convenioId: nuevo } } as any,
+      nuevo ? `${convenios.find((c) => c._id === nuevo)?.externalId || 'El convenio'} queda por defecto para ${empresa.razonSocial}.` : 'Se quitó el convenio por defecto.',
+    );
+  };
+
+  const guardarTodo = () => {
     // Los overrides de convenios que se dejaron de registrar se descartan al guardar: quedarían
     // huérfanos y aplicarían a un CCT que esta empleadora ya no tiene.
-    guardar({ convenioIds: ids, convenioObraSocialOverrides: overrides.filter((o) => ids.includes(String(o.convenioId))) }, `${ids.length} convenio(s) registrado(s) para ${empresa.razonSocial}.`);
+    // Si se le saca el convenio que era el habitual, el default se va con él: sugerir uno que la
+    // empleadora ya no tiene registrado es sugerir un alta que ARCA rechaza.
+    const pierdeElDefault = !!convenioPorDefectoId && !ids.includes(convenioPorDefectoId);
+    guardar(
+      {
+        convenioIds: ids,
+        convenioObraSocialOverrides: overrides.filter((o) => ids.includes(String(o.convenioId))),
+        ...(pierdeElDefault ? { defaultsArca: { ...(empresa.defaultsArca || {}), convenioId: null } } : {}),
+      } as any,
+      `${ids.length} convenio(s) registrado(s) para ${empresa.razonSocial}.${pierdeElDefault ? ' Se quitó el convenio por defecto: ya no está registrado.' : ''}`,
+    );
+  };
 
   return (
     <SeccionEmpleador
@@ -484,6 +505,26 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
               sinSindicato: String(cv.externalId || '').trim() === CONVENIO_EXCLUIDO,
             };
           }}
+          /*
+            ★ EL CONVENIO HABITUAL DE ESTA EMPLEADORA.
+
+            Es una SUGERENCIA, no un candado: en el alta aparece primero y marcado, y los otros
+            registrados se siguen pudiendo elegir. Existe porque el caso normal es que una misma
+            productora dé de alta casi todo bajo el mismo CCT, y hoy eso se elige de cero cada vez.
+
+            Mismo gesto que la ★ de Domicilios: se guarda con el click, no espera al «Guardar cambios»
+            de arriba — es una decisión sola, no parte del formulario de registro.
+          */
+          renderPorDefecto={(cv) => (
+            <button
+              onClick={() => marcarConvenioPorDefecto(cv._id)}
+              disabled={guardando}
+              title={convenioPorDefectoId === cv._id ? 'Es el convenio por defecto. Click para quitarlo.' : 'Marcar como convenio por defecto de esta empleadora'}
+              className={`transition-colors disabled:opacity-50 ${convenioPorDefectoId === cv._id ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}
+            >
+              <FontAwesomeIcon icon={faStar} />
+            </button>
+          )}
           renderAcciones={(cv) => (
             // Mismos íconos que el resto de los listados de la app (✎ / 🗑): el verbo cambia según
             // dónde estés parado —acá se edita la excepción y se quita el convenio de la empleadora,
@@ -600,6 +641,18 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
 
   const sucio = JSON.stringify([...ids].sort()) !== JSON.stringify([...(empresa.sucursalIds || [])].sort());
   const elegidas = useMemo(() => sucursales.filter((s) => ids.includes(s._id)), [sucursales, ids]);
+  const porDefectoId = empresa.defaultsArca?.sucursalId || '';
+
+  /** Marca o desmarca el domicilio habitual. Se guarda solo: es un click, no un formulario. */
+  const marcarPorDefecto = async (sucursalId: string) => {
+    const nuevo = porDefectoId === sucursalId ? null : sucursalId;
+    // Los otros defaults se mandan tal cual están: el PATCH reemplaza el subdocumento entero, y
+    // omitirlos los borraría.
+    await guardar(
+      { defaultsArca: { ...(empresa.defaultsArca || {}), sucursalId: nuevo } } as any,
+      nuevo ? `${sucursales.find((s) => s._id === nuevo)?.domicilio || 'El domicilio'} queda por defecto para ${empresa.razonSocial}.` : 'Se quitó el domicilio por defecto.',
+    );
+  };
 
   return (
     <SeccionEmpleador
@@ -608,7 +661,20 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
       nota="Las actividades disponibles se DERIVAN de estos domicilios: no se configuran aparte. ARCA rechaza una actividad que no esté declarada para el domicilio elegido, aunque exista en el nomenclador."
     >
       <div className="flex justify-end">
-        <BotonGuardar guardando={guardando} sucio={sucio} onClick={() => guardar({ sucursalIds: ids }, `${ids.length} domicilio(s) asignado(s) a ${empresa.razonSocial}.`)} />
+        <BotonGuardar
+          guardando={guardando}
+          sucio={sucio}
+          onClick={() => {
+            // Si se le saca el domicilio que era el habitual, el default se va con él: dejarlo
+            // apuntando a uno que la empleadora ya no tiene declarado precarga un alta que ARCA
+            // rechaza, y el error aparecería lejos de esta pantalla.
+            const pierdeElDefault = !!porDefectoId && !ids.includes(porDefectoId);
+            return guardar(
+              { sucursalIds: ids, ...(pierdeElDefault ? { defaultsArca: { ...(empresa.defaultsArca || {}), sucursalId: null } } : {}) } as any,
+              `${ids.length} domicilio(s) asignado(s) a ${empresa.razonSocial}.${pierdeElDefault ? ' Se quitó el domicilio por defecto: ya no está entre los declarados.' : ''}`,
+            );
+          }}
+        />
       </div>
 
       {cargando ? <LoadingSpinner message="Cargando el padrón de domicilios..." /> : <SucursalSelector sucursales={sucursales} cargando={cargando} value={ids} onChange={setIds} />}
@@ -616,13 +682,48 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
       {/* Nivel 2b: lo que queda disponible para los contratos de esta empleadora. */}
       {elegidas.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Actividades disponibles para sus contratos</p>
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Actividades disponibles para sus contratos</p>
+            {/* Mismo rótulo y misma explicación que la columna «Por defecto» de Convenios: es el
+                mismo concepto y no puede llamarse de dos formas. */}
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+              <FontAwesomeIcon icon={faStar} className="h-3 w-3" />
+              Por defecto
+              <FontAwesomeIcon
+                icon={faCircleInfo}
+                title="El domicilio habitual de esta empleadora: en el alta aparece PRIMERO en el select y marcado con ★. No obliga a usarlo — se puede elegir cualquiera de los otros declarados."
+                className="h-3 w-3 normal-case"
+              />
+            </span>
+          </div>
           <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-100 dark:divide-gray-700/60">
             {elegidas.map((s) => (
               <div key={s._id} className="px-3 py-2.5">
                 <div className="flex items-center gap-2">
+                  {/*
+                    ★ EL DOMICILIO HABITUAL DE ESTA EMPLEADORA.
+
+                    Es por empleadora y no global porque el código de domicilio es POR CUIT: el mismo
+                    domicilio declarado por dos empresas son dos registros distintos, así que un
+                    default único apuntaría a uno que la otra no tiene.
+
+                    Marcarlo NO lo escribe en ningún contrato: en el alta se ofrece primero, con la
+                    estrella, y hay que elegirlo. Un default que se autocompleta deja el formulario
+                    viéndose completo con un domicilio que nadie miró — y el domicilio es el que
+                    decide qué actividades acepta ARCA.
+                  */}
+                  <button
+                    type="button"
+                    onClick={() => marcarPorDefecto(s._id)}
+                    disabled={guardando}
+                    title={porDefectoId === s._id ? 'Es el domicilio por defecto. Click para quitarlo.' : 'Marcar como domicilio por defecto de esta empleadora'}
+                    className={`shrink-0 transition-colors disabled:opacity-50 ${porDefectoId === s._id ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}
+                  >
+                    <FontAwesomeIcon icon={faStar} className="h-3.5 w-3.5" />
+                  </button>
                   <span className="font-mono text-xs text-blue-700 dark:text-blue-400 font-bold">{s.codigo}</span>
                   <span className="text-sm text-gray-900 dark:text-gray-100">{s.domicilio}</span>
+                  {porDefectoId === s._id && <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">por defecto</span>}
                 </div>
                 {(s.actividades || []).length === 0 ? (
                   <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">Sin actividades declaradas: los contratos de este domicilio no pueden generar el alta.</p>

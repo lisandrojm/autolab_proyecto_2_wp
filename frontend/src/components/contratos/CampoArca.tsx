@@ -45,8 +45,14 @@ export const CampoArca: React.FC<{
   /** Key del diccionario de explicaciones, para el ⓘ. Opcional. */
   info?: string;
   rol: RolCampo;
-  /** Texto de la etiqueta: "40–45", "filtra categoría", "no va", "constante". */
-  etiqueta: string;
+  /**
+   * Texto de la etiqueta: "40–45", "constante".
+   *
+   * OPCIONAL: sin etiqueta no se dibuja el badge. Los campos que solo filtran no llevan ninguna — lo
+   * que hacen y que no llegan al archivo está en su ⓘ, y un badge repitiéndolo competía por atención
+   * con los que sí dicen algo que no está en otro lado: la posición en el registro de 130.
+   */
+  etiqueta?: string;
   /** Código/valor principal, monoespaciado. Vacío = falta. */
   valor?: string;
   /** Descripción al lado del código. */
@@ -99,9 +105,9 @@ export const CampoArca: React.FC<{
           <span className="truncate">{rotulo}</span>
           {info && <InfoCampo campo={info} />}
         </span>
-        {/* `uppercase` por CSS y no en cada string: las etiquetas se escriben en prosa («constante»,
-            «no va») y así el estilo es uno solo. Los rangos de posición («74–78») no se ven afectados. */}
-        <span className={`shrink-0 text-[9.5px] px-1.5 py-px rounded border tracking-wide uppercase ${TAG[rol]}`}>{etiqueta}</span>
+        {/* `uppercase` por CSS y no en cada string: las etiquetas se escriben en prosa («constante»)
+            y así el estilo es uno solo. Los rangos de posición («74–78») no se ven afectados. */}
+        {etiqueta && <span className={`shrink-0 text-[9.5px] px-1.5 py-px rounded border tracking-wide uppercase ${TAG[rol]}`}>{etiqueta}</span>}
       </div>
 
       <div

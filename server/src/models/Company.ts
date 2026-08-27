@@ -98,6 +98,27 @@ export interface ICompany extends Document {
     grupoTipoServicio?: string;
     /** Código de Tipo de Servicio (pos. 107-109 del TXT). */
     tipoServicio?: string;
+    /**
+     * El domicilio de desempeño habitual de esta empleadora (`_id` de `ArcaSucursal`).
+     *
+     * NO se autocompleta en el contrato: se marca en el picker de Sucursal y se ofrece primero. Un
+     * default escrito solo haría que el formulario se vea completo con un domicilio que nadie eligió,
+     * y el domicilio decide qué actividades acepta ARCA.
+     *
+     * Tiene que ser uno de los `sucursalIds` de esta empresa: si se le quita el domicilio, este
+     * default deja de tener sentido y se limpia.
+     */
+    sucursalId?: any;
+    /**
+     * El convenio habitual de esta empleadora (`_id` de `Convenio`).
+     *
+     * SUGERENCIA, NO CANDADO: en el alta se ofrece primero y marcado, y se puede elegir cualquier
+     * otro de los registrados. Sirve para el caso normal —una productora de TV da de alta casi todo
+     * bajo el mismo CCT— sin cerrar los demás.
+     *
+     * Tiene que ser uno de los `convenioIds` de esta empresa.
+     */
+    convenioId?: any;
     /** Código de Modalidad de Liquidación (pos. 73 del TXT). */
     modalidadLiquidacion?: string;
   };
@@ -137,6 +158,8 @@ const companySchema = new Schema<ICompany>(
       grupoTipoServicio: { type: String, default: "" },
       tipoServicio: { type: String, default: "" },
       modalidadLiquidacion: { type: String, default: "" },
+      sucursalId: { type: Schema.Types.ObjectId, ref: "ArcaSucursal", default: null },
+      convenioId: { type: Schema.Types.ObjectId, ref: "Convenio", default: null },
     },
   },
   {
