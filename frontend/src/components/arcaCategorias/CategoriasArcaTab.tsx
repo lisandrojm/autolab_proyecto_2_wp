@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { arcaCategoriasAPI, CategoriaArca, CategoriaHuerfana, ConvenioConCategorias, ConvenioDetalle, GrupoConvenio } from '../../api/arcaCategorias';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { SearchAndFilters } from '../ui/SearchAndFilters';
@@ -7,7 +7,7 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { InfoModal } from '../ui/InfoModal';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faListCheck, faChevronRight, faChevronDown, faDownload, faUpload, faFileExcel, faPlus, faEdit, faTrash, faTriangleExclamation, faLayerGroup, faArrowLeft, faEye, faEyeSlash, faArrowRightArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { faListCheck, faChevronRight, faChevronDown, faDownload, faUpload, faFileExcel, faPlus, faEdit, faTrash, faTriangleExclamation, faLayerGroup, faArrowLeft, faEye, faEyeSlash, faArrowRightArrowLeft, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { useAuthStore } from '../../stores/authStore';
 
 /**
@@ -77,6 +77,9 @@ const ESCALA_VACIA = {
 
 type FormEscala = typeof ESCALA_VACIA;
 
+/** Dónde queda pegada la barra de convenios. Ver el comentario de `tabsConvenios`. */
+const TOPE_TABS = 177;
+
 const MOTIVO_TEXTO: Record<CategoriaHuerfana['motivo'], string> = {
   sin_convenio_ni_codigo: 'no tiene convenio ni código de ARCA',
   sin_convenio: 'no tiene convenio',
@@ -90,6 +93,37 @@ export const CategoriasArcaTab: React.FC = () => {
   const [convenios, setConvenios] = useState<ConvenioConCategorias[]>([]);
   const [catalogoConvenios, setCatalogoConvenios] = useState<SimpleCatalogItem[]>([]);
   const [huerfanas, setHuerfanas] = useState<CategoriaHuerfana[]>([]);
+  const [huerfanasInfoOpen, setHuerfanasInfoOpen] = useState(false);
+  const tabsRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Cambia de convenio dejando la vista donde el trabajo sigue: con la barra de tabs pegada arriba y
+   * la lista nueva empezando abajo.
+   *
+   * Sin esto, el salto lo daba el propio documento: cada convenio tiene una cantidad de filas muy
+   * distinta —218 categorías contra 4—, así que al cambiar de tab la página se acorta de golpe y el
+   * navegador arrastra el scroll hasta donde todavía hay contenido. Desde media lista, elegir otro
+   * convenio te dejaba en un lugar arbitrario de la lista nueva.
+   *
+   * Solo sube cuando hace falta: si ya estás por encima de los tabs, no se toca el scroll. Bajar la
+   * vista de alguien que está mirando la parte de arriba sería el mismo problema al revés.
+   */
+  const elegirConvenio = (codigo: string) => {
+    setConvenioSel(codigo);
+    const el = tabsRef.current;
+    if (!el) return;
+    const destino = Math.max(0, window.scrollY + el.getBoundingClientRect().top - TOPE_TABS);
+    if (window.scrollY <= destino) return;
+    /*
+      Después del render, no antes.
+
+      Al cambiar de convenio el documento se acorta —de 218 filas a 4— y el navegador recorta el
+      scroll a lo que quedó de página. Scrollear en este mismo tick es escribir un valor que ese
+      recorte pisa un instante después; en el frame siguiente la altura nueva ya está aplicada y el
+      destino se respeta.
+    */
+    requestAnimationFrame(() => window.scrollTo({ top: destino, behavior: 'auto' }));
+  };
   const [convenioSel, setConvenioSel] = useState<string>(() => localStorage.getItem(CONVENIO_ELEGIDO_KEY) || '');
   const [detalle, setDetalle] = useState<ConvenioDetalle | null>(null);
   const [cargandoNivel1, setCargandoNivel1] = useState(true);
@@ -528,11 +562,22 @@ export const CategoriasArcaTab: React.FC = () => {
    * el estado de TODOS los convenios y la advertencia de los registrados sin categorías. Sacarla para
    * dejar solo las pestañas habría cambiado navegación por información.
    */
+  /*
+    LA BARRA DE CONVENIOS SE PEGA DEBAJO DE LA DE ARRIBA.
+
+    `top-[177px]` es el borde inferior de la barra «Categorías | Funciones FRAME», que está sticky a
+    140px y mide 39: quedan a tope, sin la ranura por la que se vería pasar el contenido. El número
+    está escrito y no calculado porque los dos valores viven en archivos distintos —esta barra acá, la
+    otra en `ArcaCategoriasPage`— y no hay medición en tiempo de layout que valga la pena para dos
+    barras de alto fijo. Si alguna cambia de alto, este número cambia con ella.
+
+    `z-10` y no `z-20`: la de arriba tiene que ganarle a esta cuando se superponen.
+  */
   const tabsConvenios = (
-    <div className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+    <div ref={tabsRef} className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto sticky top-[177px] z-10 bg-gray-100 dark:bg-gray-900">
       <button
         type="button"
-        onClick={() => setConvenioSel('')}
+        onClick={() => elegirConvenio('')}
         className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
           convenioSel === '' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
         }`}
@@ -543,7 +588,7 @@ export const CategoriasArcaTab: React.FC = () => {
         <button
           key={c.convenio}
           type="button"
-          onClick={() => setConvenioSel(c.convenio)}
+          onClick={() => elegirConvenio(c.convenio)}
           title={`${c.convenio} — ${c.nombre || 'sin descripción'} · ${c.categorias} categoría(s)`}
           className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap inline-flex items-center gap-1.5 ${
             convenioSel === c.convenio ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
@@ -558,42 +603,96 @@ export const CategoriasArcaTab: React.FC = () => {
     </div>
   );
 
+  /*
+    EL AVISO DE HUÉRFANAS ES UNA LÍNEA, no un panel.
+
+    Era un bloque rojo con una fila por categoría y un botón de acción en cada una, arriba de todo y
+    en las dos pantallas. Ocupaba un tercio de la vista para decir algo que no cambia de un día para
+    el otro: son dos categorías rotas heredadas de FRAME, y arreglarlas es un trabajo puntual, no una
+    tarea diaria. Un aviso permanente del tamaño del contenido que tapa deja de leerse y empieza a
+    esquivarse — que es lo contrario de lo que un aviso tiene que lograr.
+
+    Sigue siendo rojo y sigue estando arriba, así que no se pierde. Lo que cambia es que el detalle
+    —cuál es cada una, por qué está rota, cuántos contratos la usan, y el botón para repararla— vive
+    en el modal, a un click.
+  */
   const banner = huerfanas.length > 0 && (
-    <div className="rounded-xl border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/20 overflow-hidden">
-      <div className="px-4 py-3 flex items-start gap-3">
-        <FontAwesomeIcon icon={faTriangleExclamation} className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
-        <div className="min-w-0">
-          <h3 className="text-sm font-bold text-red-800 dark:text-red-300">
-            {huerfanas.length === 1 ? 'Hay 1 categoría que ARCA no puede aceptar' : `Hay ${huerfanas.length} categorías que ARCA no puede aceptar`}
-          </h3>
-          <p className="text-xs text-red-700 dark:text-red-400 mt-0.5">Sin convenio o sin código, el alta no se puede generar: el TXT sale sin categoría profesional y ARCA la rechaza. Asignales el convenio y el código reales, o dalas de baja si no se usan.</p>
-        </div>
-      </div>
-      <div className="divide-y divide-red-200 dark:divide-red-900/60 border-t border-red-200 dark:border-red-900/60">
-        {huerfanas.map((h) => (
-          <div key={h._id} className="px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap">
-            <div className="min-w-0 text-sm">
-              <span className="font-semibold text-gray-900 dark:text-gray-100">{h.nombre}</span>
-              <span className="text-red-700 dark:text-red-400"> — {MOTIVO_TEXTO[h.motivo]}</span>
-              <span className="block text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                {h.contratos > 0 ? (
-                  <>
-                    <strong className="text-red-700 dark:text-red-400">{h.contratos} contrato(s)</strong> la usan y hoy no pueden generar TXT. No se puede dar de baja: hay que asignarle convenio y código.
-                  </>
-                ) : (
-                  'Ningún contrato la usa: se puede dar de baja.'
-                )}
-              </span>
-            </div>
-            {canManage && (
-              <button onClick={() => abrirHuerfana(h)} className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors">
-                Asignar convenio y código
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
+    <div className="flex items-center gap-1.5 rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/20 px-3 py-2">
+      <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 text-red-600 dark:text-red-400 shrink-0" />
+      <span className="text-xs text-red-800 dark:text-red-300 min-w-0 truncate mr-0.5">
+        {huerfanas.length === 1 ? (
+          <>
+            Hay <strong>1 categoría</strong> que ARCA no puede aceptar
+          </>
+        ) : (
+          <>
+            Hay <strong>{huerfanas.length} categorías</strong> que ARCA no puede aceptar
+          </>
+        )}
+        {/* El nombre entra en la línea cuando hay lugar: sin él, el aviso no dice de qué habla. */}
+        <span className="hidden sm:inline text-red-700/80 dark:text-red-400/80"> — {huerfanas.map((h) => h.nombre).join(', ')}</span>
+      </span>
+      <button
+        type="button"
+        onClick={() => setHuerfanasInfoOpen(true)}
+        title="Ver cuáles son y cómo se arreglan"
+        aria-label="Ver las categorías que ARCA no puede aceptar"
+        className="shrink-0 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-colors"
+      >
+        <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+      </button>
     </div>
+  );
+
+  /** El detalle que antes ocupaba el panel: una ficha por categoría, con su reparación. */
+  const modalHuerfanas = (
+    <InfoModal
+      isOpen={huerfanasInfoOpen}
+      onClose={() => setHuerfanasInfoOpen(false)}
+      title={huerfanas.length === 1 ? 'Una categoría que ARCA no puede aceptar' : `${huerfanas.length} categorías que ARCA no puede aceptar`}
+      size="md"
+    >
+      <div className="space-y-3">
+        <p className="text-sm text-gray-700 dark:text-gray-200">
+          Sin convenio o sin código, el alta no se puede generar: el TXT sale sin categoría profesional y ARCA lo rechaza. Asignales el convenio y el código reales, o dalas de baja si no las usa nadie.
+        </p>
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700">
+          {huerfanas.map((h) => (
+            <div key={h._id} className="px-3 py-2.5 flex items-center justify-between gap-3 flex-wrap">
+              <div className="min-w-0 text-sm">
+                <span className="font-semibold text-gray-900 dark:text-gray-100">{h.nombre}</span>
+                <span className="text-red-700 dark:text-red-400"> — {MOTIVO_TEXTO[h.motivo]}</span>
+                <span className="block text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                  {h.contratos > 0 ? (
+                    <>
+                      <strong className="text-red-700 dark:text-red-400">{h.contratos} contrato(s)</strong> la usan y hoy no pueden generar TXT. No se puede dar de baja: hay que asignarle convenio y código.
+                    </>
+                  ) : (
+                    'Ningún contrato la usa: se puede dar de baja.'
+                  )}
+                </span>
+              </div>
+              {canManage && (
+                <button
+                  onClick={() => {
+                    setHuerfanasInfoOpen(false);
+                    abrirHuerfana(h);
+                  }}
+                  className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors"
+                >
+                  Asignar convenio y código
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        <p className="text-[11px] text-gray-500 dark:text-gray-400">
+          {/* Se dice porque es la pregunta que sigue: «¿entonces las borro?». No: los contratos
+              históricos necesitan que la categoría exista para resolver su nombre. */}
+          Dar de baja no borra: la categoría deja de ofrecerse al cargar un contrato nuevo, pero sigue resolviendo el nombre y el código de los que ya la usan.
+        </p>
+      </div>
+    </InfoModal>
   );
 
   // ── Nivel 1: elegir convenio. No hay "todos": una categoría se lee dentro de su convenio.
@@ -601,6 +700,7 @@ export const CategoriasArcaTab: React.FC = () => {
     return (
       <div className="space-y-4">
         {banner}
+        {modalHuerfanas}
         <div>
           <h2 className="text-sm font-bold text-gray-700 dark:text-gray-200">Elegí un convenio</h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Las categorías profesionales cuelgan de un Convenio Colectivo. La escala salarial vive en sus grupos —o en la categoría, en los convenios que ARCA publica sin grupos.</p>
@@ -643,7 +743,7 @@ export const CategoriasArcaTab: React.FC = () => {
               return (
                 <button
                   key={c.convenio}
-                  onClick={() => setConvenioSel(c.convenio)}
+                  onClick={() => elegirConvenio(c.convenio)}
                   className={`text-left rounded-xl border p-4 hover:shadow-md transition-all ${
                     vacio
                       ? 'border-amber-300 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-950/20 hover:border-amber-500 dark:hover:border-amber-600'
@@ -693,6 +793,7 @@ export const CategoriasArcaTab: React.FC = () => {
   return (
     <div className="space-y-4">
       {banner}
+      {modalHuerfanas}
 
       {tabsConvenios}
 
