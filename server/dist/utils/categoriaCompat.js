@@ -12,33 +12,41 @@
  * Cuando no quede ningún consumidor de `data.*`, este archivo y `CategoriaSat` se borran juntos.
  */
 import { Categoria } from "../models/Categoria.js";
+import { escalaDeCategoria } from "./escalaCategoria.js";
 import { ConvenioGrupo } from "../models/ConvenioGrupo.js";
 import { CategoriaSat } from "../models/CategoriaSat.js";
-const aplanar = (c, g) => ({
-    _id: c._id,
-    externalId: c.codigoArca || String(c.legacyId ?? ""),
-    name: c.nombre,
-    // Las de la tabla vieja no tienen el campo: se asumen elegibles, que es como se comportaban.
-    isActive: c.isActive !== false,
-    data: {
-        id: c.legacyId,
-        numeroCategoria: g?.numero,
-        nombre: c.nombre,
-        // Numérico por compatibilidad; el canónico de 6 dígitos con ceros va en `codigoArca`.
-        codigoAfip: c.codigoArca ? Number(c.codigoArca) : 0,
-        codigoArca: c.codigoArca,
-        convenio: c.convenio,
-        grupoId: c.grupoId,
-        sueldoBasico: g?.sueldoBasico ?? 0,
-        sueldoAdicional: g?.sueldoAdicional ?? 0,
-        presentismo: g?.presentismo ?? 0,
-        sueldoBruto: g?.sueldoBruto ?? 0,
-        sueldoBrutoLetras: g?.sueldoBrutoLetras ?? "",
-        neto: g?.neto ?? 0,
-        sueldoNetoLetras: g?.sueldoNetoLetras ?? "",
-        fechaActualizacion: g?.fechaActualizacion,
-    },
-});
+const aplanar = (c, g) => {
+    // La escala sale de UNA sola regla, compartida con el modal de contrato y con el TXT: propia de la
+    // categoría → del grupo → ninguna. Antes se leía siempre del grupo, y por eso una categoría de un
+    // convenio SIN grupos no podía tener retribución ni aunque se la cargaran.
+    const e = escalaDeCategoria(c, g);
+    return {
+        _id: c._id,
+        externalId: c.codigoArca || String(c.legacyId ?? ""),
+        name: c.nombre,
+        // Las de la tabla vieja no tienen el campo: se asumen elegibles, que es como se comportaban.
+        isActive: c.isActive !== false,
+        data: {
+            id: c.legacyId,
+            numeroCategoria: g?.numero,
+            nombre: c.nombre,
+            // Numérico por compatibilidad; el canónico de 6 dígitos con ceros va en `codigoArca`.
+            codigoAfip: c.codigoArca ? Number(c.codigoArca) : 0,
+            codigoArca: c.codigoArca,
+            convenio: c.convenio,
+            grupoId: c.grupoId,
+            sueldoBasico: e.sueldoBasico,
+            sueldoAdicional: e.sueldoAdicional,
+            presentismo: e.presentismo,
+            sueldoBruto: e.sueldoBruto,
+            sueldoBrutoLetras: e.sueldoBrutoLetras,
+            neto: e.neto,
+            sueldoNetoLetras: e.sueldoNetoLetras,
+            fechaActualizacion: e.fechaActualizacion,
+            escalaOrigen: e.origen,
+        },
+    };
+};
 /** ¿Ya se corrió la migración en esta base? Mientras `categorias` esté vacía se sirve la tabla vieja. */
 export const migracionCategoriasCorrida = async () => (await Categoria.estimatedDocumentCount()) > 0;
 /**

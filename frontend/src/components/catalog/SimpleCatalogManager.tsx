@@ -38,6 +38,17 @@ interface SimpleCatalogManagerProps {
   /** Campos extra propios del catálogo (ej. Bancos → "Tipo de Entidad"). */
   extraFields?: CatalogExtraField[];
   /**
+   * Bloque propio del catálogo, al final del formulario de edición.
+   *
+   * Para lo que no es un campo del registro: relaciones que viven en OTRA colección y se guardan por
+   * su cuenta. En Convenios son las empresas que lo tienen registrado — el dato está en
+   * `Company.convenioIds`, no en el convenio, así que no puede entrar por `extraFields` ni salir en
+   * el mismo `update`.
+   *
+   * Solo se muestra al EDITAR: un registro que todavía no existe no tiene a qué relacionarse.
+   */
+  extraSeccion?: (item: SimpleCatalogItem) => React.ReactNode;
+  /**
    * Columnas de solo lectura CALCULADAS, que no son campos del registro (ej. Convenios → "en cuántas
    * empresas está registrado"). Se distinguen de `extraFields` porque no se editan ni se guardan.
    */
@@ -83,7 +94,7 @@ interface SimpleCatalogManagerProps {
   pestanas?: Array<{ id: string; label: string; icon?: IconDefinition; render: (items: SimpleCatalogItem[], recargar: () => Promise<void>) => React.ReactNode }>;
 }
 
-export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], helpKey, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia }) => {
+export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], extraSeccion, helpKey, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia }) => {
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
   const [tabActiva, setTabActiva] = useState<string>('catalogo');
   const [loading, setLoading] = useState(true);
@@ -518,6 +529,8 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{externalIdLabel} (opcional)</label>
                 <input type="text" value={externalId} onChange={(e) => setExternalId(e.target.value)} placeholder={externalIdPlaceholder} className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white" />
               </div>
+              {/* Va al final y separado: lo de arriba se guarda con «Guardar», esto se guarda solo. */}
+              {editing && extraSeccion && <div className="border-t border-gray-200 dark:border-gray-700 pt-4">{extraSeccion(editing)}</div>}
             </div>
             <div className="flex justify-end gap-2 border-t border-gray-200 dark:border-gray-700 px-5 py-4">
               <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200">

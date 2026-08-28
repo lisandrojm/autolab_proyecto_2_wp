@@ -5,6 +5,7 @@ import { faFileContract, faArrowUpRightFromSquare, faTriangleExclamation } from 
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
 import { createSimpleCatalogApi, SimpleCatalogItem } from "../api/simpleCatalog";
 import { companiesAPI, Company } from "../api/companies";
+import { sweetAlert } from "../utils/sweetAlert";
 import { formatRnos } from "../utils/rnos";
 import { InfoModal } from "../components/ui/InfoModal";
 import { ConveniosTable } from "../components/convenios/ConveniosTable";
@@ -86,6 +87,14 @@ export const ConveniosPage: React.FC = () => {
   const [obrasSociales, setObrasSociales] = useState<SimpleCatalogItem[]>([]);
   /** Qué empresas registraron cada convenio, por `_id`. */
   const [empresasPorConvenio, setEmpresasPorConvenio] = useState<Map<string, Company[]>>(new Map());
+  /**
+   * Todas las empresas, para los switches del formulario.
+   *
+   * La relación vive en `Company.convenioIds`, no en el convenio: para poder prenderla y apagarla
+   * desde acá hace falta la lista entera, no solo las que ya lo tienen.
+   */
+  const [todasLasEmpresas, setTodasLasEmpresas] = useState<Company[]>([]);
+  const [guardandoEmpresa, setGuardandoEmpresa] = useState('');
   const [detalle, setDetalle] = useState<ConvenioFila | null>(null);
 
   useEffect(() => {
@@ -99,6 +108,7 @@ export const ConveniosPage: React.FC = () => {
     companiesAPI
       .list()
       .then((empresas) => {
+        setTodasLasEmpresas(empresas);
         const porConvenio = new Map<string, Company[]>();
         // SIEMPRE por `_id`, nunca por `externalId`: 1.555 de los 2.669 convenios llevan sufijo " E"
         // y "0131/75" y "0131/75 E" son registros distintos y legítimos del nomenclador.
@@ -175,6 +185,71 @@ export const ConveniosPage: React.FC = () => {
           { key: "signatario", label: "Signatario", placeholder: "Ej: FAECYS" },
           { key: "obraSocialDefaultId", label: "Obra social del convenio", type: "select", options: opcionesObraSocial },
         ]}
+        /*
+          Las empresas que lo tienen registrado, editables desde acá.
+
+          El dato NO es del convenio: vive en `Company.convenioIds`. Por eso no entra por
+          `extraFields` —no sale en el mismo `update`— y por eso cada switch guarda solo, apenas se
+          toca. Mezclarlo con el «Guardar» de abajo daría a entender que se escribe todo junto, y una
+          mitad se guardaría igual aunque se cancele.
+
+          Se listan TODAS las empresas y no solo las registradas: el sentido del bloque es poder
+          agregar, y una lista que solo muestra lo que ya está no deja hacerlo.
+        */
+        extraSeccion={(convenio) => (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Empresas que lo tienen registrado</label>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">ARCA solo acepta un alta si la empleadora tiene el convenio en su padrón. Cada cambio se guarda solo.</p>
+            {todasLasEmpresas.length === 0 ? (
+              <p className="text-xs text-gray-400">No hay empresas cargadas.</p>
+            ) : (
+              <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60">
+                {todasLasEmpresas.map((e) => {
+                  const tiene = (e.convenioIds || []).map(String).includes(convenio._id);
+                  return (
+                    <div key={e._id} className="flex items-center justify-between gap-3 px-3 py-2">
+                      <span className="min-w-0">
+                        <span className="block text-sm text-gray-800 dark:text-gray-200 truncate">{e.razonSocial}</span>
+                        <span className="block text-[11px] font-mono text-gray-400">{e.cuit || "—"}</span>
+                      </span>
+                      {/* Mismo switch que el resto de la app (ver `ContractStatesTab`): un check se
+                          lee como «seleccionar de una lista» y esto es prender o apagar una relación. */}
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={tiene}
+                        aria-label={`${tiene ? "Quitar" : "Registrar"} ${convenio.externalId || convenio.name} en ${e.razonSocial}`}
+                        disabled={guardandoEmpresa === e._id}
+                        onClick={async () => {
+                          setGuardandoEmpresa(e._id);
+                          try {
+                            const ids = (e.convenioIds || []).map(String);
+                            // Se manda la lista COMPLETA: el server la reemplaza, no la fusiona.
+                            const nuevos = tiene ? ids.filter((x) => x !== convenio._id) : [...ids, convenio._id];
+                            await companiesAPI.update(e._id, { convenioIds: nuevos } as any);
+                            const empresas = await companiesAPI.list();
+                            setTodasLasEmpresas(empresas);
+                            const porConvenio = new Map<string, Company[]>();
+                            for (const emp of empresas) for (const id of emp.convenioIds || []) porConvenio.set(String(id), [...(porConvenio.get(String(id)) || []), emp]);
+                            for (const [, lista] of porConvenio) lista.sort((a, b) => a.razonSocial.localeCompare(b.razonSocial, "es", { sensitivity: "base" }));
+                            setEmpresasPorConvenio(porConvenio);
+                          } catch (err: any) {
+                            sweetAlert.error("Error", err?.response?.data?.error || "No se pudo cambiar el convenio de esa empresa.");
+                          } finally {
+                            setGuardandoEmpresa("");
+                          }
+                        }}
+                        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${tiene ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${tiene ? "translate-x-6" : "translate-x-1"}`} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       />
 
       <EmpresasDelConvenioModal convenio={detalle} empresas={detalle ? empresasPorConvenio.get(detalle._id) || [] : []} obraSocialDe={porDataId} onClose={() => setDetalle(null)} />

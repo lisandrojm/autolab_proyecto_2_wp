@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { escalaDeCategoria } from "../utils/escalaCategoria.js";
 import multer from "multer";
 import xlsx from "xlsx";
 import { Categoria } from "../models/Categoria.js";
@@ -31,7 +32,13 @@ const upload = multer({ storage: multer.memoryStorage() });
 const aCodigoArca = (v) => String(v ?? "").replace(/\D/g, "").padStart(6, "0");
 /** Un código es real si tiene 6 dígitos y no es todo ceros. "0" y "" son la ausencia de código. */
 const codigoArcaValido = (v) => /^\d{6}$/.test(v) && v !== "000000";
-/** Campos de la escala salarial, que viven en el grupo y en ningún otro lado. */
+/**
+ * Los campos de escala que vengan en el body.
+ *
+ * Sirve para el GRUPO y también para la CATEGORÍA: desde que ARCA resultó publicar convenios sin
+ * grupos —los de actores— la escala puede vivir en cualquiera de los dos, y cuál gana lo decide
+ * `escalaDeCategoria`. `nombre` solo aplica al grupo; para una categoría se descarta afuera.
+ */
 const escalaDelBody = (body) => {
     const set = {};
     for (const k of ["sueldoBasico", "sueldoAdicional", "presentismo", "sueldoBruto", "neto"]) {
@@ -183,12 +190,20 @@ router.get("/", authenticateToken, async (req, res) => {
         if (!convenio)
             return res.status(400).json({ error: "Falta el convenio: las categorías se leen dentro de un convenio" });
         const [grupos, cats, nombres, uso] = await Promise.all([ConvenioGrupo.find({ convenio }).sort({ numero: 1 }).lean(), Categoria.find({ convenio }).lean(), nombresDeConvenio(), contratosPorLegacyId()]);
-        const porGrupo = new Map();
-        for (const c of cats) {
-            const k = String(c.grupoId);
-            if (!porGrupo.has(k))
-                porGrupo.set(k, []);
-            porGrupo.get(k).push({
+        const porGrupoId = new Map(grupos.map((g) => [String(g._id), g]));
+        /*
+          Las categorías SIN GRUPO salen en su propia lista, no se descartan.
+    
+          Antes se agrupaba por `grupoId` y las que no tenían quedaban bajo la clave `"null"`, que no
+          coincide con ningún grupo: desaparecían de la pantalla sin que nada lo dijera. Es lo que iba a
+          pasar con los cuatro convenios que ARCA publica sin grupos.
+    
+          Cada una viaja con su escala RESUELTA (propia → del grupo → ninguna) y con de dónde salió, para
+          que la pantalla pueda distinguir «$ 0» de «sin escala» sin volver a implementar la regla.
+        */
+        const aFila = (c) => {
+            const e = escalaDeCategoria(c, c.grupoId ? porGrupoId.get(String(c.grupoId)) : null);
+            return {
                 _id: c._id,
                 codigoArca: String(c.codigoArca || ""),
                 nombre: c.nombre,
@@ -196,8 +211,30 @@ router.get("/", authenticateToken, async (req, res) => {
                 isActive: c.isActive !== false,
                 legacyId: c.legacyId ?? null,
                 contratos: c.legacyId != null ? uso.get(Number(c.legacyId)) || 0 : 0,
-            });
+                sueldoBasico: e.sueldoBasico,
+                sueldoAdicional: e.sueldoAdicional,
+                presentismo: e.presentismo,
+                sueldoBruto: e.sueldoBruto,
+                sueldoBrutoLetras: e.sueldoBrutoLetras,
+                neto: e.neto,
+                sueldoNetoLetras: e.sueldoNetoLetras,
+                fechaActualizacion: e.fechaActualizacion ?? null,
+                escalaOrigen: e.origen,
+            };
+        };
+        const porGrupo = new Map();
+        const sinGrupo = [];
+        for (const c of cats) {
+            if (!c.grupoId) {
+                sinGrupo.push(aFila(c));
+                continue;
+            }
+            const k = String(c.grupoId);
+            if (!porGrupo.has(k))
+                porGrupo.set(k, []);
+            porGrupo.get(k).push(aFila(c));
         }
+        sinGrupo.sort((a, b) => a.codigoArca.localeCompare(b.codigoArca));
         res.json({
             convenio,
             nombre: nombres.get(convenio) || "",
@@ -215,6 +252,8 @@ router.get("/", authenticateToken, async (req, res) => {
                 fechaActualizacion: g.fechaActualizacion ?? null,
                 categorias: (porGrupo.get(String(g._id)) || []).sort((a, b) => a.codigoArca.localeCompare(b.codigoArca)),
             })),
+            /** Las del convenio que no cuelgan de ningún grupo, con su escala propia. */
+            sinGrupo,
         });
     }
     catch (error) {
@@ -322,9 +361,19 @@ const resolverGrupo = async (convenio, body) => {
             throw new DatoInvalido(`El grupo ${g.numero} es del convenio ${g.convenio}, no de ${convenio}`);
         return g;
     }
+    /*
+      SIN GRUPO ES UN CASO VÁLIDO, no un dato faltante.
+  
+      ARCA publica grupo en 0634/11 y en el 0131/75 moderno, y NO lo publica en los convenios de
+      actores. Exigirlo fue lo que obligó a inventar uno por categoría — y en 0131/75, a tomar el
+      prefijo «1ª CATEGORIA» (que es la categoría de la emisora, no una escala) como si fuera un grupo:
+      quedaron 73 donde hay 12.
+    */
+    if (body.numeroGrupo === undefined || body.numeroGrupo === null || String(body.numeroGrupo).trim() === "")
+        return null;
     const numero = Number(body.numeroGrupo);
     if (!Number.isFinite(numero))
-        throw new DatoInvalido("Falta el grupo salarial al que pertenece la categoría");
+        throw new DatoInvalido("El grupo salarial tiene que ser un número, o venir vacío si el convenio no tiene grupos");
     const g = await ConvenioGrupo.findOne({ convenio, numero });
     if (!g)
         throw new DatoInvalido(`El convenio ${convenio} no tiene un grupo ${numero}: creá primero el grupo con su escala`);
@@ -349,9 +398,13 @@ router.post("/", authenticateToken, async (req, res) => {
         if (yaExiste)
             return res.status(409).json({ error: `El convenio ${convenio} ya tiene la categoría ${codigoArca} ("${yaExiste.nombre}")` });
         const grupo = await resolverGrupo(convenio, req.body);
+        // La escala propia solo se guarda si vino: con grupo, la escala es del grupo y duplicarla acá
+        // garantiza que se desincronicen en la próxima paritaria.
+        const { nombre: _descartado, ...escalaPropia } = escalaDelBody(req.body);
         const nueva = await Categoria.create({
             convenio,
-            grupoId: grupo._id,
+            grupoId: grupo ? grupo._id : null,
+            ...escalaPropia,
             // SIN `legacyId` LA CATEGORÍA NACE INELEGIBLE: `contracts.categoria_sat_id` es un número, así
             // que una categoría sin él se lista en los selectores pero no se puede guardar en ningún
             // contrato. Así quedaron 226 de 335 en producción, y el síntoma era «clickeo y no pasa nada».
@@ -400,9 +453,14 @@ router.put("/:id", authenticateToken, async (req, res) => {
         const cambioConvenio = convenio !== String(item.convenio || "").trim();
         if (cambioConvenio || req.body.grupoId !== undefined || req.body.numeroGrupo !== undefined) {
             const grupo = await resolverGrupo(convenio, req.body);
-            item.grupoId = grupo._id;
+            item.grupoId = (grupo ? grupo._id : null);
         }
         item.convenio = convenio;
+        // La escala propia se edita como cualquier otro campo. Solo se toca lo que vino: mandar el
+        // formulario sin los importes no puede borrar una paritaria cargada.
+        const { nombre: _descartado, ...escalaPropia } = escalaDelBody(req.body);
+        for (const [k, v] of Object.entries(escalaPropia))
+            item[k] = v;
         await item.save();
         res.json(item);
     }
@@ -440,6 +498,8 @@ router.delete("/:id", authenticateToken, async (req, res) => {
 });
 /** Columnas de la plantilla de paritarias. La primera es el convenio: sin él la fila es ambigua. */
 const COLUMNAS_PLANTILLA = ["convenio", "grupo", "nombreGrupo", "sueldoBasico", "sueldoAdicional", "presentismo", "sueldoBruto", "sueldoBrutoLetras", "neto", "sueldoNetoLetras"];
+/** La misma plantilla para los convenios SIN grupos: en vez del número de grupo, el código de ARCA. */
+const COLUMNAS_PLANTILLA_SIN_GRUPO = ["convenio", "codigoArca", "nombreCategoria", "sueldoBasico", "sueldoAdicional", "presentismo", "sueldoBruto", "sueldoBrutoLetras", "neto", "sueldoNetoLetras"];
 /**
  * GET /api/v1/arca/categorias/plantilla?convenio=0634/11
  *
@@ -453,12 +513,33 @@ router.get("/plantilla", authenticateToken, async (req, res) => {
         if (!convenio)
             return res.status(400).json({ error: "Falta el convenio: la plantilla es de un convenio" });
         const grupos = await ConvenioGrupo.find({ convenio }).sort({ numero: 1 }).lean();
-        const filas = [[...COLUMNAS_PLANTILLA]];
-        for (const g of grupos) {
-            filas.push([convenio, g.numero, g.nombre || "", g.sueldoBasico ?? 0, g.sueldoAdicional ?? 0, g.presentismo ?? 0, g.sueldoBruto ?? 0, g.sueldoBrutoLetras || "", g.neto ?? 0, g.sueldoNetoLetras || ""]);
+        /*
+          LA PLANTILLA TIENE LA FORMA DEL CONVENIO, no una forma fija.
+    
+          Con grupos sale por grupo —doce filas para ciento seis categorías, que es de lo que se trata la
+          paritaria—. Sin grupos sale por CATEGORÍA, con su código de ARCA: es el caso de los convenios de
+          actores, donde el organismo no publica ningún nivel de agrupamiento y cada categoría tiene su
+          tarifa. Una plantilla con columna «grupo» para 0322/75 pediría un dato que no existe.
+        */
+        let filas;
+        let anchos;
+        if (grupos.length > 0) {
+            filas = [[...COLUMNAS_PLANTILLA]];
+            for (const g of grupos) {
+                filas.push([convenio, g.numero, g.nombre || "", g.sueldoBasico ?? 0, g.sueldoAdicional ?? 0, g.presentismo ?? 0, g.sueldoBruto ?? 0, g.sueldoBrutoLetras || "", g.neto ?? 0, g.sueldoNetoLetras || ""]);
+            }
+            anchos = [{ wch: 12 }, { wch: 8 }, { wch: 22 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 45 }, { wch: 16 }, { wch: 45 }];
+        }
+        else {
+            const cats = await Categoria.find({ convenio }).sort({ codigoArca: 1 }).lean();
+            filas = [[...COLUMNAS_PLANTILLA_SIN_GRUPO]];
+            for (const c of cats) {
+                filas.push([convenio, c.codigoArca || "", c.nombre || "", c.sueldoBasico ?? 0, c.sueldoAdicional ?? 0, c.presentismo ?? 0, c.sueldoBruto ?? 0, c.sueldoBrutoLetras || "", c.neto ?? 0, c.sueldoNetoLetras || ""]);
+            }
+            anchos = [{ wch: 12 }, { wch: 14 }, { wch: 32 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 45 }, { wch: 16 }, { wch: 45 }];
         }
         const ws = xlsx.utils.aoa_to_sheet(filas);
-        ws["!cols"] = [{ wch: 12 }, { wch: 8 }, { wch: 22 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 45 }, { wch: 16 }, { wch: 45 }];
+        ws["!cols"] = anchos;
         const wb = xlsx.utils.book_new();
         xlsx.utils.book_append_sheet(wb, ws, "Escalas");
         const buffer = xlsx.write(wb, { type: "buffer", bookType: "xlsx" });
@@ -501,18 +582,41 @@ router.post("/importar", authenticateToken, upload.single("file"), async (req, r
             const fila = i + 2;
             const convenio = String(row["convenio"] ?? row["Convenio"] ?? row["CCT"] ?? "").trim();
             const grupoRaw = row["grupo"] ?? row["Grupo"] ?? row["numeroCategoria"] ?? row["Nº Grupo"];
+            const codigoRaw = row["codigoArca"] ?? row["Código ARCA"] ?? row["Codigo ARCA"] ?? row["codigo"] ?? row["Código"];
             if (!convenio) {
-                errores.push(`Fila ${fila}: falta la columna 'convenio'. Sin convenio no se sabe de qué CCT es el grupo.`);
+                errores.push(`Fila ${fila}: falta la columna 'convenio'. Sin convenio no se sabe de qué CCT es la escala.`);
                 continue;
             }
+            /*
+              DOS FORMAS DE IDENTIFICAR A QUIÉN SE LE APLICA LA ESCALA, porque hay dos formas de convenio:
+      
+                convenio + grupo         → 0634/11, 0131/75. La escala es del GRUPO y la comparten sus
+                                           categorías. Doce filas cubren ciento seis categorías.
+                convenio + codigoArca    → 0322/75, 0102/90. ARCA no publica grupos, así que la escala se
+                                           escribe en cada CATEGORÍA.
+      
+              Se admite una de las dos, no las dos a la vez: una fila con grupo Y código no dice a cuál de
+              los dos aplicarle el importe, y elegir uno por nosotros escribiría un sueldo donde nadie pidió.
+            */
             const grupo = Number(grupoRaw);
-            if (!Number.isFinite(grupo)) {
-                errores.push(`Fila ${fila}: la columna 'grupo' es obligatoria y tiene que ser un número.`);
+            const codigoArca = codigoRaw === undefined || codigoRaw === null || String(codigoRaw).trim() === "" ? "" : aCodigoArca(codigoRaw);
+            const tieneGrupo = Number.isFinite(grupo);
+            if (tieneGrupo && codigoArca) {
+                errores.push(`Fila ${fila}: trae 'grupo' y 'codigoArca' a la vez. Poné uno solo: el grupo si el convenio tiene grupos, el código si no.`);
+                continue;
+            }
+            if (!tieneGrupo && !codigoArca) {
+                errores.push(`Fila ${fila}: falta 'grupo' o 'codigoArca'. Los convenios sin grupos (actores) se cargan por código de categoría.`);
+                continue;
+            }
+            if (codigoArca && !codigoArcaValido(codigoArca)) {
+                errores.push(`Fila ${fila}: '${codigoRaw}' no es un código de ARCA de 6 dígitos.`);
                 continue;
             }
             items.push({
                 convenio,
-                grupo,
+                grupo: tieneGrupo ? grupo : null,
+                codigoArca,
                 escala: {
                     sueldoBasico: num(row["sueldoBasico"] ?? row["Sueldo Básico"] ?? row["Sueldo Basico"]),
                     sueldoAdicional: num(row["sueldoAdicional"] ?? row["Sueldo Adicional"]),
@@ -531,15 +635,26 @@ router.post("/importar", authenticateToken, upload.single("file"), async (req, r
         let actualizados = 0;
         const noEncontrados = [];
         for (const item of items) {
-            const r = await ConvenioGrupo.updateOne({ convenio: item.convenio, numero: item.grupo }, { $set: { ...item.escala, fechaActualizacion } });
+            if (item.grupo !== null) {
+                const r = await ConvenioGrupo.updateOne({ convenio: item.convenio, numero: item.grupo }, { $set: { ...item.escala, fechaActualizacion } });
+                if (r.matchedCount === 0)
+                    noEncontrados.push(`${item.convenio} grupo ${item.grupo}`);
+                else
+                    actualizados++;
+                continue;
+            }
+            // Por código: la escala va en la CATEGORÍA. `nombre` no se pisa —en la categoría es un campo
+            // propio, no parte de la escala— aunque la planilla traiga la columna del grupo.
+            const { nombre: _descartado, ...escala } = item.escala;
+            const r = await Categoria.updateOne({ convenio: item.convenio, codigoArca: item.codigoArca }, { $set: { ...escala, fechaActualizacion } });
             if (r.matchedCount === 0)
-                noEncontrados.push(`${item.convenio} grupo ${item.grupo}`);
+                noEncontrados.push(`${item.convenio} categoría ${item.codigoArca}`);
             else
                 actualizados++;
         }
         // Los que no matchean se REPORTAN, no se crean: un grupo que no existe en el CCT es un error de
         // la planilla, y crearlo en silencio inventa estructura del convenio.
-        const partes = [`Se actualizó la escala de ${actualizados} grupo(s).`];
+        const partes = [`Se actualizó la escala de ${actualizados} grupo(s)/categoría(s).`];
         if (noEncontrados.length > 0)
             partes.push(`No existen (no se crearon): ${noEncontrados.join(", ")}.`);
         res.json({ message: partes.join(" "), count: actualizados, noEncontrados });

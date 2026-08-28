@@ -5,7 +5,15 @@ const categoriaSchema = new Schema({
     // que YA están mal (Actor / Musico) se siguen leyendo —Mongoose no valida al leer—, pero no se
     // pueden volver a guardar sin completarlos, que es exactamente lo que se busca.
     convenio: { type: String, required: [true, "La categoría tiene que pertenecer a un convenio"], trim: true },
-    grupoId: { type: Schema.Types.ObjectId, ref: "ConvenioGrupo", required: true },
+    grupoId: { type: Schema.Types.ObjectId, ref: "ConvenioGrupo", default: null },
+    sueldoBasico: { type: Number, default: 0 },
+    sueldoAdicional: { type: Number, default: 0 },
+    presentismo: { type: Number, default: 0 },
+    sueldoBruto: { type: Number, default: 0 },
+    sueldoBrutoLetras: { type: String, default: "" },
+    neto: { type: Number, default: 0 },
+    sueldoNetoLetras: { type: String, default: "" },
+    fechaActualizacion: { type: Date },
     codigoArca: {
         type: String,
         required: [true, "La categoría tiene que tener su código de ARCA"],

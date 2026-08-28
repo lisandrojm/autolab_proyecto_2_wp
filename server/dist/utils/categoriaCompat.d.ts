@@ -26,6 +26,8 @@ export interface CategoriaCompat {
         neto: number;
         sueldoNetoLetras: string;
         fechaActualizacion?: Date | string;
+        /** De dónde salió la escala: `"categoria"`, `"grupo"`, o `null` si no hay. */
+        escalaOrigen?: "categoria" | "grupo" | null;
     };
 }
 /** ¿Ya se corrió la migración en esta base? Mientras `categorias` esté vacía se sirve la tabla vieja. */
