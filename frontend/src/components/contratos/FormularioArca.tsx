@@ -279,7 +279,11 @@ export const FormularioArca: React.FC<{
 
   const bloqueadoPorPrevios = !cascada.resto;
   const motivoBloqueo = motivoDe('resto');
-  const sucursalElegida = valores.sucursalesDisponibles.find((s) => s._id === row.sucursalArcaId);
+  // Por el CÓDIGO ya resuelto y no por `row.sucursalArcaId`: cuando el contrato no eligió ninguna,
+  // rige la habitual de la empleadora (ver `resolveAfipValues`) y el nombre tiene que acompañarla.
+  const sucursalElegida = valores.sucursalesDisponibles.find((s) => String(s.codigo) === valores.sucursal);
+  /** `true` si lo que se muestra es el default de la empleadora y no una elección de este contrato. */
+  const sucursalEsDefault = !row.sucursalArcaId && !!valores.sucursal;
   /** El domicilio habitual de esta empleadora, si dejó uno marcado (ficha → ARCA → Domicilios). */
   const sucursalPorDefecto = (cat.empresas?.find((e) => e._id === row.empresaContratoId) as { defaultsArca?: { sucursalId?: string | null } } | undefined)?.defaultsArca?.sucursalId || '';
   /** El convenio habitual de esta empleadora, en código (ficha → ARCA → Convenios). */
@@ -484,7 +488,19 @@ export const FormularioArca: React.FC<{
                 enEspera={bloqueadoPorPrevios}
                 guardando={guardando === 'sucursal'}
                 onEditar={() => setAbierto('sucursal')}
-                origen={bloqueadoPorPrevios ? motivoBloqueo : <>de los domicilios declarados por la empleadora</>}
+                origen={
+                  bloqueadoPorPrevios ? (
+                    motivoBloqueo
+                  ) : sucursalEsDefault ? (
+                    // Se dice que es el habitual, no se hace pasar por una elección: quien mira tiene
+                    // que poder distinguir «lo eligieron» de «vino puesto».
+                    <>
+                      <strong>habitual</strong> de la empleadora · elegí otro si este alta va en otro domicilio
+                    </>
+                  ) : (
+                    <>de los domicilios declarados por la empleadora</>
+                  )
+                }
               />
 
               <CampoArca

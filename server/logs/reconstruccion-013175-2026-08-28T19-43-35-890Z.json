@@ -1,0 +1,2584 @@
+{
+  "convenio": "0131/75",
+  "fecha": "2026-08-28T19:43:34.729Z",
+  "gruposRenumerados": [
+    {
+      "_id": "6a83c1ffbb57a33a81c971f4",
+      "numeroAntes": 62,
+      "numeroDespues": 1,
+      "nombre": "GRUPO SALARIAL 1"
+    },
+    {
+      "_id": "6a83c1ffbb57a33a81c971f5",
+      "numeroAntes": 63,
+      "numeroDespues": 2,
+      "nombre": "GRUPO SALARIAL 2"
+    },
+    {
+      "_id": "6a83c1ffbb57a33a81c971f6",
+      "numeroAntes": 64,
+      "numeroDespues": 3,
+      "nombre": "GRUPO SALARIAL 3"
+    },
+    {
+      "_id": "6a83c1ffbb57a33a81c971f7",
+      "numeroAntes": 65,
+      "numeroDespues": 4,
+      "nombre": "GRUPO SALARIAL 4"
+    },
+    {
+      "_id": "6a83c1ffbb57a33a81c971f8",
+      "numeroAntes": 66,
+      "numeroDespues": 5,
+      "nombre": "GRUPO SALARIAL 5"
+    },
+    {
+      "_id": "6a83c1ffbb57a33a81c971f9",
+      "numeroAntes": 67,
+      "numeroDespues": 6,
+      "nombre": "GRUPO SALARIAL 6"
+    },
+    {
+      "_id": "6a83c1ffbb57a33a81c971fa",
+      "numeroAntes": 68,
+      "numeroDespues": 7,
+      "nombre": "GRUPO SALARIAL 7"
+    },
+    {
+      "_id": "6a83c1ffbb57a33a81c971fb",
+      "numeroAntes": 69,
+      "numeroDespues": 8,
+      "nombre": "GRUPO SALARIAL 8"
+    },
+    {
+      "_id": "6a83c1ffbb57a33a81c971fc",
+      "numeroAntes": 70,
+      "numeroDespues": 9,
+      "nombre": "GRUPO SALARIAL 9"
+    },
+    {
+      "_id": "6a83c1ffbb57a33a81c971fd",
+      "numeroAntes": 71,
+      "numeroDespues": 10,
+      "nombre": "GRUPO SALARIAL 10"
+    },
+    {
+      "_id": "6a83c1ffbb57a33a81c971fe",
+      "numeroAntes": 72,
+      "numeroDespues": 11,
+      "nombre": "GRUPO SALARIAL 11"
+    },
+    {
+      "_id": "6a83c1ffbb57a33a81c971ff",
+      "numeroAntes": 73,
+      "numeroDespues": 12,
+      "nombre": "GRUPO SALARIAL 12"
+    }
+  ],
+  "gruposEliminados": [
+    {
+      "_id": "6a83c1fcbb57a33a81c971b7",
+      "convenio": "0131/75",
+      "numero": 1,
+      "nombre": "1ª CATEGORIA",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fcbb57a33a81c971b8",
+      "convenio": "0131/75",
+      "numero": 2,
+      "nombre": "2ª CATEGORIA",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fcbb57a33a81c971b9",
+      "convenio": "0131/75",
+      "numero": 3,
+      "nombre": "3ª CATEGORIA",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fcbb57a33a81c971ba",
+      "convenio": "0131/75",
+      "numero": 4,
+      "nombre": "ASESOR DE VESTUARIO",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fcbb57a33a81c971bb",
+      "convenio": "0131/75",
+      "numero": 5,
+      "nombre": "ASISTENTE DE ILUMINACION",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fcbb57a33a81c971bc",
+      "convenio": "0131/75",
+      "numero": 6,
+      "nombre": "AUXILIAR ADMINISTRATIVO DE ARCHIVO GENERAL",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fcbb57a33a81c971bd",
+      "convenio": "0131/75",
+      "numero": 7,
+      "nombre": "AUXILIAR ADMINISTRATIVO DE COPISTERIA",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fcbb57a33a81c971be",
+      "convenio": "0131/75",
+      "numero": 8,
+      "nombre": "AUXILIAR DE ALMACENES Y/O DEPOSITOS",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fcbb57a33a81c971bf",
+      "convenio": "0131/75",
+      "numero": 9,
+      "nombre": "AUXILIAR DE CAMARINES",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fcbb57a33a81c971c0",
+      "convenio": "0131/75",
+      "numero": 10,
+      "nombre": "AUXILIAR DE DEPOSITO",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fcbb57a33a81c971c1",
+      "convenio": "0131/75",
+      "numero": 11,
+      "nombre": "AUXILIAR DE ESTUDIOS",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fcbb57a33a81c971c2",
+      "convenio": "0131/75",
+      "numero": 12,
+      "nombre": "AUXILIAR DE FORILLOTECA",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fcbb57a33a81c971c3",
+      "convenio": "0131/75",
+      "numero": 13,
+      "nombre": "AUXILIAR DE LIMPIEZA",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fdbb57a33a81c971c4",
+      "convenio": "0131/75",
+      "numero": 14,
+      "nombre": "AUXILIAR DE TRAFICO",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fdbb57a33a81c971c5",
+      "convenio": "0131/75",
+      "numero": 15,
+      "nombre": "AUXILIAR ELECTRICISTA",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fdbb57a33a81c971c6",
+      "convenio": "0131/75",
+      "numero": 16,
+      "nombre": "AUXILIAR RECEPCIONISTA",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fdbb57a33a81c971c7",
+      "convenio": "0131/75",
+      "numero": 17,
+      "nombre": "AUXILIAR REVISOR DE FILMOTECA",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fdbb57a33a81c971c8",
+      "convenio": "0131/75",
+      "numero": 18,
+      "nombre": "AYUDANTE DE REALIZACION",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fdbb57a33a81c971c9",
+      "convenio": "0131/75",
+      "numero": 19,
+      "nombre": "AYUDANTE DE UTILERO DE CALLE",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fdbb57a33a81c971ca",
+      "convenio": "0131/75",
+      "numero": 20,
+      "nombre": "BOMBERO",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fdbb57a33a81c971cb",
+      "convenio": "0131/75",
+      "numero": 21,
+      "nombre": "CADETE",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fdbb57a33a81c971cc",
+      "convenio": "0131/75",
+      "numero": 22,
+      "nombre": "CALDERISTA",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fdbb57a33a81c971cd",
+      "convenio": "0131/75",
+      "numero": 23,
+      "nombre": "CHEQUEADOR",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fdbb57a33a81c971ce",
+      "convenio": "0131/75",
+      "numero": 24,
+      "nombre": "COBRADOR",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fdbb57a33a81c971cf",
+      "convenio": "0131/75",
+      "numero": 25,
+      "nombre": "CONDUCTORES DE AUTOMOTORES DE INTENDENCIA",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fdbb57a33a81c971d0",
+      "convenio": "0131/75",
+      "numero": 26,
+      "nombre": "CONDUCTORES DE AUTOMOTORES DE OPERACIONES",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fdbb57a33a81c971d1",
+      "convenio": "0131/75",
+      "numero": 27,
+      "nombre": "COORDINADOR",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fdbb57a33a81c971d2",
+      "convenio": "0131/75",
+      "numero": 28,
+      "nombre": "CREATIVO DE CAMPANA PROMOCIONAL",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fdbb57a33a81c971d3",
+      "convenio": "0131/75",
+      "numero": 29,
+      "nombre": "DIRECTOR DE PROGRAMAS",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fdbb57a33a81c971d4",
+      "convenio": "0131/75",
+      "numero": 30,
+      "nombre": "FOTOGRAFO",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fdbb57a33a81c971d5",
+      "convenio": "0131/75",
+      "numero": 31,
+      "nombre": "JARDINERO/A",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fdbb57a33a81c971d6",
+      "convenio": "0131/75",
+      "numero": 32,
+      "nombre": "LABORATORISTA FOTOGRAFICO",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fdbb57a33a81c971d7",
+      "convenio": "0131/75",
+      "numero": 33,
+      "nombre": "MOZO DE CAFETERIA",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fdbb57a33a81c971d8",
+      "convenio": "0131/75",
+      "numero": 34,
+      "nombre": "OFICIAL ADMINISTRATIVO",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1fdbb57a33a81c971d9",
+      "convenio": "0131/75",
+      "numero": 35,
+      "nombre": "OFICIAL MANTENIMIENTO EDIFICIO",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971da",
+      "convenio": "0131/75",
+      "numero": 36,
+      "nombre": "OPERADOR DE CAMARA DE VIDEO TAPE PORTATIL",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971db",
+      "convenio": "0131/75",
+      "numero": 37,
+      "nombre": "OPERADOR DE COMPUTADORA",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971dc",
+      "convenio": "0131/75",
+      "numero": 38,
+      "nombre": "OPERADOR DE TELEX",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971dd",
+      "convenio": "0131/75",
+      "numero": 39,
+      "nombre": "OPERADOR TECNICO DE VTR ESPECIALIZADO EN CONVERSION DE NORMAS",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971de",
+      "convenio": "0131/75",
+      "numero": 40,
+      "nombre": "OPERADOR TECNICO EDITOR DE VTR",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971df",
+      "convenio": "0131/75",
+      "numero": 41,
+      "nombre": "OPERADOR/A TELEFONISTA",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971e0",
+      "convenio": "0131/75",
+      "numero": 42,
+      "nombre": "ORDENANZA",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971e1",
+      "convenio": "0131/75",
+      "numero": 43,
+      "nombre": "PEON DE ESTUDIO",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971e2",
+      "convenio": "0131/75",
+      "numero": 44,
+      "nombre": "PINTOR CORPOREO LETRISTA",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971e3",
+      "convenio": "0131/75",
+      "numero": 45,
+      "nombre": "PREPARADOR/A DE SASTRERIA",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971e4",
+      "convenio": "0131/75",
+      "numero": 46,
+      "nombre": "PRODUCTOR DE PROGRAMAS",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971e5",
+      "convenio": "0131/75",
+      "numero": 47,
+      "nombre": "PROMOTORES DE VENTAS",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971e6",
+      "convenio": "0131/75",
+      "numero": 48,
+      "nombre": "PROYECTORISTA DE DOBLAJE - COMPAGINADOR DE DOBLAJE",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971e7",
+      "convenio": "0131/75",
+      "numero": 49,
+      "nombre": "REDACTOR DE TEXTOS PROMOCIONALES",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971e8",
+      "convenio": "0131/75",
+      "numero": 50,
+      "nombre": "REFLECTORISTA AFECTADO A TALLER DE ILUMINACION",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971e9",
+      "convenio": "0131/75",
+      "numero": 51,
+      "nombre": "SECRETARIA",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971ea",
+      "convenio": "0131/75",
+      "numero": 52,
+      "nombre": "SECRETARIA BILINGÜE",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971eb",
+      "convenio": "0131/75",
+      "numero": 53,
+      "nombre": "SECRETARIAS Y SECRETARIOS",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971ec",
+      "convenio": "0131/75",
+      "numero": 54,
+      "nombre": "SERENO",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971ed",
+      "convenio": "0131/75",
+      "numero": 55,
+      "nombre": "SOMBRERERA/O",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971ee",
+      "convenio": "0131/75",
+      "numero": 56,
+      "nombre": "TABLERISTA DE ILUMINACION",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971ef",
+      "convenio": "0131/75",
+      "numero": 57,
+      "nombre": "TECNICO DE MANTENIMIENTO ELECTRONICO AFECTADO A PLANTA TRANSMISORA",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1febb57a33a81c971f0",
+      "convenio": "0131/75",
+      "numero": 58,
+      "nombre": "TECNICO EN ELECTRONICA",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1ffbb57a33a81c971f1",
+      "convenio": "0131/75",
+      "numero": 59,
+      "nombre": "TELECONTROL",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1ffbb57a33a81c971f2",
+      "convenio": "0131/75",
+      "numero": 60,
+      "nombre": "UTILERO DE CALLE",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    },
+    {
+      "_id": "6a83c1ffbb57a33a81c971f3",
+      "convenio": "0131/75",
+      "numero": 61,
+      "nombre": "UTILERO PREPARADOR",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "fechaActualizacion": null
+    }
+  ],
+  "categoriasDesactivadas": [
+    {
+      "_id": "6a83c1ffbb57a33a81c97200",
+      "codigoArca": "000123",
+      "nombre": "ASISTENTE DE DIRECCION",
+      "legacyId": 191,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c1ffbb57a33a81c97201",
+      "codigoArca": "000124",
+      "nombre": "ASISTENTE DE PRODUCCION",
+      "legacyId": 192,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c1ffbb57a33a81c97202",
+      "codigoArca": "000127",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE COMPRAS",
+      "legacyId": 193,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c1ffbb57a33a81c97203",
+      "codigoArca": "000128",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE CONTADURIA",
+      "legacyId": 194,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c1ffbb57a33a81c97204",
+      "codigoArca": "000129",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE CONTRATACIONES",
+      "legacyId": 195,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c1ffbb57a33a81c97205",
+      "codigoArca": "000130",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE CREDITOS Y COBRANZAS",
+      "legacyId": 196,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c1ffbb57a33a81c97206",
+      "codigoArca": "000131",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE FILMOTECA",
+      "legacyId": 197,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c97207",
+      "codigoArca": "000132",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE PERSONAL",
+      "legacyId": 198,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c97208",
+      "codigoArca": "000133",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE PRODUCCION Y OPERACIONES",
+      "legacyId": 199,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c97209",
+      "codigoArca": "000134",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE TESORERIA",
+      "legacyId": 200,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c9720a",
+      "codigoArca": "000135",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE VENTAS",
+      "legacyId": 201,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c9720b",
+      "codigoArca": "000136",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE VIDEO TAPE",
+      "legacyId": 202,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c9720c",
+      "codigoArca": "000137",
+      "nombre": "AUXILIAR DE DESPACHO",
+      "legacyId": 203,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c9720d",
+      "codigoArca": "000138",
+      "nombre": "AUXILIAR MIMEOGRAFISTA",
+      "legacyId": 204,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c9720e",
+      "codigoArca": "000139",
+      "nombre": "AYUDANTE GENERAL DE TECNICA",
+      "legacyId": 205,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c9720f",
+      "codigoArca": "000140",
+      "nombre": "CARACTERIZADOR/A",
+      "legacyId": 206,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c97210",
+      "codigoArca": "000141",
+      "nombre": "CARPINTERO REALIZADOR",
+      "legacyId": 207,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c97211",
+      "codigoArca": "000142",
+      "nombre": "COMPAGINADOR DE FILMOTECA",
+      "legacyId": 208,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c97212",
+      "codigoArca": "000143",
+      "nombre": "COMPAGINADOR MUSICAL",
+      "legacyId": 209,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c97213",
+      "codigoArca": "000144",
+      "nombre": "CONDUCTOR DE CAMARAS",
+      "legacyId": 210,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c97214",
+      "codigoArca": "000145",
+      "nombre": "CONDUCTOR MOTORISTA MECANICO",
+      "legacyId": 211,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c97215",
+      "codigoArca": "000147",
+      "nombre": "DIBUJANTE ARTE PUBLICITARIO",
+      "legacyId": 212,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c97216",
+      "codigoArca": "000148",
+      "nombre": "DIBUJANTE TECNICO",
+      "legacyId": 213,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c97217",
+      "codigoArca": "000151",
+      "nombre": "ESCENOGRAFO",
+      "legacyId": 214,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c97218",
+      "codigoArca": "000155",
+      "nombre": "ILUMINADOR",
+      "legacyId": 215,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c97219",
+      "codigoArca": "000159",
+      "nombre": "MEZCLADOR DE CONTROL CENTRAL",
+      "legacyId": 216,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c9721a",
+      "codigoArca": "000160",
+      "nombre": "MICROFONISTA",
+      "legacyId": 217,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c9721b",
+      "codigoArca": "000161",
+      "nombre": "MODISTA",
+      "legacyId": 218,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c9721c",
+      "codigoArca": "000162",
+      "nombre": "MODISTA REALIZADORA",
+      "legacyId": 219,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c200bb57a33a81c9721d",
+      "codigoArca": "000163",
+      "nombre": "MONTADOR DE ESCENOGRAFIA",
+      "legacyId": 220,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c9721e",
+      "codigoArca": "000166",
+      "nombre": "OPERADOR DE CAMARAS",
+      "legacyId": 221,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c9721f",
+      "codigoArca": "000167",
+      "nombre": "OPERADOR DE MAQUINA DE CONTABILIDAD ELECTROMECANICA",
+      "legacyId": 222,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c97220",
+      "codigoArca": "000168",
+      "nombre": "OPERADOR DE SONIDO",
+      "legacyId": 223,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c97221",
+      "codigoArca": "000171",
+      "nombre": "OPERADOR REALIZADOR CINEMATOGRAFICO",
+      "legacyId": 224,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c97222",
+      "codigoArca": "000172",
+      "nombre": "OPERADOR REVISOR DE FILMOTECA",
+      "legacyId": 225,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c97223",
+      "codigoArca": "000174",
+      "nombre": "OPERADOR TECNICO DE PLANTA TRANSMISORA",
+      "legacyId": 226,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c97224",
+      "codigoArca": "000175",
+      "nombre": "OPERADOR TECNICO DE VIDEO",
+      "legacyId": 227,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c97225",
+      "codigoArca": "000176",
+      "nombre": "OPERADOR TECNICO DE VIDEO FILM",
+      "legacyId": 228,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c97226",
+      "codigoArca": "000177",
+      "nombre": "OPERADOR TECNICO DE VIDEO TAPE",
+      "legacyId": 229,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c97227",
+      "codigoArca": "000179",
+      "nombre": "PEINADOR/A",
+      "legacyId": 230,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c97228",
+      "codigoArca": "000180",
+      "nombre": "PERFORADOR MAQUINAS CONTABLES",
+      "legacyId": 231,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c97229",
+      "codigoArca": "000181",
+      "nombre": "PERFOVERIFICADORIA DE COMPUTADORAS",
+      "legacyId": 232,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c9722a",
+      "codigoArca": "000197",
+      "nombre": "PINTOR CORPOREO",
+      "legacyId": 233,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c9722b",
+      "codigoArca": "000198",
+      "nombre": "PROYECTORISTA CONTROL CENTRAL",
+      "legacyId": 234,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c9722c",
+      "codigoArca": "000199",
+      "nombre": "REALIZADOR DE ESCENOGRAFIA",
+      "legacyId": 235,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c9722d",
+      "codigoArca": "000200",
+      "nombre": "REFLECTORISTA",
+      "legacyId": 236,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c9722e",
+      "codigoArca": "000202",
+      "nombre": "TAPICERO REALIZADOR",
+      "legacyId": 237,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c9722f",
+      "codigoArca": "000203",
+      "nombre": "TECNICO DE EFECTOS ESPECIALES VISUALES",
+      "legacyId": 238,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c97230",
+      "codigoArca": "000207",
+      "nombre": "TECNICO DE MANTENIMIENTO MECANICO",
+      "legacyId": 239,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c97231",
+      "codigoArca": "000208",
+      "nombre": "TECNICO ELECTRICISTA",
+      "legacyId": 240,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c97232",
+      "codigoArca": "000209",
+      "nombre": "TECNICO EN PROCESO CINEMATOGRAFICO",
+      "legacyId": 241,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c97233",
+      "codigoArca": "000210",
+      "nombre": "TECNICO MANTENIMIENTO ELECTRONICO",
+      "legacyId": 242,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c97234",
+      "codigoArca": "000211",
+      "nombre": "TECNICO MECANICO DE AIRE ACONDICIONADO",
+      "legacyId": 243,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c201bb57a33a81c97235",
+      "codigoArca": "000212",
+      "nombre": "UTILERO",
+      "legacyId": 244,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c97236",
+      "codigoArca": "000213",
+      "nombre": "UTILERO REALIZADOR",
+      "legacyId": 245,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c97237",
+      "codigoArca": "000350",
+      "nombre": "ASISTENTE DE DIRECCION",
+      "legacyId": 246,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c97238",
+      "codigoArca": "000351",
+      "nombre": "ASISTENTE DE PRODUCCION",
+      "legacyId": 247,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c97239",
+      "codigoArca": "000354",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE COMPRAS",
+      "legacyId": 248,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c9723a",
+      "codigoArca": "000355",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE CONTADURIA",
+      "legacyId": 249,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c9723b",
+      "codigoArca": "000356",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE CONTRATACIONES",
+      "legacyId": 250,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c9723c",
+      "codigoArca": "000357",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE CREDITOS Y COBRANZAS",
+      "legacyId": 251,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c9723d",
+      "codigoArca": "000358",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE FILMOTECA",
+      "legacyId": 252,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c9723e",
+      "codigoArca": "000359",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE PERSONAL",
+      "legacyId": 253,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c9723f",
+      "codigoArca": "000360",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE PRODUCCION Y OPERACIONES",
+      "legacyId": 254,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c97240",
+      "codigoArca": "000361",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE TESORERIA",
+      "legacyId": 255,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c97241",
+      "codigoArca": "000362",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE VENTAS",
+      "legacyId": 256,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c97242",
+      "codigoArca": "000363",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE VIDEO TAPE",
+      "legacyId": 257,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c97243",
+      "codigoArca": "000364",
+      "nombre": "AUXILIAR DE DESPACHO",
+      "legacyId": 258,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c97244",
+      "codigoArca": "000365",
+      "nombre": "AUXILIAR MIMEOGRAFISTA",
+      "legacyId": 259,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c97245",
+      "codigoArca": "000366",
+      "nombre": "AYUDANTE GENERAL DE TECNICA",
+      "legacyId": 260,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c97246",
+      "codigoArca": "000368",
+      "nombre": "CARACTERIZADOR/A",
+      "legacyId": 261,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c97247",
+      "codigoArca": "000369",
+      "nombre": "CARPINTERO REALIZADOR",
+      "legacyId": 262,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c97248",
+      "codigoArca": "000370",
+      "nombre": "COMPAGINADOR DE FILMOTECA",
+      "legacyId": 263,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c97249",
+      "codigoArca": "000371",
+      "nombre": "COMPAGINADOR MUSICAL",
+      "legacyId": 264,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c9724a",
+      "codigoArca": "000372",
+      "nombre": "CONDUCTOR DE CAMARAS",
+      "legacyId": 265,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c9724b",
+      "codigoArca": "000373",
+      "nombre": "CONDUCTOR MOTORISTA MECANICO",
+      "legacyId": 266,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c9724c",
+      "codigoArca": "000375",
+      "nombre": "DIBUJANTE ARTE PUBLICITARIO",
+      "legacyId": 267,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c9724d",
+      "codigoArca": "000376",
+      "nombre": "DIBUJANTE TECNICO",
+      "legacyId": 268,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c202bb57a33a81c9724e",
+      "codigoArca": "000379",
+      "nombre": "ESCENOGRAFO",
+      "legacyId": 269,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c9724f",
+      "codigoArca": "000382",
+      "nombre": "ILUMINADOR",
+      "legacyId": 270,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c97250",
+      "codigoArca": "000386",
+      "nombre": "MEZCLADOR DE CONTROL CENTRAL",
+      "legacyId": 271,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c97251",
+      "codigoArca": "000387",
+      "nombre": "MICROFONISTA",
+      "legacyId": 272,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c97252",
+      "codigoArca": "000388",
+      "nombre": "MODISTA",
+      "legacyId": 273,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c97253",
+      "codigoArca": "000389",
+      "nombre": "MODISTA REALIZADORA",
+      "legacyId": 274,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c97254",
+      "codigoArca": "000390",
+      "nombre": "MONTADOR DE ESCENOGRAFIA",
+      "legacyId": 275,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c97255",
+      "codigoArca": "000393",
+      "nombre": "OPERADOR DE CAMARAS",
+      "legacyId": 276,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c97256",
+      "codigoArca": "000394",
+      "nombre": "OPERADOR DE MAQUINA DE CONTABILIDAD ELECTROMECANICA",
+      "legacyId": 277,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c97257",
+      "codigoArca": "000395",
+      "nombre": "OPERADOR DE SONIDO",
+      "legacyId": 278,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c97258",
+      "codigoArca": "000398",
+      "nombre": "OPERADOR REALIZADOR CINEMATOGRAFICO",
+      "legacyId": 279,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c97259",
+      "codigoArca": "000399",
+      "nombre": "OPERADOR REVISOR DE FILMOTECA",
+      "legacyId": 280,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c9725a",
+      "codigoArca": "000401",
+      "nombre": "OPERADOR TECNICO DE PLANTA TRANSMISORA",
+      "legacyId": 281,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c9725c",
+      "codigoArca": "000402",
+      "nombre": "OPERADOR TECNICO DE VIDEO",
+      "legacyId": 282,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c9725d",
+      "codigoArca": "000403",
+      "nombre": "OPERADOR TECNICO DE VIDEO FILM",
+      "legacyId": 283,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c9725e",
+      "codigoArca": "000404",
+      "nombre": "OPERADOR TECNICO DE VIDEO TAPE",
+      "legacyId": 284,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c9725f",
+      "codigoArca": "000406",
+      "nombre": "PEINADOR/A",
+      "legacyId": 285,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c97260",
+      "codigoArca": "000407",
+      "nombre": "PERFORADOR MAQUINAS CONTABLES",
+      "legacyId": 286,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c97261",
+      "codigoArca": "000408",
+      "nombre": "PERFOVERIFICADORIA DE COMPUTADORAS",
+      "legacyId": 287,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c97262",
+      "codigoArca": "000422",
+      "nombre": "PINTOR CORPOREO",
+      "legacyId": 288,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c97263",
+      "codigoArca": "000423",
+      "nombre": "PROYECTORISTA CONTROL CENTRAL",
+      "legacyId": 289,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c97264",
+      "codigoArca": "000424",
+      "nombre": "REALIZADOR DE ESCENOGRAFIA",
+      "legacyId": 290,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c97265",
+      "codigoArca": "000425",
+      "nombre": "REFLECTORISTA",
+      "legacyId": 291,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c203bb57a33a81c97266",
+      "codigoArca": "000427",
+      "nombre": "TAPICERO REALIZADOR",
+      "legacyId": 292,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c97267",
+      "codigoArca": "000428",
+      "nombre": "TECNICO DE EFECTOS ESPECIALES VISUALES",
+      "legacyId": 293,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c97268",
+      "codigoArca": "000432",
+      "nombre": "TECNICO DE MANTENIMIENTO MECANICO",
+      "legacyId": 294,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c97269",
+      "codigoArca": "000433",
+      "nombre": "TECNICO ELECTRICISTA",
+      "legacyId": 295,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c9726a",
+      "codigoArca": "000434",
+      "nombre": "TECNICO EN PROCESO CINEMATOGRAFICO",
+      "legacyId": 296,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c9726b",
+      "codigoArca": "000435",
+      "nombre": "TECNICO MANTENIMIENTO ELECTRONICO",
+      "legacyId": 297,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c9726c",
+      "codigoArca": "000436",
+      "nombre": "TECNICO MECANICO DE AIRE ACONDICIONADO",
+      "legacyId": 298,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c9726d",
+      "codigoArca": "000437",
+      "nombre": "UTILERO",
+      "legacyId": 299,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c9726e",
+      "codigoArca": "000438",
+      "nombre": "UTILERO REALIZADOR",
+      "legacyId": 300,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c9726f",
+      "codigoArca": "000561",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE COMPRAS",
+      "legacyId": 301,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c97270",
+      "codigoArca": "000562",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE CONTADURIA",
+      "legacyId": 302,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c97271",
+      "codigoArca": "000563",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE CONTRATACIONES",
+      "legacyId": 303,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c97272",
+      "codigoArca": "000564",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE CREDITOS Y COBRANZAS",
+      "legacyId": 304,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c97273",
+      "codigoArca": "000565",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE FILMOTECA",
+      "legacyId": 305,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c97274",
+      "codigoArca": "000566",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE PERSONAL",
+      "legacyId": 306,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c97275",
+      "codigoArca": "000567",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE PRODUCCION Y OPERACIONES",
+      "legacyId": 307,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c97276",
+      "codigoArca": "000568",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE TESORERIA",
+      "legacyId": 308,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c97277",
+      "codigoArca": "000569",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE VENTAS",
+      "legacyId": 309,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c97278",
+      "codigoArca": "000570",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE VIDEO TAPE",
+      "legacyId": 310,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c97279",
+      "codigoArca": "000572",
+      "nombre": "CARACTERIZADOR/A",
+      "legacyId": 311,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c9727a",
+      "codigoArca": "000573",
+      "nombre": "CARPINTERO REALIZADOR",
+      "legacyId": 312,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c9727b",
+      "codigoArca": "000574",
+      "nombre": "COMPAGINADOR DE FILMOTECA",
+      "legacyId": 313,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c9727c",
+      "codigoArca": "000575",
+      "nombre": "CONDUCTOR DE CAMARAS",
+      "legacyId": 314,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c204bb57a33a81c9727d",
+      "codigoArca": "000576",
+      "nombre": "CONDUCTOR MOTORISTA MECANICO",
+      "legacyId": 315,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c205bb57a33a81c9727e",
+      "codigoArca": "000578",
+      "nombre": "DIBUJANTE ARTE PUBLICITARIO",
+      "legacyId": 316,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c205bb57a33a81c9727f",
+      "codigoArca": "000580",
+      "nombre": "ESCENOGRAFO",
+      "legacyId": 317,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c205bb57a33a81c97280",
+      "codigoArca": "000581",
+      "nombre": "ILUMINADOR",
+      "legacyId": 318,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c205bb57a33a81c97281",
+      "codigoArca": "000582",
+      "nombre": "MICROFONISTA",
+      "legacyId": 319,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c205bb57a33a81c97282",
+      "codigoArca": "000583",
+      "nombre": "MONTADOR DE ESCENOGRAFIA",
+      "legacyId": 320,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c205bb57a33a81c97283",
+      "codigoArca": "000585",
+      "nombre": "OPERADOR DE CAMARAS",
+      "legacyId": 321,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c205bb57a33a81c97284",
+      "codigoArca": "000586",
+      "nombre": "OPERADOR DE SONIDO",
+      "legacyId": 322,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c205bb57a33a81c97285",
+      "codigoArca": "000589",
+      "nombre": "OPERADOR TECNICO DE PLANTA TRANSMISORA",
+      "legacyId": 323,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c205bb57a33a81c97286",
+      "codigoArca": "000590",
+      "nombre": "OPERADOR TECNICO DE VIDEO",
+      "legacyId": 324,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c205bb57a33a81c97287",
+      "codigoArca": "000591",
+      "nombre": "OPERADOR TECNICO DE VIDEO FILM",
+      "legacyId": 325,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c205bb57a33a81c97288",
+      "codigoArca": "000592",
+      "nombre": "OPERADOR TECNICO DE VIDEO TAPE",
+      "legacyId": 326,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c205bb57a33a81c97289",
+      "codigoArca": "000594",
+      "nombre": "PEINADOR/A",
+      "legacyId": 327,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c205bb57a33a81c9728a",
+      "codigoArca": "000606",
+      "nombre": "PINTOR CORPOREO",
+      "legacyId": 328,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c205bb57a33a81c9728b",
+      "codigoArca": "000607",
+      "nombre": "PROYECTORISTA CONTROL CENTRAL",
+      "legacyId": 329,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c205bb57a33a81c9728c",
+      "codigoArca": "000608",
+      "nombre": "REALIZADOR DE ESCENOGRAFIA",
+      "legacyId": 330,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c205bb57a33a81c9728d",
+      "codigoArca": "000609",
+      "nombre": "REFLECTORISTA",
+      "legacyId": 331,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c205bb57a33a81c9728e",
+      "codigoArca": "000611",
+      "nombre": "TECNICO DE EFECTOS ESPECIALES VISUALES",
+      "legacyId": 332,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c205bb57a33a81c9728f",
+      "codigoArca": "000613",
+      "nombre": "TECNICO DE MANTENIMIENTO MECANICO",
+      "legacyId": 333,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c205bb57a33a81c97290",
+      "codigoArca": "000614",
+      "nombre": "TECNICO ELECTRICISTA",
+      "legacyId": 334,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c205bb57a33a81c97291",
+      "codigoArca": "000615",
+      "nombre": "TECNICO EN PROCESO CINEMATOGRAFICO",
+      "legacyId": 335,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c205bb57a33a81c97292",
+      "codigoArca": "000616",
+      "nombre": "TECNICO MANTENIMIENTO ELECTRONICO",
+      "legacyId": 336,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c205bb57a33a81c97293",
+      "codigoArca": "000617",
+      "nombre": "TECNICO MECANICO DE AIRE ACONDICIONADO",
+      "legacyId": 337,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c97294",
+      "codigoArca": "000619",
+      "nombre": "UTILERO",
+      "legacyId": 338,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971b9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c97295",
+      "codigoArca": "002651",
+      "nombre": "ASESOR DE VESTUARIO",
+      "legacyId": 339,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971ba",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c97296",
+      "codigoArca": "002788",
+      "nombre": "ASISTENTE DE ILUMINACION",
+      "legacyId": 340,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971bb",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c97297",
+      "codigoArca": "003323",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE ARCHIVO GENERAL",
+      "legacyId": 341,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971bc",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c97298",
+      "codigoArca": "003325",
+      "nombre": "AUXILIAR ADMINISTRATIVO DE COPISTERIA",
+      "legacyId": 342,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971bd",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c97299",
+      "codigoArca": "003474",
+      "nombre": "AUXILIAR DE ALMACENES Y/O DEPOSITOS",
+      "legacyId": 343,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971be",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c9729a",
+      "codigoArca": "003492",
+      "nombre": "AUXILIAR DE CAMARINES",
+      "legacyId": 344,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971bf",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c9729b",
+      "codigoArca": "003535",
+      "nombre": "AUXILIAR DE DEPOSITO",
+      "legacyId": 345,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971c0",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c9729c",
+      "codigoArca": "003564",
+      "nombre": "AUXILIAR DE ESTUDIOS",
+      "legacyId": 346,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971c1",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c9729d",
+      "codigoArca": "003572",
+      "nombre": "AUXILIAR DE FORILLOTECA",
+      "legacyId": 347,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971c2",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c9729e",
+      "codigoArca": "003615",
+      "nombre": "AUXILIAR DE LIMPIEZA",
+      "legacyId": 348,
+      "grupoIdAntes": "6a83c1fcbb57a33a81c971c3",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c9729f",
+      "codigoArca": "003785",
+      "nombre": "AUXILIAR DE TRAFICO",
+      "legacyId": 349,
+      "grupoIdAntes": "6a83c1fdbb57a33a81c971c4",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c972a0",
+      "codigoArca": "003809",
+      "nombre": "AUXILIAR ELECTRICISTA",
+      "legacyId": 350,
+      "grupoIdAntes": "6a83c1fdbb57a33a81c971c5",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c972a1",
+      "codigoArca": "004009",
+      "nombre": "AUXILIAR RECEPCIONISTA",
+      "legacyId": 351,
+      "grupoIdAntes": "6a83c1fdbb57a33a81c971c6",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c972a2",
+      "codigoArca": "004013",
+      "nombre": "AUXILIAR REVISOR DE FILMOTECA",
+      "legacyId": 352,
+      "grupoIdAntes": "6a83c1fdbb57a33a81c971c7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c972a3",
+      "codigoArca": "004952",
+      "nombre": "AYUDANTE DE REALIZACION",
+      "legacyId": 353,
+      "grupoIdAntes": "6a83c1fdbb57a33a81c971c8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c972a4",
+      "codigoArca": "005015",
+      "nombre": "AYUDANTE DE UTILERO DE CALLE",
+      "legacyId": 354,
+      "grupoIdAntes": "6a83c1fdbb57a33a81c971c9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c972a5",
+      "codigoArca": "005941",
+      "nombre": "BOMBERO",
+      "legacyId": 355,
+      "grupoIdAntes": "6a83c1fdbb57a33a81c971ca",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c972a6",
+      "codigoArca": "006046",
+      "nombre": "CADETE",
+      "legacyId": 356,
+      "grupoIdAntes": "6a83c1fdbb57a33a81c971cb",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c972a7",
+      "codigoArca": "006442",
+      "nombre": "CALDERISTA",
+      "legacyId": 357,
+      "grupoIdAntes": "6a83c1fdbb57a33a81c971cc",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c972a8",
+      "codigoArca": "007966",
+      "nombre": "CHEQUEADOR",
+      "legacyId": 358,
+      "grupoIdAntes": "6a83c1fdbb57a33a81c971cd",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c972a9",
+      "codigoArca": "008434",
+      "nombre": "COBRADOR",
+      "legacyId": 359,
+      "grupoIdAntes": "6a83c1fdbb57a33a81c971ce",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c972aa",
+      "codigoArca": "008993",
+      "nombre": "CONDUCTORES DE AUTOMOTORES DE INTENDENCIA",
+      "legacyId": 360,
+      "grupoIdAntes": "6a83c1fdbb57a33a81c971cf",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c206bb57a33a81c972ab",
+      "codigoArca": "008994",
+      "nombre": "CONDUCTORES DE AUTOMOTORES DE OPERACIONES",
+      "legacyId": 361,
+      "grupoIdAntes": "6a83c1fdbb57a33a81c971d0",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972ac",
+      "codigoArca": "009367",
+      "nombre": "COORDINADOR",
+      "legacyId": 362,
+      "grupoIdAntes": "6a83c1fdbb57a33a81c971d1",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972ad",
+      "codigoArca": "009808",
+      "nombre": "CREATIVO DE CAMPANA PROMOCIONAL",
+      "legacyId": 363,
+      "grupoIdAntes": "6a83c1fdbb57a33a81c971d2",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972ae",
+      "codigoArca": "010451",
+      "nombre": "DIRECTOR DE PROGRAMAS",
+      "legacyId": 364,
+      "grupoIdAntes": "6a83c1fdbb57a33a81c971d3",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972af",
+      "codigoArca": "013525",
+      "nombre": "FOTOGRAFO",
+      "legacyId": 365,
+      "grupoIdAntes": "6a83c1fdbb57a33a81c971d4",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972b0",
+      "codigoArca": "014825",
+      "nombre": "JARDINERO/A",
+      "legacyId": 366,
+      "grupoIdAntes": "6a83c1fdbb57a33a81c971d5",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972b1",
+      "codigoArca": "016020",
+      "nombre": "LABORATORISTA FOTOGRAFICO",
+      "legacyId": 367,
+      "grupoIdAntes": "6a83c1fdbb57a33a81c971d6",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972b2",
+      "codigoArca": "019116",
+      "nombre": "MOZO DE CAFETERIA",
+      "legacyId": 368,
+      "grupoIdAntes": "6a83c1fdbb57a33a81c971d7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972b3",
+      "codigoArca": "019947",
+      "nombre": "OFICIAL ADMINISTRATIVO",
+      "legacyId": 369,
+      "grupoIdAntes": "6a83c1fdbb57a33a81c971d8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972b4",
+      "codigoArca": "021081",
+      "nombre": "OFICIAL MANTENIMIENTO EDIFICIO",
+      "legacyId": 370,
+      "grupoIdAntes": "6a83c1fdbb57a33a81c971d9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972b5",
+      "codigoArca": "022248",
+      "nombre": "OPERADOR DE CAMARA DE VIDEO TAPE PORTATIL",
+      "legacyId": 371,
+      "grupoIdAntes": "6a83c1febb57a33a81c971da",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972b6",
+      "codigoArca": "022315",
+      "nombre": "OPERADOR DE COMPUTADORA",
+      "legacyId": 372,
+      "grupoIdAntes": "6a83c1febb57a33a81c971db",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972b7",
+      "codigoArca": "022841",
+      "nombre": "OPERADOR DE TELEX",
+      "legacyId": 373,
+      "grupoIdAntes": "6a83c1febb57a33a81c971dc",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972b8",
+      "codigoArca": "023765",
+      "nombre": "OPERADOR TECNICO DE VTR ESPECIALIZADO EN CONVERSION DE NORMAS",
+      "legacyId": 374,
+      "grupoIdAntes": "6a83c1febb57a33a81c971dd",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972b9",
+      "codigoArca": "023766",
+      "nombre": "OPERADOR TECNICO EDITOR DE VTR",
+      "legacyId": 375,
+      "grupoIdAntes": "6a83c1febb57a33a81c971de",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972ba",
+      "codigoArca": "023851",
+      "nombre": "OPERADOR/A TELEFONISTA",
+      "legacyId": 376,
+      "grupoIdAntes": "6a83c1febb57a33a81c971df",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972bb",
+      "codigoArca": "025600",
+      "nombre": "ORDENANZA",
+      "legacyId": 377,
+      "grupoIdAntes": "6a83c1febb57a33a81c971e0",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972bc",
+      "codigoArca": "026152",
+      "nombre": "PEON DE ESTUDIO",
+      "legacyId": 378,
+      "grupoIdAntes": "6a83c1febb57a33a81c971e1",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972bd",
+      "codigoArca": "027018",
+      "nombre": "PINTOR CORPOREO LETRISTA",
+      "legacyId": 379,
+      "grupoIdAntes": "6a83c1febb57a33a81c971e2",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972be",
+      "codigoArca": "027618",
+      "nombre": "PREPARADOR/A DE SASTRERIA",
+      "legacyId": 380,
+      "grupoIdAntes": "6a83c1febb57a33a81c971e3",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972bf",
+      "codigoArca": "027890",
+      "nombre": "PRODUCTOR DE PROGRAMAS",
+      "legacyId": 381,
+      "grupoIdAntes": "6a83c1febb57a33a81c971e4",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972c0",
+      "codigoArca": "028132",
+      "nombre": "PROMOTORES DE VENTAS",
+      "legacyId": 382,
+      "grupoIdAntes": "6a83c1febb57a33a81c971e5",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972c1",
+      "codigoArca": "028209",
+      "nombre": "PROYECTORISTA DE DOBLAJE - COMPAGINADOR DE DOBLAJE",
+      "legacyId": 383,
+      "grupoIdAntes": "6a83c1febb57a33a81c971e6",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972c2",
+      "codigoArca": "028619",
+      "nombre": "REDACTOR DE TEXTOS PROMOCIONALES",
+      "legacyId": 384,
+      "grupoIdAntes": "6a83c1febb57a33a81c971e7",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c207bb57a33a81c972c3",
+      "codigoArca": "028651",
+      "nombre": "REFLECTORISTA AFECTADO A TALLER DE ILUMINACION",
+      "legacyId": 385,
+      "grupoIdAntes": "6a83c1febb57a33a81c971e8",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c208bb57a33a81c972c4",
+      "codigoArca": "029327",
+      "nombre": "SECRETARIA",
+      "legacyId": 386,
+      "grupoIdAntes": "6a83c1febb57a33a81c971e9",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c208bb57a33a81c972c5",
+      "codigoArca": "029348",
+      "nombre": "SECRETARIA BILINGÜE",
+      "legacyId": 387,
+      "grupoIdAntes": "6a83c1febb57a33a81c971ea",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c208bb57a33a81c972c6",
+      "codigoArca": "029386",
+      "nombre": "SECRETARIAS Y SECRETARIOS",
+      "legacyId": 388,
+      "grupoIdAntes": "6a83c1febb57a33a81c971eb",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c208bb57a33a81c972c7",
+      "codigoArca": "029666",
+      "nombre": "SERENO",
+      "legacyId": 389,
+      "grupoIdAntes": "6a83c1febb57a33a81c971ec",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c208bb57a33a81c972c8",
+      "codigoArca": "030018",
+      "nombre": "SOMBRERERA/O",
+      "legacyId": 390,
+      "grupoIdAntes": "6a83c1febb57a33a81c971ed",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c208bb57a33a81c972c9",
+      "codigoArca": "031508",
+      "nombre": "TABLERISTA DE ILUMINACION",
+      "legacyId": 391,
+      "grupoIdAntes": "6a83c1febb57a33a81c971ee",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c208bb57a33a81c972ca",
+      "codigoArca": "031880",
+      "nombre": "TECNICO DE MANTENIMIENTO ELECTRONICO AFECTADO A PLANTA TRANSMISORA",
+      "legacyId": 392,
+      "grupoIdAntes": "6a83c1febb57a33a81c971ef",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c208bb57a33a81c972cb",
+      "codigoArca": "031980",
+      "nombre": "TECNICO EN ELECTRONICA",
+      "legacyId": 393,
+      "grupoIdAntes": "6a83c1febb57a33a81c971f0",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c208bb57a33a81c972cc",
+      "codigoArca": "032301",
+      "nombre": "TELECONTROL",
+      "legacyId": 394,
+      "grupoIdAntes": "6a83c1ffbb57a33a81c971f1",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c208bb57a33a81c972cd",
+      "codigoArca": "032900",
+      "nombre": "UTILERO DE CALLE",
+      "legacyId": 395,
+      "grupoIdAntes": "6a83c1ffbb57a33a81c971f2",
+      "isActiveAntes": true
+    },
+    {
+      "_id": "6a83c208bb57a33a81c972ce",
+      "codigoArca": "032906",
+      "nombre": "UTILERO PREPARADOR",
+      "legacyId": 396,
+      "grupoIdAntes": "6a83c1ffbb57a33a81c971f3",
+      "isActiveAntes": true
+    }
+  ]
+}

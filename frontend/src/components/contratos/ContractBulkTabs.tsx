@@ -722,6 +722,53 @@ const SIN_EMPRESA_MASIVO = '__sin_empresa__';
  * solo acepta categorías de los convenios que ESE CUIT registró: escribirlas igual dejaría altas que
  * el organismo rechaza, con el error apareciendo recién al subir el archivo.
  */
+/*
+  EL ⓘ DE CADA CONTROL MASIVO.
+
+  Los tres botones de acción de la fila de abajo abren un modal con la explicación; los cuatro
+  selects de arriba tenían, a lo sumo, un `title` que solo aparece si la persona deja el mouse
+  quieto encima y no entra más que una frase. Convenio y Categoría directamente no tenían nada, que
+  es justo donde más falta: son los dos que se comportan distinto entre sí —uno filtra y no guarda,
+  el otro escribe y recalcula sueldos— y por fuera se ven idénticos.
+*/
+const InfoMasivo: React.FC<{ titulo: string; ayuda: string; children: React.ReactNode }> = ({ titulo, ayuda, children }) => {
+  const [abierto, setAbierto] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
+        title={ayuda}
+        aria-label={ayuda}
+        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0"
+      >
+        <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+      </button>
+      {abierto && (
+        <Modal isOpen={abierto} onClose={() => setAbierto(false)} title={titulo} size="sm" zIndex={80}>
+          <div className="space-y-3">{children}</div>
+        </Modal>
+      )}
+    </>
+  );
+};
+
+/*
+  LOS CONTROLES MASIVOS SE VEN COMO UNA SOLA PIEZA, no como dos pastillas sueltas.
+
+  Eran cuatro pares «select + Aplicar» de 12px pegados entre sí, y la fila se leía como ocho controles
+  en vez de cuatro: no se veía qué botón aplicaba qué select. Unidos —el select con las esquinas
+  izquierdas redondeadas y el botón con las derechas, compartiendo el borde— cada par se lee como un
+  control con su acción, que es lo que es.
+
+  El tamaño y el redondeo son los mismos de «Validar obras sociales» y «Cargar en ARCA», que están en
+  la fila de abajo: es la misma barra y no hay razón para que la mitad de arriba parezca otra cosa.
+*/
+const SELECT_MASIVO =
+  "text-sm rounded-l-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 pl-3 pr-2 py-2 max-w-[13rem] focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:z-10 disabled:opacity-40 disabled:cursor-not-allowed";
+const BOTON_MASIVO =
+  "inline-flex items-center gap-1.5 px-3 py-2 rounded-r-lg text-sm font-semibold border border-l-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/60 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap";
+
 const AsignarEncuadreMasivo: React.FC<{
   filas: ImpositivoRow[];
   cat: AfipCatalogs;
@@ -771,47 +818,71 @@ const AsignarEncuadreMasivo: React.FC<{
     }
   };
 
-  const claseSelect = 'text-xs rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/40 disabled:opacity-40 disabled:cursor-not-allowed max-w-[13rem]';
-  const claseBoton =
-    'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold bg-gray-700 text-white hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap';
-
   return (
-    <div className="flex items-center gap-1.5">
-      <select
-        value={convenio}
-        onChange={(e) => {
-          setConvenio(e.target.value);
-          setCategoriaId('');
-        }}
-        disabled={inhabilitado}
-        title={bloqueado || (sinSeleccion ? 'Tildá contratos para filtrarles el convenio' : 'Filtra las categorías de los contratos tildados. No se guarda.')}
-        className={claseSelect}
-      >
-        <option value="">Convenio...</option>
-        {convenios.map(([cct, nombre]) => (
-          <option key={cct} value={cct}>
-            {cct}
-            {nombre ? ` — ${nombre}` : ''}
-          </option>
-        ))}
-      </select>
-      <button type="button" onClick={() => onConvenio(convenio, filas)} disabled={inhabilitado || !convenio} title={`Filtrar las categorías de ${filas.length} contrato(s) por el convenio ${convenio || ''}`} className={claseBoton}>
-        <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />
-        Filtrar
-      </button>
-
-      <select value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)} disabled={inhabilitado || !convenio} title={convenio ? 'Asignar esta categoría a los contratos tildados' : 'Elegí primero el convenio'} className={claseSelect}>
-        <option value="">Categoría...</option>
-        {categorias.map((c: any) => (
-          <option key={String(c.data?.id)} value={String(c.data?.id ?? '')}>
-            {c.data?.codigoArca || c.data?.codigoAfip} — {c.name}
-          </option>
-        ))}
-      </select>
-      <button type="button" onClick={aplicarCategoria} disabled={inhabilitado || !categoriaId || aplicando} title={categoriaId ? `Asignar a ${filas.length} contrato(s) · cambia el sueldo de cada uno` : 'Elegí una categoría'} className={claseBoton}>
-        <FontAwesomeIcon icon={aplicando ? faSpinner : faCheck} spin={aplicando} className="h-3 w-3" />
-        Aplicar
-      </button>
+    <div className="flex items-center flex-wrap gap-2">
+      <div className="flex items-stretch">
+        <select
+          value={convenio}
+          onChange={(e) => {
+            setConvenio(e.target.value);
+            setCategoriaId('');
+          }}
+          disabled={inhabilitado}
+          title={bloqueado || (sinSeleccion ? 'Tildá contratos para filtrarles el convenio' : 'Filtra las categorías de los contratos tildados. No se guarda.')}
+          className={SELECT_MASIVO}
+        >
+          <option value="">Convenio…</option>
+          {convenios.map(([cct, nombre]) => (
+            <option key={cct} value={cct}>
+              {cct}
+              {nombre ? ` — ${nombre}` : ''}
+            </option>
+          ))}
+        </select>
+        <button type="button" onClick={() => onConvenio(convenio, filas)} disabled={inhabilitado || !convenio} title={`Filtrar las categorías de ${filas.length} contrato(s) por el convenio ${convenio || ''}`} className={BOTON_MASIVO}>
+          <FontAwesomeIcon icon={faCheck} className="h-3.5 w-3.5" />
+          Filtrar
+        </button>
+      </div>
+      <InfoMasivo titulo="Convenio en masa" ayuda="Qué hace «Filtrar» en Convenio">
+        <p className="text-sm text-gray-700 dark:text-gray-200">
+          {/* Lo primero, porque es lo único que lo distingue de los otros tres controles de la fila. */}
+          El convenio <strong>no se guarda en el contrato</strong>: acá es un filtro. Tocar «Filtrar» no modifica ninguna fila — solo hace que el select de <strong>Categoría</strong>, al lado, ofrezca únicamente las categorías de ese convenio.
+        </p>
+        <p className="text-sm text-gray-600 dark:text-gray-300">
+          Hace falta porque las categorías de todos los convenios juntas son cientos, y hay códigos que se repiten entre convenios. El convenio de un contrato queda determinado por la categoría que se le asigna, no al revés.
+        </p>
+        <p className="text-sm text-gray-600 dark:text-gray-300">
+          Además <strong>condiciona la obra social por defecto</strong>: la que se propone al validar sale del convenio de la categoría asignada.
+        </p>
+        <p className="text-[11px] text-gray-500 dark:text-gray-400">La lista muestra los convenios registrados en las empleadoras de los contratos tildados.</p>
+      </InfoMasivo>
+      <div className="flex items-stretch">
+        <select value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)} disabled={inhabilitado || !convenio} title={convenio ? 'Asignar esta categoría a los contratos tildados' : 'Elegí primero el convenio'} className={SELECT_MASIVO}>
+          <option value="">Categoría…</option>
+          {categorias.map((c: any) => (
+            <option key={String(c.data?.id)} value={String(c.data?.id ?? '')}>
+              {c.data?.codigoArca || c.data?.codigoAfip} — {c.name}
+            </option>
+          ))}
+        </select>
+        <button type="button" onClick={aplicarCategoria} disabled={inhabilitado || !categoriaId || aplicando} title={categoriaId ? `Asignar a ${filas.length} contrato(s) · cambia el sueldo de cada uno` : 'Elegí una categoría'} className={BOTON_MASIVO}>
+          <FontAwesomeIcon icon={aplicando ? faSpinner : faCheck} spin={aplicando} className="h-3.5 w-3.5" />
+          Aplicar
+        </button>
+      </div>
+      <InfoMasivo titulo="Categoría en masa" ayuda="Qué hace «Aplicar» en Categoría">
+        <p className="text-sm text-gray-700 dark:text-gray-200">
+          Le asigna esa categoría a todos los contratos tildados. A diferencia de Convenio, <strong>esto sí escribe</strong> en cada contrato.
+        </p>
+        <p className="text-sm text-gray-600 dark:text-gray-300">
+          {/* Se avisa antes y no después: es un cambio de plata en muchos contratos a la vez. */}
+          Al aplicarla se <strong>recalculan los sueldos</strong> de cada contrato con la escala de la categoría elegida — básico, bruto, neto y el diario. Si la categoría no tiene escala cargada, los importes quedan en cero.
+        </p>
+        <p className="text-sm text-gray-600 dark:text-gray-300">
+          Se saltean los contratos cuya <strong>empleadora no tenga registrado ese convenio</strong>; el aviso final dice cuántos fueron y por qué. Elegí primero el convenio: hasta entonces el select está bloqueado.
+        </p>
+      </InfoMasivo>
     </div>
   );
 };
@@ -903,54 +974,67 @@ const AsignarEmpresaMasivo: React.FC<{
   if (opciones.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-1.5">
-      <select
-        value={empresaId}
-        onChange={(e) => setEmpresaId(e.target.value)}
-        disabled={inhabilitado}
-        title={bloqueado || (sinSeleccion ? `Tildá contratos para asignarles la ${label}` : `Asignar ${label} a los contratos tildados`)}
-        className="text-xs rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/40 disabled:opacity-40 disabled:cursor-not-allowed"
-      >
-        <option value="">{label}...</option>
-        {/* Quitar en masa, la contracara de asignar: el select de cada fila ya ofrece «Sin empresa»
-            y hacerlo de a una para corregir una asignación equivocada era el mismo trabajo que la
-            barra existe para evitar. Va primero y separado por eso: no es una empresa más. */}
-        <option value={SIN_EMPRESA_MASIVO}>Sin {label}</option>
-        {opciones.map((o) => (
-          <option key={o.id} value={o.id}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-      <button
-        type="button"
-        onClick={aplicar}
-        disabled={inhabilitado || !empresaId || aplicando}
-        title={
-          bloqueado ||
-          (sinSeleccion
-            ? `Tildá contratos para asignarles la ${label}`
-            : empresaId === SIN_EMPRESA_MASIVO
-              ? `Dejar sin ${label} a ${filas.length} contrato(s)`
-              : empresaId
-                ? `Asignar a ${filas.length} contrato(s)`
-                : 'Elegí una empresa')
-        }
-        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold bg-gray-700 text-white hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
-      >
-        <FontAwesomeIcon icon={aplicando ? faSpinner : faCheck} spin={aplicando} className="h-3 w-3" />
-        Aplicar
-      </button>
-      {/* El «cómo se usa», en un ⓘ y no escrito al lado: el texto ocupaba media barra para decir
-          siempre lo mismo, y una vez que hay filas tildadas ya no hacía falta. */}
-      <button
-        type="button"
-        title={`Tildá contratos en la lista, elegí una empresa acá y tocá «Aplicar»: se le pone esa ${label} a todos los tildados de una. Con «Sin ${label}» se los deja sin ella.`}
-        aria-label={`Cómo asignar la ${label} en masa`}
-        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0"
-      >
-        <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
-      </button>
+    <div className="flex items-center gap-2">
+      <div className="flex items-stretch">
+        <select
+          value={empresaId}
+          onChange={(e) => setEmpresaId(e.target.value)}
+          disabled={inhabilitado}
+          title={bloqueado || (sinSeleccion ? `Tildá contratos para asignarles la ${label}` : `Asignar ${label} a los contratos tildados`)}
+          className={SELECT_MASIVO}
+        >
+          <option value="">{label}…</option>
+          {/* Quitar en masa, la contracara de asignar: el select de cada fila ya ofrece «Sin empresa»
+              y hacerlo de a una para corregir una asignación equivocada era el mismo trabajo que la
+              barra existe para evitar. Va primero y separado por eso: no es una empresa más. */}
+          <option value={SIN_EMPRESA_MASIVO}>Sin {label}</option>
+          {opciones.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={aplicar}
+          disabled={inhabilitado || !empresaId || aplicando}
+          title={
+            bloqueado ||
+            (sinSeleccion
+              ? `Tildá contratos para asignarles la ${label}`
+              : empresaId === SIN_EMPRESA_MASIVO
+                ? `Dejar sin ${label} a ${filas.length} contrato(s)`
+                : empresaId
+                  ? `Asignar a ${filas.length} contrato(s)`
+                  : 'Elegí una empresa')
+          }
+          className={BOTON_MASIVO}
+        >
+          <FontAwesomeIcon icon={aplicando ? faSpinner : faCheck} spin={aplicando} className="h-3.5 w-3.5" />
+          Aplicar
+        </button>
+      </div>
+      <InfoMasivo titulo={`${label} en masa`} ayuda={`Qué hace «Aplicar» en ${label}`}>
+        <p className="text-sm text-gray-700 dark:text-gray-200">
+          Tildá contratos en la lista, elegí una empresa acá y tocá <strong>Aplicar</strong>: se le pone esa <strong>{label}</strong> a todos los tildados de una, igual que si abrieras el select de cada fila. Es la misma escritura, hecha de a muchas.
+        </p>
+        {campo === 'contrato' ? (
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            La <strong>Empresa Contrato</strong> es la empleadora: su CUIT es contra el que se consulta la obra social y con el que se registra el alta. Un contrato sin ella no se puede validar ni entra en el TXT.
+          </p>
+        ) : (
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            La <strong>Empresa Release</strong> es la que sale impresa en el PDF del release, y puede ser distinta de la empleadora del contrato. No interviene en ARCA: no afecta al TXT, ni al alta, ni a la obra social.
+          </p>
+        )}
+        <p className="text-sm text-gray-600 dark:text-gray-300">
+          {/* Es la pregunta que aparece sola cuando el select ofrece menos empresas de las esperadas. */}
+          El select ofrece solo las empresas <strong>del proyecto</strong> de los contratos tildados. Si tildás contratos de proyectos distintos, aparecen las de todos, y al aplicar se saltean las filas cuyo proyecto no tenga la empresa elegida.
+        </p>
+        <p className="text-sm text-gray-600 dark:text-gray-300">
+          Con <strong>«Sin {label}»</strong> —la primera opción de la lista— se los deja sin ella, que es la forma de corregir una asignación equivocada sin ir fila por fila.
+        </p>
+      </InfoMasivo>
     </div>
   );
 };
@@ -1930,8 +2014,6 @@ export const ContractBulkAfipTab: React.FC<{
             <button type="button" onClick={() => setValidarObrasSocialesInfoOpen(true)} title="Cómo se validan las obras sociales" className="text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white shrink-0">
               <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
             </button>
-
-            <span className="hidden sm:block h-6 w-px bg-gray-200 dark:bg-gray-700" />
 
             <button
               onClick={() => generarTxt(fuenteTxt, nombreArchivoTxt)}

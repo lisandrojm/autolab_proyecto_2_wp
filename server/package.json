@@ -48,7 +48,18 @@
     "test:nombre-arca": "tsx --test src/services/arca/nombreArca.test.ts",
     "categorias:legacy-id:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/backfillLegacyIdCategorias.ts",
     "categorias:legacy-id": "dotenv -e .env.production -- tsx src/scripts/backfillLegacyIdCategorias.ts",
-    "test:escala": "tsx --test src/utils/escalaCategoria.test.ts"
+    "test:escala": "tsx --test src/utils/escalaCategoria.test.ts",
+    "actores:reasignar:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/reasignarCategoriaActor.ts",
+    "actores:reasignar": "dotenv -e .env.production -- tsx src/scripts/reasignarCategoriaActor.ts",
+    "actores:revertir:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/revertirReasignacionActor.ts",
+    "actores:revertir": "dotenv -e .env.production -- tsx src/scripts/revertirReasignacionActor.ts",
+    "encuadre:auditar": "dotenv -e .env.production -- tsx src/scripts/auditarEncuadre.ts",
+    "encuadre:corregir:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/corregirEncuadreContrato.ts",
+    "encuadre:corregir": "dotenv -e .env.production -- tsx src/scripts/corregirEncuadreContrato.ts",
+    "013175:reconstruir:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/reconstruirGrupos013175.ts",
+    "013175:reconstruir": "dotenv -e .env.production -- tsx src/scripts/reconstruirGrupos013175.ts",
+    "013175:revertir:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/revertirGrupos013175.ts",
+    "013175:revertir": "dotenv -e .env.production -- tsx src/scripts/revertirGrupos013175.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",

@@ -40,7 +40,7 @@ export interface AfipCatalogs {
      * del contrato. Solo entra cuando el tipo de contrato no lo tiene cargado, que hoy deja el campo
      * vacío y bloquea el TXT.
      */
-    defaultsArca?: { grupoTipoServicio?: string; tipoServicio?: string; modalidadLiquidacion?: string };
+    defaultsArca?: { grupoTipoServicio?: string; tipoServicio?: string; modalidadLiquidacion?: string; sucursalId?: string | null; convenioId?: string | null };
   }>;
   /** Catálogo de Sucursales de ARCA: de acá salen el código de sucursal y las actividades. */
   sucursales?: ArcaSucursal[];
@@ -307,7 +307,23 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
   // válido contra el que se valida la categoría del contrato.
   const idsConvenio = (empresa?.convenioIds || []).map(String);
   const conveniosEmpresa = (cat.convenios || []).filter((c) => idsConvenio.includes(c._id)).map((c) => String(c.externalId || "").trim()).filter(Boolean);
-  const sucursal = row.sucursalArcaId ? sucursalesEmpresa.find((s) => s._id === row.sucursalArcaId) : undefined;
+  /*
+    EL DOMICILIO HABITUAL DE LA EMPLEADORA SE PRESELECCIONA, igual que el Tipo de Servicio.
+
+    Si el contrato no eligió sucursal y la empleadora dejó una marcada con ★, rige esa. Es exactamente
+    el mecanismo que ya usaban `tipoServicio` y `modalidadLiquidacion` unas líneas más abajo: el
+    default se RESUELVE al leer, no se escribe en el contrato.
+
+    Esa diferencia importa. Escribirlo dejaría en la base un domicilio que nadie eligió, indistinguible
+    de uno decidido a mano; resolviéndolo al leer, el contrato sigue diciendo la verdad —«no eligió»—
+    y la pantalla, el checklist y el TXT ven el mismo valor porque los tres salen de acá.
+
+    Elegir otro en el picker escribe y pisa el default, que es lo esperado: la preselección acelera el
+    caso normal sin cerrar ninguno.
+  */
+  const sucursalDefault = (empresa as { defaultsArca?: { sucursalId?: string | null } } | undefined)?.defaultsArca?.sucursalId;
+  const sucursalId = row.sucursalArcaId || sucursalDefault || "";
+  const sucursal = sucursalId ? sucursalesEmpresa.find((s) => s._id === String(sucursalId)) : undefined;
   const actividades = sucursal?.actividades?.filter((a) => !!a.codigo) || [];
   const elegida = row.actividadArca ? actividades.find((a) => a.codigo === row.actividadArca) : undefined;
 

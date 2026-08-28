@@ -1,0 +1,31 @@
+[
+  {
+    "userProjectId": "696423835dd723128ad69ec0",
+    "projectId": "695d5ef295be848a048e8f77",
+    "userId": "69642382888f8216c848824c",
+    "proyecto": "426_LN+",
+    "contractIndex": 39,
+    "contractId": "",
+    "rol": "Asistente de Cámara",
+    "quien": "ALEJANDRO HUGO DAVID CORDOBA · CUIT 20-36397260-9 · 426_LN+ · alta 04/07/2026",
+    "motivo": "Rol FRAME «Asistente de Cámara»: es técnico y va por SATSAID (0634/11). Estaba en APUNTADOR, una categoría del convenio de actores. De las dos categorías que su función FRAME contempla, «Asistente de cámara especializado / Grip» es la que corresponde por nombre.",
+    "antes": {
+      "categoria_sat_id": 409,
+      "nombre_categoria_sat": "APUNTADOR",
+      "sueldo_neto": 0,
+      "sueldo_bruto": 0,
+      "sueldo_diario_neto": 0,
+      "diferencia_diaria_neto": 50816.38
+    },
+    "ahora": {
+      "categoria_sat_id": 145,
+      "nombre_categoria_sat": "Asistente de cámara especializado / Grip",
+      "convenio": "0634/11",
+      "codigoArca": "035358",
+      "sueldo_neto": 944760.67,
+      "sueldo_bruto": 1166371.2,
+      "sueldo_diario_neto": 31492.02,
+      "diferencia_diaria_neto": 19324.36
+    }
+  }
+]

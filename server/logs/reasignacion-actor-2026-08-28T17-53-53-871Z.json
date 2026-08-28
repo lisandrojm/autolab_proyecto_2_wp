@@ -1,0 +1,2890 @@
+[
+  {
+    "userProjectId": "696421905dd723128ad69d2d",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "6964218f888f8216c8487401",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696421905dd723128ad69d2d",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "6964218f888f8216c8487401",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 1,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696421b75dd723128ad69d4e",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "696421b6888f8216c8487521",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6964218c5dd723128ad69d28",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "6964218b888f8216c84873de",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6964218d5dd723128ad69d29",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "6964218c888f8216c84873e5",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6964218e5dd723128ad69d2a",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "6964218d888f8216c84873ec",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696421ea5dd723128ad69d88",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "696421e9888f8216c84876ad",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696421d45dd723128ad69d70",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "696421d3888f8216c848760b",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696421ed5dd723128ad69d8c",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "696421ec888f8216c84876c8",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696421f45dd723128ad69d95",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "696421f3888f8216c8487709",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696421f85dd723128ad69d9a",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "696421f8888f8216c848772c",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696421f85dd723128ad69d9a",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "696421f8888f8216c848772c",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 1,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696421e95dd723128ad69d87",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "696421e8888f8216c84876a6",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696421e95dd723128ad69d87",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "696421e8888f8216c84876a6",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 1,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696421c05dd723128ad69d57",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "696421bf888f8216c8487569",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696421e65dd723128ad69d83",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "696421e5888f8216c848768a",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422205dd723128ad69dd3",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642220888f8216c848787b",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6964223b5dd723128ad69def",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "6964223a888f8216c848794b",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6964223b5dd723128ad69def",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "6964223a888f8216c848794b",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 1,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6964220b5dd723128ad69db1",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "6964220b888f8216c84877c4",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696421fe5dd723128ad69da0",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "696421fd888f8216c848774f",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696421ed5dd723128ad69d8d",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "696421ed888f8216c84876cf",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696421e55dd723128ad69d82",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "696421e4888f8216c8487683",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696421c85dd723128ad69d61",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "696421c7888f8216c84875aa",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696421c85dd723128ad69d61",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "696421c7888f8216c84875aa",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 1,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422425dd723128ad69df7",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642241888f8216c8487985",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422425dd723128ad69df7",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642241888f8216c8487985",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 1,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6964222f5dd723128ad69de1",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "6964222e888f8216c84878e6",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696421df5dd723128ad69d7c",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "696421df888f8216c8487656",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696421db5dd723128ad69d74",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "696421da888f8216c8487630",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696421db5dd723128ad69d74",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "696421da888f8216c8487630",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 1,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696421cc5dd723128ad69d67",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "696421cc888f8216c84875d0",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422295dd723128ad69ddc",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642228888f8216c84878bd",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422435dd723128ad69df8",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642242888f8216c848798c",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422385dd723128ad69dec",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642237888f8216c8487933",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422315dd723128ad69de3",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642230888f8216c84878f4",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422075dd723128ad69dac",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642207888f8216c84877a1",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422075dd723128ad69dac",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642207888f8216c84877a1",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 1,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422365dd723128ad69dea",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642236888f8216c8487925",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422035dd723128ad69da7",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642202888f8216c848777b",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6964223f5dd723128ad69df4",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "6964223e888f8216c848796d",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6964223f5dd723128ad69df4",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "6964223e888f8216c848796d",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 1,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422235dd723128ad69dd6",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642223888f8216c8487890",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422345dd723128ad69de7",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642233888f8216c8487910",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422455dd723128ad69dfc",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642245888f8216c84879a4",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422455dd723128ad69dfb",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642244888f8216c848799d",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422125dd723128ad69dbc",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642211888f8216c84877fb",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422395dd723128ad69ded",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642238888f8216c848793a",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422505dd723128ad69e07",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642250888f8216c84879f7",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6964222b5dd723128ad69dde",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "6964222a888f8216c84878ce",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422315dd723128ad69de4",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642231888f8216c84878fb",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422585dd723128ad69e08",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642257888f8216c8487a2b",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422585dd723128ad69e08",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642257888f8216c8487a2b",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 1,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422335dd723128ad69de6",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642232888f8216c8487909",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422255dd723128ad69dd8",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642225888f8216c84878a1",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422205dd723128ad69dd2",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "6964221f888f8216c8487874",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6964224b5dd723128ad69e03",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "6964224b888f8216c84879d5",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6964224b5dd723128ad69e03",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "6964224b888f8216c84879d5",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 1,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422485dd723128ad69dff",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642248888f8216c84879b9",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422495dd723128ad69e00",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "69642248888f8216c84879c0",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6964224b5dd723128ad69e02",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "6964224a888f8216c84879ce",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6964250b5dd723128ad69f96",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "6964250a888f8216c8488c6d",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6964250c5dd723128ad69f97",
+    "projectId": "695d5ef495be848a048e8fad",
+    "userId": "6964250b888f8216c8488c74",
+    "proyecto": "700_REEL_SHORT_CDDUJDF",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a1c40ebfaac03e05c35",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6964218c888f8216c84873e5",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a1c40ebfaac03e05c43",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a4c055080db2623ba4d64de",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a1d40ebfaac03e05c67",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a4c055180db2623ba4d64eb",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a2940ebfaac03e0753a",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a4c055c80db2623ba4d7db6",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a2d40ebfaac03e08090",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a4c056280db2623ba4d8909",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a3040ebfaac03e08622",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a4c056480db2623ba4d8e89",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a3140ebfaac03e08634",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a4c056580db2623ba4d8e9d",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a3140ebfaac03e0879d",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "696421cc888f8216c84875d0",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a3840ebfaac03e09297",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a4c056b80db2623ba4d9aea",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a3a40ebfaac03e09414",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a4c056d80db2623ba4d9da1",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a3e40ebfaac03e09897",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a590abc787c184a430d3b76",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a4040ebfaac03e0991d",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a590abf787c184a430d3bf4",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a4340ebfaac03e09c67",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "696421f3888f8216c8487709",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a4840ebfaac03e0a3e4",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "69642202888f8216c848777b",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a4940ebfaac03e0a541",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a590acb787c184a430d4800",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a4b40ebfaac03e0a6c7",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a590ace787c184a430d4979",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a4c40ebfaac03e0a6ef",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6964220b888f8216c84877c4",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a4d40ebfaac03e0a83f",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a590ad0787c184a430d4ae4",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a4f40ebfaac03e0aa06",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a590ad2787c184a430d4ca8",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a5140ebfaac03e0aca9",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a590ad4787c184a430d4f43",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a5240ebfaac03e0af88",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a590ad6787c184a430d521c",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a5440ebfaac03e0b11c",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a590ad9787c184a430d547f",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a5540ebfaac03e0b2c3",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a590adc787c184a430d5623",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a5c40ebfaac03e0ba4d",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a590ae5787c184a430d5daa",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a5d40ebfaac03e0bbf3",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a590ae7787c184a430d5f48",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a5f40ebfaac03e0bd8e",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a590ae9787c184a430d60db",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a6140ebfaac03e0bdb9",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a590aea787c184a430d60fe",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a6340ebfaac03e0bf4d",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "69642236888f8216c8487925",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a6440ebfaac03e0bff4",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "69642237888f8216c8487933",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a6640ebfaac03e0c081",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a4c055980db2623ba4d7985",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a6840ebfaac03e0c09f",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a590aef787c184a430d62d8",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a6f40ebfaac03e0c538",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6964224a888f8216c84879ce",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a7040ebfaac03e0c549",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a4c058e80db2623ba4dcb08",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a7140ebfaac03e0c564",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a4c058f80db2623ba4dcb1e",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a7140ebfaac03e0c6cb",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "69642250888f8216c84879f7",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a7540ebfaac03e0c72c",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "69642257888f8216c8487a2b",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591b5d40ebfaac03e29eda",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a4c072091d8701abc7884e5",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b247c6db5eb54e982ad1e",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a6b247b6db5eb54e982ad19",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24896db5eb54e982d1df",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a6b24886db5eb54e982d1da",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24c56db5eb54e98329c5",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a590af7787c184a430d6753",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24c56db5eb54e98329c5",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a590af7787c184a430d6753",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 1,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24c66db5eb54e9832a02",
+    "projectId": "6a591a1b40ebfaac03e05a89",
+    "userId": "6a590af8787c184a430d6775",
+    "proyecto": "719H1_REELSHORT_SURRENDER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a591a7640ebfaac03e0c736",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a590afc787c184a430d6946",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b247b6db5eb54e982ad03",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a6b247b6db5eb54e982acfe",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b247c6db5eb54e982ad2a",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a6b247c6db5eb54e982ad25",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24846db5eb54e982c4e6",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a6b24846db5eb54e982c4e1",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24886db5eb54e982d1cb",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a6b24886db5eb54e982d1c6",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24896db5eb54e982d1e4",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a6b24886db5eb54e982d1da",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b248d6db5eb54e982dd69",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a6b248d6db5eb54e982dd64",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b248e6db5eb54e982dd85",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a6b248e6db5eb54e982dd80",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24936db5eb54e982e87f",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a6b24926db5eb54e982e87a",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24946db5eb54e982ebcb",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "696421da888f8216c8487630",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24976db5eb54e982f0c3",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a4c056d80db2623ba4d9da1",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b249a6db5eb54e982f42e",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "696421e8888f8216c84876a6",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24aa6db5eb54e9830925",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a590ad2787c184a430d4ca8",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24ad6db5eb54e9830fa2",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a590ad6787c184a430d521c",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24af6db5eb54e983135a",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a590adc787c184a430d5623",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24b36db5eb54e98319af",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "69642223888f8216c8487890",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24b96db5eb54e9832013",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a590ae9787c184a430d60db",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24bc6db5eb54e983221b",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "69642236888f8216c8487925",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24bd6db5eb54e983226c",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a6b24bd6db5eb54e9832267",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24c06db5eb54e983243c",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a590af1787c184a430d62f4",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24c06db5eb54e9832450",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6964223e888f8216c848796d",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24c16db5eb54e98325e0",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a590af3787c184a430d6455",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24c16db5eb54e98325ec",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a6b24c16db5eb54e98325e7",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24c26db5eb54e9832789",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a590af4787c184a430d65c0",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24c56db5eb54e98329ba",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a6b24c56db5eb54e98329b5",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24c56db5eb54e98329ca",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a590af7787c184a430d6753",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b24c66db5eb54e98329f7",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a6b24c66db5eb54e98329f2",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a6b25586db5eb54e9856526",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a6b25586db5eb54e985651a",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a84953315ceabf9996464c4",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a6b24796db5eb54e982ab65",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a84954215ceabf999649075",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a6bef14ede0ee17df762974",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a84954515ceabf999649705",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a6bef17ede0ee17df762fc9",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a84954715ceabf999649a36",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a84954615ceabf999649a31",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a84954a15ceabf99964a252",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a84954915ceabf99964a24d",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a84955e15ceabf99964c0bd",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a590ad0787c184a430d4ae4",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a84956315ceabf99964cb0b",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a590ad9787c184a430d547f",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a84957015ceabf99964dd29",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6a6b24bc6db5eb54e9832239",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "6a84957815ceabf99964e345",
+    "projectId": "6a591a1b40ebfaac03e05a96",
+    "userId": "6964224b888f8216c84879d5",
+    "proyecto": "719H2_REELSHORT_MYSECRETLOVER",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 411,
+      "nombre_categoria_sat": "TIRA",
+      "convenio": "0322/75",
+      "codigoArca": "032564"
+    }
+  },
+  {
+    "userProjectId": "696422305dd723128ad69de2",
+    "projectId": "695d5ef395be848a048e8f95",
+    "userId": "6964222f888f8216c84878ed",
+    "proyecto": "6880002_GM_LLQL_ANIMACION",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 412,
+      "nombre_categoria_sat": "UNITARIO",
+      "convenio": "0322/75",
+      "codigoArca": "032879"
+    }
+  },
+  {
+    "userProjectId": "696422325dd723128ad69de5",
+    "projectId": "695d5ef395be848a048e8f95",
+    "userId": "69642232888f8216c8487902",
+    "proyecto": "6880002_GM_LLQL_ANIMACION",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 412,
+      "nombre_categoria_sat": "UNITARIO",
+      "convenio": "0322/75",
+      "codigoArca": "032879"
+    }
+  },
+  {
+    "userProjectId": "696422445dd723128ad69df9",
+    "projectId": "695d5ef395be848a048e8f95",
+    "userId": "69642243888f8216c8487993",
+    "proyecto": "6880002_GM_LLQL_ANIMACION",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 412,
+      "nombre_categoria_sat": "UNITARIO",
+      "convenio": "0322/75",
+      "codigoArca": "032879"
+    }
+  },
+  {
+    "userProjectId": "696422405dd723128ad69df5",
+    "projectId": "695d5ef395be848a048e8f95",
+    "userId": "6964223f888f8216c8487977",
+    "proyecto": "6880002_GM_LLQL_ANIMACION",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 412,
+      "nombre_categoria_sat": "UNITARIO",
+      "convenio": "0322/75",
+      "codigoArca": "032879"
+    }
+  },
+  {
+    "userProjectId": "696422375dd723128ad69deb",
+    "projectId": "695d5ef395be848a048e8f95",
+    "userId": "69642236888f8216c848792c",
+    "proyecto": "6880002_GM_LLQL_ANIMACION",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 412,
+      "nombre_categoria_sat": "UNITARIO",
+      "convenio": "0322/75",
+      "codigoArca": "032879"
+    }
+  },
+  {
+    "userProjectId": "6964223b5dd723128ad69df0",
+    "projectId": "695d5ef395be848a048e8f95",
+    "userId": "6964223b888f8216c8487952",
+    "proyecto": "6880002_GM_LLQL_ANIMACION",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 412,
+      "nombre_categoria_sat": "UNITARIO",
+      "convenio": "0322/75",
+      "codigoArca": "032879"
+    }
+  },
+  {
+    "userProjectId": "696422395dd723128ad69dee",
+    "projectId": "695d5ef395be848a048e8f95",
+    "userId": "69642239888f8216c8487941",
+    "proyecto": "6880002_GM_LLQL_ANIMACION",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 412,
+      "nombre_categoria_sat": "UNITARIO",
+      "convenio": "0322/75",
+      "codigoArca": "032879"
+    }
+  },
+  {
+    "userProjectId": "696421dc5dd723128ad69d76",
+    "projectId": "695d5ef495be848a048e8fb3",
+    "userId": "696421dc888f8216c848763e",
+    "proyecto": "703_TELECOM_JSA_PROD_POST",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 412,
+      "nombre_categoria_sat": "UNITARIO",
+      "convenio": "0322/75",
+      "codigoArca": "032879"
+    }
+  },
+  {
+    "userProjectId": "696422445dd723128ad69dfa",
+    "projectId": "695d5ef495be848a048e8fb3",
+    "userId": "69642243888f8216c8487993",
+    "proyecto": "703_TELECOM_JSA_PROD_POST",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Actor",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 412,
+      "nombre_categoria_sat": "UNITARIO",
+      "convenio": "0322/75",
+      "codigoArca": "032879"
+    }
+  },
+  {
+    "userProjectId": "6a6b24886db5eb54e982d1b5",
+    "projectId": "695d5ef495be848a048e8fb3",
+    "userId": "6a6b24876db5eb54e982d1a9",
+    "proyecto": "703_TELECOM_JSA_PROD_POST",
+    "contractIndex": 0,
+    "contractId": "",
+    "rol": "Apuntador",
+    "antes": {
+      "categoria_sat_id": 46,
+      "nombre_categoria_sat": "Actor"
+    },
+    "ahora": {
+      "categoria_sat_id": 409,
+      "nombre_categoria_sat": "APUNTADOR",
+      "convenio": "0322/75",
+      "codigoArca": "002344"
+    }
+  }
+]

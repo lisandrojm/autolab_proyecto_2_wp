@@ -157,6 +157,16 @@ router.get("/huerfanas", authenticateToken, async (_req, res) => {
         const [cats, uso] = await Promise.all([Categoria.find().lean(), contratosPorLegacyId()]);
         const huerfanas = cats
             .filter((c) => !String(c.convenio || "").trim() || !codigoArcaValido(String(c.codigoArca || "")))
+            /*
+              Una categoría rota, DADA DE BAJA y que no usa nadie, ya no es un problema pendiente: no se
+              puede elegir en ningún selector ni llegar a ningún alta. Sigue existiendo en la base a
+              propósito —para que un contrato histórico pueda resolver su nombre— pero mostrarla en el panel
+              rojo dejaría un aviso que no se puede hacer desaparecer haciendo lo correcto.
+      
+              Si está de baja PERO la usa algún contrato, sigue apareciendo: ahí el problema es real y
+              además urgente, porque esos contratos apuntan a algo que los selectores ya no ofrecen.
+            */
+            .filter((c) => c.isActive !== false || (c.legacyId != null && (uso.get(Number(c.legacyId)) || 0) > 0))
             .map((c) => ({
             _id: c._id,
             nombre: c.nombre,
@@ -203,6 +213,20 @@ router.get("/", authenticateToken, async (req, res) => {
         */
         const aFila = (c) => {
             const e = escalaDeCategoria(c, c.grupoId ? porGrupoId.get(String(c.grupoId)) : null);
+            /*
+              LA ESCALA PROPIA VIAJA APARTE DE LA RESUELTA, y no es una redundancia.
+      
+              Los campos de arriba son lo que RIGE —propia, o heredada del grupo—, que es lo correcto para
+              mostrar. Para EDITAR es una trampa: si el formulario de una categoría se precarga con el
+              importe que heredó del grupo, guardarlo lo escribe como escala propia sin que nadie lo haya
+              pedido, y a partir de ahí esa categoría deja de seguir a su grupo. La próxima paritaria se
+              aplica al grupo y esa categoría se queda con el número viejo, en silencio.
+      
+              `escalaPropia: null` es la respuesta a «¿qué tiene cargado ESTA categoría?», y es con lo que
+              el formulario tiene que arrancar. Sin este campo la pregunta no se puede contestar desde el
+              cliente: un bruto heredado y uno propio se ven idénticos.
+            */
+            const propia = Number(c?.sueldoBruto || 0) > 0;
             return {
                 _id: c._id,
                 codigoArca: String(c.codigoArca || ""),
@@ -220,6 +244,19 @@ router.get("/", authenticateToken, async (req, res) => {
                 sueldoNetoLetras: e.sueldoNetoLetras,
                 fechaActualizacion: e.fechaActualizacion ?? null,
                 escalaOrigen: e.origen,
+                /** Lo que tiene cargado ESTA categoría, sin heredar. `null` = no tiene, y el formulario arranca vacío. */
+                escalaPropia: propia
+                    ? {
+                        sueldoBasico: Number(c.sueldoBasico || 0),
+                        sueldoAdicional: Number(c.sueldoAdicional || 0),
+                        presentismo: Number(c.presentismo || 0),
+                        sueldoBruto: Number(c.sueldoBruto || 0),
+                        sueldoBrutoLetras: String(c.sueldoBrutoLetras || ""),
+                        neto: Number(c.neto || 0),
+                        sueldoNetoLetras: String(c.sueldoNetoLetras || ""),
+                        fechaActualizacion: c.fechaActualizacion ?? null,
+                    }
+                    : null,
             };
         };
         const porGrupo = new Map();

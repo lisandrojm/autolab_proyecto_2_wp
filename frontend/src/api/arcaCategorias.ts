@@ -32,8 +32,28 @@ export interface ConvenioConCategorias {
   registrado: boolean;
 }
 
-/** Nivel 3: la categoría no lleva importes — los hereda de su grupo. */
-export interface CategoriaArca {
+/** Los cinco importes de una escala salarial, vengan del grupo o de la categoría. */
+export interface EscalaResuelta {
+  sueldoBasico: number;
+  sueldoAdicional: number;
+  presentismo: number;
+  sueldoBruto: number;
+  sueldoBrutoLetras: string;
+  neto: number;
+  sueldoNetoLetras: string;
+  fechaActualizacion: string | null;
+}
+
+/**
+ * Nivel 3. La escala llega DOS VECES y las dos hacen falta:
+ *
+ *   · los campos de `EscalaResuelta` son lo que RIGE (propia, o heredada del grupo) → para mostrar.
+ *   · `escalaPropia` es lo que tiene cargado esta categoría, sin heredar → para editar.
+ *
+ * Precargar un formulario con la heredada la convierte en propia al guardar, y esa categoría deja de
+ * seguir a su grupo: la próxima paritaria se aplica al grupo y ella se queda con el número viejo.
+ */
+export interface CategoriaArca extends EscalaResuelta {
   _id: string;
   /** Canónico de ARCA: 6 dígitos con ceros a la izquierda. */
   codigoArca: string;
@@ -45,6 +65,10 @@ export interface CategoriaArca {
   legacyId: number | null;
   /** Contratos que la usan. Es lo que decide si se puede eliminar o solo desactivar. */
   contratos: number;
+  /** De dónde salieron los importes de arriba. `null` = no hay escala en ningún lado. */
+  escalaOrigen: 'categoria' | 'grupo' | null;
+  /** Lo cargado en ESTA categoría. `null` = nada propio, y el formulario arranca vacío. */
+  escalaPropia: EscalaResuelta | null;
 }
 
 /** Nivel 2: el grupo es donde vive la escala, y por lo tanto donde se edita. */
@@ -67,6 +91,14 @@ export interface ConvenioDetalle {
   convenio: string;
   nombre: string;
   grupos: GrupoConvenio[];
+  /**
+   * Las categorías del convenio que NO cuelgan de ningún grupo, con su escala propia.
+   *
+   * NO es excluyente con `grupos`: un mismo convenio puede tener las dos cosas. 0131/75 tiene 12
+   * grupos vigentes y 206 categorías históricas sin grupo, y una pantalla que elija una vista según
+   * `grupos.length` hace desaparecer 206 filas sin decir nada.
+   */
+  sinGrupo: CategoriaArca[];
 }
 
 /** Por qué una categoría no se puede usar. Ninguno de los tres es un estado con el que convivir. */
@@ -143,12 +175,22 @@ class ArcaCategoriasAPI {
   }
 
   /** La categoría no lleva importes: van `convenio`, `grupo`, `codigoArca` y `nombre`. */
-  async crearCategoria(payload: { convenio: string; grupoId?: string; numeroGrupo?: number; codigoArca: string; nombre: string; descripcionArca?: string }): Promise<CategoriaArca> {
+  /**
+   * Lo identificatorio de una categoría, más su escala PROPIA.
+   *
+   * `numeroGrupo` acepta `''` —no solo un número— porque «sin grupo» es un valor válido y hay que
+   * poder mandarlo: ARCA no publica grupo en todos los convenios. Omitir la clave no sirve, porque
+   * el backend distingue «no vino» (no toques el grupo) de «vino vacío» (sacale el grupo).
+   *
+   * Los importes solo tienen sentido SIN grupo. Con grupo la escala vive en el grupo, y mandarlos
+   * acá la convierte en propia: esa categoría deja de seguir las paritarias del grupo para siempre.
+   */
+  async crearCategoria(payload: { convenio: string; grupoId?: string; numeroGrupo?: number | ''; codigoArca: string; nombre: string; descripcionArca?: string } & Partial<EscalaGrupo>): Promise<CategoriaArca> {
     const { data } = await axios.post(BASE, payload);
     return data;
   }
 
-  async actualizarCategoria(id: string, payload: { convenio?: string; grupoId?: string; numeroGrupo?: number; codigoArca?: string; nombre?: string; descripcionArca?: string; isActive?: boolean }): Promise<CategoriaArca> {
+  async actualizarCategoria(id: string, payload: { convenio?: string; grupoId?: string; numeroGrupo?: number | ''; codigoArca?: string; nombre?: string; descripcionArca?: string; isActive?: boolean } & Partial<EscalaGrupo>): Promise<CategoriaArca> {
     const { data } = await axios.put(`${BASE}/${id}`, payload);
     return data;
   }

@@ -96,6 +96,16 @@ export const CategoriasArcaTab: React.FC = () => {
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
+  /*
+    LAS DADAS DE BAJA SE ESCONDEN, y el filtro es del cliente a propósito.
+
+    Después de reconstruir 0131/75 quedan 206 categorías históricas —desactivadas y sin grupo—, así
+    que sin esto el convenio abre con una lista plana de 206 filas de baja y las 12 vigentes perdidas
+    adentro. Filtrarlas en el backend habría sido más barato, pero ese mismo GET alimenta la lista de
+    grupos del formulario y la plantilla de paritarias: cambiarle el default les cambia el contenido
+    a los dos, y ninguno pidió nada. Acá el dato completo llega igual y la pantalla decide qué muestra.
+  */
+  const [verHistoricas, setVerHistoricas] = useState(false);
 
   // Escala del grupo (crear / editar)
   const [grupoEnEdicion, setGrupoEnEdicion] = useState<GrupoConvenio | null>(null);
@@ -107,6 +117,14 @@ export const CategoriasArcaTab: React.FC = () => {
   const [showCategoria, setShowCategoria] = useState(false);
   const [categoriaEnEdicion, setCategoriaEnEdicion] = useState<{ _id: string; contratos: number } | null>(null);
   const [formCategoria, setFormCategoria] = useState({ convenio: '', numeroGrupo: '', codigoArca: '', nombre: '', descripcionArca: '', isActive: true });
+  /*
+    La escala PROPIA de la categoría, para los convenios sin grupo.
+
+    Arranca siempre desde `escalaPropia` y nunca desde los importes resueltos: una categoría con
+    grupo trae el bruto del grupo, y precargarlo acá lo escribiría como propio al guardar. Desde ese
+    momento la categoría deja de seguir al grupo y la próxima paritaria la saltea, sin ningún aviso.
+  */
+  const [formEscalaCat, setFormEscalaCat] = useState<FormEscala>(ESCALA_VACIA);
   const [gruposDelConvenioForm, setGruposDelConvenioForm] = useState<GrupoConvenio[]>([]);
 
   // Carga masiva de escalas
@@ -174,14 +192,34 @@ export const CategoriasArcaTab: React.FC = () => {
   // ───────────────────────────────── Búsqueda
   // Filtra CATEGORÍAS, pero conserva el grupo como contenedor: buscar "utilero" tiene que dejar ver
   // de qué grupo cuelga y con qué escala, que es justamente el dato que la lista plana escondía.
+  /** Una categoría entra en la búsqueda por nombre, código o descripción de ARCA. */
+  const coincide = (c: CategoriaArca, q: string) => c.nombre.toLowerCase().includes(q) || c.codigoArca.includes(q) || c.descripcionArca.toLowerCase().includes(q);
+
   const gruposVisibles = useMemo(() => {
     if (!detalle) return [];
     const q = searchTerm.trim().toLowerCase();
-    if (!q) return detalle.grupos;
     return detalle.grupos
-      .map((g) => ({ ...g, categorias: g.categorias.filter((c) => c.nombre.toLowerCase().includes(q) || c.codigoArca.includes(q) || c.descripcionArca.toLowerCase().includes(q)) }))
-      .filter((g) => g.categorias.length > 0 || String(g.numero).includes(q) || g.nombre.toLowerCase().includes(q));
-  }, [detalle, searchTerm]);
+      .map((g) => ({ ...g, categorias: g.categorias.filter((c) => (verHistoricas || c.isActive) && (!q || coincide(c, q))) }))
+      .filter((g) => !q || g.categorias.length > 0 || String(g.numero).includes(q) || g.nombre.toLowerCase().includes(q));
+  }, [detalle, searchTerm, verHistoricas]);
+
+  /**
+   * Las categorías sin grupo, que son una SECCIÓN APARTE y no una vista alternativa.
+   *
+   * Un convenio puede tener grupos y sueltas al mismo tiempo —0131/75 tiene 12 grupos vigentes y 206
+   * categorías históricas—, así que las dos secciones se dibujan juntas cuando las dos traen algo.
+   */
+  const sinGrupoVisibles = useMemo(() => {
+    if (!detalle) return [];
+    const q = searchTerm.trim().toLowerCase();
+    return (detalle.sinGrupo || []).filter((c) => (verHistoricas || c.isActive) && (!q || coincide(c, q)));
+  }, [detalle, searchTerm, verHistoricas]);
+
+  /** Cuántas quedaron escondidas por estar de baja. Es lo que rotula el interruptor. */
+  const historicas = useMemo(() => {
+    if (!detalle) return 0;
+    return detalle.grupos.reduce((acc, g) => acc + g.categorias.filter((c) => !c.isActive).length, 0) + (detalle.sinGrupo || []).filter((c) => !c.isActive).length;
+  }, [detalle]);
 
   // Con una búsqueda activa los grupos se abren solos: si no, el resultado quedaría escondido detrás
   // de un chevron.
@@ -195,7 +233,7 @@ export const CategoriasArcaTab: React.FC = () => {
       return next;
     });
 
-  const totalCategorias = useMemo(() => (detalle ? detalle.grupos.reduce((acc, g) => acc + g.categorias.length, 0) : 0), [detalle]);
+  const totalCategorias = useMemo(() => (detalle ? detalle.grupos.reduce((acc, g) => acc + g.categorias.length, 0) + (detalle.sinGrupo || []).length : 0), [detalle]);
 
   /** Registrados ante ARCA por alguna empleadora, y de esos los que no tienen ni una categoría. */
   const registrados = useMemo(() => convenios.filter((c) => c.registrado), [convenios]);
@@ -304,13 +342,33 @@ export const CategoriasArcaTab: React.FC = () => {
   const abrirNuevaCategoria = () => {
     setCategoriaEnEdicion(null);
     setFormCategoria({ convenio: convenioSel, numeroGrupo: '', codigoArca: '', nombre: '', descripcionArca: '', isActive: true });
+    setFormEscalaCat(ESCALA_VACIA);
     cargarGruposPara(convenioSel);
     setShowCategoria(true);
   };
 
-  const abrirEditarCategoria = (cat: CategoriaArca, grupo: GrupoConvenio, convenio: string) => {
+  /** El formulario, cargado con la escala PROPIA. Ver `formEscalaCat`: la heredada no se precarga. */
+  const escalaPropiaAlForm = (cat: CategoriaArca): FormEscala => {
+    const e = cat.escalaPropia;
+    if (!e) return ESCALA_VACIA;
+    return {
+      nombre: '',
+      sueldoBasico: String(e.sueldoBasico || ''),
+      sueldoAdicional: String(e.sueldoAdicional || ''),
+      presentismo: String(e.presentismo || ''),
+      sueldoBruto: String(e.sueldoBruto || ''),
+      sueldoBrutoLetras: e.sueldoBrutoLetras || '',
+      neto: String(e.neto || ''),
+      sueldoNetoLetras: e.sueldoNetoLetras || '',
+      fechaActualizacion: aInputDate(e.fechaActualizacion),
+    };
+  };
+
+  /** `grupo` es `null` para las categorías sueltas: no todas cuelgan de uno. */
+  const abrirEditarCategoria = (cat: CategoriaArca, grupo: GrupoConvenio | null, convenio: string) => {
     setCategoriaEnEdicion({ _id: cat._id, contratos: cat.contratos });
-    setFormCategoria({ convenio, numeroGrupo: String(grupo.numero), codigoArca: cat.codigoArca, nombre: cat.nombre, descripcionArca: cat.descripcionArca, isActive: cat.isActive });
+    setFormCategoria({ convenio, numeroGrupo: grupo ? String(grupo.numero) : '', codigoArca: cat.codigoArca, nombre: cat.nombre, descripcionArca: cat.descripcionArca, isActive: cat.isActive });
+    setFormEscalaCat(escalaPropiaAlForm(cat));
     cargarGruposPara(convenio);
     setShowCategoria(true);
   };
@@ -322,6 +380,7 @@ export const CategoriasArcaTab: React.FC = () => {
   const abrirHuerfana = (h: CategoriaHuerfana) => {
     setCategoriaEnEdicion({ _id: h._id, contratos: h.contratos });
     setFormCategoria({ convenio: h.convenio, numeroGrupo: '', codigoArca: esCodigoValido(h.codigoArca) ? h.codigoArca : '', nombre: h.nombre, descripcionArca: '', isActive: true });
+    setFormEscalaCat(ESCALA_VACIA);
     cargarGruposPara(h.convenio);
     setShowCategoria(true);
   };
@@ -333,10 +392,6 @@ export const CategoriasArcaTab: React.FC = () => {
       sweetAlert.error('Falta el convenio', 'Una categoría pertenece a un convenio: sin eso, ARCA no la reconoce.');
       return;
     }
-    if (!formCategoria.numeroGrupo) {
-      sweetAlert.error('Falta el grupo', 'La categoría cuelga de un grupo salarial, que es de donde saca su escala.');
-      return;
-    }
     if (!esCodigoValido(codigo)) {
       sweetAlert.error('Código de ARCA inválido', 'Son 6 dígitos, con ceros a la izquierda (ej. 035283). "0" y vacío no son códigos.');
       return;
@@ -346,13 +401,33 @@ export const CategoriasArcaTab: React.FC = () => {
       return;
     }
 
+    const conGrupo = !!formCategoria.numeroGrupo;
+    /*
+      La escala propia se manda SOLO cuando la categoría no cuelga de un grupo.
+
+      Con grupo, la escala es del grupo: mandar importes acá los grabaría como propios y la categoría
+      quedaría congelada en el número de hoy, ignorando la próxima paritaria. El formulario ni
+      siquiera muestra los campos en ese caso, y esto lo vuelve a garantizar del lado del envío.
+    */
     const payload = {
       convenio,
-      numeroGrupo: Number(formCategoria.numeroGrupo),
+      numeroGrupo: conGrupo ? Number(formCategoria.numeroGrupo) : ('' as const),
       codigoArca: codigo,
       nombre: formCategoria.nombre.trim(),
       descripcionArca: formCategoria.descripcionArca.trim(),
       isActive: formCategoria.isActive,
+      ...(conGrupo
+        ? {}
+        : {
+            sueldoBasico: Number(formEscalaCat.sueldoBasico || 0),
+            sueldoAdicional: Number(formEscalaCat.sueldoAdicional || 0),
+            presentismo: Number(formEscalaCat.presentismo || 0),
+            sueldoBruto: Number(formEscalaCat.sueldoBruto || 0),
+            sueldoBrutoLetras: formEscalaCat.sueldoBrutoLetras.trim(),
+            neto: Number(formEscalaCat.neto || 0),
+            sueldoNetoLetras: formEscalaCat.sueldoNetoLetras.trim(),
+            fechaActualizacion: formEscalaCat.fechaActualizacion,
+          }),
     };
 
     try {
@@ -361,7 +436,7 @@ export const CategoriasArcaTab: React.FC = () => {
         sweetAlert.success('Categoría actualizada', categoriaEnEdicion.contratos > 0 ? `Los ${categoriaEnEdicion.contratos} contratos que la usan pasan a resolver contra ${convenio} · ${codigo}.` : 'Los cambios se guardaron correctamente.');
       } else {
         await arcaCategoriasAPI.crearCategoria(payload);
-        sweetAlert.success('Categoría creada', `${codigo} — ${payload.nombre} quedó en el grupo ${payload.numeroGrupo} de ${convenio}.`);
+        sweetAlert.success('Categoría creada', conGrupo ? `${codigo} — ${payload.nombre} quedó en el grupo ${payload.numeroGrupo} de ${convenio}.` : `${codigo} — ${payload.nombre} quedó en ${convenio}, sin grupo: su escala es la que se cargó acá.`);
       }
       setShowCategoria(false);
       // Si se reparó una huérfana de otro convenio, se abre ese convenio: si no, el usuario guarda y
@@ -442,6 +517,47 @@ export const CategoriasArcaTab: React.FC = () => {
     );
   }
 
+  /**
+   * Los convenios como TABS, no como una pantalla previa de tarjetas.
+   *
+   * Antes había que entrar a un convenio y salir con «Cambiar convenio» para ver otro: dos clicks y
+   * una pantalla que se iba, cuando lo que se hace acá es justamente comparar entre convenios —
+   * cuáles tienen escala cargada, cuántas categorías tiene cada uno.
+   *
+   * La primera pestaña, «Todos», conserva la vista de tarjetas: es la única que muestra de un vistazo
+   * el estado de TODOS los convenios y la advertencia de los registrados sin categorías. Sacarla para
+   * dejar solo las pestañas habría cambiado navegación por información.
+   */
+  const tabsConvenios = (
+    <div className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+      <button
+        type="button"
+        onClick={() => setConvenioSel('')}
+        className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+          convenioSel === '' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+        }`}
+      >
+        Todos
+      </button>
+      {convenios.map((c) => (
+        <button
+          key={c.convenio}
+          type="button"
+          onClick={() => setConvenioSel(c.convenio)}
+          title={`${c.convenio} — ${c.nombre || 'sin descripción'} · ${c.categorias} categoría(s)`}
+          className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap inline-flex items-center gap-1.5 ${
+            convenioSel === c.convenio ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+          }`}
+        >
+          <span className="font-mono">{c.convenio}</span>
+          {/* El nombre distingue lo que el código no: esta empleadora tiene dos TELEVISIÓN y dos ACTORES. */}
+          <span className="hidden lg:inline font-normal">{c.nombre}</span>
+          <span className="text-[10px] font-normal text-gray-400">{c.categorias}</span>
+        </button>
+      ))}
+    </div>
+  );
+
   const banner = huerfanas.length > 0 && (
     <div className="rounded-xl border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/20 overflow-hidden">
       <div className="px-4 py-3 flex items-start gap-3">
@@ -487,8 +603,10 @@ export const CategoriasArcaTab: React.FC = () => {
         {banner}
         <div>
           <h2 className="text-sm font-bold text-gray-700 dark:text-gray-200">Elegí un convenio</h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Las categorías profesionales cuelgan de un Convenio Colectivo. La escala salarial vive en sus grupos, no en cada categoría.</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Las categorías profesionales cuelgan de un Convenio Colectivo. La escala salarial vive en sus grupos —o en la categoría, en los convenios que ARCA publica sin grupos.</p>
         </div>
+
+        {tabsConvenios}
         {/*
          * Chequeo de consistencia, arriba: un convenio registrado ante ARCA y sin categorías es un
          * bloqueo, no un detalle — ningún alta bajo ese CCT se puede generar. Mismo patrón que los
@@ -576,18 +694,25 @@ export const CategoriasArcaTab: React.FC = () => {
     <div className="space-y-4">
       {banner}
 
+      {tabsConvenios}
+
       <div className="flex items-center gap-3 flex-wrap">
-        <button onClick={() => setConvenioSel('')} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-          <FontAwesomeIcon icon={faArrowLeft} className="h-3 w-3" />
-          Cambiar convenio
-        </button>
         <div className="min-w-0">
           <span className="font-mono text-sm font-bold text-blue-700 dark:text-blue-400">{convenioSel}</span>
           <span className="text-sm text-gray-600 dark:text-gray-300"> — {detalle?.nombre || '(sin descripción)'}</span>
           <span className="block text-xs text-gray-500 dark:text-gray-400">
             {detalle?.grupos.length ?? 0} grupos · {totalCategorias} categorías
+            {(detalle?.sinGrupo?.length ?? 0) > 0 && <> · {detalle!.sinGrupo.length} sin grupo</>}
           </span>
         </div>
+        {historicas > 0 && (
+          <label className="inline-flex items-center gap-2 cursor-pointer select-none ml-auto" title="Las dadas de baja siguen resolviendo el sueldo y el código de los contratos que ya las usan, pero no se ofrecen al cargar uno nuevo.">
+            <input type="checkbox" checked={verHistoricas} onChange={(e) => setVerHistoricas(e.target.checked)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+            <span className="text-xs text-gray-600 dark:text-gray-300">
+              Ver históricas <span className="font-semibold">({historicas})</span>
+            </span>
+          </label>
+        )}
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
@@ -632,150 +757,259 @@ export const CategoriasArcaTab: React.FC = () => {
         <div className="flex justify-center items-center py-20">
           <LoadingSpinner message="Cargando el convenio..." />
         </div>
-      ) : gruposVisibles.length === 0 ? (
+      ) : gruposVisibles.length === 0 && sinGrupoVisibles.length === 0 ? (
         <EmptyState
           icon={faListCheck}
-          title={searchTerm ? 'Sin resultados' : 'Este convenio no tiene grupos'}
-          description={searchTerm ? `Ninguna categoría de ${convenioSel} coincide con la búsqueda.` : 'Creá un grupo salarial con su escala y colgale las categorías del nomenclador de ARCA.'}
+          title={searchTerm ? 'Sin resultados' : 'Este convenio no tiene categorías'}
+          description={
+            searchTerm
+              ? `Ninguna categoría de ${convenioSel} coincide con la búsqueda.`
+              : historicas > 0
+                ? `Las ${historicas} categorías de ${convenioSel} están dadas de baja. Tildá «Ver históricas» para verlas.`
+                : 'Creá un grupo salarial con su escala y colgale las categorías del nomenclador de ARCA.'
+          }
           action={canManage && !searchTerm ? { label: 'Nuevo grupo', onClick: abrirNuevoGrupo, icon: faLayerGroup } : undefined}
         />
       ) : (
-        <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm mx-0.5 lg:mx-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                  <th className="px-3 py-3 w-8" />
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Grupo</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sueldo Básico</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Adicional</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sueldo Bruto</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden xl:table-cell">Presentismo</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Neto</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Actualización</th>
-                  {canManage && <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-                {gruposVisibles.map((g) => {
-                  const abierto = estaExpandido(g);
-                  const sinEscala = !g.sueldoBruto;
-                  return (
-                    <React.Fragment key={g._id}>
-                      <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer" onClick={() => alternar(g._id)}>
-                        <td className="px-3 py-3 text-gray-400">
-                          <FontAwesomeIcon icon={abierto ? faChevronDown : faChevronRight} className="h-3 w-3" />
+        <div className="space-y-4">
+          {gruposVisibles.length > 0 && (
+            <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm mx-0.5 lg:mx-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                      <th className="px-3 py-3 w-8" />
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Grupo</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sueldo Básico</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Adicional</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sueldo Bruto</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden xl:table-cell">Presentismo</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Neto</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Actualización</th>
+                      {canManage && <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+                    {gruposVisibles.map((g) => {
+                      const abierto = estaExpandido(g);
+                      const sinEscala = !g.sueldoBruto;
+                      return (
+                        <React.Fragment key={g._id}>
+                          <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer" onClick={() => alternar(g._id)}>
+                            <td className="px-3 py-3 text-gray-400">
+                              <FontAwesomeIcon icon={abierto ? faChevronDown : faChevronRight} className="h-3 w-3" />
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center h-7 w-10 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-bold">{g.numero}</span>
+                                <div className="min-w-0">
+                                  {g.nombre && <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{g.nombre}</span>}
+                                  <span className="block text-xs text-gray-500 dark:text-gray-400">{g.categorias.length === 1 ? '1 categoría' : `${g.categorias.length} categorías`}</span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-medium">{formatCurrency(g.sueldoBasico)}</td>
+                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-medium">{formatCurrency(g.sueldoAdicional)}</td>
+                            <td className="px-4 py-3">
+                              <span className={`text-sm font-semibold ${sinEscala ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}>{formatCurrency(g.sueldoBruto)}</span>
+                              {sinEscala && (
+                                <span className="block text-[10px] text-red-600 dark:text-red-400" title="Sin sueldo bruto, la retribución del TXT queda en 0 y ARCA rechaza el alta.">
+                                  Sin escala: bloquea el alta
+                                </span>
+                              )}
+                              {!sinEscala && g.sueldoBrutoLetras && (
+                                <div className="text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-[170px]" title={g.sueldoBrutoLetras}>
+                                  {g.sueldoBrutoLetras}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-medium hidden xl:table-cell">{formatCurrency(g.presentismo)}</td>
+                            <td className="px-4 py-3 text-sm text-blue-700 dark:text-blue-400 font-bold">{formatCurrency(g.neto)}</td>
+                            <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell">{formatDate(g.fechaActualizacion)}</td>
+                            {canManage && (
+                              <td className="px-4 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center justify-end gap-2">
+                                  <button onClick={() => abrirEscala(g)} className="p-1.5 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors" title="Editar la escala del grupo (aplicar paritaria)">
+                                    <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                                  </button>
+                                  <button onClick={() => eliminarGrupo(g)} disabled={g.categorias.length > 0} className="p-1.5 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={g.categorias.length > 0 ? 'Tiene categorías: movelas o eliminalas antes' : 'Eliminar grupo'}>
+                                    <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+
+                          {abierto && (
+                            <tr>
+                              <td colSpan={canManage ? 9 : 8} className="p-0 bg-gray-50/70 dark:bg-gray-900/30">
+                                {g.categorias.length === 0 ? (
+                                  <div className="px-6 py-4 text-xs text-gray-500 dark:text-gray-400">Este grupo no tiene categorías.</div>
+                                ) : (
+                                  <table className="w-full text-left border-collapse">
+                                    <thead>
+                                      <tr className="border-b border-gray-200 dark:border-gray-700/60">
+                                        <th className="pl-14 pr-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Cód. ARCA</th>
+                                        <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Nombre</th>
+                                        <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest hidden lg:table-cell">Descripción de ARCA</th>
+                                        <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contratos</th>
+                                        {canManage && <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Acciones</th>}
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                                      {g.categorias.map((c) => (
+                                        <tr key={c._id} className="hover:bg-white dark:hover:bg-gray-800/60 transition-colors">
+                                          <td className="pl-14 pr-4 py-2">
+                                            {/* 6 dígitos, como lo escribe ARCA: así se coteja de un vistazo contra un export del organismo. */}
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{c.codigoArca}</span>
+                                          </td>
+                                          <td className="px-4 py-2">
+                                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{c.nombre}</span>
+                                            {!c.isActive && (
+                                              <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600" title="Resuelve para los contratos que ya la usan, pero no se ofrece al cargar uno nuevo.">
+                                                NO ELEGIBLE
+                                              </span>
+                                            )}
+                                          </td>
+                                          <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell">{c.descripcionArca || '—'}</td>
+                                          <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{c.contratos > 0 ? c.contratos : '—'}</td>
+                                          {canManage && (
+                                            <td className="px-4 py-2 text-right whitespace-nowrap">
+                                              <div className="flex items-center justify-end gap-1.5">
+                                                <button onClick={() => abrirEditarCategoria(c, g, convenioSel)} className="p-1.5 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors" title="Editar">
+                                                  <FontAwesomeIcon icon={faEdit} className="h-3.5 w-3.5" />
+                                                </button>
+                                                <button onClick={() => alternarActiva(c)} className="p-1.5 text-gray-500 hover:text-amber-600 dark:hover:text-amber-400 rounded transition-colors" title={c.isActive ? 'Dejar de ofrecerla en contratos nuevos' : 'Volver a ofrecerla'}>
+                                                  <FontAwesomeIcon icon={c.isActive ? faEye : faEyeSlash} className="h-3.5 w-3.5" />
+                                                </button>
+                                                <button onClick={() => eliminarCategoria(c)} disabled={c.contratos > 0} className="p-1.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={c.contratos > 0 ? `${c.contratos} contrato(s) la usan: desactivala en vez de eliminarla` : 'Eliminar'}>
+                                                  <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
+                                                </button>
+                                              </div>
+                                            </td>
+                                          )}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                )}
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700 px-4 py-3">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {convenioSel} · <span className="font-bold text-gray-700 dark:text-gray-300">{gruposVisibles.length}</span> grupo(s) y <span className="font-bold text-gray-700 dark:text-gray-300">{gruposVisibles.reduce((acc, g) => acc + g.categorias.length, 0)}</span> categoría(s)
+                  {searchTerm ? ` de ${totalCategorias}` : ''}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/*
+            SECCIÓN PLANA: las categorías que no cuelgan de ningún grupo.
+
+            No es una vista alternativa a la de arriba — se dibujan las dos cuando las dos tienen
+            algo. 0131/75 tiene 12 grupos vigentes y 206 categorías históricas sueltas al mismo
+            tiempo, y elegir una vista según `grupos.length` haría desaparecer 206 filas en silencio.
+
+            Acá la escala se muestra por fila y no en un encabezado: sin grupo del cual heredar, cada
+            categoría tiene la suya o no tiene ninguna.
+          */}
+          {sinGrupoVisibles.length > 0 && (
+            <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm mx-0.5 lg:mx-0">
+              <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Categorías sin grupo salarial</span>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                  ARCA no publica grupo en todos los convenios. Sin grupo del cual heredar, la escala vive en cada categoría.
+                </p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cód. ARCA</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sueldo Bruto</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden xl:table-cell">Neto</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Actualización</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contratos</th>
+                      {canManage && <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+                    {sinGrupoVisibles.map((c) => (
+                      <tr key={c._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                        <td className="px-4 py-2.5">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{c.codigoArca}</span>
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center justify-center h-7 w-10 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-bold">{g.numero}</span>
-                            <div className="min-w-0">
-                              {g.nombre && <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{g.nombre}</span>}
-                              <span className="block text-xs text-gray-500 dark:text-gray-400">{g.categorias.length === 1 ? '1 categoría' : `${g.categorias.length} categorías`}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-medium">{formatCurrency(g.sueldoBasico)}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-medium">{formatCurrency(g.sueldoAdicional)}</td>
-                        <td className="px-4 py-3">
-                          <span className={`text-sm font-semibold ${sinEscala ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}>{formatCurrency(g.sueldoBruto)}</span>
-                          {sinEscala && (
-                            <span className="block text-[10px] text-red-600 dark:text-red-400" title="Sin sueldo bruto, la retribución del TXT queda en 0 y ARCA rechaza el alta.">
-                              Sin escala: bloquea el alta
+                        <td className="px-4 py-2.5">
+                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{c.nombre}</span>
+                          {!c.isActive && (
+                            <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600" title="Resuelve para los contratos que ya la usan, pero no se ofrece al cargar uno nuevo.">
+                              NO ELEGIBLE
                             </span>
                           )}
-                          {!sinEscala && g.sueldoBrutoLetras && (
-                            <div className="text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-[170px]" title={g.sueldoBrutoLetras}>
-                              {g.sueldoBrutoLetras}
-                            </div>
+                          {c.descripcionArca && <span className="block text-[11px] text-gray-400 dark:text-gray-500 truncate max-w-[380px]">{c.descripcionArca}</span>}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          {/*
+                            «Sin escala» y «$ 0» NO son lo mismo, y el color los separa: el primero es
+                            un dato que falta y bloquea el alta; el segundo sería una decisión.
+                            `escalaOrigen` es lo único que permite distinguirlos desde acá.
+                          */}
+                          {c.escalaOrigen === null ? (
+                            <span className="text-xs font-semibold text-red-600 dark:text-red-400" title="Sin sueldo bruto, la retribución del TXT queda en 0 y ARCA rechaza el alta.">
+                              Sin escala: bloquea el alta
+                            </span>
+                          ) : (
+                            <>
+                              <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">{formatCurrency(c.sueldoBruto)}</span>
+                              {c.sueldoBrutoLetras && (
+                                <span className="block text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-[170px]" title={c.sueldoBrutoLetras}>
+                                  {c.sueldoBrutoLetras}
+                                </span>
+                              )}
+                            </>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-medium hidden xl:table-cell">{formatCurrency(g.presentismo)}</td>
-                        <td className="px-4 py-3 text-sm text-blue-700 dark:text-blue-400 font-bold">{formatCurrency(g.neto)}</td>
-                        <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell">{formatDate(g.fechaActualizacion)}</td>
+                        <td className="px-4 py-2.5 text-sm text-blue-700 dark:text-blue-400 font-bold hidden xl:table-cell">{c.escalaOrigen === null ? '—' : formatCurrency(c.neto)}</td>
+                        <td className="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell">{formatDate(c.fechaActualizacion)}</td>
+                        <td className="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400">{c.contratos > 0 ? c.contratos : '—'}</td>
                         {canManage && (
-                          <td className="px-4 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-end gap-2">
-                              <button onClick={() => abrirEscala(g)} className="p-1.5 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors" title="Editar la escala del grupo (aplicar paritaria)">
-                                <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                          <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button onClick={() => abrirEditarCategoria(c, null, convenioSel)} className="p-1.5 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors" title="Editar la categoría y su escala">
+                                <FontAwesomeIcon icon={faEdit} className="h-3.5 w-3.5" />
                               </button>
-                              <button onClick={() => eliminarGrupo(g)} disabled={g.categorias.length > 0} className="p-1.5 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={g.categorias.length > 0 ? 'Tiene categorías: movelas o eliminalas antes' : 'Eliminar grupo'}>
-                                <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                              <button onClick={() => alternarActiva(c)} className="p-1.5 text-gray-500 hover:text-amber-600 dark:hover:text-amber-400 rounded transition-colors" title={c.isActive ? 'Dejar de ofrecerla en contratos nuevos' : 'Volver a ofrecerla'}>
+                                <FontAwesomeIcon icon={c.isActive ? faEye : faEyeSlash} className="h-3.5 w-3.5" />
+                              </button>
+                              <button onClick={() => eliminarCategoria(c)} disabled={c.contratos > 0} className="p-1.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={c.contratos > 0 ? `${c.contratos} contrato(s) la usan: desactivala en vez de eliminarla` : 'Eliminar'}>
+                                <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
                               </button>
                             </div>
                           </td>
                         )}
                       </tr>
-
-                      {abierto && (
-                        <tr>
-                          <td colSpan={canManage ? 9 : 8} className="p-0 bg-gray-50/70 dark:bg-gray-900/30">
-                            {g.categorias.length === 0 ? (
-                              <div className="px-6 py-4 text-xs text-gray-500 dark:text-gray-400">Este grupo no tiene categorías.</div>
-                            ) : (
-                              <table className="w-full text-left border-collapse">
-                                <thead>
-                                  <tr className="border-b border-gray-200 dark:border-gray-700/60">
-                                    <th className="pl-14 pr-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Cód. ARCA</th>
-                                    <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Nombre</th>
-                                    <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest hidden lg:table-cell">Descripción de ARCA</th>
-                                    <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contratos</th>
-                                    {canManage && <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Acciones</th>}
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                                  {g.categorias.map((c) => (
-                                    <tr key={c._id} className="hover:bg-white dark:hover:bg-gray-800/60 transition-colors">
-                                      <td className="pl-14 pr-4 py-2">
-                                        {/* 6 dígitos, como lo escribe ARCA: así se coteja de un vistazo contra un export del organismo. */}
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{c.codigoArca}</span>
-                                      </td>
-                                      <td className="px-4 py-2">
-                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{c.nombre}</span>
-                                        {!c.isActive && (
-                                          <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600" title="Resuelve para los contratos que ya la usan, pero no se ofrece al cargar uno nuevo.">
-                                            NO ELEGIBLE
-                                          </span>
-                                        )}
-                                      </td>
-                                      <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell">{c.descripcionArca || '—'}</td>
-                                      <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{c.contratos > 0 ? c.contratos : '—'}</td>
-                                      {canManage && (
-                                        <td className="px-4 py-2 text-right whitespace-nowrap">
-                                          <div className="flex items-center justify-end gap-1.5">
-                                            <button onClick={() => abrirEditarCategoria(c, g, convenioSel)} className="p-1.5 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors" title="Editar">
-                                              <FontAwesomeIcon icon={faEdit} className="h-3.5 w-3.5" />
-                                            </button>
-                                            <button onClick={() => alternarActiva(c)} className="p-1.5 text-gray-500 hover:text-amber-600 dark:hover:text-amber-400 rounded transition-colors" title={c.isActive ? 'Dejar de ofrecerla en contratos nuevos' : 'Volver a ofrecerla'}>
-                                              <FontAwesomeIcon icon={c.isActive ? faEye : faEyeSlash} className="h-3.5 w-3.5" />
-                                            </button>
-                                            <button onClick={() => eliminarCategoria(c)} disabled={c.contratos > 0} className="p-1.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={c.contratos > 0 ? `${c.contratos} contrato(s) la usan: desactivala en vez de eliminarla` : 'Eliminar'}>
-                                              <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
-                                            </button>
-                                          </div>
-                                        </td>
-                                      )}
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            )}
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700 px-4 py-3">
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              {convenioSel} · <span className="font-bold text-gray-700 dark:text-gray-300">{gruposVisibles.length}</span> grupo(s) y <span className="font-bold text-gray-700 dark:text-gray-300">{gruposVisibles.reduce((acc, g) => acc + g.categorias.length, 0)}</span> categoría(s)
-              {searchTerm ? ` de ${totalCategorias}` : ''}
-            </span>
-          </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700 px-4 py-3">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  <span className="font-bold text-gray-700 dark:text-gray-300">{sinGrupoVisibles.length}</span> categoría(s) sin grupo
+                  {searchTerm || !verHistoricas ? ` de ${detalle?.sinGrupo.length ?? 0}` : ''}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1010,9 +1244,15 @@ export const CategoriasArcaTab: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Grupo salarial *</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Grupo salarial</label>
             <select value={formCategoria.numeroGrupo} onChange={(e) => setFormCategoria((p) => ({ ...p, numeroGrupo: e.target.value }))} className="input-field w-full" disabled={!convenioForm}>
-              <option value="">{convenioForm ? (gruposDelConvenioForm.length ? '— Elegir grupo —' : 'Este convenio no tiene grupos') : 'Elegí primero el convenio'}</option>
+              {/*
+                «Sin grupo» es una opción válida, no la ausencia de una elección: ARCA no publica
+                grupo en todos los convenios. Exigirlo fue lo que llevó a inventar un grupo por
+                categoría en los convenios de actores, y a tomar «1ª CATEGORIA» —que es la categoría
+                de la emisora— como si fuera una escala en 0131/75.
+              */}
+              <option value="">{convenioForm ? 'Sin grupo — la escala se carga acá abajo' : 'Elegí primero el convenio'}</option>
               {gruposDelConvenioForm.map((g) => (
                 <option key={g._id} value={g.numero}>
                   Grupo {g.numero}
@@ -1020,7 +1260,9 @@ export const CategoriasArcaTab: React.FC = () => {
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">De acá salen el básico, el bruto, el presentismo y el neto.</p>
+            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+              {formCategoria.numeroGrupo ? 'De acá salen el básico, el bruto, el presentismo y el neto: la categoría los hereda y sigue sus paritarias.' : 'Sin grupo, la escala es propia de esta categoría y se carga abajo.'}
+            </p>
           </div>
 
           <div>
@@ -1046,6 +1288,52 @@ export const CategoriasArcaTab: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción de ARCA</label>
             <input type="text" value={formCategoria.descripcionArca} onChange={(e) => setFormCategoria((p) => ({ ...p, descripcionArca: e.target.value }))} className="input-field" placeholder="Tal como viene del organismo, ej: DIRECTOR DE PROGRAMAS - GRUPO 1" />
           </div>
+
+          {/*
+            LA ESCALA PROPIA SOLO APARECE SIN GRUPO, y no es una decisión estética.
+
+            Con grupo, estos campos no se muestran ni se mandan: cargar un importe acá lo grabaría
+            como propio y la categoría dejaría de seguir al grupo — la próxima paritaria se aplicaría
+            al grupo y esta categoría se quedaría con el número viejo, sin que nada lo diga. Es la
+            razón por la que el formulario se precarga desde `escalaPropia` y nunca desde los
+            importes resueltos, que para una categoría con grupo son los del grupo.
+          */}
+          {!formCategoria.numeroGrupo && (
+            <div className="md:col-span-2 rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-3">
+              <div>
+                <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Escala salarial de esta categoría</span>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Sin bruto, la retribución del TXT queda en 0 y ARCA rechaza el alta.</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Sueldo básico</label>
+                  <input type="number" value={formEscalaCat.sueldoBasico} onChange={(e) => setFormEscalaCat((p) => ({ ...p, sueldoBasico: e.target.value }))} className="input-field" placeholder="0" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Adicional</label>
+                  <input type="number" value={formEscalaCat.sueldoAdicional} onChange={(e) => setFormEscalaCat((p) => ({ ...p, sueldoAdicional: e.target.value }))} className="input-field" placeholder="0" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Presentismo</label>
+                  <input type="number" value={formEscalaCat.presentismo} onChange={(e) => setFormEscalaCat((p) => ({ ...p, presentismo: e.target.value }))} className="input-field" placeholder="0" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Sueldo bruto</label>
+                  <input type="number" value={formEscalaCat.sueldoBruto} onChange={(e) => setFormEscalaCat((p) => ({ ...p, sueldoBruto: e.target.value }))} className="input-field" placeholder="0" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Neto</label>
+                  <input type="number" value={formEscalaCat.neto} onChange={(e) => setFormEscalaCat((p) => ({ ...p, neto: e.target.value }))} className="input-field" placeholder="0" />
+                </div>
+                <div>
+                  {/* La fecha es la de VIGENCIA de la paritaria, no la de carga: es lo que permite
+                      saber si la escala está vencida. */}
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Vigencia de la escala</label>
+                  <input type="date" value={formEscalaCat.fechaActualizacion} onChange={(e) => setFormEscalaCat((p) => ({ ...p, fechaActualizacion: e.target.value }))} className="input-field" />
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="md:col-span-2">
             <label className="inline-flex items-center gap-2 cursor-pointer select-none">
