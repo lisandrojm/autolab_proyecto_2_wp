@@ -104,6 +104,39 @@ export interface ConvenioDetalle {
 /** Por qué una categoría no se puede usar. Ninguno de los tres es un estado con el que convivir. */
 export type MotivoHuerfana = "sin_convenio" | "sin_convenio_ni_codigo" | "codigo_invalido";
 
+/**
+ * Contratos que apuntan a una categoría que no existe.
+ *
+ * El desglose POR ROL no es un detalle: es lo que separa casos distintos que comparten el mismo id
+ * roto. Con el id 43, 163 contratos eran de «Director de Programas» —de donde venía ese id— y 1 de
+ * «Jefe de Produccion», que ni siquiera propone esa categoría. Un solo número los habría hecho ver
+ * como un grupo homogéneo al que aplicarle un solo arreglo.
+ */
+export interface PunterosHuerfanos {
+  total: number;
+  porCategoria: Array<{
+    categoriaSatId: number;
+    /** El nombre denormalizado en el contrato: la única pista de a qué apuntaba. */
+    nombreGuardado: string;
+    contratos: number;
+    roles: Array<{ rolFrameId: number | null; nombre: string; contratos: number }>;
+  }>;
+}
+
+/**
+ * Convenios cuya escala declara una vigencia que ya pasó.
+ *
+ * A diferencia de los otros tres chequeos, este NO señala algo roto: la escala vencida sigue siendo
+ * la última paritaria pactada y el alta se genera igual. Avisa para que nadie mande un TXT creyendo
+ * que el importe está al día.
+ */
+export interface EscalasVencidas {
+  total: number;
+  porConvenio: Array<{ convenio: string; escalas: number; vigenciaHasta: string; diasVencida: number }>;
+  /** Contra qué día se calculó. Hace el número reproducible al leer un reporte viejo. */
+  hoy: string;
+}
+
 export interface CategoriaHuerfana {
   _id: string;
   nombre: string;
@@ -134,6 +167,24 @@ class ArcaCategoriasAPI {
   /** Nivel 1. No hay "todos": una categoría se lee dentro de su convenio. */
   async convenios(): Promise<ConvenioConCategorias[]> {
     const { data } = await axios.get(`${BASE}/convenios`);
+    return data;
+  }
+
+  /** Convenios con la escala vencida. Avisa, no bloquea. */
+  async escalasVencidas(): Promise<EscalasVencidas> {
+    const { data } = await axios.get(`${BASE}/escalas-vencidas`);
+    return data;
+  }
+
+  /**
+   * Contratos con un `categoria_sat_id` que no resuelve.
+   *
+   * Va aparte de `huerfanas()` porque mira el problema desde el otro lado: aquella recorre categorías
+   * y les busca defectos, esta recorre contratos y les busca punteros a la nada. Un id inexistente no
+   * aparece en ninguna lista de categorías, así que solo se ve desde acá.
+   */
+  async contratosHuerfanos(): Promise<PunterosHuerfanos> {
+    const { data } = await axios.get(`${BASE}/contratos-huerfanos`);
     return data;
   }
 

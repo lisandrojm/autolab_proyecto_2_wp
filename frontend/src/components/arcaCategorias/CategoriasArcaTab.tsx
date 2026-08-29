@@ -5,6 +5,9 @@ import { SearchAndFilters } from '../ui/SearchAndFilters';
 import { EmptyState } from '../ui/EmptyState';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { InfoModal } from '../ui/InfoModal';
+import { BannerFuncionesRotas } from './BannerFuncionesRotas';
+import { BannerContratosHuerfanos } from './BannerContratosHuerfanos';
+import { BannerEscalasVencidas } from './BannerEscalasVencidas';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faListCheck, faChevronRight, faChevronDown, faDownload, faUpload, faFileExcel, faPlus, faEdit, faTrash, faTriangleExclamation, faLayerGroup, faArrowLeft, faEye, faEyeSlash, faArrowRightArrowLeft, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
@@ -700,6 +703,9 @@ export const CategoriasArcaTab: React.FC = () => {
     return (
       <div className="space-y-4">
         {banner}
+        <BannerFuncionesRotas />
+      <BannerContratosHuerfanos />
+      <BannerEscalasVencidas />
         {modalHuerfanas}
         <div>
           <h2 className="text-sm font-bold text-gray-700 dark:text-gray-200">Elegí un convenio</h2>
@@ -793,6 +799,9 @@ export const CategoriasArcaTab: React.FC = () => {
   return (
     <div className="space-y-4">
       {banner}
+      <BannerFuncionesRotas />
+      <BannerContratosHuerfanos />
+      <BannerEscalasVencidas />
       {modalHuerfanas}
 
       {tabsConvenios}

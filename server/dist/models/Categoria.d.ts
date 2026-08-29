@@ -54,7 +54,23 @@ export interface ICategoria extends Document {
     neto?: number;
     sueldoNetoLetras?: string;
     /** Fecha de VIGENCIA de la paritaria, no de carga. */
+    /**
+     * DESDE CUÁNDO RIGE esta escala. No es la fecha en que se la cargó.
+     *
+     * Se usaba como fecha de carga y eso la volvía inútil para lo único que importa: saber si el
+     * importe está al día. La MISMA escala de 0634/11, con los mismos números, figuraba al 27/08 en
+     * FRAME y al 06/07 en WeProdu — dos fechas distintas para un acuerdo que tiene una sola vigencia,
+     * y ninguna de las dos era la del acuerdo.
+     */
     fechaActualizacion?: Date | string;
+    /**
+     * Hasta cuándo rige. Vacío = la paritaria no declaró vencimiento.
+     *
+     * Las de actores siempre lo declaran —«julio–agosto 2026»— y son las que más rápido se vencen.
+     * Con este campo, una escala vencida se puede AVISAR en pantalla; sin él, un importe viejo se ve
+     * igual que uno vigente, que es peor que no tener ninguno.
+     */
+    vigenciaHasta?: Date | string;
     /**
      * Código de categoría de ARCA, SIEMPRE con 6 dígitos y ceros a la izquierda ("035283", no "35283").
      * Se guarda canónico —como lo escribe ARCA— para que comparar contra un export del organismo sea

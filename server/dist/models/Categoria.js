@@ -14,6 +14,7 @@ const categoriaSchema = new Schema({
     neto: { type: Number, default: 0 },
     sueldoNetoLetras: { type: String, default: "" },
     fechaActualizacion: { type: Date },
+    vigenciaHasta: { type: Date },
     codigoArca: {
         type: String,
         required: [true, "La categoría tiene que tener su código de ARCA"],

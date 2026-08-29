@@ -29,6 +29,7 @@ const VACIA = {
     neto: 0,
     sueldoNetoLetras: "",
     fechaActualizacion: undefined,
+    vigenciaHasta: undefined,
     origen: null,
 };
 /** Una fuente cuenta como cargada cuando tiene bruto. Sin bruto no hay retribución que declarar. */
@@ -42,6 +43,7 @@ const leer = (x, origen) => ({
     neto: Number(x?.neto || 0),
     sueldoNetoLetras: String(x?.sueldoNetoLetras || ""),
     fechaActualizacion: x?.fechaActualizacion,
+    vigenciaHasta: x?.vigenciaHasta,
     origen,
 });
 /**

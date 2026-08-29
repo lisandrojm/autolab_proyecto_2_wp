@@ -28,7 +28,10 @@ export interface EscalaSalarial {
     sueldoBrutoLetras: string;
     neto: number;
     sueldoNetoLetras: string;
+    /** Desde cuándo rige. */
     fechaActualizacion?: Date | string;
+    /** Hasta cuándo. Vacío = la paritaria no lo declaró. */
+    vigenciaHasta?: Date | string;
     /** De dónde salió. `null` = no hay escala en ningún lado. */
     origen: "categoria" | "grupo" | null;
 }

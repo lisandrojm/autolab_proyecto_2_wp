@@ -11,6 +11,7 @@ const convenioGrupoSchema = new Schema({
     neto: { type: Number, default: 0 },
     sueldoNetoLetras: { type: String, default: "" },
     fechaActualizacion: { type: Schema.Types.Mixed },
+    vigenciaHasta: { type: Schema.Types.Mixed },
 }, { timestamps: true, collection: "convenio-grupos" });
 // Un grupo es único dentro de su convenio: el Grupo 1 del SAT no es el Grupo 1 de otro CCT.
 convenioGrupoSchema.index({ convenio: 1, numero: 1 }, { unique: true });

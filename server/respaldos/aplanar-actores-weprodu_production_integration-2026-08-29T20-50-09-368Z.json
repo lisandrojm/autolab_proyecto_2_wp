@@ -1,0 +1,158 @@
+{
+  "categorias": [
+    {
+      "_id": "6a83c209bb57a33a81c972df",
+      "grupoId": "6a83c209bb57a33a81c972db"
+    },
+    {
+      "_id": "6a83c209bb57a33a81c972e0",
+      "grupoId": "6a83c209bb57a33a81c972dc"
+    },
+    {
+      "_id": "6a83c209bb57a33a81c972e1",
+      "grupoId": "6a83c209bb57a33a81c972dd"
+    },
+    {
+      "_id": "6a83c209bb57a33a81c972e2",
+      "grupoId": "6a83c209bb57a33a81c972de"
+    },
+    {
+      "_id": "6a83c209bb57a33a81c972e7",
+      "grupoId": "6a83c209bb57a33a81c972e3"
+    },
+    {
+      "_id": "6a83c209bb57a33a81c972e8",
+      "grupoId": "6a83c209bb57a33a81c972e4"
+    },
+    {
+      "_id": "6a83c209bb57a33a81c972e9",
+      "grupoId": "6a83c209bb57a33a81c972e5"
+    },
+    {
+      "_id": "6a83c209bb57a33a81c972ea",
+      "grupoId": "6a83c209bb57a33a81c972e6"
+    }
+  ],
+  "grupos": [
+    {
+      "_id": "6a83c209bb57a33a81c972db",
+      "convenio": "0322/75",
+      "numero": 1,
+      "nombre": "APUNTADOR",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "createdAt": "2026-08-18T02:23:05.026Z",
+      "updatedAt": "2026-08-18T02:23:05.026Z"
+    },
+    {
+      "_id": "6a83c209bb57a33a81c972dc",
+      "convenio": "0322/75",
+      "numero": 2,
+      "nombre": "APUNTADOR DE REEMPLAZO",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "createdAt": "2026-08-18T02:23:05.065Z",
+      "updatedAt": "2026-08-18T02:23:05.065Z"
+    },
+    {
+      "_id": "6a83c209bb57a33a81c972dd",
+      "convenio": "0322/75",
+      "numero": 3,
+      "nombre": "TIRA",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "createdAt": "2026-08-18T02:23:05.106Z",
+      "updatedAt": "2026-08-18T02:23:05.106Z"
+    },
+    {
+      "_id": "6a83c209bb57a33a81c972de",
+      "convenio": "0322/75",
+      "numero": 4,
+      "nombre": "UNITARIO",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "createdAt": "2026-08-18T02:23:05.148Z",
+      "updatedAt": "2026-08-18T02:23:05.148Z"
+    },
+    {
+      "_id": "6a83c209bb57a33a81c972e3",
+      "convenio": "0102/90",
+      "numero": 1,
+      "nombre": "COPROTAGONISTA A",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "createdAt": "2026-08-18T02:23:05.428Z",
+      "updatedAt": "2026-08-18T02:23:05.428Z"
+    },
+    {
+      "_id": "6a83c209bb57a33a81c972e4",
+      "convenio": "0102/90",
+      "numero": 2,
+      "nombre": "PERSONAJE MENOR",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "createdAt": "2026-08-18T02:23:05.468Z",
+      "updatedAt": "2026-08-18T02:23:05.468Z"
+    },
+    {
+      "_id": "6a83c209bb57a33a81c972e5",
+      "convenio": "0102/90",
+      "numero": 3,
+      "nombre": "PERSONAJE SECUNDARIO",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "createdAt": "2026-08-18T02:23:05.508Z",
+      "updatedAt": "2026-08-18T02:23:05.508Z"
+    },
+    {
+      "_id": "6a83c209bb57a33a81c972e6",
+      "convenio": "0102/90",
+      "numero": 4,
+      "nombre": "PROTAGONISTA A",
+      "sueldoBasico": 0,
+      "sueldoAdicional": 0,
+      "presentismo": 0,
+      "sueldoBruto": 0,
+      "sueldoBrutoLetras": "",
+      "neto": 0,
+      "sueldoNetoLetras": "",
+      "createdAt": "2026-08-18T02:23:05.548Z",
+      "updatedAt": "2026-08-18T02:23:05.548Z"
+    }
+  ]
+}

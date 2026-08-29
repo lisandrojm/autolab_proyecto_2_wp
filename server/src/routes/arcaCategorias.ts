@@ -1,5 +1,10 @@
 import { Router, Response } from "express";
 import { escalaDeCategoria } from "../utils/escalaCategoria.js";
+import { RoleFrame } from "../models/RoleFrame.js";
+import UserProject from "../models/UserProject.js";
+import { CategoriaSat } from "../models/CategoriaSat.js";
+import { auditarPunteros } from "../utils/auditoriaPunterosCategoria.js";
+import { escalasVencidas, vencidasPorConvenio } from "../utils/auditoriaEscalas.js";
 import multer from "multer";
 import xlsx from "xlsx";
 import { Categoria } from "../models/Categoria.js";
@@ -7,7 +12,6 @@ import { proximoLegacyId } from "../utils/categoriaCompat.js";
 import { ConvenioGrupo } from "../models/ConvenioGrupo.js";
 import { Convenio } from "../models/Convenio.js";
 import { Company } from "../models/Company.js";
-import UserProject from "../models/UserProject.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 
 /**
@@ -146,6 +150,80 @@ router.get("/convenios", authenticateToken, async (_req: AuthenticatedRequest, r
   }
 });
 
+/**
+ * Qué funciones FRAME referencian esta categoría, por su `legacyId`.
+ *
+ * Existe por lo que pasó con «Actor»: se la dio de baja, cuatro funciones quedaron apuntándole, y
+ * nadie se enteró — ni siquiera el panel rojo de huérfanas, porque una categoría de baja sin
+ * contratos deja de figurar ahí. La función siguió proponiéndola al armar contratos nuevos.
+ *
+ * Se mira la lista DENORMALIZADA de `roles_frame`, que es la que de verdad alimenta el selector.
+ */
+const funcionesQueUsan = async (legacyId: number | null | undefined): Promise<string[]> => {
+  if (legacyId == null || !Number.isFinite(Number(legacyId))) return [];
+  const roles = await RoleFrame.find({ "data.categoriasSat.id": Number(legacyId) })
+    .select("name")
+    .lean();
+  return roles.map((r: any) => String(r.name));
+};
+/**
+ * GET /api/v1/arca/categorias/escalas-vencidas
+ *
+ * Convenios cuya escala salarial declara una vigencia que ya pasó.
+ *
+ * El cuarto de la familia, y el único que NO señala algo roto: una escala vencida sigue siendo la
+ * última paritaria pactada y el alta se genera igual. Lo que evita es que alguien mande un TXT
+ * creyendo que el importe está al día. Por eso avisa y no bloquea.
+ */
+router.get("/escalas-vencidas", authenticateToken, async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const [grupos, cats] = await Promise.all([
+      ConvenioGrupo.find().select("convenio numero nombre sueldoBruto fechaActualizacion vigenciaHasta").lean(),
+      // Solo las que tienen escala PROPIA: las que heredan del grupo ya están contempladas arriba.
+      Categoria.find({ sueldoBruto: { $gt: 0 } }).select("convenio nombre codigoArca sueldoBruto fechaActualizacion vigenciaHasta").lean(),
+    ]);
+    const hoy = new Date().toISOString().slice(0, 10);
+    const vencidas = escalasVencidas(
+      [...(grupos as any[]).map((g) => ({ ...g, donde: "grupo" as const })), ...(cats as any[]).map((c) => ({ ...c, donde: "categoria" as const }))],
+      hoy,
+    );
+    res.json({ total: vencidas.length, porConvenio: vencidasPorConvenio(vencidas), hoy });
+  } catch (error) {
+    console.error("Get escalas vencidas error:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
+/**
+ * GET /api/v1/arca/categorias/contratos-huerfanos
+ *
+ * Contratos cuya `categoria_sat_id` no resuelve a ninguna categoría del catálogo.
+ *
+ * Es el tercero de la familia, y el que faltaba. El panel de huérfanas recorre CATEGORÍAS y se
+ * pregunta si les falta algo: un puntero a un id que no existe se le escapa por definición, porque
+ * no hay categoría que listar. Así fue como 164 contratos con `categoria_sat_id 43` sobrevivieron a
+ * todas las revisiones — y encima el conteo de la función FRAME los tapaba, sumándolos a los 322 de
+ * «Mezclador de Control Central» bajo un único número de 485.
+ *
+ * A diferencia de las funciones rotas —que rompen el PRÓXIMO contrato— esto ya está roto: esos
+ * contratos existen y su TXT sale sin las posiciones 101-106.
+ */
+router.get("/contratos-huerfanos", authenticateToken, async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const [cats, viejas, ups, roles] = await Promise.all([
+      Categoria.find().select("legacyId nombre").lean(),
+      CategoriaSat.find().select("data.id data.nombre").lean(),
+      UserProject.find().select("userId nombre_proyecto contracts.categoria_sat_id contracts.nombre_categoria_sat contracts.rol_frame_id").lean(),
+      RoleFrame.find().select("name data.rol.id").lean(),
+    ]);
+    const nombrePorRolId = new Map<number, string>((roles as any[]).filter((r) => r.data?.rol?.id != null).map((r) => [Number(r.data.rol.id), String(r.name)]));
+    // Solo el resumen: la lista completa son cientos de filas y el panel muestra el agrupado.
+    const { total, porCategoria } = auditarPunteros(ups as any[], [...(cats as any[]), ...(viejas as any[])], nombrePorRolId);
+    res.json({ total, porCategoria });
+  } catch (error) {
+    console.error("Get contratos huérfanos error:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
 /**
  * GET /api/v1/arca/categorias/huerfanas
  *
@@ -480,7 +558,31 @@ router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Res
     }
     if (req.body.nombre !== undefined) item.nombre = String(req.body.nombre || "").trim();
     if (req.body.descripcionArca !== undefined) item.descripcionArca = String(req.body.descripcionArca || "").trim();
-    if (req.body.isActive !== undefined) item.isActive = req.body.isActive !== false;
+    /*
+      DAR DE BAJA CON FUNCIONES APUNTANDO SE RECHAZA.
+
+      No es una advertencia que se pueda ignorar: mientras la función la referencie, el selector de
+      contratos nuevos va a seguir ofreciendo una categoría sin convenio ni código, y el contrato que
+      salga de ahí no puede generar el TXT. Se pide remapear primero — que es trabajo de un minuto en
+      Funciones FRAME— y recién después dar de baja.
+
+      `forzar: true` existe para el caso en que se esté remapeando en el mismo movimiento, y queda
+      registrado en el log del server: la baja silenciosa es justamente lo que rompió el puente.
+    */
+    if (req.body.isActive !== undefined) {
+      const daDeBaja = req.body.isActive === false && item.isActive !== false;
+      if (daDeBaja && !req.body.forzar) {
+        const funciones = await funcionesQueUsan(item.legacyId);
+        if (funciones.length > 0) {
+          return res.status(409).json({
+            error: `No se puede dar de baja «${item.nombre}»: ${funciones.length} función(es) FRAME la proponen al armar un contrato (${funciones.join(", ")}). Remapealas primero en Funciones FRAME.`,
+            funciones,
+          });
+        }
+      }
+      if (daDeBaja && req.body.forzar) console.warn(`[CATEGORIAS] Baja FORZADA de «${item.nombre}» (legacyId ${item.legacyId}) con funciones FRAME apuntándole.`);
+      item.isActive = req.body.isActive !== false;
+    }
 
     // Si cambió el convenio o el grupo, se re-resuelve el destino. Mudar de convenio SIN indicar
     // grupo falla a propósito: el grupo N de un convenio no es el grupo N de otro, y elegirlo solo
@@ -534,10 +636,43 @@ router.delete("/:id", authenticateToken, async (req: AuthenticatedRequest, res: 
 });
 
 /** Columnas de la plantilla de paritarias. La primera es el convenio: sin él la fila es ambigua. */
-const COLUMNAS_PLANTILLA = ["convenio", "grupo", "nombreGrupo", "sueldoBasico", "sueldoAdicional", "presentismo", "sueldoBruto", "sueldoBrutoLetras", "neto", "sueldoNetoLetras"] as const;
+/**
+ * Una fecha como «2026-02-01», para que la planilla se lea igual en cualquier Excel.
+ *
+ * Excel interpreta las fechas según la configuración regional de quien abre el archivo: mandarlas
+ * como texto ISO es lo que evita que «02/03» viaje como marzo y vuelva como febrero.
+ */
+const aFechaTexto = (v: any): string => {
+  if (!v) return "";
+  if (typeof v === "string") return v.slice(0, 10);
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+};
+
+/** Lee una fecha de la planilla. "" cuando la celda está vacía o no es una fecha. */
+const aFechaDeCelda = (v: any): string => {
+  if (v === undefined || v === null || String(v).trim() === "") return "";
+  // Excel puede mandarla como número de serie (días desde 1899-12-30) o como texto.
+  if (typeof v === "number" && Number.isFinite(v)) return new Date(Date.UTC(1899, 11, 30) + v * 86400000).toISOString().slice(0, 10);
+  const t = String(v).trim();
+  const iso = /^(d{4})-(d{2})-(d{2})/.exec(t);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const dmy = /^(d{1,2})[/-](d{1,2})[/-](d{4})$/.exec(t);
+  // En la planilla la escribe alguien de acá: día primero, como en todo el resto de la app.
+  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`;
+  return "";
+};
+/**
+ * Columnas de la plantilla de paritarias. La primera es el convenio: sin él la fila es ambigua.
+ *
+ * `vigenciaDesde` y `vigenciaHasta` son del ACUERDO, no del día de la carga. Van en la planilla y
+ * no las pone el server porque el server no tiene forma de saberlas: quien transcribe la paritaria
+ * las está leyendo del PDF en ese momento.
+ */
+const COLUMNAS_PLANTILLA = ["convenio", "grupo", "nombreGrupo", "sueldoBasico", "sueldoAdicional", "presentismo", "sueldoBruto", "sueldoBrutoLetras", "neto", "sueldoNetoLetras", "vigenciaDesde", "vigenciaHasta"] as const;
 
 /** La misma plantilla para los convenios SIN grupos: en vez del número de grupo, el código de ARCA. */
-const COLUMNAS_PLANTILLA_SIN_GRUPO = ["convenio", "codigoArca", "nombreCategoria", "sueldoBasico", "sueldoAdicional", "presentismo", "sueldoBruto", "sueldoBrutoLetras", "neto", "sueldoNetoLetras"] as const;
+const COLUMNAS_PLANTILLA_SIN_GRUPO = ["convenio", "codigoArca", "nombreCategoria", "sueldoBasico", "sueldoAdicional", "presentismo", "sueldoBruto", "sueldoBrutoLetras", "neto", "sueldoNetoLetras", "vigenciaDesde", "vigenciaHasta"] as const;
 
 /**
  * GET /api/v1/arca/categorias/plantilla?convenio=0634/11
@@ -566,16 +701,16 @@ router.get("/plantilla", authenticateToken, async (req: AuthenticatedRequest, re
     if (grupos.length > 0) {
       filas = [[...COLUMNAS_PLANTILLA]];
       for (const g of grupos as any[]) {
-        filas.push([convenio, g.numero, g.nombre || "", g.sueldoBasico ?? 0, g.sueldoAdicional ?? 0, g.presentismo ?? 0, g.sueldoBruto ?? 0, g.sueldoBrutoLetras || "", g.neto ?? 0, g.sueldoNetoLetras || ""]);
+        filas.push([convenio, g.numero, g.nombre || "", g.sueldoBasico ?? 0, g.sueldoAdicional ?? 0, g.presentismo ?? 0, g.sueldoBruto ?? 0, g.sueldoBrutoLetras || "", g.neto ?? 0, g.sueldoNetoLetras || "", aFechaTexto(g.fechaActualizacion), aFechaTexto(g.vigenciaHasta)]);
       }
-      anchos = [{ wch: 12 }, { wch: 8 }, { wch: 22 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 45 }, { wch: 16 }, { wch: 45 }];
+      anchos = [{ wch: 12 }, { wch: 8 }, { wch: 22 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 45 }, { wch: 16 }, { wch: 45 }, { wch: 14 }, { wch: 14 }];
     } else {
       const cats = await Categoria.find({ convenio }).sort({ codigoArca: 1 }).lean();
       filas = [[...COLUMNAS_PLANTILLA_SIN_GRUPO]];
       for (const c of cats as any[]) {
-        filas.push([convenio, c.codigoArca || "", c.nombre || "", c.sueldoBasico ?? 0, c.sueldoAdicional ?? 0, c.presentismo ?? 0, c.sueldoBruto ?? 0, c.sueldoBrutoLetras || "", c.neto ?? 0, c.sueldoNetoLetras || ""]);
+        filas.push([convenio, c.codigoArca || "", c.nombre || "", c.sueldoBasico ?? 0, c.sueldoAdicional ?? 0, c.presentismo ?? 0, c.sueldoBruto ?? 0, c.sueldoBrutoLetras || "", c.neto ?? 0, c.sueldoNetoLetras || "", aFechaTexto(c.fechaActualizacion), aFechaTexto(c.vigenciaHasta)]);
       }
-      anchos = [{ wch: 12 }, { wch: 14 }, { wch: 32 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 45 }, { wch: 16 }, { wch: 45 }];
+      anchos = [{ wch: 12 }, { wch: 14 }, { wch: 32 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 45 }, { wch: 16 }, { wch: 45 }, { wch: 14 }, { wch: 14 }];
     }
 
     const ws = xlsx.utils.aoa_to_sheet(filas);
@@ -672,19 +807,31 @@ router.post("/importar", authenticateToken, upload.single("file"), async (req: A
           neto: num(row["neto"] ?? row["Neto"]),
           sueldoNetoLetras: String(row["sueldoNetoLetras"] ?? row["Sueldo Neto Letras"] ?? "").trim(),
           ...(row["nombreGrupo"] !== undefined ? { nombre: String(row["nombreGrupo"] ?? "").trim() } : {}),
+          // Solo se escriben si vinieron: una celda vacía conserva la vigencia que ya estaba.
+          ...(aFechaDeCelda(row["vigenciaDesde"] ?? row["Vigencia Desde"] ?? row["fechaActualizacion"]) ? { fechaActualizacion: aFechaDeCelda(row["vigenciaDesde"] ?? row["Vigencia Desde"] ?? row["fechaActualizacion"]) } : {}),
+          ...(aFechaDeCelda(row["vigenciaHasta"] ?? row["Vigencia Hasta"]) ? { vigenciaHasta: aFechaDeCelda(row["vigenciaHasta"] ?? row["Vigencia Hasta"]) } : {}),
         },
       });
     }
 
     if (errores.length > 0) return res.status(400).json({ error: "Errores de validación en el archivo Excel", details: errores });
 
-    const fechaActualizacion = new Date().toISOString().split("T")[0];
+    /*
+      LA VIGENCIA SALE DE LA PLANILLA, NO DEL RELOJ.
+
+      Acá se ponía `new Date()`: la escala quedaba fechada el día de la carga, que no dice nada
+      sobre si el importe está al día. Por eso el MISMO acuerdo de 0634/11 figuraba al 27/08 en
+      FRAME y al 06/07 en WeProdu.
+
+      Si la planilla no trae `vigenciaDesde` se conserva lo que ya estaba, en vez de pisarlo con hoy:
+      una fecha vieja pero real es más útil que una nueva y falsa.
+    */
     let actualizados = 0;
     const noEncontrados: string[] = [];
 
     for (const item of items) {
       if (item.grupo !== null) {
-        const r = await ConvenioGrupo.updateOne({ convenio: item.convenio, numero: item.grupo }, { $set: { ...item.escala, fechaActualizacion } });
+        const r = await ConvenioGrupo.updateOne({ convenio: item.convenio, numero: item.grupo }, { $set: item.escala });
         if (r.matchedCount === 0) noEncontrados.push(`${item.convenio} grupo ${item.grupo}`);
         else actualizados++;
         continue;
@@ -692,7 +839,7 @@ router.post("/importar", authenticateToken, upload.single("file"), async (req: A
       // Por código: la escala va en la CATEGORÍA. `nombre` no se pisa —en la categoría es un campo
       // propio, no parte de la escala— aunque la planilla traiga la columna del grupo.
       const { nombre: _descartado, ...escala } = item.escala;
-      const r = await Categoria.updateOne({ convenio: item.convenio, codigoArca: item.codigoArca }, { $set: { ...escala, fechaActualizacion } });
+      const r = await Categoria.updateOne({ convenio: item.convenio, codigoArca: item.codigoArca }, { $set: escala });
       if (r.matchedCount === 0) noEncontrados.push(`${item.convenio} categoría ${item.codigoArca}`);
       else actualizados++;
     }
@@ -700,6 +847,10 @@ router.post("/importar", authenticateToken, upload.single("file"), async (req: A
     // Los que no matchean se REPORTAN, no se crean: un grupo que no existe en el CCT es un error de
     // la planilla, y crearlo en silencio inventa estructura del convenio.
     const partes = [`Se actualizó la escala de ${actualizados} grupo(s)/categoría(s).`];
+    // Sin vigencia el aviso de «escala vencida» no puede funcionar, y esa es toda la razón por la
+    // que existe la columna: se dice acá, cuando todavía se está mirando la planilla.
+    const sinVigencia = items.filter((i) => !(i.escala as any).fechaActualizacion).length;
+    if (sinVigencia > 0) partes.push(`${sinVigencia} fila(s) sin «vigenciaDesde»: se conservó la fecha anterior. Cargala para que se pueda avisar cuando la escala venza.`);
     if (noEncontrados.length > 0) partes.push(`No existen (no se crearon): ${noEncontrados.join(", ")}.`);
 
     res.json({ message: partes.join(" "), count: actualizados, noEncontrados });

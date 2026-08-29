@@ -1,0 +1,78 @@
+[
+  {
+    "_id": "6966c03b54bcb393d9f43869",
+    "name": "Actor",
+    "categoriasSat": [
+      {
+        "id": 46,
+        "numeroCategoria": 13,
+        "sueldoBruto": 0,
+        "sueldoBrutoLetras": "CERO",
+        "neto": 0,
+        "sueldoNetoLetras": "CERO",
+        "fechaActualizacion": "2026-07-06",
+        "codigoAfip": 0,
+        "presentismo": 0,
+        "sueldoBasico": 0,
+        "sueldoAdicional": 0,
+        "nombre": "Actor",
+        "_id": "6a6b7e45e0741eb6cf55ce6a"
+      }
+    ]
+  },
+  {
+    "_id": "6a6b24886db5eb54e982d1ba",
+    "name": "Apuntador",
+    "categoriasSat": [
+      {
+        "id": 46,
+        "numeroCategoria": 13,
+        "sueldoBruto": 0,
+        "sueldoBrutoLetras": "CERO",
+        "neto": 0,
+        "sueldoNetoLetras": "CERO",
+        "fechaActualizacion": "2026-07-06",
+        "codigoAfip": 0,
+        "presentismo": 0,
+        "sueldoBasico": 0,
+        "sueldoAdicional": 0,
+        "nombre": "Actor",
+        "_id": "6a6b7f57e0741eb6cf55cea6"
+      }
+    ]
+  },
+  {
+    "_id": "6966c03d54bcb393d9f4388c",
+    "name": "Director de Programas",
+    "categoriasSat": [
+      {
+        "id": 43,
+        "numeroCategoria": 1,
+        "sueldoBruto": 1849258.73,
+        "sueldoBrutoLetras": "UN MILLÓN OCHOCIENTOS CUARENTA Y NUEVE MIL DOSCIENTOS CINCUENTA Y OCHO CON 73/100",
+        "neto": 1497899.5713000002,
+        "sueldoNetoLetras": "UN MILLÓN CUATROCIENTOS NOVENTA Y SIETE MIL OCHOCIENTOS NOVENTA Y NUEVE CON 57/100",
+        "fechaActualizacion": "2026-01-08T00:00:00.000Z",
+        "codigoAfip": 35283,
+        "presentismo": 168114.43,
+        "sueldoBasico": 1034550.34,
+        "sueldoAdicional": 646593.96,
+        "nombre": "Director de Programas"
+      },
+      {
+        "id": 111,
+        "numeroCategoria": 4,
+        "sueldoBruto": 1291252.54,
+        "sueldoBrutoLetras": "UN MILLÓN DOSCIENTOS NOVENTA Y UN MIL DOSCIENTOS CINCUENTA Y DOS CON 54/100",
+        "neto": 1045914.5574,
+        "sueldoNetoLetras": "UN MILLÓN CUARENTA Y CINCO MIL NOVECIENTOS CATORCE CON 56/100",
+        "fechaActualizacion": "2026-01-08T00:00:00.000Z",
+        "codigoAfip": 35303,
+        "presentismo": 117386.59,
+        "sueldoBasico": 8695300.33,
+        "sueldoAdicional": 304335.62,
+        "nombre": "Mezclador de Control Central"
+      }
+    ]
+  }
+]

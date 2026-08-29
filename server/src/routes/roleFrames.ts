@@ -1,5 +1,8 @@
 import { Router } from "express";
 import { RoleFrame } from "../models/RoleFrame.js";
+import { Categoria } from "../models/Categoria.js";
+import UserProject from "../models/UserProject.js";
+import { auditarFunciones } from "../utils/auditoriaFuncionesFrame.js";
 import { listarCategoriasCompat, resolverCategoriasCompatPorId } from "../utils/categoriaCompat.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
@@ -32,6 +35,47 @@ const armarCategoriasSatData = async (categoryIds: any[]) => {
     nombre: cat.data?.nombre || cat.name,
   }));
 };
+
+/**
+ * GET /api/v1/role-frames/rotas
+ *
+ * Funciones FRAME que apuntan a una categoría inexistente, dada de baja, o a ninguna.
+ *
+ * Es el equivalente, para el PUENTE, del panel rojo de categorías huérfanas de `/arca/categorias`.
+ * Sin esto la rotura es invisible: cuando la Fase 2 dio de baja «Actor», cuatro funciones quedaron
+ * proponiendo una categoría sin convenio ni código y no había ninguna pantalla donde se viera —
+ * «Actor» ya no figuraba entre las huérfanas justamente por estar de baja.
+ *
+ * La regla la pone `auditarFunciones`, la misma que corre el script de auditoría. Compartirla no es
+ * prolijidad: si el panel y el script contaran distinto, uno de los dos estaría mintiendo y no habría
+ * forma de saber cuál.
+ */
+router.get("/rotas", requireTenant, authenticateToken, async (_req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const [roles, categorias, ups] = await Promise.all([
+      RoleFrame.find().lean(),
+      Categoria.find().select("legacyId nombre convenio codigoArca isActive").lean(),
+      UserProject.find().select("contracts.rol_frame_id").lean(),
+    ]);
+
+    // A cuántos contratos alcanza cada función: es lo que dice si urge o si puede esperar.
+    const contratosPorRolId = new Map<number, number>();
+    for (const up of ups as any[]) {
+      for (const c of up.contracts || []) {
+        const rol = Number(c?.rol_frame_id);
+        if (Number.isFinite(rol)) contratosPorRolId.set(rol, (contratosPorRolId.get(rol) || 0) + 1);
+      }
+    }
+
+    const rotas = auditarFunciones(roles as any[], categorias as any[], contratosPorRolId)
+      .filter((f) => f.rota)
+      .sort((a, b) => b.contratos - a.contratos);
+    res.json(rotas);
+  } catch (error) {
+    console.error("Get funciones FRAME rotas error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 router.get("/", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {

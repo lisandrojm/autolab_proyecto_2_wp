@@ -37,7 +37,7 @@ export declare const DemoCredential: import("mongoose").Model<{
     tenantId: string;
     label: string;
     passwordPlain: string;
-} & import("mongoose").DefaultTimestampProps>, {}, import("mongoose").MergeType<import("mongoose").DefaultSchemaOptions, {
+} & import("mongoose").DefaultTimestampProps>, {}, import("mongoose").ResolveSchemaOptions<{
     timestamps: true;
 }>> & import("mongoose").FlatRecord<{
     userId: string;

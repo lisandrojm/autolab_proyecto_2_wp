@@ -29,7 +29,23 @@ export interface IConvenioGrupo extends Document {
     neto: number;
     sueldoNetoLetras: string;
     /** Desde cuándo rige esta escala (última paritaria aplicada). */
+    /**
+     * DESDE CUÁNDO RIGE esta escala. No es la fecha en que se la cargó.
+     *
+     * Se usaba como fecha de carga y eso la volvía inútil para lo único que importa: saber si el
+     * importe está al día. La MISMA escala de 0634/11, con los mismos números, figuraba al 27/08 en
+     * FRAME y al 06/07 en WeProdu — dos fechas distintas para un acuerdo que tiene una sola vigencia,
+     * y ninguna de las dos era la del acuerdo.
+     */
     fechaActualizacion?: Date | string;
+    /**
+     * Hasta cuándo rige. Vacío = la paritaria no declaró vencimiento.
+     *
+     * Las de actores siempre lo declaran —«julio–agosto 2026»— y son las que más rápido se vencen.
+     * Con este campo, una escala vencida se puede AVISAR en pantalla; sin él, un importe viejo se ve
+     * igual que uno vigente, que es peor que no tener ninguno.
+     */
+    vigenciaHasta?: Date | string;
     createdAt: Date;
     updatedAt: Date;
 }
