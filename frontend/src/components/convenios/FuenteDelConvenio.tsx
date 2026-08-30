@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faCircleCheck, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { paritariasAPI, FuenteParitaria, DeclaracionFuente, EstadoDeclarado } from '../../api/paritarias';
+import { formatearInstante } from '../../utils/fechas';
 
 /**
  * DÓNDE PUBLICA SUS PARITARIAS UN CONVENIO. Un solo bloque, usado desde los dos lados.
@@ -226,7 +227,7 @@ export const FuenteDelConvenio: React.FC<Props> = ({ convenio, fuentes, declarad
         {declarado && !actual && (
           <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
             Revisado por {declarado.revisadaPor || 'alguien sin identificar'}
-            {declarado.revisadaEl ? ` el ${new Date(declarado.revisadaEl).toLocaleDateString('es-AR')}` : ''}.
+            {declarado.revisadaEl ? ` el ${formatearInstante(declarado.revisadaEl)}` : ''}.
           </p>
         )}
         {declarado && actual && (
@@ -237,7 +238,7 @@ export const FuenteDelConvenio: React.FC<Props> = ({ convenio, fuentes, declarad
             <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5 mt-0.5 shrink-0" />
             <span>
               Queda una anotación anterior ({declarado.estado === 'no_aplica' ? 'no aplica' : 'sin fuente conocida'}
-              {declarado.revisadaEl ? `, del ${new Date(declarado.revisadaEl).toLocaleDateString('es-AR')}` : ''}) que ya no rige: manda la fuente asignada.
+              {declarado.revisadaEl ? `, del ${formatearInstante(declarado.revisadaEl)}` : ''}) que ya no rige: manda la fuente asignada.
             </span>
           </p>
         )}

@@ -9,27 +9,45 @@ import axios from './axiosConfig';
 
 export type ResultadoRevision = 'ok' | 'sin_enlaces' | 'error_red' | 'error_parseo';
 
-export interface FuenteParitaria {
+/**
+ * El estado de una fuente, tal como lo arma el server. UNA sola forma para las dos pantallas.
+ *
+ * Lo produce un único mapper del backend (`utils/vistaFuenteParitaria.ts`) y lo consumen tanto
+ * `/arca/fuentes-paritaria` como la columna de `/convenios`. Antes eran dos armados paralelos, y por
+ * eso pudieron decir cosas distintas de la misma fuente: una decía «vigilando» y la otra «vigilancia
+ * pausada», las dos con cara de estar informando.
+ */
+export interface FuenteResumen {
   _id: string;
   /** Quién publica: "SATSAID". */
   entidad: string;
   /** Etiqueta corta: "Actores · televisión". */
   nombre: string;
+  /**
+   * OPCIONAL A PROPÓSITO, aunque el server siempre lo mande.
+   *
+   * Un backend viejo, una proyección incompleta o un `select` de más lo dejan afuera, y ahí
+   * `!f.activa` da `true` y la pantalla escribe «pausada» sobre una fuente que está corriendo. El
+   * tipo obliga a pasar por `vigilanciaDe()`, que distingue ausente de `false` y lo reporta.
+   */
+  activa?: boolean;
+  /** Un INSTANTE en ISO. `null` = nunca revisada, y de eso depende la línea de base. */
+  ultimaRevision: string | null;
+  ultimoResultado?: ResultadoRevision;
+  ultimoError?: string;
+  /** La última revisión no terminó en `ok`: la fuente está ciega. */
+  conProblema: boolean;
+}
+
+export interface FuenteParitaria extends FuenteResumen {
   /** La página de LISTADO, no el PDF. */
   url: string;
   convenios: string[];
   patronIncluir: string;
   patronExcluir: string;
-  activa: boolean;
-  /** `null` = nunca revisada. Su primera revisión establece la línea de base. */
-  ultimaRevision: string | null;
-  ultimoResultado?: ResultadoRevision;
-  ultimoError?: string;
   enlacesUltimaExitosa?: number;
   publicaciones: number;
   sinVer: number;
-  /** La última revisión no terminó en `ok`: la fuente está ciega. */
-  conProblema: boolean;
 }
 
 export interface PublicacionParitaria {
@@ -69,7 +87,7 @@ export interface DeclaracionFuente {
  */
 export interface EstadoParitarias {
   /** Por código de convenio, qué fuentes lo alimentan. Vacío = ninguna registrada. */
-  porConvenio: Record<string, Array<{ _id: string; entidad: string; nombre: string; activa: boolean; ultimaRevision: string | null; conProblema: boolean }>>;
+  porConvenio: Record<string, FuenteResumen[]>;
   /**
    * Por `_id` de convenio, lo declarado a mano. SOLO los que alguien tocó.
    *
@@ -78,7 +96,7 @@ export interface EstadoParitarias {
    */
   declarado: Record<string, DeclaracionFuente>;
   sinVer: PublicacionParitaria[];
-  conProblema: Array<{ _id: string; entidad: string; nombre: string; url: string; ultimoResultado: ResultadoRevision; ultimoError: string; ultimaRevision: string | null }>;
+  conProblema: Array<FuenteResumen & { url: string }>;
   sinRevisar: number;
   /** `true` cuando lo de arriba viene acotado a una empresa. */
   filtradoPorEmpresa: boolean;

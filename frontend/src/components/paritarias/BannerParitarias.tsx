@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTriangleExclamation, faCircleInfo, faFilePdf, faEyeSlash, faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
 import { InfoModal } from '../ui/InfoModal';
 import { paritariasAPI, EstadoParitarias } from '../../api/paritarias';
+import { formatearInstante } from '../../utils/fechas';
 
 /**
  * Los avisos de la vigilancia de paritarias, con la misma forma que los cuatro de `/arca/categorias`.
@@ -50,7 +51,8 @@ export const BannerParitarias: React.FC<{ empresaId?: string }> = ({ empresaId }
 
   if (!estado) return null;
 
-  const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—');
+  /** Los dos datos que formatea son INSTANTES, no fechas de calendario. Ver `utils/fechas.ts`. */
+  const fmt = formatearInstante;
 
   const marcarVista = async (id: string) => {
     await paritariasAPI.marcarVista(id);
@@ -99,7 +101,7 @@ export const BannerParitarias: React.FC<{ empresaId?: string }> = ({ empresaId }
                     <div className="flex items-baseline justify-between gap-3 flex-wrap">
                       <span className="font-semibold text-gray-900 dark:text-gray-100">{f.nombre}</span>
                       <span className="text-xs text-red-700 dark:text-red-400">
-                        {MOTIVO[f.ultimoResultado] || f.ultimoResultado} · última revisión {fmt(f.ultimaRevision)}
+                        {(f.ultimoResultado && (MOTIVO[f.ultimoResultado] || f.ultimoResultado)) || 'no se pudo leer el motivo'} · última revisión {fmt(f.ultimaRevision)}
                       </span>
                     </div>
                     {f.ultimoError && <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{f.ultimoError}</p>}

@@ -9,6 +9,7 @@ import { BannerFuncionesRotas } from './BannerFuncionesRotas';
 import { BannerContratosHuerfanos } from './BannerContratosHuerfanos';
 import { BannerEscalasVencidas } from './BannerEscalasVencidas';
 import { sweetAlert } from '../../utils/sweetAlert';
+import { formatearFechaCalendario } from '../../utils/fechas';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faListCheck, faChevronRight, faChevronDown, faDownload, faUpload, faFileExcel, faPlus, faEdit, faTrash, faTriangleExclamation, faLayerGroup, faArrowLeft, faEye, faEyeSlash, faArrowRightArrowLeft, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { useAuthStore } from '../../stores/authStore';
@@ -40,14 +41,13 @@ const formatCurrency = (value: number | undefined | null): string => {
   return value.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2 });
 };
 
-const formatDate = (value: string | Date | undefined | null): string => {
-  if (!value) return '—';
-  try {
-    return new Date(value).toLocaleDateString('es-AR');
-  } catch {
-    return String(value);
-  }
-};
+/**
+ * `fechaActualizacion` es la fecha DEL ACUERDO, no un instante: «rige desde el 6 de julio» es el 6
+ * de julio en cualquier huso. Se guarda como "2026-07-06" y se mostraba con
+ * `new Date(...).toLocaleDateString()`, que la lee como medianoche UTC — en Argentina, el día
+ * anterior a las 21:00. Por eso aparecía un día antes.
+ */
+const formatDate = formatearFechaCalendario;
 
 /** Fecha en el formato que espera un `<input type="date">`. */
 const aInputDate = (value: string | null | undefined): string => {

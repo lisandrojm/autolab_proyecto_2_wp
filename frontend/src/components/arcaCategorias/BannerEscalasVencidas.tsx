@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faClockRotateLeft, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { InfoModal } from '../ui/InfoModal';
+import { formatearFechaCalendario } from '../../utils/fechas';
 import { arcaCategoriasAPI, EscalasVencidas } from '../../api/arcaCategorias';
 
 /**
@@ -38,10 +39,8 @@ export const BannerEscalasVencidas: React.FC = () => {
   if (!datos || datos.total === 0) return null;
 
   const convenios = datos.porConvenio;
-  const fmt = (iso: string) => {
-    const [a, m, d] = iso.split('-');
-    return `${d}/${m}/${a}`;
-  };
+  /** Las vigencias son fechas de CALENDARIO: no se convierten de huso. Ver `utils/fechas.ts`. */
+  const fmt = formatearFechaCalendario;
 
   return (
     <>

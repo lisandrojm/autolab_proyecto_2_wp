@@ -7,6 +7,7 @@ import { Company } from "../models/Company.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { revisarFuente, revisarTodas, fuenteConProblema } from "../services/paritariasVigilanciaService.js";
 import { esDeclarable } from "../utils/estadoFuenteConvenio.js";
+import { vistaDeFuente, VistaFuente } from "../utils/vistaFuenteParitaria.js";
 
 /**
  * ABM de fuentes de paritarias y lectura de lo detectado.
@@ -79,7 +80,10 @@ router.get("/fuentes", authenticateToken, async (_req: AuthenticatedRequest, res
       total.set(k, (total.get(k) || 0) + c.n);
       if (!c._id.vista) sinVer.set(k, (sinVer.get(k) || 0) + c.n);
     }
-    res.json((fuentes as any[]).map((f) => ({ ...f, publicaciones: total.get(String(f._id)) || 0, sinVer: sinVer.get(String(f._id)) || 0, conProblema: fuenteConProblema(f) })));
+    // El spread trae lo propio del ABM (patrones, convenios, url) y `vistaDeFuente` PISA el estado
+    // compartido: así `activa` y `ultimaRevision` salen del mismo lugar que en `/estado`, y no de
+    // dos lecturas paralelas que hay que acordarse de mantener iguales.
+    res.json((fuentes as any[]).map((f) => ({ ...f, ...vistaDeFuente(f), publicaciones: total.get(String(f._id)) || 0, sinVer: sinVer.get(String(f._id)) || 0 })));
   } catch (error) {
     console.error("List fuentes paritaria error:", error);
     res.status(500).json({ error: "Error interno del servidor" });
@@ -295,11 +299,11 @@ router.get("/estado", authenticateToken, async (req: AuthenticatedRequest, res: 
 
     // Por convenio: qué fuente lo vigila. Es lo que dibuja la columna, y sale de acá para que la
     // pantalla no tenga que recorrer las fuentes por su cuenta y llegar a otra conclusión.
-    const porConvenio: Record<string, Array<{ _id: string; entidad: string; nombre: string; activa: boolean; ultimaRevision: Date | null; conProblema: boolean }>> = {};
+    const porConvenio: Record<string, VistaFuente[]> = {};
     for (const f of fuentes as any[]) {
-      for (const c of f.convenios || []) {
-        (porConvenio[c] ??= []).push({ _id: String(f._id), entidad: f.entidad, nombre: f.nombre, activa: !!f.activa, ultimaRevision: f.ultimaRevision ?? null, conProblema: fuenteConProblema(f) });
-      }
+      // EL MISMO mapper que `/fuentes`. Que las dos pantallas puedan decir cosas distintas de la
+      // misma fuente era el bug de fondo, no el campo que faltaba en una de las dos.
+      for (const c of f.convenios || []) (porConvenio[c] ??= []).push(vistaDeFuente(f));
     }
 
     /*
@@ -337,7 +341,7 @@ router.get("/estado", authenticateToken, async (req: AuthenticatedRequest, res: 
       sinVer: sinVer.map((p) => ({ _id: String(p._id), url: p.url, textoEnlace: p.textoEnlace, detectadaEl: p.detectadaEl, fuente: p.fuente })),
       conProblema: (fuentes as any[])
         .filter((f) => f.activa && fuenteConProblema(f) && leImporta(f.convenios))
-        .map((f) => ({ _id: String(f._id), entidad: f.entidad, nombre: f.nombre, url: f.url, ultimoResultado: f.ultimoResultado, ultimoError: f.ultimoError, ultimaRevision: f.ultimaRevision ?? null })),
+        .map((f) => ({ ...vistaDeFuente(f), url: f.url })),
       /** Fuentes activas que nunca se revisaron: no están rotas, pero todavía no vigilan nada. */
       sinRevisar: (fuentes as any[]).filter((f) => f.activa && !f.ultimaRevision && leImporta(f.convenios)).length,
       /** `true` cuando lo de arriba está acotado a una empresa. La pantalla lo dice, para no mentir por omisión. */

@@ -14,6 +14,8 @@ import type { ConvenioFila } from "../components/convenios/ConveniosTable";
 import { paritariasAPI, EstadoParitarias, FuenteParitaria, EstadoFuenteConvenio } from "../api/paritarias";
 import { BannerParitarias } from "../components/paritarias/BannerParitarias";
 import { FuenteDelConvenio } from "../components/convenios/FuenteDelConvenio";
+import { vigilanciaDe, avisoDeVigilancia, textoUltimaRevision } from "../components/paritarias/estadoFuente";
+import { formatearInstante } from "../utils/fechas";
 
 const conveniosApi = createSimpleCatalogApi("/convenios");
 const obrasSocialesApi = createSimpleCatalogApi("/obras-sociales");
@@ -193,7 +195,8 @@ export const ConveniosPage: React.FC = () => {
     return d === 'sin_fuente_conocida' || d === 'no_aplica' ? d : 'sin_revisar';
   };
 
-  const fmtFecha = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleDateString('es-AR') : '');
+  // `revisadaEl` es un INSTANTE (cuándo alguien lo declaró), no una fecha de calendario: se convierte
+  // a hora local y lleva hora. Ver `utils/fechas.ts`.
 
   /**
    * La columna, en las DOS pestañas.
@@ -211,16 +214,27 @@ export const ConveniosPage: React.FC = () => {
     if (estado === 'con_fuente') {
       const asignadas = vigilancia[String(c.externalId || '').trim()] || [];
       const rota = asignadas.some((f) => f.conProblema);
-      // Que exista la fuente no quiere decir que se esté bajando: son dos cosas, y callar la segunda
-      // haría creer que el convenio está cubierto cuando su vigilancia está pausada.
-      const pausadas = asignadas.filter((f) => !f.activa);
+      /*
+        Que exista la fuente no quiere decir que se esté bajando: son dos cosas, y callar la segunda
+        haría creer que el convenio está cubierto cuando su vigilancia está pausada.
+
+        Se lee con `vigilanciaDe`, EL MISMO lector que usa el ABM. La versión anterior preguntaba
+        `!f.activa` acá y algo distinto allá, y con el campo ausente esta pantalla escribía «pausada»
+        sobre las tres fuentes que la otra mostraba corriendo.
+      */
+      const avisos = [...new Set(asignadas.map((f) => avisoDeVigilancia(vigilanciaDe(f))).filter(Boolean))];
+      const noSeSabe = asignadas.some((f) => vigilanciaDe(f) === 'desconocida');
       return (
         <span className="text-gray-700 dark:text-gray-200">
           {asignadas.map((f) => f.entidad).join(', ')}
-          <span className={`block text-[11px] ${rota ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
-            {rota ? 'la última revisión falló' : asignadas[0].ultimaRevision ? `revisado el ${fmtFecha(asignadas[0].ultimaRevision)}` : 'sin revisar todavía'}
-          </span>
-          {pausadas.length > 0 && <span className="block text-[11px] text-amber-700 dark:text-amber-400">vigilancia pausada</span>}
+          <span className={`block text-[11px] ${rota ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>{textoUltimaRevision(asignadas[0])}</span>
+          {avisos.map((a) => (
+            // El estado que no se pudo leer va en ROJO y no en ámbar: no es «pausada», es que la
+            // consulta vino incompleta. Confundirlos volvería a esconder el problema.
+            <span key={a} className={`block text-[11px] ${noSeSabe ? 'text-red-600 dark:text-red-400' : 'text-amber-700 dark:text-amber-400'}`}>
+              {a}
+            </span>
+          ))}
         </span>
       );
     }
@@ -231,7 +245,7 @@ export const ConveniosPage: React.FC = () => {
       return (
         <span className="text-gray-400 dark:text-gray-600" title={dec?.nota || 'No tiene paritaria y no la va a tener.'}>
           No aplica
-          {dec?.revisadaEl && <span className="block text-[11px]">marcado el {fmtFecha(dec.revisadaEl)}</span>}
+          {dec?.revisadaEl && <span className="block text-[11px]">marcado el {formatearInstante(dec.revisadaEl)}</span>}
         </span>
       );
     }
@@ -245,7 +259,7 @@ export const ConveniosPage: React.FC = () => {
           className="text-left text-gray-400 dark:text-gray-600 hover:text-blue-600 dark:hover:text-blue-400"
         >
           Sin fuente conocida
-          <span className="block text-[11px]">revisado el {fmtFecha(dec?.revisadaEl) || '—'}</span>
+          <span className="block text-[11px]">revisado el {formatearInstante(dec?.revisadaEl)}</span>
         </button>
       );
     }

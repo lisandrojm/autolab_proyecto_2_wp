@@ -4,6 +4,8 @@ import { faRss, faPlus, faTrash, faEdit, faSpinner, faRotate, faArrowUpRightFrom
 import { PageLayout } from '../components/ui/PageLayout';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
+import { vigilanciaDe, avisoDeVigilancia } from '../components/paritarias/estadoFuente';
+import { formatearInstante } from '../utils/fechas';
 import { Modal } from '../components/ui/Modal';
 import { sweetAlert } from '../utils/sweetAlert';
 import { paritariasAPI, FuenteParitaria, ResultadoDeRevision } from '../api/paritarias';
@@ -132,8 +134,14 @@ export const FuentesParitariaPage: React.FC = () => {
     setAbierto(true);
   };
   const abrirEditar = (f: FuenteParitaria) => {
+    // El formulario manda `activa` al guardar. Si no llegó, abrirlo convertiría un dato que no
+    // tenemos en una escritura real: guardaría «pausada» sobre una fuente que quizás está corriendo.
+    if (vigilanciaDe(f) === 'desconocida') {
+      sweetAlert.error('No se puede editar todavía', `La respuesta del servidor no trae el estado de «${f.nombre}». Recargá la página; si sigue igual, el backend está desactualizado. Editarla ahora guardaría un estado inventado.`);
+      return;
+    }
     setEditando(f._id);
-    const datos = { entidad: f.entidad, nombre: f.nombre, url: f.url, convenios: [...(f.convenios || [])], patronIncluir: f.patronIncluir, patronExcluir: f.patronExcluir || '', activa: f.activa };
+    const datos = { entidad: f.entidad, nombre: f.nombre, url: f.url, convenios: [...(f.convenios || [])], patronIncluir: f.patronIncluir, patronExcluir: f.patronExcluir || '', activa: vigilanciaDe(f) === 'activa' };
     setForm(datos);
     setFormInicial(datos);
     setAbierto(true);
@@ -275,11 +283,16 @@ export const FuentesParitariaPage: React.FC = () => {
     await cargar();
   };
 
-  /** El estado de una fuente en palabras: «sin_enlaces» no le dice nada a nadie. */
+  /**
+   * El estado de una fuente en palabras: «sin_enlaces» no le dice nada a nadie.
+   *
+   * La fecha sale de `formatearInstante` —el MISMO formateo que la columna de /convenios— y lleva
+   * hora: con revisión diaria, «30/8» no responde si corrió hoy temprano o quedó de ayer.
+   */
   const lineaEstado = (f: FuenteParitaria) =>
     !f.ultimaRevision
       ? 'nunca revisada — su primera revisión establece la línea de base'
-      : `${MOTIVO[f.ultimoResultado || 'ok']} · ${f.publicaciones} publicación(es)${f.sinVer > 0 ? ` · ${f.sinVer} sin ver` : ''} · última revisión ${new Date(f.ultimaRevision).toLocaleDateString('es-AR')}`;
+      : `${MOTIVO[f.ultimoResultado || 'ok']} · ${f.publicaciones} publicación(es)${f.sinVer > 0 ? ` · ${f.sinVer} sin ver` : ''} · última revisión ${formatearInstante(f.ultimaRevision)}`;
 
   /** Las mismas tres acciones en las dos vistas: si divergen, una de las dos queda atrás. */
   const acciones = (f: FuenteParitaria) => (
@@ -375,7 +388,9 @@ export const FuentesParitariaPage: React.FC = () => {
                   <td className="px-5 py-3">
                     <span className="block text-sm font-medium text-gray-900 dark:text-white">
                       {f.nombre}
-                      {!f.activa && <span className="ml-2 text-[10px] px-1.5 py-px rounded border border-gray-300 dark:border-gray-600 text-gray-500">pausada</span>}
+                      {avisoDeVigilancia(vigilanciaDe(f)) && (
+                        <span className={`ml-2 text-[10px] px-1.5 py-px rounded border ${vigilanciaDe(f) === 'desconocida' ? 'border-red-400 text-red-600 dark:text-red-400' : 'border-gray-300 dark:border-gray-600 text-gray-500'}`}>{avisoDeVigilancia(vigilanciaDe(f))}</span>
+                      )}
                     </span>
                     <span className="block text-xs text-gray-500 dark:text-gray-400">{f.entidad}</span>
                     <a href={f.url} target="_blank" rel="noreferrer" className="block text-xs text-blue-600 dark:text-blue-400 hover:underline break-all">
@@ -411,7 +426,9 @@ export const FuentesParitariaPage: React.FC = () => {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                     {f.nombre}
-                    {!f.activa && <span className="ml-2 text-[10px] px-1.5 py-px rounded border border-gray-300 dark:border-gray-600 text-gray-500">pausada</span>}
+                    {avisoDeVigilancia(vigilanciaDe(f)) && (
+                        <span className={`ml-2 text-[10px] px-1.5 py-px rounded border ${vigilanciaDe(f) === 'desconocida' ? 'border-red-400 text-red-600 dark:text-red-400' : 'border-gray-300 dark:border-gray-600 text-gray-500'}`}>{avisoDeVigilancia(vigilanciaDe(f))}</span>
+                      )}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">{f.entidad}</p>
                 </div>
