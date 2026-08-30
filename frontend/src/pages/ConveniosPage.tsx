@@ -14,6 +14,7 @@ import type { ConvenioFila } from "../components/convenios/ConveniosTable";
 import { paritariasAPI, EstadoParitarias, FuenteParitaria, EstadoFuenteConvenio } from "../api/paritarias";
 import { BannerParitarias } from "../components/paritarias/BannerParitarias";
 import { FuenteDelConvenio } from "../components/convenios/FuenteDelConvenio";
+import { PanelCoberturaFuentes } from "../components/convenios/PanelCoberturaFuentes";
 import { vigilanciaDe, avisoDeVigilancia, textoUltimaRevision } from "../components/paritarias/estadoFuente";
 import { formatearInstante } from "../utils/fechas";
 
@@ -119,6 +120,13 @@ export const ConveniosPage: React.FC = () => {
    * lista de códigos que cada fuente tiene hoy.
    */
   const [fuentes, setFuentes] = useState<FuenteParitaria[]>([]);
+  /**
+   * Convenios en uso que nadie revisó. Sale del SERVER, no se recalcula acá.
+   *
+   * Es el mismo dato que alimenta el aviso de la ficha de empresa. Calcularlo por separado en cada
+   * pantalla es exactamente cómo terminamos diciendo dos cosas distintas de la misma fuente.
+   */
+  const [enUsoSinRevisar, setEnUsoSinRevisar] = useState<EstadoParitarias['enUsoSinRevisar']>([]);
   /** El convenio cuya fuente se está anotando desde la fila. */
   const [anotando, setAnotando] = useState<ConvenioFila | null>(null);
   /** Refresca las dos puntas: lo que dibuja la columna y lo que editan los switches. */
@@ -129,10 +137,12 @@ export const ConveniosPage: React.FC = () => {
       const [estado, lista] = await Promise.all([paritariasAPI.estado(), paritariasAPI.fuentes()]);
       setVigilancia(estado.porConvenio);
       setDeclarado(estado.declarado || {});
+      setEnUsoSinRevisar(estado.enUsoSinRevisar || []);
       setFuentes(lista);
     } catch {
       setVigilancia({});
       setDeclarado({});
+      setEnUsoSinRevisar([]);
       setFuentes([]);
     }
   };
@@ -309,21 +319,16 @@ export const ConveniosPage: React.FC = () => {
           convenio que alguien anota vale para siempre y para todas las empresas de la plataforma.
           Por eso el número va ARRIBA y en positivo, y por eso ninguna fila lleva ícono de alerta.
         */
-        resumen={(todos) => {
-          const conFuente = todos.filter((c) => (vigilancia[String(c.externalId || '').trim()] || []).length > 0).length;
-          const revisados = todos.filter((c) => declarado[c._id]?.estado === 'sin_fuente_conocida').length;
-          const noAplica = todos.filter((c) => declarado[c._id]?.estado === 'no_aplica').length;
-          return (
-            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-3 py-2 text-xs text-gray-600 dark:text-gray-300">
-              Fuente conocida en <strong className="text-gray-900 dark:text-gray-100">{conFuente}</strong> de {todos.length} convenios
-              {revisados > 0 && <> · {revisados} revisado(s) sin fuente</>}
-              {noAplica > 0 && <> · {noAplica} sin paritaria</>}
-              <span className="block text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                Dónde publica sus acuerdos un gremio es dato de la plataforma: sirve igual aunque hoy ninguna empresa use ese convenio. Anotar que se buscó y no hay nada también cuenta.
-              </span>
-            </div>
-          );
-        }}
+        /*
+          EL ENCUADRE ES LO QUE ESTÁ EN JUEGO ACÁ.
+
+          Con la columna en las dos pestañas, 2.664 filas dicen «Sin revisar». Ese mismo hecho se
+          puede presentar como 2.664 pendientes —y entonces la pantalla es una lista de deudas que
+          nadie va a terminar nunca— o como el recuento de un conocimiento que se acumula: cada
+          convenio que alguien anota vale para siempre y para todas las empresas de la plataforma.
+          Por eso el número va ARRIBA y en positivo, y por eso ninguna fila lleva ícono de alerta.
+        */
+        resumen={(todos) => <PanelCoberturaFuentes todos={todos} vigilancia={vigilancia} declarado={declarado} enUsoSinRevisar={enUsoSinRevisar} onCambiado={cargarParitarias} />}
         tablaPropia={({ items, renderAcciones }) => (
           <ConveniosTable
             convenios={items as ConvenioFila[]}

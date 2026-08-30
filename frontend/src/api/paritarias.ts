@@ -31,6 +31,17 @@ export interface FuenteResumen {
    * tipo obliga a pasar por `vigilanciaDe()`, que distingue ausente de `false` y lo reporta.
    */
   activa?: boolean;
+  /**
+   * CÓMO SE MIRA ESTA FUENTE.
+   *
+   *   listado_html  una página con enlaces a PDF, que la rutina diaria baja y compara.
+   *   manual        se sabe dónde consultar, y se consulta a mano. Sin vigilancia automática.
+   *
+   * El caso que obliga a `manual` es el buscador oficial del Ministerio: cubre TODOS los convenios
+   * homologados —o sea que ninguno queda estructuralmente sin fuente— pero es un formulario, no un
+   * listado raspable. Registrar dónde se consulta cuesta cero y ya es mejor que «nadie miró».
+   */
+  tipo?: 'listado_html' | 'manual';
   /** Un INSTANTE en ISO. `null` = nunca revisada, y de eso depende la línea de base. */
   ultimaRevision: string | null;
   ultimoResultado?: ResultadoRevision;
@@ -98,6 +109,13 @@ export interface EstadoParitarias {
   sinVer: PublicacionParitaria[];
   conProblema: Array<FuenteResumen & { url: string }>;
   sinRevisar: number;
+  /**
+   * Convenios que alguna empresa USA y que nadie revisó todavía. La tarea concreta.
+   *
+   * Sobre los 2.669 del catálogo, «sin revisar» es cobertura preventiva y se mide en porcentaje.
+   * Acá es trabajo que alguien pidió sin saberlo: registró una empresa con ese convenio.
+   */
+  enUsoSinRevisar: Array<{ _id: string; externalId: string; name: string }>;
   /** `true` cuando lo de arriba viene acotado a una empresa. */
   filtradoPorEmpresa: boolean;
 }
@@ -132,9 +150,20 @@ export const paritariasAPI = {
    *
    * `con_fuente` no se puede mandar: el server lo rechaza con 400. Se gana asignándole una fuente.
    */
-  declararEstadoFuente: async (convenioId: string, estado: EstadoDeclarado, nota: string): Promise<void> => {
-    await axios.put(`${BASE}/convenios/${convenioId}/estado-fuente`, { estado, nota });
-  },
+  declararEstadoFuente: async (convenioId: string, estado: EstadoDeclarado, nota: string) => paritariasAPI.declararEstadoFuenteMasivo([convenioId], estado, nota),
+
+  /**
+   * El mismo endpoint, con la lista entera.
+   *
+   * Existe porque `sin_fuente_conocida` es un resultado FRECUENTE y llega de a entidades, no de a
+   * convenios: un gremio que no publica cubre todos los suyos —la Federación de la Alimentación
+   * firma once—. De a uno no se hace, y esos once vuelven a «nadie miró».
+   *
+   * `salteados` nombra los que no se pudieron marcar (tienen una fuente que los vigila) sin frenar
+   * a los demás: abortar cincuenta por uno obligaría a rehacer el trabajo entero.
+   */
+  declararEstadoFuenteMasivo: async (convenioIds: string[], estado: EstadoDeclarado, nota: string): Promise<{ marcados: number; salteados: string[] }> =>
+    (await axios.put(`${BASE}/convenios/estado-fuente`, { convenioIds, estado, nota })).data,
 
   /** El MISMO recorrido que la rutina diaria, con otro disparador. No hay dos caminos. */
   revisar: async (id: string): Promise<ResultadoDeRevision> => (await axios.post(`${BASE}/fuentes/${id}/revisar`)).data,

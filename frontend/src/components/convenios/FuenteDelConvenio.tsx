@@ -71,12 +71,25 @@ export const FuenteDelConvenio: React.FC<Props> = ({ convenio, fuentes, declarad
   const [nota, setNota] = useState(declarado?.nota || '');
 
   const codigo = String(convenio.externalId || '').trim();
-  const actual = useMemo(() => fuentes.find((f) => (f.convenios || []).includes(codigo)), [fuentes, codigo]);
+  /**
+   * DOS NIVELES QUE CONVIVEN, y por eso son dos grupos y no una lista excluyente.
+   *
+   * El gremio publica el acuerdo apenas lo firma: es la alerta temprana, y de esas hay UNA sola
+   * —dos páginas anunciando el mismo acuerdo lo registrarían dos veces—. El buscador oficial del
+   * Ministerio publica la homologación, meses después: es el respaldo, no avisa nada, y por eso
+   * puede estar además de la del gremio sin duplicar ningún aviso.
+   *
+   * Si fueran un solo grupo excluyente, registrar la oficial obligaría a borrar la del gremio.
+   */
+  const vigilantes = useMemo(() => fuentes.filter((f) => f.tipo !== 'manual'), [fuentes]);
+  const manuales = useMemo(() => fuentes.filter((f) => f.tipo === 'manual'), [fuentes]);
+  const actual = useMemo(() => vigilantes.find((f) => (f.convenios || []).includes(codigo)), [vigilantes, codigo]);
+  const actualManual = useMemo(() => manuales.find((f) => (f.convenios || []).includes(codigo)), [manuales, codigo]);
   const visibles = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
-    if (!q) return fuentes;
-    return fuentes.filter((f) => `${f.entidad} ${f.nombre} ${(f.convenios || []).join(' ')}`.toLowerCase().includes(q));
-  }, [fuentes, busqueda]);
+    if (!q) return vigilantes;
+    return vigilantes.filter((f) => `${f.entidad} ${f.nombre} ${(f.convenios || []).join(' ')}`.toLowerCase().includes(q));
+  }, [vigilantes, busqueda]);
   // La nota llega asincrónica y puede cambiar al refrescar: el campo la sigue. Después de guardar
   // vale lo mismo que se acaba de escribir, así que no pisa nada que esté a medio tipear.
   useEffect(() => setNota(declarado?.nota || ''), [declarado?.nota]);
@@ -98,14 +111,14 @@ export const FuenteDelConvenio: React.FC<Props> = ({ convenio, fuentes, declarad
    * —el mismo PDF entraría dos veces y el aviso diría que salieron dos acuerdos donde salió uno—.
    * Con este orden, un fallo lo deja sin fuente: visible, y arreglable con un click.
    */
-  const asignar = async (destinoId: string) => {
+  const asignar = async (destinoId: string, previa?: FuenteParitaria) => {
     if (guardando) return;
     setGuardando(destinoId || 'ninguna');
     try {
-      if (actual && actual._id !== destinoId) {
-        await paritariasAPI.actualizarFuente(actual._id, { convenios: (actual.convenios || []).filter((c) => c !== codigo) });
+      if (previa && previa._id !== destinoId) {
+        await paritariasAPI.actualizarFuente(previa._id, { convenios: (previa.convenios || []).filter((c) => c !== codigo) });
       }
-      if (destinoId && (!actual || actual._id !== destinoId)) {
+      if (destinoId && (!previa || previa._id !== destinoId)) {
         const destino = fuentes.find((f) => f._id === destinoId);
         if (destino) await paritariasAPI.actualizarFuente(destinoId, { convenios: [...(destino.convenios || []), codigo] });
       }
@@ -139,12 +152,12 @@ export const FuenteDelConvenio: React.FC<Props> = ({ convenio, fuentes, declarad
           Es una propiedad del convenio, no de tu empresa: sirve igual para cualquiera que lo use. Cada cambio se guarda solo.
         </p>
 
-        {fuentes.length === 0 ? (
-          <p className="text-xs text-gray-400">No hay ninguna fuente cargada todavía. Se dan de alta en Configuración → ARCA → Fuentes de paritarias.</p>
+        {vigilantes.length === 0 ? (
+          <p className="text-xs text-gray-400">No hay ninguna fuente de vigilancia cargada todavía. Se dan de alta en Configuración → ARCA → Fuentes de paritarias.</p>
         ) : (
           <>
             {/* El buscador aparece solo cuando hay suficientes como para tener que buscar. */}
-            {fuentes.length > 6 && (
+            {vigilantes.length > 6 && (
               <div className="relative mb-2">
                 <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
                 <input
@@ -170,7 +183,7 @@ export const FuenteDelConvenio: React.FC<Props> = ({ convenio, fuentes, declarad
                         {!f.activa && <span className="ml-1.5 text-amber-600 dark:text-amber-400">· vigilancia pausada</span>}
                       </span>
                     </span>
-                    <Switch on={elegida} disabled={!!guardando} onClick={() => asignar(elegida ? '' : f._id)} label={`${elegida ? 'Desasociar' : 'Asociar'} ${codigo} de ${f.nombre}`} />
+                    <Switch on={elegida} disabled={!!guardando} onClick={() => asignar(elegida ? '' : f._id, actual)} label={`${elegida ? 'Desasociar' : 'Asociar'} ${codigo} de ${f.nombre}`} />
                   </div>
                 );
               })}
@@ -178,6 +191,34 @@ export const FuenteDelConvenio: React.FC<Props> = ({ convenio, fuentes, declarad
           </>
         )}
       </div>
+
+      {/*
+        LA RED DE CONTENCIÓN. Separada del bloque de arriba porque no hace lo mismo.
+
+        Estas no avisan: se consultan. Registrar el buscador oficial del Ministerio no convierte al
+        convenio en vigilado, pero sí lo saca de «nadie sabe dónde mirar» — que es el estado que
+        obliga a la próxima persona a repetir la búsqueda desde cero.
+      */}
+      {manuales.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Dónde consultarlo a mano</label>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">No avisa cuando sale un acuerdo: dice dónde ir a buscarlo. Convive con la página del gremio, no la reemplaza.</p>
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60">
+            {manuales.map((f) => {
+              const elegida = actualManual?._id === f._id;
+              return (
+                <div key={f._id} className="flex items-center justify-between gap-3 px-3 py-2">
+                  <span className="min-w-0">
+                    <span className="block text-sm text-gray-800 dark:text-gray-200 truncate">{f.nombre}</span>
+                    <span className="block text-[11px] text-gray-400 truncate">{f.entidad}</span>
+                  </span>
+                  <Switch on={elegida} disabled={!!guardando} onClick={() => asignar(elegida ? '' : f._id, actualManual)} label={`${elegida ? 'Desasociar' : 'Asociar'} ${codigo} de ${f.nombre}`} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Y si no hay ninguna, anotarlo ────────────────────────────────────── */}
       <div>

@@ -25,6 +25,8 @@ export interface VistaFuente {
      * cargada: se puede saber dónde publica un gremio sin estar bajando esa página todos los días.
      */
     activa: boolean;
+    /** `manual` = se sabe dónde consultar, pero no se raspa. La rutina diaria no la toca. */
+    tipo: "listado_html" | "manual";
     /**
      * Un INSTANTE en ISO, no una fecha de calendario: la revisión corrió en un momento exacto y se
      * muestra convertido a la hora de quien mira. `null` = nunca revisada, y de eso depende la línea
@@ -36,7 +38,7 @@ export interface VistaFuente {
     /** La última revisión no terminó en `ok`: la fuente está ciega. */
     conProblema: boolean;
 }
-type FuenteLeida = Pick<IFuenteParitaria, "entidad" | "nombre" | "activa" | "ultimaRevision" | "ultimoResultado" | "ultimoError"> & {
+type FuenteLeida = Pick<IFuenteParitaria, "entidad" | "nombre" | "activa" | "tipo" | "ultimaRevision" | "ultimoResultado" | "ultimoError"> & {
     _id: unknown;
 };
 export declare const vistaDeFuente: (f: FuenteLeida) => VistaFuente;

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTriangleExclamation, faCircleInfo, faFilePdf, faEyeSlash, faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
+import { faTriangleExclamation, faCircleInfo, faFilePdf, faEyeSlash, faArrowUpRightFromSquare, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 import { InfoModal } from '../ui/InfoModal';
 import { paritariasAPI, EstadoParitarias } from '../../api/paritarias';
 import { formatearInstante } from '../../utils/fechas';
@@ -35,6 +35,7 @@ export const BannerParitarias: React.FC<{ empresaId?: string }> = ({ empresaId }
   const [estado, setEstado] = useState<EstadoParitarias | null>(null);
   const [verNuevas, setVerNuevas] = useState(false);
   const [verProblemas, setVerProblemas] = useState(false);
+  const [verSinRevisar, setVerSinRevisar] = useState(false);
 
   const cargar = () =>
     paritariasAPI
@@ -112,6 +113,61 @@ export const BannerParitarias: React.FC<{ empresaId?: string }> = ({ empresaId }
                 ))}
               </div>
               <p className="text-xs text-gray-600 dark:text-gray-400">Abrí la página a mano y comparala con el patrón de la fuente. Casi siempre es que la entidad reorganizó su sitio.</p>
+            </div>
+          </InfoModal>
+        </>
+      )}
+
+      {/*
+        ── Gris: trabajo pendiente, no un problema. ──────────────────────────
+
+        Va ÚLTIMO y sin color de alarma a propósito. Los otros dos avisan de algo que pasó —salió un
+        acuerdo, una fuente se quedó ciega—; este dice que todavía nadie averiguó dónde publica un
+        gremio cuyo convenio esta empresa sí usa. Es la tarea concreta que reemplaza a la celda gris:
+        aparece porque alguien registró ese convenio, no porque el catálogo tenga 2.669 filas.
+
+        Si esto se pintara de rojo o de ámbar, competiría con los dos avisos que sí son urgentes y los
+        volvería ruido — que es exactamente lo que arruina un sistema de alertas.
+      */}
+      {estado.enUsoSinRevisar.length > 0 && (
+        <>
+          <div className="flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-3 py-2">
+            <FontAwesomeIcon icon={faMagnifyingGlass} className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400 shrink-0" />
+            <span className="text-xs text-gray-700 dark:text-gray-300 min-w-0 truncate mr-0.5">
+              {estado.enUsoSinRevisar.length === 1 ? (
+                <>
+                  Falta averiguar dónde publica sus paritarias <strong>{estado.enUsoSinRevisar[0].externalId || estado.enUsoSinRevisar[0].name}</strong>
+                </>
+              ) : (
+                <>
+                  Falta averiguar dónde publican sus paritarias <strong>{estado.enUsoSinRevisar.length} convenios</strong> en uso
+                </>
+              )}
+              <span className="hidden sm:inline text-gray-500 dark:text-gray-400"> — nadie los revisó todavía</span>
+            </span>
+            <button type="button" onClick={() => setVerSinRevisar(true)} title="Ver cuáles son" aria-label="Ver los convenios sin revisar" className="shrink-0 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
+              <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          <InfoModal isOpen={verSinRevisar} onClose={() => setVerSinRevisar(false)} title="Convenios en uso sin revisar" size="md">
+            <div className="space-y-3">
+              <p className="text-sm text-gray-700 dark:text-gray-200">
+                Nadie averiguó todavía dónde publica sus acuerdos el gremio de estos convenios. <strong>No es un error ni una falta</strong>: el catálogo tiene 2.669 y no hace falta revisarlos
+                todos — hace falta revisar los que alguien usa, y estos son los que alguien empezó a usar.
+              </p>
+              <div className="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700">
+                {estado.enUsoSinRevisar.map((c) => (
+                  <div key={c._id} className="px-3 py-2 text-sm flex items-baseline gap-3">
+                    <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-400 shrink-0">{c.externalId || "—"}</span>
+                    <span className="text-gray-800 dark:text-gray-200 min-w-0">{c.name}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Se resuelve desde <strong>Convenios</strong>: buscar la página donde el gremio publica y cargarla como fuente, o —si no publica en ningún lado estable— marcarlos como
+                <em> revisados sin fuente</em>, que también cuenta y evita que la próxima persona repita la búsqueda.
+              </p>
             </div>
           </InfoModal>
         </>

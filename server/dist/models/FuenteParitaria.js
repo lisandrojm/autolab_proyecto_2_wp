@@ -2,9 +2,21 @@ import mongoose, { Schema } from "mongoose";
 const schema = new Schema({
     entidad: { type: String, required: true, trim: true },
     nombre: { type: String, required: true, trim: true },
+    // El default es el tipo que ya existía: las fuentes cargadas antes de este campo son todas
+    // páginas de listado, y ninguna cambia de comportamiento por la migración.
+    tipo: { type: String, enum: ["listado_html", "manual"], default: "listado_html" },
     url: { type: String, required: true, trim: true },
     convenios: [{ type: String, trim: true }],
-    patronIncluir: { type: String, required: true, trim: true },
+    // Obligatorio solo donde significa algo: una fuente `manual` no se raspa, así que pedirle un
+    // patrón sería pedir que se invente una regla para un mecanismo que no va a correr.
+    patronIncluir: {
+        type: String,
+        trim: true,
+        default: "",
+        required: function () {
+            return this.tipo !== "manual";
+        },
+    },
     patronExcluir: { type: String, default: "", trim: true },
     activa: { type: Boolean, default: true },
     /**

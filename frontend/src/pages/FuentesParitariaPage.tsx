@@ -36,7 +36,7 @@ import { ConvenioSelector } from '../components/empresas/ConvenioSelector';
  * sembrar, cosa que un `_id` no. El selector trabaja con ids, así que se traduce en los dos
  * sentidos al abrir y al guardar.
  */
-const VACIA = { entidad: '', nombre: '', url: '', convenios: [] as string[], patronIncluir: '', patronExcluir: '', activa: true };
+const VACIA = { entidad: '', nombre: '', url: '', convenios: [] as string[], tipo: 'listado_html' as 'listado_html' | 'manual', patronIncluir: '', patronExcluir: '', activa: true };
 
 const MOTIVO: Record<string, string> = {
   ok: 'vigilando',
@@ -141,7 +141,7 @@ export const FuentesParitariaPage: React.FC = () => {
       return;
     }
     setEditando(f._id);
-    const datos = { entidad: f.entidad, nombre: f.nombre, url: f.url, convenios: [...(f.convenios || [])], patronIncluir: f.patronIncluir, patronExcluir: f.patronExcluir || '', activa: vigilanciaDe(f) === 'activa' };
+    const datos = { entidad: f.entidad, nombre: f.nombre, url: f.url, convenios: [...(f.convenios || [])], tipo: f.tipo === 'manual' ? ('manual' as const) : ('listado_html' as const), patronIncluir: f.patronIncluir || '', patronExcluir: f.patronExcluir || '', activa: vigilanciaDe(f) === 'activa' };
     setForm(datos);
     setFormInicial(datos);
     setAbierto(true);
@@ -186,14 +186,18 @@ export const FuentesParitariaPage: React.FC = () => {
 
   const guardar = async () => {
     setGuardando(true);
+    const esManual = form.tipo === 'manual';
     try {
       const datos = {
         entidad: form.entidad.trim(),
         nombre: form.nombre.trim(),
         url: form.url.trim(),
         convenios: form.convenios,
-        patronIncluir: form.patronIncluir.trim(),
-        patronExcluir: form.patronExcluir.trim(),
+        tipo: form.tipo,
+        // Una fuente `manual` no se raspa: mandar patrones sería guardar reglas para un mecanismo
+        // que no va a correr, y al volver a `listado_html` reaparecerían sin que nadie las revisara.
+        patronIncluir: esManual ? '' : form.patronIncluir.trim(),
+        patronExcluir: esManual ? '' : form.patronExcluir.trim(),
         activa: form.activa,
       };
       if (editando) {
@@ -211,6 +215,11 @@ export const FuentesParitariaPage: React.FC = () => {
       } else {
         const creada = await paritariasAPI.crearFuente(datos);
         setAbierto(false);
+        if (esManual) {
+          sweetAlert.success('Fuente registrada', `Queda anotado dónde se consultan las paritarias de estos convenios. No se revisa sola: es de consulta manual.`);
+          await cargar();
+          return;
+        }
         // Se ofrece revisar EN EL MISMO PASO: es cuando se quiere ver si los patrones sirven, y es la
         // revisión que establece la línea de base.
         const r = await sweetAlert.confirm('¿Revisar ahora?', 'Es la primera revisión: todo lo que encuentre queda registrado como ya visto, y de la próxima en adelante lo que aparezca es novedad. También sirve para ver si los patrones que pusiste funcionan.', 'Sí, revisar');
@@ -250,7 +259,9 @@ export const FuentesParitariaPage: React.FC = () => {
    * paréntesis ya dice cuántas van — con (0) el botón no tiene sentido.
    */
   const revisarLote = async () => {
-    const objetivo = fuentes.filter((f) => elegidas.has(f._id));
+    // Las `manual` no se raspan: incluirlas devolvería un error por cada una y ensuciaría el
+    // resumen del lote con fallas que no lo son.
+    const objetivo = fuentes.filter((f) => elegidas.has(f._id) && f.tipo !== 'manual');
     if (objetivo.length === 0) return;
     setRevisando('lote');
     try {
@@ -290,14 +301,16 @@ export const FuentesParitariaPage: React.FC = () => {
    * hora: con revisión diaria, «30/8» no responde si corrió hoy temprano o quedó de ayer.
    */
   const lineaEstado = (f: FuenteParitaria) =>
-    !f.ultimaRevision
-      ? 'nunca revisada — su primera revisión establece la línea de base'
-      : `${MOTIVO[f.ultimoResultado || 'ok']} · ${f.publicaciones} publicación(es)${f.sinVer > 0 ? ` · ${f.sinVer} sin ver` : ''} · última revisión ${formatearInstante(f.ultimaRevision)}`;
+    f.tipo === 'manual'
+      ? 'consulta manual — se sabe dónde mirar, pero no se revisa sola'
+      : !f.ultimaRevision
+        ? 'nunca revisada — su primera revisión establece la línea de base'
+        : `${MOTIVO[f.ultimoResultado || 'ok']} · ${f.publicaciones} publicación(es)${f.sinVer > 0 ? ` · ${f.sinVer} sin ver` : ''} · última revisión ${formatearInstante(f.ultimaRevision)}`;
 
   /** Las mismas tres acciones en las dos vistas: si divergen, una de las dos queda atrás. */
   const acciones = (f: FuenteParitaria) => (
     <div className="flex items-center gap-1 shrink-0">
-      <button onClick={() => revisar(f._id)} disabled={!!revisando} title="Revisar ahora" className="p-2 rounded text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50">
+      <button onClick={() => revisar(f._id)} disabled={!!revisando || f.tipo === 'manual'} title={f.tipo === 'manual' ? 'Es de consulta manual: no se raspa' : 'Revisar ahora'} className="p-2 rounded text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50">
         <FontAwesomeIcon icon={revisando === f._id ? faSpinner : faRotate} spin={revisando === f._id} />
       </button>
       <button onClick={() => abrirEditar(f)} title="Editar" className="p-2 rounded text-gray-500 hover:text-gray-800 dark:hover:text-gray-200">
@@ -482,8 +495,6 @@ export const FuentesParitariaPage: React.FC = () => {
             { k: 'entidad' as const, label: 'Entidad', ph: 'SATSAID' },
             { k: 'nombre' as const, label: 'Nombre', ph: 'Actores · televisión' },
             { k: 'url' as const, label: 'URL de la página de listado', ph: 'https://…' },
-            { k: 'patronIncluir' as const, label: 'Patrón de inclusión', ph: 'ACUERDO +SALARIAL' },
-            { k: 'patronExcluir' as const, label: 'Patrón de exclusión', ph: 'convenio|texto|protocolo' },
           ].map((c) => (
             <div key={c.k}>
               <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">{c.label}</label>
@@ -491,23 +502,74 @@ export const FuentesParitariaPage: React.FC = () => {
               {/* La ayuda va donde se toma la decisión, no en un manual: quien carga una fuente
                   tiene la página abierta al lado y necesita saber contra qué se prueba. */}
               {c.k === 'url' && <p className="text-[11px] text-gray-500 mt-1">La página de LISTADO, no el PDF: lo que se vigila es qué aparece ahí.</p>}
-              {c.k === 'patronIncluir' && <p className="text-[11px] text-gray-500 mt-1">Se prueba contra el texto del enlace y el nombre del archivo. Sin él entraría cualquier PDF de la página.</p>}
-              {/* El aviso va al lado del campo y solo al editar: en un alta no hay línea de base que
-                  perder, y enterarse recién en el mensaje de «guardado» es enterarse tarde. */}
-              {editando && (c.k === 'patronIncluir' || c.k === 'patronExcluir') && form[c.k] !== formInicial[c.k] && (
-                <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-1">
-                  Al cambiar este patrón cambia qué se considera una escala en esta página, así que <strong>la línea de base se reinicia</strong>: la próxima revisión vuelve a registrar todo lo que
-                  encuentre como ya visto.
-                </p>
-              )}
-              {c.k === 'patronExcluir' && (
-                <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-1">
-                  Lo que NO es una escala aunque matchee lo anterior. <strong>No lo dejes vacío sin mirar la página</strong>: al lado de los acuerdos suele colgar el texto del convenio colectivo, y
-                  si entra, el sistema avisa de una novedad que no existe.
-                </p>
-              )}
             </div>
           ))}
+
+          {/*
+            CÓMO SE MIRA ESTA FUENTE. Va ARRIBA de los patrones porque decide si existen.
+
+            Sin este campo, la única forma de registrar el buscador oficial del Ministerio —que cubre
+            TODOS los convenios homologados y por lo tanto es la red de contención del catálogo— sería
+            cargarlo como listado y que quedara eternamente en «sin enlaces»: gritando todos los días
+            un error que no existe, hasta que nadie mire más el banner.
+          */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Cómo se mira</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {[
+                { v: 'listado_html' as const, t: 'Página de listado', d: 'Una página con enlaces a PDF. La rutina diaria la baja y avisa lo nuevo.' },
+                { v: 'manual' as const, t: 'Consulta manual', d: 'Se registra dónde mirar. No se raspa: sirve como respaldo, no como alerta.' },
+              ].map((o) => (
+                <button
+                  key={o.v}
+                  type="button"
+                  onClick={() => setForm((prev) => ({ ...prev, tipo: o.v }))}
+                  aria-pressed={form.tipo === o.v}
+                  className={`text-left px-3 py-2 rounded-lg border transition-colors ${form.tipo === o.v ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30' : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                >
+                  <span className="block text-sm font-medium text-gray-800 dark:text-gray-200">{o.t}</span>
+                  <span className="block text-[11px] text-gray-500 dark:text-gray-400">{o.d}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/*
+            Los patrones solo existen para lo que se raspa. Mostrárselos a una fuente de consulta
+            manual sería pedir una regla para un mecanismo que no va a correr — y alguien la
+            completaría, porque el campo estaría ahí.
+          */}
+          {form.tipo === 'manual' ? (
+            <p className="text-[11px] text-gray-600 dark:text-gray-400 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-3 py-2">
+              Sin patrones ni revisión diaria: queda anotado <strong>dónde se consulta</strong>, que es lo que evita que estos convenios sigan en «nadie miró». Los acuerdos hay que ir a
+              buscarlos a esa página.
+            </p>
+          ) : (
+            [
+              { k: 'patronIncluir' as const, label: 'Patrón de inclusión', ph: 'ACUERDO +SALARIAL' },
+              { k: 'patronExcluir' as const, label: 'Patrón de exclusión', ph: 'convenio|texto|protocolo' },
+            ].map((c) => (
+              <div key={c.k}>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">{c.label}</label>
+                <input value={form[c.k]} onChange={(e) => setForm((prev) => ({ ...prev, [c.k]: e.target.value }))} placeholder={c.ph} className={input} />
+                {c.k === 'patronIncluir' && <p className="text-[11px] text-gray-500 mt-1">Se prueba contra el texto del enlace y el nombre del archivo. Sin él entraría cualquier PDF de la página.</p>}
+                {c.k === 'patronExcluir' && (
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-1">
+                    Lo que NO es una escala aunque matchee lo anterior. <strong>No lo dejes vacío sin mirar la página</strong>: al lado de los acuerdos suele colgar el texto del convenio
+                    colectivo, y si entra, el sistema avisa de una novedad que no existe.
+                  </p>
+                )}
+                {/* El aviso va al lado del campo y solo al editar: en un alta no hay línea de base que
+                    perder, y enterarse recién en el mensaje de «guardado» es enterarse tarde. */}
+                {editando && form[c.k] !== formInicial[c.k] && (
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-1">
+                    Al cambiar este patrón cambia qué se considera una escala en esta página, así que <strong>la línea de base se reinicia</strong>: la próxima revisión vuelve a registrar todo
+                    lo que encuentre como ya visto.
+                  </p>
+                )}
+              </div>
+            ))
+          )}
           {/*
             Los convenios se ELIGEN del nomenclador, no se tipean.
 

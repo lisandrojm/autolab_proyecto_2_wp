@@ -102,6 +102,17 @@ export async function revisarFuente(fuenteId) {
     const fuente = await FuenteParitaria.findById(fuenteId);
     if (!fuente)
         throw new Error(`No existe la fuente ${fuenteId}`);
+    /*
+      Una fuente `manual` no se raspa, y forzarla por acá sería peor que no poder revisarla.
+  
+      El buscador oficial del Ministerio es un formulario: bajarlo devolvería una página sin ningún
+      `<a href>` a un PDF, o sea `sin_enlaces` — que en este sistema significa «la fuente se quedó
+      ciega» y pinta el banner de rojo. Estaría gritando por un error que no existe, todos los días,
+      hasta que nadie mire más el banner. Se frena acá y se dice por qué.
+    */
+    if (fuente.tipo === "manual") {
+        throw new Error(`«${fuente.nombre}» es una fuente de consulta manual: se registra dónde mirar, pero no se raspa. No hay nada que revisar automáticamente.`);
+    }
     const base = { fuenteId: String(fuente._id), nombre: fuente.nombre, resultado: "ok", enlaces: 0, nuevas: 0, lineaBase: !fuente.ultimaRevision };
     const cerrar = async (r) => {
         fuente.ultimaRevision = new Date();
@@ -198,7 +209,11 @@ export async function revisarFuente(fuenteId) {
  * garantiza `revisarFuente`, que nunca lanza.
  */
 export async function revisarTodas() {
-    const fuentes = await FuenteParitaria.find({ activa: true }).select("_id").lean();
+    // Las `manual` quedan afuera de la rutina: no son fuentes apagadas, son fuentes que no se raspan.
+    // Meterlas acá las reportaría como `sin_enlaces` todos los días.
+    const fuentes = await FuenteParitaria.find({ activa: true, tipo: { $ne: "manual" } })
+        .select("_id")
+        .lean();
     const out = [];
     for (const f of fuentes) {
         try {

@@ -27,6 +27,8 @@ export interface VistaFuente {
    * cargada: se puede saber dónde publica un gremio sin estar bajando esa página todos los días.
    */
   activa: boolean;
+  /** `manual` = se sabe dónde consultar, pero no se raspa. La rutina diaria no la toca. */
+  tipo: "listado_html" | "manual";
   /**
    * Un INSTANTE en ISO, no una fecha de calendario: la revisión corrió en un momento exacto y se
    * muestra convertido a la hora de quien mira. `null` = nunca revisada, y de eso depende la línea
@@ -39,7 +41,7 @@ export interface VistaFuente {
   conProblema: boolean;
 }
 
-type FuenteLeida = Pick<IFuenteParitaria, "entidad" | "nombre" | "activa" | "ultimaRevision" | "ultimoResultado" | "ultimoError"> & { _id: unknown };
+type FuenteLeida = Pick<IFuenteParitaria, "entidad" | "nombre" | "activa" | "tipo" | "ultimaRevision" | "ultimoResultado" | "ultimoError"> & { _id: unknown };
 
 export const vistaDeFuente = (f: FuenteLeida): VistaFuente => ({
   _id: String(f._id),
@@ -48,6 +50,8 @@ export const vistaDeFuente = (f: FuenteLeida): VistaFuente => ({
   // `!!` y no `?? true`: el default del modelo ya es `true`, así que un documento sin el campo es
   // uno de antes de que existiera. Asumirlo activo diría «vigilando» sobre algo que nadie prendió.
   activa: !!f.activa,
+  // El default es el tipo que ya existía: los documentos anteriores a este campo son todos listados.
+  tipo: f.tipo === "manual" ? "manual" : "listado_html",
   ultimaRevision: f.ultimaRevision ? new Date(f.ultimaRevision).toISOString() : null,
   ultimoResultado: f.ultimoResultado,
   ultimoError: f.ultimoError || "",

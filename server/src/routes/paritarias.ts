@@ -22,7 +22,15 @@ const fuenteSchema = z.object({
   nombre: z.string().min(1, "El nombre es obligatorio"),
   url: z.string().url("La URL no es válida"),
   convenios: z.array(z.string()).default([]),
-  patronIncluir: z.string().min(1, "Sin patrón de inclusión entraría cualquier PDF de la página"),
+  /**
+   * Cómo se mira. `manual` = se registra dónde se consulta, sin vigilancia automática: es lo que
+   * permite anotar el buscador oficial del Ministerio, que cubre todo el catálogo pero es un
+   * formulario y no un listado raspable.
+   */
+  tipo: z.enum(["listado_html", "manual"]).default("listado_html"),
+  // Sin `.min(1)`: a una fuente `manual` pedirle un patrón sería pedirle una regla para un
+  // mecanismo que no va a correr. La obligatoriedad real se valida abajo, contra el tipo.
+  patronIncluir: z.string().default(""),
   // Se pide vacío explícito y no opcional: quien da de alta una fuente tiene que haber MIRADO qué
   // más cuelga esa página. El texto del convenio colectivo conviviendo con los acuerdos es la norma.
   patronExcluir: z.string().default(""),
@@ -41,22 +49,37 @@ const patronInvalido = (p: string): string | null => {
 };
 
 /**
- * UN CONVENIO TIENE UNA SOLA FUENTE.
+ * Una fuente que se raspa SIN patrón de inclusión se traga cualquier PDF de la página.
+ *
+ * Se valida acá y no en el schema porque depende del tipo: la misma ausencia que es un error en
+ * `listado_html` es lo correcto en `manual`.
+ */
+const faltaPatron = (tipo: "listado_html" | "manual", patronIncluir: string | undefined): string | null =>
+  tipo !== "manual" && !String(patronIncluir || "").trim() ? "Sin patrón de inclusión entraría cualquier PDF de la página. (Si esta fuente no se raspa, marcala como de consulta manual.)" : null;
+
+/**
+ * UN CONVENIO TIENE UNA SOLA FUENTE QUE LO VIGILA. Puede tener además una de consulta manual.
  *
  * Al revés sí es de a muchos: un acuerdo del SATSAID cubre 0131/75 y 0634/11 a la vez. Pero dos
- * fuentes para el MISMO convenio significarían dos páginas anunciando el mismo acuerdo, y el mismo
- * PDF entraría dos veces —con hash distinto si cada sitio lo republica— como dos publicaciones. El
- * aviso diría que salieron dos paritarias donde salió una.
+ * fuentes VIGILANDO el mismo convenio significarían dos páginas anunciando el mismo acuerdo, y el
+ * mismo PDF entraría dos veces —con hash distinto si cada sitio lo republica— como dos
+ * publicaciones. El aviso diría que salieron dos paritarias donde salió una.
  *
- * La pantalla ya ofrece una sola opción por convenio, pero eso es una convención de la interfaz: el
- * selector del lado de la fuente elige varios convenios y podría tomar uno ya asignado. Acá se
- * rechaza, nombrando la fuente que ya lo tiene — que es lo que hace falta saber para resolverlo.
+ * POR QUÉ UNA `manual` NO CUENTA PARA ESTE CHOQUE
+ *
+ * La regla existe por las publicaciones duplicadas, no por prolijidad. Una fuente `manual` no se
+ * raspa y por lo tanto NO PRODUCE publicaciones: nunca puede duplicar un aviso. Y el modelo de dos
+ * niveles la necesita conviviendo con la sindical — el gremio avisa cuando firma, el buscador
+ * oficial confirma cuando homologa—, así que si el choque la incluyera, registrar la oficial
+ * obligaría a borrar la del gremio, que es exactamente lo contrario de lo que se quiere.
  *
  * Devuelve el mensaje del rechazo, o `null`.
  */
-const convenioYaVigilado = async (convenios: string[] | undefined, exceptoId?: string): Promise<string | null> => {
+const convenioYaVigilado = async (convenios: string[] | undefined, exceptoId: string | undefined, tipo: "listado_html" | "manual"): Promise<string | null> => {
   if (!Array.isArray(convenios) || convenios.length === 0) return null;
-  const otras = await FuenteParitaria.find({ convenios: { $in: convenios }, ...(exceptoId ? { _id: { $ne: exceptoId } } : {}) })
+  // La que se está guardando no vigila: no puede duplicar nada.
+  if (tipo === "manual") return null;
+  const otras = await FuenteParitaria.find({ convenios: { $in: convenios }, tipo: { $ne: "manual" }, ...(exceptoId ? { _id: { $ne: exceptoId } } : {}) })
     .select("nombre convenios")
     .lean();
   const choques: string[] = [];
@@ -64,7 +87,7 @@ const convenioYaVigilado = async (convenios: string[] | undefined, exceptoId?: s
     for (const c of o.convenios || []) if (convenios.includes(c)) choques.push(`${c} ya lo vigila «${o.nombre}»`);
   }
   if (choques.length === 0) return null;
-  return `${choques.join("; ")}. Un convenio tiene una sola fuente: sacalo de la otra primero.`;
+  return `${choques.join("; ")}. Un convenio tiene una sola fuente que lo vigila: sacalo de la otra primero. (Una fuente de consulta manual sí puede convivir.)`;
 };
 
 router.get("/fuentes", authenticateToken, async (_req: AuthenticatedRequest, res: Response) => {
@@ -93,11 +116,13 @@ router.get("/fuentes", authenticateToken, async (_req: AuthenticatedRequest, res
 router.post("/fuentes", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const data = fuenteSchema.parse(req.body);
+    const sinPatron = faltaPatron(data.tipo, data.patronIncluir);
+    if (sinPatron) return res.status(400).json({ error: sinPatron });
     for (const p of [data.patronIncluir, data.patronExcluir]) {
       const err = patronInvalido(p);
       if (err) return res.status(400).json({ error: err });
     }
-    const tomado = await convenioYaVigilado(data.convenios);
+    const tomado = await convenioYaVigilado(data.convenios, undefined, data.tipo);
     if (tomado) return res.status(409).json({ error: tomado });
     const creada = await FuenteParitaria.create(data);
     res.status(201).json(creada);
@@ -116,11 +141,16 @@ router.put("/fuentes/:id", authenticateToken, async (req: AuthenticatedRequest, 
       const err = patronInvalido(p);
       if (err) return res.status(400).json({ error: err });
     }
-    const tomado = await convenioYaVigilado(data.convenios, req.params.id);
-    if (tomado) return res.status(409).json({ error: tomado });
-
     const previa = await FuenteParitaria.findById(req.params.id);
     if (!previa) return res.status(404).json({ error: "Fuente no encontrada" });
+
+    // El tipo que va a quedar, que puede venir en el parche o ya estar guardado.
+    const tipoFinal = data.tipo ?? previa.tipo ?? "listado_html";
+    const sinPatron = faltaPatron(tipoFinal, data.patronIncluir ?? previa.patronIncluir);
+    if (sinPatron) return res.status(400).json({ error: sinPatron });
+
+    const tomado = await convenioYaVigilado(data.convenios, req.params.id, tipoFinal);
+    if (tomado) return res.status(409).json({ error: tomado });
 
     /*
       CAMBIAR UN PATRÓN INVALIDA LA LÍNEA DE BASE.
@@ -172,35 +202,89 @@ router.put("/fuentes/:id", authenticateToken, async (req: AuthenticatedRequest, 
  *   409  hay una fuente que lo lista. Declarar «no hay fuente» ahí sería guardar una contradicción
  *        que la derivación después ignora — o sea, basura con cara de dato.
  */
-router.put("/convenios/:convenioId/estado-fuente", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+/**
+ * Declara el estado de VARIOS convenios de una. El de a uno es este mismo, con una lista de uno.
+ *
+ * POR QUÉ TIENE QUE SER MASIVO
+ *
+ * Muchos gremios no publican escalas en una página estable: publican en noticias sueltas, en redes,
+ * o directamente no publican. `sin_fuente_conocida` va a ser un resultado FRECUENTE Y LEGÍTIMO, y
+ * una entidad que no publica cubre todos sus convenios de una — la Federación de la Alimentación
+ * firma once. Si hay que marcarlos de a uno, no se marca ninguno, y esos once vuelven a
+ * «nadie miró» para la próxima persona que los mire.
+ *
+ * Los rechazos NO frenan al lote: el que tiene una fuente que lo vigila se saltea y se informa por
+ * nombre. Abortar los cincuenta por uno obligaría a rehacer el trabajo entero.
+ */
+const declararConvenios = async (ids: string[], estado: string, nota: string, quien: string) => {
+  const hechos: string[] = [];
+  const salteados: string[] = [];
+
+  for (const id of ids) {
+    const convenio = await Convenio.findById(id);
+    if (!convenio) {
+      salteados.push(`${id}: no existe`);
+      continue;
+    }
+    const codigo = String(convenio.externalId || "").trim();
+    if (codigo && estado !== "sin_revisar") {
+      /*
+        Solo choca contra una fuente que VIGILA. Una `manual` convive: el buscador oficial cubre el
+        catálogo entero, y si contara acá, registrarlo bloquearía marcar cualquier cosa.
+      */
+      const vigilante = await FuenteParitaria.findOne({ convenios: codigo, tipo: { $ne: "manual" } })
+        .select("nombre")
+        .lean();
+      if (vigilante) {
+        salteados.push(`${codigo}: lo vigila «${(vigilante as any).nombre}»`);
+        continue;
+      }
+    }
+    convenio.fuenteEstadoDeclarado = estado as any;
+    convenio.fuenteNota = nota;
+    // Se estampa también en `sin_revisar`: volver algo a «nadie buscó» es una decisión y conviene
+    // saber quién la tomó. La AUSENCIA del sello es lo que distingue a los que nunca nadie tocó.
+    convenio.fuenteRevisadaPor = quien;
+    convenio.fuenteRevisadaEl = new Date();
+    await convenio.save();
+    hechos.push(codigo || String(convenio._id));
+  }
+  return { hechos, salteados };
+};
+
+/**
+ * DECLARAR EN QUÉ ESTADO ESTÁ EL CONOCIMIENTO SOBRE UNO O VARIOS CONVENIOS.
+ *
+ * No es una acción de vigilancia: es anotar lo que se averiguó. «Buscamos y no hay página que
+ * publique sus acuerdos» es conocimiento durable que le ahorra la búsqueda a la próxima persona, y
+ * no tener dónde anotarlo es lo que obliga a rehacer el trabajo cada vez.
+ *
+ * Va por un endpoint propio y NO por el PUT genérico del catálogo (`_simpleCatalogRouter`) por dos
+ * razones: ahí no hay dónde estampar quién y cuándo —que es la mitad del valor del dato—, y ese
+ * router escribe cualquier campo que se le declare sin poder rechazar nada.
+ *
+ * Los dos rechazos son el punto del endpoint:
+ *   400  `con_fuente` es DERIVADO. No se declara: se gana asignando una fuente.
+ *   409  TODOS los convenios del lote tienen una fuente que los vigila. Declarar «no hay fuente»
+ *        ahí sería guardar una contradicción que la derivación después ignora.
+ */
+router.put("/convenios/estado-fuente", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { estado, nota } = req.body as { estado?: string; nota?: string };
+    const { convenioIds, estado, nota } = req.body as { convenioIds?: unknown; estado?: string; nota?: string };
     if (estado === "con_fuente") {
       return res.status(400).json({ error: "«Con fuente» no se marca: se obtiene asignándole una fuente al convenio. Es un estado derivado de los enlaces, no una declaración." });
     }
     if (!esDeclarable(estado)) return res.status(400).json({ error: "Estado inválido. Los declarables son: sin_revisar, sin_fuente_conocida, no_aplica." });
+    const ids = Array.isArray(convenioIds) ? convenioIds.map(String).filter(Boolean) : [];
+    if (ids.length === 0) return res.status(400).json({ error: "No se indicó ningún convenio." });
 
-    const convenio = await Convenio.findById(req.params.convenioId);
-    if (!convenio) return res.status(404).json({ error: "Convenio no encontrado" });
-
-    const codigo = String(convenio.externalId || "").trim();
-    if (codigo && estado !== "sin_revisar") {
-      const vigilante = await FuenteParitaria.findOne({ convenios: codigo }).select("nombre").lean();
-      if (vigilante) {
-        return res.status(409).json({ error: `«${(vigilante as any).nombre}» ya publica las paritarias de ${codigo}. Sacale la fuente primero si querés marcarlo de otra manera.` });
-      }
-    }
-
-    convenio.fuenteEstadoDeclarado = estado;
-    convenio.fuenteNota = String(nota || "").trim();
-    // Se estampa también en `sin_revisar`: volver algo a «nadie buscó» es una decisión y conviene
-    // saber quién la tomó. La AUSENCIA del sello es lo que distingue a los que nunca nadie tocó.
-    convenio.fuenteRevisadaPor = req.user?.email || req.user?.userId || "";
-    convenio.fuenteRevisadaEl = new Date();
-    await convenio.save();
-    res.json(convenio);
+    const { hechos, salteados } = await declararConvenios(ids, estado, String(nota || "").trim(), req.user?.email || req.user?.userId || "");
+    // Si no se pudo marcar NINGUNO es un rechazo; si se marcó alguno es un resultado parcial, y
+    // devolverlo como error haría pensar que no se guardó nada.
+    if (hechos.length === 0) return res.status(409).json({ error: `No se marcó ninguno. ${salteados.join("; ")}` });
+    res.json({ marcados: hechos.length, salteados });
   } catch (error) {
-    console.error("Estado fuente convenio error:", error);
+    console.error("Estado fuente convenios error:", error);
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });
@@ -333,6 +417,26 @@ router.get("/estado", authenticateToken, async (req: AuthenticatedRequest, res: 
 
     const sinVer = (sinVerTodas as any[]).filter((p) => leImporta(p.fuente?.convenios)).slice(0, 50);
 
+    /*
+      Qué convenios EN USO no tiene nadie revisados.
+
+      «En uso» es que alguna empresa lo tenga en su padrón — la de `empresaId` si vino, cualquiera si
+      no. Se resuelve contra las mismas dos fuentes de verdad que la columna: los enlaces (una fuente
+      que lo lista ⇒ `con_fuente`) y lo declarado. Lo que sobra es lo que nadie miró.
+    */
+    const registrados = new Set<string>();
+    for (const e of (await Company.find(empresaId ? { _id: empresaId } : {})
+      .select("convenioIds")
+      .lean()) as any[]) {
+      for (const id of e.convenioIds || []) registrados.add(String(id));
+    }
+    const declaradoPorId = new Set((declarados as any[]).map((c) => String(c._id)));
+    const enUsoSinRevisar = ((await Convenio.find({ _id: { $in: [...registrados] } })
+      .select("externalId name")
+      .lean()) as any[])
+      .filter((c) => !declaradoPorId.has(String(c._id)) && (porConvenio[String(c.externalId || "").trim()] || []).length === 0)
+      .map((c) => ({ _id: String(c._id), externalId: String(c.externalId || ""), name: c.name }));
+
     res.json({
       porConvenio,
       declarado: Object.fromEntries(
@@ -342,8 +446,22 @@ router.get("/estado", authenticateToken, async (req: AuthenticatedRequest, res: 
       conProblema: (fuentes as any[])
         .filter((f) => f.activa && fuenteConProblema(f) && leImporta(f.convenios))
         .map((f) => ({ ...vistaDeFuente(f), url: f.url })),
-      /** Fuentes activas que nunca se revisaron: no están rotas, pero todavía no vigilan nada. */
-      sinRevisar: (fuentes as any[]).filter((f) => f.activa && !f.ultimaRevision && leImporta(f.convenios)).length,
+      /**
+       * Fuentes activas que nunca se revisaron: no están rotas, pero todavía no vigilan nada.
+       * Las `manual` no cuentan: no se revisan por diseño, no por olvido.
+       */
+      sinRevisar: (fuentes as any[]).filter((f) => f.activa && f.tipo !== "manual" && !f.ultimaRevision && leImporta(f.convenios)).length,
+      /**
+       * LA TAREA CONCRETA: convenios que alguna empresa USA y que nadie revisó todavía.
+       *
+       * Es la regla que evita que esto se vuelva una lista de deudas. Un convenio que ninguna empresa
+       * registra no necesita fuente todavía — la necesita el día que se registra, y ese día el trabajo
+       * es de UNA entidad. Sobre los 2.669 del catálogo, «sin revisar» es cobertura preventiva y se
+       * mide en porcentaje; acá es trabajo que alguien pidió sin saberlo.
+       *
+       * Van los datos para hacerla, no un número: un contador manda a buscar cuáles son.
+       */
+      enUsoSinRevisar,
       /** `true` cuando lo de arriba está acotado a una empresa. La pantalla lo dice, para no mentir por omisión. */
       filtradoPorEmpresa: !!empresaId,
     });
