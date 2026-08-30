@@ -6,6 +6,7 @@ import { PageLayout } from '../ui/PageLayout';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Card } from '../ui/Card';
 import { ViewToggle, ViewMode } from '../ui/ViewToggle';
+import { Paginador, POR_PAGINA } from '../ui/Paginador';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { fuzzyMatch } from '../../utils/searchHelpers';
 import { SimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
@@ -74,7 +75,27 @@ interface SimpleCatalogManagerProps {
    * misma entidad con encabezados distintos, y habían divergido. Recibe las acciones ya armadas
    * (editar / eliminar), que es lo único que el manager sabe y la tabla del dominio no.
    */
-  tablaPropia?: (props: { items: SimpleCatalogItem[]; renderAcciones: (item: SimpleCatalogItem) => React.ReactNode }) => React.ReactNode;
+  tablaPropia?: (props: {
+    items: SimpleCatalogItem[];
+    renderAcciones: (item: SimpleCatalogItem) => React.ReactNode;
+    /**
+     * En qué estado del filtro destacado está la pantalla.
+     *
+     * Lo necesita Convenios: la columna de vigilancia de paritarias solo tiene sentido en
+     * «Registrados por alguna empresa». Sobre los 2.669 del nomenclador serían 2.664 filas
+     * diciendo «No vigilado», y eso no es información: es una columna de vacíos que se lee como
+     * si faltaran 2.664 configuraciones.
+     */
+    soloDestacados: boolean;
+  }) => React.ReactNode;
+  /**
+   * Bloque propio del catálogo ARRIBA del buscador: avisos que pertenecen a esta entidad.
+   *
+   * Es donde van los banners —Convenios cuelga acá los de vigilancia de paritarias—, con la misma
+   * forma que los de `/arca/categorias`. Va antes del buscador porque un aviso debajo del filtro se
+   * lee como parte del resultado de la búsqueda y desaparece al filtrar.
+   */
+  extraSuperior?: React.ReactNode;
   /** Clave de ayuda para el modal de info (i). */
   helpKey?: HelpKey;
   /** Etiqueta de "ID Externo" (columna, campo del form, badge de tarjeta), por si en este catálogo
@@ -94,7 +115,7 @@ interface SimpleCatalogManagerProps {
   pestanas?: Array<{ id: string; label: string; icon?: IconDefinition; render: (items: SimpleCatalogItem[], recargar: () => Promise<void>) => React.ReactNode }>;
 }
 
-export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], extraSeccion, helpKey, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia }) => {
+export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], extraSeccion, helpKey, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia, extraSuperior }) => {
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
   const [tabActiva, setTabActiva] = useState<string>('catalogo');
   const [loading, setLoading] = useState(true);
@@ -187,7 +208,64 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
   const [soloDestacados, setSoloDestacados] = useState(true);
   const destacados = filtroDestacado ? items.filter(filtroDestacado.aplica) : items;
   const base = filtroDestacado && soloDestacados ? destacados : items;
-  const filtered = base.filter((it) => !search.trim() || fuzzyMatch(it.name || '', search));
+  /**
+   * Dónde busca el buscador: en TODO lo que la tabla muestra.
+   *
+   * Buscaba solo en `name`, y en la mitad de los catálogos el nombre no es lo que uno tipea. En
+   * Convenios las columnas son CÓDIGO · ACTIVIDAD · SIGNATARIO: el código es `externalId` y el
+   * signatario un `extraField`, así que escribir «0609» —que está a la vista, en la primera
+   * columna— devolvía «No hay resultados para la búsqueda». Un buscador que no encuentra lo que la
+   * pantalla está mostrando se lee como que el dato no existe.
+   *
+   * El código entra DOS VECES, como se guarda y como se ve: `0609/03` y `060903`. Quien lo busca lo
+   * copia de donde lo tenga, y ahí el separador puede estar o no. Lo mismo con el RNOS de las obras
+   * sociales, que se muestra con guiones y se guarda sin ellos — de ahí que también entre la forma
+   * que produce `formatExternalId`.
+   */
+  const textoBuscable = (it: SimpleCatalogItem): string => {
+    const id = String(it.externalId || '');
+    const partes = [it.name || '', id, id.replace(/[^a-zA-Z0-9]/g, ''), formatExternalId ? formatExternalId(id) : ''];
+    // Los campos extra son columnas de la tabla en varios catálogos (el signatario del convenio, el
+    // tipo de entidad de un banco). Se toman los de texto: un select guarda un id que nadie tipea.
+    for (const f of extraFields) {
+      if (f.type === 'select') continue;
+      const v = (it as Record<string, unknown>)[f.key];
+      if (typeof v === 'string' || typeof v === 'number') partes.push(String(v));
+    }
+    return partes.filter(Boolean).join(' ');
+  };
+
+  const filtered = base.filter((it) => !search.trim() || fuzzyMatch(textoBuscable(it), search));
+
+  /*
+    SE PAGINA LO QUE SE DIBUJA, NO LO QUE SE BUSCA.
+
+    `filtered` es el resultado completo —de las 2.669 filas, no de las 50 que están a la vista— y
+    recién después se recorta la página. Por eso el buscador encuentra un convenio que está en la
+    página 47 y el resultado se vuelve a paginar solo. Al revés —paginar primero y buscar sobre la
+    página— el buscador contestaría «no hay resultados» sobre datos que sí están cargados.
+
+    Los datos siguen viniendo todos en una sola llamada (840 KB para convenios, que llegan en un
+    suspiro). Lo que se sentía lento era el navegador armando 2.669 filas de tabla con tres columnas
+    de texto largo, y eso es lo que esto corta.
+  */
+  const [pagina, setPagina] = useState(1);
+  const visibles = filtered.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
+
+  /*
+    Volver a la página 1 al cambiar lo que se está mirando.
+
+    Sin esto, buscar algo estando en la página 30 muestra una lista vacía —el resultado tiene tres
+    filas y no hay página 30— y se lee como «no encontró nada». Vale igual para el filtro de
+    destacados y para una recarga que devuelva menos elementos que antes.
+  */
+  useEffect(() => {
+    setPagina(1);
+  }, [search, soloDestacados, tabActiva]);
+  useEffect(() => {
+    const ultima = Math.max(1, Math.ceil(filtered.length / POR_PAGINA));
+    if (pagina > ultima) setPagina(ultima);
+  }, [filtered.length, pagina]);
 
   const openCreate = () => {
     setEditing(null);
@@ -339,6 +417,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
         pestanas?.find((t) => t.id === tabActiva)?.render(items, load)
       ) : (
         <>
+      {extraSuperior && <div className="mb-4">{extraSuperior}</div>}
       <div className="mb-4 flex flex-col md:flex-row gap-4 items-center justify-between">
         <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Buscar ${entityLabel}...`} className="w-full max-w-md px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white" />
         <div className="flex items-center gap-3 shrink-0">
@@ -375,7 +454,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
         <div className="text-center py-12 text-gray-500 dark:text-gray-400 text-sm">{items.length === 0 ? `Todavía no hay registros de ${entityLabel}. Cargá uno con "Nuevo" o importá un Excel.` : 'No hay resultados para la búsqueda.'}</div>
       ) : effectiveViewMode === 'cards' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
-          {filtered.map((item) => (
+          {visibles.map((item) => (
             <Card
               key={item._id}
               onClick={() => openEdit(item)}
@@ -416,7 +495,8 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
           // El catálogo trae su propia tabla (ej. Convenios, que la comparte con la ficha de empresa).
           // El manager solo aporta las acciones, que son lo único que la tabla del dominio no sabe.
           tablaPropia({
-            items: filtered,
+            items: visibles,
+            soloDestacados: !filtroDestacado || soloDestacados,
             renderAcciones: (item) => (
               <>
                 <button onClick={() => openEdit(item)} className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 mr-3" title="Editar">
@@ -454,7 +534,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
-              {filtered.map((item) => (
+              {visibles.map((item) => (
                 <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
                   <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">{item.name}</td>
                   {extraFields
@@ -485,6 +565,9 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
         </div>
         )
       )}
+
+      {/* Uno solo para las tres vistas: es el mismo control sobre el mismo conjunto. */}
+      {!loading && !loadError && <Paginador total={filtered.length} pagina={pagina} onCambiar={setPagina} entidadPlural={`${entityLabel}s`} />}
         </>
       )}
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileContract, faArrowUpRightFromSquare, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
@@ -10,6 +10,8 @@ import { formatRnos } from "../utils/rnos";
 import { InfoModal } from "../components/ui/InfoModal";
 import { ConveniosTable } from "../components/convenios/ConveniosTable";
 import type { ConvenioFila } from "../components/convenios/ConveniosTable";
+import { paritariasAPI, EstadoParitarias } from "../api/paritarias";
+import { BannerParitarias } from "../components/paritarias/BannerParitarias";
 
 const conveniosApi = createSimpleCatalogApi("/convenios");
 const obrasSocialesApi = createSimpleCatalogApi("/obras-sociales");
@@ -95,6 +97,18 @@ export const ConveniosPage: React.FC = () => {
    */
   const [todasLasEmpresas, setTodasLasEmpresas] = useState<Company[]>([]);
   const [guardandoEmpresa, setGuardandoEmpresa] = useState('');
+  const navigate = useNavigate();
+  /** Qué fuente vigila cada convenio. Sale del server ya resuelto: la pantalla no recorre fuentes. */
+  const [vigilancia, setVigilancia] = useState<EstadoParitarias['porConvenio']>({});
+  useEffect(() => {
+    // Si falla, la columna dice «No vigilado» en todas: es literalmente cierto —no sabemos de
+    // ninguna— y es preferible a una columna vacía que no se sabe si es un error o un dato.
+    void paritariasAPI
+      .estado()
+      .then((e) => setVigilancia(e.porConvenio))
+      .catch(() => setVigilancia({}));
+  }, []);
+
   const [detalle, setDetalle] = useState<ConvenioFila | null>(null);
 
   useEffect(() => {
@@ -155,7 +169,10 @@ export const ConveniosPage: React.FC = () => {
         // LA MISMA tabla que usa la ficha de empresa: eran dos, con encabezados distintos para los
         // mismos datos ("Nombre" vs "Actividad", el código al final vs primero) y ya habían divergido.
         // Acá se le suma la columna "Empresas" y las acciones de ABM que aporta el manager.
-        tablaPropia={({ items, renderAcciones }) => (
+        // Los avisos de paritarias van ARRIBA de la tabla y con la misma forma que los cuatro de
+        // /arca/categorias: es el mismo tipo de aviso —algo que hay que mirar— sobre otra entidad.
+        extraSuperior={<BannerParitarias />}
+        tablaPropia={({ items, renderAcciones, soloDestacados }) => (
           <ConveniosTable
             convenios={items as ConvenioFila[]}
             obraSocialDe={(c) => ({ os: porDataId(c.obraSocialDefaultId) })}
@@ -176,6 +193,40 @@ export const ConveniosPage: React.FC = () => {
                 </button>
               );
             }}
+            /*
+              Solo en la pestaña acotada. En «Ver todos (2669)» serían 2.664 filas diciendo «No
+              vigilado», que no es información sino una columna de vacíos.
+            */
+            renderVigilancia={
+              soloDestacados
+                ? (c) => {
+                    const fuentes = vigilancia[String(c.externalId || '').trim()] || [];
+                    if (fuentes.length === 0)
+                      return (
+                        // Gris y sin ícono de alerta: no estar vigilado no es un error. `9999/99` no
+                        // va a tener fuente nunca.
+                        <span className="text-gray-400 dark:text-gray-600">
+                          No vigilado
+                          <button type="button" onClick={() => navigate('/arca/fuentes-paritaria')} className="ml-2 text-blue-600 dark:text-blue-400 hover:underline">
+                            asignar
+                          </button>
+                        </span>
+                      );
+                    return (
+                      <span className="text-gray-700 dark:text-gray-200">
+                        {fuentes.map((f) => f.entidad).join(', ')}
+                        <span className={`block text-[11px] ${fuentes.some((f) => f.conProblema) ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                          {fuentes.some((f) => f.conProblema)
+                            ? 'la última revisión falló'
+                            : fuentes[0].ultimaRevision
+                              ? `revisado el ${new Date(fuentes[0].ultimaRevision).toLocaleDateString('es-AR')}`
+                              : 'sin revisar todavía'}
+                        </span>
+                      </span>
+                    );
+                  }
+                : undefined
+            }
             renderAcciones={renderAcciones}
           />
         )}

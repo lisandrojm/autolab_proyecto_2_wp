@@ -43,6 +43,14 @@ interface Props {
   /** Columna extra solo del nomenclador: en cuántas empresas está registrado. */
   renderEmpresas?: (c: ConvenioFila) => React.ReactNode;
   /**
+   * Columna extra: qué fuente vigila las paritarias de este convenio.
+   *
+   * Se lee como una PROPIEDAD, no como un campo a completar: este convenio está vigilado, este no.
+   * `9999/99 Excluido de convenio` no va a tener fuente nunca y está bien — si la columna se leyera
+   * como un formulario, alguien sentiría que hay casilleros vacíos por todos lados.
+   */
+  renderVigilancia?: (c: ConvenioFila) => React.ReactNode;
+  /**
    * Columna extra solo de la FICHA: el convenio habitual de esa empleadora.
    *
    * No existe en el nomenclador porque el default es POR EMPRESA: el mismo convenio puede ser el
@@ -61,7 +69,7 @@ interface Props {
   ayudaSinObraSocial?: string;
 }
 
-export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, renderEmpresas, renderPorDefecto, renderAcciones, ayudaSinObraSocial }) => (
+export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, renderEmpresas, renderVigilancia, renderPorDefecto, renderAcciones, ayudaSinObraSocial }) => (
   <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-xl">
     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
       <thead className="bg-gray-50 dark:bg-gray-900/50">
@@ -74,6 +82,7 @@ export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, rende
               propia para la persona, no la que va a tener sí o sí. La diferencia importa: la
               validación contra el padrón puede traer otra. */}
           <th className="px-4 py-2.5">Obra social por defecto</th>
+          {renderVigilancia && <th className="px-4 py-2.5 whitespace-nowrap w-px">Fuente de paritarias</th>}
           {renderEmpresas && <th className="px-4 py-2.5 whitespace-nowrap w-px">Empresas</th>}
           {renderPorDefecto && (
             <th className="px-4 py-2.5 whitespace-nowrap w-px">
@@ -123,6 +132,7 @@ export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, rende
                   <span className="text-gray-400 dark:text-gray-600">—</span>
                 )}
               </td>
+              {renderVigilancia && <td className="px-4 py-3 align-top text-sm whitespace-nowrap">{renderVigilancia(c)}</td>}
               {renderEmpresas && <td className="px-4 py-3 align-top text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{renderEmpresas(c)}</td>}
               {renderPorDefecto && <td className="px-4 py-3 align-top text-center whitespace-nowrap">{renderPorDefecto(c)}</td>}
               {renderAcciones && <td className="px-4 py-3 align-top text-right whitespace-nowrap">{renderAcciones(c)}</td>}

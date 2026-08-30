@@ -20,6 +20,7 @@ import { ensureAllTenantsHaveDefaultShifts } from "./services/shiftInitService.j
 import { errorHandler } from "./middleware/errorHandler.js";
 import { initCronScheduler } from "./services/cronService.js";
 import { initEstadoDropboxScheduler } from "./services/estadoDropboxCronService.js";
+import { initParitariasScheduler } from "./services/paritariasCronService.js";
 import { initDropboxSignMailScheduler } from "./services/dropboxSignMailService.js";
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
 import { authRoutes } from "./routes/auth.js";
@@ -43,6 +44,7 @@ import { infoRoutes } from "./routes/info.js";
 import { roleFrameRoutes } from "./routes/roleFrames.js";
 import { categoriasSatRoutes } from "./routes/categoriasSat.js";
 import { arcaCategoriasRoutes } from "./routes/arcaCategorias.js";
+import { paritariasRoutes } from "./routes/paritarias.js";
 import { bancoRoutes } from "./routes/bancos.js";
 import { obraSocialRoutes } from "./routes/obrasSociales.js";
 // Tablas oficiales de ARCA (Simplificación Registral) usadas para armar el TXT de alta masiva.
@@ -192,6 +194,7 @@ app.use("/api/v1/bancos", bancoRoutes);
 app.use("/api/v1/obras-sociales", obraSocialRoutes);
 // ABM de categorías en la forma de ARCA: convenio → grupo (escala) → categoría. Toda la escritura.
 app.use("/api/v1/arca/categorias", arcaCategoriasRoutes);
+app.use("/api/v1/paritarias", paritariasRoutes);
 app.use("/api/v1/arca/sucursales", arcaSucursalRoutes);
 app.use("/api/v1/arca/modalidades-contratacion", arcaModalidadContratacionRoutes);
 app.use("/api/v1/arca/tipos-servicio", arcaTipoServicioRoutes);
@@ -269,6 +272,7 @@ connectDB()
     // Initialize the Estado auto-transition Dropbox folder scanner
     try {
         initEstadoDropboxScheduler();
+        initParitariasScheduler();
     }
     catch (error) {
         console.error("❌ Failed to initialize estado-dropbox scheduler:", error);

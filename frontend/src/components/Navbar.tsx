@@ -72,7 +72,7 @@ const PLANTILLAS_PATHS = [MEMBRETE_PATH, '/pdfs', '/pdfs-vacaciones', '/contrato
  * autocompletar el código y normalizar la descripción al cargarlas ahí. Por eso va pegado a
  * Domicilios de Explotación y comparte su permiso.
  */
-const ARCA_NOMENCLADOR_PATHS = ['/obras-sociales', '/arca/sucursales', '/arca/actividades', '/arca/tipos-servicio', '/arca/grupos-tipo-servicio', '/arca/modalidades-contratacion', '/arca/modalidades-liquidacion'];
+const ARCA_NOMENCLADOR_PATHS = ['/obras-sociales', '/arca/sucursales', '/arca/actividades', '/arca/tipos-servicio', '/arca/grupos-tipo-servicio', '/arca/modalidades-contratacion', '/arca/modalidades-liquidacion', '/arca/fuentes-paritaria'];
 /**
  * La Conexión va ÚLTIMA y separada por una raya.
  *
@@ -384,6 +384,7 @@ export const MobileNavbar: React.FC = () => {
         // Va PEGADO a Tipos de Servicio y comparte su permiso, igual que Actividades con Domicilios:
         // son 2 registros que nadie navega, existen para filtrar el de arriba.
         base.push({ path: '/arca/grupos-tipo-servicio', icon: faLayerGroup, label: 'Grupos de Tipo de Servicio', scope: 'global' });
+        base.push({ path: '/arca/fuentes-paritaria', icon: faListCheck, label: 'Fuentes de Paritarias', scope: 'global' });
         base.push({ path: '/arca/modalidades-liquidacion', icon: faClock, label: 'Modalidades de Liquidación', scope: 'global' });
       }
     }
