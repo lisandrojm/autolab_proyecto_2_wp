@@ -8,11 +8,17 @@ import { authenticateToken } from "../middleware/auth.js";
 import { revisarFuente, revisarTodas, fuenteConProblema } from "../services/paritariasVigilanciaService.js";
 import { esDeclarable } from "../utils/estadoFuenteConvenio.js";
 import { vistaDeFuente } from "../utils/vistaFuenteParitaria.js";
+import { rutaAbsoluta, existeArchivo, borrarArchivo } from "../services/archivoParitariaService.js";
 /**
- * ABM de fuentes de paritarias y lectura de lo detectado.
+ * ABM de fuentes de paritarias, lectura de lo detectado y descarga del PDF guardado.
  *
- * Esta entrega SOLO DETECTA: no hay ningún endpoint que abra un PDF, lea importes o toque una escala.
- * Si alguna vez aparece uno acá, se fue de alcance.
+ * DETECTA Y GUARDA. NO LEE.
+ *
+ * El archivo se conserva y se puede descargar, pero ningún endpoint lo ABRE: no se extrae texto, no
+ * se leen importes y no se toca ninguna escala. Son tres capas con confiabilidad distinta —el
+ * archivo es evidencia, la lectura es interpretación, la aplicación es una decisión humana— y
+ * mezclarlas es exactamente lo que haría que un número inventado por un parser termine declarado
+ * ante ARCA. Si alguna vez aparece acá un endpoint que lea el PDF, se fue de alcance.
  */
 const router = Router();
 const fuenteSchema = z.object({
@@ -294,6 +300,69 @@ router.put("/convenios/estado-fuente", authenticateToken, async (req, res) => {
     }
 });
 /**
+ * LAS PUBLICACIONES DE UNA FUENTE. La pantalla que faltaba.
+ *
+ * El ABM decía «31 publicación(es)» y no había ninguna forma de verlas: ni lista, ni enlace, ni
+ * archivo. El sistema avisaba de algo que nadie podía abrir, que es la mitad de un aviso.
+ *
+ * Se devuelven TODAS, no solo las sin ver: la pregunta «¿qué acuerdos hubo?» es tan legítima como
+ * «¿qué salió hoy?», y para la segunda ya está el banner.
+ */
+router.get("/fuentes/:id/publicaciones", authenticateToken, async (req, res) => {
+    try {
+        const pubs = await PublicacionParitaria.find({ fuente: req.params.id }).sort({ detectadaEl: -1 }).lean();
+        /*
+          Se comprueba que el archivo EXISTA, no que el registro diga que existe.
+    
+          Son dos cosas distintas y confundirlas es lo que haría ofrecer una descarga que devuelve 404.
+          El caso real: una restauración de base sin la carpeta `storage`, o un borrado a mano.
+        */
+        res.json(await Promise.all(pubs.map(async (p) => ({
+            _id: String(p._id),
+            url: p.url,
+            textoEnlace: p.textoEnlace,
+            hash: p.hash,
+            detectadaEl: p.detectadaEl,
+            vista: p.vista,
+            estado: p.estado,
+            archivo: p.archivo ? { nombreOriginal: p.archivo.nombreOriginal, bytes: p.archivo.bytes, descargadoEl: p.archivo.descargadoEl, disponible: await existeArchivo(p.archivo.ruta) } : null,
+            archivoError: p.archivoError || "",
+        }))));
+    }
+    catch (error) {
+        console.error("List publicaciones de fuente error:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+/**
+ * Descarga el PDF guardado, con el nombre que tenía en la página del gremio.
+ *
+ * Va por acá y no por la URL estática de `storage/` para devolver el nombre original —que es el
+ * que la persona reconoce— y para que la descarga pase por un token. El archivo igual es legible
+ * por la ruta estática si alguien la adivina: son PDF públicos del sitio del sindicato, sin ningún
+ * dato de nadie adentro, y se acepta a sabiendas.
+ */
+router.get("/publicaciones/:id/archivo", authenticateToken, async (req, res) => {
+    try {
+        const p = await PublicacionParitaria.findById(req.params.id).lean();
+        if (!p)
+            return res.status(404).json({ error: "Publicación no encontrada" });
+        const a = p.archivo;
+        if (!a?.ruta) {
+            // Se distingue «nunca se guardó» de «se intentó y falló»: la segunda tiene un motivo y la
+            // primera solo significa que la publicación es anterior a que se guardaran los archivos.
+            return res.status(404).json({ error: p.archivoError || "Esta publicación no tiene el PDF guardado. Se detectó antes de que el sistema guardara los archivos: se puede rebajar con el script de respaldo." });
+        }
+        if (!(await existeArchivo(a.ruta)))
+            return res.status(410).json({ error: "El registro tiene un archivo pero el archivo no está en el disco." });
+        res.download(rutaAbsoluta(a.ruta), a.nombreOriginal || "acuerdo.pdf");
+    }
+    catch (error) {
+        console.error("Descargar archivo publicacion error:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+/**
  * Borra la fuente Y sus publicaciones.
  *
  * Las publicaciones no tienen sentido sin su fuente —no se sabría de dónde salieron ni con qué
@@ -305,8 +374,21 @@ router.delete("/fuentes/:id", authenticateToken, async (req, res) => {
         const r = await FuenteParitaria.deleteOne({ _id: req.params.id });
         if (r.deletedCount === 0)
             return res.status(404).json({ error: "Fuente no encontrada" });
+        /*
+          Los ARCHIVOS se borran junto con sus publicaciones: dejarlos sería acumular PDF que ya no
+          tienen quién los explique.
+    
+          Cuando exista la capa de aplicación, acá va el guard: el archivo de una publicación que
+          derivó en una escala aplicada NO se borra nunca, porque es el respaldo del importe que se
+          declaró ante ARCA. Hoy no hay ninguna aplicada, así que no hay nada que proteger todavía.
+        */
+        const pubs = await PublicacionParitaria.find({ fuente: req.params.id }).select("archivo").lean();
+        let archivos = 0;
+        for (const p of pubs)
+            if (await borrarArchivo(p.archivo?.ruta))
+                archivos++;
         const { deletedCount } = await PublicacionParitaria.deleteMany({ fuente: req.params.id });
-        res.json({ message: `Fuente eliminada junto con ${deletedCount} publicación(es).` });
+        res.json({ message: `Fuente eliminada junto con ${deletedCount} publicación(es) y ${archivos} archivo(s).` });
     }
     catch (error) {
         console.error("Delete fuente paritaria error:", error);

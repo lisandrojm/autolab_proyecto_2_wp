@@ -6,6 +6,7 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { vigilanciaDe, avisoDeVigilancia } from '../components/paritarias/estadoFuente';
 import { formatearInstante } from '../utils/fechas';
+import { PublicacionesDeFuente } from '../components/paritarias/PublicacionesDeFuente';
 import { Modal } from '../components/ui/Modal';
 import { sweetAlert } from '../utils/sweetAlert';
 import { paritariasAPI, FuenteParitaria, ResultadoDeRevision } from '../api/paritarias';
@@ -38,8 +39,17 @@ import { ConvenioSelector } from '../components/empresas/ConvenioSelector';
  */
 const VACIA = { entidad: '', nombre: '', url: '', convenios: [] as string[], tipo: 'listado_html' as 'listado_html' | 'manual', patronIncluir: '', patronExcluir: '', activa: true };
 
+/**
+ * Cómo salió la ÚLTIMA REVISIÓN. No dice si la fuente está vigilando.
+ *
+ * `ok` decía «vigilando», y por eso la columna ESTADO contradecía al chip de la fila: el chip leía
+ * `activa` y decía «pausada», la columna leía este resultado y decía «vigilando». Las dos tenían
+ * razón sobre cosas distintas y ninguna lo aclaraba. Son dos hechos independientes —una fuente
+ * pausada conserva el resultado de su última revisión, que salió bien— y ahora cada uno se dice con
+ * sus palabras: la vigilancia sale de `vigilanciaDe()`, esto solo describe la revisión.
+ */
 const MOTIVO: Record<string, string> = {
-  ok: 'vigilando',
+  ok: 'última revisión OK',
   sin_enlaces: 'no encontró ningún enlace',
   error_red: 'no se pudo alcanzar la página',
   error_parseo: 'no se pudo leer el HTML',
@@ -80,8 +90,10 @@ export const FuentesParitariaPage: React.FC = () => {
   }, [viewMode, esGrande]);
   const vista: ViewMode = esGrande ? viewMode : 'cards';
 
+  /** La fuente cuyas publicaciones se están mirando. */
+  const [viendoPublicaciones, setViendoPublicaciones] = useState<FuenteParitaria | null>(null);
   /**
-   * Cuáles revisar. Vacío = todas.
+   * Cuáles revisar. Vacío = ninguna, y el botón queda apagado.
    *
    * Revisar las tres siempre es lo normal, pero cuando una falla o se le acaba de tocar el patrón,
    * lo que se quiere es probar ESA — y golpear los otros dos sitios de gremios al pasar es una
@@ -300,12 +312,44 @@ export const FuentesParitariaPage: React.FC = () => {
    * La fecha sale de `formatearInstante` —el MISMO formateo que la columna de /convenios— y lleva
    * hora: con revisión diaria, «30/8» no responde si corrió hoy temprano o quedó de ayer.
    */
-  const lineaEstado = (f: FuenteParitaria) =>
-    f.tipo === 'manual'
-      ? 'consulta manual — se sabe dónde mirar, pero no se revisa sola'
-      : !f.ultimaRevision
-        ? 'nunca revisada — su primera revisión establece la línea de base'
-        : `${MOTIVO[f.ultimoResultado || 'ok']} · ${f.publicaciones} publicación(es)${f.sinVer > 0 ? ` · ${f.sinVer} sin ver` : ''} · última revisión ${formatearInstante(f.ultimaRevision)}`;
+  /** El conteo, como botón: es el número que da ganas de tocar y hasta ahora no hacía nada. */
+  const botonPublicaciones = (f: FuenteParitaria) =>
+    f.publicaciones > 0 ? (
+      <button
+        type="button"
+        onClick={() => setViendoPublicaciones(f)}
+        title={`Ver las ${f.publicaciones} publicación(es) detectadas`}
+        className="underline decoration-dotted underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400"
+      >
+        {f.publicaciones} publicación(es)
+      </button>
+    ) : (
+      <span>0 publicaciones</span>
+    );
+
+  const lineaEstado = (f: FuenteParitaria): React.ReactNode => {
+    if (f.tipo === 'manual') return 'consulta manual — se sabe dónde mirar, pero no se revisa sola';
+    /*
+      LA VIGILANCIA VA PRIMERO, Y SALE DE `vigilanciaDe`.
+
+      Antes esta línea arrancaba con el resultado de la última revisión —«vigilando»— y contradecía al
+      chip de la misma fila, que leía `activa` y decía «pausada». Las dos afirmaban algo cierto sobre
+      cosas distintas, y de afuera se leía como que el sistema no se ponía de acuerdo consigo mismo.
+      Una fuente pausada conserva el resultado de su última revisión; que haya salido bien no
+      significa que se esté revisando.
+    */
+    const aviso = avisoDeVigilancia(vigilanciaDe(f));
+    if (!f.ultimaRevision) {
+      const sinRevisar = 'nunca revisada — su primera revisión establece la línea de base';
+      return <>{aviso ? `${aviso} · ${sinRevisar}` : sinRevisar}</>;
+    }
+    return (
+      <>
+        {aviso || 'vigilando'} · {MOTIVO[f.ultimoResultado || 'ok']} · {botonPublicaciones(f)}
+        {f.sinVer > 0 && ` · ${f.sinVer} sin ver`} · {formatearInstante(f.ultimaRevision)}
+      </>
+    );
+  };
 
   /** Las mismas tres acciones en las dos vistas: si divergen, una de las dos queda atrás. */
   const acciones = (f: FuenteParitaria) => (
@@ -598,6 +642,13 @@ export const FuentesParitariaPage: React.FC = () => {
           </label>
         </div>
       </Modal>
+
+      {/*
+        Las publicaciones de una fuente. Modal aparte del de edición: mirar qué se detectó y
+        configurar cómo se detecta son dos tareas distintas, y meterlas en la misma pantalla haría
+        que revisar un acuerdo pase por el formulario de patrones.
+      */}
+      {viendoPublicaciones && <PublicacionesDeFuente fuente={viendoPublicaciones} onClose={() => setViendoPublicaciones(null)} onCambiado={cargar} />}
     </PageLayout>
   );
 };

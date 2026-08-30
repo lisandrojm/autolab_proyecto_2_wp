@@ -61,6 +61,37 @@ export interface FuenteParitaria extends FuenteResumen {
   sinVer: number;
 }
 
+/**
+ * El PDF guardado de una publicación.
+ *
+ * `disponible` NO es lo mismo que que el registro tenga archivo: el server comprueba que el
+ * archivo esté REALMENTE en el disco. Confundirlos ofrecería una descarga que devuelve 404 — el
+ * caso real es una base restaurada sin la carpeta `storage`.
+ */
+export interface ArchivoPublicacion {
+  nombreOriginal: string;
+  bytes: number;
+  descargadoEl: string;
+  disponible: boolean;
+}
+
+/** Una publicación con todo lo que hace falta para mirarla. Es lo que lista la pantalla de la fuente. */
+export interface PublicacionDeFuente {
+  _id: string;
+  url: string;
+  textoEnlace: string;
+  hash: string;
+  detectadaEl: string;
+  vista: boolean;
+  estado: 'detectada' | 'descartada';
+  archivo: ArchivoPublicacion | null;
+  /**
+   * Por qué NO hay archivo. Distingue «todavía no se guardó» de «se intentó y falló», que es la
+   * diferencia entre una publicación vieja y un PDF que el gremio repuso o borró.
+   */
+  archivoError: string;
+}
+
 export interface PublicacionParitaria {
   _id: string;
   url: string;
@@ -178,4 +209,20 @@ export const paritariasAPI = {
   estado: async (empresaId?: string): Promise<EstadoParitarias> => (await axios.get(`${BASE}/estado${empresaId ? `?empresaId=${encodeURIComponent(empresaId)}` : ''}`)).data,
   publicaciones: async (sinVer = false): Promise<PublicacionParitaria[]> => (await axios.get(`${BASE}/publicaciones${sinVer ? '?sinVer=1' : ''}`)).data,
   marcarVista: async (id: string): Promise<PublicacionParitaria> => (await axios.put(`${BASE}/publicaciones/${id}`, { vista: true })).data,
+
+  /**
+   * Todas las publicaciones de una fuente. La pantalla que faltaba.
+   *
+   * El ABM decía «31 publicación(es)» y no había forma de verlas: el sistema avisaba de algo que
+   * nadie podía abrir.
+   */
+  publicacionesDeFuente: async (fuenteId: string): Promise<PublicacionDeFuente[]> => (await axios.get(`${BASE}/fuentes/${fuenteId}/publicaciones`)).data,
+
+  /**
+   * Baja el PDF guardado y lo entrega con el nombre que tenía en la página del gremio.
+   *
+   * Va por axios y no por un `<a href>` porque el endpoint pide token. Devuelve el blob y el
+   * nombre; el disparo de la descarga queda en la pantalla, como el resto de la app.
+   */
+  descargarArchivo: async (publicacionId: string): Promise<Blob> => (await axios.get(`${BASE}/publicaciones/${publicacionId}/archivo`, { responseType: "blob" })).data,
 };

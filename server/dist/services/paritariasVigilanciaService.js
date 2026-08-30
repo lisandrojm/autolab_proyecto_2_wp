@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { FuenteParitaria } from "../models/FuenteParitaria.js";
 import { PublicacionParitaria } from "../models/PublicacionParitaria.js";
+import { guardarPdf } from "./archivoParitariaService.js";
 /**
  * Vigilancia de paritarias: detectar que salió un PDF nuevo.
  *
@@ -176,11 +177,15 @@ export async function revisarFuente(fuenteId) {
     let nuevas = 0;
     for (const enlace of candidatos) {
         let hash;
+        let bytes;
+        let contentType = null;
         try {
             const res = await fetch(enlace.url, { headers: { "User-Agent": USER_AGENT }, signal: AbortSignal.timeout(TIMEOUT_MS) });
             if (!res.ok)
                 continue;
-            hash = createHash("sha256").update(Buffer.from(await res.arrayBuffer())).digest("hex");
+            bytes = Buffer.from(await res.arrayBuffer());
+            contentType = res.headers.get("content-type");
+            hash = createHash("sha256").update(bytes).digest("hex");
         }
         catch {
             // Un PDF que no baja no invalida la revisión: se lo saltea y se lo va a reintentar mañana.
@@ -189,8 +194,28 @@ export async function revisarFuente(fuenteId) {
         }
         if (conocidas.has(`${enlace.url}|${hash}`))
             continue;
+        /*
+          EL ARCHIVO SE GUARDA, NO SE DESCARTA.
+    
+          Ya estaba bajado —hace falta entero para hashearlo— así que guardarlo no cuesta una request
+          más. Lo que cambia es que deja de existir una publicación cuya única prueba es un enlace al
+          sitio del gremio, que es lo que se pierde el día que reorganicen la web.
+    
+          Si el guardado falla, la publicación se registra IGUAL con el motivo anotado: perder el aviso
+          de que salió un acuerdo porque no se pudo escribir un archivo sería cambiar un problema chico
+          por uno grande.
+        */
+        let archivo;
+        let archivoError = "";
         try {
-            await PublicacionParitaria.create({ fuente: fuente._id, url: enlace.url, textoEnlace: enlace.texto, hash, vista: esLineaBase, detectadaEl: new Date() });
+            archivo = await guardarPdf(String(fuente._id), hash, bytes, enlace.url, contentType);
+        }
+        catch (e) {
+            archivoError = `No se pudo guardar el PDF: ${e?.message || e}`;
+            console.error(`[PARITARIAS] ${archivoError} (${enlace.url})`);
+        }
+        try {
+            await PublicacionParitaria.create({ fuente: fuente._id, url: enlace.url, textoEnlace: enlace.texto, hash, vista: esLineaBase, detectadaEl: new Date(), archivo, archivoError });
             nuevas++;
         }
         catch (e) {
