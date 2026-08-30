@@ -16,6 +16,7 @@ import { formatRnos } from '../../utils/rnos';
 import { InfoModal } from '../../components/ui/InfoModal';
 import { CONVENIO_EXCLUIDO } from '../../components/contratos/afipCompleteness';
 import { ConveniosTable } from '../../components/convenios/ConveniosTable';
+import { BannerParitarias } from '../../components/paritarias/BannerParitarias';
 
 /**
  * "Datos del Empleador" de ARCA, por CUIT.
@@ -468,6 +469,16 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
       descripcion="Los CCT que este CUIT tiene registrados ante ARCA. De cada uno cuelgan DOS cosas: qué categorías profesionales se le pueden dar de alta, y qué obra social le corresponde a quien trabaja bajo él."
       nota="La obra social y la escala salarial son del CONVENIO, iguales para todas las empleadoras que lo tengan registrado: se editan en Configuración → ARCA → Convenios. Acá solo se registra cuáles aplican y, si hace falta, se pisa la obra social como excepción."
     >
+      {/*
+        Los avisos de paritarias, ACOTADOS A ESTA EMPLEADORA.
+
+        La revisión es una sola para toda la plataforma —la página del gremio se baja una vez por día,
+        no una vez por empresa—, pero acá solo se muestra lo que sale de fuentes que alimentan
+        convenios que este CUIT tiene registrados. Un acuerdo de un gremio que esta empleadora no usa
+        no es una novedad suya, y mostrárselo entrena a ignorar el cartel.
+      */}
+      <BannerParitarias empresaId={empresa._id} />
+
       <div className="flex justify-end gap-2">
         <button onClick={() => setAgregando((v) => !v)} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
           <FontAwesomeIcon icon={faPlus} className="h-3.5 w-3.5" />

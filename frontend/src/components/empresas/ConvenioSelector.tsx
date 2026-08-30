@@ -8,6 +8,8 @@ interface Props {
   /** Ids de los convenios asociados. */
   value: string[];
   onChange: (ids: string[]) => void;
+  /** Qué decir sin nada elegido. El default habla de «esta empresa», que no siempre aplica. */
+  textoVacio?: string;
 }
 
 /**
@@ -16,7 +18,7 @@ interface Props {
  * La interacción vive en `CatalogoMultiSelector`, compartida con Obras Sociales: son el mismo gesto
  * —buscar en el nomenclador y quedarse con los propios— y tienen que verse igual.
  */
-export const ConvenioSelector: React.FC<Props> = ({ convenios, cargando, value, onChange }) => (
+export const ConvenioSelector: React.FC<Props> = ({ convenios, cargando, value, onChange, textoVacio }) => (
   <CatalogoMultiSelector
     items={convenios}
     cargando={cargando}
@@ -25,5 +27,6 @@ export const ConvenioSelector: React.FC<Props> = ({ convenios, cargando, value, 
     entidadPlural="convenios"
     placeholder="Buscar por código, actividad o signatario…"
     detalle={(c) => (c as { signatario?: string }).signatario}
+    textoVacio={textoVacio}
   />
 );

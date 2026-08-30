@@ -23,6 +23,14 @@ interface Props {
   onChange: (ids: string[]) => void;
   /** Cómo se llama lo que se elige, en plural y minúscula: "convenios", "obras sociales". */
   entidadPlural: string;
+  /**
+   * Qué decir cuando no se eligió nada todavía.
+   *
+   * Existe porque el texto por defecto habla de «esta empresa», y este selector ya no es solo de la
+   * ficha de empresa: también lo usa una fuente de paritarias para elegir qué convenios alimenta.
+   * Ahí, «asociadas a esta empresa» nombra algo que no está en la pantalla.
+   */
+  textoVacio?: string;
   placeholder: string;
   /** Formatea el `externalId` para mostrarlo (ej. el RNOS con guiones). */
   formatCodigo?: (externalId: string) => string;
@@ -46,7 +54,7 @@ const normalizar = (s: string): string =>
     // que cualquier reformateo o cambio de codificación puede romper sin que se note.
     .replace(/[\u0300-\u036f]/g, "");
 
-export const CatalogoMultiSelector: React.FC<Props> = ({ items, cargando, value, onChange, entidadPlural, placeholder, formatCodigo, detalle }) => {
+export const CatalogoMultiSelector: React.FC<Props> = ({ items, cargando, value, onChange, entidadPlural, placeholder, formatCodigo, detalle, textoVacio }) => {
   const [busqueda, setBusqueda] = useState("");
 
   const codigo = (item: SimpleCatalogItem) => (formatCodigo ? formatCodigo(String(item.externalId || "")) : String(item.externalId || ""));
@@ -88,7 +96,7 @@ export const CatalogoMultiSelector: React.FC<Props> = ({ items, cargando, value,
       <div>
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Asociados ({seleccionados.length})</p>
         {seleccionados.length === 0 ? (
-          <p className="text-xs text-gray-400 dark:text-gray-500 italic">Todavía no hay {entidadPlural} asociadas a esta empresa.</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 italic">{textoVacio || `Todavía no hay ${entidadPlural} asociadas a esta empresa.`}</p>
         ) : (
           <div className="flex items-center gap-2 flex-wrap max-h-40 overflow-y-auto">
             {seleccionados.map((c) => (

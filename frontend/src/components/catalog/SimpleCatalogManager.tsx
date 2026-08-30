@@ -6,6 +6,7 @@ import { PageLayout } from '../ui/PageLayout';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Card } from '../ui/Card';
 import { ViewToggle, ViewMode } from '../ui/ViewToggle';
+import { Modal } from '../ui/Modal';
 import { Paginador, POR_PAGINA } from '../ui/Paginador';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { fuzzyMatch } from '../../utils/searchHelpers';
@@ -79,12 +80,12 @@ interface SimpleCatalogManagerProps {
     items: SimpleCatalogItem[];
     renderAcciones: (item: SimpleCatalogItem) => React.ReactNode;
     /**
-     * En qué estado del filtro destacado está la pantalla.
+     * En qué estado del filtro destacado está la pantalla, por si alguna columna solo aplica a uno.
      *
-     * Lo necesita Convenios: la columna de vigilancia de paritarias solo tiene sentido en
-     * «Registrados por alguna empresa». Sobre los 2.669 del nomenclador serían 2.664 filas
-     * diciendo «No vigilado», y eso no es información: es una columna de vacíos que se lee como
-     * si faltaran 2.664 configuraciones.
+     * Convenios lo usó un tiempo para esconder la columna de paritarias en «Ver todos», cuando esa
+     * columna decía «No vigilado» y se leía como una falta. Ya no: separado el catálogo de fuentes
+     * de la vigilancia, dónde publica sus acuerdos un convenio es una propiedad del convenio y vale
+     * para los 2.669, los use alguien o no.
      */
     soloDestacados: boolean;
   }) => React.ReactNode;
@@ -96,6 +97,15 @@ interface SimpleCatalogManagerProps {
    * lee como parte del resultado de la búsqueda y desaparece al filtrar.
    */
   extraSuperior?: React.ReactNode;
+  /**
+   * Una línea de recuento sobre el catálogo COMPLETO, arriba de la tabla.
+   *
+   * Recibe todos los items —no los de la página ni los del filtro— porque lo que cuenta es el
+   * universo: «fuente conocida en 5 de 2.669» encuadra una columna mayormente vacía como
+   * conocimiento que se acumula, en vez de como 2.664 pendientes. El mismo dato dentro de cada fila,
+   * con un ícono de alerta, diría lo contrario.
+   */
+  resumen?: (items: SimpleCatalogItem[]) => React.ReactNode;
   /** Clave de ayuda para el modal de info (i). */
   helpKey?: HelpKey;
   /** Etiqueta de "ID Externo" (columna, campo del form, badge de tarjeta), por si en este catálogo
@@ -115,7 +125,7 @@ interface SimpleCatalogManagerProps {
   pestanas?: Array<{ id: string; label: string; icon?: IconDefinition; render: (items: SimpleCatalogItem[], recargar: () => Promise<void>) => React.ReactNode }>;
 }
 
-export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], extraSeccion, helpKey, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia, extraSuperior }) => {
+export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], extraSeccion, helpKey, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia, extraSuperior, resumen }) => {
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
   const [tabActiva, setTabActiva] = useState<string>('catalogo');
   const [loading, setLoading] = useState(true);
@@ -418,6 +428,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
       ) : (
         <>
       {extraSuperior && <div className="mb-4">{extraSuperior}</div>}
+      {resumen && <div className="mb-4">{resumen(items)}</div>}
       <div className="mb-4 flex flex-col md:flex-row gap-4 items-center justify-between">
         <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Buscar ${entityLabel}...`} className="w-full max-w-md px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white" />
         <div className="flex items-center gap-3 shrink-0">
@@ -572,18 +583,31 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
       )}
 
       {/* ABM Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white dark:bg-gray-800 shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {editing ? 'Editar' : 'Nuevo'} {title}
-              </h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                <FontAwesomeIcon icon={faTimes} />
-              </button>
-            </div>
-            <div className="px-5 py-4 space-y-4">
+      {/*
+        Sale del componente compartido y no de un `fixed inset-0` propio.
+
+        El de antes no tenía tope de altura: con un catálogo que aporta `extraSeccion` —Convenios suma
+        dos listas de switches— el modal crecía más que la pantalla, el encabezado quedaba cortado
+        arriba y el footer con Guardar caía abajo del pliegue, sin nada que scrollear. `Modal` acota a
+        90vh, deja el cuerpo con su propio scroll y clava el footer.
+      */}
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title={`${editing ? 'Editar' : 'Nuevo'} ${title}`}
+        size="sm"
+        footer={
+          <div className="flex items-center justify-end gap-3 w-full">
+            <button onClick={() => setShowModal(false)} className="btn-secondary" disabled={saving}>
+              Cancelar
+            </button>
+            <button onClick={handleSave} className="btn-primary" disabled={saving}>
+              {saving ? 'Guardando...' : 'Guardar'}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre *</label>
                 <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} autoFocus className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white" />
@@ -614,18 +638,8 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
               </div>
               {/* Va al final y separado: lo de arriba se guarda con «Guardar», esto se guarda solo. */}
               {editing && extraSeccion && <div className="border-t border-gray-200 dark:border-gray-700 pt-4">{extraSeccion(editing)}</div>}
-            </div>
-            <div className="flex justify-end gap-2 border-t border-gray-200 dark:border-gray-700 px-5 py-4">
-              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200">
-                Cancelar
-              </button>
-              <button onClick={handleSave} disabled={saving} className="px-4 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60">
-                {saving ? 'Guardando...' : 'Guardar'}
-              </button>
-            </div>
-          </div>
         </div>
-      )}
+      </Modal>
 
       {/* Import Modal */}
       {showImport && (

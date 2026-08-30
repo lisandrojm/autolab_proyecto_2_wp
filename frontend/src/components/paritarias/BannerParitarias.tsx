@@ -18,15 +18,26 @@ import { paritariasAPI, EstadoParitarias } from '../../api/paritarias';
  * exactamente lo que la vuelve peligrosa.
  *
  * Mezclarlos en un solo cartel haría que una fuente caída se leyera como tranquilidad.
+ *
+ * LA VIGILANCIA ES GLOBAL; EL AVISO ES POR EMPRESA
+ *
+ * La página del SATSAID se baja UNA vez por día para toda la plataforma y la publicación se guarda
+ * UNA vez: bajarla por empresa sería descortés con un sitio del que dependemos y multiplicaría por N
+ * el trabajo de arreglar un patrón roto. Lo que cambia por empresa es a quién se le muestra — con
+ * `empresaId`, solo las fuentes que alimentan convenios que ESA empleadora tiene registrados.
+ *
+ * Sin `empresaId` no se filtra nada, y es deliberado: en el catálogo de la plataforma tiene que
+ * verse TODO, porque es ahí donde se arregla una fuente ciega. Una fuente rota que solo se le muestra
+ * a las empresas afectadas es una fuente rota que nadie con permiso para tocarla ve.
  */
-export const BannerParitarias: React.FC = () => {
+export const BannerParitarias: React.FC<{ empresaId?: string }> = ({ empresaId }) => {
   const [estado, setEstado] = useState<EstadoParitarias | null>(null);
   const [verNuevas, setVerNuevas] = useState(false);
   const [verProblemas, setVerProblemas] = useState(false);
 
   const cargar = () =>
     paritariasAPI
-      .estado()
+      .estado(empresaId)
       .then(setEstado)
       // Si falla, silencio: un aviso sobre la vigilancia disparado por un error de red diría algo
       // falso. La rutina diaria deja su registro en el log del server igual.
@@ -34,7 +45,8 @@ export const BannerParitarias: React.FC = () => {
 
   useEffect(() => {
     void cargar();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [empresaId]);
 
   if (!estado) return null;
 

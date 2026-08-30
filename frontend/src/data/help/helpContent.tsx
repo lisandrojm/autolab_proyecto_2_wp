@@ -58,7 +58,8 @@ export type HelpKey =
   | "arcaModalidadContratacion"
   | "arcaTipoServicio"
   | "arcaGrupoTipoServicio"
-  | "arcaModalidadLiquidacion";
+  | "arcaModalidadLiquidacion"
+  | "fuentesParitaria";
 
 export type HelpEntry = {
   title: string;
@@ -419,6 +420,25 @@ const helpResources = {
         "**No hace falta tocarla**: son dos registros que ARCA no cambia.",
       ],
 
+      // Fuentes de paritarias (vigilancia de acuerdos salariales)
+      "fuentesParitaria.title": "Cómo funciona la vigilancia de paritarias",
+      "fuentesParitaria.description": "Cada fuente es una página de un sindicato. Una vez por día —para toda la plataforma, no por empresa— se mira qué PDF hay ahí y se avisa si apareció uno nuevo.",
+      "fuentesParitaria.items": [
+        "**Solo avisa, no carga nada**: el sistema no abre los PDF ni lee los importes. Deja el enlace y listo. La escala se sigue cargando a mano, con el botón *Paritaria* del convenio.",
+        "**Una fuente, varios convenios**: un solo acuerdo del SATSAID cubre 0131/75 y 0634/11 a la vez, y la Asociación de Actores publica en dos páginas distintas que alimentan convenios distintos. Por eso los convenios se tildan acá y no al revés.",
+        "**La URL es la del LISTADO**, no la del PDF: lo que se vigila es qué aparece en esa página.",
+        "**Los dos patrones**: *incluir* dice cuáles de los PDF de la página son una escala; *excluir* saca los que no lo son aunque matcheen. Se prueban contra el texto del enlace y contra el nombre del archivo, porque según la página el dato útil está en uno o en el otro.",
+        "**El de excluir no es opcional**: al lado de los acuerdos suele colgar el texto del convenio colectivo, protocolos y subsidios. Si entran, el sistema avisa de una novedad que no existe — y a la segunda vez nadie le cree.",
+        "**La primera revisión no avisa de nada**: registra todo lo que encuentra como *ya visto* y ahí queda la línea de base. Sin eso, dar de alta el SATSAID gritaría treinta acuerdos viejos. De la segunda revisión en adelante, lo que aparece sí es novedad.",
+        "**Cero enlaces es un ERROR, no *sin novedades***: si una página venía devolviendo acuerdos y de golpe no devuelve ninguno, cambió de estructura o el patrón dejó de servir. Queda en rojo, porque una fuente ciega es peor que una novedad sin leer: puede haber salido algo y nadie se enteró.",
+        "**Revisar ahora hace exactamente lo mismo que la rutina diaria**, solo que a pedido. No hay dos caminos: es el mismo código con otro disparador.",
+        "**El catálogo y la vigilancia son dos cosas**: *dónde publica sus acuerdos* un convenio es una propiedad suya —vale para cualquier empresa de la plataforma, hoy y en tres años— y anotarlo no cuesta nada. *Que esa página se baje todos los días* es la decisión operativa, y es el tilde **Activa** de acá.",
+        "**Se revisa una vez por día para toda la plataforma**, no una vez por empresa: la página se baja una sola vez y la publicación se guarda una sola vez. Lo que cambia por empresa es a quién se le muestra el aviso — cada una ve solo lo de los convenios que tiene registrados.",
+        "**Cambiar un patrón reinicia la línea de base**: los patrones definen qué se considera una escala en esa página, así que lo que estaba dado por visto se calculó con la definición anterior. Al guardar, la próxima revisión vuelve a registrar todo como ya visto — y se avisa en el momento.",
+        "**En Convenios se ve el estado de cada uno**: *con fuente* (y de qué entidad), *sin revisar* (nadie buscó todavía), *sin fuente conocida* (se buscó y no hay, con quién y cuándo) o *no aplica* (*9999/99 Excluido de convenio* no tiene sindicato). Ninguno de los grises es un error.",
+        "**Anotar que se buscó y no hay nada vale tanto como encontrarla**: es lo único que distingue *nadie miró* de *ya miramos*, y lo que evita que la próxima persona repita la búsqueda entera.",
+      ],
+
       // Modalidades de liquidación (ARCA)
       "arcaModalidadLiquidacion.title": "Información de Modalidades de Liquidación",
       "arcaModalidadLiquidacion.description": "Tabla oficial de ARCA: cada cuánto se liquida la retribución pactada.",
@@ -636,6 +656,7 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
   orderTypes: { title: "Información de Pedidos", size: "sm", content: buildHelpContent("orderTypes") },
   releases: { title: "Información de Releases", size: "sm", content: buildHelpContent("releases") },
   importUsersWp: { title: "Importación de Usuarios WP", size: "sm", content: buildHelpContent("importUsersWp") },
+  fuentesParitaria: { title: "Vigilancia de paritarias", size: "lg", content: buildHelpContent("fuentesParitaria") },
 };
 
 export function getHelp(key: HelpKey): HelpEntry {

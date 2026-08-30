@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileContract, faArrowUpRightFromSquare, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
@@ -8,10 +8,12 @@ import { companiesAPI, Company } from "../api/companies";
 import { sweetAlert } from "../utils/sweetAlert";
 import { formatRnos } from "../utils/rnos";
 import { InfoModal } from "../components/ui/InfoModal";
+import { Modal } from "../components/ui/Modal";
 import { ConveniosTable } from "../components/convenios/ConveniosTable";
 import type { ConvenioFila } from "../components/convenios/ConveniosTable";
-import { paritariasAPI, EstadoParitarias } from "../api/paritarias";
+import { paritariasAPI, EstadoParitarias, FuenteParitaria, EstadoFuenteConvenio } from "../api/paritarias";
 import { BannerParitarias } from "../components/paritarias/BannerParitarias";
+import { FuenteDelConvenio } from "../components/convenios/FuenteDelConvenio";
 
 const conveniosApi = createSimpleCatalogApi("/convenios");
 const obrasSocialesApi = createSimpleCatalogApi("/obras-sociales");
@@ -97,16 +99,44 @@ export const ConveniosPage: React.FC = () => {
    */
   const [todasLasEmpresas, setTodasLasEmpresas] = useState<Company[]>([]);
   const [guardandoEmpresa, setGuardandoEmpresa] = useState('');
-  const navigate = useNavigate();
-  /** Qué fuente vigila cada convenio. Sale del server ya resuelto: la pantalla no recorre fuentes. */
+  /** Qué fuente alimenta cada convenio, por código. Sale del server ya resuelto. */
   const [vigilancia, setVigilancia] = useState<EstadoParitarias['porConvenio']>({});
-  useEffect(() => {
-    // Si falla, la columna dice «No vigilado» en todas: es literalmente cierto —no sabemos de
+  /**
+   * Lo declarado a mano, por `_id` de convenio. SOLO los que alguien tocó.
+   *
+   * Los 2.669 restantes son `sin_revisar` por ausencia. No es lo mismo que `sin_fuente_conocida`, y
+   * esa diferencia es toda la razón de ser del campo: «nadie buscó» contra «se buscó y no hay nada
+   * publicado». Sin ella, la próxima persona repite la búsqueda.
+   */
+  const [declarado, setDeclarado] = useState<EstadoParitarias['declarado']>({});
+  /**
+   * Las fuentes completas, para poder prenderlas y apagarlas desde el convenio.
+   *
+   * `vigilancia` alcanza para DIBUJAR la columna —viene ya resuelto por convenio— pero no para
+   * editar: la relación vive en `FuenteParitaria.convenios`, así que para tocarla hace falta la
+   * lista de códigos que cada fuente tiene hoy.
+   */
+  const [fuentes, setFuentes] = useState<FuenteParitaria[]>([]);
+  /** El convenio cuya fuente se está anotando desde la fila. */
+  const [anotando, setAnotando] = useState<ConvenioFila | null>(null);
+  /** Refresca las dos puntas: lo que dibuja la columna y lo que editan los switches. */
+  const cargarParitarias = async () => {
+    // Si falla, la columna dice «Sin revisar» en todas: es literalmente cierto —no sabemos de
     // ninguna— y es preferible a una columna vacía que no se sabe si es un error o un dato.
-    void paritariasAPI
-      .estado()
-      .then((e) => setVigilancia(e.porConvenio))
-      .catch(() => setVigilancia({}));
+    try {
+      const [estado, lista] = await Promise.all([paritariasAPI.estado(), paritariasAPI.fuentes()]);
+      setVigilancia(estado.porConvenio);
+      setDeclarado(estado.declarado || {});
+      setFuentes(lista);
+    } catch {
+      setVigilancia({});
+      setDeclarado({});
+      setFuentes([]);
+    }
+  };
+  useEffect(() => {
+    void cargarParitarias();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [detalle, setDetalle] = useState<ConvenioFila | null>(null);
@@ -148,6 +178,90 @@ export const ConveniosPage: React.FC = () => {
   /** La obra social sindical del convenio, resuelta contra el catálogo por `data.id`. */
   const porDataId = (id?: number | null) => (id == null ? undefined : obrasSociales.find((o) => Number((o.data as { id?: number } | undefined)?.id) === id));
 
+  /**
+   * En qué estado está el conocimiento sobre dónde publica sus paritarias este convenio.
+   *
+   * `con_fuente` se DERIVA de los enlaces, no de un campo: si hay una fuente que lista el código,
+   * está cubierto, y si le sacan la última deja de estarlo sin que haya nada que actualizar. Un
+   * booleano guardado seguiría diciendo «vigilado» — el tipo de mentira silenciosa que costó los 163
+   * contratos del `legacyId 43`.
+   */
+  const estadoFuenteDe = (c: ConvenioFila): EstadoFuenteConvenio => {
+    const asignadas = vigilancia[String(c.externalId || '').trim()] || [];
+    if (asignadas.length > 0) return 'con_fuente';
+    const d = declarado[c._id]?.estado;
+    return d === 'sin_fuente_conocida' || d === 'no_aplica' ? d : 'sin_revisar';
+  };
+
+  const fmtFecha = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleDateString('es-AR') : '');
+
+  /**
+   * La columna, en las DOS pestañas.
+   *
+   * En la primera entrega estaba solo en la acotada, porque decía «No vigilado» y sobre los 2.669
+   * eran 2.664 filas que se leían como pendientes. Ahora dice otra cosa: dónde publica sus acuerdos
+   * un convenio es una propiedad del convenio —verdad para cualquier empresa, hoy y en tres años— y
+   * anotarla vale aunque nadie lo use todavía. Por eso el gris no lleva ícono de alerta y el recuento
+   * está ARRIBA, encuadrando el total como conocimiento acumulado y no como una lista de deudas.
+   */
+  const renderFuente = (c: ConvenioFila) => {
+    const estado = estadoFuenteDe(c);
+    const dec = declarado[c._id];
+
+    if (estado === 'con_fuente') {
+      const asignadas = vigilancia[String(c.externalId || '').trim()] || [];
+      const rota = asignadas.some((f) => f.conProblema);
+      // Que exista la fuente no quiere decir que se esté bajando: son dos cosas, y callar la segunda
+      // haría creer que el convenio está cubierto cuando su vigilancia está pausada.
+      const pausadas = asignadas.filter((f) => !f.activa);
+      return (
+        <span className="text-gray-700 dark:text-gray-200">
+          {asignadas.map((f) => f.entidad).join(', ')}
+          <span className={`block text-[11px] ${rota ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
+            {rota ? 'la última revisión falló' : asignadas[0].ultimaRevision ? `revisado el ${fmtFecha(asignadas[0].ultimaRevision)}` : 'sin revisar todavía'}
+          </span>
+          {pausadas.length > 0 && <span className="block text-[11px] text-amber-700 dark:text-amber-400">vigilancia pausada</span>}
+        </span>
+      );
+    }
+
+    if (estado === 'no_aplica') {
+      // Sin acción, como pide el caso 9999/99: no tiene paritaria y no la va a tener. Si hubo un
+      // error se corrige desde el modal de edición del convenio, que tiene el bloque completo.
+      return (
+        <span className="text-gray-400 dark:text-gray-600" title={dec?.nota || 'No tiene paritaria y no la va a tener.'}>
+          No aplica
+          {dec?.revisadaEl && <span className="block text-[11px]">marcado el {fmtFecha(dec.revisadaEl)}</span>}
+        </span>
+      );
+    }
+
+    if (estado === 'sin_fuente_conocida') {
+      return (
+        <button
+          type="button"
+          onClick={() => setAnotando(c)}
+          title={`${dec?.nota || 'Se buscó y no se encontró página que publique sus acuerdos.'}${dec?.revisadaPor ? ` — ${dec.revisadaPor}` : ''}`}
+          className="text-left text-gray-400 dark:text-gray-600 hover:text-blue-600 dark:hover:text-blue-400"
+        >
+          Sin fuente conocida
+          <span className="block text-[11px]">revisado el {fmtFecha(dec?.revisadaEl) || '—'}</span>
+        </button>
+      );
+    }
+
+    return (
+      // Gris y sin ícono de alerta: que nadie haya buscado todavía dónde publica un gremio que
+      // ninguna empresa usa no es un error que haya que arreglar hoy.
+      <span className="text-gray-400 dark:text-gray-600">
+        Sin revisar
+        <button type="button" onClick={() => setAnotando(c)} className="ml-2 text-blue-600 dark:text-blue-400 hover:underline">
+          asignar fuente
+        </button>
+      </span>
+    );
+  };
+
   return (
     <>
       <SimpleCatalogManager
@@ -172,7 +286,31 @@ export const ConveniosPage: React.FC = () => {
         // Los avisos de paritarias van ARRIBA de la tabla y con la misma forma que los cuatro de
         // /arca/categorias: es el mismo tipo de aviso —algo que hay que mirar— sobre otra entidad.
         extraSuperior={<BannerParitarias />}
-        tablaPropia={({ items, renderAcciones, soloDestacados }) => (
+        /*
+          EL ENCUADRE ES LO QUE ESTÁ EN JUEGO ACÁ.
+
+          Con la columna en las dos pestañas, 2.664 filas dicen «Sin revisar». Ese mismo hecho se
+          puede presentar como 2.664 pendientes —y entonces la pantalla es una lista de deudas que
+          nadie va a terminar nunca— o como el recuento de un conocimiento que se acumula: cada
+          convenio que alguien anota vale para siempre y para todas las empresas de la plataforma.
+          Por eso el número va ARRIBA y en positivo, y por eso ninguna fila lleva ícono de alerta.
+        */
+        resumen={(todos) => {
+          const conFuente = todos.filter((c) => (vigilancia[String(c.externalId || '').trim()] || []).length > 0).length;
+          const revisados = todos.filter((c) => declarado[c._id]?.estado === 'sin_fuente_conocida').length;
+          const noAplica = todos.filter((c) => declarado[c._id]?.estado === 'no_aplica').length;
+          return (
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-3 py-2 text-xs text-gray-600 dark:text-gray-300">
+              Fuente conocida en <strong className="text-gray-900 dark:text-gray-100">{conFuente}</strong> de {todos.length} convenios
+              {revisados > 0 && <> · {revisados} revisado(s) sin fuente</>}
+              {noAplica > 0 && <> · {noAplica} sin paritaria</>}
+              <span className="block text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                Dónde publica sus acuerdos un gremio es dato de la plataforma: sirve igual aunque hoy ninguna empresa use ese convenio. Anotar que se buscó y no hay nada también cuenta.
+              </span>
+            </div>
+          );
+        }}
+        tablaPropia={({ items, renderAcciones }) => (
           <ConveniosTable
             convenios={items as ConvenioFila[]}
             obraSocialDe={(c) => ({ os: porDataId(c.obraSocialDefaultId) })}
@@ -193,40 +331,8 @@ export const ConveniosPage: React.FC = () => {
                 </button>
               );
             }}
-            /*
-              Solo en la pestaña acotada. En «Ver todos (2669)» serían 2.664 filas diciendo «No
-              vigilado», que no es información sino una columna de vacíos.
-            */
-            renderVigilancia={
-              soloDestacados
-                ? (c) => {
-                    const fuentes = vigilancia[String(c.externalId || '').trim()] || [];
-                    if (fuentes.length === 0)
-                      return (
-                        // Gris y sin ícono de alerta: no estar vigilado no es un error. `9999/99` no
-                        // va a tener fuente nunca.
-                        <span className="text-gray-400 dark:text-gray-600">
-                          No vigilado
-                          <button type="button" onClick={() => navigate('/arca/fuentes-paritaria')} className="ml-2 text-blue-600 dark:text-blue-400 hover:underline">
-                            asignar
-                          </button>
-                        </span>
-                      );
-                    return (
-                      <span className="text-gray-700 dark:text-gray-200">
-                        {fuentes.map((f) => f.entidad).join(', ')}
-                        <span className={`block text-[11px] ${fuentes.some((f) => f.conProblema) ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                          {fuentes.some((f) => f.conProblema)
-                            ? 'la última revisión falló'
-                            : fuentes[0].ultimaRevision
-                              ? `revisado el ${new Date(fuentes[0].ultimaRevision).toLocaleDateString('es-AR')}`
-                              : 'sin revisar todavía'}
-                        </span>
-                      </span>
-                    );
-                  }
-                : undefined
-            }
+            /* En las DOS pestañas: es una propiedad del convenio, no una configuración de quien lo usa. */
+            renderVigilancia={renderFuente}
             renderAcciones={renderAcciones}
           />
         )}
@@ -248,7 +354,8 @@ export const ConveniosPage: React.FC = () => {
           agregar, y una lista que solo muestra lo que ya está no deja hacerlo.
         */
         extraSeccion={(convenio) => (
-          <div>
+          <div className="space-y-5">
+            <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Empresas que lo tienen registrado</label>
             <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">ARCA solo acepta un alta si la empleadora tiene el convenio en su padrón. Cada cambio se guarda solo.</p>
             {todasLasEmpresas.length === 0 ? (
@@ -299,11 +406,36 @@ export const ConveniosPage: React.FC = () => {
                 })}
               </div>
             )}
+            </div>
+
+            {/*
+              Dónde publica sus paritarias este convenio: EL MISMO bloque que abre la acción de la
+              fila, no una copia. El dato no vive en el convenio sino en `FuenteParitaria.convenios`,
+              así que no puede entrar por `extraFields` ni salir en el mismo «Guardar»: cada cambio
+              se guarda solo, igual que las empresas de arriba.
+            */}
+            <div>
+              <FuenteDelConvenio convenio={convenio} fuentes={fuentes} declarado={declarado[convenio._id]} onCambiado={cargarParitarias} />
+            </div>
           </div>
         )}
       />
 
       <EmpresasDelConvenioModal convenio={detalle} empresas={detalle ? empresasPorConvenio.get(detalle._id) || [] : []} obraSocialDe={porDataId} onClose={() => setDetalle(null)} />
+
+      {/*
+        Anotar la fuente sin pasar por el ABM del convenio.
+
+        Es la acción de la columna, y abre EL MISMO bloque que el modal de edición: al que está
+        recorriendo el catálogo no le sirve abrir el formulario entero del convenio —código, nombre,
+        signatario, obra social, empresas— para anotar una sola cosa. Sin footer a propósito: cada
+        switch se guarda solo, y un botón «Guardar» haría pensar que hasta tocarlo no pasó nada.
+      */}
+      {anotando && (
+        <Modal isOpen onClose={() => setAnotando(null)} title="Fuente de paritarias" subtitle={`${anotando.externalId || 'sin código'} — ${anotando.name}`} size="md">
+          <FuenteDelConvenio convenio={anotando} fuentes={fuentes} declarado={declarado[anotando._id]} onCambiado={cargarParitarias} />
+        </Modal>
+      )}
     </>
   );
 };
