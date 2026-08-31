@@ -2,7 +2,9 @@ import { Router } from "express";
 import { Info } from "../models/Info.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
-import { PROPOSITOS } from "../utils/propositosCarpeta.js";
+import { PROPOSITOS, esProposito } from "../utils/propositosCarpeta.js";
+import { Tenant } from "../models/Tenant.js";
+import { getTenantDropboxConfig, listFolder } from "../services/dropboxService.js";
 const router = Router();
 const ESTADO_TYPE = "estado-empleado";
 const normalizarNombre = (s) => (s || "")
@@ -177,7 +179,16 @@ function parseEstadoBody(body) {
                     continue;
                 vistas.add(dropboxCarpeta);
                 const detalle = String(c?.detalle ?? "").trim().slice(0, 500) || undefined;
-                carpetas.push({ dropboxCarpeta, detalle });
+                /*
+                  El propósito se CONSERVA. Si no se lo copiara acá, cualquier guardado desde el modal
+                  borraría en silencio lo que cargó el backfill: la carpeta volvería a resolverse por su
+                  nombre sin que nadie lo pidiera.
+        
+                  Un valor que no está en la lista se descarta en vez de guardarse: mejor sin propósito
+                  —resuelve por nombre y se reporta— que con uno inventado que no resuelve nunca.
+                */
+                const proposito = esProposito(c?.proposito) ? c.proposito : undefined;
+                carpetas.push({ dropboxCarpeta, detalle, proposito });
             }
             if (carpetas.length === 0)
                 return { error: "La transición por carpeta de Dropbox necesita indicar al menos una carpeta a vigilar" };
@@ -364,7 +375,37 @@ router.patch("/estados/:id", requireTenant, authenticateToken, async (req, res) 
         estado.data = nuevaData;
         estado.markModified("data");
         await estado.save();
-        res.json(estado.toObject());
+        /*
+          SE GUARDA PRIMERO Y SE VERIFICA DESPUÉS, a propósito.
+    
+          Que una carpeta no exista todavía en Dropbox es un aviso, no un error: se la puede configurar
+          antes de crearla, y bloquear el guardado por eso obligaría a hacer las dos cosas en un orden
+          que nadie pidió. Pero callarlo es lo que hoy hace que una ruta mal escrita no produzca ningún
+          síntoma hasta que alguien nota que los contratos dejaron de avanzar.
+    
+          Si Dropbox no responde, no se avisa nada: un aviso disparado por un problema de red diría algo
+          falso sobre la configuración.
+        */
+        const avisos = [];
+        try {
+            const cfg = getTenantDropboxConfig(await Tenant.findById(req.tenantObjectId).lean());
+            if (cfg) {
+                for (const c of (nuevaData.transicionAutomatica?.carpetas || [])) {
+                    if (!c.dropboxCarpeta)
+                        continue;
+                    try {
+                        await listFolder(String(req.tenantObjectId), cfg, c.dropboxCarpeta, true);
+                    }
+                    catch {
+                        avisos.push(`La carpeta «${c.dropboxCarpeta}» no existe en Dropbox. Se guardó igual, pero mientras no exista no va a llegar ningún archivo ahí y este estado no se va a disparar.`);
+                    }
+                }
+            }
+        }
+        catch {
+            /* Dropbox no disponible: se guardó bien, no hay nada verificable que decir. */
+        }
+        res.json({ ...estado.toObject(), avisos });
     }
     catch (error) {
         console.error("Update estado error:", error);

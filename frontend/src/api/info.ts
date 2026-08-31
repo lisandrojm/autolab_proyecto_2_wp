@@ -91,7 +91,8 @@ class InfoAPI {
     return data;
   }
 
-  async updateEstado(id: string, payload: EstadoPayload): Promise<InfoItem> {
+  /** Devuelve además `avisos`: cosas que se guardaron igual pero que conviene saber (ver el PATCH). */
+  async updateEstado(id: string, payload: EstadoPayload): Promise<InfoItem & { avisos?: string[] }> {
     const { data } = await axios.patch(`/info/estados/${id}`, payload);
     return data;
   }

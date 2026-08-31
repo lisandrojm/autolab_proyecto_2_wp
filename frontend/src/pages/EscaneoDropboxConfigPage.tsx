@@ -4,7 +4,7 @@ import { faArrowsRotate, faBolt, faFolder, faSpinner, faCheck, faStopwatch, faSi
 import { faDropbox } from "@fortawesome/free-brands-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { infoAPI, InfoItem } from "../api/info";
-import { dropboxAPI, DropboxStatus, EscaneoConfig } from "../api/dropbox";
+import { dropboxAPI, DiagnosticoCarpeta, DropboxStatus, EscaneoConfig } from "../api/dropbox";
 import { DropboxConexionCard } from "../components/documents/DropboxConexionCard";
 import { sweetAlert } from "../utils/sweetAlert";
 
@@ -19,6 +19,14 @@ const formatCuentaRegresiva = (ms: number): string => {
 };
 
 export function EscaneoDropboxConfigPage() {
+  /**
+   * Cómo se está resolviendo cada carpeta. EL SÍNTOMA QUE ANTES NO EXISTÍA.
+   *
+   * Una carpeta que no se puede resolver no generaba ninguna señal: el escaneo pasaba de largo y el
+   * problema aparecía semanas después como «los contratos dejaron de avanzar». Va en esta pantalla,
+   * al lado de la última lectura, porque es donde alguien mira cuando sospecha del escaneo.
+   */
+  const [diagnostico, setDiagnostico] = useState<DiagnosticoCarpeta[]>([]);
   const [status, setStatus] = useState<DropboxStatus | null>(null);
   const [config, setConfig] = useState<EscaneoConfig | null>(null);
   const [estados, setEstados] = useState<InfoItem[]>([]);
@@ -33,6 +41,7 @@ export function EscaneoDropboxConfigPage() {
   const cargar = async () => {
     try {
       const [s, c, e] = await Promise.all([dropboxAPI.status(), dropboxAPI.getEscaneoConfig(), infoAPI.listEstados()]);
+      dropboxAPI.diagnosticoCarpetas().then((d) => setDiagnostico(d.carpetas)).catch(() => setDiagnostico([]));
       setStatus(s);
       setConfig(c);
       setIntervaloInput(String(c.intervalMinutos));
@@ -212,6 +221,26 @@ export function EscaneoDropboxConfigPage() {
 
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
             <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-3">Carpetas vigiladas</p>
+            {diagnostico.length > 0 && (
+              <div className="mb-4 space-y-1">
+                {diagnostico.map((d) => (
+                  <div key={d.proposito} className="flex items-start gap-2 text-[11px]">
+                    <span className="font-semibold text-gray-600 dark:text-gray-300 w-40 shrink-0">{d.etiqueta}</span>
+                    {d.origen === "no_resuelta" ? (
+                      <span className="text-red-600 dark:text-red-400">sin carpeta — esa función no se puede usar</span>
+                    ) : (
+                      <span className="min-w-0">
+                        <span className="font-mono text-gray-500 dark:text-gray-400 break-all">{d.carpeta}</span>
+                        {/* «anda» y «anda de casualidad» son cosas distintas y acá se dicen distinto. */}
+                        {d.origen === "patron" && <span className="ml-1.5 text-amber-700 dark:text-amber-400">se encontró por su NOMBRE: si la renombrás, deja de funcionar. Cargale el propósito.</span>}
+                        {d.origen === "derivada" && <span className="ml-1.5 text-amber-700 dark:text-amber-400">ruta deducida: no está vigilada por el escaneo.</span>}
+                        {d.existe === false && <span className="ml-1.5 text-red-600 dark:text-red-400">no existe en Dropbox.</span>}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
             {estadosConTransicion.length === 0 ? (
               <p className="text-sm text-gray-400 italic">Todavía no hay ninguna transición automática configurada.</p>
             ) : (

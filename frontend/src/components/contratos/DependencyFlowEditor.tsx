@@ -18,7 +18,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, useSortable, arrayMove, sortableKeyboardCoordinates, rectSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { infoAPI, InfoItem, EstadoPayload } from "../../api/info";
+import { infoAPI, InfoItem, EstadoPayload, propositosCarpeta, PropositoCarpeta } from "../../api/info";
 import { dropboxAPI, DropboxEntry } from "../../api/dropbox";
 import { EstadoBadge, TramiteImpositivoBadge, estadoLabel } from "../EstadoSelect";
 import { Modal } from "../ui/Modal";
@@ -185,7 +185,7 @@ export const DependencyFlowEditor: React.FC = () => {
   const [eventoOverrides, setEventoOverrides] = useState<Record<string, TransicionAutomatica | null>>({});
   const [configurando, setConfigurando] = useState<InfoItem | null>(null);
   const [showFlowInfo, setShowFlowInfo] = useState(false);
-  const [eventoForm, setEventoForm] = useState<{ carpetas: { dropboxCarpeta: string; detalle: string }[] }>({ carpetas: [] });
+  const [eventoForm, setEventoForm] = useState<{ carpetas: { dropboxCarpeta: string; detalle: string; proposito: string }[] }>({ carpetas: [] });
   const [savingEvento, setSavingEvento] = useState(false);
   // Selector de carpeta de Dropbox: navega el árbol real en vez de tipear la ruta a ciegas. Navega TODO
   // el Dropbox conectado (no solo el rootPath de Dropbox Sign) porque puede haber carpetas separadas
@@ -196,12 +196,35 @@ export const DependencyFlowEditor: React.FC = () => {
   const [pickerLoading, setPickerLoading] = useState(false);
   /** Aviso NO bloqueante del picker (ej. la ruta pedida ya no existe y se cayó a la raíz). */
   const [pickerAviso, setPickerAviso] = useState("");
+  /**
+   * Los propósitos posibles. Vienen del server (única fuente) y se cachean por sesión.
+   *
+   * `null` = todavía no se sabe. `[]` con `propositosError` = no se pudieron cargar, que NO es lo
+   * mismo que «no hay ninguno»: un desplegable vacío se lee como lo segundo.
+   */
+  const [propositos, setPropositos] = useState<PropositoCarpeta[]>([]);
+  const [propositosError, setPropositosError] = useState(false);
+  useEffect(() => {
+    propositosCarpeta()
+      .then((ps) => {
+        setPropositos(ps);
+        setPropositosError(false);
+      })
+      .catch(() => setPropositosError(true));
+  }, []);
+
+  /** El propósito que el nombre sugiere, solo si es inequívoco. La etiqueta la pone el server. */
+  const sugerirProposito = (ruta: string): string => {
+    const nombre = (ruta || "").split("/").filter(Boolean).pop() || "";
+    const coincide = propositos.filter((p) => nombre.toLowerCase().includes(p.valor.split("_")[0]));
+    return coincide.length === 1 ? coincide[0].valor : "";
+  };
 
   const transicionDe = (estado: InfoItem): TransicionAutomatica => (Object.prototype.hasOwnProperty.call(eventoOverrides, estado._id) ? eventoOverrides[estado._id] ?? undefined : estado.data?.transicionAutomatica);
 
   const abrirConfigurarEvento = (estado: InfoItem) => {
     const actual = transicionDe(estado);
-    setEventoForm({ carpetas: (actual?.carpetas || []).map((c) => ({ dropboxCarpeta: c.dropboxCarpeta, detalle: c.detalle || "" })) });
+    setEventoForm({ carpetas: (actual?.carpetas || []).map((c) => ({ dropboxCarpeta: c.dropboxCarpeta, detalle: c.detalle || "", proposito: c.proposito || "" })) });
     setConfigurando(estado);
   };
 
@@ -264,11 +287,20 @@ export const DependencyFlowEditor: React.FC = () => {
 
   const elegirCarpetaActual = () => {
     if (yaAgregadaEnForm(pickerPath)) return;
-    setEventoForm((p) => ({ carpetas: [...p.carpetas, { dropboxCarpeta: pickerPath, detalle: "" }] }));
+    /*
+      Una carpeta NUEVA arranca con el propósito que su nombre sugiere, si hay uno solo.
+
+      No es adivinar: es la misma inferencia del backfill, ofrecida como valor inicial y editable.
+      Lo alternativo —dejarlo vacío— haría que la carpeta nazca sin migrar justo después de haber
+      migrado todas las demás.
+    */
+    const sugerido = propositos.length > 0 ? sugerirProposito(pickerPath) : "";
+    setEventoForm((p) => ({ carpetas: [...p.carpetas, { dropboxCarpeta: pickerPath, detalle: "", proposito: sugerido }] }));
     setPickerOpen(false);
   };
 
   const quitarCarpetaDelForm = (i: number) => setEventoForm((p) => ({ carpetas: p.carpetas.filter((_, idx) => idx !== i) }));
+  const actualizarPropositoCarpeta = (i: number, proposito: string) => setEventoForm((p) => ({ carpetas: p.carpetas.map((c, idx) => (idx === i ? { ...c, proposito } : c)) }));
   const actualizarDetalleCarpeta = (i: number, detalle: string) => setEventoForm((p) => ({ carpetas: p.carpetas.map((c, idx) => (idx === i ? { ...c, detalle } : c)) }));
 
   const segmentosPicker = pickerPath.split("/").filter(Boolean);
@@ -287,15 +319,25 @@ export const DependencyFlowEditor: React.FC = () => {
 
   const guardarEvento = async () => {
     if (!configurando) return;
-    const carpetas = eventoForm.carpetas.map((c) => ({ dropboxCarpeta: c.dropboxCarpeta, detalle: c.detalle.trim() || undefined }));
+    // `proposito` vacío se manda como `undefined`, no como "": una carpeta sin migrar tiene que
+    // quedar SIN el campo, para que el server la siga resolviendo por nombre y la reporte como tal.
+    const carpetas = eventoForm.carpetas.map((c) => ({ dropboxCarpeta: c.dropboxCarpeta, detalle: c.detalle.trim() || undefined, proposito: c.proposito || undefined }));
     const nuevaTransicion: TransicionAutomatica = carpetas.length > 0 ? { evento: "dropbox_carpeta", carpetas } : undefined;
     const payload: EstadoPayload = { ...payloadBaseDe(configurando), transicionAutomatica: nuevaTransicion || null };
     const id = configurando._id;
     try {
       setSavingEvento(true);
-      await infoAPI.updateEstado(id, payload);
+      const r = await infoAPI.updateEstado(id, payload);
       setEventoOverrides((prev) => ({ ...prev, [id]: nuevaTransicion ?? null }));
-      sweetAlert.success("Transición guardada", "Se actualizó la transición automática de este estado.");
+      /*
+        Los avisos del server se muestran, no se tragan.
+
+        Que una carpeta no exista todavía en Dropbox no impide guardar —se la puede configurar antes
+        de crearla— pero callarlo es lo que hace que una ruta mal escrita no produzca ningún síntoma
+        hasta que alguien nota que los contratos dejaron de avanzar.
+      */
+      if (r.avisos?.length) sweetAlert.error("Se guardó, pero mirá esto", r.avisos.join(String.fromCharCode(10) + String.fromCharCode(10)));
+      else sweetAlert.success("Transición guardada", "Se actualizó la transición automática de este estado.");
       setConfigurando(null);
     } catch (e: any) {
       sweetAlert.error("Error", e?.response?.data?.error || "No se pudo guardar la transición automática.");
@@ -640,6 +682,43 @@ export const DependencyFlowEditor: React.FC = () => {
                       <button type="button" onClick={() => quitarCarpetaDelForm(i)} title="Quitar esta carpeta" className="text-gray-400 hover:text-red-500 shrink-0">
                         <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
                       </button>
+                    </div>
+                    {/*
+                      PARA QUÉ SIRVE ESTA CARPETA. Es lo que el sistema usa para encontrarla.
+
+                      Sin esto, la carpeta se resuelve por su NOMBRE: el día que alguien la renombre
+                      en Dropbox, la transición deja de dispararse sin ningún error visible.
+
+                      Las opciones vienen del server (`GET /info/propositos-carpeta`), que es la única
+                      fuente. Si mañana se agrega un propósito, aparece acá sin tocar este componente.
+                    */}
+                    <div>
+                      <select className="input-field w-full text-[11px]" value={c.proposito} onChange={(e) => actualizarPropositoCarpeta(i, e.target.value)} disabled={propositosError && !c.proposito}>
+                        {/*
+                          El valor YA CARGADO se ofrece siempre, aunque la lista no haya llegado.
+                          Si no, un fallo de red convertiría el select en vacío y guardar borraría el
+                          propósito que alguien había elegido — un problema de red no puede borrar datos.
+                        */}
+                        {c.proposito && !propositos.some((p) => p.valor === c.proposito) && <option value={c.proposito}>{c.proposito}</option>}
+                        <option value="">— Sin propósito (se resuelve por el nombre) —</option>
+                        {propositos.map((p) => (
+                          <option key={p.valor} value={p.valor}>
+                            {p.etiqueta}
+                          </option>
+                        ))}
+                      </select>
+                      {/* Un desplegable vacío se lee como «no hay propósitos», no como «no los pude traer». */}
+                      {propositosError ? (
+                        <p className="text-[11px] text-red-600 dark:text-red-400 mt-0.5 flex items-start gap-1">
+                          <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5 mt-0.5 shrink-0" />
+                          No se pudieron cargar los propósitos. Podés guardar igual: lo que ya estaba elegido se conserva.
+                        </p>
+                      ) : (
+                        c.proposito && <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{propositos.find((p) => p.valor === c.proposito)?.descripcion}</p>
+                      )}
+                      {!c.proposito && !propositosError && (
+                        <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">Sin propósito, esta carpeta se busca por su nombre: si la renombrás en Dropbox, deja de funcionar sin avisar.</p>
+                      )}
                     </div>
                     <input
                       className="input-field w-full text-[11px]"

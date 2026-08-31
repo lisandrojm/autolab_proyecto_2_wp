@@ -7,6 +7,8 @@ import { requireTenant } from "../middleware/tenant.js";
 import { encryptSecret } from "../utils/secretCrypto.js";
 import { getTenantDropboxConfig, verifyAccount, listFolder, getTemporaryLink, downloadFileContent, uploadFile, deleteEntry, moveEntry, createFolder, clearTenantToken, isWithinRoot, } from "../services/dropboxService.js";
 import { escanearTenantAhora, getEscaneoConfig, setEscaneoIntervalo, MIN_INTERVAL_MINUTES, MAX_INTERVAL_MINUTES } from "../services/estadoDropboxCronService.js";
+import { diagnosticoCarpetas } from "../utils/estadoCarpetas.js";
+import { etiquetaProposito } from "../utils/propositosCarpeta.js";
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 /*
@@ -392,6 +394,50 @@ router.post("/estado-scan/trigger", async (req, res) => {
             return;
         }
         res.json({ estadosEscaneados: resultado.estadosEscaneados, transicionesAplicadas: resultado.transicionesAplicadas });
+    }
+    catch (error) {
+        dropboxError(res, error);
+    }
+});
+/**
+ * GET /dropbox/diagnostico-carpetas — el síntoma que hoy no existe.
+ *
+ * Hasta acá, una carpeta que no se podía resolver NO producía ningún síntoma: el escaneo pasaba de
+ * largo y el problema aparecía semanas después como «los contratos dejaron de avanzar». Esto lo hace
+ * visible en la misma pantalla donde se ve la última lectura.
+ *
+ * Dice tres cosas distintas por propósito:
+ *   proposito     resolvió por el propósito cargado. Sobrevive a que renombren la carpeta.
+ *   patron        resolvió POR EL NOMBRE. Anda hoy y se rompe el día que la renombren.
+ *   derivada      la ruta se dedujo; puede no existir y no está vigilada por el cron.
+ *   no_resuelta   nadie la va a encontrar. Esa función no se puede usar.
+ *
+ * Y para cada una, si la ruta EXISTE en el Dropbox de este tenant. Son cosas independientes: se
+ * puede resolver perfecto una ruta que no existe.
+ *
+ * NO bloquea nada: que falte un propósito puede ser legítimo — un tenant puede no usar esa función.
+ */
+router.get("/diagnostico-carpetas", async (req, res) => {
+    try {
+        const diag = await diagnosticoCarpetas();
+        const cfg = getTenantDropboxConfig(await Tenant.findById(req.tenantObjectId).lean());
+        const out = [];
+        for (const d of diag) {
+            let existe = null;
+            let motivo = "";
+            if (cfg && d.carpeta) {
+                try {
+                    await listFolder(String(req.tenantObjectId), cfg, d.carpeta, true);
+                    existe = true;
+                }
+                catch (e) {
+                    existe = false;
+                    motivo = e?.response?.data?.error_summary || e?.message || "no se pudo leer";
+                }
+            }
+            out.push({ ...d, etiqueta: etiquetaProposito(d.proposito), existe, motivo });
+        }
+        res.json({ carpetas: out, dropboxConectado: !!cfg });
     }
     catch (error) {
         dropboxError(res, error);

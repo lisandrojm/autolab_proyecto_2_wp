@@ -18,6 +18,18 @@ export interface DropboxStatus {
   canManageConnection: boolean;
 }
 
+/** Cómo se resolvió un propósito. `origen` es lo que distingue "anda" de "anda de casualidad". */
+export interface DiagnosticoCarpeta {
+  proposito: string;
+  etiqueta: string;
+  carpeta: string | null;
+  origen: "proposito" | "patron" | "derivada" | "no_resuelta";
+  estado?: string;
+  /** `null` = no se pudo comprobar (sin Dropbox conectado). */
+  existe: boolean | null;
+  motivo: string;
+}
+
 export const dropboxAPI = {
   async status(): Promise<DropboxStatus> {
     const { data } = await axios.get("/dropbox/status");
@@ -34,6 +46,17 @@ export const dropboxAPI = {
   },
 
   /** `full`: ignora el límite del rootPath y navega desde una raíz más amplia (ver /dropbox/list). */
+  /**
+   * Cómo se está resolviendo cada propósito, y si esa carpeta existe en este Dropbox.
+   *
+   * Es el síntoma que antes no existía: una carpeta que no se puede resolver no producía ninguna
+   * señal hasta que alguien notaba que los contratos dejaron de avanzar.
+   */
+  async diagnosticoCarpetas(): Promise<{ carpetas: DiagnosticoCarpeta[]; dropboxConectado: boolean }> {
+    const { data } = await axios.get("/dropbox/diagnostico-carpetas");
+    return data;
+  },
+
   async list(path?: string, full?: boolean): Promise<{ entries: DropboxEntry[]; path: string; rootPath: string }> {
     const { data } = await axios.get("/dropbox/list", { params: { path: path || "", full: full ? "1" : undefined } });
     return data;
