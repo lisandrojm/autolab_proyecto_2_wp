@@ -49,6 +49,23 @@ export const nombreCentroCosto = (proyecto: { metadataResolutions?: { centroCost
  * Los que no tienen `data.id` se descartan: el proyecto guarda un número, así que uno sin id no se
  * puede elegir ni resolver. Aparece en el ABM con «—» en la columna ID Externo.
  */
+/**
+ * El valor de un `<select>` de id numérico, listo para el payload.
+ *
+ * `parseInt(v) || undefined` ES UN BUG, y este es el que costó encontrar: con la opción de valor
+ * «0», `parseInt` da 0 y `0 || undefined` da **undefined**. El id se descarta en silencio, el PATCH
+ * viaja sin el campo, y el server —que solo escribe `if (... !== undefined)`— no guarda nada. Desde
+ * afuera se ve como «elegí uno y no guarda», sin ningún error.
+ *
+ * Acá el vacío se distingue del cero mirando el STRING, que es lo único que sabe cuál de los dos es.
+ */
+export const idOpcional = (valor: string): number | undefined => {
+  const limpio = String(valor ?? "").trim();
+  if (limpio === "") return undefined;
+  const n = Number(limpio);
+  return Number.isFinite(n) ? n : undefined;
+};
+
 export const cargarCentrosCosto = async (apiUrl: string, headers: Record<string, string>): Promise<any[]> => {
   const traer = async (ruta: string) => {
     try {
@@ -64,7 +81,14 @@ export const cargarCentrosCosto = async (apiUrl: string, headers: Record<string,
   const porId = new Map<number, any>();
   for (const c of [...deInfo, ...delAbm]) {
     const id = Number(c?.data?.id);
-    if (Number.isFinite(id)) porId.set(id, c);
+    /*
+      Se descarta el id 0, que es lo que queda cuando alguien crea un centro de costo SIN ID Externo.
+      No es un id: es el default del campo numérico, y se comporta como «vacío» en cada chequeo por
+      verdadero de la aplicación —el propio proyecto lo muestra con `centroCostoId ? … : '—'`—. Un
+      centro con id 0 aparecería en el select y no se podría guardar; mejor que no aparezca y que se
+      le cargue un ID Externo real.
+    */
+    if (Number.isFinite(id) && id > 0) porId.set(id, c);
   }
   return [...porId.values()].sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
 };

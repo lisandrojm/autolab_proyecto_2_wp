@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { cargarCentrosCosto } from '../utils/centroCosto';
+import { cargarCentrosCosto, idOpcional } from '../utils/centroCosto';
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { projectsAPI, Project, Client } from "../api/projects";
 import { companiesAPI, Company } from "../api/companies";
@@ -438,7 +438,7 @@ export const ProjectDetailPage: React.FC = () => {
                       className="input-field py-2.5"
                       required
                       value={projectForm.metadata?.centroCostoId || ""}
-                      onChange={(e) => setProjectForm(p => ({ ...p, metadata: { ...p.metadata, centroCostoId: parseInt(e.target.value) || undefined } }))}
+                      onChange={(e) => setProjectForm(p => ({ ...p, metadata: { ...p.metadata, centroCostoId: idOpcional(e.target.value) } }))}
                     >
                       <option value="">Seleccionar del sistema...</option>
                       {availableCostCenters.map(cc => (
@@ -453,7 +453,7 @@ export const ProjectDetailPage: React.FC = () => {
                       className="input-field py-2.5"
                       required
                       value={projectForm.metadata?.sedeId || ""}
-                      onChange={(e) => setProjectForm(p => ({ ...p, metadata: { ...p.metadata, sedeId: parseInt(e.target.value) || undefined } }))}
+                      onChange={(e) => setProjectForm(p => ({ ...p, metadata: { ...p.metadata, sedeId: idOpcional(e.target.value) } }))}
                     >
                       <option value="">Seleccionar del sistema...</option>
                       {availableSedes.map(s => (
@@ -478,7 +478,7 @@ export const ProjectDetailPage: React.FC = () => {
                     className="input-field py-2.5"
                     required
                     value={projectForm.metadata?.responsableId || ""}
-                    onChange={(e) => setProjectForm(p => ({ ...p, metadata: { ...p.metadata, responsableId: parseInt(e.target.value) || undefined } }))}
+                    onChange={(e) => setProjectForm(p => ({ ...p, metadata: { ...p.metadata, responsableId: idOpcional(e.target.value) } }))}
                   >
                     <option value="">Seleccionar del sistema...</option>
                     {availableCoordinators.map(c => (

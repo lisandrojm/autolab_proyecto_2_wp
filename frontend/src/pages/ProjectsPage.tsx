@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { nombreCentroCosto, cargarCentrosCosto } from '../utils/centroCosto';
+import { nombreCentroCosto, cargarCentrosCosto, idOpcional } from '../utils/centroCosto';
 import { fuzzyMatch } from '../utils/searchHelpers';
 import { useNavigate } from 'react-router-dom';
 import { projectsAPI, Project } from '../api/projects';
@@ -644,7 +644,7 @@ export const ProjectsPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
               <div>
                 <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Centro de costo *</label>
-                <select className="input-field py-2.5" required value={formData.metadata?.centroCostoId || ''} onChange={(e) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, centroCostoId: parseInt(e.target.value) || undefined } }))}>
+                <select className="input-field py-2.5" required value={formData.metadata?.centroCostoId || ''} onChange={(e) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, centroCostoId: idOpcional(e.target.value) } }))}>
                   <option value="">Seleccionar del sistema...</option>
                   {availableCostCenters.map((cc) => (
                     <option key={cc._id} value={cc.data?.id}>
@@ -656,7 +656,7 @@ export const ProjectsPage: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Sede *</label>
-                <select className="input-field py-2.5" required value={formData.metadata?.sedeId || ''} onChange={(e) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, sedeId: parseInt(e.target.value) || undefined } }))}>
+                <select className="input-field py-2.5" required value={formData.metadata?.sedeId || ''} onChange={(e) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, sedeId: idOpcional(e.target.value) } }))}>
                   <option value="">Seleccionar del sistema...</option>
                   {availableSedes.map((s) => (
                     <option key={s._id} value={s.data?.id}>
@@ -674,7 +674,7 @@ export const ProjectsPage: React.FC = () => {
                   <FontAwesomeIcon icon={faInfoCircle} />
                 </button>
               </label>
-              <select className="input-field py-2.5" required value={formData.metadata?.responsableId || ''} onChange={(e) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, responsableId: parseInt(e.target.value) || undefined } }))}>
+              <select className="input-field py-2.5" required value={formData.metadata?.responsableId || ''} onChange={(e) => setFormData((p) => ({ ...p, metadata: { ...p.metadata, responsableId: idOpcional(e.target.value) } }))}>
                 <option value="">Seleccionar del sistema...</option>
                 {availableCoordinators.map((c) => (
                   <option key={c._id} value={c.metadata?.id}>
