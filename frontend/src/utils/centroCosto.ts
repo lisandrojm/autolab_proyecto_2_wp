@@ -29,3 +29,42 @@ export const nombreCentroCosto = (proyecto: { metadataResolutions?: { centroCost
   const delCatalogo = catalogo.find((c) => Number(c?.data?.id) === Number(id));
   return String(delCatalogo?.name || delCatalogo?.data?.nombre || `ID: ${id}`);
 };
+
+/**
+ * TODOS los centros de costo, de los DOS catálogos que existen.
+ *
+ * Hay dos, y no son el mismo: `info?type=centro-costo` (colección `infos`) es de donde salían los
+ * selects, y `/centros-costo` (modelo `CentroCosto`) es el que administra Configuración → Centros de
+ * Costos, con su alta, su edición y su import de Excel.
+ *
+ * Mientras tuvieron los mismos 32 registros la diferencia no se veía. En cuanto alguien cargó 15 más
+ * desde el ABM, el select del proyecto siguió ofreciendo 32: los nuevos existían, se podían editar, y
+ * no se podían elegir. La pantalla que los administra y la que los usa miraban lugares distintos.
+ *
+ * Se devuelven UNIDOS y no reemplazados: quedarse solo con el del ABM haría desaparecer del select
+ * cualquiera que exista únicamente en `infos` y que algún proyecto ya esté usando —y un proyecto no
+ * puede perder su centro de costo porque cambiamos de dónde leemos la lista—. Ante el mismo `data.id`
+ * gana el del ABM, que es el que una persona puede corregir.
+ *
+ * Los que no tienen `data.id` se descartan: el proyecto guarda un número, así que uno sin id no se
+ * puede elegir ni resolver. Aparece en el ABM con «—» en la columna ID Externo.
+ */
+export const cargarCentrosCosto = async (apiUrl: string, headers: Record<string, string>): Promise<any[]> => {
+  const traer = async (ruta: string) => {
+    try {
+      const r = await fetch(`${apiUrl}${ruta}`, { headers });
+      if (!r.ok) return [];
+      const d = await r.json();
+      return Array.isArray(d) ? d : d?.items || [];
+    } catch {
+      return [];
+    }
+  };
+  const [deInfo, delAbm] = await Promise.all([traer("/info?type=centro-costo"), traer("/centros-costo")]);
+  const porId = new Map<number, any>();
+  for (const c of [...deInfo, ...delAbm]) {
+    const id = Number(c?.data?.id);
+    if (Number.isFinite(id)) porId.set(id, c);
+  }
+  return [...porId.values()].sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+};

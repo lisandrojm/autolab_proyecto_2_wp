@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 // Si necesitás i18n, usá: import { useTranslation } from "react-i18next";
 import { useAuthStore } from '../stores/authStore';
 import { projectsAPI, Project } from '../api/projects';
-import { nombreCentroCosto } from '../utils/centroCosto';
+import { nombreCentroCosto, cargarCentrosCosto } from '../utils/centroCosto';
 import { companiesAPI, Company } from '../api/companies';
 import { shiftsAPI, Shift } from '../api/shifts';
 import { areasAPI, Area } from '../api/areas';
@@ -160,10 +160,11 @@ export const ClientProjectsPage: React.FC = () => {
       const { token, tenantId } = useAuthStore.getState();
       const headers = { Authorization: `Bearer ${token}`, 'X-Tenant-Id': tenantId };
 
-      const [sedesRes, ccRes, responsablesRes] = await Promise.all([fetch(`${import.meta.env.VITE_API_URL}/info?type=sede`, { headers }), fetch(`${import.meta.env.VITE_API_URL}/info?type=centro-costo`, { headers }), fetch(`${import.meta.env.VITE_API_URL}/users/eligible-responsables`, { headers })]);
+      const [sedesRes, responsablesRes] = await Promise.all([fetch(`${import.meta.env.VITE_API_URL}/info?type=sede`, { headers }), fetch(`${import.meta.env.VITE_API_URL}/users/eligible-responsables`, { headers })]);
+      // Los dos catálogos de centros de costo, unidos. Ver `cargarCentrosCosto`.
+      setAvailableCostCenters(await cargarCentrosCosto(import.meta.env.VITE_API_URL, headers));
 
       if (sedesRes.ok) setAvailableSedes(await sedesRes.json());
-      if (ccRes.ok) setAvailableCostCenters(await ccRes.json());
       if (responsablesRes.ok) {
         setAvailableCoordinators(await responsablesRes.json());
       }

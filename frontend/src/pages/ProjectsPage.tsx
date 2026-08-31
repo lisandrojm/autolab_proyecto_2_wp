@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { nombreCentroCosto } from '../utils/centroCosto';
+import { nombreCentroCosto, cargarCentrosCosto } from '../utils/centroCosto';
 import { fuzzyMatch } from '../utils/searchHelpers';
 import { useNavigate } from 'react-router-dom';
 import { projectsAPI, Project } from '../api/projects';
@@ -120,10 +120,11 @@ export const ProjectsPage: React.FC = () => {
       const { token, tenantId } = useAuthStore.getState();
       const headers = { Authorization: `Bearer ${token}`, 'X-Tenant-Id': tenantId };
 
-      const [sedesRes, ccRes, responsablesRes] = await Promise.all([fetch(`${import.meta.env.VITE_API_URL}/info?type=sede`, { headers }), fetch(`${import.meta.env.VITE_API_URL}/info?type=centro-costo`, { headers }), fetch(`${import.meta.env.VITE_API_URL}/users/eligible-responsables`, { headers })]);
+      const [sedesRes, responsablesRes] = await Promise.all([fetch(`${import.meta.env.VITE_API_URL}/info?type=sede`, { headers }), fetch(`${import.meta.env.VITE_API_URL}/users/eligible-responsables`, { headers })]);
+      // Los dos catálogos de centros de costo, unidos. Ver `cargarCentrosCosto`.
+      setAvailableCostCenters(await cargarCentrosCosto(import.meta.env.VITE_API_URL, headers));
 
       if (sedesRes.ok) setAvailableSedes(await sedesRes.json());
-      if (ccRes.ok) setAvailableCostCenters(await ccRes.json());
       if (responsablesRes.ok) setAvailableCoordinators(await responsablesRes.json());
 
       // Also fetch shifts and areas

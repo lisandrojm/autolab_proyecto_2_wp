@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { cargarCentrosCosto } from '../utils/centroCosto';
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { projectsAPI, Project, Client } from "../api/projects";
 import { companiesAPI, Company } from "../api/companies";
@@ -162,14 +163,14 @@ export const ProjectDetailPage: React.FC = () => {
       const { token, tenantId } = useAuthStore.getState();
       const headers = { Authorization: `Bearer ${token}`, "X-Tenant-Id": tenantId };
 
-      const [sedesRes, ccRes, responsablesRes] = await Promise.all([
+      const [sedesRes, responsablesRes] = await Promise.all([
         fetch(`${import.meta.env.VITE_API_URL}/info?type=sede`, { headers }),
-        fetch(`${import.meta.env.VITE_API_URL}/info?type=centro-costo`, { headers }),
         fetch(`${import.meta.env.VITE_API_URL}/users/eligible-responsables`, { headers }),
       ]);
 
       if (sedesRes.ok) setAvailableSedes(await sedesRes.json());
-      if (ccRes.ok) setAvailableCostCenters(await ccRes.json());
+      // Los dos catálogos de centros de costo, unidos. Ver `cargarCentrosCosto`.
+      setAvailableCostCenters(await cargarCentrosCosto(import.meta.env.VITE_API_URL, headers));
       if (responsablesRes.ok) {
         setAvailableCoordinators(await responsablesRes.json());
       }
