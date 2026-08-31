@@ -331,7 +331,19 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
   let actividadOrigen: ActividadOrigen;
   if (!row.empresaContratoId) {
     actividadOrigen = "sin_empresa";
-  } else if (!row.sucursalArcaId) {
+  } else if (!sucursalId) {
+    /*
+      POR EL ID YA RESUELTO, NO POR `row.sucursalArcaId`.
+
+      Preguntar por el campo del contrato deshacía justo arriba el default de la empleadora: con la ★
+      puesta, `sucursalId` resolvía bien y `actividades` salía cargada, pero esta rama cortaba en
+      «sin_sucursal» y la actividad quedaba vacía. En pantalla se veía el domicilio completo y la
+      actividad en blanco, y la única forma de destrabarlo era volver a elegir a mano la misma
+      sucursal que ya estaba puesta —que es exactamente lo que escribe `row.sucursalArcaId`.
+
+      La regla del bloque de arriba vale para toda la cadena: el default se RESUELVE al leer, así que
+      todo lo que cuelga del domicilio tiene que mirar el valor resuelto y no el escrito.
+    */
     actividadOrigen = "sin_sucursal";
   } else if (!sucursal) {
     // Apunta a una sucursal que la empresa no tiene asignada (o que se borró del catálogo).

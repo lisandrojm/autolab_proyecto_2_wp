@@ -2007,11 +2007,23 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/actividad-ar
         }
         const contrato = up.contracts[idx];
         if (actividadArca) {
-            if (!contrato.sucursalArcaId) {
+            /*
+              LA SUCURSAL SE RESUELVE COMO LA LEE EL FRONT: la del contrato, y si no eligió ninguna, la que
+              la empleadora dejó marcada con ★.
+      
+              Preguntar solo por `contrato.sucursalArcaId` rechazaba con «Primero hay que elegir la
+              Sucursal» a alguien que la está viendo puesta en pantalla: el default se RESUELVE al leer y no
+              se escribe, así que el contrato no lo tiene aunque el domicilio esté decidido. La regla de
+              resolución tiene que ser la misma de los dos lados o el formulario ofrece algo que la ruta
+              niega.
+            */
+            const empresaDelContrato = contrato.empresaContratoId ? await Company.findById(contrato.empresaContratoId).select("defaultsArca.sucursalId").lean() : null;
+            const sucursalId = contrato.sucursalArcaId || empresaDelContrato?.defaultsArca?.sucursalId || null;
+            if (!sucursalId) {
                 res.status(400).json({ error: "Primero hay que elegir la Sucursal: las actividades son del domicilio de desempeño" });
                 return;
             }
-            const sucursal = await ArcaSucursal.findById(contrato.sucursalArcaId).select("actividades codigo").lean();
+            const sucursal = await ArcaSucursal.findById(sucursalId).select("actividades codigo").lean();
             if (!sucursal) {
                 res.status(400).json({ error: "La sucursal del contrato ya no existe en el catálogo" });
                 return;
