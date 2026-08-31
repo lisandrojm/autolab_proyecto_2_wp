@@ -215,7 +215,24 @@ export async function revisarFuente(fuenteId) {
             console.error(`[PARITARIAS] ${archivoError} (${enlace.url})`);
         }
         try {
-            await PublicacionParitaria.create({ fuente: fuente._id, url: enlace.url, textoEnlace: enlace.texto, hash, vista: esLineaBase, detectadaEl: new Date(), archivo, archivoError });
+            await PublicacionParitaria.create({
+                fuente: fuente._id,
+                url: enlace.url,
+                textoEnlace: enlace.texto,
+                hash,
+                vista: esLineaBase,
+                detectadaEl: new Date(),
+                archivo,
+                archivoError,
+                /*
+                  Nace en «pendiente», no sin el campo.
+        
+                  Es la diferencia entre «todavía no se espejó» y «nadie lo intentó nunca»: sin el estado
+                  escrito, una publicación sin copia en Dropbox se ve igual que una de antes de que el espejo
+                  existiera. `npm run paritarias-dropbox` levanta exactamente lo que esté en pendiente.
+                */
+                dropbox: { path: "", estado: "pendiente", motivo: "Todavía no se espejó." },
+            });
             nuevas++;
         }
         catch (e) {

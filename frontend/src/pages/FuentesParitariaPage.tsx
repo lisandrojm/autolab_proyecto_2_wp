@@ -58,6 +58,31 @@ const MOTIVO: Record<string, string> = {
 const ayuda = getHelp('fuentesParitaria');
 const conveniosApi = createSimpleCatalogApi('/convenios');
 
+/**
+ * Los convenios de una fuente, uno por badge.
+ *
+ * Iban como `"0131/75, 0634/11"` —una sola cadena— y con dos códigos ya costaba ver dónde terminaba
+ * uno y empezaba el otro: son cuatro dígitos, una barra y dos más, todo del mismo color, y la coma
+ * es el único separador. Un badge por código le da a cada uno su propio contorno, que es lo que
+ * permite contarlos de un vistazo.
+ *
+ * Monoespaciado por el mismo motivo que en el resto del módulo: son códigos que se cotejan carácter
+ * por carácter contra un padrón de ARCA, y «0131/75» y «0131/75 E» son convenios distintos.
+ */
+const BadgesDeConvenios: React.FC<{ convenios?: string[] }> = ({ convenios }) => {
+  const lista = convenios || [];
+  if (lista.length === 0) return <span className="text-gray-400">—</span>;
+  return (
+    <span className="inline-flex flex-wrap gap-1">
+      {lista.map((c) => (
+        <span key={c} className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-mono font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
+          {c}
+        </span>
+      ))}
+    </span>
+  );
+};
+
 export const FuentesParitariaPage: React.FC = () => {
   const [fuentes, setFuentes] = useState<FuenteParitaria[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -454,7 +479,9 @@ export const FuentesParitariaPage: React.FC = () => {
                       {f.url} <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2 w-2" />
                     </a>
                   </td>
-                  <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{(f.convenios || []).join(", ") || <span className="text-gray-400">—</span>}</td>
+                  <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">
+                    <BadgesDeConvenios convenios={f.convenios} />
+                  </td>
                   <td className="px-5 py-3 text-[11px] font-mono text-gray-500 dark:text-gray-400">
                     <span className="block">incluir: /{f.patronIncluir}/i</span>
                     {f.patronExcluir && <span className="block">excluir: /{f.patronExcluir}/i</span>}
@@ -491,7 +518,9 @@ export const FuentesParitariaPage: React.FC = () => {
                 </div>
                 {acciones(f)}
               </div>
-              <p className="text-xs text-gray-600 dark:text-gray-300 mt-2">{(f.convenios || []).join(", ") || "—"}</p>
+              <div className="mt-2 text-xs">
+                <BadgesDeConvenios convenios={f.convenios} />
+              </div>
               <a href={f.url} target="_blank" rel="noreferrer" className="block text-xs text-blue-600 dark:text-blue-400 hover:underline break-all">
                 {f.url} <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2 w-2" />
               </a>

@@ -52,6 +52,30 @@ const PROHIBIDOS = ["<", ">", ":", String.fromCharCode(34), "/", String.fromChar
  * puede escribir en ningún lado. Se sanea igual porque viaja en un encabezado HTTP y termina como
  * nombre de archivo en la máquina de quien descarga.
  */
+/**
+ * Reemplaza lo que rompe un nombre de archivo, dejando el resto tal cual.
+ *
+ * Es UNA lista explícita de caracteres prohibidos, recorrida a mano, y no una clase de caracteres en
+ * un regex: la versión anterior tenía un byte NUL adentro de la clase y no se podía revisar leyendo
+ * el archivo. Un saneador que no se puede leer no se puede auditar.
+ *
+ * `espacio` decide qué pasa con los espacios: en el nombre sugerido de una descarga molestan (rompen
+ * `Content-Disposition` sin comillas), pero en un nombre legible de Dropbox son justamente el punto.
+ */
+export const sanearNombre = (base, espacio = "_") => {
+    let limpio = "";
+    for (const ch of base) {
+        const codigo = ch.codePointAt(0) ?? 0;
+        if (codigo < 32)
+            limpio += "_";
+        else if (ch === " ")
+            limpio += espacio;
+        else
+            limpio += PROHIBIDOS.includes(ch) ? "_" : ch;
+    }
+    // Sin puntos al principio: ningún nombre sugerido empieza con «..».
+    return limpio.replace(/^[.]+/, "");
+};
 export const nombreDesdeUrl = (url) => {
     let base = "documento.pdf";
     try {
@@ -60,13 +84,7 @@ export const nombreDesdeUrl = (url) => {
     catch {
         /* URL rara: se queda el default. No vale la pena fallar por el nombre. */
     }
-    let limpio = "";
-    for (const ch of base) {
-        const codigo = ch.codePointAt(0) ?? 0;
-        limpio += codigo < 32 || ch === " " || PROHIBIDOS.includes(ch) ? "_" : ch;
-    }
-    // Sin puntos al principio: ningún nombre sugerido empieza con «..».
-    const sinPuntos = limpio.replace(/^[.]+/, "");
+    const sinPuntos = sanearNombre(base);
     // El tope cuenta la extensión. Cortar a 120 y después agregar «.pdf» devolvía 124, que es un tope
     // que no es el que dice ser.
     if (sinPuntos.toLowerCase().endsWith(".pdf"))

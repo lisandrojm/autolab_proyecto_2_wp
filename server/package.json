@@ -88,7 +88,13 @@
     "013175:reconstruir:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/reconstruirGrupos013175.ts",
     "013175:reconstruir": "dotenv -e .env.production -- tsx src/scripts/reconstruirGrupos013175.ts",
     "013175:revertir:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/revertirGrupos013175.ts",
-    "013175:revertir": "dotenv -e .env.production -- tsx src/scripts/revertirGrupos013175.ts"
+    "013175:revertir": "dotenv -e .env.production -- tsx src/scripts/revertirGrupos013175.ts",
+    "test:senales-paritaria": "tsx --test src/services/senalesParitaria.test.ts",
+    "paritarias-texto:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/extraerTextoParitarias.ts",
+    "paritarias-texto": "dotenv -e .env.production -- tsx src/scripts/extraerTextoParitarias.ts",
+    "paritarias-dropbox:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/espejarParitariasDropbox.ts",
+    "paritarias-dropbox": "dotenv -e .env.production -- tsx src/scripts/espejarParitariasDropbox.ts",
+    "test:espejo-dropbox": "tsx --test src/services/espejoDropboxParitaria.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",

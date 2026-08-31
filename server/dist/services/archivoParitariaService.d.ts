@@ -18,6 +18,17 @@ export declare const rutaAbsoluta: (ruta: string) => string;
  * puede escribir en ningún lado. Se sanea igual porque viaja en un encabezado HTTP y termina como
  * nombre de archivo en la máquina de quien descarga.
  */
+/**
+ * Reemplaza lo que rompe un nombre de archivo, dejando el resto tal cual.
+ *
+ * Es UNA lista explícita de caracteres prohibidos, recorrida a mano, y no una clase de caracteres en
+ * un regex: la versión anterior tenía un byte NUL adentro de la clase y no se podía revisar leyendo
+ * el archivo. Un saneador que no se puede leer no se puede auditar.
+ *
+ * `espacio` decide qué pasa con los espacios: en el nombre sugerido de una descarga molestan (rompen
+ * `Content-Disposition` sin comillas), pero en un nombre legible de Dropbox son justamente el punto.
+ */
+export declare const sanearNombre: (base: string, espacio?: "_" | " ") => string;
 export declare const nombreDesdeUrl: (url: string) => string;
 /**
  * Guarda los bytes y devuelve los metadatos. Si el archivo ya está, NO lo reescribe.

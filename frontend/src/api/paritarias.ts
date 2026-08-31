@@ -90,6 +90,60 @@ export interface PublicacionDeFuente {
    * diferencia entre una publicación vieja y un PDF que el gremio repuso o borró.
    */
   archivoError: string;
+  /** Lo detectado en el texto del PDF. `null` = todavía no se extrajo. */
+  extraccion: ExtraccionPublicacion | null;
+  /** El espejo en Dropbox. Puntero de conveniencia: la descarga NUNCA sale de acá. */
+  dropbox: EspejoDropbox | null;
+}
+
+/** Una señal y el fragmento del que salió. Sin el fragmento no se puede verificar sin abrir el PDF. */
+export interface SenalDetectada {
+  valor: string;
+  fragmento: string;
+}
+
+/**
+ * Cómo se lleva lo que el acuerdo cita con lo que la fuente alimenta.
+ *
+ * `ajeno` y `sin_mencion` NO son lo mismo: la página del SATSAID cuelga acuerdos de 0223/75, que es
+ * de otro gremio (16 de sus 31 publicaciones), mientras que los tarifarios de actores son tablas de
+ * escala que no citan ningún CCT y son perfectamente nuestros. Fundirlos convertiría un documento
+ * válido en uno sospechoso.
+ */
+export type CotejoConvenios = 'coinciden' | 'ajeno' | 'sin_mencion';
+
+export interface ExtraccionPublicacion {
+  paginas: number;
+  extraidoEl: string;
+  /** `vacio` = el PDF es imagen escaneada. NO es éxito: cero caracteres es un error, no un resultado. */
+  estado: 'ok' | 'vacio' | 'error';
+  motivo: string;
+  extractor: 'pdftotext' | 'pdf-parse' | null;
+  conveniosMencionados: SenalDetectada[];
+  periodoMencionado: SenalDetectada | null;
+  expediente: SenalDetectada | null;
+  /** Presente = el documento dice que sus importes no son mensuales. La señal que más importa. */
+  unidadSospechosa: SenalDetectada | null;
+  cotejoConvenios: CotejoConvenios;
+  /** El período del PDF contra el del enlace. `null` = no hay con qué comparar, que no es `false`. */
+  periodoCoincide: boolean | null;
+}
+
+export interface EspejoDropbox {
+  path: string;
+  estado: 'ok' | 'pendiente' | 'error';
+  motivo: string;
+  subidoEl: string | null;
+}
+
+export interface TextoPublicacion {
+  texto: string;
+  paginas: number;
+  estado: 'ok' | 'vacio' | 'error';
+  motivo: string;
+  extractor: string | null;
+  nombreArchivo: string;
+  caracteres: number;
 }
 
 export interface PublicacionParitaria {
@@ -216,7 +270,14 @@ export const paritariasAPI = {
    * El ABM decía «31 publicación(es)» y no había forma de verlas: el sistema avisaba de algo que
    * nadie podía abrir.
    */
-  publicacionesDeFuente: async (fuenteId: string): Promise<PublicacionDeFuente[]> => (await axios.get(`${BASE}/fuentes/${fuenteId}/publicaciones`)).data,
+  publicacionesDeFuente: async (fuenteId: string, q = ''): Promise<PublicacionDeFuente[]> =>
+    (await axios.get(`${BASE}/fuentes/${fuenteId}/publicaciones`, { params: q.trim() ? { q: q.trim() } : {} })).data,
+
+  /**
+   * El texto plano de una publicación. Aparte de la lista a propósito: son ~25 KB por publicación, y
+   * mandarlos todos juntos convertiría una lista de 8 KB en una de 800 KB cada vez que se abre el modal.
+   */
+  textoDePublicacion: async (publicacionId: string): Promise<TextoPublicacion> => (await axios.get(`${BASE}/publicaciones/${publicacionId}/texto`)).data,
 
   /**
    * Baja el PDF guardado y lo entrega con el nombre que tenía en la página del gremio.

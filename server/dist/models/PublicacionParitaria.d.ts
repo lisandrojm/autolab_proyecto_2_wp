@@ -56,6 +56,70 @@ export interface IPublicacionParitaria extends Document {
      * cubrir— y tiene que quedar dicho, no como un campo vacío que se confunde con «todavía no».
      */
     archivoError?: string;
+    /**
+     * EL TEXTO PLANO DEL PDF. Dato DERIVADO: se regenera con `npm run paritarias-texto`.
+     *
+     * Está guardado y no se extrae al vuelo porque es lo que hace buscables las 31 publicaciones del
+     * SATSAID: «¿cuál cubría julio?» se contesta con una consulta, no abriendo PDFs de a uno.
+     *
+     * No lleva importes ni tablas. Extraer escalas es la capa 3 y todavía no existe.
+     */
+    extraccion?: {
+        texto: string;
+        paginas: number;
+        extraidoEl: Date;
+        /** `vacio` = el PDF es imagen escaneada. NO es éxito: ver `extraerTextoParitaria`. */
+        estado: "ok" | "vacio" | "error";
+        motivo: string;
+        /** Con cuál se extrajo. Los dos dan layouts distintos y la capa 3 va a depender de eso. */
+        extractor?: "pdftotext" | "pdf-parse";
+        /** Códigos de CCT citados en el texto, normalizados a 4 dígitos, con su fragmento. */
+        conveniosMencionados: {
+            valor: string;
+            fragmento: string;
+        }[];
+        periodoMencionado?: {
+            valor: string;
+            fragmento: string;
+        };
+        expediente?: {
+            valor: string;
+            fragmento: string;
+        };
+        /**
+         * Presente = el documento dice que sus importes no son mensuales («Valores por jornada»).
+         *
+         * Es la señal que más vale de todas: cargar un tarifario por jornada como sueldo bruto mensual
+         * declara mal la remuneración ante ARCA, y ninguna validación aritmética lo detecta porque los
+         * números están bien — está mal la unidad.
+         */
+        unidadSospechosa?: {
+            valor: string;
+            fragmento: string;
+        };
+        /** Cómo se lleva lo citado con lo que la fuente dice alimentar. NO descarta nada: informa. */
+        cotejoConvenios?: "coinciden" | "ajeno" | "sin_mencion";
+        /** El período del PDF contra el del texto del enlace. `null` = no hay con qué comparar. */
+        periodoCoincide?: boolean;
+    };
+    /**
+     * EL ESPEJO EN DROPBOX. Copia con nombre legible, para que la evidencia no viva en un solo disco.
+     *
+     * DROPBOX ES ESPEJO, NO ALMACÉN: la app sigue leyendo el PDF del disco del server y ningún endpoint
+     * lee de acá. Si Dropbox falla, cambia de token o alguien reordena la carpeta a mano, la app no se
+     * entera y no se rompe — servir un PDF sigue siendo abrir un archivo local.
+     */
+    dropbox?: {
+        /**
+         * Ruta completa en Dropbox. PUNTERO DE CONVENIENCIA QUE PUEDE QUEDAR VIEJO: si alguien mueve el
+         * archivo allá, esta ruta miente. Nunca se usa para leer ni para decidir si el archivo existe;
+         * eso lo sigue contestando el disco.
+         */
+        path: string;
+        subidoEl?: Date;
+        estado: "ok" | "pendiente" | "error";
+        motivo: string;
+    };
     createdAt: Date;
     updatedAt: Date;
 }

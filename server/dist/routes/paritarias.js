@@ -310,7 +310,23 @@ router.put("/convenios/estado-fuente", authenticateToken, async (req, res) => {
  */
 router.get("/fuentes/:id/publicaciones", authenticateToken, async (req, res) => {
     try {
-        const pubs = await PublicacionParitaria.find({ fuente: req.params.id }).sort({ detectadaEl: -1 }).lean();
+        /*
+          El BUSCADOR sobre el texto de las publicaciones de esta fuente.
+    
+          Con 31 acuerdos del SATSAID, «¿cuál cubría julio?» no puede exigir abrir PDFs de a uno. La
+          búsqueda se resuelve en Mongo con el índice de texto y NO trayendo los 31 textos completos
+          —más de 800 KB— para filtrarlos en Node.
+        */
+        const q = String(req.query.q || "").trim();
+        const filtro = { fuente: req.params.id };
+        if (q)
+            filtro.$text = { $search: q };
+        /*
+          El TEXTO COMPLETO NO VIAJA EN LA LISTA. Son ~25 KB por publicación: mandar los 31 convierte una
+          lista de 8 KB en una de 800 KB cada vez que se abre el modal. Va aparte, cuando alguien pide
+          «Ver texto» de una en particular.
+        */
+        const pubs = await PublicacionParitaria.find(filtro).select("-extraccion.texto").sort({ detectadaEl: -1 }).lean();
         /*
           Se comprueba que el archivo EXISTA, no que el registro diga que existe.
     
@@ -327,10 +343,58 @@ router.get("/fuentes/:id/publicaciones", authenticateToken, async (req, res) => 
             estado: p.estado,
             archivo: p.archivo ? { nombreOriginal: p.archivo.nombreOriginal, bytes: p.archivo.bytes, descargadoEl: p.archivo.descargadoEl, disponible: await existeArchivo(p.archivo.ruta) } : null,
             archivoError: p.archivoError || "",
+            /* Las señales, cada una con el fragmento del que salió: sin eso no se pueden verificar. */
+            extraccion: p.extraccion
+                ? {
+                    paginas: p.extraccion.paginas || 0,
+                    extraidoEl: p.extraccion.extraidoEl,
+                    estado: p.extraccion.estado,
+                    motivo: p.extraccion.motivo || "",
+                    extractor: p.extraccion.extractor || null,
+                    conveniosMencionados: p.extraccion.conveniosMencionados || [],
+                    periodoMencionado: p.extraccion.periodoMencionado || null,
+                    expediente: p.extraccion.expediente || null,
+                    unidadSospechosa: p.extraccion.unidadSospechosa || null,
+                    cotejoConvenios: p.extraccion.cotejoConvenios || "sin_mencion",
+                    periodoCoincide: p.extraccion.periodoCoincide ?? null,
+                }
+                : null,
+            /* Puntero de conveniencia. La descarga NO sale de acá: sale del disco del server. */
+            dropbox: p.dropbox ? { path: p.dropbox.path || "", estado: p.dropbox.estado, motivo: p.dropbox.motivo || "", subidoEl: p.dropbox.subidoEl || null } : null,
         }))));
     }
     catch (error) {
         console.error("List publicaciones de fuente error:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+/**
+ * GET /paritarias/publicaciones/:id/texto
+ *
+ * El texto plano extraído, para leerlo sin abrir el PDF. Aparte de la lista a propósito: son ~25 KB
+ * por publicación y mandarlos todos juntos haría pesar 800 KB cada apertura del modal.
+ *
+ * NO SIRVE EL PDF NI TOCA DROPBOX: devuelve lo que se extrajo del archivo del disco.
+ */
+router.get("/publicaciones/:id/texto", authenticateToken, async (req, res) => {
+    try {
+        const p = await PublicacionParitaria.findById(req.params.id).select("textoEnlace archivo.nombreOriginal extraccion").lean();
+        if (!p)
+            return res.status(404).json({ error: "Publicación no encontrada" });
+        if (!p.extraccion?.extraidoEl)
+            return res.status(409).json({ error: "Esta publicación todavía no tiene texto extraído. Corré: npm run paritarias-texto" });
+        res.json({
+            texto: p.extraccion.texto || "",
+            paginas: p.extraccion.paginas || 0,
+            estado: p.extraccion.estado,
+            motivo: p.extraccion.motivo || "",
+            extractor: p.extraccion.extractor || null,
+            nombreArchivo: p.archivo?.nombreOriginal || p.textoEnlace || "",
+            caracteres: (p.extraccion.texto || "").length,
+        });
+    }
+    catch (error) {
+        console.error("Texto de publicación error:", error);
         res.status(500).json({ error: "Error interno del servidor" });
     }
 });
@@ -384,6 +448,15 @@ router.delete("/fuentes/:id", authenticateToken, async (req, res) => {
         */
         const pubs = await PublicacionParitaria.find({ fuente: req.params.id }).select("archivo").lean();
         let archivos = 0;
+        /*
+          SE BORRA EL DISCO, NO EL ESPEJO EN DROPBOX. Es deliberado.
+    
+          Si borrar una fuente borrara también su copia de Dropbox, el respaldo no sería un respaldo:
+          sería una segunda copia del mismo error, que desaparece junto con el original en el mismo
+          click. La copia de Dropbox existe precisamente para sobrevivir a lo que le pase a este disco
+          —incluido que alguien borre acá lo que no quería—. Limpiarla, si alguna vez hace falta, es a
+          mano y deliberado.
+        */
         for (const p of pubs)
             if (await borrarArchivo(p.archivo?.ruta))
                 archivos++;
