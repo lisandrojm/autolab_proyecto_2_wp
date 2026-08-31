@@ -10,6 +10,7 @@ import { Project } from "../models/Project.js";
 import { Client } from "../models/Client.js";
 import { User } from "../models/User.js";
 import { Info } from "../models/Info.js";
+import { CentroCosto } from "../models/CentroCosto.js";
 import { agruparContratosPorDocumento, partirClaveDocumento } from "../utils/agruparContratos.js";
 import { arrancarCorrida, corridaDe, detenerCorrida } from "../services/arca/corridaServidor.js";
 import { buscarCategoriaCompatPorLegacyId } from "../utils/categoriaCompat.js";
@@ -286,6 +287,55 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
                         if (!p.metadataResolutions)
                             p.metadataResolutions = {};
                         p.metadataResolutions.sede = sede;
+                    }
+                }
+            });
+        }
+        /*
+          RESOLUCIÓN EN BLOQUE DEL CENTRO DE COSTO.
+    
+          La ficha del proyecto lo resolvía y el LISTADO no, así que la tabla mostraba «ID: 46» donde la
+          ficha del mismo proyecto decía «99_PRODUCTORA». No era un problema de la pantalla: el dato no
+          llegaba, y el número crudo es lo que la pantalla muestra cuando el id no resuelve —que también
+          es el caso real de un centro de costo borrado, y por eso conviene que se distinga de un guion.
+    
+          Va en bloque, como sede y responsable: un `findOne` por proyecto serían 12 consultas para
+          mostrar una columna.
+        */
+        const centroCostoIds = new Set();
+        projects.forEach((p) => {
+            if (p.metadata?.centroCostoId)
+                centroCostoIds.add(Number(p.metadata.centroCostoId));
+        });
+        if (centroCostoIds.size > 0) {
+            /*
+              SE BUSCA EN LOS DOS CATÁLOGOS, y no es una precaución teórica.
+      
+              Los centros de costo viven duplicados: `Info` con `type: "centro-costo"` —de donde salía esta
+              resolución— y el modelo `CentroCosto`, colección `centros-costo`, que es el que administra
+              Configuración → Centros de Costos y el que exporta e importa por Excel. Hoy los dos tienen los
+              mismos 32 ids, así que la diferencia no se nota; pero dar de alta uno desde el ABM escribe SOLO
+              en `centros-costo`, y la resolución seguiría sin encontrarlo. El síntoma sería exactamente el
+              de hoy —«ID: 46» en la columna— después de haberlo cargado, que es la peor forma de un bug:
+              hiciste lo correcto y no pasó nada.
+      
+              Se prefiere el del ABM porque es el que una persona puede corregir.
+            */
+            const ids = Array.from(centroCostoIds);
+            const [propios, deInfo] = await Promise.all([
+                CentroCosto.find({ "data.id": { $in: ids } }).lean(),
+                Info.find({ type: "centro-costo", "data.id": { $in: ids } }).lean(),
+            ]);
+            const ccMap = new Map();
+            deInfo.forEach((c) => ccMap.set(String(c.data?.id), c));
+            propios.forEach((c) => ccMap.set(String(c.data?.id), c));
+            projects.forEach((p) => {
+                if (p.metadata?.centroCostoId) {
+                    const cc = ccMap.get(String(p.metadata.centroCostoId));
+                    if (cc) {
+                        if (!p.metadataResolutions)
+                            p.metadataResolutions = {};
+                        p.metadataResolutions.centroCosto = cc;
                     }
                 }
             });
@@ -713,10 +763,8 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
                     resolutions.sede = sede;
             }
             if (centroCostoId) {
-                const cc = await Info.findOne({
-                    type: "centro-costo",
-                    "data.id": centroCostoId,
-                }).lean();
+                // Los dos catálogos, con la misma preferencia que el listado: ver el comentario de arriba.
+                const cc = (await CentroCosto.findOne({ "data.id": centroCostoId }).lean()) || (await Info.findOne({ type: "centro-costo", "data.id": centroCostoId }).lean());
                 if (cc)
                     resolutions.centroCosto = cc;
             }

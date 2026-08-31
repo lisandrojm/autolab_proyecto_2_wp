@@ -3,13 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 // Si necesitás i18n, usá: import { useTranslation } from "react-i18next";
 import { useAuthStore } from '../stores/authStore';
 import { projectsAPI, Project } from '../api/projects';
+import { nombreCentroCosto } from '../utils/centroCosto';
 import { companiesAPI, Company } from '../api/companies';
 import { shiftsAPI, Shift } from '../api/shifts';
 import { areasAPI, Area } from '../api/areas';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { sweetAlert } from '../utils/sweetAlert';
 import { emitProjectsChanged } from '../utils/navbarEvents';
-import { faPlus, faEdit, faTrash, faBriefcase, faBuilding, faTable, faGrip, faLayerGroup, faInfoCircle, faCalendarDay, faCalendarCheck, faUsers, faFileLines, faBell } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faTrash, faBriefcase, faBuilding, faTable, faGrip, faLayerGroup, faInfoCircle, faCalendarDay, faCalendarCheck, faUsers, faFileLines, faBell, faWallet } from '@fortawesome/free-solid-svg-icons';
 import { Card } from '../components/ui/Card';
 import { PageLayout } from '../components/ui/PageLayout';
 import { getHelp, hasHelp } from '../data/help/helpContent';
@@ -787,6 +788,9 @@ export const ClientProjectsPage: React.FC = () => {
               <tr className="bg-gray-50/50 dark:bg-gray-900/30 border-b border-gray-100 dark:border-gray-800">
                 <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Proyecto</th>
                 <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Sede</th>
+                {/* Pegado a Sede: los dos contestan «dónde se imputa esto», y separarlos obliga a
+                    cruzar la fila entera para leer un solo concepto. */}
+                <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Centro de Costo</th>
                 <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Responsable</th>
                 <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Estado</th>
                 <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Áreas y Turnos</th>
@@ -797,7 +801,7 @@ export const ClientProjectsPage: React.FC = () => {
             <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
               {visibleProjects.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     No se encontraron proyectos
                   </td>
                 </tr>
@@ -808,6 +812,25 @@ export const ClientProjectsPage: React.FC = () => {
                       {p.name}
                     </td>
                     <td className="py-4 px-6 text-gray-600 dark:text-gray-400">{(p.metadataResolutions?.sede?.name || p.metadataResolutions?.sede?.data?.nombre) ?? '—'}</td>
+                    <td className="py-4 px-6">
+                      {/*
+                        MISMO BADGE VIOLETA QUE LA FICHA DEL PROYECTO, a propósito: es el mismo dato y
+                        tiene que reconocerse igual desde el listado y desde adentro.
+
+                        El fallback a «ID: n» no es decorativo: un proyecto puede tener un
+                        `centroCostoId` que ya no resuelve contra el catálogo —porque lo borraron o
+                        cambió de id—, y mostrar «—» ahí diría que no tiene centro de costo cuando lo
+                        que pasa es que apunta a uno que no está. Son dos problemas distintos.
+                      */}
+                      {(() => {
+                        const cc = nombreCentroCosto(p, availableCostCenters);
+                        return cc ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50">{cc}</span>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        );
+                      })()}
+                    </td>
                     <td className="py-4 px-6 text-gray-600 dark:text-gray-400">
                       {p.metadataResolutions?.responsable ? (
                         <div className="flex items-center gap-2">
@@ -975,6 +998,19 @@ export const ClientProjectsPage: React.FC = () => {
                       Sede
                     </label>
                     <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">{project.metadataResolutions.sede.name || project.metadataResolutions.sede.data?.nombre || 'Sede'}</span>
+                  </div>
+                )}
+
+                {/* Centro de costo, debajo de Sede: mismo par que en la tabla y en la ficha. */}
+                {(project.metadataResolutions?.centroCosto || project.metadata?.centroCostoId) && (
+                  <div className="flex flex-col mt-4">
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                      <FontAwesomeIcon icon={faWallet} className="h-3 w-3 text-gray-400" />
+                      Centro de Costo
+                    </label>
+                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50 w-fit">
+                      {nombreCentroCosto(project, availableCostCenters)}
+                    </span>
                   </div>
                 )}
 

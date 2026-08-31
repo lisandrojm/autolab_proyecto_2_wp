@@ -1000,6 +1000,23 @@ export const ProjectDetailPage: React.FC = () => {
           }}
           footer={{
             leftContent: <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Creado: {project.createdAt ? new Date(project.createdAt).toLocaleDateString() : "—"}</span>,
+            /*
+              El lápiz también acá, en el pie de la card que se está mirando.
+
+              Editar el proyecto ya se podía, pero desde un botón del encabezado de la PÁGINA —arriba
+              de todo, al lado del título—, que es otro lugar y otro contexto. Quien está leyendo
+              «Responsable», «Período» o «Empresa del contrato» y ve algo para corregir tiene la
+              acción a mano, sin volver a subir. Es el mismo gesto que ya usa la card de Equipo del
+              Proyecto, y abre exactamente el mismo formulario: no hay dos caminos de edición, hay dos
+              puertas al mismo.
+            */
+            actions: [
+              {
+                icon: faEdit,
+                onClick: openEditProject,
+                title: "Editar el proyecto",
+              },
+            ],
           }}
         >
           <div className="space-y-5 pt-2">

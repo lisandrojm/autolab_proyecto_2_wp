@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faLock } from '@fortawesome/free-solid-svg-icons';
 import { ContractOverviewRow } from '../../api/users';
-import { AfipCatalogs, AfipValues, MODALIDADES_PLAZO_DETERMINADO, MODALIDADES_TIEMPO_INDETERMINADO } from './afipCompleteness';
+import { AfipCatalogs, AfipValues, MODALIDADES_PLAZO_DETERMINADO, MODALIDADES_TIEMPO_INDETERMINADO, buscarTipoContrato } from './afipCompleteness';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { contratosAPI, ContratoItem } from '../../api/contratos';
 import { projectsAPI } from '../../api/projects';
@@ -172,8 +172,19 @@ export const FormularioArca: React.FC<{
     modalidadesLiqApi.list().then(setModalidadesLiq).catch(() => setModalidadesLiq([]));
   }, []);
 
-  /** El tipo de contrato de esta fila y a cuántos contratos afecta tocarlo. */
-  const tipo: ContratoItem | undefined = useMemo(() => cat.tipos.find((t) => t.name === row.nombre_contrato), [cat.tipos, row.nombre_contrato]);
+  /*
+    EL TIPO SE BUSCA CON LA MISMA FUNCIÓN QUE USA EL RESOLUTOR, no con una copia.
+
+    Acá había un `find` por igualdad de nombre, que es lo que `resolveAfipValues` dejó de hacer: el
+    nombre del contrato trae el sufijo de la empleadora («Jornada 2030 SRL») y el catálogo guarda el
+    canónico («Jornada»). Con las dos búsquedas distintas, el modal MOSTRABA los datos del tipo
+    —porque los lee del resolutor, que sí lo encuentra— y al guardar decía «No se encontró el tipo de
+    contrato de este contrato», que es la peor forma del error: la pantalla afirma una cosa y la
+    acción, la contraria.
+
+    Dos búsquedas del mismo objeto se separan solas. Ahora es una.
+  */
+  const tipo: ContratoItem | undefined = useMemo(() => buscarTipoContrato(cat.tipos, row.nombre_contrato), [cat.tipos, row.nombre_contrato]);
   const nombreTipo = row.nombre_contrato || 'este tipo de contrato';
 
   const alcanceTipo = (

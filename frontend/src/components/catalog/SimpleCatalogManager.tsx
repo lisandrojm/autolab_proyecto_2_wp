@@ -118,6 +118,19 @@ interface SimpleCatalogManagerProps {
   /** Normaliza lo que se escribió (ej. sacar los guiones que puso `formatExternalId`) antes de guardar. */
   sanitizeExternalId?: (value: string) => string;
   /**
+   * El ID externo de este catálogo es un NÚMERO: el campo acepta solo dígitos.
+   *
+   * OPT-IN Y NO GLOBAL, porque no todos lo son. El RNOS de las obras sociales se escribe con guiones
+   * de presentación y los códigos de ARCA —tipo de servicio, modalidad— son cadenas de tres dígitos
+   * donde el cero de la izquierda es parte del código: forzarlos a número los rompería.
+   *
+   * Donde sí aplica, dejar entrar texto no es inofensivo: `data.id` se guarda como Number y se compara
+   * como Number contra el `centroCostoId` del proyecto. Un «22 » o un «O22» se guarda sin chistar y
+   * después no matchea con nada, y el síntoma aparece lejos —una columna que muestra «ID: 22» en vez
+   * del nombre— sin ninguna pista de que el problema fue un carácter de más al cargarlo.
+   */
+  externalIdNumerico?: boolean;
+  /**
    * Pestañas extra junto al listado (ej. "Por defecto" en Obras Sociales). El catálogo es siempre
    * la primera. Al pararse en otra se ocultan el buscador y las acciones de ABM: pertenecen al
    * listado, no a la configuración.
@@ -125,7 +138,7 @@ interface SimpleCatalogManagerProps {
   pestanas?: Array<{ id: string; label: string; icon?: IconDefinition; render: (items: SimpleCatalogItem[], recargar: () => Promise<void>) => React.ReactNode }>;
 }
 
-export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], extraSeccion, helpKey, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia, extraSuperior, resumen }) => {
+export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], extraSeccion, helpKey, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, externalIdNumerico, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia, extraSuperior, resumen }) => {
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
   const [tabActiva, setTabActiva] = useState<string>('catalogo');
   const [loading, setLoading] = useState(true);
@@ -641,7 +654,21 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
               ))}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{externalIdLabel} (opcional)</label>
-                <input type="text" value={externalId} onChange={(e) => setExternalId(e.target.value)} placeholder={externalIdPlaceholder} className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white" />
+                {/*
+                  Se filtra al ESCRIBIR y no al guardar: `type="number"` deja pegar «22a» y muestra el
+                  valor vacío sin decir por qué, y validar recién al guardar obliga a descubrir el
+                  problema después de haber escrito todo. Acá el carácter que no corresponde
+                  simplemente no entra.
+                */}
+                <input
+                  type="text"
+                  inputMode={externalIdNumerico ? 'numeric' : undefined}
+                  value={externalId}
+                  onChange={(e) => setExternalId(externalIdNumerico ? e.target.value.replace(/\D/g, '') : e.target.value)}
+                  placeholder={externalIdPlaceholder}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white"
+                />
+                {externalIdNumerico && <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Solo números: es el id con el que FRAME lo identifica, y se compara como número.</p>}
               </div>
               {/* Va al final y separado: lo de arriba se guarda con «Guardar», esto se guarda solo. */}
               {editing && extraSeccion && <div className="border-t border-gray-200 dark:border-gray-700 pt-4">{extraSeccion(editing)}</div>}

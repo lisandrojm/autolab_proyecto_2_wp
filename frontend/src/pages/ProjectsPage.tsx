@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { nombreCentroCosto } from '../utils/centroCosto';
 import { fuzzyMatch } from '../utils/searchHelpers';
 import { useNavigate } from 'react-router-dom';
 import { projectsAPI, Project } from '../api/projects';
@@ -515,6 +516,9 @@ export const ProjectsPage: React.FC = () => {
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cliente</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sede</th>
+                  {/* Junto a Sede y con el mismo badge violeta que la ficha y la lista por cliente:
+                      es el mismo dato y tiene que reconocerse igual en las tres pantallas. */}
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Centro de Costo</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Responsable</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Creado</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
@@ -524,6 +528,9 @@ export const ProjectsPage: React.FC = () => {
                 {filteredProjects.map((project) => {
                   const clientName = (typeof project.clientId === 'object' ? project.clientId.name : clientMap.get(project.clientId as string)?.name) || 'Cliente Desconocido';
                   const sedeName = project.metadataResolutions?.sede?.name || project.metadataResolutions?.sede?.data?.nombre || '-';
+                  /* `ID: n` y no un guion cuando el id no resuelve: distingue «no tiene centro de
+                     costo» de «apunta a uno que no está en el catálogo», que son cosas distintas. */
+                  const centroCosto = nombreCentroCosto(project, availableCostCenters);
 
                   const statusColors: any = {
                     active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
@@ -559,6 +566,13 @@ export const ProjectsPage: React.FC = () => {
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm text-gray-600 dark:text-gray-400">{sedeName}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {centroCosto ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50 whitespace-nowrap">{centroCosto}</span>
+                        ) : (
+                          <span className="text-sm text-gray-400">—</span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
