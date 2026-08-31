@@ -236,6 +236,7 @@ export function getDummyDocVariables(): Record<string, string> {
     empresaFirmanteNombre: "María González",
     empresaFirmanteDni: "27.987.654",
     empresaFirmanteCargo: "Apoderada",
+    empresaFirmanteEmail: "maria.gonzalez@ejemplo.com",
     empresaRepresentanteLegalNombre: "María González",
     empresaRepresentanteLegalEmail: "legales@2030.com",
     // Otros

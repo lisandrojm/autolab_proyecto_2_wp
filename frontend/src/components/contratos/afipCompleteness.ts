@@ -170,7 +170,31 @@ export const MODALIDADES_PLAZO_DETERMINADO = ["021", "022", "012"];
  * Las modalidades que no están en ninguna de las dos listas no se chequean: sin saber la regla,
  * inventarla sería peor que no validar.
  */
-export const MODALIDADES_TIEMPO_INDETERMINADO = ["008", "001"];
+export const MODALIDADES_TIEMPO_INDETERMINADO = ["008", "001", "065"];
+
+/**
+ * LAS ONCE MODALIDADES QUE UNA PRODUCTORA USA, de las 153 del nomenclador.
+ *
+ * El catálogo entero es una trampa en un desplegable: varias entradas son de leyes derogadas y otras
+ * de regímenes que no son de una productora. Ofrecerlas todas no es neutral — es poner al lado de la
+ * opción correcta una docena que declaran mal.
+ *
+ * LO QUE QUEDA AFUERA, Y POR QUÉ:
+ *
+ *   000, 004, 005, 006 · modalidades promovidas y de fomento de las leyes 24.013 y 24.465. Derogadas.
+ *   003, 007           · aprendizaje (ley 25.013) y período de prueba (24.465/25.013): las leyes que
+ *                        las crearon ya no rigen.
+ *   102                · «Empleado Servicio Eventual en Usuaria DTO 762» es la modalidad de una
+ *                        EMPRESA DE SERVICIOS EVENTUALES que cede personal a una usuaria. Una
+ *                        productora que contrata directo usa 012. Es la confusión más fácil de esta
+ *                        lista y la más cara: se elige por el nombre y declara otra relación.
+ *   3xx, 6xx           · regímenes con reducción de contribuciones (art. 19 y 24 ley 26.940, dcto.
+ *                        551/22 y 1085/24). Si alguna aplica es una decisión contable, no del catálogo.
+ *
+ * No es un candado del modelo: el campo acepta cualquier código y lo ya cargado se sigue mostrando.
+ * Es qué se OFRECE.
+ */
+export const MODALIDADES_OFRECIDAS = ["012", "022", "021", "008", "001", "065", "011", "061", "062", "027", "010"];
 
 /**
  * Código de CCT de "EXCLUIDO DE CONVENIO" en el nomenclador de ARCA.
@@ -197,6 +221,8 @@ export interface AfipValues {
   fechaFin: string;
   retribucion: number; // sueldo bruto de la categoría
   categoriaProf: string; // código ARCA de la categoría
+  /** `false` = el tipo de contrato no genera alta temprana. */
+  generaAlta: boolean;
   modalidadContrato: string;
   tipoServicio: string;
   /** De dónde salió el tipo de servicio: del tipo de contrato, del default de la empleadora, o de ningún lado. */
@@ -251,10 +277,72 @@ export interface AfipValues {
   nombreObraSocialSugerida: string;
 }
 
+/**
+ * EL TIPO DE CONTRATO NO SE ENCUENTRA POR IGUALDAD DE NOMBRE, y por eso los tres códigos de ARCA
+ * salían vacíos aunque estuvieran cargados.
+ *
+ * `contracts.nombre_contrato` viene de FRAME con el sufijo de la empleadora pegado —«Jornada 2030
+ * SRL», «Servicios - FZERO SRL»— mientras que el catálogo local guarda el tipo canónico («Jornada»,
+ * «Servicios»). Medido sobre los 6.780 contratos: la comparación exacta acertaba en 100, y
+ * `tipo_contrato_id` —un id de FRAME que acá no resuelve— en 19. Por eso el modal decía «del tipo de
+ * contrato X» y a la vez «Falta»: encontraba el nombre en el contrato y no el tipo en el catálogo.
+ *
+ * QUÉ SE PERMITE Y QUÉ NO. Se normaliza (espacios, mayúsculas, acentos) y se saca un sufijo de
+ * empleadora, que es un patrón enumerable —« 2030 SRL», « - FZERO SRL»— y no una semejanza. Lo que
+ * NO se hace es elegir por parecido: «Eventual Talento» a secas no se resuelve contra ninguno de los
+ * cuatro «Eventual Talento …», y queda sin tipo. Adivinar ahí escribiría en el TXT la modalidad de
+ * un contrato que nadie eligió, que es peor que declarar que falta.
+ */
+const NORMALIZAR = (s: string) =>
+  String(s || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase();
+
+/**
+ * Lo que puede sobrar al final: la razón social de la empleadora.
+ *
+ * Se exige que TERMINE en una forma societaria («SRL», «S.R.L.», «SA») y que sea corta. No alcanza
+ * con «algo al final»: sin ese ancla, «Plazo fijo 5x10 2030 SRL + Release JSA FZERO» —que no
+ * corresponde a ningún tipo cargado— se recortaría hasta parecerse a uno.
+ */
+const SOBRA_EMPLEADORA = /^\s*[-–]?\s*[^-–]{0,40}\b(?:S\.?\s?R\.?\s?L\.?|S\.?\s?A\.?)\s*$/i;
+
+/**
+ * EL CATÁLOGO ES LA AUTORIDAD, no un regex sobre nombres de empresa.
+ *
+ * En vez de adivinar dónde termina el tipo y empieza la empleadora, se busca qué tipo del catálogo
+ * es PREFIJO del nombre del contrato y se toma el más largo. Así «Plazo fijo 5x7 part-time 2030 SRL»
+ * cae en «Plazo fijo 5x7 part-time» y no en «Plazo fijo 5x7», que es el error que un recorte a ciegas
+ * comete y que además no se nota: los dos son tipos válidos y el TXT saldría con la modalidad del
+ * equivocado.
+ */
+export const buscarTipoContrato = <T extends { name: string }>(tipos: T[], nombreContrato?: string | null): T | undefined => {
+  const buscado = NORMALIZAR(nombreContrato || "");
+  if (!buscado) return undefined;
+
+  const exacto = tipos.find((t) => NORMALIZAR(t.name) === buscado);
+  if (exacto) return exacto;
+
+  let mejor: T | undefined;
+  let largo = -1;
+  for (const t of tipos) {
+    const n = NORMALIZAR(t.name);
+    if (!n || !buscado.startsWith(n) || n.length <= largo) continue;
+    // Lo que sobra tiene que parecer una razón social; si no, no es el mismo tipo con sufijo.
+    if (!SOBRA_EMPLEADORA.test(String(nombreContrato).slice(String(nombreContrato).length - (buscado.length - n.length)))) continue;
+    mejor = t;
+    largo = n.length;
+  }
+  return mejor;
+};
+
 /** Resuelve los valores ARCA de un contrato contra los catálogos (sin validar). */
 export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): AfipValues {
   const categoria = row.categoria_sat_id != null ? cat.categorias.find((c) => c.data?.id === row.categoria_sat_id) : undefined;
-  const tipo = cat.tipos.find((t) => t.name === row.nombre_contrato);
+  const tipo = buscarTipoContrato(cat.tipos, row.nombre_contrato);
   const porDataId = (id?: number | null) => (id == null ? undefined : cat.obrasSociales.find((o) => Number((o.data as { id?: number } | undefined)?.id) === id));
   const empresa = row.empresaContratoId ? cat.empresas?.find((e) => e._id === row.empresaContratoId) : undefined;
 
@@ -397,6 +485,13 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
     fechaFin: row.fecha_baja_contrato || "",
     retribucion,
     categoriaProf: categoria?.data?.codigoAfip ? String(categoria.data.codigoAfip) : "",
+    /**
+     * `false` = este tipo de contrato NO se declara ante ARCA (locación de servicios).
+     *
+     * Se resuelve acá, junto al resto, para que la pantalla, el checklist y el TXT vean lo mismo.
+     * Sin tipo resuelto NO se asume `false`: no saber si declara es distinto de saber que no.
+     */
+    generaAlta: tipo?.data?.generaAlta !== false,
     modalidadContrato: tipo?.data?.afipModalidadContrato || "",
     // El default de la empleadora entra DESPUÉS del tipo de contrato, nunca antes: es lo que dice
     // la pantalla de Defaults y es la regla que hace que el default sea seguro de poner.
@@ -684,7 +779,18 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
    * contarlos como pendientes haría que un contrato listo se muestre incompleto para siempre —
    * "constatar la obra social" es una mejora, no un requisito.
    */
-  const conProblema = checks.filter((c) => c.estado !== "ok" && c.estado !== "aviso");
+  /*
+    UN TIPO QUE NO GENERA ALTA NO TIENE FALTANTES.
+
+    «Servicios» es una locación de servicios: no es relación laboral y no se declara. Sus tres
+    códigos vacíos no son un dato pendiente, son la respuesta correcta — y contarlos como faltantes
+    lo dejaba «incompleto» para siempre, que es la forma más segura de que alguien los complete y
+    declare ante el organismo una relación que no existe.
+
+    Los `aviso` tampoco entran: el dato está, el TXT sale, y «constatar la obra social» es una
+    mejora, no un requisito.
+  */
+  const conProblema = v.generaAlta ? checks.filter((c) => c.estado !== "ok" && c.estado !== "aviso") : [];
   const avisos = checks.filter((c) => c.estado === "aviso");
   /**
    * A dónde manda el link del grupo.

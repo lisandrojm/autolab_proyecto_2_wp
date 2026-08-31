@@ -76,7 +76,7 @@ router.get("/", authenticateToken, async (_req, res) => {
 // POST / - crear
 router.post("/", authenticateToken, async (req, res) => {
     try {
-        const { nombre, cantidadJornadas, multiplicadorDiario, esTiempoIndeterminado, requiereFirma, isActive, afipModalidadContrato, afipTipoServicio, afipActividad, afipModalidadLiquidacion } = req.body;
+        const { nombre, cantidadJornadas, multiplicadorDiario, esTiempoIndeterminado, requiereFirma, isActive, afipModalidadContrato, afipTipoServicio, afipActividad, afipModalidadLiquidacion, generaAlta } = req.body;
         const name = String(nombre ?? "").trim();
         if (!name) {
             res.status(400).json({ error: "El nombre es obligatorio" });
@@ -98,6 +98,7 @@ router.post("/", authenticateToken, async (req, res) => {
                 afipTipoServicio: afipTipoServicio != null ? String(afipTipoServicio).trim() : undefined,
                 afipActividad: afipActividad != null ? String(afipActividad).trim() : undefined,
                 afipModalidadLiquidacion: afipModalidadLiquidacion != null ? String(afipModalidadLiquidacion).trim() : undefined,
+                generaAlta: generaAlta === undefined ? true : generaAlta === "true" || generaAlta === true,
             },
             isActive: isActive === undefined ? true : isActive === "true" || isActive === true,
         });
@@ -116,7 +117,7 @@ router.post("/", authenticateToken, async (req, res) => {
 // PUT /:id - actualizar
 router.put("/:id", authenticateToken, async (req, res) => {
     try {
-        const { nombre, cantidadJornadas, multiplicadorDiario, esTiempoIndeterminado, requiereFirma, isActive, afipModalidadContrato, afipTipoServicio, afipActividad, afipModalidadLiquidacion } = req.body;
+        const { nombre, cantidadJornadas, multiplicadorDiario, esTiempoIndeterminado, requiereFirma, isActive, afipModalidadContrato, afipTipoServicio, afipActividad, afipModalidadLiquidacion, generaAlta } = req.body;
         const item = await Contrato.findById(req.params.id);
         if (!item) {
             res.status(404).json({ error: "Contrato no encontrado" });
@@ -143,6 +144,8 @@ router.put("/:id", authenticateToken, async (req, res) => {
             item.data.esTiempoIndeterminado = esTiempoIndeterminado === "true" || esTiempoIndeterminado === true;
         if (requiereFirma !== undefined)
             item.data.requiereFirma = requiereFirma === "true" || requiereFirma === true;
+        if (generaAlta !== undefined)
+            item.data.generaAlta = generaAlta === "true" || generaAlta === true;
         if (afipModalidadContrato !== undefined)
             item.data.afipModalidadContrato = String(afipModalidadContrato).trim();
         if (afipTipoServicio !== undefined)

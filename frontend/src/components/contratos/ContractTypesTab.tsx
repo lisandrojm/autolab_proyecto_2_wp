@@ -13,6 +13,7 @@ import { contratoFrameAPI, ContratoFrameItem } from '../../api/contratosFrame';
 import { infoAPI, InfoItem } from '../../api/info';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { SelectorCodigoArca } from '../arca/SelectorCodigoArca';
+import { MODALIDADES_OFRECIDAS } from './afipCompleteness';
 import { EstadoBadge, EstadoSecundarioBadge } from '../EstadoSelect';
 
 // Nomencladores de ARCA de los que salen los tres códigos. Se leen enteros (153 / 293 / 8 / 2): son
@@ -50,9 +51,10 @@ interface FormState {
   afipModalidadContrato: string;
   afipTipoServicio: string;
   afipModalidadLiquidacion: string;
+  generaAlta: boolean;
 }
 
-const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDiario: '', esTiempoIndeterminado: false, requiereFirma: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '' };
+const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDiario: '', esTiempoIndeterminado: false, requiereFirma: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true };
 
 const BadgeTiempoIndeterminado: React.FC = () => (
   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
@@ -161,6 +163,19 @@ export const ContractTypesTab: React.FC = () => {
    * selector se encarga de decir que su catálogo está vacío y dónde se llena.
    */
   const [modalidadesContrato, setModalidadesContrato] = useState<SimpleCatalogItem[]>([]);
+
+  /*
+    ONCE DE 153. Ver `MODALIDADES_OFRECIDAS` para qué queda afuera y por qué.
+
+    Lo ya cargado se sigue ofreciendo aunque no esté en la lista: si un tipo tiene guardada una
+    modalidad que hoy no se ofrece, sacarla del desplegable la borraría al primer guardado del
+    formulario, en silencio. Se acota lo que se PROPONE, no lo que se puede conservar.
+  */
+  const modalidadesOfrecidas = useMemo(() => {
+    const permitidas = new Set(MODALIDADES_OFRECIDAS);
+    const actual = pad3(form.afipModalidadContrato || '');
+    return modalidadesContrato.filter((m) => permitidas.has(pad3(String(m.externalId || ''))) || (actual && pad3(String(m.externalId || '')) === actual));
+  }, [modalidadesContrato, form.afipModalidadContrato]);
   const [tiposServicio, setTiposServicio] = useState<SimpleCatalogItem[]>([]);
   const [modalidadesLiq, setModalidadesLiq] = useState<SimpleCatalogItem[]>([]);
   const [gruposTipoServicio, setGruposTipoServicio] = useState<SimpleCatalogItem[]>([]);
@@ -284,6 +299,7 @@ export const ContractTypesTab: React.FC = () => {
       afipModalidadContrato: contrato.data?.afipModalidadContrato || '',
       afipTipoServicio: contrato.data?.afipTipoServicio || '',
       afipModalidadLiquidacion: contrato.data?.afipModalidadLiquidacion || '',
+      generaAlta: contrato.data?.generaAlta !== false,
     });
     setEstadoIdsOriginal(seleccionActual);
     setShowModal(true);
@@ -358,6 +374,7 @@ export const ContractTypesTab: React.FC = () => {
       afipModalidadContrato: form.afipModalidadContrato.trim(),
       afipTipoServicio: form.afipTipoServicio.trim(),
       afipModalidadLiquidacion: form.afipModalidadLiquidacion.trim(),
+      generaAlta: form.generaAlta,
     };
 
     try {
@@ -653,15 +670,33 @@ export const ContractTypesTab: React.FC = () => {
               <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-3.5 w-3.5 text-indigo-500" />
               <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">Códigos ARCA (Alta masiva)</p>
             </div>
+            {/*
+              VA ARRIBA DE LOS TRES CÓDIGOS PORQUE DECIDE SI TIENEN SENTIDO.
+
+              Sin esto, un tipo que no declara nada —una locación de servicios no es relación
+              laboral— queda con los tres campos en blanco, exactamente igual que uno al que le
+              falta cargarlos. Y lo que se ve igual, tarde o temprano alguien lo «completa»:
+              declarando ante el organismo una relación que no existe.
+            */}
+            <label className="flex items-start gap-2 cursor-pointer select-none rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+              <input type="checkbox" checked={form.generaAlta} onChange={(e) => setForm((p) => ({ ...p, generaAlta: e.target.checked }))} className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+              <span className="min-w-0">
+                <span className="block text-sm text-gray-700 dark:text-gray-300">Este tipo de contrato genera alta temprana ante ARCA</span>
+                <span className="block text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                  Desmarcado, no se le piden los códigos de abajo y sus contratos dejan de contarse como incompletos: es lo que corresponde a una locación de servicios, que no es relación laboral.
+                </span>
+              </span>
+            </label>
+
             <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-0.5">
               Códigos de la interfaz de "Alta masiva" de ARCA, específicos del convenio/modalidad. Se usan para generar el TXT. Dejalos en blanco si no aplican. La <strong>actividad del domicilio</strong> no va acá: depende del domicilio de explotación y de la empleadora, así que se carga en la ficha de la empresa, en ARCA → Domicilios de Explotación.
             </p>
 
-            <div className="space-y-3">
+            <div className={`space-y-3 ${form.generaAlta ? "" : "opacity-40 pointer-events-none"}`}>
               <SelectorCodigoArca
                 label="Modalidad de contrato"
                 sufijoLabel="(3 díg.)"
-                items={modalidadesContrato}
+                items={modalidadesOfrecidas}
                 cargando={cargandoArca}
                 value={form.afipModalidadContrato}
                 onChange={(c) => setForm((p) => ({ ...p, afipModalidadContrato: c }))}

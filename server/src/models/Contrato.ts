@@ -37,6 +37,19 @@ export interface IContrato extends Document {
      */
     afipActividad?: string;
     afipModalidadLiquidacion?: string; // pos. 73 (1 díg.) — 1 = mensual, etc.
+    /**
+     * Si este tipo de contrato genera alta temprana ante ARCA.
+     *
+     * VACÍO NO ES LO MISMO QUE «NO CORRESPONDE», Y HOY SE VEN IGUAL. «Servicios» es una locación de
+     * servicios: no es relación laboral, no lleva modalidad de contrato y no se declara. Sin este
+     * campo queda con los tres códigos en blanco, indistinguible de un tipo al que le falta
+     * cargarlos — así que figura como incompleto para siempre y alguien, tarde o temprano, va a
+     * «completarlo» declarando ante el organismo una relación que no existe.
+     *
+     * `true` por defecto: la enorme mayoría de los tipos sí generan alta, y un default en `false`
+     * haría desaparecer de la pestaña de altas a cualquier tipo nuevo sin que nadie lo note.
+     */
+    generaAlta?: boolean;
   };
   isActive: boolean;
   createdAt: Date;
@@ -57,6 +70,7 @@ const contratoSchema = new Schema<IContrato>(
       afipTipoServicio: { type: String },
       afipActividad: { type: String },
       afipModalidadLiquidacion: { type: String },
+      generaAlta: { type: Boolean, default: true },
     },
     isActive: { type: Boolean, default: true },
   },

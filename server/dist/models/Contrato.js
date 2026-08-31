@@ -12,6 +12,7 @@ const contratoSchema = new Schema({
         afipTipoServicio: { type: String },
         afipActividad: { type: String },
         afipModalidadLiquidacion: { type: String },
+        generaAlta: { type: Boolean, default: true },
     },
     isActive: { type: Boolean, default: true },
 }, {

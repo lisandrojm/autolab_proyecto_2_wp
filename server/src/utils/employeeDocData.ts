@@ -280,6 +280,7 @@ export function buildEmpresaDocData(empresa: any): Record<string, any> {
     empresaFirmanteNombre: e.firmanteNombre || "",
     empresaFirmanteDni: e.firmanteDni || "",
     empresaFirmanteCargo: e.firmanteCargo || "",
+    empresaFirmanteEmail: e.firmanteEmail || "",
     // Representante legal / apoderado
     empresaRepresentanteLegalNombre: e.representanteLegalNombre || "",
     empresaRepresentanteLegalEmail: e.representanteLegalEmail || "",

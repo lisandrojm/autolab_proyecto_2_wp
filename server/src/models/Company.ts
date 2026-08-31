@@ -15,6 +15,15 @@ export interface ICompany extends Document {
   firmanteNombre?: string;
   firmanteDni?: string;
   firmanteCargo?: string;
+  /**
+   * Email del firmante. NO es el del representante legal, y por eso es un campo aparte.
+   *
+   * En 2030 S.R.L. el firmante es Norma Olivo y el representante legal es Hernán Pellegrini: hacer
+   * que `{{empresaFirmanteEmail}}` resolviera al email del representante imprimiría el mail de una
+   * persona al lado del nombre y el DNI de otra, en el bloque de partes de un contrato firmado.
+   * Que hoy coincidan en FZERO no las vuelve el mismo dato.
+   */
+  firmanteEmail?: string;
   // Representante legal / apoderado
   representanteLegalNombre?: string;
   representanteLegalEmail?: string;
@@ -139,6 +148,7 @@ const companySchema = new Schema<ICompany>(
     firmanteNombre: { type: String },
     firmanteDni: { type: String },
     firmanteCargo: { type: String },
+    firmanteEmail: { type: String },
     representanteLegalNombre: { type: String },
     representanteLegalEmail: { type: String },
     logoUrl: { type: String },

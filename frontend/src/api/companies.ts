@@ -13,6 +13,8 @@ export interface Company {
   firmanteNombre?: string;
   firmanteDni?: string;
   firmanteCargo?: string;
+  /** Email del firmante. Distinto del representante legal: pueden ser dos personas. */
+  firmanteEmail?: string;
   representanteLegalNombre?: string;
   representanteLegalEmail?: string;
   // Membrete: logo y firma (imágenes). La aclaración/cargo reutilizan firmanteNombre/firmanteCargo.

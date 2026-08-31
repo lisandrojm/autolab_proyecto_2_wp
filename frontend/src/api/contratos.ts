@@ -18,6 +18,8 @@ export interface ContratoItem {
     afipTipoServicio?: string;
     afipActividad?: string;
     afipModalidadLiquidacion?: string;
+    /** Si genera alta temprana ante ARCA. `false` = no es relación laboral (ej. locación de servicios). */
+    generaAlta?: boolean;
   };
   isActive?: boolean;
   createdAt?: string;
@@ -35,6 +37,7 @@ export interface ContratoInput {
   afipTipoServicio?: string;
   afipActividad?: string;
   afipModalidadLiquidacion?: string;
+  generaAlta?: boolean;
 }
 
 class ContratosAPI {

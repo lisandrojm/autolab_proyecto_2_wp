@@ -51,7 +51,22 @@ export const releaseVariables: GrupoVariables[] = [
   },
   {
     grupo: "Firmante de la empresa",
-    vars: ["{{empresaFirmanteNombre}}", "{{empresaFirmanteDni}}", "{{empresaFirmanteCargo}}"],
+    vars: ["{{empresaFirmanteNombre}}", "{{empresaFirmanteDni}}", "{{empresaFirmanteCargo}}", "{{empresaFirmanteEmail}}"],
+  },
+  {
+    /*
+      OTRA PERSONA, NO UN ALIAS DEL FIRMANTE.
+
+      El firmante es quien suscribe el contrato —su nombre y su DNI van en el bloque de partes—; el
+      representante legal es quien figura ante los organismos. En 2030 S.R.L. son distintos: firma
+      Norma Olivo y el representante es Hernán Pellegrini. Usar uno por el otro imprime el mail de
+      una persona al lado del DNI de otra.
+
+      El server ya resolvía estas dos y el panel no las listaba, así que existían sin que nadie
+      pudiera enterarse desde el editor.
+    */
+    grupo: "Representante legal de la empresa",
+    vars: ["{{empresaRepresentanteLegalNombre}}", "{{empresaRepresentanteLegalEmail}}"],
   },
   { grupo: "Otros", vars: ["{{fecha}}"] },
   // ÚLTIMO a propósito: es lo último que se pega y lo último que va en el documento. Destacada y con

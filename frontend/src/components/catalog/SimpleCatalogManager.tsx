@@ -528,7 +528,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                 {extraFields
                   .filter((f) => f.showColumn)
                   .map((f) => (
-                    <th key={f.key} className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th key={f.key} className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                       {f.columnLabel || f.label}
                     </th>
                   ))}
@@ -548,10 +548,17 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
               {visibles.map((item) => (
                 <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
                   <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">{item.name}</td>
+                  {/*
+                    Los valores de un `extraField` son etiquetas de catálogo —«2 — DISCONTINUOS»,
+                    «1 — CONTINUOS»—, no texto corrido: partirlos en dos renglones por el guión hace
+                    que una tabla de 293 filas tenga la mitad con doble alto y sin ninguna razón. La
+                    columna se ensancha lo que haga falta; el ancho lo absorbe la de Nombre, que sí
+                    es texto largo.
+                  */}
                   {extraFields
                     .filter((f) => f.showColumn)
                     .map((f) => (
-                      <td key={f.key} className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">
+                      <td key={f.key} className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">
                         {extraDisplay(f, item[f.key])}
                       </td>
                     ))}

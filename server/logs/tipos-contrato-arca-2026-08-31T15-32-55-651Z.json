@@ -1,0 +1,212 @@
+[
+  {
+    "_id": "6a6a6d75bcadd174805690bd",
+    "name": "Eventual Crew My secret",
+    "antes": {
+      "requiereFirma": true,
+      "cantidadJornadas": 30,
+      "multiplicadorDiario": 0,
+      "esTiempoIndeterminado": false
+    },
+    "set": {
+      "data.afipModalidadContrato": "012",
+      "data.afipTipoServicio": "000",
+      "data.generaAlta": true
+    }
+  },
+  {
+    "_id": "6a6a6d75bcadd174805690a4",
+    "name": "Eventual Crew Reelshort - STMP - MSLIHB",
+    "antes": {
+      "cantidadJornadas": 30,
+      "multiplicadorDiario": 0,
+      "esTiempoIndeterminado": false
+    },
+    "set": {
+      "data.afipModalidadContrato": "012",
+      "data.afipTipoServicio": "000",
+      "data.generaAlta": true
+    }
+  },
+  {
+    "_id": "6a6a6d75bcadd174805690b5",
+    "name": "Eventual Crew Surrender",
+    "antes": {
+      "cantidadJornadas": 30,
+      "multiplicadorDiario": 0,
+      "esTiempoIndeterminado": false
+    },
+    "set": {
+      "data.afipModalidadContrato": "012",
+      "data.afipTipoServicio": "000",
+      "data.generaAlta": true
+    }
+  },
+  {
+    "_id": "6a6a6d75bcadd17480569096",
+    "name": "Eventual Musico Reelshort",
+    "antes": {
+      "cantidadJornadas": 30,
+      "multiplicadorDiario": 0,
+      "esTiempoIndeterminado": false
+    },
+    "set": {
+      "data.afipModalidadContrato": "012",
+      "data.afipTipoServicio": "000",
+      "data.generaAlta": true
+    }
+  },
+  {
+    "_id": "6a6a6d75bcadd174805690cd",
+    "name": "Eventual Talento My secret - Reelshort",
+    "antes": {
+      "cantidadJornadas": 0,
+      "multiplicadorDiario": 0,
+      "esTiempoIndeterminado": false
+    },
+    "set": {
+      "data.afipTipoServicio": "000",
+      "data.generaAlta": true
+    }
+  },
+  {
+    "_id": "6a6a6d74bcadd1748056905e",
+    "name": "Eventual Talento My secret Nudity rider - Reelshort",
+    "antes": {
+      "cantidadJornadas": 0,
+      "multiplicadorDiario": 0,
+      "esTiempoIndeterminado": false
+    },
+    "set": {
+      "data.afipTipoServicio": "000",
+      "data.generaAlta": true
+    }
+  },
+  {
+    "_id": "6a6a6d75bcadd174805690c9",
+    "name": "Eventual Talento Surrender  - Reelshort",
+    "antes": {
+      "cantidadJornadas": 0,
+      "multiplicadorDiario": 0,
+      "esTiempoIndeterminado": false
+    },
+    "set": {
+      "data.afipTipoServicio": "000",
+      "data.generaAlta": true
+    }
+  },
+  {
+    "_id": "6a6a6d74bcadd17480569066",
+    "name": "Eventual Talento Surrender Nudity rider - Reelshort",
+    "antes": {
+      "cantidadJornadas": 30,
+      "multiplicadorDiario": 0,
+      "esTiempoIndeterminado": false
+    },
+    "set": {
+      "data.afipTipoServicio": "000",
+      "data.generaAlta": true
+    }
+  },
+  {
+    "_id": "6a6a6d74bcadd1748056907b",
+    "name": "Plazo fijo 5x7",
+    "antes": {
+      "requiereFirma": true,
+      "cantidadJornadas": 30,
+      "multiplicadorDiario": 0,
+      "esTiempoIndeterminado": false,
+      "afipModalidadContrato": "",
+      "afipTipoServicio": "000",
+      "afipModalidadLiquidacion": ""
+    },
+    "set": {
+      "data.afipModalidadContrato": "022",
+      "data.afipTipoServicio": "000",
+      "data.afipModalidadLiquidacion": "1",
+      "data.generaAlta": true
+    }
+  },
+  {
+    "_id": "6a6a6d74bcadd17480569075",
+    "name": "Plazo fijo 6x6",
+    "antes": {
+      "cantidadJornadas": 30,
+      "multiplicadorDiario": 0,
+      "esTiempoIndeterminado": false
+    },
+    "set": {
+      "data.afipModalidadContrato": "022",
+      "data.afipTipoServicio": "000",
+      "data.afipModalidadLiquidacion": "1",
+      "data.generaAlta": true
+    }
+  },
+  {
+    "_id": "6a6a6d75bcadd17480569084",
+    "name": "Plazo fijo 5x7 part-time",
+    "antes": {
+      "cantidadJornadas": 30,
+      "multiplicadorDiario": 0,
+      "esTiempoIndeterminado": false
+    },
+    "set": {
+      "data.afipModalidadContrato": "021",
+      "data.afipTipoServicio": "000",
+      "data.afipModalidadLiquidacion": "1",
+      "data.generaAlta": true
+    }
+  },
+  {
+    "_id": "6a6a6d75bcadd1748056908d",
+    "name": "Tiempo Indeterminado",
+    "antes": {
+      "requiereFirma": false,
+      "cantidadJornadas": 30,
+      "multiplicadorDiario": 0,
+      "esTiempoIndeterminado": true
+    },
+    "set": {
+      "data.afipModalidadContrato": "008",
+      "data.afipTipoServicio": "000",
+      "data.afipModalidadLiquidacion": "1",
+      "data.generaAlta": true
+    }
+  },
+  {
+    "_id": "6a6a6d75bcadd1748056909b",
+    "name": "Practica Profesional Supervisada",
+    "antes": {
+      "cantidadJornadas": 30,
+      "multiplicadorDiario": 0,
+      "esTiempoIndeterminado": false
+    },
+    "set": {
+      "data.afipTipoServicio": "000"
+    }
+  },
+  {
+    "_id": "6a6a6d74bcadd1748056906e",
+    "name": "Jornada",
+    "antes": {
+      "cantidadJornadas": 22,
+      "multiplicadorDiario": 1.5,
+      "esTiempoIndeterminado": false
+    },
+    "set": {
+      "data.afipTipoServicio": "000"
+    }
+  },
+  {
+    "_id": "6a6a6d75bcadd174805690ad",
+    "name": "Servicios",
+    "antes": {
+      "cantidadJornadas": 22,
+      "multiplicadorDiario": 0,
+      "esTiempoIndeterminado": false
+    },
+    "set": {
+      "data.generaAlta": false
+    }
+  }
+]

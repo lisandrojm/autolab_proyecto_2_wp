@@ -265,6 +265,7 @@ export function buildEmpresaDocData(empresa) {
         empresaFirmanteNombre: e.firmanteNombre || "",
         empresaFirmanteDni: e.firmanteDni || "",
         empresaFirmanteCargo: e.firmanteCargo || "",
+        empresaFirmanteEmail: e.firmanteEmail || "",
         // Representante legal / apoderado
         empresaRepresentanteLegalNombre: e.representanteLegalNombre || "",
         empresaRepresentanteLegalEmail: e.representanteLegalEmail || "",

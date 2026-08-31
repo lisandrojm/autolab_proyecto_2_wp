@@ -39,6 +39,7 @@ const EMPTY_FORM: CompanyInput = {
   firmanteNombre: '',
   firmanteDni: '',
   firmanteCargo: '',
+  firmanteEmail: '',
   representanteLegalNombre: '',
   representanteLegalEmail: '',
   convenioIds: [],
@@ -284,6 +285,7 @@ export const EmpresasPage: React.FC = () => {
       firmanteNombre: c.firmanteNombre || '',
       firmanteDni: c.firmanteDni || '',
       firmanteCargo: c.firmanteCargo || '',
+      firmanteEmail: c.firmanteEmail || '',
       representanteLegalNombre: c.representanteLegalNombre || '',
       representanteLegalEmail: c.representanteLegalEmail || '',
       convenioIds: (c.convenioIds || []).map((x) => String(x)),
@@ -651,6 +653,11 @@ export const EmpresasPage: React.FC = () => {
               {field('Nombre', 'firmanteNombre', { placeholder: 'Norma Olivo' })}
               {field('DNI', 'firmanteDni', { placeholder: '5.453.082' })}
               {field('Cargo', 'firmanteCargo', { placeholder: 'Socio Gerente' })}
+              {/* Va acá y no en Representante legal: son dos personas distintas. En 2030 S.R.L. firma
+                  Norma Olivo y el representante legal es Hernán Pellegrini — el bloque de partes del
+                  contrato imprime el nombre y el DNI del FIRMANTE, así que el mail que va al lado
+                  tiene que ser el suyo. */}
+              {field('Email', 'firmanteEmail', { type: 'email', placeholder: 'norma.olivo@frame.com.ar' })}
             </div>
           </div>
 
