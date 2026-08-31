@@ -2,6 +2,8 @@ import { buscarCategoriaCompatPorLegacyId } from "./categoriaCompat.js";
 import { numeroALetras } from "./numeroALetras.js";
 import { formatDateAr } from "./releaseFiller.js";
 import { normalizarCuit } from "./constanciaPdf.js";
+import { Project } from "../models/Project.js";
+import { Client } from "../models/Client.js";
 
 const num = (n: any): string => (n != null && n !== "" && !isNaN(Number(n)) ? Number(n).toLocaleString("es-AR") : "");
 
@@ -293,6 +295,23 @@ export async function buildEmployeeDocData(user: any, up: any, contract: any, em
   const nombre = user?.firstName || "";
   const apellido = user?.lastName || "";
 
+  /*
+    El cliente del proyecto. Si no resuelve queda en "", nunca en el nombre del proyecto: un título
+    equivocado se lee como correcto, y uno vacío se ve.
+  */
+  let nombreCliente = "";
+  try {
+    if (up?.projectId) {
+      const proyecto: any = await Project.findById(up.projectId).select("clientId").lean();
+      if (proyecto?.clientId) {
+        const cliente: any = await Client.findById(proyecto.clientId).select("name").lean();
+        nombreCliente = String(cliente?.name || "");
+      }
+    }
+  } catch {
+    /* Un proyecto borrado o un cliente que ya no está no pueden tumbar la generación del PDF. */
+  }
+
   // Número de categoría SAT (lookup por el id externo guardado en el contrato)
   let catSatNumero = "";
   let catSatNombre = c.nombre_categoria_sat || "";
@@ -347,6 +366,18 @@ export async function buildEmployeeDocData(user: any, up: any, contract: any, em
     tipoDeCuentaBancaria: meta.tipoDeCuentaBancaria || "",
 
     // ── Datos del contrato ──
+    /*
+      EL CLIENTE Y EL PROYECTO NO SON LO MISMO, y confundirlos titula el contrato con la película.
+
+      `nombreProyecto` es la OBRA —«Surrender», «My secret lover is his brother»— y ya se usa 5 a 8
+      veces dentro de cada plantilla: «{{nombreProyecto}} (“Picture”)». `nombreCliente` es para quién
+      se hace: REELSHORT. El título del documento —«PROJECT REELSHORT»— es el cliente.
+
+      Sale del proyecto porque el contrato no lo guarda: `UserProject.projectId → Project.clientId →
+      Client.name`. Se resuelve acá y no en cada llamador para que el PDF de contrato, el de release y
+      la vista previa vean el mismo valor.
+    */
+    nombreCliente,
     nombreProyecto: c.nombre_proyecto || up?.nombre_proyecto || "",
     rolFrame: c.nombre_rol_frame || up?.nombre_rol_frame || "",
     nombreRolFrame: c.nombre_rol_frame || up?.nombre_rol_frame || "",

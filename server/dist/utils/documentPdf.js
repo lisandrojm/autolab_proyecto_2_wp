@@ -186,6 +186,7 @@ export function getDummyDocVariables() {
         codigoPostal: "1425",
         // Contrato / proyecto
         nombreProyecto: "426_LN+",
+        nombreCliente: "REELSHORT",
         rolFrame: "Musicalizador",
         nombreRolFrame: "Musicalizador",
         nombreContrato: "Jornada 2030 SRL",

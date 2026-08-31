@@ -42,8 +42,11 @@ export const releaseVariables: GrupoVariables[] = [
     vars: ["{{direccion}}", "{{calle}}", "{{altura}}", "{{pisoDepto}}", "{{localidad}}", "{{codigoPostal}}"],
   },
   {
+    /* Ver `advertencia`: la confusión entre cliente y proyecto ya tituló contratos con el nombre de la película. */
+    nota: "«{{nombreProyecto}}» es la OBRA («Surrender»); «{{nombreCliente}}» es para quién se hace («REELSHORT»).",
+    advertencia: "Para el título del documento va el CLIENTE. Usar {{nombreProyecto}} ahí titula el contrato con el nombre de la película.",
     grupo: "Contrato y proyecto",
-    vars: ["{{nombreProyecto}}", "{{rolFrame}}", "{{nombreContrato}}", "{{nombreSede}}", "{{nombreCargo}}", "{{nombreArea}}", "{{nombreTurno}}", "{{fechaAltaContrato}}", "{{fechaBajaContrato}}", "{{cantidadJornadas}}"],
+    vars: ["{{nombreProyecto}}", "{{nombreCliente}}", "{{rolFrame}}", "{{nombreContrato}}", "{{nombreSede}}", "{{nombreCargo}}", "{{nombreArea}}", "{{nombreTurno}}", "{{fechaAltaContrato}}", "{{fechaBajaContrato}}", "{{cantidadJornadas}}"],
   },
   {
     grupo: "Empresa (se toma del proyecto)",

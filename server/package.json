@@ -101,7 +101,11 @@
     "firmante-email:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/variableEmailFirmante.ts",
     "firmante-email": "dotenv -e .env.production -- tsx src/scripts/variableEmailFirmante.ts",
     "tipos-contrato:arca:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/cargarCodigosArcaTipoContrato.ts",
-    "tipos-contrato:arca": "dotenv -e .env.production -- tsx src/scripts/cargarCodigosArcaTipoContrato.ts"
+    "tipos-contrato:arca": "dotenv -e .env.production -- tsx src/scripts/cargarCodigosArcaTipoContrato.ts",
+    "test:variables-plantilla": "tsx --test src/utils/variablesPlantilla.test.ts",
+    "plantillas:auditar": "dotenv -e .env.production -- tsx src/scripts/auditarPlantillas.ts",
+    "plantillas:parametrizar:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/parametrizarPlantillas.ts",
+    "plantillas:parametrizar": "dotenv -e .env.production -- tsx src/scripts/parametrizarPlantillas.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",

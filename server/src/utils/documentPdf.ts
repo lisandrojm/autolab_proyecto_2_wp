@@ -210,6 +210,7 @@ export function getDummyDocVariables(): Record<string, string> {
     codigoPostal: "1425",
     // Contrato / proyecto
     nombreProyecto: "426_LN+",
+    nombreCliente: "REELSHORT",
     rolFrame: "Musicalizador",
     nombreRolFrame: "Musicalizador",
     nombreContrato: "Jornada 2030 SRL",
