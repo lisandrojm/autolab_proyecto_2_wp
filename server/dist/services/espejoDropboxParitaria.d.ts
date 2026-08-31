@@ -26,19 +26,30 @@ import { getTenantDropboxConfig } from "./dropboxService.js";
  * obliga a fijar los permisos de la carpeta por lo más sensible que contiene, y entonces quien
  * necesita mirar una escala termina con acceso a constancias de CUIT.
  */
-export declare const BASE_POR_DEFECTO = "/FZERO S.R.L/WEPRODU/Paritarias";
+export declare const BASE_POR_DEFECTO = "/WEPRODU/Paritarias";
 export declare const basePariarias: () => string;
 export interface ConexionEspejo {
     tenantId: string;
     cfg: NonNullable<ReturnType<typeof getTenantDropboxConfig>>;
 }
 /**
- * La conexión de Dropbox a usar. `null` con motivo si no hay ninguna utilizable.
+ * La conexión de Dropbox a usar: EXACTAMENTE LA MISMA QUE SIRVE `/WEPRODU/ARCA`.
  *
- * Las fuentes de paritarias NO son de un tenant —un convenio no le pertenece a nadie— pero la
- * conexión de Dropbox sí lo es. Si hay más de una conectada hay que elegir explícitamente: subir la
- * evidencia a la cuenta equivocada porque el script agarró la primera que encontró es peor que no
- * subirla.
+ * HAY DOS INTEGRACIONES QUE SE LLAMAN «DROPBOX» Y NO SON LO MISMO:
+ *
+ *   `integrations.dropbox`      · la conexión de ARCHIVOS (OAuth con refresh token). Es la que lista
+ *                                 y sirve la pestaña Documentos, la que tiene `/WEPRODU/ARCA`, y la
+ *                                 única que este espejo usa.
+ *   `integrations.dropboxSign`  · una casilla IMAP para leer los avisos de Dropbox Sign. No toca
+ *                                 archivos ni tiene token de Dropbox: no es candidata a nada de acá.
+ *
+ * El `rootPath` de la primera —hoy `/HelloSign`— es SOLO la carpeta donde abre el explorador de
+ * Documentos. No limita el token: la raíz real del espacio tiene `WEPRODU`, `HelloSign` y las
+ * carpetas de proyecto como hermanas. Confundir ese `rootPath` con el alcance del token fue lo que
+ * hizo concluir que la app no veía este Dropbox.
+ *
+ * Si hay más de un tenant conectado hay que elegir explícitamente: subir la evidencia a la cuenta
+ * equivocada porque el script agarró la primera que encontró es peor que no subirla.
  */
 export declare const conexionEspejo: () => Promise<{
     conexion: ConexionEspejo | null;

@@ -41,6 +41,19 @@ test("la ruta es <base>/<entidad>/<año>/<nombre>", () => {
     // Y queda fuera de ARCA/, donde viven las constancias de CUIT.
     assert.ok(!r.includes("/ARCA/"));
 });
+test("la base es hermana de ARCA, no hija, y no lleva el nombre del espacio de equipo", () => {
+    // `/WEPRODU/ARCA` tiene constancias de CUIT y altas tempranas: datos personales. Una paritaria es
+    // un documento público del gremio, y los permisos de una carpeta se fijan por lo más sensible que
+    // contiene.
+    assert.equal(BASE_POR_DEFECTO, "/WEPRODU/Paritarias");
+    assert.ok(!BASE_POR_DEFECTO.includes("/ARCA"));
+    /*
+      «FZERO S.R.L» es el nombre que la interfaz web le pone al espacio de equipo en la URL, no un path
+      de la API: pedirlo devuelve `path/not_found`. Ese prefijo de más fue lo que hizo parecer que la
+      conexión no veía este Dropbox.
+    */
+    assert.ok(!BASE_POR_DEFECTO.includes("FZERO"));
+});
 test("la base sale de configuración: cambiarla mueve todo", () => {
     assert.equal(rutaEspejo("SATSAID", "2026", "a.pdf", "/Otro/Lugar"), "/Otro/Lugar/SATSAID/2026/a.pdf");
 });

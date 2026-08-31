@@ -30,7 +30,20 @@ import { sanearNombre } from "./archivoParitariaService.js";
  * obliga a fijar los permisos de la carpeta por lo más sensible que contiene, y entonces quien
  * necesita mirar una escala termina con acceso a constancias de CUIT.
  */
-export const BASE_POR_DEFECTO = "/FZERO S.R.L/WEPRODU/Paritarias";
+/*
+  `/WEPRODU/Paritarias`, AL LADO DE `/WEPRODU/ARCA` Y NO ADENTRO.
+
+  Ese árbol tiene «Alta temprana de Arca», «Constancia de cuit» y «Sin cuit»: datos personales de
+  trabajadores. Una paritaria es un documento público del gremio. Compartir el token no cambia nada
+  —es el mismo—; lo que se separa son las carpetas y sus permisos, para que quien necesita mirar una
+  escala no termine con acceso a constancias de CUIT.
+
+  NO LLEVA `/FZERO S.R.L` ADELANTE, y esto ya costó un diagnóstico equivocado: «FZERO S.R.L» es el
+  nombre del espacio de equipo que muestra la interfaz web en la URL, no un path de la API. Para el
+  token, la raíz del espacio ya ES eso, y `/WEPRODU` cuelga directo de ahí. Pedir «/FZERO S.R.L» da
+  `path/not_found`, que es exactamente lo que parecía «esta app no ve este Dropbox».
+*/
+export const BASE_POR_DEFECTO = "/WEPRODU/Paritarias";
 
 export const basePariarias = (): string => {
   const p = String(process.env.DROPBOX_PARITARIAS_PATH || BASE_POR_DEFECTO).trim();
@@ -46,12 +59,23 @@ export interface ConexionEspejo {
 }
 
 /**
- * La conexión de Dropbox a usar. `null` con motivo si no hay ninguna utilizable.
+ * La conexión de Dropbox a usar: EXACTAMENTE LA MISMA QUE SIRVE `/WEPRODU/ARCA`.
  *
- * Las fuentes de paritarias NO son de un tenant —un convenio no le pertenece a nadie— pero la
- * conexión de Dropbox sí lo es. Si hay más de una conectada hay que elegir explícitamente: subir la
- * evidencia a la cuenta equivocada porque el script agarró la primera que encontró es peor que no
- * subirla.
+ * HAY DOS INTEGRACIONES QUE SE LLAMAN «DROPBOX» Y NO SON LO MISMO:
+ *
+ *   `integrations.dropbox`      · la conexión de ARCHIVOS (OAuth con refresh token). Es la que lista
+ *                                 y sirve la pestaña Documentos, la que tiene `/WEPRODU/ARCA`, y la
+ *                                 única que este espejo usa.
+ *   `integrations.dropboxSign`  · una casilla IMAP para leer los avisos de Dropbox Sign. No toca
+ *                                 archivos ni tiene token de Dropbox: no es candidata a nada de acá.
+ *
+ * El `rootPath` de la primera —hoy `/HelloSign`— es SOLO la carpeta donde abre el explorador de
+ * Documentos. No limita el token: la raíz real del espacio tiene `WEPRODU`, `HelloSign` y las
+ * carpetas de proyecto como hermanas. Confundir ese `rootPath` con el alcance del token fue lo que
+ * hizo concluir que la app no veía este Dropbox.
+ *
+ * Si hay más de un tenant conectado hay que elegir explícitamente: subir la evidencia a la cuenta
+ * equivocada porque el script agarró la primera que encontró es peor que no subirla.
  */
 export const conexionEspejo = async (): Promise<{ conexion: ConexionEspejo | null; motivo: string }> => {
   const filtro = TENANT_CONFIGURADO ? { slug: TENANT_CONFIGURADO } : {};
@@ -77,6 +101,14 @@ export const conexionEspejo = async (): Promise<{ conexion: ConexionEspejo | nul
 export const baseAlcanzable = async (con: ConexionEspejo, base = basePariarias()): Promise<{ ok: boolean; motivo: string }> => {
   const ancla = "/" + base.split("/").filter(Boolean)[0];
   try {
+    /*
+      Se pide el ancla como PATH CONCRETO, nunca "".
+      
+      En `listFolder`, un path vacío sin `full` no es la raíz: es el `rootPath` del tenant. Preguntar
+      por "" para «ver la raíz» devuelve el contenido de `/HelloSign` y hace parecer que el token
+      está encerrado ahí. Acá siempre se pregunta por `/WEPRODU` —un path real— así que la respuesta
+      es sobre la carpeta que importa y no sobre el default del explorador.
+    */
     await listFolder(con.tenantId, con.cfg, ancla);
     return { ok: true, motivo: "" };
   } catch (e: any) {

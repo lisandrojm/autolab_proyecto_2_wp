@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faRss, faPlus, faTrash, faEdit, faSpinner, faRotate, faArrowUpRightFromSquare, faCircleCheck, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
+import { faRss, faPlus, faTrash, faEdit, faSpinner, faRotate, faArrowUpRightFromSquare, faCircleCheck, faTriangleExclamation, faFilePdf } from '@fortawesome/free-solid-svg-icons';
 import { PageLayout } from '../components/ui/PageLayout';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
@@ -337,20 +337,41 @@ export const FuentesParitariaPage: React.FC = () => {
    * La fecha sale de `formatearInstante` —el MISMO formateo que la columna de /convenios— y lleva
    * hora: con revisión diaria, «30/8» no responde si corrió hoy temprano o quedó de ayer.
    */
-  /** El conteo, como botón: es el número que da ganas de tocar y hasta ahora no hacía nada. */
-  const botonPublicaciones = (f: FuenteParitaria) =>
-    f.publicaciones > 0 ? (
+  /*
+    LAS PUBLICACIONES SON UNA COLUMNA, no un pedazo de la frase de estado.
+
+    Estaban embutidas en «vigilando · última revisión OK · 31 publicación(es) · 31/8/2026 08:41»,
+    subrayadas con puntitos entre dos datos que no se tocan. Ahí adentro no se leían como una acción:
+    parecían parte del relato de la última revisión, y el único camino a lo que se detectó —que es a
+    lo que se entra a esta pantalla— quedaba escondido en medio de un renglón gris.
+
+    Como botón y en su propia columna, el número dice lo que es: cuántos acuerdos hay para mirar, y
+    dónde tocar para verlos. El «sin ver» viaja con él y no con la revisión, porque es una propiedad
+    de las publicaciones, no de la corrida.
+  */
+  const botonPublicaciones = (f: FuenteParitaria) => {
+    if (f.publicaciones === 0) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-400 dark:text-gray-500" title="Esta fuente todavía no detectó ningún acuerdo">
+          <FontAwesomeIcon icon={faFilePdf} className="h-3 w-3" />
+          Ninguna
+        </span>
+      );
+    }
+    return (
       <button
         type="button"
         onClick={() => setViendoPublicaciones(f)}
-        title={`Ver las ${f.publicaciones} publicación(es) detectadas`}
-        className="underline decoration-dotted underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400"
+        title={`Ver los ${f.publicaciones} acuerdo(s) detectado(s)${f.sinVer > 0 ? `, ${f.sinVer} sin ver` : ''}`}
+        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
       >
-        {f.publicaciones} publicación(es)
+        <FontAwesomeIcon icon={faFilePdf} className="h-3 w-3" />
+        {f.publicaciones}
+        {/* El «sin ver» va adentro del botón, en ámbar: es lo que hace que se toque hoy y no mañana. */}
+        {f.sinVer > 0 && <span className="px-1 rounded bg-amber-200 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 font-bold">{f.sinVer} sin ver</span>}
       </button>
-    ) : (
-      <span>0 publicaciones</span>
     );
+  };
 
   const lineaEstado = (f: FuenteParitaria): React.ReactNode => {
     if (f.tipo === 'manual') return 'consulta manual — se sabe dónde mirar, pero no se revisa sola';
@@ -370,8 +391,7 @@ export const FuentesParitariaPage: React.FC = () => {
     }
     return (
       <>
-        {aviso || 'vigilando'} · {MOTIVO[f.ultimoResultado || 'ok']} · {botonPublicaciones(f)}
-        {f.sinVer > 0 && ` · ${f.sinVer} sin ver`} · {formatearInstante(f.ultimaRevision)}
+        {aviso || 'vigilando'} · {MOTIVO[f.ultimoResultado || 'ok']} · {formatearInstante(f.ultimaRevision)}
       </>
     );
   };
@@ -457,6 +477,7 @@ export const FuentesParitariaPage: React.FC = () => {
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fuente</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Convenios</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Patrones</th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Publicaciones</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
                 <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
               </tr>
@@ -486,6 +507,7 @@ export const FuentesParitariaPage: React.FC = () => {
                     <span className="block">incluir: /{f.patronIncluir}/i</span>
                     {f.patronExcluir && <span className="block">excluir: /{f.patronExcluir}/i</span>}
                   </td>
+                  <td className="px-5 py-3">{botonPublicaciones(f)}</td>
                   <td className={`px-5 py-3 text-xs ${f.conProblema ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`}>
                     <span className="inline-flex items-start gap-1.5">
                       <FontAwesomeIcon icon={f.conProblema ? faTriangleExclamation : faCircleCheck} className="h-3 w-3 mt-0.5 shrink-0" />
@@ -531,6 +553,9 @@ export const FuentesParitariaPage: React.FC = () => {
                 <span>{lineaEstado(f)}</span>
               </p>
               {f.conProblema && f.ultimoError && <p className="text-xs text-red-600 dark:text-red-400">{f.ultimoError}</p>}
+              {/* Mismo botón que la columna de la tabla: entrar a lo detectado es a lo que se viene
+                  a esta pantalla, y en la card estaba metido dentro de la frase de estado. */}
+              <div className="mt-2">{botonPublicaciones(f)}</div>
             </div>
           ))}
         </div>

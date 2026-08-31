@@ -91,6 +91,29 @@ export async function verifyAccount(tenantId, cfg) {
         return {};
     }
 }
+/**
+ * El argumento de las llamadas de CONTENIDO viaja en una cabecera HTTP, y una cabecera es ASCII.
+ *
+ * `/files/download` y `/files/upload` no mandan el path en el body sino en el header
+ * `Dropbox-API-Arg`. Con un nombre acentuado —«Antunes Fernández», «Der atamian»— ese JSON deja de
+ * ser ASCII, los bytes llegan mal del otro lado y Dropbox contesta **409 path/not_found**: no es que
+ * el archivo no exista, es que el path que recibió no es el que se mandó.
+ *
+ * Era invisible porque depende del nombre: una carpeta de altas con nombres sin acentos baja
+ * perfecto y la de al lado falla entera, sin ningún patrón aparente. Y como la respuesta de error
+ * llega como arraybuffer, el motivo real quedaba adentro de un Buffer sin leer (ver `dropboxError`).
+ *
+ * La solución es la del SDK oficial: escapar todo lo que pase de \u007f como `\uXXXX`, que JSON
+ * entiende igual y una cabecera sí puede transportar.
+ *
+ * ESTABA ESCRITO Y NO LO LLAMABA NADIE. Las dos llamadas de contenido —`downloadFileContent` y
+ * `uploadFile`— serializaban con `JSON.stringify` pelado, así que el defecto que este comentario
+ * describe seguía pasando: al subir, el nombre llega con U+FFFD en lugar del acento y el archivo
+ * queda guardado con el nombre roto; al bajar, el path no matchea y Dropbox contesta 409
+ * `path/not_found`. Toda ruta con acento, «ñ» o «·» pasa por acá: si alguna vez se vuelve a
+ * serializar a mano, `argHeader.test.ts` falla.
+ */
+export const argHeader = (obj) => JSON.stringify(obj).replace(/[\u007f-\uffff]/g, (c) => "\\u" + ("0000" + c.charCodeAt(0).toString(16)).slice(-4));
 const mapEntry = (e) => ({
     tag: e[".tag"] === "folder" ? "folder" : "file",
     name: e.name,
@@ -123,22 +146,6 @@ export async function listFolder(tenantId, cfg, path, full = false) {
     }
     return { path: target, entries: entries.map(mapEntry) };
 }
-/**
- * El argumento de las llamadas de CONTENIDO viaja en una cabecera HTTP, y una cabecera es ASCII.
- *
- * `/files/download` y `/files/upload` no mandan el path en el body sino en el header
- * `Dropbox-API-Arg`. Con un nombre acentuado —«Antunes Fernández», «Der atamian»— ese JSON deja de
- * ser ASCII, los bytes llegan mal del otro lado y Dropbox contesta **409 path/not_found**: no es que
- * el archivo no exista, es que el path que recibió no es el que se mandó.
- *
- * Era invisible porque depende del nombre: una carpeta de altas con nombres sin acentos baja
- * perfecto y la de al lado falla entera, sin ningún patrón aparente. Y como la respuesta de error
- * llega como arraybuffer, el motivo real quedaba adentro de un Buffer sin leer (ver `dropboxError`).
- *
- * La solución es la del SDK oficial: escapar todo lo que pase de \u007f como `\uXXXX`, que JSON
- * entiende igual y una cabecera sí puede transportar.
- */
-const argHeader = (obj) => JSON.stringify(obj).replace(/[\u007f-\uffff]/g, (c) => "\\u" + ("0000" + c.charCodeAt(0).toString(16)).slice(-4));
 /** Link temporal (4h) para descargar/previsualizar un archivo directamente desde Dropbox. */
 export async function getTemporaryLink(tenantId, cfg, path) {
     const data = await rpc(tenantId, cfg, "/files/get_temporary_link", { path });
@@ -150,7 +157,7 @@ export async function downloadFileContent(tenantId, cfg, path) {
     const { data } = await axios.post(`${CONTENT}/files/download`, null, {
         headers: {
             Authorization: `Bearer ${token}`,
-            "Dropbox-API-Arg": JSON.stringify({ path }),
+            "Dropbox-API-Arg": argHeader({ path }),
         },
         responseType: "arraybuffer",
         maxBodyLength: Infinity,
@@ -166,7 +173,7 @@ export async function uploadFile(tenantId, cfg, path, buffer) {
         headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/octet-stream",
-            "Dropbox-API-Arg": JSON.stringify(arg),
+            "Dropbox-API-Arg": argHeader(arg),
         },
         maxBodyLength: Infinity,
         maxContentLength: Infinity,

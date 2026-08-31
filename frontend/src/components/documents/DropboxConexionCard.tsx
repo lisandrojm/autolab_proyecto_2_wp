@@ -63,10 +63,26 @@ export const DropboxConexionCard: React.FC<{ status: DropboxStatus | null; onCha
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 <FontAwesomeIcon icon={faCheck} className="h-3 w-3 text-green-500 mr-1" />
                 Vinculado a <strong>{status?.accountEmail || "una cuenta"}</strong>
+                {/*
+                  «CARPETA RAÍZ» ERA MENTIRA Y COSTÓ UN DIAGNÓSTICO.
+
+                  Decía «carpeta raíz /HelloSign» tres líneas arriba de una lista de carpetas de
+                  `/WEPRODU`, y se leía como que el token está encerrado en `/HelloSign`. No lo está:
+                  la raíz real del espacio tiene `WEPRODU`, `HelloSign` y las carpetas de proyecto
+                  como hermanas, y la conexión las ve todas. Este valor es solo dónde ABRE el
+                  explorador de acá abajo.
+
+                  Alguien leyó esa etiqueta, concluyó que la app no veía `/WEPRODU/Paritarias` y
+                  frenó una entrega entera por un problema que no existía.
+                */}
                 {status?.rootPath ? (
                   <>
                     {" "}
-                    · carpeta raíz <span className="font-mono">{status.rootPath}</span>
+                    · abre en <span className="font-mono">{status.rootPath}</span>
+                    <span className="text-gray-400 dark:text-gray-500" title="No limita el acceso: la conexión ve toda la cuenta. Es solo la carpeta donde arranca el explorador de abajo.">
+                      {" "}
+                      (no limita el acceso)
+                    </span>
                   </>
                 ) : null}
               </p>
@@ -104,8 +120,9 @@ export const DropboxConexionCard: React.FC<{ status: DropboxStatus | null; onCha
             <input type="password" className="input-field w-full" value={form.refreshToken} onChange={(e) => setForm({ ...form, refreshToken: e.target.value })} placeholder="Refresh token (offline)" autoComplete="new-password" />
           </div>
           <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Carpeta raíz</label>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Carpeta donde abre el explorador</label>
             <input className="input-field w-full" value={form.rootPath} onChange={(e) => setForm({ ...form, rootPath: e.target.value })} placeholder="/HelloSign" />
+            <p className="mt-1 text-[11px] text-gray-400">Dónde arranca el navegador de carpetas de abajo. No restringe nada: la conexión ve toda la cuenta.</p>
           </div>
           <button type="button" onClick={conectar} disabled={connecting} className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50">
             {connecting ? <FontAwesomeIcon icon={faSpinner} spin /> : <FontAwesomeIcon icon={faPlug} />}

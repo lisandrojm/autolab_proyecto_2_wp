@@ -28,6 +28,29 @@ export declare function verifyAccount(tenantId: string, cfg: TenantDropboxConfig
     name?: string;
 }>;
 /**
+ * El argumento de las llamadas de CONTENIDO viaja en una cabecera HTTP, y una cabecera es ASCII.
+ *
+ * `/files/download` y `/files/upload` no mandan el path en el body sino en el header
+ * `Dropbox-API-Arg`. Con un nombre acentuado —«Antunes Fernández», «Der atamian»— ese JSON deja de
+ * ser ASCII, los bytes llegan mal del otro lado y Dropbox contesta **409 path/not_found**: no es que
+ * el archivo no exista, es que el path que recibió no es el que se mandó.
+ *
+ * Era invisible porque depende del nombre: una carpeta de altas con nombres sin acentos baja
+ * perfecto y la de al lado falla entera, sin ningún patrón aparente. Y como la respuesta de error
+ * llega como arraybuffer, el motivo real quedaba adentro de un Buffer sin leer (ver `dropboxError`).
+ *
+ * La solución es la del SDK oficial: escapar todo lo que pase de \u007f como `\uXXXX`, que JSON
+ * entiende igual y una cabecera sí puede transportar.
+ *
+ * ESTABA ESCRITO Y NO LO LLAMABA NADIE. Las dos llamadas de contenido —`downloadFileContent` y
+ * `uploadFile`— serializaban con `JSON.stringify` pelado, así que el defecto que este comentario
+ * describe seguía pasando: al subir, el nombre llega con U+FFFD en lugar del acento y el archivo
+ * queda guardado con el nombre roto; al bajar, el path no matchea y Dropbox contesta 409
+ * `path/not_found`. Toda ruta con acento, «ñ» o «·» pasa por acá: si alguna vez se vuelve a
+ * serializar a mano, `argHeader.test.ts` falla.
+ */
+export declare const argHeader: (obj: unknown) => string;
+/**
  * Lista el contenido de una carpeta (no recursivo). path vacío → rootPath del tenant, salvo que
  * `full` sea true: ahí path vacío es la raíz REAL del Dropbox conectado (para poder elegir carpetas
  * fuera del subárbol de rootPath, como una carpeta "AFIP" separada de "HelloSign"). Ojo: "" es la
