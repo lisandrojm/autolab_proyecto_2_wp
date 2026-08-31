@@ -1365,7 +1365,7 @@ router.delete("/projects/:projectId/members/:userId/contracts/:index", requireTe
 });
 // PATCH /projects/:projectId/members/:userId/contracts/:index/empresa-contrato - Actualiza SOLO la
 // Empresa del Contrato de un contrato puntual (por índice), sin tocar el resto de sus campos — para
-// poder elegirla desde la tabla (p. ej. "Alta temprana de AFIP") sin abrir el wizard de "Configurar
+// poder elegirla desde la tabla (p. ej. "Alta temprana de ARCA") sin abrir el wizard de "Configurar
 // Miembro" completo. `nombre_empresa_contrato` se deriva acá mismo, igual que en /assign-member.
 router.patch("/projects/:projectId/members/:userId/contracts/:index/empresa-contrato", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
     try {

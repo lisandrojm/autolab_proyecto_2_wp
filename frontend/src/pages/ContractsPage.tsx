@@ -56,7 +56,7 @@ const SUB_TAB_INFO: Record<"alta_afip" | "constancia_cuit" | "sin_cuit" | "firma
   sin_cuit: {
     title: "Sin CUIT",
     text:
-      "Personas extranjeras que TODAVÍA no tienen CUIT/CUIL argentino: su trámite de ARCA/ANSES queda pendiente hasta que cuenten con la documentación migratoria (DNI precario, residencia en trámite, etc.), así que no aparecen en Alta temprana ni en Constancia de CUIT y se agrupan acá. Se carga la documentación de respaldo, se marca la validación y se las envía a Generar Documentos de forma excepcional: se archiva un comprobante en \"AFIP/Sin cuit\", el contrato avanza y desde ahí se le generan el Contrato y el Release.",
+      "Personas extranjeras que TODAVÍA no tienen CUIT/CUIL argentino: su trámite de ARCA/ANSES queda pendiente hasta que cuenten con la documentación migratoria (DNI precario, residencia en trámite, etc.), así que no aparecen en Alta temprana ni en Constancia de CUIT y se agrupan acá. Se carga la documentación de respaldo, se marca la validación y se las envía a Generar Documentos de forma excepcional: se archiva un comprobante en \"WEPRODU/ARCA/Sin cuit\", el contrato avanza y desde ahí se le generan el Contrato y el Release.",
   },
   firma: {
     title: "Generar Documentos",
@@ -226,7 +226,7 @@ export const ContractsPage: React.FC = () => {
   /**
    * Qué carpetas de Dropbox alimentan cada paso. Salen de la configuración real, no de una lista fija:
    *  - Paso 2 (Generar Documentos): las carpetas vigiladas del estado al que llegan los contratos con
-   *    el trámite impositivo terminado (Alta temprana de Afip, Constancia de cuit, Sin cuit).
+   *    el trámite impositivo terminado (Alta temprana de Arca, Constancia de cuit, Sin cuit).
    *  - Pasos 3 a 5: las carpetas de Dropbox Sign configuradas (Outbox, Pendbox, Requested signatures).
    */
   const carpetasPorTab = useMemo<Partial<Record<MgmtTab, string[]>>>(() => {
@@ -967,7 +967,7 @@ export const ContractsPage: React.FC = () => {
               </p>
               <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Generar Documentos</p>
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                Contratos cuyo documento ya llegó a <span className="font-mono text-xs">AFIP/Alta temprana de Afip</span> o <span className="font-mono text-xs">AFIP/Constancia de cuit</span>. Acá se generan
+                Contratos cuyo documento ya llegó a <span className="font-mono text-xs">WEPRODU/ARCA/Alta temprana de Arca</span> o <span className="font-mono text-xs">WEPRODU/ARCA/Constancia de cuit</span>. Acá se generan
                 los PDF de Contrato y Release, que quedan en la carpeta <span className="font-mono text-xs">Outbox</span> de Dropbox: es el paso previo a importarlos en Dropbox Sign, pero todavía no se
                 envía nada a firmar desde esta pestaña.
               </p>

@@ -1,4 +1,5 @@
 import { Document, Model } from "mongoose";
+import { PropositoCarpeta } from "../utils/propositosCarpeta.js";
 export interface IInfo extends Document {
     externalId: string;
     type: string;
@@ -32,6 +33,14 @@ export interface IInfo extends Document {
                 dropboxCarpeta: string;
                 /** Nota libre de quien la configuró (ej. qué significa esta carpeta puntual en su flujo). */
                 detalle?: string;
+                /**
+                 * PARA QUÉ SIRVE esta carpeta, explícito. Ver `utils/propositosCarpeta.ts`.
+                 *
+                 * Opcional a propósito: las carpetas cargadas antes de que este campo existiera no lo tienen,
+                 * y se siguen resolviendo por el nombre. Hacerlo obligatorio antes de que el backfill haya
+                 * corrido en todos lados rompería el guardado de las que quedaron sin migrar.
+                 */
+                proposito?: PropositoCarpeta;
             }[];
         };
         [key: string]: any;

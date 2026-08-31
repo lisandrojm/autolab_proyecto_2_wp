@@ -1,0 +1,46 @@
+[
+  {
+    "infoId": "6966c2b554bcb393d9f43b2c",
+    "estado": "Envio de documentacion",
+    "carpetas": [
+      {
+        "dropboxCarpeta": "/WEPRODU/ARCA/Alta temprana de Arca"
+      },
+      {
+        "dropboxCarpeta": "/WEPRODU/ARCA/Constancia de cuit"
+      },
+      {
+        "dropboxCarpeta": "/WEPRODU/ARCA/Sin cuit",
+        "detalle": "Personas sin CUIT/CUIL: comprobante de validación manual"
+      }
+    ]
+  },
+  {
+    "infoId": "6966c2b554bcb393d9f43b2b",
+    "estado": "Disponible",
+    "carpetas": [
+      {
+        "dropboxCarpeta": "/HelloSign/Requested signatures",
+        "detalle": "Cuando aparece aca esta firmado"
+      }
+    ]
+  },
+  {
+    "infoId": "6966c2b554bcb393d9f43b2d",
+    "estado": "Firma pendiente",
+    "carpetas": [
+      {
+        "dropboxCarpeta": "/HelloSign/Outbox"
+      }
+    ]
+  },
+  {
+    "infoId": "6a8d74399e6d26b6746799ae",
+    "estado": "Firma enviada",
+    "carpetas": [
+      {
+        "dropboxCarpeta": "/HelloSign/Pendbox"
+      }
+    ]
+  }
+]

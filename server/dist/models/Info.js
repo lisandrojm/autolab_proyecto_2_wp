@@ -1,4 +1,5 @@
 import mongoose, { Schema } from "mongoose";
+import { VALORES_PROPOSITO } from "../utils/propositosCarpeta.js";
 const infoSchema = new Schema({
     externalId: { type: String, required: true },
     type: { type: String, required: true },
@@ -22,6 +23,8 @@ const infoSchema = new Schema({
                     _id: false,
                     dropboxCarpeta: { type: String },
                     detalle: { type: String },
+                    // Sin `required`: ver el comentario del tipo. El enum sale de la fuente única.
+                    proposito: { type: String, enum: VALORES_PROPOSITO },
                 },
             ],
         },

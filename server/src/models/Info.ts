@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
+import { PropositoCarpeta, VALORES_PROPOSITO } from "../utils/propositosCarpeta.js";
 
 export interface IInfo extends Document {
   externalId: string;
@@ -33,6 +34,14 @@ export interface IInfo extends Document {
         dropboxCarpeta: string;
         /** Nota libre de quien la configuró (ej. qué significa esta carpeta puntual en su flujo). */
         detalle?: string;
+        /**
+         * PARA QUÉ SIRVE esta carpeta, explícito. Ver `utils/propositosCarpeta.ts`.
+         *
+         * Opcional a propósito: las carpetas cargadas antes de que este campo existiera no lo tienen,
+         * y se siguen resolviendo por el nombre. Hacerlo obligatorio antes de que el backfill haya
+         * corrido en todos lados rompería el guardado de las que quedaron sin migrar.
+         */
+        proposito?: PropositoCarpeta;
       }[];
     };
     [key: string]: any;
@@ -66,6 +75,8 @@ const infoSchema = new Schema<IInfo>(
             _id: false,
             dropboxCarpeta: { type: String },
             detalle: { type: String },
+            // Sin `required`: ver el comentario del tipo. El enum sale de la fuente única.
+            proposito: { type: String, enum: VALORES_PROPOSITO },
           },
         ],
       },

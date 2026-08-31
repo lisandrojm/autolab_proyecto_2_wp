@@ -33,7 +33,17 @@ export interface InfoItem {
       evento: "dropbox_carpeta";
       carpetas: {
         dropboxCarpeta: string;
-        /** Nota libre de quien la configuró (ej. qué significa esta carpeta puntual en su flujo). */
+        /**
+     * PARA QUÉ SIRVE esta carpeta. Es lo que usa el server para resolverla, en vez de su nombre.
+     *
+     * `string` y no un union: la lista de valores vive en el server (`utils/propositosCarpeta.ts`)
+     * y llega por `GET /info/propositos-carpeta`. Declarar acá un union sería una copia de esa
+     * lista que hay que acordarse de mantener sincronizada — la segunda verdad que evitamos.
+     *
+     * Vacío = carpeta sin migrar: el server la resuelve por su nombre y lo registra.
+     */
+    proposito?: string;
+    /** Nota libre de quien la configuró (ej. qué significa esta carpeta puntual en su flujo). */
         detalle?: string;
       }[];
     };
@@ -122,3 +132,35 @@ class InfoAPI {
 }
 
 export const infoAPI = new InfoAPI();
+
+/** Un propósito de carpeta, tal como lo describe el server. */
+export interface PropositoCarpeta {
+  valor: string;
+  etiqueta: string;
+  descripcion: string;
+}
+
+/**
+ * La lista de propósitos, cacheada por sesión.
+ *
+ * Es estática —no toca la base— así que pedirla en cada apertura del modal sería una llamada por
+ * nada. Se guarda la PROMESA y no el resultado: si el modal se abre dos veces mientras la primera
+ * está en vuelo, las dos esperan la misma respuesta en vez de disparar dos pedidos.
+ *
+ * Si falla, el caché se limpia para que el próximo intento vuelva a pedirla. Cachear un error
+ * dejaría el desplegable roto hasta recargar la página.
+ */
+let cachePropositos: Promise<PropositoCarpeta[]> | null = null;
+
+export const propositosCarpeta = (): Promise<PropositoCarpeta[]> => {
+  if (!cachePropositos) {
+    cachePropositos = axios
+      .get("/info/propositos-carpeta")
+      .then((r) => (r.data?.propositos || []) as PropositoCarpeta[])
+      .catch((e) => {
+        cachePropositos = null;
+        throw e;
+      });
+  }
+  return cachePropositos;
+};

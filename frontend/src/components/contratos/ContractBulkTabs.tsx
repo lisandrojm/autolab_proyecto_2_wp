@@ -206,7 +206,7 @@ const CeldaDocumentacionSinCuit: React.FC<{ row: ContractOverviewRow; onAbrir: (
  * Reemplaza a "Generar TXT" / "Validar ARCA" para la gente que todavía NO tiene CUIT/CUIL argentino:
  * su trámite de ARCA/ANSES queda PENDIENTE hasta que cuente con la documentación migratoria, y sin
  * esto quedaría trabada antes de poder firmar. En su lugar se archiva un comprobante JSON en la carpeta
- * "AFIP/Sin cuit" de Dropbox, el contrato avanza a Generar Documentos y desde ahí se le generan el
+ * "WEPRODU/ARCA/Sin cuit" de Dropbox, el contrato avanza a Generar Documentos y desde ahí se le generan el
  * Contrato y el Release.
  *
  * Se habilita solo con el switch de la columna Validación en ON.
@@ -224,7 +224,7 @@ const BotonHabilitarFirma: React.FC<{
     e.stopPropagation();
     const confirm = await sweetAlert.confirm(
       '¿Enviar a Generar Documentos?',
-      `${row.userName} todavía no posee CUIT/CUIL. El trámite de ARCA queda PENDIENTE hasta que cuente con la documentación migratoria necesaria. Se va a archivar un comprobante en "AFIP/Sin cuit" con la documentación de respaldo, y el contrato avanzará a Generar Documentos de forma excepcional.`,
+      `${row.userName} todavía no posee CUIT/CUIL. El trámite de ARCA queda PENDIENTE hasta que cuente con la documentación migratoria necesaria. Se va a archivar un comprobante en "WEPRODU/ARCA/Sin cuit" con la documentación de respaldo, y el contrato avanzará a Generar Documentos de forma excepcional.`,
       'Sí, enviar',
     );
     if (!confirm.isConfirmed) return;
@@ -2637,7 +2637,7 @@ export const ContractBulkAfipTab: React.FC<{
                 <strong>Cargar en ARCA</strong>: abre el portal de ARCA para importar ese TXT y generar las altas.
               </li>
               <li>
-                Cuando ARCA sincronice las altas, se guardarán automáticamente en la carpeta de Dropbox <span className="font-mono text-xs">FZERO S.R.L/AFIP/Alta temprana de Afip</span> y los contratos van a aparecer en la bandeja <strong>Firma Digital</strong>.
+                Cuando ARCA sincronice las altas, se guardarán automáticamente en la carpeta de Dropbox <span className="font-mono text-xs">WEPRODU/ARCA/Alta temprana de Arca</span> y los contratos van a aparecer en la bandeja <strong>Firma Digital</strong>.
               </li>
             </ol>
           </div>

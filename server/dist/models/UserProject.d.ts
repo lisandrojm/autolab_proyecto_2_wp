@@ -175,7 +175,7 @@ interface IContract {
      * migratoria necesaria (DNI precario, residencia en trámite, etc.). Mientras tanto se avanza con el
      * contrato de forma excepcional, respaldado por la documentación que se carga acá.
      *
-     * Es exclusivo de esa pestaña: no toca "Alta temprana de AFIP" ni "Constancia de CUIT".
+     * Es exclusivo de esa pestaña: no toca "Alta temprana de ARCA" ni "Constancia de CUIT".
      */
     sinCuitValidacion?: {
         /** Documentación de respaldo cargada. Hace falta al menos una para poder marcar `validado`. */

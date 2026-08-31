@@ -50,7 +50,13 @@ export function DocumentsPage() {
           {/* Tab Content */}
           <div className="animate-in fade-in duration-300">
             {activeTab === "dropbox" && <DropboxTab onCountChange={handleCountChange} />}
-            {activeTab === "afip" && <DropboxTab key="afip" fixedRoot="/AFIP" rootLabel="ARCA" onCountChange={handleCountChange} />}
+            {/*
+              La raíz de esta pestaña estaba fija en «/AFIP», que dejó de existir cuando el árbol se
+              movió a «/WEPRODU/ARCA». Es el único lugar del front donde una ruta de Dropbox está
+              escrita en el código en vez de resolverse desde la configuración de los Estados — por
+              eso el resto sobrevivió a la mudanza y esta pestaña no.
+            */}
+            {activeTab === "afip" && <DropboxTab key="afip" fixedRoot="/WEPRODU/ARCA" rootLabel="ARCA" onCountChange={handleCountChange} />}
           </div>
         </div>
       }

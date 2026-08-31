@@ -34,18 +34,29 @@ axiosInstance.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Añadir tenantId header
-    const user = localStorage.getItem("user");
-    if (user) {
-      try {
-        const userData = JSON.parse(user);
-        if (userData.tenantId) {
-          config.headers["X-Tenant-Id"] = userData.tenantId;
-        }
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-      }
+    /*
+      X-Tenant-Id, con el MISMO fallback que usa el resto de la app.
+
+      Salía solo de `user.tenantId`. Si ese objeto llegaba a faltar, venir sin ese campo o no parsear,
+      el header simplemente NO se mandaba y el server contestaba «Missing tenantId header» — un error
+      que no dice nada de la pantalla donde apareció y que se arregla solo al reintentar, así que
+      queda como un fantasma imposible de reproducir.
+
+      La app además mantiene `tenantId` como clave suelta, y `authStore.refrescarUsuario` ya la usa
+      como respaldo (`localStorage.getItem("tenantId") || user.tenantId`). Que el interceptor —por
+      donde pasan TODAS las llamadas— fuera el único que no la consultaba era la asimetría.
+
+      No cambia nada cuando el estado es normal: `user.tenantId` sigue teniendo prioridad.
+    */
+    let tenantId = "";
+    try {
+      const user = localStorage.getItem("user");
+      if (user) tenantId = JSON.parse(user)?.tenantId || "";
+    } catch (error) {
+      console.error("Error parsing user data:", error);
     }
+    if (!tenantId) tenantId = localStorage.getItem("tenantId") || "";
+    if (tenantId) config.headers["X-Tenant-Id"] = tenantId;
 
     // Set Content-Type to application/json only if not FormData
     // For FormData, let the browser set the Content-Type with boundary

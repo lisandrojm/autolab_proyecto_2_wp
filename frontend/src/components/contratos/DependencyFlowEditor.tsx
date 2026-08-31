@@ -20,7 +20,7 @@ import { SortableContext, useSortable, arrayMove, sortableKeyboardCoordinates, r
 import { CSS } from "@dnd-kit/utilities";
 import { infoAPI, InfoItem, EstadoPayload } from "../../api/info";
 import { dropboxAPI, DropboxEntry } from "../../api/dropbox";
-import { EstadoBadge, TramiteImpositivoBadge } from "../EstadoSelect";
+import { EstadoBadge, TramiteImpositivoBadge, estadoLabel } from "../EstadoSelect";
 import { Modal } from "../ui/Modal";
 import { InfoModal } from "../ui/InfoModal";
 import { sweetAlert } from "../../utils/sweetAlert";
@@ -194,6 +194,8 @@ export const DependencyFlowEditor: React.FC = () => {
   const [pickerPath, setPickerPath] = useState("");
   const [pickerEntries, setPickerEntries] = useState<DropboxEntry[]>([]);
   const [pickerLoading, setPickerLoading] = useState(false);
+  /** Aviso NO bloqueante del picker (ej. la ruta pedida ya no existe y se cayó a la raíz). */
+  const [pickerAviso, setPickerAviso] = useState("");
 
   const transicionDe = (estado: InfoItem): TransicionAutomatica => (Object.prototype.hasOwnProperty.call(eventoOverrides, estado._id) ? eventoOverrides[estado._id] ?? undefined : estado.data?.transicionAutomatica);
 
@@ -203,14 +205,34 @@ export const DependencyFlowEditor: React.FC = () => {
     setConfigurando(estado);
   };
 
+  /**
+   * UNA CARPETA QUE YA NO ESTÁ NO PUEDE DEJAR AL SELECTOR SIN SELECTOR.
+   *
+   * Antes, cualquier fallo mostraba un modal de error y CERRABA el picker. El caso que lo dispara
+   * es justamente el peor momento posible: alguien movió o renombró una carpeta en Dropbox y entra
+   * acá a re-apuntar la ruta — la carpeta vieja da `path/not_found` y la herramienta que venía a
+   * usar para arreglarlo se cierra en la cara.
+   *
+   * Ahora una ruta que no existe cae a la RAÍZ, que siempre existe, con un aviso al costado. El
+   * modal bloqueante queda solo para cuando falla también la raíz: ahí sí Dropbox no responde y no
+   * hay nada que navegar.
+   */
   const cargarCarpetaPicker = async (path: string) => {
     try {
       setPickerLoading(true);
+      setPickerAviso("");
       const { entries, path: resolved } = await dropboxAPI.list(path, true);
       setPickerEntries(entries.filter((e) => e.tag === "folder"));
       setPickerPath(resolved);
     } catch (e: any) {
-      sweetAlert.error("No se pudo abrir Dropbox", e?.response?.data?.error || "Revisá que Dropbox esté conectado.");
+      const detalle = e?.response?.data?.error || "";
+      const noExiste = /not_found/i.test(detalle);
+      if (noExiste && path) {
+        setPickerAviso(`La carpeta ${path} ya no existe en Dropbox. Se abrió desde la raíz.`);
+        await cargarCarpetaPicker("");
+        return;
+      }
+      sweetAlert.error("No se pudo abrir Dropbox", detalle || "Revisá que Dropbox esté conectado.");
       setPickerOpen(false);
     } finally {
       setPickerLoading(false);
@@ -218,6 +240,17 @@ export const DependencyFlowEditor: React.FC = () => {
   };
 
   const abrirPicker = () => {
+    /*
+      Se limpia lo de la vez anterior ANTES de abrir.
+
+      El estado del picker sobrevive al cierre, así que al reabrirlo se veía el árbol de la sesión
+      pasada mientras la carga nueva estaba en vuelo — y si en el medio alguien movió esas carpetas,
+      lo que se ve es una lista de carpetas que ya no existen, invitando a clickear una y llevarse un
+      `path/not_found`. Mostrar nada es mejor que mostrar algo que dejó de ser cierto.
+    */
+    setPickerEntries([]);
+    setPickerPath("");
+    setPickerAviso("");
     setPickerOpen(true);
     cargarCarpetaPicker("");
   };
@@ -274,7 +307,7 @@ export const DependencyFlowEditor: React.FC = () => {
   /** Quita UNA carpeta puntual de un estado directo desde su chip, sin pasar por el modal (las demás
    *  carpetas configuradas, si hay, quedan como estaban). */
   const quitarCarpetaRapido = async (estado: InfoItem, dropboxCarpeta: string) => {
-    const result = await sweetAlert.confirm("¿Quitar esta carpeta?", `Se va a dejar de vigilar "${nombreCarpeta(dropboxCarpeta)}" para "${estado.name}".`, "Sí, quitar", "Cancelar");
+    const result = await sweetAlert.confirm("¿Quitar esta carpeta?", `Se va a dejar de vigilar "${nombreCarpeta(dropboxCarpeta)}" para "${estadoLabel(estado.name)}".`, "Sí, quitar", "Cancelar");
     if (!result.isConfirmed) return;
     const restantes = (transicionDe(estado)?.carpetas || []).filter((c) => c.dropboxCarpeta !== dropboxCarpeta);
     const nuevaTransicion: TransicionAutomatica = restantes.length > 0 ? { evento: "dropbox_carpeta", carpetas: restantes } : undefined;
@@ -568,7 +601,7 @@ export const DependencyFlowEditor: React.FC = () => {
         isOpen={!!configurando}
         onClose={() => setConfigurando(null)}
         title="Transición automática"
-        subtitle={configurando.name}
+        subtitle={estadoLabel(configurando.name)}
         size="sm"
         zIndex={70}
         footer={
@@ -643,7 +676,21 @@ export const DependencyFlowEditor: React.FC = () => {
         }
       >
         <div className="space-y-3">
+          {/*
+            La ruta pedida no existía y se cayó a la raíz.
+
+            Va acá y no en un modal a propósito: el objetivo es que la persona SIGA navegando, no que
+            confirme un error. Un modal bloqueante en este punto es lo que dejaba sin herramienta a
+            quien justamente venía a re-apuntar una carpeta que acababa de mover.
+          */}
+          {pickerAviso && (
+            <p className="text-[11px] font-medium text-amber-700 dark:text-amber-400 flex items-start gap-1.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 px-2.5 py-1.5">
+              <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3 mt-0.5 shrink-0" />
+              {pickerAviso}
+            </p>
+          )}
           <div className="flex flex-wrap items-center gap-1 text-xs">
+            {/* Migas de pan: cada tramo vuelve a cargar esa carpeta. */}
             <button type="button" onClick={() => cargarCarpetaPicker("")} className="text-blue-600 dark:text-blue-400 hover:underline font-semibold">
               Raíz
             </button>

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { Info } from "../models/Info.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
+import { PROPOSITOS } from "../utils/propositosCarpeta.js";
 
 const router = Router();
 
@@ -52,6 +53,23 @@ async function ensureEstadosOrdenBackfilled(): Promise<void> {
  * GET /api/v1/info
  * Query: ?type=sede
  */
+/**
+ * GET /info/propositos-carpeta — para qué puede servir una carpeta vigilada.
+ *
+ * Existe para que el desplegable del modal NO tenga su propia lista. La fuente es
+ * `utils/propositosCarpeta.ts`, del lado del server, que es donde también viven la validación, el
+ * backfill y la resolución: un array escrito a mano en el componente sería una segunda verdad sobre
+ * lo mismo, y ya sabemos cómo termina eso.
+ *
+ * Devuelve etiqueta Y descripción: si el front compusiera los textos por su cuenta, la etiqueta
+ * volvería a ser una segunda verdad por otro camino.
+ *
+ * Es estático: no toca la base. El front lo cachea por sesión.
+ */
+router.get("/propositos-carpeta", requireTenant, authenticateToken, async (_req: AuthenticatedRequest & TenantRequest, res) => {
+  res.json({ propositos: PROPOSITOS.map((p) => ({ valor: p.valor, etiqueta: p.etiqueta, descripcion: p.descripcion })) });
+});
+
 router.get("/", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { type } = req.query;
@@ -133,10 +151,10 @@ function parseEstadoBody(body: any): { error?: string; name?: string; data?: any
   }
 
   // Todo estado impositivo tiene que ser exactamente uno de estos dos trámites (nunca los dos ni
-  // ninguno): "Alta temprana de AFIP" o "Constancia de CUIT".
+  // ninguno): "Alta temprana de ARCA" o "Constancia de CUIT".
   const tipoImpositivo = esImpositivo ? String(body?.tipoImpositivo ?? "").trim() : "";
   if (esImpositivo && !TIPOS_IMPOSITIVO.includes(tipoImpositivo as any)) {
-    return { error: "Un estado impositivo tiene que ser 'Alta temprana de AFIP' o 'Constancia de CUIT'" };
+    return { error: "Un estado impositivo tiene que ser 'Alta temprana de ARCA' o 'Constancia de CUIT'" };
   }
 
   const data: any = {

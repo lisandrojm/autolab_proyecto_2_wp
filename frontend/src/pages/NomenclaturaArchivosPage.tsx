@@ -593,7 +593,7 @@ export const NomenclaturaArchivosPage: React.FC = () => {
               </p>
               <ul className="space-y-1.5 list-disc list-inside marker:text-gray-400">
                 <li>
-                  <strong>Las carpetas de trámites</strong> (<span className="font-mono text-xs">Alta temprana de Afip</span>, <span className="font-mono text-xs">Constancia de cuit</span>,{" "}
+                  <strong>Las carpetas de trámites</strong> (<span className="font-mono text-xs">Alta temprana de Arca</span>, <span className="font-mono text-xs">Constancia de cuit</span>,{" "}
                   <span className="font-mono text-xs">Sin cuit</span>): el escaneo busca el CUIT en el nombre para saber a qué contrato pertenece cada archivo que aparece.
                 </li>
                 <li>

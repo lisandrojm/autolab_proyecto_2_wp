@@ -2,7 +2,7 @@ import { ImapFlow } from "imapflow";
 import { Tenant } from "../models/Tenant.js";
 import { decryptSecret } from "../utils/secretCrypto.js";
 import { leerAnclas, mismoDocumento, AnclasNombre } from "../utils/anclasNombre.js";
-import { resolverCarpetaPorPatron } from "../utils/estadoCarpetas.js";
+import { resolverCarpetaPorProposito } from "../utils/estadoCarpetas.js";
 import { getTenantDropboxConfig, listFolder, moveEntry } from "./dropboxService.js";
 
 /**
@@ -174,8 +174,8 @@ export async function leerCasillaDropboxSign(tenantId: string, soloPrueba = fals
   }
 
   const dropboxCfg = getTenantDropboxConfig(tenant);
-  const pendbox = await resolverCarpetaPorPatron([/pendbox/i]);
-  const outbox = await resolverCarpetaPorPatron([/outbox/i]);
+  const pendbox = await resolverCarpetaPorProposito("pendbox");
+  const outbox = await resolverCarpetaPorProposito("outbox");
 
   const client = new ImapFlow({
     host: String(cfg.imapHost),

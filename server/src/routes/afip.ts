@@ -19,7 +19,7 @@ import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { encryptSecret } from "../utils/secretCrypto.js";
 import { normalizarCuit, cuitEsValido } from "../utils/constanciaPdf.js";
 import { nombreArchivoDocumento } from "../services/nomenclaturaService.js";
-import { resolverCarpetaPorPatron } from "../utils/estadoCarpetas.js";
+import { resolverCarpetaPorProposito, resolverSinCuit } from "../utils/estadoCarpetas.js";
 import { getTenantAfipConfig, verificarCredenciales, verificarServicioPadron, consultarPadron, clearTenantTicket, getCertificadoInfo, Ambiente } from "../services/afipService.js";
 import { getTenantDropboxConfig, uploadFile, getTemporaryLink, deleteEntry } from "../services/dropboxService.js";
 
@@ -409,30 +409,14 @@ const padronTargetSchema = z.object({
   contractIndex: z.number().int().min(0),
 });
 
-/** Busca, entre los Estados con transición automática configurada, la carpeta de Dropbox anotada
- *  como "Constancia de cuit" — es la misma que ya vigila estadoDropboxCronService.ts para avanzar el
- *  estado. No hay un vínculo de esquema fuerte (el `detalle` es una nota libre del admin), así que se
- *  matchea por texto; si no está configurada, devuelve null y el archivo simplemente no se sube. */
-async function resolverCarpetaConstanciaCuit(): Promise<string | null> {
-  const estados = await Info.find({ type: "estado-empleado", "data.transicionAutomatica.carpetas.0": { $exists: true } })
-    .select("data.transicionAutomatica")
-    .lean();
-  for (const e of estados) {
-    const carpetas = ((e as any)?.data?.transicionAutomatica?.carpetas || []) as { dropboxCarpeta?: string; detalle?: string }[];
-    const match = carpetas.find((c) => {
-      // `detalle` es una nota libre opcional que en la práctica casi nunca se completa — el nombre
-      // que realmente se ve en "Carpetas vigiladas" (EscaneoDropboxConfigPage.tsx, nombreCarpeta())
-      // es el ÚLTIMO tramo del path de `dropboxCarpeta`, así que hay que matchear ahí también, no
-      // solo contra `detalle` (que era el único lugar donde se buscaba antes, y por eso nunca
-      // encontraba la carpeta aunque estuviera perfectamente configurada y visible en esa pantalla).
-      const nombreCarpeta = (c.dropboxCarpeta || "").split("/").filter(Boolean).pop() || "";
-      const texto = `${c.detalle || ""} ${nombreCarpeta}`;
-      return /constancia/i.test(texto) && /cuit/i.test(texto);
-    });
-    if (match?.dropboxCarpeta) return match.dropboxCarpeta;
-  }
-  return null;
-}
+/**
+ * La carpeta de «Constancia de CUIT», por su PROPÓSITO.
+ *
+ * Acá vivía un matcher propio que buscaba /constancia/ y /cuit/ sobre el último tramo del path: una
+ * tercera copia de la misma idea, además de las de firmaDigital y dropboxSignMailService. Las tres
+ * ahora piden el propósito y comparten el mismo fallback —el que además deja registro cuando se usa.
+ */
+const resolverCarpetaConstanciaCuit = (): Promise<string | null> => resolverCarpetaPorProposito("constancia_cuit");
 
 // POST /afip/consulta-padron/bulk { targets: [{projectId, userId, contractIndex}] } - consulta el
 // Padrón de AFIP para cada persona (deduplicado por CUIT) y actualiza sus contratos.
@@ -753,18 +737,28 @@ router.post("/habilitar-firma", async (req: AuthenticatedRequest & TenantRequest
     // automática), el cron la ve y el contrato avanza solo a Generar Documentos. Si no lo está, el
     // archivo igual se guarda —en "Sin cuit", al lado de las otras de AFIP— pero el avance de estado
     // no va a dispararse: eso se avisa en la respuesta en vez de fallar sin más.
-    let carpeta = await resolverCarpetaPorPatron([/sin/i, /cuit/i]);
-    const carpetaVigilada = !!carpeta;
+    /*
+      La carpeta de «Sin CUIT», o su deducción como hermana de la de Constancia.
+
+      Las dos cosas pasan ahora por PROPÓSITO (`resolverSinCuit`): antes la deducción resolvía
+      Constancia por patrón, así que seguía atada al nombre por la puerta de atrás aunque el
+      primer paso ya no lo estuviera. `origen` dice cuál de las dos fue.
+    */
+    const resuelta = await resolverSinCuit();
+    const carpeta = resuelta.carpeta;
     if (!carpeta) {
-      // Hermana de la carpeta de Constancia de CUIT (misma raíz de AFIP).
-      const carpetaConstancia = await resolverCarpetaPorPatron([/constancia/i, /cuit/i]);
-      if (!carpetaConstancia) {
-        res.status(400).json({ error: 'No se encontró ninguna carpeta de AFIP configurada en Documentos → Configurar transición automática, así que no se puede deducir dónde archivar el comprobante.' });
-        return;
-      }
-      const raiz = carpetaConstancia.replace(/\/$/, "").split("/").slice(0, -1).join("/");
-      carpeta = `${raiz}/Sin cuit`;
+      res.status(400).json({ error: "No hay ninguna carpeta con el propósito «Sin CUIT» ni «Constancia de CUIT» en Configuración → Documentos → Dropbox, así que no se puede deducir dónde archivar el comprobante." });
+      return;
     }
+    /*
+      «Vigilada» solo si la carpeta está CONFIGURADA, no si se dedujo.
+
+      Una ruta deducida como hermana de Constancia puede ni siquiera existir en Dropbox, y por
+      definición no está en la lista que mira el cron: el archivo se guarda igual, pero el contrato
+      no va a avanzar solo. Contar la deducción como vigilada haría que la respuesta prometa un
+      avance automático que no va a pasar.
+    */
+    const carpetaVigilada = resuelta.origen === "proposito" || resuelta.origen === "patron";
 
     let targets: { projectId: string; userId: string; contractIndex: number }[] = [];
     try {

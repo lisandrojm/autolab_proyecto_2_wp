@@ -11,7 +11,7 @@ import UserProject from "../models/UserProject.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { getTenantDropboxConfig, uploadFile } from "../services/dropboxService.js";
-import { resolverCarpetaPorPatron, resolverEstadoPorCarpetas } from "../utils/estadoCarpetas.js";
+import { resolverCarpetaPorProposito, resolverEstadoPorPropositos } from "../utils/estadoCarpetas.js";
 import { ETIQUETA_TRAMITE } from "../utils/employeeDocData.js";
 import { nombreArchivoDocumento } from "../services/nomenclaturaService.js";
 import { generarContratoPdf } from "./contratosFrame.js";
@@ -27,7 +27,13 @@ router.use(requireTenant, authenticateToken);
 // resolverCarpetaConstanciaCuit en routes/afip.ts) — acá generalizados para no repetir estados.
 const PATRON_ENVIO_ALTA_AFIP = [/alta/i, /temprana|afip/i];
 const PATRON_ENVIO_CONSTANCIA_CUIT = [/constancia/i, /cuit/i];
-const PATRON_OUTBOX = [/outbox/i];
+/*
+  Los propósitos reemplazaron a los patrones.
+
+  Antes acá vivían `PATRON_OUTBOX`, `PATRON_FIRMADOS`, etc. — listas de regex que buscaban el
+  nombre de la carpeta. Ahora se pide el propósito y el nombre deja de importar; los patrones
+  quedaron en `utils/propositosCarpeta.ts` solo como red de contención, y su uso se registra.
+*/
 // "Requested signatures": donde Dropbox Sign deja los contratos ya firmados.
 const PATRON_FIRMADOS = [/requested/i, /signature/i];
 // "Pendbox": carpeta intermedia (hermana de Outbox). El contrato ya se envió a firmar y espera la
@@ -36,16 +42,16 @@ const PATRON_FIRMADOS = [/requested/i, /signature/i];
 const PATRON_PENDIENTE_FIRMA = [/pendbox/i];
 
 // GET /firma-digital/config - qué estado alimenta la bandeja "Firma Digital" (el que ya se dispara
-// automáticamente al llegar un archivo a "Alta temprana de Afip" o "Constancia de cuit") y a qué
+// automáticamente al llegar un archivo a "Alta temprana de Arca" o "Constancia de cuit") y a qué
 // carpeta de Dropbox hay que subir cuando se manda a firmar ("Outbox", la que ya vigila el estado
 // siguiente). No hardcodea nombres de estado — los resuelve por la config real de cada tenant.
 router.get("/config", async (_req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const [estadoEnvioDocNombre, outboxCarpeta, pendienteFirmaCarpeta, firmadosCarpeta] = await Promise.all([
-      resolverEstadoPorCarpetas([PATRON_ENVIO_ALTA_AFIP, PATRON_ENVIO_CONSTANCIA_CUIT]),
-      resolverCarpetaPorPatron(PATRON_OUTBOX),
-      resolverCarpetaPorPatron(PATRON_PENDIENTE_FIRMA),
-      resolverCarpetaPorPatron(PATRON_FIRMADOS),
+      resolverEstadoPorPropositos(["alta_temprana", "constancia_cuit"]),
+      resolverCarpetaPorProposito("outbox"),
+      resolverCarpetaPorProposito("pendbox"),
+      resolverCarpetaPorProposito("firmados"),
     ]);
     res.json({ estadoEnvioDocNombre, outboxCarpeta, pendienteFirmaCarpeta, firmadosCarpeta });
   } catch (error) {
@@ -281,7 +287,7 @@ const enviarTargetSchema = z.object({
   userId: z.string().min(1),
   contractIndex: z.number().int().min(0),
   // Ya calculado por el frontend (estadoImpositivoDelContrato) — determina si además del
-  // Contrato/Release hay que sumar el documento de Alta temprana de AFIP ya cargado.
+  // Contrato/Release hay que sumar el documento de Alta temprana de ARCA ya cargado.
   tipoImpositivo: z.enum(["alta_temprana_afip", "constancia_cuit"]).optional(),
   // Si el Contrato de este trámite tiene tildado "Se envía a firmar" (default true) — ya lo calcula
   // el frontend con el Tipo de Contrato. Cuando es false no se exige el Contrato generado ni se sube.
@@ -296,7 +302,7 @@ function leerArchivoStorage(urlStorage: string): Buffer {
 
 // POST /firma-digital/enviar { targets: [...] } - paso 2: sube a la carpeta Outbox de Dropbox los
 // documentos YA generados en el paso 1 (nunca genera nada acá) — Contrato + Release(s) siempre, y si
-// el trámite de origen fue "Alta temprana de AFIP" también el documento de Alta ya cargado. La
+// el trámite de origen fue "Alta temprana de ARCA" también el documento de Alta ya cargado. La
 // Constancia de CUIT (el JSON) NUNCA se manda a firmar.
 router.post("/enviar", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
@@ -314,7 +320,7 @@ router.post("/enviar", async (req: AuthenticatedRequest & TenantRequest, res) =>
       res.status(400).json({ error: "Dropbox no está conectado para esta organización." });
       return;
     }
-    const outboxCarpeta = await resolverCarpetaPorPatron(PATRON_OUTBOX);
+    const outboxCarpeta = await resolverCarpetaPorProposito("outbox");
     if (!outboxCarpeta) {
       res.status(400).json({ error: 'No se encontró ninguna carpeta de Dropbox configurada como "Outbox" en Documentos → Configurar transición automática.' });
       return;
@@ -362,7 +368,7 @@ router.post("/enviar", async (req: AuthenticatedRequest & TenantRequest, res) =>
           continue;
         }
 
-        // Alta temprana de AFIP: el documento ya cargado (altaDocumentoUrl) se suma, pero renombrado
+        // Alta temprana de ARCA: el documento ya cargado (altaDocumentoUrl) se suma, pero renombrado
         // con la nomenclatura del sistema — el nombre original que le puso quien lo subió a mano no
         // necesariamente lo trae, y el cron de estadoDropboxCronService.ts matchea por CUIT en el nombre.
         if (t.tipoImpositivo === "alta_temprana_afip" && contract.altaDocumentoUrl) {

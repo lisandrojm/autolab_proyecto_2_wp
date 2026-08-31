@@ -25,24 +25,43 @@ const normalize = (s: string): string =>
     .replace(/[\u0300-\u036f]/g, "")
     .trim();
 
-/**
- * Estilo (color de badge) y etiqueta por estado. La clave está normalizada (sin acentos/mayúsculas).
- * "Falta pedido de ARCA" se muestra como "Pedido de ARCA".
- */
+/** Color del badge por estado. La clave está normalizada (sin acentos ni mayúsculas). */
+/* Las ETIQUETAS no van acá: viven en TEXTO_VIEJO, que es el único lugar donde se traduce un nombre. */
 const ESTADO_STYLES: Record<string, { label?: string; cls: string }> = {
   disponible: { cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
   "envio de documentacion": { cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
-  "falta pedido de afip": { label: "Pedido de ARCA", cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" },
+  "falta pedido de afip": { cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" },
   "pedido de afip": { cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" },
   "firma pendiente": { cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
-  // Nombre viejo guardado en algunos contratos: se muestra con la etiqueta del ABM ("Pedido de
-  // Servicios"), igual que "Falta pedido de ARCA". Sin el `label`, los filtros que deduplican por
-  // etiqueta lo tratan como un estado aparte y aparece dos veces en la lista.
-  "pedido servicios": { label: "Pedido de Servicios", cls: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300" },
+  "pedido servicios": { cls: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300" },
+};
+
+/**
+ * NOMENCLATURA VIEJA → CÓMO SE MUESTRA HOY. Un solo lugar, para todas las pantallas.
+ *
+ * El organismo se llama ARCA desde hace rato, pero los nombres siguen guardados con «AFIP»: esas
+ * claves son con las que matchean los filtros (`estadoCanonico` acá y en `routes/users.ts`) y
+ * renombrarlas en la base es una migración aparte. Así que se traducen al dibujar.
+ *
+ * Cubre los DOS textos que salen de la configuración de un estado:
+ *   · el nombre del estado          «Pedido de AFIP» → «Pedido de ARCA»
+ *   · su etiqueta secundaria        «Alta Afip»      → «Alta ARCA»
+ *
+ * Van juntos a propósito: cuando estaban separados, el desplegable decía ARCA y el board de
+ * Dependencias seguía diciendo AFIP para el mismo estado, en la misma pantalla.
+ */
+const TEXTO_VIEJO: Record<string, string> = {
+  "pedido de afip": "Pedido de ARCA",
+  "falta pedido de afip": "Pedido de ARCA",
+  "pedido servicios": "Pedido de Servicios",
+  // Etiqueta secundaria del estado impositivo. Su par es «Alta Servicios», que no cambia.
+  "alta afip": "Alta ARCA",
+  "alta de afip": "Alta ARCA",
+  "alta temprana de afip": "Alta temprana de ARCA",
 };
 
 const styleFor = (name: string) => ESTADO_STYLES[normalize(name)] || { cls: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300" };
-const labelFor = (name: string) => styleFor(name).label || name;
+const labelFor = (name: string) => TEXTO_VIEJO[normalize(name)] || styleFor(name).label || name;
 
 /**
  * Equivalente hexadecimal de los colores históricos de cada estado (los de ESTADO_STYLES).
@@ -134,7 +153,18 @@ export const EstadoBadge: React.FC<{ name: string; className?: string }> = ({ na
   const configurado = useMemo(() => estados.find((e) => claveEstado(e.name) === claveEstado(name)), [estados, name]);
   // Si el estado está en el ABM, manda lo que diga el ABM: su color.
   const color = configurado?.data?.color || (configurado ? estadoColorPorDefecto(configurado.name) : undefined);
-  const texto = configurado?.name || labelFor(name);
+  /*
+    EL NOMBRE DEL ABM PASA POR `labelFor` IGUAL.
+
+    Antes era `configurado?.name || labelFor(name)`: si el estado existía en el ABM —y todos los
+    reales existen— ganaba su nombre crudo y la traducción NUNCA se consultaba. Por eso el
+    desplegable mostraba «Pedido de ARCA» y el board de Dependencias, que dibuja el mismo estado
+    con este badge, seguía mostrando «PEDIDO DE AFIP».
+
+    El ABM sigue mandando en el COLOR y en la existencia del estado; lo único que se le pisa es el
+    texto viejo, que es un renombre del organismo y no una decisión de quien configuró el ABM.
+  */
+  const texto = labelFor(configurado?.name || name);
   const esImpositivo = !!configurado?.data?.esImpositivo;
 
   const clases = `inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide whitespace-nowrap ${className}`;
@@ -173,7 +203,10 @@ export const estadoImpositivoDe = <T extends { name: string; data?: { esImpositi
  */
 export const EstadoSecundarioBadge: React.FC<{ estado: { name: string; data?: { etiquetaSecundaria?: string; colorEtiquetaSecundaria?: string } } | null; className?: string }> = ({ estado, className = "" }) => {
   const theme = useThemeStore((s) => s.theme);
-  const texto = estado?.data?.etiquetaSecundaria?.trim();
+  // Por el MISMO helper que el badge principal: «Alta Afip» es nomenclatura vieja igual que
+  // «Pedido de AFIP», y traducir una sí y la otra no las deja contradiciéndose en la misma fila.
+  const crudo = estado?.data?.etiquetaSecundaria?.trim();
+  const texto = crudo ? labelFor(crudo) : "";
   if (!texto) return null;
   const color = estado?.data?.colorEtiquetaSecundaria || estadoColorPorDefecto(estado!.name);
   const textoColor = colorTextoBadge(color, theme === "dark");
