@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBriefcaseMedical, faFileContract, faLocationDot, faListCheck, faSliders, faSearch, faXmark, faStar, faCircleInfo, faTriangleExclamation, faArrowUpRightFromSquare, faSpinner, faPlus, faChevronDown, faChevronRight, faCheck, faEdit, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faBriefcaseMedical, faFileContract, faLocationDot, faListCheck, faSliders, faSearch, faXmark, faStar, faCircleInfo, faTriangleExclamation, faArrowUpRightFromSquare, faSpinner, faPlus, faChevronDown, faChevronRight, faCheck, faEdit, faTrash, faLayerGroup } from '@fortawesome/free-solid-svg-icons';
 import { EmpresaContextLayout, SeccionEmpleador } from '../../components/empresa/EmpresaContextLayout';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { ConvenioSelector } from '../../components/empresas/ConvenioSelector';
@@ -863,6 +863,129 @@ const CategoriasBody: React.FC<{ empresa: Company }> = ({ empresa }) => {
  * contrato (que lo sigue trayendo el Tipo de Contrato): son el valor de arranque, para no repetir en
  * cada alta lo que en la práctica es siempre lo mismo por CUIT.
  */
+/**
+ * GRUPOS DE TIPO DE SERVICIO, DENTRO DE LA EMPLEADORA.
+ *
+ * El catálogo es global y tiene DOS filas —CONTINUOS y DISCONTINUOS—, iguales para todo el mundo: no
+ * hay nada que registrar por empresa. Lo que sí es de cada empleadora es CUÁL usa habitualmente, y
+ * eso vivía escondido en un `<select>` de la pantalla de Defaults.
+ *
+ * Acá se marca con ★, igual que el convenio y el domicilio habituales. La razón de tener las tres
+ * decisiones con el mismo gesto no es estética: son la misma clase de decisión —«de todo lo posible,
+ * esto es lo que esta empleadora usa casi siempre»— y aprender un gesto distinto para cada una es lo
+ * que hace que ninguna se use.
+ *
+ * NO ES UN CANDADO. En el alta el grupo marcado aparece primero; el otro se sigue pudiendo elegir.
+ */
+export const EmpresaGruposTipoServicioPage: React.FC = () => (
+  <EmpresaContextLayout titulo="Grupos de Tipo de Servicio" icono={faLayerGroup} ayuda="empresaDefaults">
+    {(empresa, recargar) => <GruposTipoServicioBody empresa={empresa} recargar={recargar} />}
+  </EmpresaContextLayout>
+);
+
+const GruposTipoServicioBody: React.FC<{ empresa: Company; recargar: () => Promise<void> }> = ({ empresa, recargar }) => {
+  const { guardar, guardando } = useGuardarEmpresa(empresa, recargar);
+  const [grupos, setGrupos] = useState<SimpleCatalogItem[]>([]);
+  const [tipos, setTipos] = useState<SimpleCatalogItem[]>([]);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    Promise.all([gruposTipoServicioApi.list().catch(() => []), tiposServicioApi.list().catch(() => [])])
+      .then(([g, t]) => {
+        setGrupos(g);
+        setTipos(t);
+      })
+      .finally(() => setCargando(false));
+  }, []);
+
+  const porDefecto = empresa.defaultsArca?.grupoTipoServicio || '';
+
+  /**
+   * Marca o desmarca el grupo habitual. Se guarda con el click, como las otras ★.
+   *
+   * CAMBIAR DE GRUPO LIMPIA EL TIPO DE SERVICIO POR DEFECTO si ya no pertenece. Dejarlo puesto
+   * guardaría una combinación imposible —grupo CONTINUOS con un tipo discontinuo— que además se ve
+   * bien en pantalla, porque el select muestra el código aunque no esté entre sus opciones. El server
+   * la rechaza con 422, pero llegar hasta ahí para enterarse es peor que no ofrecerla.
+   */
+  const marcarPorDefecto = async (codigo: string) => {
+    const nuevo = porDefecto === codigo ? '' : codigo;
+    const tipoActual = empresa.defaultsArca?.tipoServicio || '';
+    const pierdeElTipo = !!tipoActual && !!nuevo && grupoDelCodigo(tipoActual) !== nuevo;
+    const nombre = grupos.find((g) => String(g.externalId) === nuevo)?.name || 'El grupo';
+    await guardar(
+      { defaultsArca: { ...(empresa.defaultsArca || {}), grupoTipoServicio: nuevo, ...(pierdeElTipo ? { tipoServicio: '' } : {}) } } as any,
+      nuevo
+        ? `${nombre} queda por defecto para ${empresa.razonSocial}.${pierdeElTipo ? ' Se limpió el tipo de servicio por defecto: era del otro grupo.' : ''}`
+        : 'Se quitó el grupo por defecto.',
+    );
+  };
+
+  return (
+    <SeccionEmpleador
+      titulo="Grupo de Tipo de Servicio habitual"
+      descripcion="ARCA divide los tipos de servicio en dos grupos, y en Simplificación Registral se elige primero el grupo y recién ahí el tipo. Marcá el que esta empleadora usa casi siempre: en el alta aparece primero, y el otro se sigue pudiendo elegir."
+      nota="Los dos grupos son del nomenclador de ARCA, iguales para todas las empleadoras: no se agregan ni se editan acá. El grupo NO viaja en el TXT — lo que viaja es el tipo de servicio (posiciones 107-109); el grupo existe para que elegir entre 293 tipos no sea elegir a ciegas."
+    >
+      {cargando ? (
+        <LoadingSpinner message="Cargando grupos..." />
+      ) : (
+        <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Grupo</th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Código</th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipos de servicio</th>
+                <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1.5">
+                    Por defecto
+                    <button
+                      type="button"
+                      title="El grupo marcado aparece primero al cargar un contrato y deja preseleccionado el filtro de Tipo de Servicio. Se puede elegir el otro igual: es una sugerencia, no un candado."
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal"
+                    >
+                      <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                    </button>
+                  </span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+              {grupos.map((g) => {
+                const codigo = String(g.externalId || '');
+                const cuantos = tipos.filter((t) => grupoDelItem(t) === codigo).length;
+                const esDefecto = porDefecto === codigo;
+                return (
+                  <tr key={g._id} className={`transition-colors ${esDefecto ? 'bg-amber-50/60 dark:bg-amber-950/10' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'}`}>
+                    <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100">{g.name}</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{codigo || '—'}</span>
+                    </td>
+                    {/* Cuántos tipos cuelgan de cada grupo: es lo que hace entendible por qué el
+                        filtro importa — sin él, el combo del alta son 293 opciones. */}
+                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">{cuantos > 0 ? `${cuantos} de ${tipos.length}` : 'sin clasificar'}</td>
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={() => marcarPorDefecto(codigo)}
+                        disabled={guardando || !codigo}
+                        title={esDefecto ? 'Es el grupo por defecto. Click para quitarlo.' : `Marcar ${g.name} como grupo por defecto de esta empleadora`}
+                        className={`transition-colors disabled:opacity-50 ${esDefecto ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}
+                      >
+                        <FontAwesomeIcon icon={faStar} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </SeccionEmpleador>
+  );
+};
+
 export const EmpresaDefaultsPage: React.FC = () => (
   <EmpresaContextLayout titulo="Defaults de ARCA" icono={faSliders} ayuda="empresaDefaults">
     {(empresa, recargar) => <DefaultsBody empresa={empresa} recargar={recargar} />}
@@ -917,25 +1040,13 @@ const DefaultsBody: React.FC<{ empresa: Company; recargar: () => Promise<void> }
    */
   const tiposDelGrupo = useMemo(() => (form.grupoTipoServicio ? tipos.filter((t) => grupoDelItem(t) === form.grupoTipoServicio) : tipos), [tipos, form.grupoTipoServicio]);
 
-  /**
-   * Cambiar el grupo LIMPIA el tipo si ya no pertenece.
-   *
-   * Dejarlo puesto guardaría una combinación imposible —grupo CONTINUOS con un tipo discontinuo—, y
-   * además se vería bien: el select muestra el código igual aunque no esté entre sus opciones. El
-   * server la rechaza con 422, pero llegar hasta ahí para descubrirlo es peor que no ofrecerla.
-   */
-  const elegirGrupo = (grupoTipoServicio: string) => {
-    setForm((p) => {
-      const sigueSiendoDelGrupo = !p.tipoServicio || !grupoTipoServicio || grupoDelCodigo(p.tipoServicio) === grupoTipoServicio;
-      return { ...p, grupoTipoServicio, tipoServicio: sigueSiendoDelGrupo ? p.tipoServicio : '' };
-    });
-  };
-
   /** Elegir el tipo primero también vale: el grupo se completa solo, derivado del código. */
   const elegirTipo = (tipoServicio: string) => setForm((p) => ({ ...p, tipoServicio, grupoTipoServicio: tipoServicio ? grupoDelCodigo(tipoServicio) : p.grupoTipoServicio }));
 
   const original = defaultsDe(empresa);
-  const sucio = form.grupoTipoServicio !== original.grupoTipoServicio || form.tipoServicio !== original.tipoServicio || form.modalidadLiquidacion !== original.modalidadLiquidacion;
+  /* El grupo ya no se edita acá —se marca con ★ en su pantalla—, así que no cuenta para «sucio»:
+     seguiría diciendo «hay cambios sin guardar» por un campo que este formulario no toca. */
+  const sucio = form.tipoServicio !== original.tipoServicio || form.modalidadLiquidacion !== original.modalidadLiquidacion;
 
   const selectClass = 'w-full px-3 py-2 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200';
 
@@ -954,17 +1065,34 @@ const DefaultsBody: React.FC<{ empresa: Company; recargar: () => Promise<void> }
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* El grupo va ARRIBA del tipo, y no al lado, porque el orden es la explicación: primero se
             elige el grupo y recién ahí se habilita el tipo, igual que en Simplificación Registral. */}
+        {/*
+          EL GRUPO SE MARCA CON ★ EN SU PANTALLA, NO ACÁ.
+
+          Era un `<select>` que escribía el MISMO campo que la ★ de «Grupos de Tipo de Servicio»: dos
+          editores del mismo dato, en dos pantallas de la misma sección, con dos gestos distintos. El
+          que llegaba segundo pisaba al primero sin decir nada.
+
+          Sigue mostrándose porque es el filtro del combo de abajo y esconderlo dejaría sin explicar
+          por qué ofrece 140 tipos y no 293 — pero acá se LEE, y se cambia donde se decide.
+        */}
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Grupo Tipo Servicio</label>
-          <select value={form.grupoTipoServicio} onChange={(e) => elegirGrupo(e.target.value)} className={selectClass}>
-            <option value="">— Sin valor por defecto —</option>
-            {grupos.map((g) => (
-              <option key={g._id} value={String(g.externalId || '')}>
-                {g.externalId} — {g.name}
-              </option>
-            ))}
-          </select>
-          <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">No viaja al TXT: filtra el Tipo de Servicio de acá abajo. Se completa solo si elegís primero el tipo.</p>
+          <div className="flex items-center gap-2 flex-wrap rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-3 py-2">
+            {form.grupoTipoServicio ? (
+              <>
+                <FontAwesomeIcon icon={faStar} className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                <span className="text-sm text-gray-800 dark:text-gray-200">
+                  <span className="font-mono">{form.grupoTipoServicio}</span> — {grupos.find((g) => String(g.externalId || '') === form.grupoTipoServicio)?.name || 'sin nombre'}
+                </span>
+              </>
+            ) : (
+              <span className="text-sm text-gray-500 dark:text-gray-400">Sin grupo por defecto: el combo de abajo ofrece los {tipos.length} tipos.</span>
+            )}
+            <Link to={`/empresas/${empresa._id}/arca/grupos-tipo-servicio`} className="ml-auto shrink-0 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+              {form.grupoTipoServicio ? 'Cambiarlo' : 'Elegir uno'}
+            </Link>
+          </div>
+          <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">No viaja al TXT: filtra el Tipo de Servicio de acá abajo. Se marca con ★ en Grupos de Tipo de Servicio.</p>
         </div>
 
         <div>

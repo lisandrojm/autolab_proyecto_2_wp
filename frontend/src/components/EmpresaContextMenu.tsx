@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useEmpresaContextStore } from '../stores/empresaContextStore';
 import { useAuthStore } from '../stores/authStore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faInfoCircle, faLandmark, faFileContract, faChevronDown, faChevronRight, faBriefcaseMedical, faLocationDot, faListCheck, faSliders } from '@fortawesome/free-solid-svg-icons';
+import { faInfoCircle, faLandmark, faFileContract, faChevronDown, faChevronRight, faBriefcaseMedical, faLocationDot, faListCheck, faSliders, faLayerGroup } from '@fortawesome/free-solid-svg-icons';
 
 /**
  * Nav del contexto Empresa, gemelo de [ClientContextMenu].
@@ -39,6 +39,10 @@ export const EmpresaContextMenu: React.FC = () => {
     { path: `${base}/arca/categorias`, icon: faListCheck, label: 'Categorías' },
     { path: `${base}/arca/domicilios`, icon: faLocationDot, label: 'Domicilios de Explotación' },
     { path: `${base}/arca/obras-sociales`, icon: faBriefcaseMedical, label: 'Obras Sociales' },
+    // Grupos de Tipo de Servicio va PEGADO a Defaults, y antes: es la ★ que decide con qué queda
+    // filtrado el Tipo de Servicio que se elige ahí. Al revés, se elige el tipo sin saber por qué el
+    // combo ofrece 293 opciones o 140.
+    { path: `${base}/arca/grupos-tipo-servicio`, icon: faLayerGroup, label: 'Grupos de Tipo de Servicio' },
     { path: `${base}/arca/defaults`, icon: faSliders, label: 'Defaults' },
   ];
 

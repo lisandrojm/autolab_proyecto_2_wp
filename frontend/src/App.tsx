@@ -69,7 +69,7 @@ import { ContratosPage } from "./pages/ContratosPage";
 import { EmpresasPage } from "./pages/EmpresasPage";
 // Contexto Empresa (la empleadora como eje, igual que Cliente).
 import { EmpresaInfoPage } from "./pages/empresa/EmpresaInfoPage";
-import { EmpresaObrasSocialesPage, EmpresaConveniosPage, EmpresaDomiciliosPage, EmpresaCategoriasPage, EmpresaDefaultsPage } from "./pages/empresa/EmpresaArcaPages";
+import { EmpresaObrasSocialesPage, EmpresaConveniosPage, EmpresaDomiciliosPage, EmpresaCategoriasPage, EmpresaGruposTipoServicioPage, EmpresaDefaultsPage } from "./pages/empresa/EmpresaArcaPages";
 import { EmpresaContratosPage } from "./pages/empresa/EmpresaContratosPage";
 import { MembretesPage } from "./pages/MembretesPage";
 import { ContratosFramePage } from "./pages/ContratosFramePage";
@@ -710,6 +710,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <EmpresaCategoriasPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/empresas/:empresaId/arca/grupos-tipo-servicio"
+                element={
+                  <ProtectedRoute>
+                    <EmpresaGruposTipoServicioPage />
                   </ProtectedRoute>
                 }
               />
