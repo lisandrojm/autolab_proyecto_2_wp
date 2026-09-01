@@ -34,8 +34,6 @@ const companySchema = z.object({
     obraSocialId: z.number().nullable().optional(),
     /** Ids del catálogo de Obras Sociales registradas ante ARCA para este CUIT. Reemplaza la lista. */
     obrasSocialesIds: z.array(z.string()).optional(),
-    /** Excepciones por convenio: para ese CCT, esta empleadora usa otra obra social. Reemplaza la lista. */
-    convenioObraSocialOverrides: z.array(z.object({ convenioId: z.string(), obraSocialId: z.number() })).optional(),
     /** Ids del catálogo de Convenios. Se manda la lista completa: reemplaza la anterior. */
     convenioIds: z.array(z.string()).optional(),
     /** Ids del catálogo de Sucursales de ARCA. Se manda la lista completa: reemplaza la anterior. */
@@ -192,12 +190,12 @@ router.put("/:id", authenticateToken, async (req, res) => {
  * Cuenta las dos formas en que un contrato termina usándola:
  *  - `contratos`: la tiene FIJADA en el contrato (constatada o manual).
  *  - `convenios`: la hereda de un CCT que esta empleadora registró — sea la sindical del convenio o
- *    una excepción que ella misma puso. Acá se devuelven los códigos de esos CCT, porque el número de
+ *    el convenio que ella registró. Acá se devuelven los códigos de esos CCT, porque el número de
  *    contratos afectados depende de qué categoría tenga cada uno y eso se resuelve en el cliente.
  */
 router.get("/:id/obras-sociales-en-uso", authenticateToken, async (req, res) => {
     try {
-        const empresa = await Company.findById(req.params.id).select("convenioIds convenioObraSocialOverrides").lean();
+        const empresa = await Company.findById(req.params.id).select("convenioIds").lean();
         if (!empresa)
             return res.status(404).json({ error: "Empresa no encontrada" });
         const filas = await UserProject.aggregate([
@@ -209,14 +207,13 @@ router.get("/:id/obras-sociales-en-uso", authenticateToken, async (req, res) => 
         for (const f of filas)
             if (f._id != null)
                 contratos[String(f._id)] = f.total;
-        // Convenios registrados por la empleadora que apuntan a cada obra social (la sindical o su excepción).
+        // Convenios registrados por la empleadora y la obra social sindical de cada uno.
         const convenios = await Convenio.find({ _id: { $in: empresa.convenioIds || [] } })
             .select("externalId obraSocialDefaultId")
             .lean();
-        const overrides = new Map((empresa.convenioObraSocialOverrides || []).map((o) => [String(o.convenioId), Number(o.obraSocialId)]));
         const porConvenio = {};
         for (const cv of convenios) {
-            const osId = overrides.has(String(cv._id)) ? overrides.get(String(cv._id)) : cv.obraSocialDefaultId;
+            const osId = cv.obraSocialDefaultId;
             if (osId == null)
                 continue;
             const k = String(osId);

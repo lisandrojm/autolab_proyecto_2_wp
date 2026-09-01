@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileContract, faArrowUpRightFromSquare, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { faFileContract, faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
 import { createSimpleCatalogApi, SimpleCatalogItem } from "../api/simpleCatalog";
 import { companiesAPI, Company } from "../api/companies";
@@ -59,21 +59,11 @@ const EmpresasDelConvenioModal: React.FC<{
           {empresas.length === 0 && <p className="px-3 py-4 text-xs text-gray-400 italic">Ninguna empresa lo tiene registrado.</p>}
 
           {empresas.map((e) => {
-            // La excepción es de la empleadora, no del convenio: se marca acá para que se vea que
-            // en esa empresa este CCT NO usa la obra social sindical.
-            const override = (e.convenioObraSocialOverrides || []).find((o) => String(o.convenioId) === convenio._id);
-            const os = obraSocialDe(override?.obraSocialId);
             return (
               <div key={e._id} className="px-3 py-2.5 flex items-start gap-3">
                 <div className="min-w-0 flex-1">
                   <span className="block text-sm text-gray-900 dark:text-gray-100">{e.razonSocial}</span>
                   {e.cuit && <span className="block font-mono text-[11px] text-gray-500 dark:text-gray-400">{e.cuit}</span>}
-                  {override && (
-                    <span className="mt-1 inline-flex items-center gap-1.5 text-[11px] text-amber-700 dark:text-amber-400">
-                      <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5" />
-                      Usa una excepción: {os ? `${formatRnos(os.externalId)} — ${os.name}` : "obra social fuera del catálogo"}
-                    </span>
-                  )}
                 </div>
                 <Link to={`/empresas/${e._id}/arca/convenios`} onClick={onClose} title={`Abrir los convenios de ${e.razonSocial}`} className="shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30">
                   Ver en la ficha

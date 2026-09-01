@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBriefcaseMedical, faFileContract, faLocationDot, faListCheck, faSliders, faSearch, faXmark, faStar, faCircleInfo, faTriangleExclamation, faArrowUpRightFromSquare, faSpinner, faPlus, faChevronDown, faChevronRight, faCheck, faEdit, faTrash, faLayerGroup } from '@fortawesome/free-solid-svg-icons';
+import { faBriefcaseMedical, faFileContract, faLocationDot, faListCheck, faSliders, faSearch, faXmark, faStar, faCircleInfo, faTriangleExclamation, faArrowUpRightFromSquare, faSpinner, faPlus, faChevronDown, faChevronRight, faCheck, faEdit, faTrash, faLayerGroup, faEye } from '@fortawesome/free-solid-svg-icons';
 import { EmpresaContextLayout, SeccionEmpleador } from '../../components/empresa/EmpresaContextLayout';
 import { ActividadesDelDomicilio, ActividadDomicilio } from '../../components/arca/ActividadesDelDomicilio';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
@@ -15,7 +15,6 @@ import { companiesAPI, Company } from '../../api/companies';
 import { useEmpresaContextStore } from '../../stores/empresaContextStore';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { formatRnos } from '../../utils/rnos';
-import { InfoModal } from '../../components/ui/InfoModal';
 import { CONVENIO_EXCLUIDO } from '../../components/contratos/afipCompleteness';
 import { ConveniosTable } from '../../components/convenios/ConveniosTable';
 import { BannerParitarias } from '../../components/paritarias/BannerParitarias';
@@ -36,7 +35,6 @@ const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
 /** Un convenio del catálogo con su obra social sindical resuelta. */
 type ConvenioConOS = SimpleCatalogItem & { obraSocialDefaultId?: number | null };
 /** Excepción de obra social de un convenio, para una empleadora concreta. */
-type Override = { convenioId: string; obraSocialId: number };
 const conveniosApi = createSimpleCatalogApi('/convenios');
 const tiposServicioApi = createSimpleCatalogApi('/arca/tipos-servicio');
 const gruposTipoServicioApi = createSimpleCatalogApi('/arca/grupos-tipo-servicio');
@@ -353,16 +351,15 @@ const ObraSocialPorConvenio: React.FC<{ empresa: Company; catalogo: SimpleCatalo
   if (delaEmpresa.length === 0) return null;
 
   const porDataId = (id?: number | null) => (id == null ? undefined : catalogo.find((o) => Number((o.data as { id?: number } | undefined)?.id) === id));
-  const overrides = empresa.convenioObraSocialOverrides || [];
 
   /** Convenios cuya obra social resuelta NO está entre las registradas: ARCA rechaza esas altas. */
   const rotos = delaEmpresa.filter((cv) => {
     if (String(cv.externalId || '').trim() === CONVENIO_EXCLUIDO) return false;
-    const os = porDataId(overrides.find((o) => String(o.convenioId) === cv._id)?.obraSocialId ?? cv.obraSocialDefaultId);
+    const os = porDataId(cv.obraSocialDefaultId);
     return !!os && !registradas.map(String).includes(os._id);
   });
   /** Convenios sin obra social: sus contratos NO pueden generar el alta — el RNOS queda sin resolver. */
-  const sinCargar = delaEmpresa.filter((cv) => String(cv.externalId || '').trim() !== CONVENIO_EXCLUIDO && !overrides.some((o) => String(o.convenioId) === cv._id) && cv.obraSocialDefaultId == null);
+  const sinCargar = delaEmpresa.filter((cv) => String(cv.externalId || '').trim() !== CONVENIO_EXCLUIDO && cv.obraSocialDefaultId == null);
 
   const Chequeo: React.FC<{ mal: boolean; texto: string; detalle?: string }> = ({ mal, texto, detalle }) => (
     <div className={`flex items-start gap-2 px-3 py-2 rounded-lg border ${mal ? 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/20' : 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20'}`}>
@@ -414,10 +411,7 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
   const [obrasSociales, setObrasSociales] = useState<SimpleCatalogItem[]>([]);
   const [cargando, setCargando] = useState(true);
   const [ids, setIds] = useState<string[]>(empresa.convenioIds || []);
-  const [overrides, setOverrides] = useState<Override[]>(empresa.convenioObraSocialOverrides || []);
   const [agregando, setAgregando] = useState(false);
-  /** Convenio cuya excepción de obra social se está editando. */
-  const [editandoOverride, setEditandoOverride] = useState<ConvenioConOS | null>(null);
 
   useEffect(() => {
     Promise.all([conveniosApi.list().catch(() => []), obrasSocialesApi.list().catch(() => [])])
@@ -429,7 +423,6 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
   }, []);
   useEffect(() => {
     setIds(empresa.convenioIds || []);
-    setOverrides(empresa.convenioObraSocialOverrides || []);
   }, [empresa]);
 
   const registrados = useMemo(() => convenios.filter((c) => ids.includes(c._id)).sort((a, b) => String(a.externalId || '').localeCompare(String(b.externalId || ''))), [convenios, ids]);
@@ -437,7 +430,7 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
   const porDataId = (id?: number | null) => (id == null ? undefined : obrasSociales.find((o) => Number((o.data as { id?: number } | undefined)?.id) === id));
   const registradasIds = (empresa.obrasSocialesIds || []).map(String);
 
-  const sucio = JSON.stringify([...ids].sort()) !== JSON.stringify([...(empresa.convenioIds || [])].sort()) || JSON.stringify(overrides) !== JSON.stringify(empresa.convenioObraSocialOverrides || []);
+  const sucio = JSON.stringify([...ids].sort()) !== JSON.stringify([...(empresa.convenioIds || [])].sort());
   const convenioPorDefectoId = empresa.defaultsArca?.convenioId || '';
 
   /** Marca o desmarca el convenio habitual. Se guarda con el click. */
@@ -450,15 +443,12 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
   };
 
   const guardarTodo = () => {
-    // Los overrides de convenios que se dejaron de registrar se descartan al guardar: quedarían
-    // huérfanos y aplicarían a un CCT que esta empleadora ya no tiene.
     // Si se le saca el convenio que era el habitual, el default se va con él: sugerir uno que la
     // empleadora ya no tiene registrado es sugerir un alta que ARCA rechaza.
     const pierdeElDefault = !!convenioPorDefectoId && !ids.includes(convenioPorDefectoId);
     guardar(
       {
         convenioIds: ids,
-        convenioObraSocialOverrides: overrides.filter((o) => ids.includes(String(o.convenioId))),
         ...(pierdeElDefault ? { defaultsArca: { ...(empresa.defaultsArca || {}), convenioId: null } } : {}),
       } as any,
       `${ids.length} convenio(s) registrado(s) para ${empresa.razonSocial}.${pierdeElDefault ? ' Se quitó el convenio por defecto: ya no está registrado.' : ''}`,
@@ -504,16 +494,12 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
           // Acá la falta SÍ es accionable: ese convenio le afecta los contratos a esta empleadora.
           // En el nomenclador va un guion, porque serían 2.664 avisos sobre convenios que nadie usa.
           ayudaSinObraSocial="Asignásela al convenio en Configuración → ARCA → Convenios."
+          // La obra social sale del CONVENIO y de ningún otro lado: la define el sindicato y vale
+          // para todas las empleadoras que lo tengan registrado.
           obraSocialDe={(cv) => {
-            const override = overrides.find((o) => String(o.convenioId) === cv._id);
-            const guardado = (empresa.convenioObraSocialOverrides || []).find((o) => String(o.convenioId) === cv._id);
-            const os = porDataId(override?.obraSocialId ?? cv.obraSocialDefaultId);
+            const os = porDataId(cv.obraSocialDefaultId);
             return {
               os,
-              esOverride: !!override,
-              // Marca la excepción que todavía no se persistió: el modal la aplica en memoria y recién
-              // el "Guardar cambios" de afuera la escribe.
-              pendiente: override?.obraSocialId !== guardado?.obraSocialId,
               noRegistrada: !!os && !registradasIds.includes(os._id),
               sinSindicato: String(cv.externalId || '').trim() === CONVENIO_EXCLUIDO,
             };
@@ -538,96 +524,26 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
               <FontAwesomeIcon icon={faStar} />
             </button>
           )}
+          /*
+            Solo QUITAR el convenio de esta empleadora. Acá no se toca el registro maestro.
+
+            Había también un ✎ para poner una «excepción de obra social» por empresa. Se quitó: la
+            obra social la define el SINDICATO del convenio y vale para todas las empleadoras que lo
+            tengan registrado, así que una excepción por empresa no es un caso real — era una forma
+            de declarar mal la obra social sin que nada lo frenara. No había ninguna cargada.
+          */
           renderAcciones={(cv) => (
-            // Mismos íconos que el resto de los listados de la app (✎ / 🗑): el verbo cambia según
-            // dónde estés parado —acá se edita la excepción y se quita el convenio de la empleadora,
-            // no se toca el registro maestro—, pero el gesto tiene que ser el mismo en todas.
-            <>
-              <button
-                onClick={() => setEditandoOverride(cv)}
-                title={overrides.some((o) => String(o.convenioId) === cv._id) ? 'Cambiar la excepción de obra social' : 'Usar otra obra social para este convenio'}
-                className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 mr-3"
-              >
-                <FontAwesomeIcon icon={faEdit} />
-              </button>
-              <button onClick={() => setIds((prev) => prev.filter((x) => x !== cv._id))} title="Quitar el convenio de esta empleadora" className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300">
-                <FontAwesomeIcon icon={faTrash} />
-              </button>
-            </>
+            <button onClick={() => setIds((prev) => prev.filter((x) => x !== cv._id))} title="Quitar el convenio de esta empleadora" className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300">
+              <FontAwesomeIcon icon={faTrash} />
+            </button>
           )}
         />
       )}
 
-      <OverrideModal
-        convenio={editandoOverride}
-        obrasSociales={obrasSociales}
-        registradasIds={registradasIds}
-        actual={editandoOverride ? overrides.find((o) => String(o.convenioId) === editandoOverride._id)?.obraSocialId : undefined}
-        onClose={() => setEditandoOverride(null)}
-        onGuardar={(obraSocialId) => {
-          const convenioId = editandoOverride!._id;
-          setOverrides((prev) => {
-            const sinEste = prev.filter((o) => String(o.convenioId) !== convenioId);
-            return obraSocialId == null ? sinEste : [...sinEste, { convenioId, obraSocialId }];
-          });
-          setEditandoOverride(null);
-        }}
-      />
     </SeccionEmpleador>
   );
 };
 
-/** La excepción de obra social de un convenio, para ESTA empleadora. */
-const OverrideModal: React.FC<{
-  convenio: ConvenioConOS | null;
-  obrasSociales: SimpleCatalogItem[];
-  registradasIds: string[];
-  actual?: number;
-  onClose: () => void;
-  onGuardar: (obraSocialId: number | null) => void;
-}> = ({ convenio, obrasSociales, registradasIds, actual, onClose, onGuardar }) => {
-  const [elegida, setElegida] = useState<string>('');
-  useEffect(() => setElegida(actual != null ? String(actual) : ''), [convenio, actual]);
-
-  if (!convenio) return null;
-
-  // Solo se ofrecen las REGISTRADAS por la empleadora: elegir una que ARCA no le acepta sería crear
-  // el error que esta pantalla existe para evitar.
-  const elegibles = obrasSociales.filter((o) => registradasIds.includes(o._id)).sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
-
-  return (
-    <InfoModal
-      isOpen
-      onClose={onClose}
-      title="Excepción de obra social"
-      subtitle={`${convenio.externalId} — ${convenio.name}`}
-      size="md"
-      actions={[
-        // "Aplicar" y NO "Guardar": esto solo la deja puesta en pantalla. Lo que persiste es el
-        // "Guardar cambios" de la ficha. Dos botones con la palabra "guardar" en el mismo flujo, y
-        // solo uno escribiendo, es la forma más barata de perder trabajo sin enterarse.
-        { label: 'Aplicar excepción', onClick: () => onGuardar(elegida ? Number(elegida) : null), variant: 'primary' },
-        { label: 'Cancelar', onClick: onClose, variant: 'ghost' },
-      ]}
-    >
-      <div className="space-y-3">
-        <p className="text-sm text-gray-700 dark:text-gray-300">
-          Lo normal es que la obra social la resuelva el convenio: la define el sindicato y vale para todas las empleadoras. Usá esto solo si <strong>para esta empresa</strong> corresponde otra.
-        </p>
-        <select value={elegida} onChange={(e) => setElegida(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200">
-          <option value="">— Sin excepción: usar la del convenio —</option>
-          {elegibles.map((o) => (
-            <option key={o._id} value={String((o.data as { id?: number } | undefined)?.id ?? '')}>
-              {formatRnos(o.externalId)} — {o.name}
-            </option>
-          ))}
-        </select>
-        <p className="text-[11px] text-gray-500 dark:text-gray-400">Solo aparecen las {elegibles.length} obras sociales que esta empleadora tiene registradas ante ARCA. Si la que buscás no está, registrala primero en Obras Sociales.</p>
-        <p className="text-[11px] text-amber-700 dark:text-amber-400">La excepción queda marcada como «sin guardar» hasta que apretés <strong>Guardar cambios</strong> en la pantalla de Convenios.</p>
-      </div>
-    </InfoModal>
-  );
-};
 
 // ───────────────────────────────────────────────────────────── Domicilios
 
@@ -887,6 +803,8 @@ export const EmpresaCategoriasPage: React.FC = () => (
 
 const CategoriasBody: React.FC<{ empresa: Company }> = ({ empresa }) => {
   const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
+  /** El convenio cuyo detalle se está mirando. `null` = modal cerrado. */
+  const [viendoConvenio, setViendoConvenio] = useState<ConvenioDetalle | null>(null);
   const [detalles, setDetalles] = useState<ConvenioDetalle[]>([]);
   const [cargando, setCargando] = useState(true);
 
@@ -919,43 +837,46 @@ const CategoriasBody: React.FC<{ empresa: Company }> = ({ empresa }) => {
           <p className="text-sm text-amber-800 dark:text-amber-300">Esta empleadora no tiene convenios registrados, así que no hay ninguna categoría que se le pueda dar de alta.</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {detalles.map((d) => (
-            <div key={d.convenio} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-              <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-900/40 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3">
-                <div className="min-w-0">
+        <>
+        <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/60">
+          {/*
+            UNA FILA POR CONVENIO, Y EL DETALLE EN UN MODAL.
+
+            Esto listaba los grupos y las 107 categorías de los cuatro convenios, una debajo de la
+            otra: pantallas de chips para una pantalla que es SOLO LECTURA y que se abre para
+            contestar «¿qué le puedo dar de alta a esta empleadora?». La respuesta a esa pregunta es
+            el conteo; el detalle es para cuando alguien lo busca, y por eso está detrás del ojito.
+          */}
+          {detalles.map((d) => {
+            const categorias = d.grupos.reduce((a, g) => a + g.categorias.length, 0);
+            const sinEscala = d.grupos.filter((g) => !g.sueldoBruto).length;
+            return (
+              <div key={d.convenio} className="px-4 py-3 flex items-center gap-3">
+                <div className="min-w-0 flex-1">
                   <span className="font-mono text-sm font-bold text-blue-700 dark:text-blue-400">{d.convenio}</span>
                   <span className="text-sm text-gray-600 dark:text-gray-300"> — {d.nombre || 'sin descripción'}</span>
+                  <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    {d.grupos.length} grupo(s) · {categorias} categoría(s)
+                    {/* Lo que BLOQUEA el alta se dice en la fila: es lo único accionable de acá. */}
+                    {sinEscala > 0 && <span className="text-red-600 dark:text-red-400"> · {sinEscala} sin escala: bloquea{sinEscala === 1 ? '' : 'n'} el alta</span>}
+                  </span>
                 </div>
-                <Link to="/arca/categorias" className="shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-                  Editar escalas
-                  <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3 w-3" />
+                <button
+                  type="button"
+                  onClick={() => setViendoConvenio(d)}
+                  title={`Ver las ${categorias} categorías de ${d.convenio}`}
+                  className="shrink-0 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300"
+                >
+                  <FontAwesomeIcon icon={faEye} />
+                </button>
+                <Link to="/arca/categorias" title="Editar las escalas de este convenio" className="shrink-0 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300">
+                  <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
                 </Link>
               </div>
-              <div className="divide-y divide-gray-100 dark:divide-gray-700/60">
-                {d.grupos.map((g) => (
-                  <div key={g._id} className="px-4 py-2.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center justify-center h-6 w-9 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-[11px] font-bold">G{g.numero}</span>
-                      {g.nombre && <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{g.nombre}</span>}
-                      <span className={`text-xs font-semibold ${g.sueldoBruto ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {g.sueldoBruto ? `Bruto ${g.sueldoBruto.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}` : 'Sin escala: bloquea el alta'}
-                      </span>
-                      <span className="text-xs text-gray-400">· {g.categorias.length} categoría(s)</span>
-                    </div>
-                    <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      {g.categorias.map((c) => (
-                        <span key={c._id} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300">
-                          <span className="font-mono">{c.codigoArca}</span>
-                          {c.nombre}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+            );
+          })}
+        </div>
+        <div className="mt-4 space-y-4">
           {/* Un convenio registrado que no resolvió es un convenio sin categorías cargadas. */}
           {detalles.length < (empresa.convenioIds || []).length && (
             <p className="text-xs text-amber-700 dark:text-amber-400">
@@ -964,6 +885,44 @@ const CategoriasBody: React.FC<{ empresa: Company }> = ({ empresa }) => {
             </p>
           )}
         </div>
+        </>
+      )}
+
+      {/*
+        EL DETALLE, cuando alguien lo pide. Solo lectura: acá no se configura nada — la escala es del
+        CCT y se edita en el nomenclador, no por empresa.
+      */}
+      {viendoConvenio && (
+        <Modal
+          isOpen
+          onClose={() => setViendoConvenio(null)}
+          title={`${viendoConvenio.convenio} — ${viendoConvenio.nombre || 'sin descripción'}`}
+          subtitle={`${viendoConvenio.grupos.length} grupo(s) · ${viendoConvenio.grupos.reduce((a, g) => a + g.categorias.length, 0)} categoría(s) que se le pueden dar de alta a ${empresa.razonSocial}`}
+          size="lg"
+        >
+          <div className="divide-y divide-gray-100 dark:divide-gray-700/60">
+            {viendoConvenio.grupos.map((g) => (
+              <div key={g._id} className="py-2.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center justify-center h-6 w-9 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-[11px] font-bold">G{g.numero}</span>
+                  {g.nombre && <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{g.nombre}</span>}
+                  <span className={`text-xs font-semibold ${g.sueldoBruto ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {g.sueldoBruto ? `Bruto ${g.sueldoBruto.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}` : 'Sin escala: bloquea el alta'}
+                  </span>
+                  <span className="text-xs text-gray-400">· {g.categorias.length} categoría(s)</span>
+                </div>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {g.categorias.map((c) => (
+                    <span key={c._id} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300">
+                      <span className="font-mono">{c.codigoArca}</span>
+                      {c.nombre}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Modal>
       )}
     </SeccionEmpleador>
   );

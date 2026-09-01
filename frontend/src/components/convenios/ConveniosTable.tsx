@@ -1,6 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTriangleExclamation, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
+import { faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { SimpleCatalogItem } from '../../api/simpleCatalog';
 import { formatRnos } from '../../utils/rnos';
 
@@ -27,9 +27,7 @@ export interface ConvenioObraSocial {
   /** La obra social que resuelve para esta fila, ya considerando la excepción si la hay. */
   os?: SimpleCatalogItem;
   /** `true` si la que resuelve viene de una excepción de la empleadora y no del CCT. */
-  esOverride?: boolean;
   /** `true` si la excepción todavía no se guardó. */
-  pendiente?: boolean;
   /** `true` si la obra social no está entre las registradas por la empleadora: ARCA la rechaza. */
   noRegistrada?: boolean;
   /** `true` para 9999/99: no tiene sindicato, la obra social la define la empresa. */
@@ -119,10 +117,9 @@ export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, rende
                       {r.os.name}
                     </span>
                     {/* De dónde sale: lo normal es "del convenio". La excepción se marca como tal. */}
-                    <span className={`mt-0.5 inline-flex items-center gap-1 text-[11px] ${r.esOverride ? 'text-amber-700 dark:text-amber-400 font-semibold' : 'text-gray-400'}`}>
-                      {r.esOverride && <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5" />}
-                      {r.esOverride ? 'pisada por esta empresa' : 'del convenio'}
-                      {r.pendiente && <span className="ml-1 px-1.5 py-0.5 rounded bg-amber-200 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 text-[10px] font-bold uppercase tracking-wide">sin guardar</span>}
+                    {/* Ya no hay dos orígenes posibles: la obra social es siempre la del convenio. */}
+                    <span className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-gray-400">
+                      del convenio
                     </span>
                     {r.noRegistrada && <span className="block text-[11px] text-red-700 dark:text-red-400 mt-0.5">No está entre las registradas por esta empleadora: ARCA va a rechazar estas altas.</span>}
                   </>

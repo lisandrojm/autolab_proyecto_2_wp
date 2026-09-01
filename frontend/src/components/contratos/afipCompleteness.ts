@@ -26,7 +26,6 @@ export interface AfipCatalogs {
     /** Obra social de los EXCLUIDOS DE CONVENIO (9999/99). No aplica al resto. */
     obraSocialDefaultId?: number | null;
     /** Excepciones por convenio: para ese CCT esta empleadora usa otra obra social que la sindical. */
-    convenioObraSocialOverrides?: Array<{ convenioId: string; obraSocialId: number }>;
     /** @deprecated Nombre viejo de `obraSocialDefaultId`; se sigue leyendo durante la transición. */
     obraSocialId?: number | null;
     /** Obras sociales registradas para este CUIT (ids del catálogo). Vacío = todavía no se extrajo el padrón. */
@@ -379,14 +378,17 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
    * el checklist lo marque como faltante y no se genere el TXT.
    */
   const obraSocialPropia = porDataId(row.osId);
-  const overrideEmpresa = convenioDeLaCategoria ? (empresa?.convenioObraSocialOverrides || []).find((o) => String(o.convenioId) === String(convenioDeLaCategoria._id)) : undefined;
-  const obraSocialOverride = porDataId(overrideEmpresa?.obraSocialId);
   const obraSocialConvenio = porDataId(convenioDeLaCategoria?.obraSocialDefaultId);
   // `obraSocialDefaultId` es el nombre nuevo; se lee el viejo mientras queden documentos sin migrar.
   // Solo aplica a los excluidos de convenio: ver el paso 3.
   const esExcluidoDeConvenio = convenioCategoria === CONVENIO_EXCLUIDO;
   const obraSocialEmpresa = esExcluidoDeConvenio ? porDataId(empresa?.obraSocialDefaultId ?? empresa?.obraSocialId) : undefined;
-  const obraSocial = obraSocialPropia || obraSocialOverride || obraSocialConvenio || obraSocialEmpresa;
+  /*
+    Sin escalón de «excepción por empresa»: la obra social la define el SINDICATO del convenio y vale
+    para todas las empleadoras que lo tengan registrado. Ese escalón permitía declarar otra obra
+    social para una empresa sin que nada lo frenara, y no había ninguna cargada.
+  */
+  const obraSocial = obraSocialPropia || obraSocialConvenio || obraSocialEmpresa;
 
   // Sucursal y actividad salen del catálogo de Sucursales de ARCA, filtrado por las que tiene
   // asignadas la empresa empleadora. Nada de esto cuelga de la Sede: son entidades distintas.
@@ -535,7 +537,7 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
     rnosPorDefecto: !obraSocialPropia && !!obraSocial,
     constatacion,
     constatadaEl: String(row.obraSocialConstatadaEl || ""),
-    rnosOrigen: obraSocialPropia ? ((row.obraSocialOrigen || "heredada-usuario") as "constatada" | "manual" | "heredada-usuario") : obraSocialOverride ? "override" : obraSocialConvenio ? "convenio" : obraSocialEmpresa ? "empresa" : "ninguno",
+    rnosOrigen: obraSocialPropia ? ((row.obraSocialOrigen || "heredada-usuario") as "constatada" | "manual" | "heredada-usuario") : obraSocialConvenio ? "convenio" : obraSocialEmpresa ? "empresa" : "ninguno",
     sucursal: sucursal?.codigo ? String(sucursal.codigo) : "",
   };
 }

@@ -33,7 +33,6 @@ export interface Company {
    */
   obraSocialDefaultId?: number | null;
   /** Excepciones: para ESE convenio, esta empleadora usa otra obra social que la sindical del CCT. */
-  convenioObraSocialOverrides?: Array<{ convenioId: string; obraSocialId: number }>;
   /** @deprecated Nombre viejo de `obraSocialDefaultId`. El server sirve los dos; usar el nuevo. */
   obraSocialId?: number | null;
   /** Ids de los Convenios Colectivos asociados a la empresa. */

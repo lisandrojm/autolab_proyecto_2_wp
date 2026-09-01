@@ -56,20 +56,6 @@ export interface ICompany extends Document {
    */
   obraSocialDefaultId?: number;
   /**
-   * Excepciones: para ESTE convenio, esta empleadora usa otra obra social que la sindical del CCT.
-   *
-   * Va en una lista aparte y no dentro de `convenioIds` para no migrar lo que ya funciona. Es una
-   * EXCEPCIÓN y no una configuración habitual: lo normal es que el convenio resuelva solo.
-   *
-   * Un override cuyo `convenioId` no esté en `convenioIds` es dato huérfano — la empresa dejó de
-   * tener ese convenio registrado pero la excepción quedó. Se reporta, no se aplica.
-   */
-  convenioObraSocialOverrides?: Array<{
-    convenioId: mongoose.Types.ObjectId;
-    /** `data.id` del catálogo de Obras Sociales (RNOS numérico). */
-    obraSocialId: number;
-  }>;
-  /**
    * Convenios Colectivos (CCT) habilitados para esta empleadora. Referencias al catálogo de Convenios.
    *
    * NO se manda al TXT: el campo Convenio del registro de 130 (pos. 91-100) va en blanco a propósito.
@@ -174,13 +160,6 @@ const companySchema = new Schema<ICompany>(
     signatureUrl: { type: String },
     obrasSocialesIds: [{ type: Schema.Types.ObjectId, ref: "ObraSocial" }],
     obraSocialDefaultId: { type: Number },
-    convenioObraSocialOverrides: [
-      {
-        _id: false,
-        convenioId: { type: Schema.Types.ObjectId, ref: "Convenio", required: true },
-        obraSocialId: { type: Number, required: true },
-      },
-    ],
     convenioIds: [{ type: Schema.Types.ObjectId, ref: "Convenio" }],
     sucursalIds: [{ type: Schema.Types.ObjectId, ref: "ArcaSucursal" }],
     sucursalActividades: [

@@ -51,6 +51,28 @@ function neutralizeHandlebars(html) {
     return html.replace(/\{\{/g, "&#123;&#123;").replace(/\}\}/g, "&#125;&#125;");
 }
 /** Lee una imagen del storage (path o URL con /storage/) y la devuelve como data URI base64. */
+/**
+ * El mime real de una imagen a partir de su extensión.
+ *
+ * NO ALCANZA CON `image/${ext}`, que es lo que había: para un SVG daba `image/svg` —el mime es
+ * `image/svg+xml`— y Chromium no renderiza un data URI con el tipo equivocado. El logo se subía sin
+ * error, se veía en la pantalla (que usa el archivo, no el data URI) y desaparecía en el PDF, que es
+ * el único lugar donde el membrete importa.
+ */
+const MIME_POR_EXTENSION = {
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    gif: "image/gif",
+    webp: "image/webp",
+    svg: "image/svg+xml",
+    bmp: "image/bmp",
+    ico: "image/x-icon",
+    avif: "image/avif",
+    tif: "image/tiff",
+    tiff: "image/tiff",
+};
+const mimeDeImagen = (ext) => MIME_POR_EXTENSION[ext] || `image/${ext}`;
 function imagePathToDataUri(url) {
     if (!url)
         return null;
@@ -66,8 +88,7 @@ function imagePathToDataUri(url) {
             const bitmap = fs.readFileSync(absolutePath);
             const base64 = bitmap.toString("base64");
             const ext = path.extname(absolutePath).substring(1).toLowerCase();
-            const mime = ext === "jpg" ? "jpeg" : ext;
-            return `data:image/${mime};base64,${base64}`;
+            return `data:${mimeDeImagen(ext)};base64,${base64}`;
         }
     }
     catch (e) {

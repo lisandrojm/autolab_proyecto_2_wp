@@ -279,17 +279,17 @@ describe("obra social — cascada persona → convenio → excluidos", () => {
     assert.equal(rnosDe(buildAltaRecord(fila(), cat)!), "010902");
   });
 
-  it("la excepción de la empresa para ese convenio le gana a la sindical del CCT", () => {
+  it("la obra social del convenio vale igual para todas las empleadoras", () => {
+    /*
+      Antes existía una «excepción de obra social» por empresa que le ganaba a la sindical. Se quitó:
+      la obra social la define el SINDICATO del convenio y vale para todas las empleadoras que lo
+      tengan registrado, así que ese escalón solo permitía declarar otra sin que nada lo frenara. No
+      había ninguna cargada en producción.
+    */
     const cat = conCascada({
       empresas: [{ _id: EMPRESA_ID, sucursalActividades: ACTIVIDADES_EMPRESA, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"], convenioObraSocialOverrides: [{ convenioId: "cv1", obraSocialId: 33 }] }],
     } as any);
-    assert.equal(rnosDe(buildAltaRecord(fila(), cat)!), "999999");
-  });
-
-  it("la excepción de OTRO convenio no aplica a este contrato", () => {
-    const cat = conCascada({
-      empresas: [{ _id: EMPRESA_ID, sucursalActividades: ACTIVIDADES_EMPRESA, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"], convenioObraSocialOverrides: [{ convenioId: "cv-otro", obraSocialId: 33 }] }],
-    } as any);
+    // El campo viejo ya no se lee: sale la del convenio igual.
     assert.equal(rnosDe(buildAltaRecord(fila(), cat)!), "010902");
   });
 
