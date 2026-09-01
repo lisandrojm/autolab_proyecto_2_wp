@@ -144,8 +144,15 @@ export function MembretesPage() {
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>, kind: 'logo' | 'signature') => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
-      Swal.fire('Error', 'Formato no válido. Solo se permiten PNG y JPG.', 'error');
+    if (!file.type.startsWith('image/')) {
+      Swal.fire('Error', 'El archivo tiene que ser una imagen.', 'error');
+      e.target.value = '';
+      return;
+    }
+    // El TIFF se sube bien y se ve acá, pero Chromium —que es quien arma el PDF— no lo renderiza:
+    // el membrete saldría vacío justo en el único lugar donde importa. Mejor rebotarlo ahora.
+    if (['image/tiff', 'image/x-tiff'].includes(file.type)) {
+      Swal.fire('Formato no soportado', 'El TIFF no se puede dibujar en el PDF. Convertilo a PNG o JPG.', 'warning');
       e.target.value = '';
       return;
     }
@@ -440,7 +447,7 @@ export function MembretesPage() {
                     <p className="text-xs mt-1">Sin logo cargado</p>
                   </div>
                 )}
-                <input type="file" accept="image/png, image/jpeg, image/jpg" onChange={(e) => onFileChange(e, 'logo')} className="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900 dark:file:text-blue-300" />
+                <input type="file" accept="image/*" onChange={(e) => onFileChange(e, 'logo')} className="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900 dark:file:text-blue-300" />
               </div>
             </div>
 
@@ -459,7 +466,7 @@ export function MembretesPage() {
                     <p className="text-xs mt-1">Sin firma cargada</p>
                   </div>
                 )}
-                <input type="file" accept="image/png, image/jpeg, image/jpg" onChange={(e) => onFileChange(e, 'signature')} className="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900 dark:file:text-blue-300" />
+                <input type="file" accept="image/*" onChange={(e) => onFileChange(e, 'signature')} className="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900 dark:file:text-blue-300" />
               </div>
             </div>
           </div>

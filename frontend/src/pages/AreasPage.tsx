@@ -271,13 +271,6 @@ export const AreasPage: React.FC = () => {
         ],
         content: viewArea ? (
           <div className="space-y-6">
-            {/* Tenant Badge */}
-            {viewArea.tenant?.name && (
-              <div>
-                <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{viewArea.tenant.name}</span>
-              </div>
-            )}
-
             {/* Descripción */}
             <div>
               <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Descripción</h4>
@@ -357,33 +350,15 @@ export const AreasPage: React.FC = () => {
                       title: area.name,
                       subtitle: area.description,
                       icon: faLayerGroup,
-                      badges:
-                        area.tenant && area.tenant.name
-                          ? [
-                              {
-                                text: area.tenant.name,
-                                variant: 'default' as const,
-                                className: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800',
-                              },
-                              ...(area.isSystem
-                                ? [
-                                    {
-                                      text: 'Sistema',
-                                      variant: 'default' as const,
-                                      className: 'bg-orange-500/10 text-orange-500 border border-orange-500/50',
-                                    },
-                                  ]
-                                : []),
-                            ]
-                          : area.isSystem
-                            ? [
-                                {
-                                  text: 'Sistema',
-                                  variant: 'default' as const,
-                                  className: 'bg-orange-500/10 text-orange-500 border border-orange-500/50',
-                                },
-                              ]
-                            : [],
+                      badges: area.isSystem
+                        ? [
+                            {
+                              text: 'Sistema',
+                              variant: 'default' as const,
+                              className: 'bg-orange-500/10 text-orange-500 border border-orange-500/50',
+                            },
+                          ]
+                        : [],
                     }}
                     footer={
                       canManage
@@ -464,7 +439,6 @@ export const AreasPage: React.FC = () => {
                             <div className="flex flex-col">
                               <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{area.name}</span>
                               <div className="flex items-center gap-2">
-                                {area.tenant && area.tenant.name && <span className="text-[10px] text-gray-500">{area.tenant.name}</span>}
                                 {area.isSystem && <span className="text-[9px] font-bold bg-orange-500/10 text-orange-500 border border-orange-500/50 px-1.5 py-0.5 rounded uppercase tracking-wider">Sistema</span>}
                               </div>
                             </div>

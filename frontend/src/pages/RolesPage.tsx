@@ -84,10 +84,11 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
       "config_pdf_templates:view",
       "config_releases:view",
       "admin_sedes:view",
-      "config_shifts:view",
-      // Usuarios (subgrupo): la entidad primero y sus catálogos detrás
+      // Usuarios (subgrupo): la entidad primero y sus catálogos detrás. Turnos va pegado a Áreas, igual
+      // que en el menú (ver USUARIOS_PATHS en Navbar.tsx).
       "admin_users:view",
       "admin_areas:view",
+      "config_shifts:view",
       "admin_positions:view",
       "admin_levels:view",
       "admin_roles:view",
@@ -160,11 +161,11 @@ const MODULE_LABELS: Record<string, string> = {
   "config_releases:view": "Plantillas | Releasess (y Configuración → Releases)",
 
   "admin_sedes:view": "Sedes",
-  "config_shifts:view": "Turnos",
 
   // Configuración → Usuarios
   "admin_users:view": "Usuarios | Usuarios",
   "admin_areas:view": "Usuarios | Áreas",
+  "config_shifts:view": "Usuarios | Turnos",
   "admin_positions:view": "Usuarios | Cargos",
   "admin_levels:view": "Usuarios | Niveles",
   "admin_roles:view": "Usuarios | Roles",

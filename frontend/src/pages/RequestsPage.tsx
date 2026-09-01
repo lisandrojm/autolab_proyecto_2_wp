@@ -30,6 +30,13 @@ interface ActivityReport extends Omit<BaseActivityReport, "id"> {
 
 // ... reusing MOCK_AREAS and MOCK_REPORTS ...
 
+// Los mismos criterios que usan los tabs del detalle, para que la columna de la lista y el número
+// del tab no puedan decir cosas distintas de la misma novedad. Antes divergían: la columna "Ausentes"
+// contaba `status !== "present"` (o sea que sumaba a los que llegaron tarde) y el tab los excluía.
+export const esAusente = (r: AttendanceRecord) => r.status !== "present" && r.status !== "late";
+export const esOtroPresente = (r: AttendanceRecord) => !!r.absenceReason?.toLowerCase().includes("adicional");
+export const tieneHorasExtras = (r: AttendanceRecord) => (r.overtimeHours || 0) > 0;
+
 const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attendance }) => {
   return (
     <div className="overflow-auto max-h-[calc(100vh-320px)] rounded border border-gray-200 dark:border-gray-700">
@@ -865,7 +872,7 @@ export const RequestsPage: React.FC = () => {
                 <FontAwesomeIcon icon={faUserSlash} className="lg:h-5 w-5 opacity-80" />
                 <div className="flex gap-2 items-center">
                   <span className="text-sm font-medium opacity-80">Ausentes</span>
-                  <span className="lg:text-lg font-bold">{selectedReport.attendance.filter((r) => r.status !== "present" && r.status !== "late").length}</span>
+                  <span className="lg:text-lg font-bold">{selectedReport.attendance.filter(esAusente).length}</span>
                 </div>
               </div>
 
@@ -905,13 +912,13 @@ export const RequestsPage: React.FC = () => {
               Asistencia del Personal ({mergedAttendance.length})
             </button>
             <button onClick={() => setDetailTab("additional")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${detailTab === "additional" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
-              Otros Presentes ({mergedAttendance.filter((r) => r.absenceReason?.toLowerCase().includes("adicional")).length})
+              Otros Presentes ({mergedAttendance.filter(esOtroPresente).length})
             </button>
             <button onClick={() => setDetailTab("absences")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${detailTab === "absences" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
-              Ausentes | Reemplazos ({selectedReport.attendance.filter((r) => r.status !== "present" && r.status !== "late").length})
+              Ausentes | Reemplazos ({selectedReport.attendance.filter(esAusente).length})
             </button>
             <button onClick={() => setDetailTab("overtime")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${detailTab === "overtime" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
-              Horas Extras ({selectedReport.attendance.filter((r) => (r.overtimeHours || 0) > 0).length})
+              Horas Extras ({selectedReport.attendance.filter(tieneHorasExtras).length})
             </button>
             <button onClick={() => setDetailTab("comments")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${detailTab === "comments" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
               Comentarios ({selectedReport.comments ? 1 : 0})
@@ -932,7 +939,7 @@ export const RequestsPage: React.FC = () => {
 
             {detailTab === "additional" &&
               (() => {
-                const additionalRecords = mergedAttendance.filter((r) => r.absenceReason?.toLowerCase().includes("adicional"));
+                const additionalRecords = mergedAttendance.filter(esOtroPresente);
                 return additionalRecords.length > 0 ? (
                   <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-0 overflow-hidden animate-fade-in">
                     <div className="p-4">
@@ -946,7 +953,7 @@ export const RequestsPage: React.FC = () => {
 
             {detailTab === "absences" &&
               (() => {
-                const absentRecords = selectedReport.attendance.filter((r) => r.status !== "present" && r.status !== "late");
+                const absentRecords = selectedReport.attendance.filter(esAusente);
 
                 // Group by available log types
                 const dynamicBlocks = logTypes
@@ -968,7 +975,7 @@ export const RequestsPage: React.FC = () => {
 
             {detailTab === "overtime" &&
               (() => {
-                const overtimeRecords = selectedReport.attendance.filter((r) => (r.overtimeHours || 0) > 0);
+                const overtimeRecords = selectedReport.attendance.filter(tieneHorasExtras);
 
                 return overtimeRecords.length > 0 ? (
                   <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-0 overflow-hidden animate-fade-in">
@@ -1156,9 +1163,14 @@ export const RequestsPage: React.FC = () => {
                   <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Total Registros de Asistencia">
                     Registros
                   </th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Ausentes</th>
+                  <th className="text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Ausentes | Reemplazos</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Otros Presentes</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Hs. Extras</th>
+                  <th className="text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Personas con horas extras">
+                    Horas Extras
+                  </th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Comentarios del coordinador">
+                    Comentarios
+                  </th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Enviado Por</th>
                   <th className="text-right py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
                 </tr>
@@ -1221,20 +1233,29 @@ export const RequestsPage: React.FC = () => {
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 font-medium">{report.attendance.length}</td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                       {(() => {
-                        const absentCount = report.attendance.filter((r) => r.status !== "present").length;
+                        const absentCount = report.attendance.filter(esAusente).length;
                         return absentCount > 0 ? <span className="text-red-600 dark:text-gray-300 font-medium">{absentCount}</span> : "0";
                       })()}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                       {(() => {
-                        const otrosPresentes = report.attendance.filter((r) => r.absenceReason?.toLowerCase().includes("adicional")).length;
+                        const otrosPresentes = report.attendance.filter(esOtroPresente).length;
                         return otrosPresentes > 0 ? <span className="text-amber-600 dark:text-amber-400 font-medium">{otrosPresentes}</span> : "0";
                       })()}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                       {(() => {
-                        const overtimeCount = report.attendance.filter((r) => r.hasOvertime).length;
+                        const overtimeCount = report.attendance.filter(tieneHorasExtras).length;
                         return overtimeCount > 0 ? <span className="text-green-600 dark:text-green-400 font-medium">{overtimeCount}</span> : "0";
+                      })()}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                      {(() => {
+                        // `comments` es un único texto libre por novedad, no una lista: el contador da 0 o 1,
+                        // igual que el tab "Comentarios (n)" del detalle. Si alguna vez pasa a ser varios,
+                        // los dos lugares tienen que cambiar juntos.
+                        const tieneComentario = (report.comments || "").trim().length > 0;
+                        return tieneComentario ? <span className="text-yellow-600 dark:text-yellow-400 font-medium">1</span> : "0";
                       })()}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{report.submittedBy}</td>

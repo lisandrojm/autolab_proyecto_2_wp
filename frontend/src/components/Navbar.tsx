@@ -117,10 +117,15 @@ const EMPRESAS_PATH = '/empresas';
  * se configura y casi no se toca.
  *
  * `/users` va PRIMERO porque es la entidad; Áreas, Cargos, Niveles y Roles son los atributos con los
- * que se la describe, y van alfabéticos detrás. Mismo criterio que el membrete en "Plantillas".
+ * que se la describe. Mismo criterio que el membrete en "Plantillas".
+ *
+ * Turnos rompe el orden alfabético a propósito y va pegado a Áreas: son el mismo tipo de dato —el par
+ * área/turno con el que se ubica a una persona en un proyecto y con el que se carga cada novedad—, y
+ * separarlos por Cargos y Niveles obligaba a buscar en dos lugares lo que siempre se toca junto.
+ * Estaba suelto en Configuración, entre catálogos que no tienen nada que ver.
  */
 const USUARIOS_PATH = '/users';
-const USUARIOS_PATHS = [USUARIOS_PATH, '/areas', '/positions', '/levels', '/roles'];
+const USUARIOS_PATHS = [USUARIOS_PATH, '/areas', '/shifts', '/positions', '/levels', '/roles'];
 
 /**
  * Subgrupo "Documentos" (dentro de Configuración): la integración con Dropbox, entera.
@@ -450,7 +455,7 @@ export const MobileNavbar: React.FC = () => {
 
     // Ojo: los paths de CONFIG_GROUPS (Plantillas, ARCA, Usuarios, Documentos) NO van acá: se sacan
     // del listado plano para meterlos adentro de su subgrupo, y dejarlos también acá los duplicaría.
-    const configPaths = ['/requests/config', '/order-types', '/shifts', '/vacations-rules', '/holidays', '/clients', '/centros-costo', '/bancos', '/contratos', '/releases-tipos', '/admin/sedes'];
+    const configPaths = ['/requests/config', '/order-types', '/vacations-rules', '/holidays', '/clients', '/centros-costo', '/bancos', '/contratos', '/releases-tipos', '/admin/sedes'];
     // "Mi Perfil" está en los DOS lados a propósito: como atajo en la barra de arriba (junto al
     // usuario) y acá, para quien lo busca recorriendo el menú. Entra en el orden alfabético.
     const profileItem = { path: '/mi-perfil', icon: faIdCard, label: 'Mi Perfil', scope: 'global' as const };
