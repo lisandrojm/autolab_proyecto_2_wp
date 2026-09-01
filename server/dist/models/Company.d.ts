@@ -83,6 +83,27 @@ export interface ICompany extends Document {
      */
     sucursalIds?: mongoose.Types.ObjectId[];
     /**
+     * QUÉ ACTIVIDADES DECLARÓ **ESTA** EMPLEADORA EN CADA DOMICILIO.
+     *
+     * El domicilio es un registro compartido —su dirección, su código y su localidad son los mismos—
+     * pero las actividades no lo son: ARCA las declara POR CUIT. Dos empleadoras en el mismo domicilio
+     * pueden tener declaradas actividades distintas, y el organismo rechaza un alta con una actividad
+     * que ESE CUIT no declaró ahí, aunque otra empresa sí la tenga.
+     *
+     * Con las actividades solo en `ArcaSucursal`, el formulario de contrato ofrecía a todas las
+     * empleadoras las mismas: un alta válida para una y rechazada para la otra, sin nada que lo
+     * anticipara.
+     *
+     * VACÍO = SIN RECORTAR. Si una empresa no tiene fila para un domicilio, rigen todas las
+     * actividades del domicilio. Es lo que había hasta ahora, y evita que agregar este campo deje sin
+     * actividad a los contratos existentes hasta que alguien lo complete empresa por empresa.
+     */
+    sucursalActividades?: Array<{
+        sucursalId: mongoose.Types.ObjectId;
+        /** Códigos de actividad, de los declarados en ese domicilio. */
+        actividades: string[];
+    }>;
+    /**
      * Valores por defecto de ARCA para los contratos de esta empleadora.
      *
      * No son nomencladores (esos son universales) ni datos del contrato: son la elección habitual de

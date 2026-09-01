@@ -32,6 +32,8 @@ export interface AfipCatalogs {
     /** Obras sociales registradas para este CUIT (ids del catálogo). Vacío = todavía no se extrajo el padrón. */
     obrasSocialesIds?: string[];
     sucursalIds?: string[];
+    /** Qué actividades declaró ESTA empleadora en cada domicilio. Ver `Company.sucursalActividades`. */
+    sucursalActividades?: Array<{ sucursalId: string; actividades: string[] }>;
     convenioIds?: string[];
     /**
      * La elección habitual de esta empleadora dentro del nomenclador (ARCA → Defaults).
@@ -412,7 +414,25 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
   const sucursalDefault = (empresa as { defaultsArca?: { sucursalId?: string | null } } | undefined)?.defaultsArca?.sucursalId;
   const sucursalId = row.sucursalArcaId || sucursalDefault || "";
   const sucursal = sucursalId ? sucursalesEmpresa.find((s) => s._id === String(sucursalId)) : undefined;
-  const actividades = sucursal?.actividades?.filter((a) => !!a.codigo) || [];
+  /*
+    LAS ACTIVIDADES SE RECORTAN POR EMPLEADORA.
+
+    El domicilio es un registro compartido, pero las actividades ARCA las declara POR CUIT: dos
+    empleadoras en el mismo domicilio pueden tener declaradas distintas, y el organismo rechaza un
+    alta con una que ESE CUIT no declaró ahí — aunque la otra empresa sí la tenga. Ofrecer las del
+    domicilio a todas producía un alta válida para una y rechazada para la otra, sin nada que lo
+    anticipara.
+
+    SIN FILA PARA ESE DOMICILIO NO SE RECORTA NADA. Es lo que había hasta ahora, y evita que este
+    campo, recién agregado y todavía vacío, deje sin actividad a los contratos que hoy funcionan.
+    Una fila con la lista vacía sí recorta: significa «esta empleadora no declaró ninguna acá».
+  */
+  const declaradasPorLaEmpresa = (empresa as { sucursalActividades?: Array<{ sucursalId: string; actividades: string[] }> } | undefined)?.sucursalActividades?.find(
+    (x) => String(x.sucursalId) === String(sucursalId),
+  );
+  const actividades = (sucursal?.actividades?.filter((a) => !!a.codigo) || []).filter(
+    (a) => !declaradasPorLaEmpresa || declaradasPorLaEmpresa.actividades.map(String).includes(String(a.codigo)),
+  );
   const elegida = row.actividadArca ? actividades.find((a) => a.codigo === row.actividadArca) : undefined;
 
   let actividad = "";

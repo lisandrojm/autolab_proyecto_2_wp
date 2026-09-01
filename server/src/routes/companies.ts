@@ -42,6 +42,14 @@ const companySchema = z.object({
   convenioIds: z.array(z.string()).optional(),
   /** Ids del catálogo de Sucursales de ARCA. Se manda la lista completa: reemplaza la anterior. */
   sucursalIds: z.array(z.string()).optional(),
+  /**
+   * Qué actividades declaró ESTA empleadora en cada domicilio. Reemplaza la lista.
+   *
+   * Una fila con `actividades: []` significa «ninguna declarada acá», y es distinto de no tener
+   * fila —que significa «no se recortó, valen todas las del domicilio»—. Por eso la lista se manda
+   * entera y no se hace merge: el merge no puede expresar «lo dejé vacío a propósito».
+   */
+  sucursalActividades: z.array(z.object({ sucursalId: z.string(), actividades: z.array(z.string()) })).optional(),
   /** Elección habitual de esta empleadora dentro del nomenclador, para no repetirla en cada alta. */
   defaultsArca: z
     .object({

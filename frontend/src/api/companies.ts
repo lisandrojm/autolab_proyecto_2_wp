@@ -44,6 +44,14 @@ export interface Company {
    */
   sucursalIds?: string[];
   /**
+   * Qué actividades declaró ESTA empleadora en cada domicilio.
+   *
+   * El domicilio es compartido pero las actividades ARCA las declara por CUIT: dos empresas en el
+   * mismo domicilio pueden tener declaradas distintas. Sin fila para un domicilio rigen todas las
+   * suyas; con la lista vacía, ninguna.
+   */
+  sucursalActividades?: Array<{ sucursalId: string; actividades: string[] }>;
+  /**
    * Elección habitual de esta empleadora dentro del nomenclador de ARCA, para no repetirla en cada
    * alta. Guarda el código tal cual viaja al TXT.
    */

@@ -640,6 +640,21 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
   const [sucursales, setSucursales] = useState<ArcaSucursal[]>([]);
   const [cargando, setCargando] = useState(true);
   const [ids, setIds] = useState<string[]>(empresa.sucursalIds || []);
+  /*
+    QUÉ ACTIVIDADES DECLARÓ ESTA EMPLEADORA EN CADA DOMICILIO.
+
+    El domicilio es un registro compartido, pero las actividades ARCA las declara POR CUIT: dos
+    empleadoras en el mismo domicilio pueden tener declaradas distintas, y el organismo rechaza un
+    alta con una que ESE CUIT no declaró ahí. Mientras esto vivía solo en el domicilio, el formulario
+    de contrato ofrecía las mismas a todas.
+
+    SIN FILA = TODAS. No tener entrada para un domicilio significa «no se recortó», que es lo que
+    había hasta ahora; tenerla vacía significa «ninguna declarada acá». Son cosas distintas y por eso
+    el mapa arranca solo con lo que la empresa ya tiene guardado.
+  */
+  const [actividadesPorSucursal, setActividadesPorSucursal] = useState<Record<string, string[]>>(
+    Object.fromEntries((empresa.sucursalActividades || []).map((x: any) => [String(x.sucursalId), (x.actividades || []).map(String)])),
+  );
 
   useEffect(() => {
     arcaSucursalesAPI
@@ -648,9 +663,25 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
       .catch(() => setSucursales([]))
       .finally(() => setCargando(false));
   }, []);
-  useEffect(() => setIds(empresa.sucursalIds || []), [empresa]);
+  useEffect(() => {
+    setIds(empresa.sucursalIds || []);
+    setActividadesPorSucursal(Object.fromEntries((empresa.sucursalActividades || []).map((x: any) => [String(x.sucursalId), (x.actividades || []).map(String)])));
+  }, [empresa]);
 
-  const sucio = JSON.stringify([...ids].sort()) !== JSON.stringify([...(empresa.sucursalIds || [])].sort());
+  const guardadas = Object.fromEntries((empresa.sucursalActividades || []).map((x: any) => [String(x.sucursalId), [...(x.actividades || [])].map(String).sort()]));
+  const enPantalla = Object.fromEntries(Object.entries(actividadesPorSucursal).map(([k, v]) => [k, [...v].sort()]));
+  const sucio =
+    JSON.stringify([...ids].sort()) !== JSON.stringify([...(empresa.sucursalIds || [])].sort()) || JSON.stringify(guardadas) !== JSON.stringify(enPantalla);
+
+  /** Prende o apaga una actividad para esta empleadora en ese domicilio. */
+  const alternarActividad = (sucursalId: string, codigo: string, todas: string[]) => {
+    setActividadesPorSucursal((prev) => {
+      // Sin fila previa rigen TODAS: la primera vez que se destilda una, se parte de la lista completa.
+      const actual = prev[sucursalId] ?? todas;
+      const next = actual.includes(codigo) ? actual.filter((c) => c !== codigo) : [...actual, codigo];
+      return { ...prev, [sucursalId]: next };
+    });
+  };
   const elegidas = useMemo(() => sucursales.filter((s) => ids.includes(s._id)), [sucursales, ids]);
   const porDefectoId = empresa.defaultsArca?.sucursalId || '';
 
@@ -669,7 +700,7 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
     <SeccionEmpleador
       titulo="Domicilios de explotación"
       descripcion="Los domicilios que este CUIT tiene declarados en el padrón, cada uno con sus actividades. El alta declara UNO de ellos y una de sus actividades."
-      nota="Las actividades disponibles se DERIVAN de estos domicilios: no se configuran aparte. ARCA rechaza una actividad que no esté declarada para el domicilio elegido, aunque exista en el nomenclador."
+      nota="Las actividades salen de estos domicilios, pero se declaran POR CUIT: tildá cuáles declaró ESTA empleadora en cada uno. ARCA rechaza un alta con una actividad que este CUIT no declaró ahí, aunque otra empresa sí la tenga."
     >
       <div className="flex justify-end">
         <BotonGuardar
@@ -681,7 +712,18 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
             // rechaza, y el error aparecería lejos de esta pantalla.
             const pierdeElDefault = !!porDefectoId && !ids.includes(porDefectoId);
             return guardar(
-              { sucursalIds: ids, ...(pierdeElDefault ? { defaultsArca: { ...(empresa.defaultsArca || {}), sucursalId: null } } : {}) } as any,
+              {
+                sucursalIds: ids,
+                /*
+                  El recorte por empleadora se manda ENTERO y solo de los domicilios que siguen
+                  asignados: una fila para un domicilio que se acaba de quitar quedaría huérfana y
+                  volvería a aplicar si alguien lo reasigna, con un recorte que nadie recuerda.
+                */
+                sucursalActividades: Object.entries(actividadesPorSucursal)
+                  .filter(([sucursalId]) => ids.includes(sucursalId))
+                  .map(([sucursalId, actividades]) => ({ sucursalId, actividades })),
+                ...(pierdeElDefault ? { defaultsArca: { ...(empresa.defaultsArca || {}), sucursalId: null } } : {}),
+              } as any,
               `${ids.length} domicilio(s) asignado(s) a ${empresa.razonSocial}.${pierdeElDefault ? ' Se quitó el domicilio por defecto: ya no está entre los declarados.' : ''}`,
             );
           }}
@@ -739,14 +781,52 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
                 {(s.actividades || []).length === 0 ? (
                   <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">Sin actividades declaradas: los contratos de este domicilio no pueden generar el alta.</p>
                 ) : (
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {(s.actividades || []).map((a) => (
-                      <span key={a.codigo} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300">
-                        <span className="font-mono">{a.codigo}</span>
-                        <span className="truncate max-w-[22rem]">{a.descripcion}</span>
-                      </span>
-                    ))}
-                  </div>
+                  (() => {
+                    const todas = (s.actividades || []).map((a) => String(a.codigo));
+                    const declaradas = actividadesPorSucursal[s._id];
+                    const activa = (codigo: string) => !declaradas || declaradas.includes(codigo);
+                    const ninguna = declaradas?.length === 0;
+                    return (
+                      <>
+                        {/*
+                          SE TILDA POR EMPLEADORA, y por eso son botones y no etiquetas.
+
+                          Antes esto mostraba las actividades del domicilio, iguales para todas las
+                          empresas. Pero ARCA las declara POR CUIT: el organismo rechaza un alta con
+                          una actividad que ESTE CUIT no declaró en ese domicilio, aunque otra empresa
+                          sí la tenga. Mostrarlas todas ofrecía a una empleadora actividades que en su
+                          alta iban a ser rechazadas, sin nada que lo anticipara.
+                        */}
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          {(s.actividades || []).map((a) => {
+                            const on = activa(String(a.codigo));
+                            return (
+                              <button
+                                key={a.codigo}
+                                type="button"
+                                onClick={() => alternarActividad(s._id, String(a.codigo), todas)}
+                                title={on ? `Quitar ${a.codigo}: esta empleadora no la declaró en este domicilio` : `Declarar ${a.codigo} para esta empleadora en este domicilio`}
+                                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] border transition-colors ${
+                                  on
+                                    ? 'bg-blue-50 dark:bg-blue-900/25 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                                    : 'bg-transparent text-gray-400 dark:text-gray-500 border-gray-200 dark:border-gray-700 line-through'
+                                }`}
+                              >
+                                <FontAwesomeIcon icon={on ? faCheck : faXmark} className="h-2.5 w-2.5" />
+                                <span className="font-mono">{a.codigo}</span>
+                                <span className="truncate max-w-[22rem]">{a.descripcion}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {ninguna && (
+                          <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                            Esta empleadora no declaró ninguna actividad acá: sus contratos en este domicilio no van a poder generar el alta.
+                          </p>
+                        )}
+                      </>
+                    );
+                  })()
                 )}
               </div>
             ))}
