@@ -432,7 +432,7 @@ export const ImportUsersWpPage: React.FC = () => {
                           <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre Completo</th>
                           <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Correo Electrónico</th>
                           <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contraseña (DNI)</th>
-                          <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Proyectos · Rol Frame · Contrato</th>
+                          <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Proyectos · Rol Empresa · Contrato</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
@@ -453,7 +453,7 @@ export const ImportUsersWpPage: React.FC = () => {
                                         <div key={pi} className="rounded-md border border-gray-200 dark:border-gray-700 px-3 py-2">
                                           <div className="font-semibold text-gray-900 dark:text-white">{p.nombre_proyecto || "—"}</div>
                                           <div className="text-xs text-gray-500 dark:text-gray-400">
-                                            Rol Frame: <span className="font-medium text-gray-700 dark:text-gray-200">{p.nombre_rol_frame || "—"}</span>
+                                            Rol Empresa: <span className="font-medium text-gray-700 dark:text-gray-200">{p.nombre_rol_frame || "—"}</span>
                                           </div>
                                           {p.contracts.length > 0 && (
                                             <ul className="mt-1 space-y-0.5 text-xs text-gray-500 dark:text-gray-400">

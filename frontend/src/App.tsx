@@ -11,8 +11,7 @@ import { RegistroPage } from "./pages/RegistroPage";
 import { ClientsPage } from "./pages/ClientsPage";
 
 import { RolesPage } from "./pages/RolesPage";
-import { PositionsPage } from "./pages/PositionsPage";
-import { LevelsPage } from "./pages/LevelsPage";
+import { RolesEmpresaPage } from "./pages/RolesEmpresaPage";
 import { AreasPage } from "./pages/AreasPage";
 import { ShiftsPage } from "./pages/ShiftsPage";
 
@@ -329,25 +328,22 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              {/* Funciones FRAME ahora es un tab dentro de Categorías, no una página propia. */}
-              <Route path="/funciones-frame" element={<Navigate to="/arca/categorias" replace />} />
-              <Route path="/admin/roles-frame" element={<Navigate to="/arca/categorias" replace />} />
               <Route
-                path="/positions"
+                path="/roles-empresa"
                 element={
                   <ProtectedRoute>
-                    <PositionsPage />
+                    <RolesEmpresaPage />
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/levels"
-                element={
-                  <ProtectedRoute>
-                    <LevelsPage />
-                  </ProtectedRoute>
-                }
-              />
+              {/* Los rol_frame salieron de ARCA → Categorías y son su propia pantalla, bajo Usuarios.
+                  Los redirects viejos apuntaban a la de Categorías: ahora van al ABM. */}
+              <Route path="/funciones-frame" element={<Navigate to="/roles-empresa" replace />} />
+              <Route path="/admin/roles-frame" element={<Navigate to="/roles-empresa" replace />} />
+              {/* Cargos y Niveles se eliminaron de la aplicación. Los redirects quedan para que un
+                  favorito o un link viejo caiga en Áreas y no en una pantalla en blanco. */}
+              <Route path="/positions" element={<Navigate to="/areas" replace />} />
+              <Route path="/levels" element={<Navigate to="/areas" replace />} />
               <Route
                 path="/areas"
                 element={

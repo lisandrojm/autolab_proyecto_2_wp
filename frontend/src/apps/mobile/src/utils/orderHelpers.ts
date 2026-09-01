@@ -16,15 +16,6 @@ export const getUserRole = (user: any): string => {
   return "Empleado";
 };
 
-export const getUserPosition = (user: any): string => {
-  if (!user) return "Sin puesto asignado";
-  if (typeof user === "string") return "Sin puesto asignado";
-  if (user.positionId && typeof user.positionId === "object" && user.positionId.name) {
-    return user.positionId.name;
-  }
-  return "Sin puesto asignado";
-};
-
 export const getUserRoleFrame = (user: any): string => {
   if (!user || typeof user === "string") return "Sin role frame asignado";
 

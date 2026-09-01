@@ -235,9 +235,9 @@ const helpResources = {
       "holidays.items": ["**Feriado**: Día no laborable con su fecha y descripción.", "**Impacto**: Los feriados se consideran en el cálculo de asistencias, horas extra y liquidaciones.", "**Gestión**: Crear, editar y eliminar feriados del calendario."],
 
       // Funciones FRAME
-      "funcionesFrame.title": "Información de Funciones FRAME",
-      "funcionesFrame.description": "Catálogo de funciones / roles FRAME asignables al personal en los proyectos.",
-      "funcionesFrame.items": ["**Función FRAME**: Rol técnico del personal en el proyecto (ej. Camarógrafo, Sonidista, Maquillador).", "**Uso**: Se asigna a cada miembro del equipo y aparece en contratos y novedades.", "**Gestión**: Crear, editar y eliminar funciones FRAME."],
+      "funcionesFrame.title": "Información de Roles Empresa",
+      "funcionesFrame.description": "El oficio con el que cada persona trabaja en una producción. No confundir con Usuarios → Roles, que son los permisos de la plataforma.",
+      "funcionesFrame.items": ["**Rol Empresa**: el oficio del personal en la producción (ej. Camarógrafo, Sonidista, Maquillador).", "**No es un permiso**: quién ve qué pantalla se decide en Usuarios → Roles. Acá se define con qué trabaja la persona.", "**Categorías**: cada rol mapea a las categorías de ARCA con las que se liquida su contrato.", "**Gestión**: crear, editar y eliminar."],
 
       // Mi Perfil
       "miPerfil.title": "Información de Mi Perfil",
@@ -633,7 +633,7 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
   empresas: { title: "Información de Empresas", size: "sm", content: buildHelpContent("empresas") },
   bancos: { title: "Información de Entidades Financieras", size: "sm", content: buildHelpContent("bancos") },
   holidays: { title: "Información de Feriados", size: "sm", content: buildHelpContent("holidays") },
-  funcionesFrame: { title: "Información de Funciones FRAME", size: "sm", content: buildHelpContent("funcionesFrame") },
+  funcionesFrame: { title: "Información de Roles Empresa", size: "sm", content: buildHelpContent("funcionesFrame") },
   miPerfil: { title: "Información de Mi Perfil", size: "sm", content: buildHelpContent("miPerfil") },
   requestsConfig: { title: "Configuración de Novedades", size: "sm", content: buildHelpContent("requestsConfig") },
   obrasSociales: { title: "Información de Obras Sociales", size: "md", content: buildHelpContent("obrasSociales") },

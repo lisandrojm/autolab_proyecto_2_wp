@@ -89,8 +89,7 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
       "admin_users:view",
       "admin_areas:view",
       "config_shifts:view",
-      "admin_positions:view",
-      "admin_levels:view",
+      "admin_roles_empresa:view",
       "admin_roles:view",
       "config_vacations:view",
       // Import WP va último en el menú por ser temporal
@@ -138,7 +137,7 @@ const MODULE_LABELS: Record<string, string> = {
   "config_convenios:view": "ARCA | Convenios",
   "config_categorias_sat:view": "ARCA | Categorías",
   // Categorías tiene dos pestañas y cada una su permiso: con este solo se ve la de Funciones.
-  "config_frame_functions:view": "ARCA | Categorías → Funciones FRAME",
+  "config_frame_functions:view": "Usuarios | Roles Empresa (mapeo a categorías)",
   "config_afip:view": "ARCA | Conexión y Cómo funciona",
 
   // Configuración
@@ -166,9 +165,8 @@ const MODULE_LABELS: Record<string, string> = {
   "admin_users:view": "Usuarios | Usuarios",
   "admin_areas:view": "Usuarios | Áreas",
   "config_shifts:view": "Usuarios | Turnos",
-  "admin_positions:view": "Usuarios | Cargos",
-  "admin_levels:view": "Usuarios | Niveles",
   "admin_roles:view": "Usuarios | Roles",
+  "admin_roles_empresa:view": "Usuarios | Roles Empresa",
 
   "config_vacations:view": "Vacaciones",
   "admin_users_import:view": "Import WP",

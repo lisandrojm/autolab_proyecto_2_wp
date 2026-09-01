@@ -977,7 +977,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             projectIds: u.projectIds?.map((p: any) => typeof p === "string" ? p : p?._id || p?.id).filter(Boolean) || [],
             role: u.role,
             roles: u.roles,
-            positionName: typeof u.positionId === "object" ? u.positionId.name : undefined,
             isActive: (u.metadata as any)?.activo !== false,
             hasActiveContract: !!u.metadata?.projects?.some((p) =>
               p.contracts?.some((c) => {
@@ -1229,7 +1228,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                       areaShiftAssignments: normalizeAreaShiftAssignments(activeContract?.areaShiftAssignments),
                     };
                   }) || [],
-                positionName: typeof au.positionId === "object" ? au.positionId?.name : undefined,
               }),
             );
 
@@ -5157,7 +5155,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                       return {
                         id: uId,
                         name: emp ? emp.name : typeof user === "object" ? `${user.firstName || ""} ${user.lastName || ""}` : "Colaborador",
-                        positionName: emp ? emp.positionName : typeof user === "object" ? (typeof user.positionId === "object" ? user.positionId.name : undefined) : undefined,
+                        positionName: emp ? emp.positionName : undefined,
                         roles: emp ? emp.roles : typeof user === "object" ? user.roles : [],
                         firstName: emp ? emp.name.split(" ")[0] : typeof user === "object" ? user.firstName : "",
                         lastName: emp ? emp.name.split(" ").slice(1).join(" ") : typeof user === "object" ? user.lastName : "",

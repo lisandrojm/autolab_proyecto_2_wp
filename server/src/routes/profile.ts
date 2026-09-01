@@ -5,7 +5,6 @@ import { UserProfile } from "../models/UserProfile.js";
 import { Vacation } from "../models/Vacation.js";
 import { User } from "../models/User.js";
 import { Area } from "../models/Area.js";
-import { Position } from "../models/Position.js";
 import { RoleFrame } from "../models/RoleFrame.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";

@@ -7,8 +7,6 @@ import { VacationConfig } from "../models/VacationConfig.js";
 import UserProject from "../models/UserProject.js";
 import { Project } from "../models/Project.js";
 import { Area } from "../models/Area.js";
-import { Position } from "../models/Position.js";
-import { Level } from "../models/Level.js";
 import { Shift } from "../models/Shift.js";
 
 async function run() {
@@ -16,7 +14,7 @@ async function run() {
     process.env.MONGO_DB_NAME = "weprodu_production_integration";
     await connectDB();
     console.log("Connected to DB successfully.");
-    console.log("Referencing models to register them:", UserProject.modelName, Project.modelName, Area.modelName, Position.modelName, Level.modelName, Shift.modelName);
+    console.log("Referencing models to register them:", UserProject.modelName, Project.modelName, Area.modelName, Shift.modelName);
 
     const tenants = await Tenant.find();
     console.log(`Found ${tenants.length} tenants in database.`);

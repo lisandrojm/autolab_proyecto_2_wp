@@ -91,7 +91,7 @@ export const BannerFuncionesRotas: React.FC = () => {
             ))}
           </div>
           <p className="text-xs text-gray-600 dark:text-gray-400">
-            Se arreglan asignándoles las categorías del convenio que les corresponde, desde el ABM de Funciones FRAME. Para las que no tienen un reemplazo obvio —«Doblajista», «Coordinador de
+            Se arreglan asignándoles las categorías del convenio que les corresponde, desde Usuarios → Roles Empresa. Para las que no tienen un reemplazo obvio —«Doblajista», «Coordinador de
             Intimidad»— la decisión es de quien conoce el convenio: el sistema no adivina una categoría por parecido de nombre.
           </p>
         </div>

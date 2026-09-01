@@ -117,7 +117,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   const passwordsCoinciden = !!newPassword && newPassword === repetirPassword;
   const passwordValida = largoOk && passwordsCoinciden;
 
-  // Rol/es Frame search
+  // Rol/es Empresa search
   const [roleFrameSearch, setRoleFrameSearch] = useState("");
 
   // Para inicializar el form una sola vez por apertura
@@ -726,7 +726,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
 
                 <div>
                   <div className="flex items-center gap-4 mb-2">
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Rol/es Frame</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Rol/es Empresa</label>
                     <div className="relative w-48 md:w-64">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400" />

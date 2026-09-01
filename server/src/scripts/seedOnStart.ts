@@ -11,9 +11,7 @@ import { Order } from "../models/Order.js";
 import { Notification } from "../models/Notification.js";
 import { Calendar } from "../models/Calendar.js";
 import { OrderConfig } from "../models/OrderConfig.js";
-import { Position } from "../models/Position.js";
 import { Area } from "../models/Area.js";
-import { Level } from "../models/Level.js";
 import { VacationConfig } from "../models/VacationConfig.js";
 import { Vacation } from "../models/Vacation.js";
 
@@ -220,15 +218,13 @@ async function ensureUser(params: {
   firstName: string;
   lastName: string;
   isActive?: boolean;
-  positionId?: Types.ObjectId;
-  levelId?: Types.ObjectId;
   areaId?: Types.ObjectId;
   hireDate?: Date;
   extraVacationDays?: number;
   carryOverVacationDays?: number;
   isSystem?: boolean;
 }) {
-  const { tenantId, email, password, roleNames, firstName, lastName, isActive = true, positionId, levelId, areaId, hireDate = new Date(), extraVacationDays = 0, carryOverVacationDays = 0, isSystem = false } = params;
+  const { tenantId, email, password, roleNames, firstName, lastName, isActive = true, areaId, hireDate = new Date(), extraVacationDays = 0, carryOverVacationDays = 0, isSystem = false } = params;
 
   let user = await User.findOne({ tenantId, email });
 
@@ -260,8 +256,6 @@ async function ensureUser(params: {
       firstName,
       lastName,
       isActive,
-      positionId,
-      levelId,
       areaId,
       hireDate,
       extraVacationDays,
@@ -309,14 +303,6 @@ async function ensureUser(params: {
     if (typeof isActive === "boolean" && user.metadata?.activo !== isActive) {
       if (!user.metadata) user.metadata = {};
       user.metadata.activo = isActive;
-      isModified = true;
-    }
-    if (positionId && String((user as any).positionId) !== String(positionId)) {
-      (user as any).positionId = positionId;
-      isModified = true;
-    }
-    if (levelId && String((user as any).levelId) !== String(levelId)) {
-      (user as any).levelId = levelId;
       isModified = true;
     }
     if (areaId && String((user as any).areaId) !== String(areaId)) {
@@ -526,7 +512,7 @@ export async function seedOnStart() {
     console.log("👥 Seeding Roles...");
 
     // 1. Admin (Sistema)
-    const adminPerms = ["client:view", "admin_clients:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", "admin_areas:view", "admin_positions:view", "admin_levels:view", "admin_users:view", "admin_roles:view", "config_orders:view", "config_vacations:view", "config_activity_logs:view", "config_pdf_templates:view", "config_releases:view", "config_holidays:view", "mobile_collaborator:view"];
+    const adminPerms = ["client:view", "admin_clients:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", "admin_areas:view", "admin_users:view", "admin_roles:view", "config_orders:view", "config_vacations:view", "config_activity_logs:view", "config_pdf_templates:view", "config_releases:view", "config_holidays:view", "mobile_collaborator:view"];
     await ensureRole(tenantId, "Admin", adminPerms, "Rol de administrador del sistema", false, true);
 
     // 2. Responsable de Proyecto (Sistema)
@@ -544,235 +530,6 @@ export async function seedOnStart() {
     await ensureRole(tenantId, "User", userPerms, "User role", true, false);
 
     console.log("✅ Roles seeded");
-
-    // ---- POSITIONS ----
-    console.log("📋 Seeding Positions...");
-    let positionDirector = await Position.findOne({ tenantId, name: "Director" });
-    if (!positionDirector) {
-      positionDirector = await Position.create({
-        tenantId,
-        name: "Director",
-        description: "Responsable de la dirección estratégica y toma de decisiones",
-      });
-      console.log(`✅ Created Position: Director (ID: ${positionDirector._id})`);
-    } else {
-      console.log(`✔️ Position exists: Director (ID: ${positionDirector._id})`);
-    }
-
-    let positionProductor = await Position.findOne({ tenantId, name: "Productor" });
-    if (!positionProductor) {
-      positionProductor = await Position.create({
-        tenantId,
-        name: "Productor",
-        description: "Responsable de la producción y coordinación de proyectos",
-      });
-      console.log(`✅ Created Position: Productor (ID: ${positionProductor._id})`);
-    } else {
-      console.log(`✔️ Position exists: Productor (ID: ${positionProductor._id})`);
-    }
-
-    let positionEditor = await Position.findOne({ tenantId, name: "Editor" });
-    if (!positionEditor) {
-      positionEditor = await Position.create({
-        tenantId,
-        name: "Editor",
-        description: "Responsable de la edición y creación de contenido",
-      });
-      console.log(`✅ Created Position: Editor (ID: ${positionEditor._id})`);
-    } else {
-      console.log(`✔️ Position exists: Editor (ID: ${positionEditor._id})`);
-    }
-
-    // ---- LEVELS ----
-    console.log("📊 Seeding Levels...");
-
-    // NIVELES GENERALES (aplican a cualquier posición)
-    console.log("📊 Creating General Levels...");
-    let levelTrainee = await Level.findOne({ tenantId, name: "Trainee", type: "general" });
-    if (!levelTrainee) {
-      levelTrainee = await Level.create({
-        tenantId,
-        name: "Trainee",
-        description: "Nivel inicial en formación, aprendiendo los fundamentos del rol",
-        type: "general",
-      });
-      console.log(`✅ Created General Level: Trainee (ID: ${levelTrainee._id})`);
-    } else {
-      console.log(`✔️ General Level exists: Trainee (ID: ${levelTrainee._id})`);
-    }
-
-    let levelJunior = await Level.findOne({ tenantId, name: "Junior", type: "general" });
-    if (!levelJunior) {
-      levelJunior = await Level.create({
-        tenantId,
-        name: "Junior",
-        description: "Nivel de experiencia inicial con autonomía básica",
-        type: "general",
-      });
-      console.log(`✅ Created General Level: Junior (ID: ${levelJunior._id})`);
-    } else {
-      console.log(`✔️ General Level exists: Junior (ID: ${levelJunior._id})`);
-    }
-
-    let levelMid = await Level.findOne({ tenantId, name: "Mid", type: "general" });
-    if (!levelMid) {
-      levelMid = await Level.create({
-        tenantId,
-        name: "Mid",
-        description: "Nivel de experiencia intermedio con proyectos complejos",
-        type: "general",
-      });
-      console.log(`✅ Created General Level: Mid (ID: ${levelMid._id})`);
-    } else {
-      console.log(`✔️ General Level exists: Mid (ID: ${levelMid._id})`);
-    }
-
-    let levelSenior = await Level.findOne({ tenantId, name: "Senior", type: "general" });
-    if (!levelSenior) {
-      levelSenior = await Level.create({
-        tenantId,
-        name: "Senior",
-        description: "Nivel de experiencia avanzado con liderazgo y mentoría",
-        type: "general",
-      });
-      console.log(`✅ Created General Level: Senior (ID: ${levelSenior._id})`);
-    } else {
-      console.log(`✔️ General Level exists: Senior (ID: ${levelSenior._id})`);
-    }
-
-    // NIVELES ESPECÍFICOS POR CARGO
-    console.log("📊 Creating Position-Specific Levels...");
-
-    // Niveles específicos para Director
-    let levelDirectorRegional = await Level.findOne({ tenantId, name: "Director Regional", type: "position-specific", positionId: positionDirector._id });
-    if (!levelDirectorRegional) {
-      levelDirectorRegional = await Level.create({
-        tenantId,
-        name: "Director Regional",
-        description: "Director responsable de operaciones en una región específica",
-        type: "position-specific",
-        positionId: positionDirector._id,
-      });
-      console.log(`✅ Created Position-Specific Level: Director Regional for ${positionDirector.name} (ID: ${levelDirectorRegional._id})`);
-    } else {
-      console.log(`✔️ Position-Specific Level exists: Director Regional (ID: ${levelDirectorRegional._id})`);
-    }
-
-    let levelDirectorNacional = await Level.findOne({ tenantId, name: "Director Nacional", type: "position-specific", positionId: positionDirector._id });
-    if (!levelDirectorNacional) {
-      levelDirectorNacional = await Level.create({
-        tenantId,
-        name: "Director Nacional",
-        description: "Director con alcance nacional, gestiona múltiples regiones",
-        type: "position-specific",
-        positionId: positionDirector._id,
-      });
-      console.log(`✅ Created Position-Specific Level: Director Nacional for ${positionDirector.name} (ID: ${levelDirectorNacional._id})`);
-    } else {
-      console.log(`✔️ Position-Specific Level exists: Director Nacional (ID: ${levelDirectorNacional._id})`);
-    }
-
-    let levelDirectorGeneral = await Level.findOne({ tenantId, name: "Director General", type: "position-specific", positionId: positionDirector._id });
-    if (!levelDirectorGeneral) {
-      levelDirectorGeneral = await Level.create({
-        tenantId,
-        name: "Director General",
-        description: "Máximo nivel de dirección, responsable de toda la organización",
-        type: "position-specific",
-        positionId: positionDirector._id,
-      });
-      console.log(`✅ Created Position-Specific Level: Director General for ${positionDirector.name} (ID: ${levelDirectorGeneral._id})`);
-    } else {
-      console.log(`✔️ Position-Specific Level exists: Director General (ID: ${levelDirectorGeneral._id})`);
-    }
-
-    // Niveles específicos para Productor
-    let levelProductorAsistente = await Level.findOne({ tenantId, name: "Productor Asistente", type: "position-specific", positionId: positionProductor._id });
-    if (!levelProductorAsistente) {
-      levelProductorAsistente = await Level.create({
-        tenantId,
-        name: "Productor Asistente",
-        description: "Asiste en la producción de proyectos bajo supervisión",
-        type: "position-specific",
-        positionId: positionProductor._id,
-      });
-      console.log(`✅ Created Position-Specific Level: Productor Asistente for ${positionProductor.name} (ID: ${levelProductorAsistente._id})`);
-    } else {
-      console.log(`✔️ Position-Specific Level exists: Productor Asistente (ID: ${levelProductorAsistente._id})`);
-    }
-
-    let levelProductorSenior = await Level.findOne({ tenantId, name: "Productor Senior", type: "position-specific", positionId: positionProductor._id });
-    if (!levelProductorSenior) {
-      levelProductorSenior = await Level.create({
-        tenantId,
-        name: "Productor Senior",
-        description: "Gestiona proyectos complejos de forma autónoma",
-        type: "position-specific",
-        positionId: positionProductor._id,
-      });
-      console.log(`✅ Created Position-Specific Level: Productor Senior for ${positionProductor.name} (ID: ${levelProductorSenior._id})`);
-    } else {
-      console.log(`✔️ Position-Specific Level exists: Productor Senior (ID: ${levelProductorSenior._id})`);
-    }
-
-    let levelProductorEjecutivo = await Level.findOne({ tenantId, name: "Productor Ejecutivo", type: "position-specific", positionId: positionProductor._id });
-    if (!levelProductorEjecutivo) {
-      levelProductorEjecutivo = await Level.create({
-        tenantId,
-        name: "Productor Ejecutivo",
-        description: "Lidera múltiples proyectos estratégicos y coordina equipos",
-        type: "position-specific",
-        positionId: positionProductor._id,
-      });
-      console.log(`✅ Created Position-Specific Level: Productor Ejecutivo for ${positionProductor.name} (ID: ${levelProductorEjecutivo._id})`);
-    } else {
-      console.log(`✔️ Position-Specific Level exists: Productor Ejecutivo (ID: ${levelProductorEjecutivo._id})`);
-    }
-
-    // Niveles específicos para Editor
-    let levelEditorJunior = await Level.findOne({ tenantId, name: "Editor Junior", type: "position-specific", positionId: positionEditor._id });
-    if (!levelEditorJunior) {
-      levelEditorJunior = await Level.create({
-        tenantId,
-        name: "Editor Junior",
-        description: "Editor en formación, trabaja en piezas sencillas con supervisión",
-        type: "position-specific",
-        positionId: positionEditor._id,
-      });
-      console.log(`✅ Created Position-Specific Level: Editor Junior for ${positionEditor.name} (ID: ${levelEditorJunior._id})`);
-    } else {
-      console.log(`✔️ Position-Specific Level exists: Editor Junior (ID: ${levelEditorJunior._id})`);
-    }
-
-    let levelEditorContenido = await Level.findOne({ tenantId, name: "Editor de Contenido", type: "position-specific", positionId: positionEditor._id });
-    if (!levelEditorContenido) {
-      levelEditorContenido = await Level.create({
-        tenantId,
-        name: "Editor de Contenido",
-        description: "Editor especializado en creación y edición de contenido diverso",
-        type: "position-specific",
-        positionId: positionEditor._id,
-      });
-      console.log(`✅ Created Position-Specific Level: Editor de Contenido for ${positionEditor.name} (ID: ${levelEditorContenido._id})`);
-    } else {
-      console.log(`✔️ Position-Specific Level exists: Editor de Contenido (ID: ${levelEditorContenido._id})`);
-    }
-
-    let levelEditorJefe = await Level.findOne({ tenantId, name: "Editor Jefe", type: "position-specific", positionId: positionEditor._id });
-    if (!levelEditorJefe) {
-      levelEditorJefe = await Level.create({
-        tenantId,
-        name: "Editor Jefe",
-        description: "Lidera el equipo editorial y define estrategias de contenido",
-        type: "position-specific",
-        positionId: positionEditor._id,
-      });
-      console.log(`✅ Created Position-Specific Level: Editor Jefe for ${positionEditor.name} (ID: ${levelEditorJefe._id})`);
-    } else {
-      console.log(`✔️ Position-Specific Level exists: Editor Jefe (ID: ${levelEditorJefe._id})`);
-    }
-
-    console.log(`📊 Levels Summary: 4 General + 9 Position-Specific (3 per position) = 13 total`);
 
     // ---- AREAS ----
     console.log("🏢 Seeding Areas...");
@@ -841,15 +598,13 @@ export async function seedOnStart() {
       firstName: "Admin",
       lastName: "User",
       isActive: true,
-      positionId: positionDirector._id as Types.ObjectId,
-      levelId: levelDirectorNacional._id as Types.ObjectId,
       areaId: areaMap["Libertador"],
       hireDate: new Date("2019-01-01"),
       extraVacationDays: 5,
       isSystem: true,
     });
     const adminId = String(adminUser._id);
-    console.log(`👤 Admin assigned: Position=${positionDirector.name}, Level=${levelDirectorNacional.name}, Area=Libertador`);
+    console.log(`👤 Admin assigned: Area=Libertador`);
 
     const userUser = await ensureUser({
       tenantId,
@@ -859,13 +614,11 @@ export async function seedOnStart() {
       firstName: "User",
       lastName: "User",
       isActive: true,
-      positionId: positionProductor._id as Types.ObjectId,
-      levelId: levelProductorEjecutivo._id as Types.ObjectId,
       areaId: areaMap["Técnica"],
       hireDate: new Date("2019-01-01"),
       extraVacationDays: 0,
     });
-    console.log(`👤 User assigned: Position=${positionProductor.name}, Level=${levelProductorEjecutivo.name}, Area=Técnica`);
+    console.log(`👤 User assigned: Area=Técnica`);
 
     // Colaborador móvil
     const collab = await ensureUser({
@@ -876,13 +629,11 @@ export async function seedOnStart() {
       firstName: "Juan",
       lastName: "Colaborador",
       isActive: true,
-      positionId: positionEditor._id as Types.ObjectId,
-      levelId: levelEditorJunior._id as Types.ObjectId,
       areaId: areaMap["Editores"],
       hireDate: new Date("2023-05-01"),
       extraVacationDays: 0,
     });
-    console.log(`👤 Colaborador assigned: Position=${positionEditor.name}, Level=${levelEditorJunior.name}, Area=Editores`);
+    console.log(`👤 Colaborador assigned: Area=Editores`);
 
     // Coordinador móvil
     const coord = await ensureUser({
@@ -893,13 +644,11 @@ export async function seedOnStart() {
       firstName: "María",
       lastName: "Coordinadora",
       isActive: true,
-      positionId: positionProductor._id as Types.ObjectId,
-      levelId: levelProductorSenior._id as Types.ObjectId,
       areaId: areaMap["Técnica"],
       hireDate: new Date("2020-03-15"),
       extraVacationDays: 2,
     });
-    console.log(`👤 Coordinador assigned: Position=${positionProductor.name}, Level=${levelProductorSenior.name}, Area=Técnica`);
+    console.log(`👤 Coordinador assigned: Area=Técnica`);
 
     /* ============ SEED: MODELOS DEL NAVBAR (HR / MODELOS) ============ */
     console.log("👥 Seeding HR/Models demo data...");

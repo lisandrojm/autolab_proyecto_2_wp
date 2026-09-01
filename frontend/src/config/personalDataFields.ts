@@ -43,7 +43,7 @@ export const PERSONAL_DATA_FIELDS: PersonalDataField[] = [
   // Sin "osId": la obra social se declara en el CONTRATO y se constata contra el padrón de la SSS,
   // así que no es un dato que la persona pueda pedir que le cambien en su legajo.
   { key: "osPrepaga", label: "Prepaga", section: "general", type: "text" },
-  { key: "rolesFrameIds", label: "Rol Frame", section: "general", type: "catalog", catalog: "rolesFrame" },
+  { key: "rolesFrameIds", label: "Rol Empresa", section: "general", type: "catalog", catalog: "rolesFrame" },
   // Domicilio
   { key: "paisId", label: "País", section: "domicilio", type: "catalog", catalog: "paises" },
   { key: "localidad", label: "Localidad", section: "domicilio", type: "text" },

@@ -364,10 +364,22 @@ export async function buildEmployeeDocData(user, up, contract, empresa) {
         nombreContrato: c.nombre_contrato || "",
         nombreSede: c.nombre_sede || "",
         sede: c.nombre_sede || "",
-        nombreCargo: c.nombre_cargo || "",
-        cargo: c.nombre_cargo || "",
-        nombreNivel: c.nombre_nivel || "",
-        nivel: c.nombre_nivel || "",
+        /*
+          Cargos y Niveles se sacaron de la aplicación: no hay ABM, ni campo en el contrato, ni colección.
+    
+          Estas cuatro variables SIGUEN declaradas a propósito. Hay 11 plantillas de contrato vivas que
+          escriben `{{nombreCargo}}` y `{{nombreNivel}}` en medio de la prosa ("...en el rol de {{rolFrame}}
+          (cargo: {{nombreCargo}}, área: {{nombreArea}})..."). Si la variable no existe, el renderer deja el
+          `{{nombreCargo}}` literal impreso en un contrato que alguien firma — bastante peor que el vacío.
+    
+          Vacío es exactamente lo que ya imprimían: de 6780 contratos guardados, 6749 no tenían el campo y
+          31 decían literalmente "Sin cargo" / "Sin nivel". Sacar esto de verdad es editar el texto de esas
+          11 plantillas, que es una decisión de contenido, no de código.
+        */
+        nombreCargo: "",
+        cargo: "",
+        nombreNivel: "",
+        nivel: "",
         nombreArea: c.nombre_area || "",
         area: c.nombre_area || "",
         nombreTurno: c.nombre_turno || "",

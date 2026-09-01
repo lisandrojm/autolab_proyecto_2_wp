@@ -3,12 +3,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faEdit, faTrash, faBan, faLayerGroup, faToggleOn, faToggleOff, faUserTie, faGraduationCap, faTriangleExclamation, faBriefcase, faIdCard, faClock, faBuilding } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faEdit, faTrash, faBan, faToggleOn, faToggleOff, faTriangleExclamation, faBriefcase, faIdCard, faClock, faBuilding } from "@fortawesome/free-solid-svg-icons";
 import { vacationOverlapsAPI, VacationOverlap } from "../../api/vacationOverlaps";
 import { areasAPI, Area } from "../../api/areas";
 import { clientsAPI, Client } from "../../api/clients";
-import { positionsAPI, Position } from "../../api/positions";
-import { levelsAPI, Level } from "../../api/levels";
 import { projectsAPI, Project } from "../../api/projects";
 import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
 import { usersAPI, User } from "../../api/users";
@@ -20,8 +18,6 @@ import { Modal } from "../ui/Modal";
 // Schema validación Zod
 const overlapSchema = z.object({
   areaId: z.string().optional(),
-  positionId: z.string().optional(),
-  levelId: z.string().optional(),
   projectId: z.string().optional(),
   clientId: z.string().optional(),
   roleFrameId: z.string().optional(),
@@ -37,8 +33,6 @@ export const VacationOverlapRules: React.FC = () => {
   const [rules, setRules] = useState<VacationOverlap[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
-  const [positions, setPositions] = useState<Position[]>([]);
-  const [levels, setLevels] = useState<Level[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [roleFrames, setRoleFrames] = useState<RoleFrameItem[]>([]);
 
@@ -64,8 +58,6 @@ export const VacationOverlapRules: React.FC = () => {
     resolver: zodResolver(overlapSchema),
     defaultValues: {
       areaId: "",
-      positionId: "",
-      levelId: "",
       projectId: "",
       roleFrameId: "",
       maxSimultaneousUsers: 1,
@@ -76,8 +68,6 @@ export const VacationOverlapRules: React.FC = () => {
 
   // Watch individual fields to prevent infinite loops caused by object instability
   const wAreaId = watch("areaId");
-  const wPositionId = watch("positionId");
-  const wLevelId = watch("levelId");
   const wProjectId = watch("projectId");
   const wClientId = watch("clientId");
   const wRoleFrameId = watch("roleFrameId");
@@ -91,12 +81,8 @@ export const VacationOverlapRules: React.FC = () => {
       return {
         roleFrames: roleFrames,
         areas: areas,
-        positions: positions,
-        levels: levels,
         roleFramesDisabled: false,
         areasDisabled: false,
-        positionsDisabled: false,
-        levelsDisabled: false,
       };
     }
 
@@ -110,28 +96,18 @@ export const VacationOverlapRules: React.FC = () => {
       return {
         roleFrames: [],
         areas: [],
-        positions: [],
-        levels: [],
         roleFramesDisabled: true,
         areasDisabled: true,
-        positionsDisabled: true,
-        levelsDisabled: true,
       };
     }
 
     // Extract unique IDs present in these users
     const validAreaIds = new Set<string>();
-    const validPositionIds = new Set<string>();
-    const validLevelIds = new Set<string>();
     const validRoleFrameIds = new Set<string>();
 
     projectUsers.forEach((user) => {
       const aId = typeof user.areaId === "object" ? user.areaId?._id : user.areaId;
       if (aId) validAreaIds.add(String(aId));
-      const pId = typeof user.positionId === "object" ? user.positionId?._id : user.positionId;
-      if (pId) validPositionIds.add(String(pId));
-      const lId = typeof user.levelId === "object" ? user.levelId?._id : user.levelId;
-      if (lId) validLevelIds.add(String(lId));
 
       user.metadata?.projects?.forEach((m: any) => {
         const rf = roleFrames.find((r) => r.externalId == m.rol_frame_id || r.data?.rol?.id == m.rol_frame_id);
@@ -152,22 +128,16 @@ export const VacationOverlapRules: React.FC = () => {
     return {
       roleFrames: roleFrames.filter((r) => validRoleFrameIds.has(String(r._id))),
       areas: areas.filter((a) => validAreaIds.has(String(a._id))),
-      positions: positions.filter((p) => validPositionIds.has(String(p._id))),
-      levels: levels.filter((l) => validLevelIds.has(String(l._id))),
       roleFramesDisabled: validRoleFrameIds.size === 0,
       areasDisabled: true,
-      positionsDisabled: true,
-      levelsDisabled: true,
     };
-  }, [wProjectId, allUsers, roleFrames, areas, positions, levels]);
+  }, [wProjectId, allUsers, roleFrames, areas]);
 
   // Reset fields if disabled or invalid after filter change
   useEffect(() => {
     if (availableOptions.areasDisabled && wAreaId) setValue("areaId", "");
-    if (availableOptions.positionsDisabled && wPositionId) setValue("positionId", "");
-    if (availableOptions.levelsDisabled && wLevelId) setValue("levelId", "");
     if (availableOptions.roleFramesDisabled && wRoleFrameId) setValue("roleFrameId", "");
-  }, [availableOptions, wAreaId, wPositionId, wLevelId, wRoleFrameId, setValue]);
+  }, [availableOptions, wAreaId, wRoleFrameId, setValue]);
 
   // Manual registration for custom controls ensuring boolean handling
   useEffect(() => {
@@ -177,13 +147,11 @@ export const VacationOverlapRules: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [rulesData, areasData, positionsData, levelsData, projectsData, roleFrameData, usersData, clientsData] = await Promise.all([vacationOverlapsAPI.list(), areasAPI.list({ limit: 100 }), positionsAPI.listAll(), levelsAPI.listAll(), projectsAPI.listAll(), roleFrameAPI.list(), usersAPI.list({ limit: 10000, isActive: true }), clientsAPI.listAll()]);
+      const [rulesData, areasData, projectsData, roleFrameData, usersData, clientsData] = await Promise.all([vacationOverlapsAPI.list(), areasAPI.list({ limit: 100 }), projectsAPI.listAll(), roleFrameAPI.list(), usersAPI.list({ limit: 10000, isActive: true }), clientsAPI.listAll()]);
 
       setRules(rulesData);
       setClients(clientsData);
       setAreas(areasData.areas);
-      setPositions(positionsData);
-      setLevels(levelsData);
       setProjects(projectsData);
       setRoleFrames(roleFrameData);
       setAllUsers(usersData.users || []);
@@ -205,14 +173,12 @@ export const VacationOverlapRules: React.FC = () => {
 
     // Use explicit empty strings for safe checks
     const areaId = wAreaId || "";
-    const positionId = wPositionId || "";
-    const levelId = wLevelId || "";
     const projectId = wProjectId || "";
     const clientId = wClientId || "";
     const roleFrameId = wRoleFrameId || "";
 
     // If no criteria selected, show ALL users (Global Rule)
-    if (!areaId && !positionId && !levelId && !projectId && !roleFrameId && !clientId) {
+    if (!areaId && !projectId && !roleFrameId && !clientId) {
       setEligibleUsers(allUsers);
       return;
     }
@@ -220,21 +186,13 @@ export const VacationOverlapRules: React.FC = () => {
     const filtered = allUsers.filter((user) => {
       let match = true;
 
-      // ... (Area, Position, Level checks remain same but technically hidden) ...
+      // ... (Area check remains, técnicamente oculto) ...
       if (areaId) {
         const uAreaId = typeof user.areaId === "object" ? user.areaId?._id : user.areaId;
         if (String(uAreaId || "") !== areaId) match = false;
       }
 
-      if (match && positionId) {
-        const uPosId = typeof user.positionId === "object" ? user.positionId?._id : user.positionId;
-        if (String(uPosId || "") !== positionId) match = false;
-      }
 
-      if (match && levelId) {
-        const uLevelId = typeof user.levelId === "object" ? user.levelId?._id : user.levelId;
-        if (String(uLevelId || "") !== levelId) match = false;
-      }
 
       // Check Project
       if (match && projectId) {
@@ -311,14 +269,12 @@ export const VacationOverlapRules: React.FC = () => {
     });
 
     setEligibleUsers(filtered);
-  }, [allUsers, wAreaId, wPositionId, wLevelId, wProjectId, wClientId, wRoleFrameId, wUseActiveContractSchedule, modalOpen, roleFrames]);
+  }, [allUsers, wAreaId, wProjectId, wClientId, wRoleFrameId, wUseActiveContractSchedule, modalOpen, roleFrames]);
 
   const openCreate = () => {
     setEditingRule(null);
     reset({
       areaId: "",
-      positionId: "",
-      levelId: "",
       projectId: "",
       clientId: "",
       roleFrameId: "",
@@ -349,8 +305,6 @@ export const VacationOverlapRules: React.FC = () => {
 
     reset({
       areaId: getId(rule.areaId),
-      positionId: getId(rule.positionId),
-      levelId: getId(rule.levelId),
       projectId: getId(rule.projectId),
       clientId: cId,
       roleFrameId: getId(rule.roleFrameId),
@@ -368,8 +322,6 @@ export const VacationOverlapRules: React.FC = () => {
       // Clean empty strings to undefined
       const payload = {
         areaId: data.areaId || undefined,
-        positionId: data.positionId || undefined,
-        levelId: data.levelId || undefined,
         projectId: data.projectId || undefined,
         clientId: data.clientId || undefined,
         roleFrameId: data.roleFrameId || undefined,
@@ -441,8 +393,6 @@ export const VacationOverlapRules: React.FC = () => {
     // This is expensive to calculate for every row if users array is large.
     // But we have allUsers in memory.
     const rAreaId = typeof rule.areaId === "object" ? rule.areaId?._id : rule.areaId;
-    const rPosId = typeof rule.positionId === "object" ? rule.positionId?._id : rule.positionId;
-    const rLevelId = typeof rule.levelId === "object" ? rule.levelId?._id : rule.levelId;
     const rProjId = typeof rule.projectId === "object" ? rule.projectId?._id : rule.projectId;
     const rClientId = typeof rule.clientId === "object" ? rule.clientId?._id : rule.clientId;
     const rRoleFrameId = typeof rule.roleFrameId === "object" ? rule.roleFrameId?._id : rule.roleFrameId;
@@ -453,14 +403,6 @@ export const VacationOverlapRules: React.FC = () => {
       if (rAreaId) {
         const uAreaId = typeof user.areaId === "object" ? user.areaId?._id : user.areaId;
         if (uAreaId !== rAreaId) match = false;
-      }
-      if (match && rPosId) {
-        const uPosId = typeof user.positionId === "object" ? user.positionId?._id : user.positionId;
-        if (uPosId !== rPosId) match = false;
-      }
-      if (match && rLevelId) {
-        const uLevelId = typeof user.levelId === "object" ? user.levelId?._id : user.levelId;
-        if (uLevelId !== rLevelId) match = false;
       }
       if (match && rProjId) {
         const userProjects = user.projectIds?.map((p: any) => (typeof p === "object" ? p._id : p)) || [];
@@ -746,7 +688,7 @@ export const VacationOverlapRules: React.FC = () => {
               <input type="checkbox" className="hidden" {...register("useActiveContractSchedule")} />
             </div>
 
-            {/* Hidden Fields: Row 3: Area & Position, Row 4: Level */}
+            {/* Campo oculto: Área */}
             {false && (
               <>
                 <div>
@@ -759,40 +701,6 @@ export const VacationOverlapRules: React.FC = () => {
                   <select {...register("areaId")} disabled={true} className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-700 dark:text-white disabled:bg-gray-100 disabled:text-gray-400 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">
                     <option value="">Cualquiera</option>
                     {availableOptions.areas.map((opt) => (
-                      <option key={opt._id} value={opt._id}>
-                        {opt.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Cargo{" "}
-                    <span title="Desactivado para el MVP" className="text-gray-400 cursor-help">
-                      (*)
-                    </span>
-                  </label>
-                  <select {...register("positionId")} disabled={true} className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-700 dark:text-white disabled:bg-gray-100 disabled:text-gray-400 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">
-                    <option value="">Cualquiera</option>
-                    {availableOptions.positions.map((opt) => (
-                      <option key={opt._id} value={opt._id}>
-                        {opt.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Nivel{" "}
-                    <span title="Desactivado para el MVP" className="text-gray-400 cursor-help">
-                      (*)
-                    </span>
-                  </label>
-                  <select {...register("levelId")} disabled={true} className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-700 dark:text-white disabled:bg-gray-100 disabled:text-gray-400 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">
-                    <option value="">Cualquiera</option>
-                    {availableOptions.levels.map((opt) => (
                       <option key={opt._id} value={opt._id}>
                         {opt.name}
                       </option>
@@ -822,7 +730,7 @@ export const VacationOverlapRules: React.FC = () => {
               <div className="max-h-80 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
                 {eligibleUsers.map((user) => {
                   // Helper to get names safely
-                  // Removed Area/Position/Level from view as requested
+                  // Removed Area from view as requested
 
                   // Projects & Clients Extraction
                   const projectNamesSet = new Set<string>();

@@ -19,7 +19,6 @@ import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { getPlainOrderNumber, getOrderRemainingCost, recalculateUserOrderBalance } from "../utils/orderHelpers.js";
 import UserProject from "../models/UserProject.js";
 import { sanitizePersonalData } from "../utils/personalDataFields.js";
-import "../models/Position.js";
 
 const router = Router();
 

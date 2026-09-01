@@ -8,8 +8,6 @@ export interface IUser extends Document {
     tenantId: Types.ObjectId;
     firstName?: string;
     lastName?: string;
-    positionId?: Types.ObjectId;
-    levelId?: Types.ObjectId;
     areaId?: Types.ObjectId;
     isActive: boolean;
     lastLoginAt?: Date;

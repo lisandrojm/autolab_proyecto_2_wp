@@ -125,7 +125,7 @@ export const UserVacationManagementTab: React.FC = () => {
   };
 
   const getActiveRoleFrame = (balance: UserVacationBalance): string => {
-    let roleFrame = "Sin rol frame";
+    let roleFrame = "Sin rol empresa";
     if (balance.metadata?.projects) {
       const now = new Date().getTime();
       balance.metadata.projects.forEach((p: any) => {
@@ -139,7 +139,7 @@ export const UserVacationManagementTab: React.FC = () => {
             }
           });
         }
-        if (roleFrame === "Sin rol frame" && p.nombre_rol_frame) {
+        if (roleFrame === "Sin rol empresa" && p.nombre_rol_frame) {
           roleFrame = p.nombre_rol_frame;
         }
       });
@@ -350,7 +350,7 @@ export const UserVacationManagementTab: React.FC = () => {
             onChange={(e) => setSelectedRoleFrame(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none"
           >
-            <option value="">Todos los Roles Frame</option>
+            <option value="">Todos los Roles Empresa</option>
             {roleFrames.map((rf) => (
               <option key={rf._id} value={rf._id}>
                 {rf.name}
@@ -396,7 +396,7 @@ export const UserVacationManagementTab: React.FC = () => {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Usuario</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ingreso / Antigüedad</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rol Frame</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rol Empresa</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contrato</th>
               <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">Total Anual</th>
               <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">Tomados (Gozados)</th>

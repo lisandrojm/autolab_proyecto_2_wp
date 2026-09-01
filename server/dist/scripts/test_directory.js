@@ -1,8 +1,6 @@
 import mongoose from "mongoose";
 import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
-import { Position } from "../models/Position.js";
-import { Level } from "../models/Level.js";
 import { Area } from "../models/Area.js";
 import { Project } from "../models/Project.js";
 import dotenv from "dotenv";
@@ -24,10 +22,8 @@ const run = async () => {
             .populate({
             path: "metadata.projects",
             model: UserProject,
-            select: "projectId positionId levelId areaId nombre_proyecto nombre_rol_frame contracts",
+            select: "projectId areaId nombre_proyecto nombre_rol_frame contracts",
             populate: [
-                { path: "positionId", select: "name", model: Position },
-                { path: "levelId", select: "name", model: Level },
                 { path: "areaId", select: "name", model: Area },
             ],
         })

@@ -33,7 +33,7 @@ const AvisoConveniosMezclados: React.FC<{ convenios: string[] }> = ({ convenios 
   </span>
 );
 
-export const FuncionesFrameTab: React.FC = () => {
+export const RolesEmpresaAbm: React.FC = () => {
   const [roles, setRoles] = useState<RoleFrameItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -448,7 +448,7 @@ export const FuncionesFrameTab: React.FC = () => {
         <Modal
           isOpen={showModal}
           onClose={() => setShowModal(false)}
-          title={editingRole ? 'Editar Función FRAME' : 'Nueva Función FRAME'}
+          title={editingRole ? 'Editar Rol Empresa' : 'Nuevo Rol Empresa'}
           subtitle={editingRole ? 'Modifica los datos de la función' : 'Agrega una nueva función y asocia categorías'}
           size="lg"
           footer={
@@ -555,4 +555,4 @@ export const FuncionesFrameTab: React.FC = () => {
   );
 };
 
-export default FuncionesFrameTab;
+export default RolesEmpresaAbm;

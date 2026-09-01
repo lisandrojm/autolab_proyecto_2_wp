@@ -8,8 +8,6 @@ import mongoose, { Schema, Document, Types, Model } from "mongoose";
 export interface IEmbeddedOverlap {
   _id?: Types.ObjectId;
   areaId?: Types.ObjectId;
-  positionId?: Types.ObjectId;
-  levelId?: Types.ObjectId;
   projectId?: Types.ObjectId;
   clientId?: Types.ObjectId;
   roleFrameId?: Types.ObjectId;
@@ -22,8 +20,6 @@ export interface IEmbeddedOverlap {
 const EmbeddedOverlapSchema = new Schema<IEmbeddedOverlap>(
   {
     areaId: { type: Schema.Types.ObjectId, ref: "Area" },
-    positionId: { type: Schema.Types.ObjectId, ref: "Position" },
-    levelId: { type: Schema.Types.ObjectId, ref: "Level" },
     projectId: { type: Schema.Types.ObjectId, ref: "Project" },
     clientId: { type: Schema.Types.ObjectId, ref: "Client" },
     roleFrameId: { type: Schema.Types.ObjectId, ref: "RoleFrame" },

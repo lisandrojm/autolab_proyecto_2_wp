@@ -228,7 +228,7 @@ export const UserVacationConfigTab: React.FC = () => {
         <div className="relative">
           <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <select value={selectedRoleFrame} onChange={(e) => setSelectedRoleFrame(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
-            <option value="">Todos los Roles Frame</option>
+            <option value="">Todos los Roles Empresa</option>
             {roleFrames.map((rf) => (
               <option key={rf._id} value={rf._id}>
                 {rf.name}

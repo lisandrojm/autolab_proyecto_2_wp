@@ -177,7 +177,7 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   <th className="px-4 py-3 font-semibold">Nombre</th>
-                  <th className="px-4 py-3 font-semibold">Rol/es Frame</th>
+                  <th className="px-4 py-3 font-semibold">Rol/es Empresa</th>
                   <th className="px-4 py-3 font-semibold">Categoría</th>
                   <th className="px-4 py-3 font-semibold">Fechas</th>
                   <th className="px-4 py-3 font-semibold">Horario</th>

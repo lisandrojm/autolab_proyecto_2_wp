@@ -1,21 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faToggleOn, faToggleOff, faInfoCircle, faBriefcase, faLayerGroup, faUserTag } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faToggleOn, faToggleOff, faInfoCircle, faBriefcase, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 import { projectsAPI, Project } from "../../api/projects";
 import { clientsAPI, Client } from "../../api/clients";
 import { areasAPI, Area } from "../../api/areas";
-import { positionsAPI, Position } from "../../api/positions";
 import { vacationConfigAPI, VacationConfig } from "../../api/vacationConfig";
 import { sweetAlert } from "../../utils/sweetAlert";
 
-type ConfigScope = "project" | "area" | "position";
+type ConfigScope = "project" | "area";
 
 export const ConsecutiveDaysConfigTab: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
-  const [positions, setPositions] = useState<Position[]>([]);
   const [globalConfig, setGlobalConfig] = useState<VacationConfig | null>(null);
 
   const [loading, setLoading] = useState(true);
@@ -29,11 +27,10 @@ export const ConsecutiveDaysConfigTab: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [projectsData, clientsData, areasData, positionsData, globalConfigData] = await Promise.all([projectsAPI.listAll(), clientsAPI.listAll(), areasAPI.listAll(), positionsAPI.listAll(), vacationConfigAPI.getConfig()]);
+      const [projectsData, clientsData, areasData, globalConfigData] = await Promise.all([projectsAPI.listAll(), clientsAPI.listAll(), areasAPI.listAll(), vacationConfigAPI.getConfig()]);
       setProjects(projectsData);
       setClients(clientsData);
       setAreas(areasData);
-      setPositions(positionsData);
       setGlobalConfig(globalConfigData);
     } catch (error) {
       console.error("Error loading data:", error);
@@ -84,25 +81,6 @@ export const ConsecutiveDaysConfigTab: React.FC = () => {
     }
   };
 
-  const handleUpdatePositionConfig = async (position: Position, updates: any) => {
-    const originalPosition = { ...position };
-    setPositions((prev) => prev.map((p) => (p._id === position._id ? { ...p, vacationConfig: { ...p.vacationConfig, ...updates } } : p)));
-
-    try {
-      const updatedConfig = {
-        useGlobalConfig: true,
-        permiteFraccionadas: true,
-        ...position.vacationConfig,
-        ...updates,
-      };
-      await positionsAPI.update(position._id, { vacationConfig: updatedConfig } as any);
-      sweetAlert.success("Actualizado", "Configuración de cargo guardada");
-    } catch (error) {
-      console.error("Error updating position:", error);
-      sweetAlert.error("Error", "No se pudo actualizar");
-      setPositions((prev) => prev.map((p) => (p._id === position._id ? originalPosition : p)));
-    }
-  };
 
   const renderConfigRow = (title: string, subtitle: string | undefined, config: any, onUpdate: (updates: any) => void, effectiveValue: boolean | undefined) => (
     <div className="border border-gray-200 dark:border-gray-700 rounded p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
@@ -196,9 +174,6 @@ export const ConsecutiveDaysConfigTab: React.FC = () => {
         <button onClick={() => setScope("area")} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${scope === "area" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
           <FontAwesomeIcon icon={faLayerGroup} /> Áreas
         </button>
-        <button onClick={() => setScope("position")} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${scope === "position" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
-          <FontAwesomeIcon icon={faUserTag} /> Cargos
-        </button>
       </div>
 
       <div className="space-y-4">
@@ -225,16 +200,6 @@ export const ConsecutiveDaysConfigTab: React.FC = () => {
             })
           ))}
 
-        {scope === "position" &&
-          (positions.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No hay cargos.</p>
-          ) : (
-            positions.map((position) => {
-              const config = { useGlobalConfig: true, permiteFraccionadas: true, diasCorridos: false, ...position.vacationConfig };
-              const effectiveValue = config.useGlobalConfig ? globalConfig?.diasCorridos : config.diasCorridos;
-              return <div key={position._id}>{renderConfigRow(position.name, position.description, config, (updates) => handleUpdatePositionConfig(position, updates), effectiveValue)}</div>;
-            })
-          ))}
       </div>
     </div>
   );

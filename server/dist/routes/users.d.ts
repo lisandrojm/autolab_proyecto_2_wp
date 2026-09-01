@@ -5,8 +5,6 @@ import "../models/Tenant.js";
 import "../models/Info.js";
 import "../models/RoleFrame.js";
 import "../models/UserProject.js";
-import "../models/Position.js";
-import "../models/Level.js";
 import "../models/Area.js";
 import "../models/Client.js";
 declare const router: import("express-serve-static-core").Router;

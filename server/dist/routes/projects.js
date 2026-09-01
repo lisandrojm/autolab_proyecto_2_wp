@@ -22,8 +22,6 @@ import { Types } from "mongoose";
 import { aplicarLoteObrasSociales, pendientesObraSocial, LoteObrasSocialesError } from "../services/obrasSocialesLoteService.js";
 import { confirmarNombresConElPadron, usuariosDeCuils, mismoNombre } from "../services/arca/nombreArca.js";
 import { Area } from "../models/Area.js";
-import { Position } from "../models/Position.js";
-import { Level } from "../models/Level.js";
 import { Shift } from "../models/Shift.js";
 import { Company } from "../models/Company.js";
 import { ObraSocial } from "../models/ObraSocial.js";
@@ -1146,7 +1144,7 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
             return res.status(404).json({ error: "User not found" });
         // 1. Resolve names for the contract from Info collection and other collections
         const isValidId = (id) => id && Types.ObjectId.isValid(id);
-        const [sede, cat, estado, tipo, area, pos, level, shift] = await Promise.all([
+        const [sede, cat, estado, tipo, area, shift] = await Promise.all([
             Info.findOne({ type: "sede", "data.id": Number(contract.sede_id) }).lean(),
             // La categoría NO vive en `Info`: nunca hubo un solo documento de tipo "categoria-sat" ahí, así
             // que este lookup siempre devolvía null y todo contrato creado desde el wizard quedaba guardado
@@ -1155,16 +1153,12 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
             Info.findOne({ type: "estado-empleado", "data.id": Number(contract.estado_id) }).lean(),
             Info.findOne({ type: "contrato", "data.id": Number(contract.tipo_contrato_id) }).lean(),
             isValidId(contract.areaId) ? Area.findById(contract.areaId).lean() : Promise.resolve(null),
-            isValidId(contract.positionId) ? Position.findById(contract.positionId).lean() : Promise.resolve(null),
-            isValidId(contract.levelId) ? Level.findById(contract.levelId).lean() : Promise.resolve(null),
             isValidId(contract.shiftId) ? Shift.findById(contract.shiftId).lean() : Promise.resolve(null),
         ]);
         // --- Validation: Check for overlapping shifts in OTHER projects only ---
         // Sanitize optional reference IDs (empty string -> null) to avoid BSON casting errors
         const sanitizeId = (id) => (id === "" || id === undefined) ? null : id;
         contract.areaId = sanitizeId(contract.areaId);
-        contract.positionId = sanitizeId(contract.positionId);
-        contract.levelId = sanitizeId(contract.levelId);
         contract.shiftId = sanitizeId(contract.shiftId);
         if (contract.shiftId && contract.fecha_alta_contrato) {
             const newStart = new Date(contract.fecha_alta_contrato);
@@ -1231,8 +1225,6 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
             nombre_estado_empleado: estado?.name || "Activo",
             nombre_contrato: contract.nombre_contrato || tipo?.name || "Sin tipo",
             nombre_area: area?.name || "Sin área",
-            nombre_cargo: pos?.name || "Sin cargo",
-            nombre_nivel: level?.name || "Sin nivel",
             nombre_turno: shift?.name || "Sin turno",
             nombre_rol_frame: rolFrameName || "Sin rol frame",
             fecha_carga: new Date().toISOString(),

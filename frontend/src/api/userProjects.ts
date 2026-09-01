@@ -2,8 +2,6 @@ import axiosInstance from "./axiosConfig";
 
 export interface UserProjectUpdate {
   areaId?: string | null;
-  positionId?: string | null;
-  levelId?: string | null;
 }
 
 export const userProjectsAPI = {

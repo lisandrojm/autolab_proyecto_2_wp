@@ -109,7 +109,7 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
                      <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                        <FontAwesomeIcon icon={faBriefcase} className="w-3 h-3 opacity-70 text-primary" />
                        <span className="truncate">
-                         {isSolicitud ? "Alta Pendiente" : (typeof user.positionId === "object" ? user.positionId?.name : "Sin cargo")}
+                         {isSolicitud ? "Alta Pendiente" : "Sin cargo"}
                        </span>
                      </div>
                      <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">

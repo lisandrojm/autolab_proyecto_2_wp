@@ -109,7 +109,11 @@
     "plantillas:reparar:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/repararPlantillaDesdeSana.ts",
     "plantillas:reparar": "dotenv -e .env.production -- tsx src/scripts/repararPlantillaDesdeSana.ts",
     "actividades:a-empresa:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/migrarActividadesAEmpresa.ts",
-    "actividades:a-empresa": "dotenv -e .env.production -- tsx src/scripts/migrarActividadesAEmpresa.ts"
+    "actividades:a-empresa": "dotenv -e .env.production -- tsx src/scripts/migrarActividadesAEmpresa.ts",
+    "cargos-niveles:eliminar:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/eliminarCargosNiveles.ts",
+    "cargos-niveles:eliminar": "dotenv -e .env.production -- tsx src/scripts/eliminarCargosNiveles.ts",
+    "roles-empresa:permiso:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/otorgarPermisoRolesEmpresa.ts",
+    "roles-empresa:permiso": "dotenv -e .env.production -- tsx src/scripts/otorgarPermisoRolesEmpresa.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",

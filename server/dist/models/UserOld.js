@@ -18,8 +18,6 @@ const userSchema = new Schema({
         trim: true,
         set: (v) => (v && v.trim() !== "" ? v.trim() : undefined),
     },
-    positionId: { type: Schema.Types.ObjectId, ref: "Position" },
-    levelId: { type: Schema.Types.ObjectId, ref: "Level" },
     areaId: { type: Schema.Types.ObjectId, ref: "Area" },
     isActive: { type: Boolean, default: true },
     hireDate: { type: Date, required: true },

@@ -9,8 +9,6 @@ const router = Router();
 
 const baseOverlapSchema = z.object({
   areaId: z.string().optional(),
-  positionId: z.string().optional(),
-  levelId: z.string().optional(),
   projectId: z.string().optional(),
   clientId: z.string().optional(),
   roleFrameId: z.string().optional(),
@@ -48,20 +46,6 @@ const populateOverlap = async (overlap: any) => {
     } catch (e) {
       result.areaId = { _id: overlap.areaId, name: "Error" };
     }
-  }
-  if (overlap.positionId) {
-    try {
-      const Position = mongoose.model("Position");
-      const doc = await Position.findById(overlap.positionId).select("name");
-      result.positionId = doc ? { _id: overlap.positionId, name: doc.name } : { _id: overlap.positionId, name: "Desconocido" };
-    } catch (e) {}
-  }
-  if (overlap.levelId) {
-    try {
-      const Level = mongoose.model("Level");
-      const doc = await Level.findById(overlap.levelId).select("name");
-      result.levelId = doc ? { _id: overlap.levelId, name: doc.name } : { _id: overlap.levelId, name: "Desconocido" };
-    } catch (e) {}
   }
   if (overlap.projectId) {
     try {
@@ -119,11 +103,9 @@ router.post("/", requireTenant, authenticateToken, async (req: AuthenticatedRequ
     // Verificar duplicate exact match
     const existing = config.overlaps.find((o) => {
       const sameArea = String(o.areaId || "") === String(data.areaId || "");
-      const samePos = String(o.positionId || "") === String(data.positionId || "");
-      const sameLevel = String(o.levelId || "") === String(data.levelId || "");
       const sameProj = String(o.projectId || "") === String(data.projectId || "");
       const sameRole = String(o.roleFrameId || "") === String(data.roleFrameId || "");
-      return sameArea && samePos && sameLevel && sameProj && sameRole;
+      return sameArea && sameProj && sameRole;
     });
 
     if (existing) {
@@ -141,8 +123,6 @@ router.post("/", requireTenant, authenticateToken, async (req: AuthenticatedRequ
 
     if (data.clientId) newOverlap.clientId = new mongoose.Types.ObjectId(data.clientId);
     if (data.areaId) newOverlap.areaId = new mongoose.Types.ObjectId(data.areaId);
-    if (data.positionId) newOverlap.positionId = new mongoose.Types.ObjectId(data.positionId);
-    if (data.levelId) newOverlap.levelId = new mongoose.Types.ObjectId(data.levelId);
     if (data.projectId) newOverlap.projectId = new mongoose.Types.ObjectId(data.projectId);
     if (data.roleFrameId) newOverlap.roleFrameId = new mongoose.Types.ObjectId(data.roleFrameId);
 
@@ -186,19 +166,15 @@ router.put("/:id", requireTenant, authenticateToken, async (req: AuthenticatedRe
     // Check duplicate if criteria changed
     // Construct potential new state to check duplicate
     const nextArea = data.areaId !== undefined ? data.areaId : current.areaId?.toString();
-    const nextPos = data.positionId !== undefined ? data.positionId : current.positionId?.toString();
-    const nextLevel = data.levelId !== undefined ? data.levelId : current.levelId?.toString();
     const nextProj = data.projectId !== undefined ? data.projectId : current.projectId?.toString();
     const nextRole = data.roleFrameId !== undefined ? data.roleFrameId : current.roleFrameId?.toString();
 
     const existingOther = config.overlaps.find((o, i) => {
       if (i === overlapIndex) return false;
       const sameArea = String(o.areaId || "") === String(nextArea || "");
-      const samePos = String(o.positionId || "") === String(nextPos || "");
-      const sameLevel = String(o.levelId || "") === String(nextLevel || "");
       const sameProj = String(o.projectId || "") === String(nextProj || "");
       const sameRole = String(o.roleFrameId || "") === String(nextRole || "");
-      return sameArea && samePos && sameLevel && sameProj && sameRole;
+      return sameArea && sameProj && sameRole;
     });
 
     if (existingOther) {
@@ -208,8 +184,6 @@ router.put("/:id", requireTenant, authenticateToken, async (req: AuthenticatedRe
     // Update overlap fields
     if (data.clientId !== undefined) config.overlaps[overlapIndex].clientId = data.clientId ? new mongoose.Types.ObjectId(data.clientId) : undefined;
     if (data.areaId !== undefined) config.overlaps[overlapIndex].areaId = data.areaId ? new mongoose.Types.ObjectId(data.areaId) : undefined;
-    if (data.positionId !== undefined) config.overlaps[overlapIndex].positionId = data.positionId ? new mongoose.Types.ObjectId(data.positionId) : undefined;
-    if (data.levelId !== undefined) config.overlaps[overlapIndex].levelId = data.levelId ? new mongoose.Types.ObjectId(data.levelId) : undefined;
     if (data.projectId !== undefined) config.overlaps[overlapIndex].projectId = data.projectId ? new mongoose.Types.ObjectId(data.projectId) : undefined;
     if (data.roleFrameId !== undefined) config.overlaps[overlapIndex].roleFrameId = data.roleFrameId ? new mongoose.Types.ObjectId(data.roleFrameId) : undefined;
 

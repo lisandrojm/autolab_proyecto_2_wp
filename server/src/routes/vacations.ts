@@ -11,8 +11,6 @@ import { generateVacationPDF } from "../utils/pdfGenerator.js";
 import { resolveContractEmpresa } from "../utils/contractEmpresa.js";
 import { User } from "../models/User.js";
 import { UserProfile } from "../models/UserProfile.js";
-import { Level } from "../models/Level.js";
-import { Position } from "../models/Position.js";
 import { Area } from "../models/Area.js";
 import { Project } from "../models/Project.js";
 import UserProject from "../models/UserProject.js";
@@ -236,20 +234,7 @@ router.get("/availability", async (req, res) => {
         }
       }
 
-      // 2. Position Check (Legacy field removed, skip or check profile)
-      if (matches && rule.positionId) {
-        // Since user.positionId is gone, we skip this for now or could match profile.position
-        // For strict decoupling we ignore this or return false if rule is specific.
-        // Let's assume rules should now use profile fields or project fields.
-        matches = false; 
-      }
-
-      // 3. Level Check (Legacy field removed, skip)
-      if (matches && rule.levelId) {
-        matches = false;
-      }
-
-      // 4. Project Check
+      // 2. Project Check
       if (matches && rule.projectId) {
         score++;
         const userProjects = user.projectIds?.map((p) => p.toString()) || [];
@@ -316,10 +301,8 @@ router.get("/availability", async (req, res) => {
       const areasToCheck = rule.areaId ? [rule.areaId] : userAreaId ? [userAreaId] : [];
 
       // Positions (Legacy field removed)
-      const positionsToCheck = [undefined];
 
       // Levels (Legacy field removed)
-      const levelsToCheck = [undefined];
 
       // RoleFrames (Complex, let's keep basic logic for now or iterate if possible)
       // For now, if rule has RF, we use it. If Any, we ignore RF constraint (global to all roles) OR matching user metadata?
@@ -330,8 +313,7 @@ router.get("/availability", async (req, res) => {
       // User said "where Any is left... users within that scope... respect rule".
       // Let's iterate if rule.roleFrameId is defined. If undefined, we don't filter by role (apply to all).
       // Taking "Any" as "All" for complex metadata is safer unless explicit request.
-      // But for Project/Area/Position/Level it's clearly "Per Project", "Per Area".
-      // We'll stick to P/A/Pos/Lvl iteration.
+      // But for Project/Area it's clearly "Per Project", "Per Area".
 
       // Flatten the check: usage must not exceed limit in ANY of the permutations the user belongs to.
       // e.g. User in P1, P2.
@@ -348,157 +330,149 @@ router.get("/availability", async (req, res) => {
       // If we query { projectIds: undefined }, it matches docs where projectIds is missing?
       const finalProjects = projectsToCheck.length > 0 ? projectsToCheck : [undefined];
       const finalAreas = areasToCheck.length > 0 ? areasToCheck : [undefined];
-      const finalPositions = positionsToCheck.length > 0 ? positionsToCheck : [undefined];
-      const finalLevels = levelsToCheck.length > 0 ? levelsToCheck : [undefined];
 
       for (const pId of finalProjects) {
         for (const aId of finalAreas) {
-          for (const posId of finalPositions) {
-            for (const lId of finalLevels) {
-              // Construct specific query for this bucket
-              const query: any = { tenantId, "metadata.activo": true, _id: { $ne: userId } };
+          // Construct specific query for this bucket
+          const query: any = { tenantId, "metadata.activo": true, _id: { $ne: userId } };
 
-              if (pId) query.projectIds = pId;
-              if (posId) query.positionId = posId;
-              if (lId) query.levelId = lId;
+          if (pId) query.projectIds = pId;
 
-              if (aId) {
-                const usersInArea = await UserProject.find({ areaId: aId }).distinct("userId");
-                query._id = { $in: usersInArea, $ne: userId };
-              }
+          if (aId) {
+            const usersInArea = await UserProject.find({ areaId: aId }).distinct("userId");
+            query._id = { $in: usersInArea, $ne: userId };
+          }
 
-              // Handle RoleFrame if specific rule exists
-              if (rule.roleFrameId) {
-                const rf = await RoleFrame.findById(rule.roleFrameId);
-                if (rf) {
-                  const values = [];
-                  if (rf.externalId) values.push(rf.externalId);
-                  if (rf.data?.rol?.id) values.push(rf.data.rol.id);
-                  if (values.length > 0) {
-                    query["metadata.projects"] = {
-                      $elemMatch: { rol_frame_id: { $in: values } },
-                    };
-                  }
-                }
-              }
-
-              // Query DB for users in this scope
-              const matchingUsers = await User.find(query).select("_id metadata").populate("metadata.projects");
-              const matchingUserIds = matchingUsers.map((u) => u._id);
-
-              // Find vacations
-              const overlappingVacations = await Vacation.find({
-                tenantId,
-                userId: { $in: matchingUserIds },
-                status: { $nin: ["rejected", "cancelled"] },
-                endDate: { $gte: searchStart },
-                startDate: { $lte: searchEnd },
-              }).lean();
-
-              console.log(`[Availability Debug] Found ${matchingUserIds.length} matching users, ${overlappingVacations.length} overlapping vacations`);
-
-              // Aggregate occupancy (Similar to before but inside loop)
-              // We need to merge this into the main blockedDatesMap
-              // If this bucket is full, we block.
-              const occupancy: Record<string, { count: number; hasPending: boolean }> = {};
-
-              // Helper to check schedule overlaps
-              const getScheduleMinutes = (timeStr: string): number => {
-                if (!timeStr) return -1;
-                const [h, m] = timeStr.split(":").map(Number);
-                return h * 60 + m;
-              };
-
-              const hasScheduleOverlap = (user1Meta: any, user2Meta: any, contextPId?: string): boolean => {
-                // Helper: extract active shifts
-                const getShifts = (meta: any) => {
-                  const shifts: { start: number; end: number }[] = [];
-                  if (!meta?.projects) return shifts;
-                  meta.projects.forEach((p: any) => {
-                    const pIdStr = p.projectId?._id?.toString() || p.projectId?.toString();
-                    // If contextPId is provided, strict filter. If not (Global rule), maybe allow all?
-                    // User request implies checking contracts. Usually rules are per project.
-                    if (contextPId && pIdStr !== contextPId.toString()) return;
-
-                    if (p.contracts) {
-                      p.contracts.forEach((c: any) => {
-                        const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
-                        const isActive = !endDate || endDate >= new Date();
-                        if (isActive && c.hora_inicio && c.hora_fin) {
-                          const start = getScheduleMinutes(c.hora_inicio);
-                          let end = getScheduleMinutes(c.hora_fin);
-
-                          if (start !== -1 && end !== -1) {
-                            // Handle 00:00 as 24:00 (1440 minutes) if it's the end time
-                            if (end === 0) end = 1440;
-                            // Handle overnight shifts (e.g., 22:00 - 06:00)
-                            if (end < start) end += 1440;
-                            shifts.push({ start, end });
-                          }
-                        }
-                      });
-                    }
-                  });
-                  return shifts;
+          // Handle RoleFrame if specific rule exists
+          if (rule.roleFrameId) {
+            const rf = await RoleFrame.findById(rule.roleFrameId);
+            if (rf) {
+              const values = [];
+              if (rf.externalId) values.push(rf.externalId);
+              if (rf.data?.rol?.id) values.push(rf.data.rol.id);
+              if (values.length > 0) {
+                query["metadata.projects"] = {
+                  $elemMatch: { rol_frame_id: { $in: values } },
                 };
-
-                const shifts1 = getShifts(user1Meta);
-                const shifts2 = getShifts(user2Meta);
-
-                // Safe default: if no schedule info found, assume overlap
-                if (shifts1.length === 0 || shifts2.length === 0) return true;
-
-                for (const s1 of shifts1) {
-                  for (const s2 of shifts2) {
-                    // Simple interval overlap check: max(start1, start2) < min(end1, end2)
-                    const start = Math.max(s1.start, s2.start);
-                    const end = Math.min(s1.end, s2.end);
-                    if (start < end) return true;
-                  }
-                }
-                return false;
-              };
-
-              for (const v of overlappingVacations) {
-                // CHECK SCHEDULE OVERLAP
-                // Find the user object for this vacation
-                const vUser = matchingUsers.find((u) => u._id.toString() === v.userId.toString());
-                // We effectively use pId from the outer loop as the context project ID
-                // Note: pId can be undefined (if rule is Any Project). In that case, we check ALL projects?
-                // Providing undefined to hasScheduleOverlap checks all projects (logic update needed above? No, passing undefined checks all if we write it so).
-                // My previous helper had: if (contextPId && ...)
-                // If pId is undefined, it skips the check, effectively aggregating all contracts.
-                if (vUser && !hasScheduleOverlap(user.metadata, vUser.metadata, pId?.toString())) {
-                  continue; // Skip counting this vacation if schedules don't overlap
-                }
-
-                let current = new Date(v.startDate < searchStart ? searchStart : v.startDate);
-                const end = new Date(v.endDate > searchEnd ? searchEnd : v.endDate);
-                const isPending = v.status === "pending";
-
-                while (current <= end) {
-                  const dateStr = current.toISOString().split("T")[0];
-                  if (!occupancy[dateStr]) occupancy[dateStr] = { count: 0, hasPending: false };
-                  occupancy[dateStr].count++;
-                  if (isPending) occupancy[dateStr].hasPending = true;
-                  current.setDate(current.getDate() + 1);
-                }
               }
-
-              // Check violations for this bucket
-              Object.entries(occupancy).forEach(([date, data]) => {
-                if (data.count >= rule.maxSimultaneousUsers) {
-                  const existing = blockedDatesMap.get(date);
-                  const currentStatus = data.hasPending ? "pending" : "approved";
-                  if (!existing) {
-                    blockedDatesMap.set(date, currentStatus);
-                  } else if (existing === "pending" && currentStatus === "approved") {
-                    blockedDatesMap.set(date, "approved");
-                  }
-                }
-              });
             }
           }
+
+          // Query DB for users in this scope
+          const matchingUsers = await User.find(query).select("_id metadata").populate("metadata.projects");
+          const matchingUserIds = matchingUsers.map((u) => u._id);
+
+          // Find vacations
+          const overlappingVacations = await Vacation.find({
+            tenantId,
+            userId: { $in: matchingUserIds },
+            status: { $nin: ["rejected", "cancelled"] },
+            endDate: { $gte: searchStart },
+            startDate: { $lte: searchEnd },
+          }).lean();
+
+          console.log(`[Availability Debug] Found ${matchingUserIds.length} matching users, ${overlappingVacations.length} overlapping vacations`);
+
+          // Aggregate occupancy (Similar to before but inside loop)
+          // We need to merge this into the main blockedDatesMap
+          // If this bucket is full, we block.
+          const occupancy: Record<string, { count: number; hasPending: boolean }> = {};
+
+          // Helper to check schedule overlaps
+          const getScheduleMinutes = (timeStr: string): number => {
+            if (!timeStr) return -1;
+            const [h, m] = timeStr.split(":").map(Number);
+            return h * 60 + m;
+          };
+
+          const hasScheduleOverlap = (user1Meta: any, user2Meta: any, contextPId?: string): boolean => {
+            // Helper: extract active shifts
+            const getShifts = (meta: any) => {
+              const shifts: { start: number; end: number }[] = [];
+              if (!meta?.projects) return shifts;
+              meta.projects.forEach((p: any) => {
+                const pIdStr = p.projectId?._id?.toString() || p.projectId?.toString();
+                // If contextPId is provided, strict filter. If not (Global rule), maybe allow all?
+                // User request implies checking contracts. Usually rules are per project.
+                if (contextPId && pIdStr !== contextPId.toString()) return;
+
+                if (p.contracts) {
+                  p.contracts.forEach((c: any) => {
+                    const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
+                    const isActive = !endDate || endDate >= new Date();
+                    if (isActive && c.hora_inicio && c.hora_fin) {
+                      const start = getScheduleMinutes(c.hora_inicio);
+                      let end = getScheduleMinutes(c.hora_fin);
+
+                      if (start !== -1 && end !== -1) {
+                        // Handle 00:00 as 24:00 (1440 minutes) if it's the end time
+                        if (end === 0) end = 1440;
+                        // Handle overnight shifts (e.g., 22:00 - 06:00)
+                        if (end < start) end += 1440;
+                        shifts.push({ start, end });
+                      }
+                    }
+                  });
+                }
+              });
+              return shifts;
+            };
+
+            const shifts1 = getShifts(user1Meta);
+            const shifts2 = getShifts(user2Meta);
+
+            // Safe default: if no schedule info found, assume overlap
+            if (shifts1.length === 0 || shifts2.length === 0) return true;
+
+            for (const s1 of shifts1) {
+              for (const s2 of shifts2) {
+                // Simple interval overlap check: max(start1, start2) < min(end1, end2)
+                const start = Math.max(s1.start, s2.start);
+                const end = Math.min(s1.end, s2.end);
+                if (start < end) return true;
+              }
+            }
+            return false;
+          };
+
+          for (const v of overlappingVacations) {
+            // CHECK SCHEDULE OVERLAP
+            // Find the user object for this vacation
+            const vUser = matchingUsers.find((u) => u._id.toString() === v.userId.toString());
+            // We effectively use pId from the outer loop as the context project ID
+            // Note: pId can be undefined (if rule is Any Project). In that case, we check ALL projects?
+            // Providing undefined to hasScheduleOverlap checks all projects (logic update needed above? No, passing undefined checks all if we write it so).
+            // My previous helper had: if (contextPId && ...)
+            // If pId is undefined, it skips the check, effectively aggregating all contracts.
+            if (vUser && !hasScheduleOverlap(user.metadata, vUser.metadata, pId?.toString())) {
+              continue; // Skip counting this vacation if schedules don't overlap
+            }
+
+            let current = new Date(v.startDate < searchStart ? searchStart : v.startDate);
+            const end = new Date(v.endDate > searchEnd ? searchEnd : v.endDate);
+            const isPending = v.status === "pending";
+
+            while (current <= end) {
+              const dateStr = current.toISOString().split("T")[0];
+              if (!occupancy[dateStr]) occupancy[dateStr] = { count: 0, hasPending: false };
+              occupancy[dateStr].count++;
+              if (isPending) occupancy[dateStr].hasPending = true;
+              current.setDate(current.getDate() + 1);
+            }
+          }
+
+          // Check violations for this bucket
+          Object.entries(occupancy).forEach(([date, data]) => {
+            if (data.count >= rule.maxSimultaneousUsers) {
+              const existing = blockedDatesMap.get(date);
+              const currentStatus = data.hasPending ? "pending" : "approved";
+              if (!existing) {
+                blockedDatesMap.set(date, currentStatus);
+              } else if (existing === "pending" && currentStatus === "approved") {
+                blockedDatesMap.set(date, "approved");
+              }
+            }
+          });
         }
       }
     }
@@ -1042,13 +1016,6 @@ router.post("/", async (req, res) => {
           score++;
           if (!userAreaId || userAreaId.toString() !== rule.areaId.toString()) matches = false;
         }
-        if (matches && rule.positionId) {
-          // Legacy positionId removed from User
-          matches = false;
-        }
-        if (matches && rule.levelId) {
-          matches = false;
-        }
         if (matches && rule.projectId) {
           score++;
           const userProjects = user.projectIds?.map((p) => p.toString()) || [];
@@ -1085,129 +1052,121 @@ router.post("/", async (req, res) => {
 
         const projectsToCheck = rule.projectId ? [rule.projectId] : user.projectIds?.length ? user.projectIds : [];
         const areasToCheck = rule.areaId ? [rule.areaId] : userAreaId ? [userAreaId] : [];
-        const positionsToCheck = [undefined];
-        const levelsToCheck = [undefined];
 
         const finalProjects = projectsToCheck.length > 0 ? projectsToCheck : [undefined];
         const finalAreas = areasToCheck.length > 0 ? areasToCheck : [undefined];
-        const finalPositions = positionsToCheck.length > 0 ? positionsToCheck : [undefined];
-        const finalLevels = levelsToCheck.length > 0 ? levelsToCheck : [undefined];
 
         for (const pId of finalProjects) {
           for (const aId of finalAreas) {
-            for (const posId of finalPositions) {
-              for (const lId of finalLevels) {
-                const otherUsersQuery: any = { tenantId, "metadata.activo": true, _id: { $ne: userId } };
-                if (pId) otherUsersQuery.projectIds = pId;
+            const otherUsersQuery: any = { tenantId, "metadata.activo": true, _id: { $ne: userId } };
+            if (pId) otherUsersQuery.projectIds = pId;
 
-                if (aId) {
-                  const usersInArea = await UserProject.find({ areaId: aId }).distinct("userId");
-                  otherUsersQuery._id = { $in: usersInArea, $ne: userId };
-                }
+            if (aId) {
+              const usersInArea = await UserProject.find({ areaId: aId }).distinct("userId");
+              otherUsersQuery._id = { $in: usersInArea, $ne: userId };
+            }
 
-                if (rule.roleFrameId) {
-                  const rf = await RoleFrame.findById(rule.roleFrameId);
-                  if (rf) {
-                    const values = [];
-                    if (rf.externalId) values.push(rf.externalId);
-                    if (rf.data?.rol?.id) values.push(rf.data.rol.id);
-                    if (values.length > 0) {
-                      otherUsersQuery["metadata.projects"] = {
-                        $elemMatch: { rol_frame_id: { $in: values } },
-                      };
-                    }
-                  }
-                }
-
-                const matchingUsers = await User.find(otherUsersQuery).select("_id metadata").populate("metadata.projects");
-                const matchingUserIds = matchingUsers.map((u) => u._id);
-
-                // Check overlaps for these users in the requested range
-                const potentialConflictingVacations = await Vacation.find({
-                  tenantId,
-                  userId: { $in: matchingUserIds },
-                  status: { $nin: ["rejected", "cancelled"] },
-                  $or: [{ startDate: { $lte: end }, endDate: { $gte: start } }],
-                }).select("userId");
-
-                // Filter by Schedule Overlap
-                // We use a Set to count distinct users who physically overlap in time
-                const conflictingUserIds = new Set<string>();
-
-                for (const v of potentialConflictingVacations) {
-                  const vUser = matchingUsers.find((u) => u._id.toString() === v.userId.toString());
-                  // Use helper defined earlier in the file (available in scope since defined at top of route handler?)
-                  // Wait, helper was defined inside GET /availability. I need to move it to module scope or redefine it.
-                  // Defining it inside this block or loop is inefficient but safe.
-                  // Better: Duplicate logic here for now as I cannot move it easily without touching unrelated code.
-
-                  // Duplicate Helper Logic locally
-                  const checkScheduleOverlap = (u1: any, u2: any, cPId?: string) => {
-                    const getScheduleMinutes = (timeStr: string): number => {
-                      if (!timeStr) return -1;
-                      const [h, m] = timeStr.split(":").map(Number);
-                      return h * 60 + m;
-                    };
-
-                    const getS = (meta: any) => {
-                      const sh: { s: number; e: number }[] = [];
-                      if (!meta?.projects) return sh;
-                      meta.projects.forEach((kp: any) => {
-                        const kId = kp.projectId?._id?.toString() || kp.projectId?.toString();
-                        if (cPId && kId !== cPId.toString()) return;
-                        if (kp.contracts) {
-                          kp.contracts.forEach((kc: any) => {
-                            const ke = kc.fecha_baja_contrato ? new Date(kc.fecha_baja_contrato) : null;
-                            if (!ke || ke >= new Date()) {
-                              if (kc.hora_inicio && kc.hora_fin) {
-                                const s = getScheduleMinutes(kc.hora_inicio);
-                                let e = getScheduleMinutes(kc.hora_fin);
-                                if (s !== -1 && e !== -1) {
-                                  if (e === 0) e = 1440;
-                                  if (e < s) e += 1440;
-                                  sh.push({ s, e });
-                                }
-                              }
-                            }
-                          });
-                        }
-                      });
-                      return sh;
-                    };
-                    const s1 = getS(u1);
-                    const s2 = getS(u2);
-                    if (s1.length === 0 || s2.length === 0) return true;
-                    for (const a of s1) {
-                      for (const b of s2) {
-                        const start = Math.max(a.s, b.s);
-                        const end = Math.min(a.e, b.e);
-                        if (start < end) return true;
-                      }
-                    }
-                    return false;
+            if (rule.roleFrameId) {
+              const rf = await RoleFrame.findById(rule.roleFrameId);
+              if (rf) {
+                const values = [];
+                if (rf.externalId) values.push(rf.externalId);
+                if (rf.data?.rol?.id) values.push(rf.data.rol.id);
+                if (values.length > 0) {
+                  otherUsersQuery["metadata.projects"] = {
+                    $elemMatch: { rol_frame_id: { $in: values } },
                   };
-
-                  if (vUser && checkScheduleOverlap(user.metadata, vUser.metadata, pId?.toString())) {
-                    conflictingUserIds.add(v.userId.toString());
-                  }
-                }
-
-                if (conflictingUserIds.size >= rule.maxSimultaneousUsers) {
-                  // Determine scope name for clearer error
-                  let scopeDesc = "";
-                  if (!rule.projectId && pId) {
-                    // Try to let user know which project blocked them?
-                    // Optimization: fetch project name only if error?
-                    // For now, generic message is fine.
-                    scopeDesc += " (en tu mismo Proyecto)";
-                  }
-                  if (!rule.areaId && aId) scopeDesc += " (en tu misma Área)";
-
-                  return res.status(400).json({
-                    error: `Conflicto de solapamiento. Hay ${conflictingUserIds.size} personas con este perfil (Regla: ${rule.description || "Personalizada"}${scopeDesc}) de vacaciones en este periodo (Límite: ${rule.maxSimultaneousUsers}).`,
-                  });
                 }
               }
+            }
+
+            const matchingUsers = await User.find(otherUsersQuery).select("_id metadata").populate("metadata.projects");
+            const matchingUserIds = matchingUsers.map((u) => u._id);
+
+            // Check overlaps for these users in the requested range
+            const potentialConflictingVacations = await Vacation.find({
+              tenantId,
+              userId: { $in: matchingUserIds },
+              status: { $nin: ["rejected", "cancelled"] },
+              $or: [{ startDate: { $lte: end }, endDate: { $gte: start } }],
+            }).select("userId");
+
+            // Filter by Schedule Overlap
+            // We use a Set to count distinct users who physically overlap in time
+            const conflictingUserIds = new Set<string>();
+
+            for (const v of potentialConflictingVacations) {
+              const vUser = matchingUsers.find((u) => u._id.toString() === v.userId.toString());
+              // Use helper defined earlier in the file (available in scope since defined at top of route handler?)
+              // Wait, helper was defined inside GET /availability. I need to move it to module scope or redefine it.
+              // Defining it inside this block or loop is inefficient but safe.
+              // Better: Duplicate logic here for now as I cannot move it easily without touching unrelated code.
+
+              // Duplicate Helper Logic locally
+              const checkScheduleOverlap = (u1: any, u2: any, cPId?: string) => {
+                const getScheduleMinutes = (timeStr: string): number => {
+                  if (!timeStr) return -1;
+                  const [h, m] = timeStr.split(":").map(Number);
+                  return h * 60 + m;
+                };
+
+                const getS = (meta: any) => {
+                  const sh: { s: number; e: number }[] = [];
+                  if (!meta?.projects) return sh;
+                  meta.projects.forEach((kp: any) => {
+                    const kId = kp.projectId?._id?.toString() || kp.projectId?.toString();
+                    if (cPId && kId !== cPId.toString()) return;
+                    if (kp.contracts) {
+                      kp.contracts.forEach((kc: any) => {
+                        const ke = kc.fecha_baja_contrato ? new Date(kc.fecha_baja_contrato) : null;
+                        if (!ke || ke >= new Date()) {
+                          if (kc.hora_inicio && kc.hora_fin) {
+                            const s = getScheduleMinutes(kc.hora_inicio);
+                            let e = getScheduleMinutes(kc.hora_fin);
+                            if (s !== -1 && e !== -1) {
+                              if (e === 0) e = 1440;
+                              if (e < s) e += 1440;
+                              sh.push({ s, e });
+                            }
+                          }
+                        }
+                      });
+                    }
+                  });
+                  return sh;
+                };
+                const s1 = getS(u1);
+                const s2 = getS(u2);
+                if (s1.length === 0 || s2.length === 0) return true;
+                for (const a of s1) {
+                  for (const b of s2) {
+                    const start = Math.max(a.s, b.s);
+                    const end = Math.min(a.e, b.e);
+                    if (start < end) return true;
+                  }
+                }
+                return false;
+              };
+
+              if (vUser && checkScheduleOverlap(user.metadata, vUser.metadata, pId?.toString())) {
+                conflictingUserIds.add(v.userId.toString());
+              }
+            }
+
+            if (conflictingUserIds.size >= rule.maxSimultaneousUsers) {
+              // Determine scope name for clearer error
+              let scopeDesc = "";
+              if (!rule.projectId && pId) {
+                // Try to let user know which project blocked them?
+                // Optimization: fetch project name only if error?
+                // For now, generic message is fine.
+                scopeDesc += " (en tu mismo Proyecto)";
+              }
+              if (!rule.areaId && aId) scopeDesc += " (en tu misma Área)";
+
+              return res.status(400).json({
+                error: `Conflicto de solapamiento. Hay ${conflictingUserIds.size} personas con este perfil (Regla: ${rule.description || "Personalizada"}${scopeDesc}) de vacaciones en este periodo (Límite: ${rule.maxSimultaneousUsers}).`,
+              });
             }
           }
         }

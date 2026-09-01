@@ -214,7 +214,7 @@ export const UserRegistrationDetailModal: React.FC<UserRegistrationDetailModalPr
               </label>
               <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm min-h-[46px] flex items-center">
                 <p className="text-sm font-medium text-slate-900 dark:text-slate-100 italic">
-                  {roleFrame ? roleFrame.name : (typeof user.positionId === "object" ? user.positionId?.name : "Sin cargo")}
+                  {roleFrame ? roleFrame.name : "Sin cargo"}
                 </p>
               </div>
             </div>

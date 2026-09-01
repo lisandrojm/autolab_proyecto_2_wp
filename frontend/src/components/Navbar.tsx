@@ -7,7 +7,7 @@ import { EmpresaContextMenu } from './EmpresaContextMenu';
 import { FichasHeader } from './context/FichasHeader';
 import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag } from '@fortawesome/free-solid-svg-icons';
 import { faDropbox } from '@fortawesome/free-brands-svg-icons';
 import { Logo } from '../components/ui/Logo';
 import axios from '../api/axiosConfig';
@@ -21,8 +21,6 @@ interface AdminCounts {
   roles: number;
   users: number;
   areas: number;
-  positions: number;
-  levels: number;
   projects: number;
 }
 
@@ -116,7 +114,7 @@ const EMPRESAS_PATH = '/empresas';
  * catálogos con los que se clasifica a una persona. Es exactamente el mismo tipo de cosa que ARCA:
  * se configura y casi no se toca.
  *
- * `/users` va PRIMERO porque es la entidad; Áreas, Cargos, Niveles y Roles son los atributos con los
+ * `/users` va PRIMERO porque es la entidad; Áreas, Turnos, Roles y Roles Empresa son los atributos con los
  * que se la describe. Mismo criterio que el membrete en "Plantillas".
  *
  * Turnos rompe el orden alfabético a propósito y va pegado a Áreas: son el mismo tipo de dato —el par
@@ -125,7 +123,7 @@ const EMPRESAS_PATH = '/empresas';
  * Estaba suelto en Configuración, entre catálogos que no tienen nada que ver.
  */
 const USUARIOS_PATH = '/users';
-const USUARIOS_PATHS = [USUARIOS_PATH, '/areas', '/shifts', '/positions', '/levels', '/roles'];
+const USUARIOS_PATHS = [USUARIOS_PATH, '/areas', '/shifts', '/roles', '/roles-empresa'];
 
 /**
  * Subgrupo "Documentos" (dentro de Configuración): la integración con Dropbox, entera.
@@ -225,7 +223,7 @@ export const MobileNavbar: React.FC = () => {
     const grupos = gruposDeRuta(location.pathname);
     if (grupos.length > 0) setOpenGroups((prev) => ({ ...prev, ...Object.fromEntries(grupos.map((g) => [g.key, true])) }));
   }, [location.pathname]);
-  const [adminCounts, setAdminCounts] = useState<AdminCounts>({ clients: 0, tenants: 0, roles: 0, users: 0, areas: 0, positions: 0, levels: 0, projects: 0 });
+  const [adminCounts, setAdminCounts] = useState<AdminCounts>({ clients: 0, tenants: 0, roles: 0, users: 0, areas: 0, projects: 0 });
   const SHOW_MENU_COUNTS = false;
 
   useEffect(() => {
@@ -245,27 +243,19 @@ export const MobileNavbar: React.FC = () => {
         if (hasPermission('admin_areas:view')) promises.push(axios.get('/areas/count').catch(() => ({ data: { count: 0 } })));
         else promises.push(Promise.resolve({ data: { count: 0 } }));
 
-        if (hasPermission('admin_positions:view')) promises.push(axios.get('/positions/count').catch(() => ({ data: { count: 0 } })));
-        else promises.push(Promise.resolve({ data: { count: 0 } }));
-
-        if (hasPermission('admin_levels:view')) promises.push(axios.get('/levels/count').catch(() => ({ data: { count: 0 } })));
-        else promises.push(Promise.resolve({ data: { count: 0 } }));
-
         if (hasPermission('admin_users:view')) promises.push(axios.get('/users/count').catch(() => ({ data: { count: 0 } })));
         else promises.push(Promise.resolve({ data: { count: 0 } }));
 
         if (hasPermission('admin_projects:view')) promises.push(axios.get('/projects/count').catch(() => ({ data: { count: 0 } })));
         else promises.push(Promise.resolve({ data: { count: 0 } }));
 
-        const [clientsRes, tenantsRes, rolesRes, areasRes, positionsRes, levelsRes, usersRes, projectsRes] = await Promise.all(promises);
+        const [clientsRes, tenantsRes, rolesRes, areasRes, usersRes, projectsRes] = await Promise.all(promises);
 
         setAdminCounts({
           clients: clientsRes?.data?.count || 0,
           tenants: tenantsRes?.data?.count || 0,
           roles: rolesRes?.data?.count || 0,
           areas: areasRes?.data?.count || 0,
-          positions: positionsRes?.data?.count || 0,
-          levels: levelsRes?.data?.count || 0,
           projects: projectsRes?.data?.count || 0,
           users: usersRes?.data?.count || 0,
         });
@@ -304,12 +294,11 @@ export const MobileNavbar: React.FC = () => {
     }> = [];
 
     if (isSuperAdminTenant) {
-      base.push({ path: '/tenants', icon: faBuilding, label: 'Tenants', scope: 'global', count: adminCounts.tenants }, { path: '/users', icon: faUserGear, label: 'Usuarios', scope: 'global', count: adminCounts.users }, { path: '/shifts', icon: faClock, label: 'Turnos', scope: 'global' }, { path: '/roles', icon: faUserShield, label: 'Roles', scope: 'global', count: adminCounts.roles }, { path: '/areas', icon: faLayerGroup, label: 'Áreas', scope: 'global', count: adminCounts.areas }, { path: '/positions', icon: faUserTie, label: 'Cargos', scope: 'global', count: adminCounts.positions }, { path: '/levels', icon: faUserGraduate, label: 'Niveles', scope: 'global', count: adminCounts.levels }, { path: '/clients', icon: faUsers, label: 'Clientes', scope: 'global', count: adminCounts.clients }, { path: '/arca/categorias', icon: faListCheck, label: 'Categorías', scope: 'global' });
+      base.push({ path: '/tenants', icon: faBuilding, label: 'Tenants', scope: 'global', count: adminCounts.tenants }, { path: '/users', icon: faUserGear, label: 'Usuarios', scope: 'global', count: adminCounts.users }, { path: '/shifts', icon: faClock, label: 'Turnos', scope: 'global' }, { path: '/roles', icon: faUserShield, label: 'Roles', scope: 'global', count: adminCounts.roles }, { path: '/areas', icon: faLayerGroup, label: 'Áreas', scope: 'global', count: adminCounts.areas }, { path: '/clients', icon: faUsers, label: 'Clientes', scope: 'global', count: adminCounts.clients }, { path: '/arca/categorias', icon: faListCheck, label: 'Categorías', scope: 'global' });
     } else {
       if (hasPermission('admin_roles:view')) base.push({ path: '/roles', icon: faUserShield, label: 'Roles', scope: 'global', count: adminCounts.roles });
+      if (hasPermission('admin_roles_empresa:view')) base.push({ path: '/roles-empresa', icon: faUserTag, label: 'Roles Empresa', scope: 'global' });
       if (hasPermission('admin_areas:view')) base.push({ path: '/areas', icon: faLayerGroup, label: 'Áreas', scope: 'global', count: adminCounts.areas });
-      if (hasPermission('admin_positions:view')) base.push({ path: '/positions', icon: faUserTie, label: 'Cargos', scope: 'global', count: adminCounts.positions });
-      if (hasPermission('admin_levels:view')) base.push({ path: '/levels', icon: faUserGraduate, label: 'Niveles', scope: 'global', count: adminCounts.levels });
       if (hasPermission('admin_users:view')) base.push({ path: '/users', icon: faUserGear, label: 'Usuarios', scope: 'global', count: adminCounts.users });
       if (hasPermission('admin_users_import:view')) base.push({ path: '/users/import-wp', icon: faArrowUpRightFromSquare, label: 'Import WP', scope: 'global' });
 
@@ -342,7 +331,6 @@ export const MobileNavbar: React.FC = () => {
       // quien puede definir el contenido de un documento puede definir su nombre.
       if (hasPermission('config_releases:view') || hasPermission('config_contratos_frame:view')) base.push({ path: NOMENCLATURA_PATH, icon: faTag, label: 'Nomenclatura de archivos', scope: 'global' });
       if (hasPermission('config_releases:view')) base.push({ path: '/releases-tipos', icon: faRocket, label: 'Releases', scope: 'global' });
-      // Categorías y Funciones FRAME viven en un solo ítem con dos tabs: alcanza con cualquiera de los dos permisos.
       if (hasPermission('config_categorias_sat:view') || hasPermission('config_frame_functions:view')) base.push({ path: '/arca/categorias', icon: faListCheck, label: 'Categorías', scope: 'global' });
       if (hasPermission('config_bancos:view')) base.push({ path: '/bancos', icon: faBuildingColumns, label: 'Entidades Financieras', scope: 'global' });
       if (hasPermission('config_obras_sociales:view')) base.push({ path: '/obras-sociales', icon: faBriefcaseMedical, label: 'Obras Sociales', scope: 'global' });

@@ -2,8 +2,6 @@ import { Document, Types, Model } from "mongoose";
 export interface IEmbeddedOverlap {
     _id?: Types.ObjectId;
     areaId?: Types.ObjectId;
-    positionId?: Types.ObjectId;
-    levelId?: Types.ObjectId;
     projectId?: Types.ObjectId;
     clientId?: Types.ObjectId;
     roleFrameId?: Types.ObjectId;

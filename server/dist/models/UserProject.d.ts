@@ -34,12 +34,8 @@ interface IContract {
     nombre_sede: string;
     nombre_rol_frame: string;
     areaId: Types.ObjectId | string | null;
-    positionId: Types.ObjectId | string | null;
-    levelId: Types.ObjectId | string | null;
     shiftId: Types.ObjectId | string | null;
     nombre_area: string;
-    nombre_cargo: string;
-    nombre_nivel: string;
     nombre_turno: string;
     empresaContratoId?: Types.ObjectId | string | null;
     empresaReleaseId?: Types.ObjectId | string | null;
@@ -208,8 +204,6 @@ export interface IUserProject extends Document {
     nombre_rol_frame: string;
     contracts: IContract[];
     areaId?: Types.ObjectId;
-    positionId?: Types.ObjectId;
-    levelId?: Types.ObjectId;
 }
 declare const UserProject: import("mongoose").Model<IUserProject, {}, {}, {}, Document<unknown, {}, IUserProject, {}, {}> & IUserProject & Required<{
     _id: Types.ObjectId;

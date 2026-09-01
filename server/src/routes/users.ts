@@ -8,8 +8,6 @@ import { Tenant } from "../models/Tenant.js";
 import { Info } from "../models/Info.js";
 import { RoleFrame } from "../models/RoleFrame.js";
 import UserProject from "../models/UserProject.js"; // This registers the model
-import { Position } from "../models/Position.js";
-import { Level } from "../models/Level.js";
 import { Area } from "../models/Area.js";
 import { Shift } from "../models/Shift.js";
 import { Client } from "../models/Client.js";
@@ -24,8 +22,6 @@ import "../models/Tenant.js";
 import "../models/Info.js";
 import "../models/RoleFrame.js";
 import "../models/UserProject.js";
-import "../models/Position.js";
-import "../models/Level.js";
 import "../models/Area.js";
 import "../models/Client.js";
 
@@ -395,10 +391,8 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
       : {
           path: "metadata.projects",
           model: UserProject,
-          select: "projectId positionId levelId areaId nombre_rol_frame nombre_proyecto contracts",
+          select: "projectId areaId nombre_rol_frame nombre_proyecto contracts",
           populate: [
-            { path: "positionId", select: "name", model: Position },
-            { path: "levelId", select: "name", model: Level },
             { path: "areaId", select: "name", model: Area },
             // NOTA: no traer teamConfig/coordinatorAssignments aquí: son arrays
             // potencialmente enormes que no se usan en esta lista y disparan timeouts.
@@ -926,10 +920,6 @@ router.post("/", requireTenant, authenticateToken, requirePermission("admin_user
     const data = createUserSchema.parse(req.body);
     normalizarRolesFrame((data as any).metadata);
 
-    if ((data as any).levelId === null) {
-      (data as any).levelId = undefined;
-    }
-
     // Toda solicitud de alta nace "pendiente" (ciclo de vida tipo Pedido).
     if ((data as any).metadata?.isSolicitud === true && !(data as any).metadata.solicitudStatus) {
       (data as any).metadata.solicitudStatus = "pendiente";
@@ -1057,7 +1047,7 @@ router.get("/directory", requireTenant, authenticateToken, async (req: Authentic
     }
 
     // Ningún consumidor de este directory (RequestsPage.tsx, mobile ActivityLogs.tsx) lee
-    // positionId/levelId/areaId POBLADOS de metadata.projects (solo el areaId crudo, como id) —
+    // areaId POBLADO de metadata.projects (solo el areaId crudo, como id) —
     // ese sub-populate triple, multiplicado por cada proyecto de cada uno de los ~1500+ usuarios
     // del tenant, era puro costo sin uso. `/users` (el endpoint completo) sigue poblándolos para
     // quien sí los necesite.
@@ -1077,7 +1067,7 @@ router.get("/directory", requireTenant, authenticateToken, async (req: Authentic
         path: "metadata.projects",
         model: UserProject,
         select:
-          "projectId positionId levelId areaId nombre_proyecto nombre_rol_frame " +
+          "projectId areaId nombre_proyecto nombre_rol_frame " +
           "contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga " +
           "contracts.hora_inicio contracts.hora_fin contracts.areaId contracts.shiftId contracts.areaShiftAssignments",
       })
@@ -1142,8 +1132,6 @@ router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_us
         path: "metadata.projects",
         model: UserProject,
         populate: [
-          { path: "positionId", select: "name description", model: Position },
-          { path: "levelId", select: "name description", model: Level },
           { path: "areaId", select: "name description", model: Area },
           { path: "projectId", select: "name status teamConfig coordinatorAssignments clientId", model: "Project" },
         ],

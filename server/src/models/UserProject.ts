@@ -36,12 +36,8 @@ interface IContract {
   nombre_sede: string;
   nombre_rol_frame: string;
   areaId: Types.ObjectId | string | null;
-  positionId: Types.ObjectId | string | null;
-  levelId: Types.ObjectId | string | null;
   shiftId: Types.ObjectId | string | null;
   nombre_area: string;
-  nombre_cargo: string;
-  nombre_nivel: string;
   nombre_turno: string;
   // Empresa (razón social) elegida para el contrato / release de ESTE miembro.
   // Debe ser una de las empresas activadas en el proyecto (project.contratoEmpresas / releaseEmpresas).
@@ -226,8 +222,6 @@ export interface IUserProject extends Document {
   nombre_rol_frame: string;
   contracts: IContract[];
   areaId?: Types.ObjectId;
-  positionId?: Types.ObjectId;
-  levelId?: Types.ObjectId;
 }
 
 const contractSchema = new Schema<IContract>(
@@ -266,12 +260,8 @@ const contractSchema = new Schema<IContract>(
     nombre_sede: { type: String },
     nombre_rol_frame: { type: String },
     areaId: { type: Schema.Types.ObjectId, ref: "Area" },
-    positionId: { type: Schema.Types.ObjectId, ref: "Position" },
-    levelId: { type: Schema.Types.ObjectId, ref: "Level" },
     shiftId: { type: Schema.Types.ObjectId, ref: "Shift" },
     nombre_area: { type: String },
-    nombre_cargo: { type: String },
-    nombre_nivel: { type: String },
     nombre_turno: { type: String },
     empresaContratoId: { type: Schema.Types.ObjectId, ref: "Company" },
     empresaReleaseId: { type: Schema.Types.ObjectId, ref: "Company" },
@@ -354,8 +344,6 @@ const userProjectSchema = new Schema<IUserProject>(
     nombre_rol_frame: { type: String }, // User requested convenience field
     contracts: [contractSchema],
     areaId: { type: Schema.Types.ObjectId, ref: "Area" },
-    positionId: { type: Schema.Types.ObjectId, ref: "Position" },
-    levelId: { type: Schema.Types.ObjectId, ref: "Level" },
   },
   {
     timestamps: true,

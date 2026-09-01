@@ -1,8 +1,6 @@
 import mongoose, { Schema } from "mongoose";
 const EmbeddedOverlapSchema = new Schema({
     areaId: { type: Schema.Types.ObjectId, ref: "Area" },
-    positionId: { type: Schema.Types.ObjectId, ref: "Position" },
-    levelId: { type: Schema.Types.ObjectId, ref: "Level" },
     projectId: { type: Schema.Types.ObjectId, ref: "Project" },
     clientId: { type: Schema.Types.ObjectId, ref: "Client" },
     roleFrameId: { type: Schema.Types.ObjectId, ref: "RoleFrame" },

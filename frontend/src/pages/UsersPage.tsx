@@ -6,8 +6,6 @@ import { cuitEsValido } from '../utils/cuit';
 import { NombreArca, estadoNombreArca } from '../components/arca/NombreArca';
 import { registroLinksAPI, RegistroLink, buildRegistroUrl, registroLinkDaysLeft, isRegistroLinkExpired, registroLinkExpiry } from '../api/registroLinks';
 import { rolesAPI, Role } from '../api/roles';
-import { positionsAPI, Position } from '../api/positions';
-import { levelsAPI, Level } from '../api/levels';
 import { areasAPI, Area } from '../api/areas';
 import { clientsAPI, Client } from '../api/clients';
 import { projectsAPI, Project } from '../api/projects';
@@ -26,7 +24,7 @@ import { UserFormModal } from '../components/users/UserFormModal';
 import { Card } from '../components/ui/Card';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faLayerGroup, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faUserPlus, faCopy, faCheck, faBan, faBell, faSort, faSortUp, faSortDown, faLandmark, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faUserShield, faEdit, faTrash, faKey, faPlus, faLayerGroup, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faUserPlus, faCopy, faCheck, faBan, faBell, faSort, faSortUp, faSortDown, faLandmark, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getImageUrl } from '../utils/imageHelpers';
@@ -85,8 +83,6 @@ export const UsersPage: React.FC = () => {
   // data
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
-  const [positions, setPositions] = useState<Position[]>([]);
-  const [levels, setLevels] = useState<Level[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
   const [allClients, setAllClients] = useState<Client[]>([]);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
@@ -249,7 +245,7 @@ export const UsersPage: React.FC = () => {
       try {
         setInitialLoading(true);
         // Prioridad: usuarios, roles, cargos, niveles, areas
-        await Promise.all([fetchUsers({ silent: false }), fetchRoles(), fetchPositions(), fetchLevels(), fetchAreas()]);
+        await Promise.all([fetchUsers({ silent: false }), fetchRoles(), fetchAreas()]);
       } finally {
         setInitialLoading(false);
         // Carga secundaria (no bloqueante para la lista inicial)
@@ -550,30 +546,6 @@ export const UsersPage: React.FC = () => {
       setRoles(response.roles);
     } catch (error) {
       console.error('Error fetching roles:', error);
-    }
-  };
-
-  const fetchPositions = async () => {
-    try {
-      const response = await positionsAPI.list({ limit: 100 });
-      setPositions(response.positions);
-    } catch (error) {
-      console.error('Error fetching positions:', error);
-    }
-  };
-
-  const fetchLevels = async (positionId?: string) => {
-    try {
-      if (positionId) {
-        const levelsForPosition = await levelsAPI.listForPosition(positionId);
-        setLevels(levelsForPosition);
-      } else {
-        const response = await levelsAPI.list({ limit: 100 });
-        const generalLevels = response.levels.filter((l) => l.type === 'general');
-        setLevels(generalLevels);
-      }
-    } catch (error) {
-      console.error('Error fetching levels:', error);
     }
   };
 
@@ -880,14 +852,6 @@ export const UsersPage: React.FC = () => {
           <button onClick={() => navigate('/roles')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Roles</span>
-          </button>
-          <button onClick={() => navigate('/positions')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faUserTie} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span className="hidden lg:block">Cargos</span>
-          </button>
-          <button onClick={() => navigate('/levels')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span className="hidden lg:block">Niveles</span>
           </button>
           <button onClick={() => navigate('/areas')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 lg:h-4 lg:w-4" />
@@ -1214,7 +1178,7 @@ export const UsersPage: React.FC = () => {
                         <div>
                           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3">
                             <FontAwesomeIcon icon={faLayerGroup} className="text-gray-300" />
-                            Roles Frame
+                            Roles Empresa
                           </label>
                           <div className="flex flex-wrap gap-2">
                             {rfIds.map((rf: any, idx: number) => {

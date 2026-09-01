@@ -39,10 +39,9 @@ const ADMIN_PERMISSIONS = [
     'admin_activity_logs:view', // Novedades
     'admin_hr_documents:view', // Documentos RRHH
     // ──────────── Admin USUARIOS ────────────
-    'admin_roles:view', // Roles
+    'admin_roles:view', // Roles (permisos de la plataforma)
+    'admin_roles_empresa:view', // Roles Empresa (los rol_frame: Actor, Animador 2D, …)
     'admin_areas:view', // Areas
-    'admin_positions:view', // Cargos
-    'admin_levels:view', // Niveles
     'admin_users:view', // Usuarios
     'admin_users_import:view', // Import WP
     // ──────────── Configuracion ────────────
@@ -159,8 +158,6 @@ export async function migrateRolePermissions(tenantId) {
         'clients:read': 'clients:view',
         'roles:view': 'admin_roles:view',
         'areas:view': 'admin_areas:view',
-        'positions:view': 'admin_positions:view',
-        'levels:view': 'admin_levels:view',
         'users:view': 'admin_users:view',
         'mobile:access': 'mobile_collaborator:view',
     };

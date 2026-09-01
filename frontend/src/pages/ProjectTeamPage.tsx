@@ -31,8 +31,6 @@ import { releasesAPI, Release } from '../api/release';
 import { companiesAPI, Company } from '../api/companies';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
 import { Area, areasAPI } from '../api/areas';
-import { positionsAPI, Position } from '../api/positions';
-import { levelsAPI, Level } from '../api/levels';
 import { userProjectsAPI } from '../api/userProjects';
 import { shiftsAPI, Shift } from '../api/shifts';
 import { clientsAPI } from '../api/clients';
@@ -257,8 +255,6 @@ export const ProjectTeamPage: React.FC = () => {
   const [loadingAreaShiftMembers, setLoadingAreaShiftMembers] = useState(false);
   const [vacations, setVacations] = useState<VacationRequest[]>([]);
   const [allAreas, setAllAreas] = useState<Area[]>([]);
-  const [allPositions, setAllPositions] = useState<Position[]>([]);
-  const [allLevels, setAllLevels] = useState<Level[]>([]);
   const [allClients, setAllClients] = useState<any[]>([]);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allSedes, setAllSedes] = useState<InfoItem[]>([]);
@@ -352,8 +348,6 @@ export const ProjectTeamPage: React.FC = () => {
     empleado_id_reemplezado: '',
     observaciones: '',
     areaShiftAssignments: [] as { areaId: string; shiftIds: string[] }[],
-    positionId: '',
-    levelId: '',
   });
 
   // UI States
@@ -506,17 +500,13 @@ export const ProjectTeamPage: React.FC = () => {
     const init = async () => {
       try {
         setLoading(true);
-        const [projectData, vacationsData, areasData, positionsData, levelsData, shiftsData] = await Promise.all([
+        const [projectData, vacationsData, areasData, shiftsData] = await Promise.all([
           projectsAPI.getProject(projectId), // específico del proyecto: no se cachea
           cachedFetch('vacations:all', () => vacationsAPI.getAll()),
           cachedFetch('areas:all', () => areasAPI.listAll()),
-          cachedFetch('positions:all', () => positionsAPI.listAll()),
-          cachedFetch('levels:all', () => levelsAPI.listAll()),
           cachedFetch('shifts:all', () => shiftsAPI.getAll()),
         ]);
 
-        setAllPositions(positionsData);
-        setAllLevels(levelsData);
         setAllShifts(shiftsData);
 
         // Auto-cleanup orphaned user IDs from assignedUsers
@@ -1164,7 +1154,7 @@ export const ProjectTeamPage: React.FC = () => {
   }, [allRoleFrames, selectedUserForWizard]);
 
   // Check Is Coordinator Helper
-  const checkIsCoordinator = (user: User) => (typeof user.positionId === 'object' && user.positionId?.name?.toLowerCase().includes('coordinador')) || (user.roles && user.roles.some((r) => r.name.toLowerCase().includes('coordinador'))) || user.firstName?.toLowerCase().includes('coordinador') || user.lastName?.toLowerCase().includes('coordinador');
+  const checkIsCoordinator = (user: User) => (user.roles && user.roles.some((r) => r.name.toLowerCase().includes('coordinador'))) || user.firstName?.toLowerCase().includes('coordinador') || user.lastName?.toLowerCase().includes('coordinador');
 
   // Get standard shifts for a user assigned to an area
   const getStandardShifts = (user: User, userConfig: any, activeContract: any, areaId: string, areaName: string) => {
@@ -1652,8 +1642,6 @@ export const ProjectTeamPage: React.FC = () => {
       empleado_id_reemplezado: lastContract?.empleado_id_reemplezado || '',
       observaciones: lastContract?.observaciones || '',
       areaShiftAssignments: areaShiftAssignments,
-      positionId: lastContract?.positionId || '',
-      levelId: lastContract?.levelId || '',
     });
   };
 
@@ -3603,32 +3591,6 @@ export const ProjectTeamPage: React.FC = () => {
                             {emp.label}
                           </option>
                         ))}
-                      </select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Cargo</label>
-                      <select className="input-field w-full" value={wizardData.positionId} onChange={(e) => setWizardData((prev) => ({ ...prev, positionId: e.target.value, levelId: '' }))} required>
-                        <option value="">Selecciona cargo...</option>
-                        {allPositions.map((p) => (
-                          <option key={p._id} value={p._id}>
-                            {p.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Nivel</label>
-                      <select className="input-field w-full" value={wizardData.levelId} onChange={(e) => setWizardData((prev) => ({ ...prev, levelId: e.target.value }))} disabled={!wizardData.positionId} required>
-                        <option value="">{wizardData.positionId ? 'Selecciona nivel...' : 'Primero selecciona cargo'}</option>
-                        {allLevels
-                          .filter((l) => String(typeof l.positionId === 'object' ? (l.positionId as any)?._id : l.positionId) === String(wizardData.positionId))
-                          .map((l) => (
-                            <option key={l._id} value={l._id}>
-                              {l.name}
-                            </option>
-                          ))}
                       </select>
                     </div>
 

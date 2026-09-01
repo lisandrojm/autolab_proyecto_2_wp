@@ -34,12 +34,8 @@ const contractSchema = new Schema({
     nombre_sede: { type: String },
     nombre_rol_frame: { type: String },
     areaId: { type: Schema.Types.ObjectId, ref: "Area" },
-    positionId: { type: Schema.Types.ObjectId, ref: "Position" },
-    levelId: { type: Schema.Types.ObjectId, ref: "Level" },
     shiftId: { type: Schema.Types.ObjectId, ref: "Shift" },
     nombre_area: { type: String },
-    nombre_cargo: { type: String },
-    nombre_nivel: { type: String },
     nombre_turno: { type: String },
     empresaContratoId: { type: Schema.Types.ObjectId, ref: "Company" },
     empresaReleaseId: { type: Schema.Types.ObjectId, ref: "Company" },
@@ -118,8 +114,6 @@ const userProjectSchema = new Schema({
     nombre_rol_frame: { type: String }, // User requested convenience field
     contracts: [contractSchema],
     areaId: { type: Schema.Types.ObjectId, ref: "Area" },
-    positionId: { type: Schema.Types.ObjectId, ref: "Position" },
-    levelId: { type: Schema.Types.ObjectId, ref: "Level" },
 }, {
     timestamps: true,
     collection: "users_&_projects",

@@ -3,8 +3,6 @@ import api from "./axiosConfig";
 export interface VacationOverlap {
   _id: string;
   areaId?: string | { _id: string; name: string };
-  positionId?: string | { _id: string; name: string };
-  levelId?: string | { _id: string; name: string };
   projectId?: string | { _id: string; name: string };
   clientId?: string | { _id: string; name: string };
   roleFrameId?: string | { _id: string; name: string };
@@ -18,8 +16,6 @@ export interface VacationOverlap {
 
 export interface VacationOverlapInput {
   areaId?: string;
-  positionId?: string;
-  levelId?: string;
   projectId?: string;
   clientId?: string;
   roleFrameId?: string;

@@ -4,7 +4,7 @@ import { faSpinner, faTimes, faCamera, faUpload, faFileArrowUp, faBell, faClock,
 import { Order } from "../../../../api/management";
 import { personnelAPI } from "../../../../api/personnel";
 import { Modal } from "../../../../components/ui/Modal";
-import { getUserName, getUserPosition, getUserAvatar, formatDateShort, getCategoryName, getOrderNumber, getSubcategoriesArray, getUserRoleFrame } from "../utils/orderHelpers";
+import { getUserName, getUserAvatar, formatDateShort, getCategoryName, getOrderNumber, getSubcategoriesArray, getUserRoleFrame } from "../utils/orderHelpers";
 import { sweetAlert } from "../utils/sweetAlert";
 import { StatusBadge } from "../../../../components/ui/StatusBadge";
 import { mapOrderStatusToStatusTypeForMobile, mapDocumentStateToStatusType, mapSignatureStateToStatusType, isOrderInFinalState } from "../../../../utils/statusHelpers";
