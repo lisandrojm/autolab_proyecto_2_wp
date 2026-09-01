@@ -1,0 +1,81 @@
+[
+  {
+    "empresa": "6a5fd12244faed2e72669b42",
+    "razonSocial": "2030 S.R.L.",
+    "antes": [],
+    "ahora": [
+      {
+        "sucursalId": "6a7f2e1ef15381dce4c71eb9",
+        "actividades": [
+          {
+            "codigo": "591110",
+            "descripcion": "PRODUCCIÓN DE FILMES Y VIDEOCINTAS"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "empresa": "6a5fd1cc44faed2e72669f38",
+    "razonSocial": "FZERO S.R.L",
+    "antes": [],
+    "ahora": [
+      {
+        "sucursalId": "6a7f2e1ef15381dce4c71eb7",
+        "actividades": [
+          {
+            "codigo": "921430",
+            "descripcion": "SERVICIOS CONEXOS A LA PRODUCCION DE ESPECTACULOS TEATRALES Y MUSICALES"
+          }
+        ]
+      },
+      {
+        "sucursalId": "6a7f2e1ef15381dce4c71eb8",
+        "actividades": [
+          {
+            "codigo": "900030",
+            "descripcion": "SERVICIOS CONEXOS A LA PRODUCCIÓN DE ESPECTÁCULOS TEATRALES Y MUSICALES"
+          },
+          {
+            "codigo": "921430",
+            "descripcion": "SERVICIOS CONEXOS A LA PRODUCCION DE ESPECTACULOS TEATRALES Y MUSICALES"
+          }
+        ]
+      },
+      {
+        "sucursalId": "6a7f2e1ef15381dce4c71eb9",
+        "actividades": [
+          {
+            "codigo": "591110",
+            "descripcion": "PRODUCCIÓN DE FILMES Y VIDEOCINTAS"
+          }
+        ]
+      },
+      {
+        "sucursalId": "6a7f2e1ef15381dce4c71eba",
+        "actividades": [
+          {
+            "codigo": "591120",
+            "descripcion": "POSTPRODUCCIÓN DE FILMES Y VIDEOCINTAS"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "empresa": "6a96bbc79dc904ae336b329b",
+    "razonSocial": "GRINI S.R.L.",
+    "antes": [],
+    "ahora": [
+      {
+        "sucursalId": "6a7f2e1ef15381dce4c71eb9",
+        "actividades": [
+          {
+            "codigo": "591110",
+            "descripcion": "PRODUCCIÓN DE FILMES Y VIDEOCINTAS"
+          }
+        ]
+      }
+    ]
+  }
+]

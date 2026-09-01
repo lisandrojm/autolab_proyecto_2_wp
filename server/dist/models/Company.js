@@ -31,7 +31,7 @@ const companySchema = new Schema({
         {
             _id: false,
             sucursalId: { type: Schema.Types.ObjectId, ref: "ArcaSucursal", required: true },
-            actividades: [{ type: String }],
+            actividades: [{ _id: false, codigo: { type: String, required: true }, descripcion: { type: String, default: "" } }],
         },
     ],
     defaultsArca: {

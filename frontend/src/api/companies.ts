@@ -50,7 +50,7 @@ export interface Company {
    * mismo domicilio pueden tener declaradas distintas. Sin fila para un domicilio rigen todas las
    * suyas; con la lista vacía, ninguna.
    */
-  sucursalActividades?: Array<{ sucursalId: string; actividades: string[] }>;
+  sucursalActividades?: Array<{ sucursalId: string; actividades: Array<{ codigo: string; descripcion?: string }> }>;
   /**
    * Elección habitual de esta empleadora dentro del nomenclador de ARCA, para no repetirla en cada
    * alta. Guarda el código tal cual viaja al TXT.

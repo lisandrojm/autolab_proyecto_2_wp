@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBriefcaseMedical, faFileContract, faLocationDot, faListCheck, faSliders, faSearch, faXmark, faStar, faCircleInfo, faTriangleExclamation, faArrowUpRightFromSquare, faSpinner, faPlus, faChevronDown, faChevronRight, faCheck, faEdit, faTrash, faLayerGroup } from '@fortawesome/free-solid-svg-icons';
 import { EmpresaContextLayout, SeccionEmpleador } from '../../components/empresa/EmpresaContextLayout';
+import { ActividadesDelDomicilio, ActividadDomicilio } from '../../components/arca/ActividadesDelDomicilio';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
+import { Modal } from '../../components/ui/Modal';
 import { ConvenioSelector } from '../../components/empresas/ConvenioSelector';
 import { SucursalSelector } from '../../components/empresas/SucursalSelector';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
@@ -641,20 +643,23 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
   const [cargando, setCargando] = useState(true);
   const [ids, setIds] = useState<string[]>(empresa.sucursalIds || []);
   /*
-    QUÉ ACTIVIDADES DECLARÓ ESTA EMPLEADORA EN CADA DOMICILIO.
+    LAS ACTIVIDADES QUE ESTA EMPLEADORA DECLARÓ EN CADA DOMICILIO.
 
-    El domicilio es un registro compartido, pero las actividades ARCA las declara POR CUIT: dos
-    empleadoras en el mismo domicilio pueden tener declaradas distintas, y el organismo rechaza un
-    alta con una que ESE CUIT no declaró ahí. Mientras esto vivía solo en el domicilio, el formulario
-    de contrato ofrecía las mismas a todas.
+    Se cargan acá y en ningún otro lado. ARCA las declara POR CUIT, no por dirección: dos empleadoras
+    en el mismo domicilio pueden tener declaradas distintas, y el organismo rechaza un alta con una
+    que ESE CUIT no declaró ahí. Mientras se editaban en el ABM del domicilio, el formulario de
+    contrato les ofrecía las mismas a todas.
 
-    SIN FILA = TODAS. No tener entrada para un domicilio significa «no se recortó», que es lo que
-    había hasta ahora; tenerla vacía significa «ninguna declarada acá». Son cosas distintas y por eso
-    el mapa arranca solo con lo que la empresa ya tiene guardado.
+    Se guarda la actividad COMPLETA (`codigo` + `descripcion`), igual que hacía el domicilio: el
+    import del padrón trae códigos y no ids del catálogo, así que la descripción tiene que viajar con
+    el dato o se pierde si el catálogo cambia.
   */
-  const [actividadesPorSucursal, setActividadesPorSucursal] = useState<Record<string, string[]>>(
-    Object.fromEntries((empresa.sucursalActividades || []).map((x: any) => [String(x.sucursalId), (x.actividades || []).map(String)])),
-  );
+  const mapaDeclaradas = (e: Company): Record<string, ActividadDomicilio[]> =>
+    Object.fromEntries((e.sucursalActividades || []).map((x) => [String(x.sucursalId), (x.actividades || []).map((a) => ({ codigo: String(a.codigo), descripcion: a.descripcion || '' }))]));
+
+  const [actividadesPorSucursal, setActividadesPorSucursal] = useState<Record<string, ActividadDomicilio[]>>(() => mapaDeclaradas(empresa));
+  /** El domicilio cuyas actividades se están editando. `null` = modal cerrado. */
+  const [editandoActividades, setEditandoActividades] = useState<ArcaSucursal | null>(null);
 
   useEffect(() => {
     arcaSucursalesAPI
@@ -665,23 +670,13 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
   }, []);
   useEffect(() => {
     setIds(empresa.sucursalIds || []);
-    setActividadesPorSucursal(Object.fromEntries((empresa.sucursalActividades || []).map((x: any) => [String(x.sucursalId), (x.actividades || []).map(String)])));
+    setActividadesPorSucursal(mapaDeclaradas(empresa));
   }, [empresa]);
 
-  const guardadas = Object.fromEntries((empresa.sucursalActividades || []).map((x: any) => [String(x.sucursalId), [...(x.actividades || [])].map(String).sort()]));
-  const enPantalla = Object.fromEntries(Object.entries(actividadesPorSucursal).map(([k, v]) => [k, [...v].sort()]));
+  const normalizar = (m: Record<string, ActividadDomicilio[]>) =>
+    JSON.stringify(Object.fromEntries(Object.entries(m).map(([k, v]) => [k, [...v].map((a) => a.codigo).sort()])));
   const sucio =
-    JSON.stringify([...ids].sort()) !== JSON.stringify([...(empresa.sucursalIds || [])].sort()) || JSON.stringify(guardadas) !== JSON.stringify(enPantalla);
-
-  /** Prende o apaga una actividad para esta empleadora en ese domicilio. */
-  const alternarActividad = (sucursalId: string, codigo: string, todas: string[]) => {
-    setActividadesPorSucursal((prev) => {
-      // Sin fila previa rigen TODAS: la primera vez que se destilda una, se parte de la lista completa.
-      const actual = prev[sucursalId] ?? todas;
-      const next = actual.includes(codigo) ? actual.filter((c) => c !== codigo) : [...actual, codigo];
-      return { ...prev, [sucursalId]: next };
-    });
-  };
+    JSON.stringify([...ids].sort()) !== JSON.stringify([...(empresa.sucursalIds || [])].sort()) || normalizar(actividadesPorSucursal) !== normalizar(mapaDeclaradas(empresa));
   const elegidas = useMemo(() => sucursales.filter((s) => ids.includes(s._id)), [sucursales, ids]);
   const porDefectoId = empresa.defaultsArca?.sucursalId || '';
 
@@ -751,7 +746,10 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
           </div>
           <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-100 dark:divide-gray-700/60">
             {elegidas.map((s) => (
-              <div key={s._id} className="px-3 py-2.5">
+              // El ✎ va centrado respecto de TODO el bloque —encabezado y badges—, no del renglón del
+              // título: alineado arriba quedaba flotando y no se leía como la acción de la fila.
+              <div key={s._id} className="px-3 py-2.5 flex items-center gap-3">
+                <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   {/*
                     ★ EL DOMICILIO HABITUAL DE ESTA EMPLEADORA.
@@ -778,60 +776,97 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
                   <span className="text-sm text-gray-900 dark:text-gray-100">{s.domicilio}</span>
                   {porDefectoId === s._id && <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">por defecto</span>}
                 </div>
-                {(s.actividades || []).length === 0 ? (
-                  <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">Sin actividades declaradas: los contratos de este domicilio no pueden generar el alta.</p>
-                ) : (
-                  (() => {
-                    const todas = (s.actividades || []).map((a) => String(a.codigo));
-                    const declaradas = actividadesPorSucursal[s._id];
-                    const activa = (codigo: string) => !declaradas || declaradas.includes(codigo);
-                    const ninguna = declaradas?.length === 0;
-                    return (
-                      <>
-                        {/*
-                          SE TILDA POR EMPLEADORA, y por eso son botones y no etiquetas.
+                {/*
+                  BADGES + LÁPIZ, y la edición en un modal.
 
-                          Antes esto mostraba las actividades del domicilio, iguales para todas las
-                          empresas. Pero ARCA las declara POR CUIT: el organismo rechaza un alta con
-                          una actividad que ESTE CUIT no declaró en ese domicilio, aunque otra empresa
-                          sí la tenga. Mostrarlas todas ofrecía a una empleadora actividades que en su
-                          alta iban a ser rechazadas, sin nada que lo anticipara.
-                        */}
-                        <div className="mt-1.5 flex flex-wrap gap-1.5">
-                          {(s.actividades || []).map((a) => {
-                            const on = activa(String(a.codigo));
-                            return (
-                              <button
-                                key={a.codigo}
-                                type="button"
-                                onClick={() => alternarActividad(s._id, String(a.codigo), todas)}
-                                title={on ? `Quitar ${a.codigo}: esta empleadora no la declaró en este domicilio` : `Declarar ${a.codigo} para esta empleadora en este domicilio`}
-                                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] border transition-colors ${
-                                  on
-                                    ? 'bg-blue-50 dark:bg-blue-900/25 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800'
-                                    : 'bg-transparent text-gray-400 dark:text-gray-500 border-gray-200 dark:border-gray-700 line-through'
-                                }`}
-                              >
-                                <FontAwesomeIcon icon={on ? faCheck : faXmark} className="h-2.5 w-2.5" />
-                                <span className="font-mono">{a.codigo}</span>
-                                <span className="truncate max-w-[22rem]">{a.descripcion}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                        {ninguna && (
-                          <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
-                            Esta empleadora no declaró ninguna actividad acá: sus contratos en este domicilio no van a poder generar el alta.
-                          </p>
-                        )}
-                      </>
-                    );
-                  })()
-                )}
+                  Estaban como filas de ancho completo, una debajo de la otra: cuatro domicilios con
+                  sus actividades ocupaban la pantalla entera para mostrar cuatro códigos. Como badges
+                  se ve de un vistazo qué declaró esta empleadora en cada domicilio, que es la
+                  pregunta que se viene a contestar acá.
+
+                  La ✕ del badge quita en el acto; agregar abre el modal, porque elegir del catálogo
+                  necesita buscador y no entra en una fila.
+                */}
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                  {(actividadesPorSucursal[s._id] || []).length === 0 ? (
+                    <span className="text-xs text-amber-700 dark:text-amber-400">
+                      Sin actividades declaradas para esta empleadora: sus contratos en este domicilio no pueden generar el alta.
+                    </span>
+                  ) : (
+                    (actividadesPorSucursal[s._id] || []).map((a) => (
+                      <span
+                        key={a.codigo}
+                        title={a.descripcion}
+                        className="inline-flex items-center gap-1.5 pl-2 pr-1 py-0.5 rounded text-[11px] bg-blue-50 dark:bg-blue-900/25 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                      >
+                        <span className="font-mono font-semibold">{a.codigo}</span>
+                        {a.descripcion && <span className="truncate max-w-[16rem]">{a.descripcion}</span>}
+                        <button
+                          type="button"
+                          onClick={() => setActividadesPorSucursal((prev) => ({ ...prev, [s._id]: (prev[s._id] || []).filter((x) => x.codigo !== a.codigo) }))}
+                          title={`Quitar ${a.codigo} de este domicilio`}
+                          className="ml-0.5 text-blue-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                        >
+                          <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+                        </button>
+                      </span>
+                    ))
+                  )}
+                </div>
+                </div>
+                {/*
+                  EXACTAMENTE el ✎ de la columna «Acciones» de las tablas de catálogo: mismas clases
+                  y mismo tamaño por defecto del ícono. Copiado y no aproximado — un ícono del mismo
+                  gesto que se ve apenas distinto en cada pantalla hace dudar de si hace lo mismo.
+                */}
+                <button
+                  type="button"
+                  onClick={() => setEditandoActividades(s)}
+                  title="Editar"
+                  className="shrink-0 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300"
+                >
+                  <FontAwesomeIcon icon={faEdit} />
+                </button>
               </div>
             ))}
           </div>
         </div>
+      )}
+
+      {/*
+        EL MODAL DE ACTIVIDADES, uno por domicilio.
+
+        Elegir del catálogo necesita buscador y una lista que respire: metido en la fila, el
+        formulario ocupaba más que todo lo demás junto. Acá se abre solo cuando hace falta.
+
+        Lo que se toca acá NO se guarda solo: queda en el formulario y se aplica con «Guardar
+        cambios», igual que la asignación de domicilios. Es lo que distingue esta pantalla del
+        nomenclador de Configuración, donde cada registro se guarda al instante — y mezclar los dos
+        comportamientos en una misma pantalla es cómo alguien cierra un modal creyendo que guardó.
+      */}
+      {editandoActividades && (
+        <Modal
+          isOpen
+          onClose={() => setEditandoActividades(null)}
+          title={`Actividades en ${editandoActividades.domicilio}`}
+          subtitle={`${empresa.razonSocial} · domicilio ${editandoActividades.codigo}. ARCA las declara por CUIT: esta lista es de esta empleadora.`}
+          size="lg"
+          footer={
+            <button
+              type="button"
+              onClick={() => setEditandoActividades(null)}
+              className="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            >
+              Listo
+            </button>
+          }
+        >
+          <ActividadesDelDomicilio
+            actividades={actividadesPorSucursal[editandoActividades._id] || []}
+            onChange={(actividades) => setActividadesPorSucursal((prev) => ({ ...prev, [editandoActividades._id]: actividades }))}
+          />
+          <p className="mt-3 text-[11px] text-amber-700 dark:text-amber-400">Los cambios se aplican al apretar «Guardar cambios» en la pantalla, no al cerrar este modal.</p>
+        </Modal>
       )}
     </SeccionEmpleador>
   );

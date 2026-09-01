@@ -90,25 +90,23 @@ export interface ICompany extends Document {
    */
   sucursalIds?: mongoose.Types.ObjectId[];
   /**
-   * QUÉ ACTIVIDADES DECLARÓ **ESTA** EMPLEADORA EN CADA DOMICILIO.
+   * LAS ACTIVIDADES QUE ESTA EMPLEADORA DECLARÓ EN CADA DOMICILIO. Acá viven, y en ningún otro lado.
    *
-   * El domicilio es un registro compartido —su dirección, su código y su localidad son los mismos—
-   * pero las actividades no lo son: ARCA las declara POR CUIT. Dos empleadoras en el mismo domicilio
-   * pueden tener declaradas actividades distintas, y el organismo rechaza un alta con una actividad
-   * que ESE CUIT no declaró ahí, aunque otra empresa sí la tenga.
+   * ARCA declara las actividades POR CUIT, no por dirección: dos empleadoras en el mismo domicilio
+   * pueden tener declaradas distintas, y el organismo rechaza un alta con una que ESE CUIT no
+   * declaró ahí, aunque otra empresa sí la tenga. Por eso el domicilio (`ArcaSucursal`) quedó como un
+   * ABM de la dirección y su código, y la asociación de actividades es de la empresa.
    *
-   * Con las actividades solo en `ArcaSucursal`, el formulario de contrato ofrecía a todas las
-   * empleadoras las mismas: un alta válida para una y rechazada para la otra, sin nada que lo
-   * anticipara.
+   * SE GUARDA LA ACTIVIDAD COMPLETA (`codigo` + `descripcion`) y no solo el código: es lo mismo que
+   * hace el domicilio, y por el mismo motivo — el import del padrón trae códigos, no ids del
+   * catálogo, así que la descripción tiene que viajar con el dato o se pierde si el catálogo cambia.
    *
-   * VACÍO = SIN RECORTAR. Si una empresa no tiene fila para un domicilio, rigen todas las
-   * actividades del domicilio. Es lo que había hasta ahora, y evita que agregar este campo deje sin
-   * actividad a los contratos existentes hasta que alguien lo complete empresa por empresa.
+   * SIN FILA PARA UN DOMICILIO = SIN ACTIVIDADES DECLARADAS ahí. No es «todas»: una vez que las
+   * actividades son de la empresa, no hay una lista del domicilio de la cual heredar.
    */
   sucursalActividades?: Array<{
     sucursalId: mongoose.Types.ObjectId;
-    /** Códigos de actividad, de los declarados en ese domicilio. */
-    actividades: string[];
+    actividades: Array<{ codigo: string; descripcion?: string }>;
   }>;
   /**
    * Valores por defecto de ARCA para los contratos de esta empleadora.
@@ -189,7 +187,7 @@ const companySchema = new Schema<ICompany>(
       {
         _id: false,
         sucursalId: { type: Schema.Types.ObjectId, ref: "ArcaSucursal", required: true },
-        actividades: [{ type: String }],
+        actividades: [{ _id: false, codigo: { type: String, required: true }, descripcion: { type: String, default: "" } }],
       },
     ],
     defaultsArca: {

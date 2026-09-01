@@ -36,6 +36,15 @@ const SUELDO_BRUTO_CAT_1 = 2122135.35;
 /** Grupo 12 del mismo convenio — el caso que motivó la duda de los centavos. */
 const SUELDO_BRUTO_CAT_12 = 785955.27;
 
+/*
+  LAS ACTIVIDADES SON DE LA EMPLEADORA, no del domicilio.
+
+  ARCA las declara por CUIT: dos empresas en el mismo domicilio pueden tener declaradas distintas, y
+  el organismo rechaza un alta con una que ESE CUIT no declaró ahí. El fixture las tenía en la
+  sucursal, que es donde vivían antes de mover la declaración a la empresa.
+*/
+const ACTIVIDADES_EMPRESA = [{ sucursalId: SUCURSAL_ID, actividades: [{ codigo: "921430", descripcion: "SERVICIOS CONEXOS" }] }];
+
 const catalogos = (over: Partial<AfipCatalogs> = {}): AfipCatalogs =>
   ({
     categorias: [
@@ -49,7 +58,7 @@ const catalogos = (over: Partial<AfipCatalogs> = {}): AfipCatalogs =>
     ],
     obrasSociales: [{ _id: "os1", externalId: "126205", name: "OSPIA", data: { id: 7 } }],
     sedes: [],
-    empresas: [{ _id: EMPRESA_ID, obraSocialId: 7, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"] }],
+    empresas: [{ _id: EMPRESA_ID, obraSocialId: 7, sucursalActividades: ACTIVIDADES_EMPRESA, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"] }],
     sucursales: [{ _id: SUCURSAL_ID, codigo: "00001", domicilio: "ZAPIOLA 392", actividades: [{ codigo: "921430", descripcion: "SERVICIOS CONEXOS" }] }],
     // El convenio trae SU obra social: es de donde sale el RNOS en el caso normal. Antes el fixture
     // no la tenía y el registro se completaba igual, porque existía una obra social global que
@@ -217,14 +226,16 @@ describe("actividad del domicilio", () => {
 
   it("con varias actividades y ninguna elegida no genera registro", () => {
     const cat = catalogos({
-      sucursales: [{ _id: SUCURSAL_ID, codigo: "00001", domicilio: "ZAPIOLA 392", actividades: [{ codigo: "921430" }, { codigo: "900030" }] }] as any,
+      // Dos actividades declaradas POR ESTA EMPLEADORA en ese domicilio.
+      empresas: [{ _id: EMPRESA_ID, obraSocialId: 7, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"], sucursalActividades: [{ sucursalId: SUCURSAL_ID, actividades: [{ codigo: "921430" }, { codigo: "900030" }] }] }] as any,
     });
     assert.equal(buildAltaRecord(fila({ actividadArca: null as any }), cat), null);
   });
 
   it("con varias actividades y una elegida, sale la elegida", () => {
     const cat = catalogos({
-      sucursales: [{ _id: SUCURSAL_ID, codigo: "00001", domicilio: "ZAPIOLA 392", actividades: [{ codigo: "921430" }, { codigo: "900030" }] }] as any,
+      // Dos actividades declaradas POR ESTA EMPLEADORA en ese domicilio.
+      empresas: [{ _id: EMPRESA_ID, obraSocialId: 7, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"], sucursalActividades: [{ sucursalId: SUCURSAL_ID, actividades: [{ codigo: "921430" }, { codigo: "900030" }] }] }] as any,
     });
     const record = buildAltaRecord(fila({ actividadArca: "900030" }), cat)!;
     assert.equal(tramo(record, 79, 84), "900030");
@@ -264,20 +275,20 @@ describe("obra social — cascada persona → convenio → excluidos", () => {
 
   it("el convenio le gana a la default de la empresa", () => {
     // La empleadora tiene la 7 por defecto y el convenio la 22: tiene que salir la del convenio.
-    const cat = conCascada({ empresas: [{ _id: EMPRESA_ID, obraSocialDefaultId: 7, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"] }] } as any);
+    const cat = conCascada({ empresas: [{ _id: EMPRESA_ID, obraSocialDefaultId: 7, sucursalActividades: ACTIVIDADES_EMPRESA, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"] }] } as any);
     assert.equal(rnosDe(buildAltaRecord(fila(), cat)!), "010902");
   });
 
   it("la excepción de la empresa para ese convenio le gana a la sindical del CCT", () => {
     const cat = conCascada({
-      empresas: [{ _id: EMPRESA_ID, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"], convenioObraSocialOverrides: [{ convenioId: "cv1", obraSocialId: 33 }] }],
+      empresas: [{ _id: EMPRESA_ID, sucursalActividades: ACTIVIDADES_EMPRESA, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"], convenioObraSocialOverrides: [{ convenioId: "cv1", obraSocialId: 33 }] }],
     } as any);
     assert.equal(rnosDe(buildAltaRecord(fila(), cat)!), "999999");
   });
 
   it("la excepción de OTRO convenio no aplica a este contrato", () => {
     const cat = conCascada({
-      empresas: [{ _id: EMPRESA_ID, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"], convenioObraSocialOverrides: [{ convenioId: "cv-otro", obraSocialId: 33 }] }],
+      empresas: [{ _id: EMPRESA_ID, sucursalActividades: ACTIVIDADES_EMPRESA, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"], convenioObraSocialOverrides: [{ convenioId: "cv-otro", obraSocialId: 33 }] }],
     } as any);
     assert.equal(rnosDe(buildAltaRecord(fila(), cat)!), "010902");
   });
@@ -291,7 +302,7 @@ describe("obra social — cascada persona → convenio → excluidos", () => {
   it("un convenio sin obra social NO usa la de la empresa ni ninguna otra: el alta no se genera", () => {
     const cat = conCascada({
       convenios: [{ _id: "cv1", externalId: "0634/11", name: "TELEVISIÓN" }],
-      empresas: [{ _id: EMPRESA_ID, obraSocialDefaultId: 33, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"] }],
+      empresas: [{ _id: EMPRESA_ID, obraSocialDefaultId: 33, sucursalActividades: ACTIVIDADES_EMPRESA, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"] }],
     } as any);
     assert.equal(buildAltaRecord(fila(), cat), null, "sin obra social resuelta no puede haber registro");
 
@@ -305,7 +316,7 @@ describe("obra social — cascada persona → convenio → excluidos", () => {
     const cat = conCascada({
       categorias: [{ _id: "cx", externalId: "999999", name: "SIN CATEGORIAS", data: { id: 1, numeroCategoria: 15, nombre: "SIN CATEGORIAS", codigoAfip: 999999, convenio: "9999/99", sueldoBruto: SUELDO_BRUTO_CAT_1 } }],
       convenios: [{ _id: "cv9", externalId: "9999/99", name: "EXCLUIDO DE CONVENIO" }],
-      empresas: [{ _id: EMPRESA_ID, obraSocialDefaultId: 33, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv9"] }],
+      empresas: [{ _id: EMPRESA_ID, obraSocialDefaultId: 33, sucursalActividades: ACTIVIDADES_EMPRESA, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv9"] }],
     } as any);
     assert.equal(rnosDe(buildAltaRecord(fila(), cat)!), "999999");
   });
@@ -581,7 +592,7 @@ describe("tipo de servicio — el default de la empleadora es el valor de arranq
   const conDefault = (defaultsArca: Record<string, string>, tipos?: unknown[]) =>
     catalogos({
       ...(tipos ? { tipos } : {}),
-      empresas: [{ _id: EMPRESA_ID, obraSocialId: 7, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"], defaultsArca }],
+      empresas: [{ _id: EMPRESA_ID, obraSocialId: 7, sucursalActividades: ACTIVIDADES_EMPRESA, sucursalIds: [SUCURSAL_ID], convenioIds: ["cv1"], defaultsArca }],
     } as any);
 
   it("el tipo de contrato MANDA sobre el default de la empresa", () => {

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLocationDot, faPlus, faEdit, faTrash, faTriangleExclamation, faDownload, faFileImport, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faLocationDot, faPlus, faEdit, faTrash, faDownload, faFileImport, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
@@ -10,7 +10,6 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { fuzzyMatch } from "../utils/searchHelpers";
 import { arcaSucursalesAPI, ArcaSucursal, ArcaSucursalInput } from "../api/arcaSucursales";
 import { getHelp, hasHelp } from "../data/help/helpContent";
-import { ActividadesDelDomicilio } from "../components/arca/ActividadesDelDomicilio";
 
 const HELP_KEY = "arcaSucursales" as const;
 
@@ -54,7 +53,7 @@ export const ArcaSucursalesPage: React.FC = () => {
 
   const filtrados = useMemo(() => {
     if (!search.trim()) return items;
-    return items.filter((s) => fuzzyMatch(s.domicilio || "", search) || (s.codigo || "").includes(search.replace(/\D/g, "")) || s.actividades.some((a) => a.codigo.includes(search.replace(/\D/g, "")) || fuzzyMatch(a.descripcion || "", search)));
+    return items.filter((s) => fuzzyMatch(s.domicilio || "", search) || (s.codigo || "").includes(search.replace(/\D/g, "")));
   }, [items, search]);
 
   const abrirCrear = () => {
@@ -136,7 +135,7 @@ export const ArcaSucursalesPage: React.FC = () => {
   return (
     <PageLayout
       title="Domicilios de Explotación"
-      subtitle="Domicilios de desempeño del padrón de ARCA, con su código y sus actividades."
+      subtitle="Domicilios de desempeño del padrón de ARCA, con su código y su dirección. Las actividades se declaran por empleadora, en la ficha de cada empresa."
       itemCount={loading ? undefined : filtrados.length}
       faIcon={{ icon: faLocationDot }}
       shouldShowInfo={hasHelp(HELP_KEY)}
@@ -168,7 +167,6 @@ export const ArcaSucursalesPage: React.FC = () => {
                 <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Código</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Domicilio</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actividades</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
                 </tr>
               </thead>
@@ -181,22 +179,6 @@ export const ArcaSucursalesPage: React.FC = () => {
                     <td className="px-6 py-4">
                       <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{s.domicilio}</p>
                       {(s.localidad || s.codigoPostal) && <p className="text-xs text-gray-500 dark:text-gray-400">{[s.codigoPostal && `CP ${s.codigoPostal}`, s.localidad].filter(Boolean).join(" · ")}</p>}
-                    </td>
-                    <td className="px-6 py-4">
-                      {s.actividades.length === 0 ? (
-                        <span className="text-xs text-amber-600 dark:text-amber-400 inline-flex items-center gap-1.5">
-                          <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" /> Sin actividades
-                        </span>
-                      ) : (
-                        <span className="inline-flex flex-wrap gap-1.5">
-                          {s.actividades.map((a) => (
-                            <span key={a.codigo} title={a.descripcion} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600">
-                              <span className="font-mono font-semibold">{a.codigo}</span>
-                              {a.descripcion && <span className="truncate max-w-[18rem]">{a.descripcion}</span>}
-                            </span>
-                          ))}
-                        </span>
-                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-1">
@@ -257,9 +239,20 @@ export const ArcaSucursalesPage: React.FC = () => {
           </div>
 
           <div className="pt-4 border-t border-gray-100 dark:border-gray-700/50">
-            {/* Las actividades se ELIGEN del catálogo, no se tipean: es lo que garantiza que la misma
-                actividad no termine escrita de dos formas distintas en dos domicilios. */}
-            <ActividadesDelDomicilio actividades={form.actividades} onChange={(actividades) => setForm((p) => ({ ...p, actividades }))} />
+            {/*
+              ACÁ NO SE ASOCIAN ACTIVIDADES. Esto es el ABM del domicilio: su código, su dirección.
+
+              Las actividades ARCA las declara POR CUIT, no por dirección: dos empleadoras en el mismo
+              domicilio pueden tener declaradas distintas, y el organismo rechaza un alta con una que
+              ESE CUIT no declaró ahí. Mientras se editaban acá, el formulario de contrato les ofrecía
+              las mismas a todas — un alta válida para una y rechazada para la otra.
+
+              Se declaran en la ficha de cada empresa, en ARCA → Domicilios de Explotación, con esta
+              misma UI (`ActividadesDelDomicilio`).
+            */}
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              Las actividades no se cargan acá: se declaran por empleadora, en su ficha de ARCA → Domicilios de Explotación. ARCA las declara por CUIT, y dos empresas en el mismo domicilio pueden tener distintas.
+            </p>
           </div>
         </div>
       </Modal>

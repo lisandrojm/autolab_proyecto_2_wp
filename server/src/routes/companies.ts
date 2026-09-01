@@ -49,7 +49,7 @@ const companySchema = z.object({
    * fila —que significa «no se recortó, valen todas las del domicilio»—. Por eso la lista se manda
    * entera y no se hace merge: el merge no puede expresar «lo dejé vacío a propósito».
    */
-  sucursalActividades: z.array(z.object({ sucursalId: z.string(), actividades: z.array(z.string()) })).optional(),
+  sucursalActividades: z.array(z.object({ sucursalId: z.string(), actividades: z.array(z.object({ codigo: z.string(), descripcion: z.string().optional() })) })).optional(),
   /** Elección habitual de esta empleadora dentro del nomenclador, para no repetirla en cada alta. */
   defaultsArca: z
     .object({
