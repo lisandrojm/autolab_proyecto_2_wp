@@ -27,3 +27,13 @@ frontend/.chrome-arca/
 !.env.example
 cuils.txt
 frontend/cuils.txt
+
+# La carpeta `tango/` es OTRO repositorio, con su propio .git.
+#
+# Estaba registrada acá como gitlink de submódulo (modo 160000) y sin entrada en .gitmodules: git
+# guardaba un puntero a un commit suyo sin saber de dónde clonarlo. Por eso aparecía siempre como
+# modificada, y `.gitignore` sola no alcanzaba — una regla de ignore NO se aplica a lo que ya está
+# en el índice: hay que sacarla con `git rm --cached tango`, que deja los archivos en disco.
+#
+# Anclada a la raíz para que no matchee una carpeta `tango` dentro de otro directorio.
+/tango/
