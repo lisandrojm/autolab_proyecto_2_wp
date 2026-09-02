@@ -133,6 +133,31 @@ export const sweetAlert = {
     });
   },
 
+  /**
+   * Aviso corto de que un filtro cambió.
+   *
+   * Los filtros de "Filtros Avanzados" se aplican solos al tocarlos —no hay que confirmar—, y eso
+   * hace que sea fácil mover uno sin registrar qué quedó puesto. El toast dice exactamente qué valor
+   * tomó, y se va solo.
+   */
+  filtro: (texto: string, icono: "success" | "info" = "success") => {
+    return Swal.fire({
+      icon: icono,
+      title: texto,
+      // Mismo formato que `success`: toast arriba a la derecha, con barra de progreso y pausa al pasar
+      // el mouse. Solo cambia el tiempo —un filtro se toca en serie y 2s se encimaban entre sí.
+      toast: true,
+      position: "top-end",
+      showConfirmButton: false,
+      timer: 1600,
+      timerProgressBar: true,
+      didOpen: (t) => {
+        t.addEventListener("mouseenter", Swal.stopTimer);
+        t.addEventListener("mouseleave", Swal.resumeTimer);
+      },
+    });
+  },
+
   favoriteToggle: (isFavorite: boolean, itemName?: string) => {
     return Swal.fire({
       toast: true,

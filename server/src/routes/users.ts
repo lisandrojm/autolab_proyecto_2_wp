@@ -1284,6 +1284,28 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_
       }
 
       data.roles = roleObjectIds.map((id) => id.toString());
+
+      /*
+        No se le puede sacar Mobile-Coordinador a alguien que tiene turnos a cargo.
+
+        La asignación vive en `Project.coordinatorAssignments`. Sin el rol, esa persona no entra a la
+        app como coordinador: las novedades de sus áreas/turnos no las carga nadie y aparecen vencidas
+        en Cumplimiento, sin nada que explique por qué. Primero se lo libera desde el equipo del
+        proyecto, después se le cambia el rol.
+
+        Va acá y no solo en el modal porque el front puede saltearse: esto es un PATCH del API.
+      */
+      const teniaCoordinador = await Role.exists({ _id: { $in: currentUser.roles }, name: /mobile-coordinador/i });
+      const sigueCoordinador = existingRoles.some((r) => /mobile-coordinador/i.test(r.name));
+      if (teniaCoordinador && !sigueCoordinador) {
+        const proyectos = await Project.find({ "coordinatorAssignments.userId": currentUser._id }).select("name").lean();
+        if (proyectos.length > 0) {
+          res.status(409).json({
+            error: `No se puede sacar el rol Mobile-Coordinador: coordina turnos en ${proyectos.map((p: any) => p.name).join(", ")}. Liberá esas coordinaciones desde el equipo del proyecto y volvé a intentar.`,
+          });
+          return;
+        }
+      }
     }
 
 

@@ -4,12 +4,13 @@ import { fuzzyMatch } from "../utils/searchHelpers";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileText, faFilter, faSearch, faUser, faCalendar, faTrash, faUserSlash, faGrip, faTable, faBriefcase, faChartSimple, faClock, faChevronDown, faChevronUp, faFileLines, faLayerGroup, faPen, faCalendarCheck, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faFileText, faUser, faCalendar, faTrash, faUserSlash, faGrip, faTable, faBriefcase, faChartSimple, faClock, faChevronDown, faChevronUp, faFileLines, faLayerGroup, faPen, faCalendarCheck, faEye, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { NewsReportsModal } from "../components/orders/news/NewsReportsModal";
 import { ComplianceView } from "../components/activity_logs/ComplianceView";
 import { PageLayout } from "../components/ui/PageLayout";
 import { CardItemGeneric } from "../components/ui/CardItemGeneric";
 import { Modal } from "../components/ui/Modal";
+import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { ActivityReport as BaseActivityReport, AttendanceRecord, AttendanceStatus } from "../types/activityTypes";
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -36,6 +37,16 @@ interface ActivityReport extends Omit<BaseActivityReport, "id"> {
 export const esAusente = (r: AttendanceRecord) => r.status !== "present" && r.status !== "late";
 export const esOtroPresente = (r: AttendanceRecord) => !!r.absenceReason?.toLowerCase().includes("adicional");
 export const tieneHorasExtras = (r: AttendanceRecord) => (r.overtimeHours || 0) > 0;
+
+/**
+ * Si la ausencia la cubrió alguien.
+ *
+ * OJO CON LOS HORARIOS: `entryTime`/`exitTime` NO son del reemplazante — salen de `scheduleInTime`/
+ * `scheduleOutTime`, que es el horario que le tocaba al AUSENTE. Mostrarlos bajo el encabezado
+ * "Información del Reemplazo" cuando no hay nadie hacía leer "lo cubrieron de 12 a 18" en una
+ * ausencia que quedó descubierta. Por eso la fila sin reemplazo ya no dibuja esas celdas.
+ */
+export const tieneReemplazo = (r: AttendanceRecord) => !!(r.replacementName || "").trim();
 
 const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attendance }) => {
   return (
@@ -64,14 +75,14 @@ const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attenda
 
             return (
               <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                <td className={`py-3 px-4 font-medium ${isAbsent ? "text-red-600 dark:text-gray-300" : "text-gray-900 dark:text-white"}`}>
+                <td className={`py-3 px-4 font-medium ${isAbsent ? "text-red-600 dark:text-red-400" : "text-gray-900 dark:text-white"}`}>
                   <div className="flex items-center gap-2">
                     <span>{record.employeeName}</span>
                     {record.absenceReason?.toLowerCase().includes("adicional") && <span className="bg-amber-100 text-amber-800 text-[9px] font-bold px-1.5 py-0.5 rounded dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-wider">Otros Presentes</span>}
                   </div>
                 </td>
                 <td className="py-3 px-4 text-center">
-                  <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${!isAbsent ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-gray-300"}`}>{!isAbsent ? "Sí" : "No"}</span>
+                  <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${!isAbsent ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{!isAbsent ? "Sí" : "No"}</span>
                 </td>
                 <td className="py-3 px-4 text-gray-600 dark:text-gray-400 capitalize">{isAbsent ? record.absenceReason || "Ausente" : record.absenceReason?.toLowerCase().includes("adicional") ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-wide">Otros Presentes</span> : "-"}</td>
                 <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{record.areaName || "-"}</td>
@@ -82,7 +93,19 @@ const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attenda
                 </td>
                 <td className="py-3 px-4 text-center text-xs font-medium">{record.overtimeEntryTime ? <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-1 rounded">{record.overtimeEntryTime}</span> : <span className="text-gray-400 dark:text-gray-600">-</span>}</td>
                 <td className="py-3 px-4 text-center text-xs font-medium">{record.overtimeExitTime ? <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-1 rounded">{record.overtimeExitTime}</span> : <span className="text-gray-400 dark:text-gray-600">-</span>}</td>
-                <td className="py-3 px-4 text-center text-xs font-medium text-gray-600 dark:text-gray-400">{record.replacementName || "-"}</td>
+                <td className="py-3 px-4 text-center text-xs font-medium">
+                  {/* Un "-" no distinguía "no necesita reemplazo" (está presente) de "faltó y nadie lo cubrió". */}
+                  {record.replacementName ? (
+                    // Mismo ámbar que el badge "No" de dos filas más abajo: toda la columna habla de
+                    // reemplazo, así que el color dice "esto es un reemplazante" y no se confunde con
+                    // el nombre del colaborador de la primera columna.
+                    <span className="text-amber-700 dark:text-amber-400 font-medium">{record.replacementName}</span>
+                  ) : isAbsent ? (
+                    <span className="inline-block px-2 py-1 rounded text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800">No</span>
+                  ) : (
+                    <span className="text-gray-400 dark:text-gray-600">-</span>
+                  )}
+                </td>
               </tr>
             );
           })}
@@ -92,8 +115,21 @@ const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attenda
   );
 };
 
+/**
+ * Un motivo de ausencia (Franco, Enfermedad, …) con sus dos mitades separadas.
+ *
+ * POR QUÉ SEPARADAS. Antes era una sola tabla y TODA fila —hubiera reemplazante o no— caía bajo el
+ * encabezado "Información del Reemplazo / Jornalero", con sus seis columnas. En una ausencia que
+ * nadie cubrió eso anuncia datos que no existen, y encima las columnas Entrada/Salida se llenaban
+ * con el horario programado del ausente, que se leía como si alguien lo hubiera cubierto.
+ *
+ * Ahora el encabezado de reemplazo aparece solamente si hay a quién ponerle abajo, y los descubiertos
+ * van en su propia lista, sin columnas que no les corresponden.
+ */
 const AbsenceBlock: React.FC<{ title: string; records: AttendanceRecord[] }> = ({ title, records }) => {
   const relevantRecords = records;
+  const conReemplazo = relevantRecords.filter(tieneReemplazo);
+  const sinReemplazo = relevantRecords.filter((r) => !tieneReemplazo(r));
 
   const count = relevantRecords.length;
   // Default open if there are records
@@ -103,14 +139,17 @@ const AbsenceBlock: React.FC<{ title: string; records: AttendanceRecord[] }> = (
     <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
       <button onClick={() => setIsOpen(!isOpen)} className="px-5 py-4 flex justify-between items-center w-full text-left focus:outline-none hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
         <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          {title} <span className={count > 0 ? "text-red-600 dark:text-gray-300 font-semibold" : "text-gray-500 font-normal"}>({count})</span>
+          {title} <span className={count > 0 ? "text-red-600 dark:text-red-400 font-semibold" : "text-gray-500 font-normal"}>({count})</span>
         </h3>
         <FontAwesomeIcon icon={isOpen ? faChevronUp : faChevronDown} className="text-gray-400 text-xs" />
       </button>
 
       {isOpen && (
         <div className="border-t border-gray-100 dark:border-gray-700 animate-fade-in">
-          {count > 0 ? (
+          {count === 0 && <div className="py-4 text-center text-sm text-gray-500 italic bg-gray-50/30 dark:bg-gray-900/10">No hay registro de Ausentes por {title}</div>}
+
+          {/* Los que sí cubrió alguien: acá el encabezado de reemplazo tiene sentido porque hay datos debajo. */}
+          {conReemplazo.length > 0 && (
             <div className="overflow-auto max-h-[calc(100vh-320px)]">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 z-10 shadow-sm text-[9px] uppercase text-gray-500 font-medium outline outline-1 outline-gray-100 dark:outline-gray-700 bg-white dark:bg-gray-800">
@@ -132,10 +171,10 @@ const AbsenceBlock: React.FC<{ title: string; records: AttendanceRecord[] }> = (
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {relevantRecords.map((rec) => (
+                  {conReemplazo.map((rec) => (
                     <tr key={rec.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
                       <td className="py-2 px-4 font-bold text-red-600 dark:text-red-400 whitespace-nowrap border-r border-gray-50 dark:border-gray-700/50">{rec.employeeName}</td>
-                      <td className="py-2 px-4 text-blue-600 dark:text-blue-400 font-medium whitespace-nowrap bg-blue-50/20 dark:bg-blue-900/5">{rec.replacementName || "-"}</td>
+                      <td className="py-2 px-4 text-blue-600 dark:text-blue-400 font-medium whitespace-nowrap bg-blue-50/20 dark:bg-blue-900/5">{rec.replacementName}</td>
                       <td className="py-2 px-2 text-center text-[11px] text-gray-500 dark:text-gray-400 bg-blue-50/20 dark:bg-blue-900/5">{rec.entryTime || "-"}</td>
                       <td className="py-2 px-2 text-center text-[11px] text-gray-500 dark:text-gray-400 bg-blue-50/20 dark:bg-blue-900/5">{rec.exitTime || "-"}</td>
                       <td className="py-2 px-2 text-center bg-blue-50/20 dark:bg-blue-900/5">
@@ -148,8 +187,23 @@ const AbsenceBlock: React.FC<{ title: string; records: AttendanceRecord[] }> = (
                 </tbody>
               </table>
             </div>
-          ) : (
-            <div className="py-4 text-center text-sm text-gray-500 italic bg-gray-50/30 dark:bg-gray-900/10">No hay registro de Ausentes por {title}</div>
+          )}
+
+          {/* Los descubiertos: sin columnas de reemplazo, porque no hay nada que poner en ellas. */}
+          {sinReemplazo.length > 0 && (
+            <div className={conReemplazo.length > 0 ? "border-t border-gray-100 dark:border-gray-700" : ""}>
+              <div className="px-4 py-2 flex items-center gap-2 bg-amber-50/60 dark:bg-amber-900/10 border-b border-amber-100 dark:border-amber-900/30">
+                <FontAwesomeIcon icon={faUserSlash} className="h-3 w-3 text-amber-600 dark:text-amber-400 opacity-80" />
+                <span className="text-[9px] uppercase font-black tracking-wide text-amber-700 dark:text-amber-400">Sin reemplazo ({sinReemplazo.length})</span>
+              </div>
+              <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+                {sinReemplazo.map((rec) => (
+                  <li key={rec.id} className="py-2 px-4 text-sm font-bold text-red-600 dark:text-red-400 hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
+                    {rec.employeeName}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
       )}
@@ -798,39 +852,16 @@ export const RequestsPage: React.FC = () => {
     );
   };
 
-  // --- RENDER DETAIL VIEW ---
-  if (viewMode === "detail" && selectedReport) {
+  /**
+   * El detalle de una novedad, para mostrarlo en un modal sobre la lista.
+   *
+   * Antes era un `return` temprano que reemplazaba la pantalla entera por otro PageLayout: abrir
+   * una novedad hacía desaparecer la tabla, y al volver la lista se remontaba perdiendo el scroll
+   * y la página en la que estabas.
+   */
+  const renderDetalleNovedad = () => {
+    if (!selectedReport) return null;
     return (
-      <PageLayout
-        title={selectedReport.projectName}
-        badge={{
-          text: `${selectedReport.reportNumber || "Pendiente"} | ${(() => {
-            try {
-              return selectedReport.date ? format(new Date(selectedReport.date + "T00:00:00"), "EEEE d 'de' MMMM, yyyy", { locale: es }).replace(/^\w/, (c) => c.toUpperCase()) : "-";
-            } catch (e) {
-              return "-";
-            }
-          })()}`,
-          variant: "default",
-        }}
-        faIcon={{ icon: faBriefcase }}
-        infoModal={{
-          isOpen: openInfo,
-          onOpen: () => setOpenInfo(true),
-          onClose: () => setOpenInfo(false),
-          title: helpEntry.title,
-          subtitle: null, // Don't show page subtitle in info modal
-          size: helpEntry.size,
-          content: helpEntry.content,
-        }}
-        shouldShowInfo={hasHelp(HELP_KEY)}
-        onBack={handleBackToList}
-        headerActions={
-          <button onClick={() => setShowDetailStatsModal(true)} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver estadísticas del reporte" title="Ver estadísticas del reporte">
-            <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
-          </button>
-        }
-      >
         <div className="space-y-6 animate-fade-in">
           {/* Header Info Card Removed as per request to save space */}
 
@@ -840,6 +871,7 @@ export const RequestsPage: React.FC = () => {
           <Modal
             isOpen={showDetailStatsModal}
             onClose={() => setShowDetailStatsModal(false)}
+            zIndex={60}
             title={
               <div className="flex items-center gap-3">
                 <span>Estadísticas: {selectedReport.projectName}</span>
@@ -865,7 +897,7 @@ export const RequestsPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="rounded-xl shadow-sm p-4 py-2 flex items-center gap-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-gray-300">
+              <div className="rounded-xl shadow-sm p-4 py-2 flex items-center gap-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">
                 <FontAwesomeIcon icon={faUserSlash} className="lg:h-5 w-5 opacity-80" />
                 <div className="flex gap-2 items-center">
                   <span className="text-sm font-medium opacity-80">Ausentes</span>
@@ -899,7 +931,12 @@ export const RequestsPage: React.FC = () => {
 
           {/* Area/Turno Badges above Tabs */}
           <div className="mb-4 bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm border border-gray-100 dark:border-gray-700/50">
-            <h4 className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Área / Turno Informado</h4>
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <h4 className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Área / Turno Informado</h4>
+              <button onClick={() => setShowDetailStatsModal(true)} className="shrink-0 p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver estadísticas del reporte" title="Ver estadísticas del reporte">
+                <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
+              </button>
+            </div>
             {renderAreaShiftBadgesDetail(selectedReport)}
           </div>
 
@@ -995,9 +1032,8 @@ export const RequestsPage: React.FC = () => {
               ))}
           </div>
         </div>
-      </PageLayout>
     );
-  }
+  };
 
   // --- RENDER LIST VIEW ---
   return (
@@ -1015,6 +1051,13 @@ export const RequestsPage: React.FC = () => {
         content: helpEntry.content,
       }}
       shouldShowInfo={hasHelp(HELP_KEY)}
+      /*
+        En tarjetas los filtros suben al bloque sticky del título: no hay encabezado de tabla que
+        haga de ancla, así que al scrollear se perdía de vista con qué proyecto/área/turno estabas
+        filtrando. En tabla no hace falta —el `thead` ya queda fijo— y sumar los filtros ahí arriba
+        se comería una franja de alto que le sirve más a las filas.
+      */
+      stickySearchAndFilters={listLayout === "cards"}
       headerActions={
         <div className="flex items-center gap-2">
           <button onClick={() => setShowStatsModal(true)} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen" title="Resumen de Novedades">
@@ -1029,103 +1072,78 @@ export const RequestsPage: React.FC = () => {
         </div>
       }
       searchAndFilters={
-        <div className="flex gap-4 items-center justify-between flex-wrap">
-          <div className="relative w-full lg:flex-1">
-            <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input type="text" placeholder="Buscar solicitudes..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
-          </div>
+        <SearchAndFilters
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder="Buscar por proyecto, coordinador o número..."
+          /*
+            Los tres filtros son EN CASCADA: el proyecto define qué áreas existen, y el área define
+            qué turnos. Por eso cada `onChange` limpia los de abajo — si no, quedaba un turno elegido
+            que no pertenece al área nueva y la lista salía vacía sin motivo visible.
 
-          <div className="relative">
-            <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <select
-              value={projectFilter}
-              onChange={(e) => {
-                setProjectFilter(e.target.value);
+            `SearchAndFilters` usa "" para "sin filtrar" y esta pantalla usa "all". La traducción se
+            hace acá, en el borde, para no tener que tocar el filtrado ni lo que recibe ComplianceView.
+          */
+          selectFilters={[
+            {
+              label: "Proyecto",
+              value: projectFilter === "all" ? "" : projectFilter,
+              onChange: (v) => {
+                setProjectFilter(v || "all");
                 setAreaFilter("all");
                 setShiftFilter("all");
-              }}
-              className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none"
-            >
-              <option value="all">Todos los Proyectos</option>
-              {allProjects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="relative">
-            <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <select
-              value={areaFilter}
-              onChange={(e) => {
-                setAreaFilter(e.target.value);
+              },
+              placeholder: "Todos los proyectos",
+              options: allProjects.map((p) => ({ value: p.id, label: p.name })),
+            },
+            {
+              label: "Área",
+              value: areaFilter === "all" ? "" : areaFilter,
+              onChange: (v) => {
+                setAreaFilter(v || "all");
                 setShiftFilter("all");
-              }}
-              className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none"
-            >
-              <option value="all">Todas las Áreas | Turnos</option>
-              {(() => {
-                if (projectFilter === "all") {
-                  return allAreas.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ));
-                }
+              },
+              placeholder: "Todas las áreas",
+              options: (() => {
+                if (projectFilter === "all") return allAreas.map((a) => ({ value: a.id, label: a.name }));
                 const proj = allProjects.find((p) => p.id === projectFilter);
-                if (!proj?.areasConfig) return null;
+                if (!proj?.areasConfig) return [];
                 return proj.areasConfig.map((ac: any) => {
                   const areaId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
                   const area = allAreas.find((a) => a.id === areaId);
-                  return (
-                    <option key={areaId} value={areaId}>
-                      {area?.name || "Área " + areaId.slice(-4)}
-                    </option>
-                  );
+                  return { value: areaId, label: area?.name || "Área " + String(areaId).slice(-4) };
                 });
-              })()}
-            </select>
-          </div>
-
-          <div className="relative">
-            <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <select value={shiftFilter} onChange={(e) => setShiftFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
-              <option value="all">Todos los Turnos</option>
-              {(() => {
-                if (projectFilter === "all" || areaFilter === "all") {
-                  return allShifts.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ));
-                }
+              })(),
+            },
+            {
+              label: "Turno",
+              value: shiftFilter === "all" ? "" : shiftFilter,
+              onChange: (v) => setShiftFilter(v || "all"),
+              placeholder: "Todos los turnos",
+              options: (() => {
+                if (projectFilter === "all" || areaFilter === "all") return allShifts.map((s) => ({ value: s.id, label: s.name }));
                 const proj = allProjects.find((p) => p.id === projectFilter);
                 const areaCfg = proj?.areasConfig?.find((ac: any) => (typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId) === areaFilter);
-                if (!areaCfg?.shiftIds) return null;
+                if (!areaCfg?.shiftIds) return [];
                 return areaCfg.shiftIds.map((sId: any) => {
                   const shiftId = typeof sId === "object" ? sId?._id : sId;
                   const shift = allShifts.find((s) => s.id === shiftId);
-                  return (
-                    <option key={shiftId} value={shiftId}>
-                      {shift?.name || "Turno " + shiftId.slice(-4)}
-                    </option>
-                  );
+                  return { value: shiftId, label: shift?.name || "Turno " + String(shiftId).slice(-4) };
                 });
-              })()}
-            </select>
-          </div>
-
-          <div className="hidden min-[1200px]:flex items-center gap-2 shrink-0">
-            <button onClick={() => setListLayout("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${listLayout === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
-              <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
-            </button>
-            <button onClick={() => setListLayout("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${listLayout === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
-              <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+              })(),
+            },
+          ]}
+          extraActions={
+            <div className="hidden min-[1200px]:flex items-center gap-2 shrink-0">
+              <button onClick={() => setListLayout("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${listLayout === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
+                <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+              </button>
+              <button onClick={() => setListLayout("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${listLayout === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
+                <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
+              </button>
+            </div>
+          }
+        />
       }
     >
       <div className="space-y-6">
@@ -1137,28 +1155,43 @@ export const RequestsPage: React.FC = () => {
         ) : listLayout === "cards" ? (
           renderCardsView()
         ) : (
-          <div className="overflow-x-auto rounded border dark:border-slate-800">
+          /*
+            El alto acotado es lo que hace posible el encabezado fijo.
+
+            `overflow-x-auto` ya convertía a este div en contenedor de scroll (con un eje en `auto`,
+            el otro deja de ser `visible`), así que un `sticky` contra el scroll de la página nunca
+            iba a funcionar acá: se pega al contenedor, y un contenedor sin alto no scrollea. Con un
+            alto máximo, el que scrollea es el div y el `thead sticky top-0` queda donde tiene que
+            quedar — justo debajo del bloque "Novedades", que es sticky a `top-16` en PageLayout.
+
+            Es el mismo patrón que ya usan AttendanceTable y AbsenceBlock más arriba en este archivo.
+            Los 260px son el título + los filtros + la paginación de abajo.
+          */
+          <div className="overflow-auto max-h-[calc(100vh-260px)] rounded border dark:border-slate-800">
             <table className="w-full dark:bg-slate-800/80 table-auto">
-              <thead>
+              <thead className="sticky top-0 z-10">
                 <tr>
-                  <th className="text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">No Registro</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">F. Carga</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">F. Novedad</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Proyecto</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Área | Turno</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Total Registros de Asistencia">
+                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">No Registro</th>
+                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">F. Carga</th>
+                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">F. Novedad</th>
+                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Proyecto</th>
+                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Área | Turno</th>
+                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Total Registros de Asistencia">
                     Registros
                   </th>
-                  <th className="text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Ausentes | Reemplazos</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Otros Presentes</th>
-                  <th className="text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Personas con horas extras">
+                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Ausentes</th>
+                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Ausencias que cubrió un reemplazante">
+                    Reemplazos
+                  </th>
+                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Otros Presentes</th>
+                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Personas con horas extras">
                     Horas Extras
                   </th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Comentarios del coordinador">
+                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Comentarios del coordinador">
                     Comentarios
                   </th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Enviado Por</th>
-                  <th className="text-right py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
+                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Enviado Por</th>
+                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-right py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
                 </tr>
               </thead>
               <tbody>
@@ -1217,12 +1250,23 @@ export const RequestsPage: React.FC = () => {
                       <div className="flex flex-wrap gap-1">{renderAreaShiftBadges(report, false)}</div>
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 font-medium">{report.attendance.length}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                      {(() => {
-                        const absentCount = report.attendance.filter(esAusente).length;
-                        return absentCount > 0 ? <span className="text-red-600 dark:text-gray-300 font-medium">{absentCount}</span> : "0";
-                      })()}
-                    </td>
+                    {(() => {
+                      // Dos columnas, dos números: cuántos faltaron y a cuántos los cubrió alguien.
+                      // La resta —los que quedaron descubiertos— se lee sola, y en el detalle cada
+                      // fila dice cuál es cuál.
+                      const ausentes = report.attendance.filter(esAusente);
+                      const reemplazos = ausentes.filter(tieneReemplazo).length;
+                      return (
+                        <>
+                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                            {ausentes.length > 0 ? <span className="text-red-600 dark:text-red-400 font-medium">{ausentes.length}</span> : "0"}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                            {reemplazos > 0 ? <span className="text-blue-600 dark:text-blue-400 font-medium">{reemplazos}</span> : "0"}
+                          </td>
+                        </>
+                      );
+                    })()}
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                       {(() => {
                         const otrosPresentes = report.attendance.filter(esOtroPresente).length;
@@ -1246,16 +1290,32 @@ export const RequestsPage: React.FC = () => {
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{report.submittedBy}</td>
                     <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteReport(report.id);
-                        }}
-                        className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors px-2 py-1 rounded"
-                        title="Eliminar"
-                      >
-                        <FontAwesomeIcon icon={faTrash} />
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        {/* El click en toda la fila sigue abriendo el detalle: esto es el gesto explícito
+                            para quien lo busca como botón, no un reemplazo. */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewDetail(report);
+                          }}
+                          className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors px-2 py-1 rounded"
+                          title="Ver detalle"
+                          aria-label="Ver detalle"
+                        >
+                          <FontAwesomeIcon icon={faEye} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteReport(report.id);
+                          }}
+                          className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors px-2 py-1 rounded"
+                          title="Eliminar"
+                          aria-label="Eliminar"
+                        >
+                          <FontAwesomeIcon icon={faTrash} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -1292,7 +1352,36 @@ export const RequestsPage: React.FC = () => {
         )}
       </div>
 
-      <Modal isOpen={showCompliance} onClose={() => setShowCompliance(false)} title="Cumplimiento de coordinadores" subtitle="Qué novedades se esperaban de cada coordinador y cuáles faltan." size="fullscreen">
+      {/* El detalle de la novedad: modal sobre la lista, que queda intacta detrás. */}
+      <Modal
+        isOpen={viewMode === "detail" && !!selectedReport}
+        onClose={handleBackToList}
+        title={selectedReport?.projectName || ""}
+        subtitle={`${selectedReport?.reportNumber || "Pendiente"} | ${(() => {
+          try {
+            return selectedReport?.date ? format(new Date(selectedReport.date + "T00:00:00"), "EEEE d 'de' MMMM, yyyy", { locale: es }).replace(/^\w/, (c) => c.toUpperCase()) : "-";
+          } catch {
+            return "-";
+          }
+        })()}`}
+        /*
+          `full` da alto FIJO (`h-[96svh]`), no un máximo.
+
+          Con `fullscreen` el alto lo definía el contenido, así que el modal cambiaba de tamaño al
+          pasar de un tab a otro —Asistencia con 16 filas contra Comentarios vacío— y saltaba en
+          pantalla. Con alto fijo el marco no se mueve nunca y lo que scrollea es el cuerpo.
+        */
+        size="full"
+      >
+        <div className="p-4 sm:p-6">{renderDetalleNovedad()}</div>
+      </Modal>
+
+      {/* `full` = alto fijo (`h-[96svh]`), igual que el detalle: con `fullscreen` el alto lo definía el
+          contenido y el modal cambiaba de tamaño al elegir un coordinador o cambiar de mes. El padding
+          va acá porque los tamaños fullscreen/full no aplican el del modal, y los chips y los botones
+          quedaban pegados a los bordes. */}
+      <Modal isOpen={showCompliance} onClose={() => setShowCompliance(false)} title="Cumplimiento de coordinadores" subtitle="Qué novedades se esperaban de cada coordinador y cuáles faltan." size="full">
+        <div className="p-4 sm:p-6">
         <ComplianceView
           projectFilter={projectFilter}
           areaFilter={areaFilter}
@@ -1307,6 +1396,7 @@ export const RequestsPage: React.FC = () => {
             } else sweetAlert.error("Novedad no encontrada", `No se pudo abrir ${reportNumber}. Puede haber sido eliminada.`);
           }}
         />
+        </div>
       </Modal>
 
       <Modal isOpen={showStatsModal} onClose={() => setShowStatsModal(false)} title="Resumen de Novedades" size="md">
@@ -1314,7 +1404,7 @@ export const RequestsPage: React.FC = () => {
           <div className="flex flex-wrap gap-4 justify-center">
             {[
               { label: "Reportes", value: stats.totalReports, icon: faFileText, color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
-              { label: "Ausentes", value: stats.totalAbsences, icon: faUserSlash, color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-gray-300" },
+              { label: "Ausentes", value: stats.totalAbsences, icon: faUserSlash, color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" },
               { label: "Hs. Extras", value: stats.totalOvertimeHours, icon: faClock, color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" },
             ].map((stat, index) => (
               <div key={index} className={`rounded-xl shadow-sm p-4 py-2 flex items-center gap-3 ${stat.color}`}>

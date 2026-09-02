@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faChevronDown, faFilter, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "./Modal";
+import { sweetAlert } from "../../utils/sweetAlert";
 
 export interface FilterOption {
   value: string;
@@ -161,6 +162,32 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
   const activeFilterCount = [hasDateFilters, ...selectFilters.map((sf) => sf.value !== ""), ...switchFilters.map((sw) => sw.value), ...radioFilters.map((rf) => rf.value !== "")].filter(Boolean).length;
   const shouldShowBadges = hasDateFilters || hasSelectFilters || hasSwitchFilters || radioFilters.length > 0;
 
+  /*
+    Los filtros se aplican SOLOS: cada onChange ya dispara el filtrado de la lista. El problema es que
+    con el modal abierto tapando los resultados no se ve el efecto, y era fácil mover tres controles
+    sin registrar qué quedó puesto. Cada cambio avisa ahora con un toast que dice el valor elegido.
+
+    Por eso también el botón dice "Cerrar" y no "Aplicar": no había nada que aplicar al tocarlo, y
+    nombrarlo así hacía pensar que sin apretarlo el filtro no contaba.
+  */
+  const conAviso = <T,>(etiqueta: string, onChange: (v: T) => void, describir: (v: T) => string) => (v: T) => {
+    onChange(v);
+    sweetAlert.filtro(`${etiqueta}: ${describir(v)}`);
+  };
+
+  const selectFiltersUI = selectFilters.map((sf) => ({
+    ...sf,
+    onChange: conAviso(sf.label, sf.onChange, (v: string) => (v ? sf.options.find((o) => o.value === v)?.label || v : sf.placeholder || "Todos")),
+  }));
+  const switchFiltersUI = switchFilters.map((sw) => ({
+    ...sw,
+    onChange: conAviso(sw.label, sw.onChange, (v: boolean) => (v ? "activado" : "desactivado")),
+  }));
+  const radioFiltersUI = radioFilters.map((rf) => ({
+    ...rf,
+    onChange: conAviso(rf.label, rf.onChange, (v: string) => rf.options.find((o) => o.value === v)?.label || "Todos"),
+  }));
+
   const handleApply = () => {
     setShowFilterModal(false);
   };
@@ -173,6 +200,8 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
     selectFilters.forEach((sf) => sf.onChange(""));
     switchFilters.forEach((sw) => sw.onChange(false));
     radioFilters.forEach((rf) => rf.onChange(""));
+    // Un solo aviso: usa los onChange originales justamente para no disparar uno por filtro.
+    sweetAlert.filtro("Filtros limpiados", "info");
     setShowFilterModal(false);
   };
 
@@ -255,7 +284,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
                 </button>
               </span>
             )}
-            {selectFilters
+            {selectFiltersUI
               .filter((sf) => sf.value !== "")
               .map((sf, idx) => (
                 <span
@@ -271,7 +300,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
                   </button>
                 </span>
               ))}
-            {switchFilters
+            {switchFiltersUI
               .filter((sw) => sw.value)
               .map((sw, idx) => (
                 <span
@@ -286,7 +315,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
                   </button>
                 </span>
               ))}
-            {radioFilters.map((rf, idx) => {
+            {radioFiltersUI.map((rf, idx) => {
               const isDefault = rf.value === "";
               const isActive = rf.value === "active";
               const isInactive = rf.value === "inactive";
@@ -339,7 +368,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
                 Limpiar Todo
               </button>
               <button onClick={handleApply} className="btn-primary">
-                Aplicar
+                Cerrar
               </button>
             </>
           }
@@ -348,7 +377,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
             {/* Radio Filters Section (Top) */}
             {radioFilters.length > 0 && (
               <div className="space-y-4 pb-4 border-b border-gray-200 dark:border-gray-700">
-                {radioFilters.map((rf, idx) => (
+                {radioFiltersUI.map((rf, idx) => (
                   <div key={`modal-radio-${idx}`} className="space-y-2">
                     <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{rf.label}</h4>
                     {rf.options.map((opt, optIdx) => (
@@ -403,7 +432,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
             {selectFilters.length > 0 && (
               <div className="space-y-3 pb-4 border-b border-gray-200 dark:border-gray-700">
                 <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Filtros por Categoría</h4>
-                {selectFilters.map((sf, idx) => (
+                {selectFiltersUI.map((sf, idx) => (
                   <div key={idx}>
                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{sf.label}</label>
                     {sf.renderOption ? (
@@ -435,7 +464,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
             {switchFilters.length > 0 && (
               <div className="space-y-3">
                 <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Opciones</h4>
-                {switchFilters.map((sw, idx) => (
+                {switchFiltersUI.map((sw, idx) => (
                   <label key={idx} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{sw.label}</span>
                     <div

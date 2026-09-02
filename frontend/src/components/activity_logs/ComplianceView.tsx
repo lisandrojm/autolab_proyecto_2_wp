@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import * as XLSX from 'xlsx';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBell, faFileExcel, faTriangleExclamation, faCircleCheck, faSpinner, faUser, faXmark, faUsers } from '@fortawesome/free-solid-svg-icons';
+import { faBell, faFileExcel, faTriangleExclamation, faCircleCheck, faSpinner, faUser, faXmark, faUsers, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { ActivityLogCalendar } from './ActivityLogCalendar';
 import { Modal } from '../ui/Modal';
 import { sweetAlert } from '../../utils/sweetAlert';
@@ -61,6 +61,20 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  /*
+    El listado de faltantes pasa a un modal.
+
+    Vivía desplegado al pie con su propio scroll: para un coordinador con 23 días vencidos empujaba el
+    calendario y la lista de coordinadores fuera de la pantalla, y era lo que menos se mira —se entra
+    a ver el detalle cuando ya se decidió mirar a esa persona.
+  */
+  const [showFaltantes, setShowFaltantes] = useState(false);
+  /*
+    Los totales NO se muestran acá. El 📊 que está al lado del mes, dentro del calendario, ya abre un
+    modal con lo mismo (días reportados, no enviados, total requerido y % de cumplimiento). Tenerlos
+    además como una franja de chips arriba era decir dos veces el mismo número y, de paso, empujaba
+    Informe y Recordar contra el borde derecho.
+  */
   const [selectedCoordinatorId, setSelectedCoordinatorId] = useState<string | null>(() => readLS(LS_COORD));
   const [showReport, setShowReport] = useState(false);
 
@@ -154,20 +168,6 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
     return Object.fromEntries(Object.entries(map).map(([d, nums]) => [d, nums.join(', ')]));
   }, [selectedCoordinator]);
 
-  // Totales: del coordinador elegido, o globales.
-  const totals = useMemo(() => {
-    if (selectedCoordinator) {
-      const c = selectedCoordinator;
-      return {
-        expected: c.expectedCount,
-        submitted: c.submittedCount,
-        missing: c.missingCount,
-        compliancePct: c.expectedCount > 0 ? Math.round((c.submittedCount / c.expectedCount) * 1000) / 10 : 0,
-        coordinatorsBehind: (c.expiredCount ?? 0) > 0 ? 1 : 0,
-      };
-    }
-    return data?.totals;
-  }, [data, selectedCoordinator]);
 
   const selectedDayData = useMemo(() => {
     if (!selectedDay) return null;
@@ -235,19 +235,40 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
 
   return (
     <div className="space-y-4">
-      {/* Totales + acciones */}
+      {/* Acciones */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <StatChip label="Esperadas" value={totals?.expected ?? 0} tone="gray" />
-          <StatChip label="Enviadas" value={totals?.submitted ?? 0} tone="green" />
-          <StatChip label="Faltantes" value={totals?.missing ?? 0} tone="red" />
-          <StatChip label="Cumplimiento" value={`${totals?.compliancePct ?? 0}%`} tone="blue" />
-          {!selectedCoordinator && <StatChip label="Coord. atrasados" value={totals?.coordinatorsBehind ?? 0} tone="amber" />}
-          {selectedCoordinator && (
+          {/*
+            Siempre hay un chip diciendo sobre quién se está mirando. Sin coordinador elegido antes no
+            se dibujaba nada, y el calendario de "todos" se veía igual que el de alguien en particular:
+            no había forma de saber qué estabas mirando salvo acordarte.
+          */}
+          {selectedCoordinator ? (
             <button onClick={() => setSelectedCoordinatorId(null)} title="Ver todos los coordinadores" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/40">
               <FontAwesomeIcon icon={faUser} />
               {selectedCoordinator.name}
               <FontAwesomeIcon icon={faXmark} className="opacity-70" />
+            </button>
+          ) : (
+            // Sin ✕: no hay filtro que sacar, esto ya es el estado sin filtrar.
+            <span className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm font-semibold" title="Estás viendo el calendario combinado de todos los coordinadores">
+              <FontAwesomeIcon icon={faUsers} />
+              Todos los coordinadores
+              <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-blue-500/15">{(data?.coordinators || []).length}</span>
+            </span>
+          )}
+          {selectedCoordinator && (
+            <button
+              onClick={() => setShowFaltantes(true)}
+              // Mismo tratamiento que un día vencido en el calendario y que las filas del listado:
+              // fondo rojo translúcido y borde fino rojo. El rojo sólido competía con "Recordar" y
+              // parecía otra cosa.
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+              title={`Ver las novedades que le faltan a ${selectedCoordinator.name}`}
+            >
+              <FontAwesomeIcon icon={faCircleInfo} />
+              Novedades que le faltan
+              <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-red-500/15 dark:bg-red-500/25">{selectedCoordinator.missingCount}</span>
             </button>
           )}
         </div>
@@ -256,7 +277,7 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
             <FontAwesomeIcon icon={faFileExcel} /> Informe
           </button>
           <button onClick={remindAll} disabled={!data || remindingAll || !data.coordinators.some((c) => c.missingCount > 0)} className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50">
-            <FontAwesomeIcon icon={remindingAll ? faSpinner : faBell} className={remindingAll ? 'animate-spin' : ''} /> Recordar a los que faltan
+            <FontAwesomeIcon icon={remindingAll ? faSpinner : faBell} className={remindingAll ? 'animate-spin' : ''} /> Recordar
           </button>
         </div>
       </div>
@@ -264,7 +285,7 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
       {error && <div className="rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-700 dark:text-red-300">{error}</div>}
       {isFutureMonth && <div className="rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 p-3 text-sm text-gray-500">Mes futuro: no hay días esperados todavía.</div>}
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 items-stretch">
         {/* Calendario */}
         <div className="xl:col-span-2 relative">
           {loading && (
@@ -291,7 +312,7 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
         </div>
 
         {/* Panel de coordinadores */}
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 flex flex-col">
           <div className="flex items-center justify-between gap-2 mb-2 px-1">
             <h4 className="text-sm font-bold text-gray-700 dark:text-gray-200">Coordinadores</h4>
             {selectedCoordinatorId ? (
@@ -302,7 +323,14 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
               <span className="text-[10px] text-gray-400">Clickeá uno para ver su calendario</span>
             )}
           </div>
-          <div className="space-y-1.5 max-h-[560px] overflow-y-auto pr-1">
+          {/*
+            `flex-1 min-h-0` en vez de un alto fijo: la lista ocupa lo que sobra de la celda del grid,
+            así que crece con el alto del calendario en vez de cortarse a 560px y dejar aire abajo. El
+            `min-h-0` es lo que permite que un hijo de flex se achique por debajo de su contenido y
+            aparezca su propio scroll. El tope en `svh` es para que en pantallas muy altas no se pase
+            del modal, que mide 96svh.
+          */}
+          <div className="space-y-1.5 flex-1 min-h-0 max-h-[calc(96svh-260px)] overflow-y-auto pr-1">
             {(data?.coordinators || []).length === 0 && !loading && <p className="text-xs text-gray-400 px-1 py-4 text-center">Sin coordinadores con asignaciones en este período/filtro.</p>}
             {(data?.coordinators || []).map((c) => (
               <CoordinatorRow key={c.userId} c={c} selected={selectedCoordinatorId === c.userId} onSelect={() => setSelectedCoordinatorId((cur) => (cur === c.userId ? null : c.userId))} reminding={remindingIds.has(c.userId)} onRemind={() => remindOne(c.userId)} />
@@ -311,22 +339,26 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
         </div>
       </div>
 
-      {/* Detalle de faltantes del coordinador elegido */}
       {selectedCoordinator && (
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-          <h4 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-1">
-            Novedades que le faltan a {selectedCoordinator.name}
-            <span className="ml-2 text-xs font-normal text-gray-400">
-              ({selectedCoordinator.missingCount} en {fmtDate(from)} – {fmtDate(to)})
+        <Modal
+          isOpen={showFaltantes}
+          onClose={() => setShowFaltantes(false)}
+          title={
+            <span className="flex items-center gap-2 text-red-700 dark:text-red-400">
+              <FontAwesomeIcon icon={faCircleInfo} />
+              Novedades que le faltan a {selectedCoordinator.name}
             </span>
-          </h4>
-          <p className="text-[11px] text-gray-400 mb-3">Cada novedad cubre el día completo del coordinador en el proyecto (incluye los turnos que corren ese día).</p>
+          }
+          subtitle={`${selectedCoordinator.missingCount} en ${fmtDate(from)} – ${fmtDate(to)} · Cada novedad cubre el día completo del coordinador en el proyecto (incluye los turnos que corren ese día).`}
+          size="md"
+          zIndex={60}
+        >
           {selectedCoordinator.missingCount === 0 ? (
             <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
               <FontAwesomeIcon icon={faCircleCheck} /> Está al día: no le falta ninguna novedad en el período.
             </p>
           ) : (
-            <div className="space-y-1.5 max-h-72 overflow-y-auto">
+            <div className="space-y-1.5">
               {selectedCoordinator.projects.flatMap((p) =>
                 p.missingDates.map((d) => {
                   const wd = weekdayOf(d);
@@ -350,7 +382,7 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
               )}
             </div>
           )}
-        </div>
+        </Modal>
       )}
 
       {/* Drill-down de un día */}
@@ -394,29 +426,13 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({ projectFilter, a
   );
 };
 
-const StatChip: React.FC<{ label: string; value: string | number; tone: 'gray' | 'green' | 'red' | 'blue' | 'amber' }> = ({ label, value, tone }) => {
-  const tones: Record<string, string> = {
-    gray: 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700',
-    green: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800',
-    red: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800',
-    blue: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
-    amber: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
-  };
-  return (
-    <div className={`px-3 py-1.5 rounded-lg border ${tones[tone]}`}>
-      <div className="text-lg font-black leading-none">{value}</div>
-      <div className="text-[10px] font-bold uppercase tracking-wider opacity-80 mt-0.5">{label}</div>
-    </div>
-  );
-};
-
 const CoordinatorRow: React.FC<{ c: CoordinatorCompliance; selected: boolean; onSelect: () => void; reminding: boolean; onRemind: () => void }> = ({ c, selected, onSelect, reminding, onRemind }) => {
   // Rojo SÓLO si tiene novedades con el plazo vencido. Las que todavía puede cargar son "pendientes".
   const pending = c.pendingCount ?? 0;
   const expired = c.expiredCount ?? Math.max(0, c.missingCount - pending);
   const isLate = expired > 0;
   const hasMissing = c.missingCount > 0;
-  const border = selected ? 'border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-400/40' : isLate ? 'border-red-200 dark:border-red-800 bg-red-50/40 dark:bg-red-900/10' : 'border-gray-100 dark:border-gray-700';
+  const border = selected ? 'border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-400/40' : isLate ? 'border-red-200 dark:border-red-800 bg-red-50/40 dark:bg-red-900/10' : 'border-gray-200 dark:border-gray-600';
   return (
     <div onClick={onSelect} title="Ver el calendario de este coordinador" className={`cursor-pointer transition-all rounded-lg border px-3 py-2 hover:shadow-sm ${border}`}>
       <div className="flex items-center justify-between gap-2">
@@ -448,8 +464,11 @@ const CoordinatorRow: React.FC<{ c: CoordinatorCompliance; selected: boolean; on
           </button>
         )}
       </div>
-      {selected && c.projects.length > 0 && (
-        <div className="mt-2 pt-2 border-t border-blue-200 dark:border-blue-800 space-y-1">
+      {/* Proyecto · área · turno: SIEMPRE, no solo en el seleccionado. Es lo que distingue a dos
+          coordinadores con números parecidos, y tenerlo escondido obligaba a clickear uno por uno
+          para saber de qué equipo era cada quien. El borde acompaña el estado de la tarjeta. */}
+      {c.projects.length > 0 && (
+        <div className={`mt-2 pt-2 border-t space-y-1 ${selected ? 'border-blue-200 dark:border-blue-800' : 'border-gray-100 dark:border-gray-700'}`}>
           {c.projects.map((p) => (
             <p key={p.projectId} className="text-[10px] text-gray-500 dark:text-gray-400">
               <span className="font-semibold text-gray-700 dark:text-gray-300">{p.projectName}</span> · {p.areas.join(', ')} · {p.turnos.join(', ')}

@@ -85,7 +85,35 @@ export interface UserFormModalProps {
   zIndex?: number;
 }
 
+/**
+ * Proyectos donde esta persona figura como coordinadora de algún área/turno.
+ *
+ * La asignación vive en `Project.coordinatorAssignments`, que llega poblado dentro de
+ * `metadata.projects[].projectId`. Es la fuente real: el rol Mobile-Coordinador es el permiso para
+ * usar la app como coordinador, pero lo que lo hace obligatorio es tener turnos a cargo.
+ */
+const proyectosQueCoordina = (u: User | null): string[] => {
+  const nombres = new Set<string>();
+  for (const up of ((u as any)?.metadata?.projects || []) as any[]) {
+    const proj = typeof up?.projectId === "object" ? up.projectId : null;
+    if (!proj?.coordinatorAssignments) continue;
+    const suyo = proj.coordinatorAssignments.some((asm: any) => String(typeof asm.userId === "object" ? asm.userId?._id : asm.userId) === String(u?._id));
+    if (suyo) nombres.add(proj.name || up.nombre_proyecto || "Proyecto sin nombre");
+  }
+  return [...nombres];
+};
+
 export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, mode = "edit", onSaved, zIndex }) => {
+  /*
+    Si coordina turnos, el rol Mobile-Coordinador queda fijo.
+
+    Sacárselo lo dejaría con áreas y turnos a cargo pero sin poder entrar a la app como coordinador:
+    esas novedades no las carga nadie y aparecen como vencidas en Cumplimiento, sin ninguna señal de
+    por qué. Para cambiarle el rol hay que liberarlo antes desde el equipo del proyecto.
+  */
+  const coordinaEn = proyectosQueCoordina(user);
+  const coordinacionBloqueada = coordinaEn.length > 0;
+
   // Catálogos propios del modal
   const [roles, setRoles] = useState<Role[]>([]);
   const [allRoleFrames, setAllRoleFrames] = useState<RoleFrameItem[]>([]);
@@ -816,15 +844,29 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                           <FontAwesomeIcon icon={faMobileAlt} className="text-indigo-300" />
                           Mobile (App)
                         </h4>
+                        {coordinacionBloqueada && (
+                          <p className="mb-3 text-[11px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+                            Coordina turnos en <strong>{coordinaEn.join(", ")}</strong>, así que el rol Mobile no se puede cambiar. Liberalo desde el equipo del proyecto primero.
+                          </p>
+                        )}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {roles
                             .filter((r) => r.name.toLowerCase().includes("mobile"))
                             .map((r) => (
-                              <label key={r._id} className={`flex items-start space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.roles.includes(r._id) ? "bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800 ring-2 ring-indigo-500/20" : "bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-200"}`}>
+                              <label
+                                key={r._id}
+                                title={coordinacionBloqueada ? `Coordina turnos en ${coordinaEn.join(", ")}. Liberalo desde el equipo del proyecto para poder cambiarle el rol.` : undefined}
+                                className={`flex items-start space-x-3 p-3 rounded-lg border transition-all ${coordinacionBloqueada ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${formData.roles.includes(r._id) ? "bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800 ring-2 ring-indigo-500/20" : "bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-200"}`}
+                              >
                                 <input
                                   type="checkbox"
                                   checked={formData.roles.includes(r._id)}
+                                  disabled={coordinacionBloqueada}
                                   onChange={(e) => {
+                                    if (coordinacionBloqueada) {
+                                      sweetAlert.warningAlert("No se puede cambiar el rol Mobile", `${user?.firstName || "Esta persona"} coordina turnos en ${coordinaEn.join(", ")}. Sacale la coordinación desde el equipo del proyecto y después cambiale el rol.`);
+                                      return;
+                                    }
                                     let newRoles = e.target.checked ? [...formData.roles, r._id] : formData.roles.filter((id) => id !== r._id);
                                     const name = r.name.toLowerCase();
                                     if (e.target.checked) {

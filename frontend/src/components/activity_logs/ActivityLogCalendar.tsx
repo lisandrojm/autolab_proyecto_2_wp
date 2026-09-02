@@ -73,18 +73,32 @@ export const ActivityLogCalendar: React.FC<ActivityLogCalendarProps> = ({ projec
     return generateMockCompliance(day, scheduleConfig);
   };
 
-  // Calculate stats for the current month
+  /*
+    Totales del mes que se ve.
+
+    OJO CON EL DENOMINADOR. Antes el modal calculaba "Total días requeridos" como `reported + missing`
+    y el cumplimiento como `reported / (reported + missing)`. Los días PARCIALES —los que tienen alguna
+    novedad pero no todas las que se esperaban— quedaban fuera de las dos cuentas. En el calendario
+    combinado de todos los coordinadores casi todo el mes es parcial, así que el modal informaba
+    "5 requeridos · 0 no enviados · 100% de cumplimiento" sobre un mes con 26 días incompletos.
+
+    Un día requerido es todo el que esperaba novedad: completo, parcial, pendiente o no enviado.
+    `extra` queda afuera a propósito: es una novedad en un día que no la pedía.
+  */
   const stats = days.reduce(
     (acc, day) => {
       const status = statusOf(day);
       if (status === "complete") acc.reported++;
       if (status === "missing") acc.missing++;
       if (status === "partial") acc.partial++;
+      if (status === "pending") acc.pending++;
       if (status === "extra") acc.extra++;
       return acc;
     },
-    { reported: 0, missing: 0, partial: 0, extra: 0 }
+    { reported: 0, missing: 0, partial: 0, pending: 0, extra: 0 }
   );
+  const totalRequeridos = stats.reported + stats.partial + stats.pending + stats.missing;
+  const pctCumplimiento = totalRequeridos > 0 ? Math.round((stats.reported / totalRequeridos) * 100) : 0;
 
   // Calculate padding days for start of month
   const startPadding = Array(getDay(firstDay)).fill(null);
@@ -224,26 +238,40 @@ export const ActivityLogCalendar: React.FC<ActivityLogCalendarProps> = ({ projec
 
       {/* Stats Modal */}
       <Modal isOpen={showStatsModal} onClose={() => setShowStatsModal(false)} title={`Estadísticas: ${format(currentDate, "MMMM yyyy", { locale: es })}`} size="md">
-        <div className="grid grid-cols-2 gap-4">
+        {/* Un recuadro por estado, con los mismos colores que la referencia del calendario. */}
+        <div className="grid grid-cols-2 gap-3">
           <div className="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800">
             <div className="text-2xl font-bold text-green-700 dark:text-green-400">{stats.reported}</div>
-            <div className="text-sm font-medium text-green-600 dark:text-green-300">Días Reportados</div>
+            <div className="text-sm font-medium text-green-600 dark:text-green-300">Reportados</div>
+          </div>
+          <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800">
+            <div className="text-2xl font-bold text-amber-700 dark:text-amber-400">{stats.partial}</div>
+            <div className="text-sm font-medium text-amber-600 dark:text-amber-300">Parciales</div>
           </div>
           <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800">
             <div className="text-2xl font-bold text-red-700 dark:text-red-400">{stats.missing}</div>
-            <div className="text-sm font-medium text-red-600 dark:text-red-300">No Enviados</div>
+            <div className="text-sm font-medium text-red-600 dark:text-red-300">No enviados (vencidos)</div>
+          </div>
+          <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800">
+            <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">{stats.pending}</div>
+            <div className="text-sm font-medium text-blue-600 dark:text-blue-300">Pendientes (a tiempo)</div>
           </div>
         </div>
-        <div className="mt-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 flex justify-between items-center">
+        <div className="mt-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 flex justify-between items-center">
           <div>
-            <div className="text-xl font-bold text-blue-700 dark:text-blue-400">{stats.reported + stats.missing}</div>
-            <div className="text-xs font-medium text-blue-600 dark:text-blue-300">Total Días Requeridos</div>
+            <div className="text-xl font-bold text-gray-800 dark:text-gray-100">{totalRequeridos}</div>
+            <div className="text-xs font-medium text-gray-500 dark:text-gray-400">Total días requeridos</div>
           </div>
           <div className="text-right">
-            <div className="text-xl font-bold text-indigo-700 dark:text-indigo-400">{((stats.reported / (stats.reported + stats.missing || 1)) * 100).toFixed(0)}%</div>
-            <div className="text-xs font-medium text-indigo-600 dark:text-indigo-300">Cumplimiento</div>
+            <div className="text-xl font-bold text-indigo-700 dark:text-indigo-400">{pctCumplimiento}%</div>
+            <div className="text-xs font-medium text-indigo-600 dark:text-indigo-300">Días completos</div>
           </div>
         </div>
+        {stats.partial > 0 && (
+          <p className="mt-3 text-[11px] text-gray-500 dark:text-gray-400">
+            Los días parciales tienen alguna novedad cargada pero no todas las esperadas, y NO cuentan como completos.
+          </p>
+        )}
       </Modal>
     </div>
   );

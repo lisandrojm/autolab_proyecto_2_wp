@@ -1,10 +1,10 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircleInfo, faArrowLeft } from "@fortawesome/free-solid-svg-icons";
-import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import { InfoModal, type InfoModalAction } from "./InfoModal";
-import { getImageUrl } from "../../utils/imageHelpers";
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCircleInfo, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import { InfoModal, type InfoModalAction } from './InfoModal';
+import { getImageUrl } from '../../utils/imageHelpers';
 
 interface InfoModalControlledProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ interface InfoModalControlledProps {
   onClose: () => void;
   title: string | React.ReactNode;
   subtitle?: React.ReactNode;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   actions?: InfoModalAction[];
   content: React.ReactNode;
 }
@@ -22,7 +22,7 @@ interface ControlledModalProps {
   onClose: () => void;
   title: string | React.ReactNode;
   subtitle?: React.ReactNode;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   actions?: InfoModalAction[];
   content: React.ReactNode;
 }
@@ -49,10 +49,10 @@ type ClientMiniAvatarProps = {
   label?: string;
 };
 
-type BadgeVariant = "default" | "success" | "warning" | "blue" | "info";
-type BadgeSecondaryVariant = "default" | "success" | "warning" | "blue" | "info";
-type BadgeTertiaryVariant = "default" | "success" | "warning" | "blue" | "info";
-type BadgeStateVariant = "default" | "success" | "warning" | "blue" | "info";
+type BadgeVariant = 'default' | 'success' | 'warning' | 'blue' | 'info';
+type BadgeSecondaryVariant = 'default' | 'success' | 'warning' | 'blue' | 'info';
+type BadgeTertiaryVariant = 'default' | 'success' | 'warning' | 'blue' | 'info';
+type BadgeStateVariant = 'default' | 'success' | 'warning' | 'blue' | 'info';
 
 interface PageLayoutProps {
   title: string;
@@ -96,6 +96,15 @@ interface PageLayoutProps {
   preSearchTitle?: React.ReactNode;
   preSearchActions?: React.ReactNode;
   searchAndFilters?: React.ReactNode;
+  /**
+   * Sube `searchAndFilters` ADENTRO del bloque sticky del título, en vez de dejarlo debajo scrolleando.
+   *
+   * Se resuelve moviéndolo en el DOM y no con un `sticky top-[Npx]` propio: el alto del encabezado
+   * cambia según lo que traiga cada página (badges, subtítulo, avatar), así que cualquier número
+   * fijo queda mal en la mitad de las pantallas. Adentro del mismo bloque se pegan juntos y no hay
+   * medida que mantener.
+   */
+  stickySearchAndFilters?: boolean;
   postFaIconSecondary?: FaIconProps;
   postSearchTitle?: React.ReactNode;
   postSearchActions?: React.ReactNode;
@@ -106,14 +115,14 @@ interface PageLayoutProps {
 }
 
 const BADGE_CLASSES: Record<BadgeVariant, string> = {
-  default: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border dark:border-slate-700",
-  success: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
-  warning: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-  blue: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
-  info: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
+  default: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border dark:border-slate-700',
+  success: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300',
+  warning: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  blue: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+  info: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
 };
 
-export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, badgeSecondary, badgeTertiary, badgeState, infoModal, showInfoIcon = false, shouldShowInfo, children, headerActions, headerBack, onBack, sinVolver = false, avatar, faIcon, faIconSecondary, clientMiniAvatar, preSearchContent, preSearchTitle, preSearchActions, searchAndFilters, postFaIconSecondary, postSearchTitle, postSearchActions, postSearchAndFilters, modal, viewModal, itemCount }) => {
+export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, badgeSecondary, badgeTertiary, badgeState, infoModal, showInfoIcon = false, shouldShowInfo, children, headerActions, headerBack, onBack, sinVolver = false, avatar, faIcon, faIconSecondary, clientMiniAvatar, preSearchContent, preSearchTitle, preSearchActions, searchAndFilters, stickySearchAndFilters = false, postFaIconSecondary, postSearchTitle, postSearchActions, postSearchAndFilters, modal, viewModal, itemCount }) => {
   const shouldShowInfoButton = shouldShowInfo ?? (!!infoModal || showInfoIcon || !!subtitle);
   const navigate = useNavigate();
 
@@ -135,7 +144,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, 
     if (headerBack) return headerBack;
     if (sinVolver) return null;
     const hayHistorial = ((window.history.state as { idx?: number } | null)?.idx ?? 0) > 0;
-    const volver = onBack ?? (() => (hayHistorial ? navigate(-1) : navigate("/")));
+    const volver = onBack ?? (() => (hayHistorial ? navigate(-1) : navigate('/')));
     return (
       <div className="flex items-center gap-2">
         <button onClick={volver} className="btn-ghost" aria-label="Volver" title="Volver">
@@ -147,29 +156,29 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, 
 
   const renderAvatar = () => {
     if (!avatar) return null;
-    return <div className="w-8 h-8 sm:w-10 sm:h-10 rounded overflow-hidden border border-gray-200 dark:border-gray-700 flex items-center justify-center">{avatar.src ? <img src={getImageUrl(avatar.src)} alt={avatar.alt || title} className="w-full h-full object-cover" /> : <span className="text-sm sm:text-base font-semibold text-white bg-primary-600 w-full h-full flex items-center justify-center">{avatar.fallback || title?.charAt(0)?.toUpperCase?.() || "?"}</span>}</div>;
+    return <div className="w-8 h-8 sm:w-10 sm:h-10 rounded overflow-hidden border border-gray-200 dark:border-gray-700 flex items-center justify-center">{avatar.src ? <img src={getImageUrl(avatar.src)} alt={avatar.alt || title} className="w-full h-full object-cover" /> : <span className="text-sm sm:text-base font-semibold text-white bg-primary-600 w-full h-full flex items-center justify-center">{avatar.fallback || title?.charAt(0)?.toUpperCase?.() || '?'}</span>}</div>;
   };
 
   const renderFaIcon = () => {
     if (!faIcon) return null;
-    return <div className="text-primary-600 dark:text-primary-400 flex items-center justify-center">{faIcon.icon ? <FontAwesomeIcon icon={faIcon.icon} className="w-5 h-5" /> : <span className="text-sm sm:text-base font-semibold">{faIcon.fallback || title?.charAt(0)?.toUpperCase?.() || "?"}</span>}</div>;
+    return <div className="text-primary-600 dark:text-primary-400 flex items-center justify-center">{faIcon.icon ? <FontAwesomeIcon icon={faIcon.icon} className="w-5 h-5" /> : <span className="text-sm sm:text-base font-semibold">{faIcon.fallback || title?.charAt(0)?.toUpperCase?.() || '?'}</span>}</div>;
   };
 
   const renderFaIconSecondary = () => {
     if (!faIconSecondary) return null;
-    return <div className="text-primary-600 dark:text-primary-400 flex items-center justify-center">{faIconSecondary.icon ? <FontAwesomeIcon icon={faIconSecondary.icon} className="w-4 h-4 sm:w-5 sm:h-5" /> : <span className="text-sm sm:text-base font-semibold">{faIconSecondary.fallback || title?.charAt(0)?.toUpperCase?.() || "?"}</span>}</div>;
+    return <div className="text-primary-600 dark:text-primary-400 flex items-center justify-center">{faIconSecondary.icon ? <FontAwesomeIcon icon={faIconSecondary.icon} className="w-4 h-4 sm:w-5 sm:h-5" /> : <span className="text-sm sm:text-base font-semibold">{faIconSecondary.fallback || title?.charAt(0)?.toUpperCase?.() || '?'}</span>}</div>;
   };
 
   const renderPostFaIconSecondary = () => {
     if (!postFaIconSecondary) return null;
-    return <div className="text-blue-600 dark:text-blue-400 flex items-center justify-center">{postFaIconSecondary.icon ? <FontAwesomeIcon icon={postFaIconSecondary.icon} className="h-6 w-6 sm:h-8 sm:w-8" /> : <span className="text-sm sm:text-base font-semibold">{postFaIconSecondary.fallback || "?"}</span>}</div>;
+    return <div className="text-blue-600 dark:text-blue-400 flex items-center justify-center">{postFaIconSecondary.icon ? <FontAwesomeIcon icon={postFaIconSecondary.icon} className="h-6 w-6 sm:h-8 sm:w-8" /> : <span className="text-sm sm:text-base font-semibold">{postFaIconSecondary.fallback || '?'}</span>}</div>;
   };
 
   const renderClientMiniAvatar = () => {
     if (!clientMiniAvatar) return null;
     return (
       <div className="flex items-center gap-2">
-        <div className="w-6 h-6 rounded overflow-hidden border border-gray-200 dark:border-gray-700 flex items-center justify-center bg-primary-600 text-white text-xs font-semibold">{clientMiniAvatar.src ? <img src={clientMiniAvatar.src} alt={clientMiniAvatar.alt || clientMiniAvatar.label || "Cliente"} className="w-full h-full object-cover" /> : clientMiniAvatar.fallback || "?"}</div>
+        <div className="w-6 h-6 rounded overflow-hidden border border-gray-200 dark:border-gray-700 flex items-center justify-center bg-primary-600 text-white text-xs font-semibold">{clientMiniAvatar.src ? <img src={clientMiniAvatar.src} alt={clientMiniAvatar.alt || clientMiniAvatar.label || 'Cliente'} className="w-full h-full object-cover" /> : clientMiniAvatar.fallback || '?'}</div>
         {clientMiniAvatar.label && <span className="text-md text-gray-700 dark:text-gray-300 font-bold">{clientMiniAvatar.label}</span>}
       </div>
     );
@@ -186,19 +195,19 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, 
                 {renderClientMiniAvatar()}
 
                 {badge && (
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium ${BADGE_CLASSES[badge.variant ?? "default"]} min-w-0`} title={badge.text}>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium ${BADGE_CLASSES[badge.variant ?? 'default']} min-w-0`} title={badge.text}>
                     <span className="truncate max-w-[30vw] sm:max-w-[40vw] md:max-w-[50vw]">{badge.text}</span>
                   </span>
                 )}
 
                 {badgeSecondary && (
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium ${BADGE_CLASSES[badgeSecondary.variant ?? "default"]} min-w-0`} title={badgeSecondary.text}>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium ${BADGE_CLASSES[badgeSecondary.variant ?? 'default']} min-w-0`} title={badgeSecondary.text}>
                     <span className="truncate max-w-[30vw] sm:max-w-[40vw] md:max-w-[50vw]">{badgeSecondary.text}</span>
                   </span>
                 )}
 
                 {badgeTertiary && (
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium ${BADGE_CLASSES[badgeTertiary.variant ?? "default"]} min-w-0`} title={badgeTertiary.text}>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium ${BADGE_CLASSES[badgeTertiary.variant ?? 'default']} min-w-0`} title={badgeTertiary.text}>
                     <span className="truncate max-w-[30vw] sm:max-w-[40vw] md:max-w-[50vw]">{badgeTertiary.text}</span>
                   </span>
                 )}
@@ -227,7 +236,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, 
                               <span className="text-gray-700 dark:text-gray-300 text-sm">({itemCount})</span>
                             </div>
                           )}
-                          {badgeState && <span className={`px-2.5 py-0.5 rounded text-xs font-medium ${BADGE_CLASSES[badgeState.variant ?? "default"]}`}>{badgeState.text}</span>}
+                          {badgeState && <span className={`px-2.5 py-0.5 rounded text-xs font-medium ${BADGE_CLASSES[badgeState.variant ?? 'default']}`}>{badgeState.text}</span>}
                         </div>
                         {shouldShowInfoButton && (
                           <button type="button" onClick={() => infoModal?.onOpen?.()} className="inline-flex items-center justify-center rounded" title="Ver información" aria-label="Ver información">
@@ -241,6 +250,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, 
                 <div className="shrink-0">{headerActions}</div>
               </div>
             </div>
+            {stickySearchAndFilters && searchAndFilters && <div className="pb-4">{searchAndFilters}</div>}
           </div>
 
           {preSearchContent && <div className="mb-6">{preSearchContent}</div>}
@@ -252,7 +262,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, 
             {preSearchActions && <div>{preSearchActions}</div>}
           </div>
 
-          {searchAndFilters && <div className="pb-4 pt-2 mb-6">{searchAndFilters}</div>}
+          {!stickySearchAndFilters && searchAndFilters && <div className="pb-4 pt-2 mb-4">{searchAndFilters}</div>}
 
           {children}
 
