@@ -35,3 +35,28 @@ export const cuitEsValido = (raw?: string): boolean => {
   const verificador = resto === 0 ? 0 : resto === 1 ? 9 : 11 - resto;
   return verificador === Number(d[10]);
 };
+
+/**
+ * Por qué un CUIT no se puede consultar en el Padrón, en castellano.
+ *
+ * `cuitEsValido` contesta sí/no, y con eso alcanza para decidir. Pero en pantalla un "no" a secas se
+ * lee como una falla del sistema —"no me deja validar y no entiendo por qué"— cuando en realidad es
+ * un dato mal cargado que alguien puede arreglar en treinta segundos. Esta función dice cuál de los
+ * cuatro problemas es, para poder mostrarlo.
+ *
+ * Devuelve `null` si el CUIT está bien.
+ */
+export const motivoCuitInvalido = (raw?: string | null): { corto: string; detalle: string } | null => {
+  const d = String(raw || "").replace(/\D/g, "");
+  if (!d) return { corto: "Sin CUIT", detalle: "No tiene CUIT cargado. El Padrón de ARCA se consulta POR CUIT, así que no hay a quién preguntarle." };
+  if (d.length !== 11) return { corto: "CUIT incompleto", detalle: `Tiene ${d.length} dígito${d.length === 1 ? "" : "s"} y un CUIT tiene 11. Corregilo en la ficha y el botón de validar aparece solo.` };
+  if (!PREFIJOS_CUIT.includes(d.slice(0, 2))) return { corto: "CUIT inválido", detalle: `Empieza con ${d.slice(0, 2)}, que no es un prefijo de ARCA (20/23/24/25/26/27 personas, 30/33/34 empresas).` };
+  if (/^(\d)\1{10}$/.test(d)) return { corto: "CUIT inválido", detalle: "Son once dígitos iguales: es un relleno, no un CUIT real." };
+  const pesos = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
+  const suma = pesos.reduce((acc, p, i) => acc + p * Number(d[i]), 0);
+  const resto = suma % 11;
+  const verificador = resto === 0 ? 0 : resto === 1 ? 9 : 11 - resto;
+  if (verificador !== Number(d[10]))
+    return { corto: "CUIT inválido", detalle: `El último dígito (el verificador) debería ser ${verificador} y dice ${d[10]}. Suele ser un número tipeado de más o de menos en el medio.` };
+  return null;
+};

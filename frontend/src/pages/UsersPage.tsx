@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { usersAPI, User } from '../api/users';
 import { afipAPI } from '../api/afip';
-import { cuitEsValido } from '../utils/cuit';
+import { motivoCuitInvalido, cuitEsValido } from '../utils/cuit';
 import { NombreArca, estadoNombreArca } from '../components/arca/NombreArca';
 import { registroLinksAPI, RegistroLink, buildRegistroUrl, registroLinkDaysLeft, isRegistroLinkExpired, registroLinkExpiry } from '../api/registroLinks';
 import { rolesAPI, Role } from '../api/roles';
@@ -24,7 +24,7 @@ import { UserFormModal } from '../components/users/UserFormModal';
 import { Card } from '../components/ui/Card';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faUserShield, faEdit, faTrash, faKey, faPlus, faLayerGroup, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faUserPlus, faCopy, faCheck, faBan, faBell, faSort, faSortUp, faSortDown, faLandmark, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faUserShield, faEdit, faTrash, faKey, faPlus, faLayerGroup, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faUserPlus, faCopy, faCheck, faBan, faBell, faSort, faSortUp, faSortDown, faLandmark, faCircleCheck, faTriangleExclamation, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getImageUrl } from '../utils/imageHelpers';
@@ -420,8 +420,10 @@ export const UsersPage: React.FC = () => {
       return n;
     });
 
-  const validarNombresEnArca = async () => {
-    const ids = [...seleccionados];
+  /** `ids` explícitos = validar una sola fila; sin argumento = validar la selección. */
+  const validarNombresEnArca = async (idsPedidos?: string[]) => {
+    const ids = idsPedidos ?? [...seleccionados];
+    const esSeleccion = !idsPedidos;
     if (ids.length === 0) return;
     const ok = await sweetAlert.confirm(
       `¿Validar ${ids.length} nombre${ids.length === 1 ? '' : 's'} con ARCA?`,
@@ -434,7 +436,8 @@ export const UsersPage: React.FC = () => {
       // Sin `revalidar`: los que ya tienen el sello no se vuelven a consultar. Igual no pueden estar
       // acá, porque su check está apagado — esto es el cinturón además de los tirantes.
       const r = await afipAPI.validarNombres({ userIds: ids, limite: 300 });
-      setSeleccionados(new Set());
+      // Validar una fila suelta no tiene por qué destildar lo que el usuario venía juntando.
+      if (esSeleccion) setSeleccionados(new Set());
       await fetchUsers({ silent: true });
       if (r.motivoSinConsultar) {
         sweetAlert.warningAlert('No se pudo consultar', r.motivoSinConsultar);
@@ -1723,7 +1726,7 @@ export const UsersPage: React.FC = () => {
             )}
             {seleccionados.size > 0 && <span className="text-xs text-gray-500 dark:text-gray-400">{seleccionados.size} seleccionado(s)</span>}
             <button
-              onClick={validarNombresEnArca}
+              onClick={() => validarNombresEnArca()}
               disabled={validandoNombres || seleccionados.size === 0}
               title={
                 seleccionados.size > 0
@@ -1853,6 +1856,7 @@ export const UsersPage: React.FC = () => {
                       <SortableTh columna="roles" activa={sortBy} direccion={sortDir} onSort={toggleSort} className="hidden md:table-cell">Roles</SortableTh>
                       <SortableTh columna="cuit" activa={sortBy} direccion={sortDir} onSort={toggleSort} className="hidden lg:table-cell">CUIT</SortableTh>
                       <SortableTh columna="contratos" activa={sortBy} direccion={sortDir} onSort={toggleSort} className="hidden md:table-cell text-center">Contratos</SortableTh>
+                      <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest text-center" title="Nombre confirmado contra el Padrón de ARCA">ARCA</th>
                       <SortableTh columna="estado" activa={sortBy} direccion={sortDir} onSort={toggleSort}>Estado</SortableTh>
                       <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Acciones</th>
                     </tr>
@@ -1936,6 +1940,54 @@ export const UsersPage: React.FC = () => {
                         </td>
                         <td className="py-4 px-6 hidden md:table-cell text-center">
                           <span className="text-xs text-gray-500">{(user.metadata?.projects || []).reduce((acc: number, p: any) => acc + (p.contracts?.length || 0), 0)}</span>
+                        </td>
+                        {/*
+                          Columna ARCA: el estado y su acción en la misma celda.
+
+                          El ✓ ya estaba al lado del nombre, pero para arreglar un "sin validar" había
+                          que tildar la fila, subir a la barra y apretar el masivo. Para una sola
+                          persona son tres pasos y una selección que después hay que limpiar.
+                        */}
+                        <td className="py-4 px-6 text-center" onClick={(e) => e.stopPropagation()}>
+                          {(() => {
+                            const estado = estadoNombreArca({ cuit: user.metadata?.cuit, sinCuit: user.metadata?.sinCuit, validadoAt: user.metadata?.nombreValidadoArcaAt });
+                            if (estado === 'validado')
+                              return (
+                                <span title={`Validado en ARCA${user.metadata?.nombreValidadoArcaAt ? ` el ${new Date(user.metadata.nombreValidadoArcaAt).toLocaleDateString()}` : ''}`} className="inline-flex text-green-600 dark:text-green-500">
+                                  <FontAwesomeIcon icon={faCircleCheck} className="h-4 w-4" />
+                                </span>
+                              );
+                            /*
+                              Sin CUIT válido no hay a quién preguntarle. Pero un "—" mudo se lee como
+                              una falla del sistema —"no me deja validar y no entiendo por qué"— cuando
+                              en realidad es un dato mal cargado. Se dice cuál es el problema.
+                            */
+                            if (estado === 'no_aplica') {
+                              if (user.metadata?.sinCuit) return <span className="text-[11px] font-semibold text-violet-600 dark:text-violet-400" title="Declaró no tener CUIT/CUIL argentino: sus contratos van por el circuito Sin CUIT, no hay nada que consultar">Sin CUIT</span>;
+                              const motivo = motivoCuitInvalido(user.metadata?.cuit);
+                              return (
+                                <button
+                                  onClick={() => openEdit(user)}
+                                  title={`${motivo?.detalle || 'No se puede consultar el Padrón con este CUIT.'} — Click para corregirlo.`}
+                                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400 hover:underline"
+                                >
+                                  <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
+                                  {motivo?.corto || 'CUIT inválido'}
+                                </button>
+                              );
+                            }
+                            return (
+                              <button
+                                onClick={() => validarNombresEnArca([user._id])}
+                                disabled={validandoNombres}
+                                title="Consultar el Padrón de ARCA y confirmar el nombre de esta persona"
+                                className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                              >
+                                <FontAwesomeIcon icon={validandoNombres ? faSpinner : faLandmark} spin={validandoNombres} className="h-3 w-3" />
+                                Validar
+                              </button>
+                            );
+                          })()}
                         </td>
                         <td className="py-4 px-6">
                           <div className="flex flex-wrap items-center gap-1.5">
