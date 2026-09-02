@@ -56,6 +56,18 @@ export interface ResultadoNombres {
     /** CUIL a los que ARCA les confirmó el nombre, HAYA CAMBIADO O NO. */
     confirmados: string[];
     consultados: number;
+    /**
+     * Los que ARCA rechazó, con el motivo que dio el organismo.
+     *
+     * Antes se descartaban en silencio (`if (!r.encontrado) return;`) y la corrida informaba "1
+     * consultado · todos los nombres ya coincidían": un fracaso contado como éxito. El caso típico es
+     * un CUIT que pasa el dígito verificador pero no existe en el Padrón — un tipeo que da un número
+     * válido pero de nadie.
+     */
+    noEncontrados: Array<{
+        cuit: string;
+        motivo: string;
+    }>;
     motivoSinConsultar?: string;
 }
 /**

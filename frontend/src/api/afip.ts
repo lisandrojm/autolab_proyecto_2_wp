@@ -186,6 +186,8 @@ export const afipAPI = {
     consultados: number;
     pendientes: number;
     cuitInvalido: number;
+    /** Los que ARCA rechazó, con el motivo textual del organismo. */
+    noEncontrados: Array<{ cuit: string; motivo: string }>;
     motivoSinConsultar?: string;
   }> {
     const { data } = await axios.post("/afip/nombres/validar", opts || {});

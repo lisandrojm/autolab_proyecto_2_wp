@@ -163,6 +163,20 @@ async function soapPost(url, soapAction, envelope) {
     const { data } = await axios.post(url, envelope, {
         headers: { "Content-Type": "text/xml; charset=utf-8", SOAPAction: soapAction },
         timeout: SOAP_TIMEOUT_MS,
+        /*
+          UN FAULT DE SOAP VIENE CON HTTP 500. ESO NO ES UN ERROR DE TRANSPORTE.
+    
+          Lo dice la spec de SOAP 1.1: cuando el servidor rechaza la llamada —CUIT que no existe en el
+          Padrón, servicio no autorizado para el certificado, parámetro mal formado— responde 500 con el
+          <Fault> en el cuerpo. Axios, por defecto, tira excepción con cualquier 5xx, así que ese cuerpo
+          se perdía antes de llegar al parseo: `consultarPadron` tiene toda la lógica para leer
+          faultCode/faultString y nunca la alcanzaba. Quedaba un "Request failed with status code 500"
+          sin explicación, idéntico para "esta persona no existe" y para "AFIP se cayó".
+    
+          Con `validateStatus` el 500 pasa como respuesta normal y el fault se parsea donde corresponde.
+          Un 4xx o un 502/503 de verdad siguen tirando excepción.
+        */
+        validateStatus: (status) => (status >= 200 && status < 300) || status === 500,
     });
     const raw = String(data);
     const parser = new XMLParser({ ignoreAttributes: false, removeNSPrefix: false });

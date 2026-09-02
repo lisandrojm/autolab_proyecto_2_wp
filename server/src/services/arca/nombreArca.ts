@@ -103,6 +103,15 @@ export interface ResultadoNombres {
   /** CUIL a los que ARCA les confirmó el nombre, HAYA CAMBIADO O NO. */
   confirmados: string[];
   consultados: number;
+  /**
+   * Los que ARCA rechazó, con el motivo que dio el organismo.
+   *
+   * Antes se descartaban en silencio (`if (!r.encontrado) return;`) y la corrida informaba "1
+   * consultado · todos los nombres ya coincidían": un fracaso contado como éxito. El caso típico es
+   * un CUIT que pasa el dígito verificador pero no existe en el Padrón — un tipeo que da un número
+   * válido pero de nadie.
+   */
+  noEncontrados: Array<{ cuit: string; motivo: string }>;
   motivoSinConsultar?: string;
 }
 
@@ -129,12 +138,13 @@ export async function confirmarNombresConElPadron(opts: { tenantObjectId: any; t
   const { tenantObjectId, tenantId, userIds } = opts;
   const renombrados: Renombre[] = [];
   const confirmados: string[] = [];
-  if (userIds.length === 0) return { renombrados, confirmados, consultados: 0 };
+  const noEncontrados: Array<{ cuit: string; motivo: string }> = [];
+  if (userIds.length === 0) return { renombrados, confirmados, consultados: 0, noEncontrados };
 
   const tenant = await Tenant.findById(tenantObjectId).lean();
   const cfg = getTenantAfipConfig(tenant);
   if (!cfg) {
-    return { renombrados, confirmados, consultados: 0, motivoSinConsultar: "El certificado de ARCA no está conectado, así que no se pudo confirmar ningún nombre contra el Padrón." };
+    return { renombrados, confirmados, consultados: 0, noEncontrados, motivoSinConsultar: "El certificado de ARCA no está conectado, así que no se pudo confirmar ningún nombre contra el Padrón." };
   }
 
   const users: any[] = await User.find({ _id: { $in: userIds }, tenantId: tenantObjectId })
@@ -158,7 +168,10 @@ export async function confirmarNombresConElPadron(opts: { tenantObjectId: any; t
         try {
           const r = await consultarPadron(tenantId, cfg, cuit);
           consultados++;
-          if (!r.encontrado) return;
+          if (!r.encontrado) {
+            noEncontrados.push({ cuit, motivo: String((r as any).faultString || "ARCA no devolvió datos para este CUIT.") });
+            return;
+          }
           const cambio = await aplicarNombreDeArca({
             tenantObjectId,
             userId: String(u._id),
@@ -168,14 +181,15 @@ export async function confirmarNombresConElPadron(opts: { tenantObjectId: any; t
           });
           if (r.nombre && r.apellido) confirmados.push(cuit);
           if (cambio) renombrados.push(cambio);
-        } catch {
-          /* best-effort: un nombre no confirmado no puede tumbar la corrida */
+        } catch (e: any) {
+          // best-effort: un nombre no confirmado no puede tumbar la corrida, pero SÍ se informa.
+          noEncontrados.push({ cuit, motivo: String(e?.message || "No se pudo consultar.") });
         }
       }),
     );
   }
 
-  return { renombrados, confirmados, consultados };
+  return { renombrados, confirmados, consultados, noEncontrados };
 }
 
 /**

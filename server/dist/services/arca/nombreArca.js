@@ -86,12 +86,13 @@ export async function confirmarNombresConElPadron(opts) {
     const { tenantObjectId, tenantId, userIds } = opts;
     const renombrados = [];
     const confirmados = [];
+    const noEncontrados = [];
     if (userIds.length === 0)
-        return { renombrados, confirmados, consultados: 0 };
+        return { renombrados, confirmados, consultados: 0, noEncontrados };
     const tenant = await Tenant.findById(tenantObjectId).lean();
     const cfg = getTenantAfipConfig(tenant);
     if (!cfg) {
-        return { renombrados, confirmados, consultados: 0, motivoSinConsultar: "El certificado de ARCA no está conectado, así que no se pudo confirmar ningún nombre contra el Padrón." };
+        return { renombrados, confirmados, consultados: 0, noEncontrados, motivoSinConsultar: "El certificado de ARCA no está conectado, así que no se pudo confirmar ningún nombre contra el Padrón." };
     }
     const users = await User.find({ _id: { $in: userIds }, tenantId: tenantObjectId })
         .select("_id firstName lastName metadata.cuit")
@@ -113,8 +114,10 @@ export async function confirmarNombresConElPadron(opts) {
             try {
                 const r = await consultarPadron(tenantId, cfg, cuit);
                 consultados++;
-                if (!r.encontrado)
+                if (!r.encontrado) {
+                    noEncontrados.push({ cuit, motivo: String(r.faultString || "ARCA no devolvió datos para este CUIT.") });
                     return;
+                }
                 const cambio = await aplicarNombreDeArca({
                     tenantObjectId,
                     userId: String(u._id),
@@ -127,12 +130,13 @@ export async function confirmarNombresConElPadron(opts) {
                 if (cambio)
                     renombrados.push(cambio);
             }
-            catch {
-                /* best-effort: un nombre no confirmado no puede tumbar la corrida */
+            catch (e) {
+                // best-effort: un nombre no confirmado no puede tumbar la corrida, pero SÍ se informa.
+                noEncontrados.push({ cuit, motivo: String(e?.message || "No se pudo consultar.") });
             }
         }));
     }
-    return { renombrados, confirmados, consultados };
+    return { renombrados, confirmados, consultados, noEncontrados };
 }
 /**
  * Los usuarios de un conjunto de CUIL, indexados por CUIL en dígitos.

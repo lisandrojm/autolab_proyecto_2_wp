@@ -451,6 +451,23 @@ export const UsersPage: React.FC = () => {
       ]
         .filter(Boolean)
         .join('\n');
+
+      /*
+        ARCA rechazó a alguien: se avisa y se corta acá.
+
+        Sin esto, "el CUIT no existe en el Padrón" terminaba en el mismo cartel verde que un éxito
+        ("1 consultado · todos los nombres ya coincidían"), y no había forma de saber por qué la
+        persona seguía sin el tilde después de apretar el botón.
+      */
+      const rechazados = r.noEncontrados || [];
+      if (rechazados.length > 0 && r.renombrados.length === 0) {
+        await sweetAlert.warningAlert(
+          rechazados.length === 1 ? 'ARCA no reconoció ese CUIT' : `ARCA no reconoció ${rechazados.length} CUIT`,
+          `${rechazados.map((x: { cuit: string; motivo: string }) => `• ${formatCuit(x.cuit)} — ${x.motivo}`).join('\n')}\n\nUn CUIT puede pasar el dígito verificador y aun así no existir: alcanza con un número cambiado. Corregí el dato en la ficha y volvé a intentar.`,
+        );
+        return;
+      }
+
       if (r.renombrados.length > 0) {
         // Los renombres se listan, no se cuentan: son datos de personas que cambiaron sin que nadie
         // los escribiera, y «se corrigieron 7» no deja revisar ninguno.
