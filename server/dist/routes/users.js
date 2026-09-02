@@ -6,6 +6,7 @@ import { Role } from "../models/Role.js";
 import { Project } from "../models/Project.js";
 import { Tenant } from "../models/Tenant.js";
 import { getTenantAfipConfig, consultarPadron } from "../services/afipService.js";
+import { usuarioExistenteConCuit } from "../services/arca/consultaCuit.js";
 import { cuitEsValido, normalizarCuit } from "../utils/constanciaPdf.js";
 import { RoleFrame } from "../models/RoleFrame.js";
 import UserProject from "../models/UserProject.js"; // This registers the model
@@ -916,6 +917,15 @@ router.post("/", requireTenant, authenticateToken, requirePermission("admin_user
           completar el formulario, y esta es la que respalda el sello. Dar de alta a alguien no es una
           operación frecuente.
         */
+        // Mismo criterio que el registro público: el CUIT identifica a la persona, el email no.
+        const cuitAlta = normalizarCuit(String(data.metadata?.cuit || ""));
+        if (cuitAlta) {
+            const duplicado = await usuarioExistenteConCuit(req.tenantObjectId, cuitAlta);
+            if (duplicado) {
+                res.status(409).json({ error: `Ese CUIT ya pertenece a ${duplicado.nombre}${duplicado.email ? ` (${duplicado.email})` : ""}. Buscalo en el listado en vez de crearlo de nuevo.` });
+                return;
+            }
+        }
         delete data.metadata?.nombreValidadoArcaAt;
         if (req.body?.validarConArca === true) {
             const cuit = normalizarCuit(String(data.metadata?.cuit || ""));

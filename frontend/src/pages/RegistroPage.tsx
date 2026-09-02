@@ -1,10 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircleInfo, faSpinner, faLandmark, faCircleCheck } from '@fortawesome/free-solid-svg-icons';
+import { faCircleInfo, faSpinner, faLandmark, faCircleCheck, faEye, faEyeSlash, faWandMagicSparkles, faSearch, faTimes, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { useSearchParams, Link } from 'react-router-dom';
 import { CuitInput, isValidCuit } from '../components/ui/CuitInput';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { sweetAlert } from '../utils/sweetAlert';
+import { generarPassword } from '../utils/password';
+import { fuzzyMatch } from '../utils/searchHelpers';
 import { mensajeErrorArca } from '../utils/errorArca';
 import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina } from '../utils/nacionalidadDocumento';
 
@@ -31,7 +34,8 @@ interface RegistroForm {
   nivelEstudioId: string;
   nacionalidadId: string;
   estadoCivil: string;
-  rolFrameId: string;
+  password: string;
+  rolesFrameIds: string[];
   // Domicilio
   pais: string;
   localidad: string;
@@ -64,7 +68,8 @@ const emptyForm: RegistroForm = {
   nivelEstudioId: '',
   nacionalidadId: '',
   estadoCivil: '',
-  rolFrameId: '',
+  password: '',
+  rolesFrameIds: [],
   pais: '',
   localidad: '',
   calle: '',
@@ -128,6 +133,50 @@ const CAMPOS_POR_TIPO: Record<string, CamposTipo> = {
 };
 const camposDe = (tipo: string): CamposTipo => CAMPOS_POR_TIPO[tipo] || CAMPOS_POR_TIPO.otro;
 const labelTipo = (tipo: string): string => TIPO_ENTIDAD_OPTIONS.find((o) => o.value === tipo)?.label || 'Entidad';
+
+/**
+ * Qué son los Roles Empresa y por qué se puede elegir más de uno.
+ *
+ * La aclaración vivía como un renglón de texto suelto arriba de la grilla, compitiendo con el título
+ * y con el buscador. Como ⓘ dice lo mismo sin ocupar lugar, y de paso hay sitio para explicar QUÉ es
+ * un rol empresa, que era lo que en realidad no se entendía.
+ */
+const InfoRolesEmpresa: React.FC = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} title="¿Qué son los roles empresa?" aria-label="¿Qué son los roles empresa?" className="ml-1.5 text-gray-400 hover:text-gray-200 transition-colors normal-case tracking-normal font-normal align-middle">
+        <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+      </button>
+      {open &&
+        createPortal(
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={() => setOpen(false)}>
+            <div className="w-full max-w-lg rounded-xl border border-gray-700 bg-gray-800 shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
+                <h3 className="text-sm font-bold text-gray-100">Rol/es Empresa</h3>
+                <button type="button" onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-200 text-lg leading-none">
+                  ✕
+                </button>
+              </div>
+              <div className="px-5 py-4 space-y-3 text-sm text-gray-300">
+                <p>Es el oficio con el que trabajás en una producción: Actor, Animador 2D, Asistente de Cámara, Sonidista.</p>
+                <p>
+                  <strong>Podés elegir más de uno.</strong> Es lo normal: alguien puede ser Asistente de Cámara en un proyecto y Foquista en otro. Marcá todos los que correspondan.
+                </p>
+                <p className="text-[11px] text-gray-500">No tiene que ver con los permisos del sistema: eso se define aparte y no lo elegís vos.</p>
+              </div>
+              <div className="flex justify-end px-5 py-3 border-t border-gray-700">
+                <button type="button" onClick={() => setOpen(false)} className="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700">
+                  Entendido
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+};
 
 /**
  * Qué pasa si la persona no tiene CUIT/CUIL: explica el circuito "Sin CUIT" de Contratos, para que
@@ -363,6 +412,9 @@ export const RegistroPage: React.FC = () => {
 
     El endpoint es público pero pide el token de invitación, el mismo del resto del formulario.
   */
+  const [mostrarPassword, setMostrarPassword] = useState(false);
+  const [rolEmpresaBusqueda, setRolEmpresaBusqueda] = useState('');
+  const [rolesEmpresaOpen, setRolesEmpresaOpen] = useState(false);
   const [validadoEnArca, setValidadoEnArca] = useState(false);
   const [consultandoPadron, setConsultandoPadron] = useState(false);
 
@@ -387,6 +439,11 @@ export const RegistroPage: React.FC = () => {
         sweetAlert.error(m.titulo, m.detalle);
         return;
       }
+      if (data.yaExiste) {
+        // Cortar acá y no al final: si no, completa las tres pestañas para recibir un 409.
+        sweetAlert.error('Ya estás registrado', `Ese CUIT ya figura a nombre de ${data.yaExiste.nombre}. Entrá con tu cuenta, o escribile a la productora si no podés acceder.`);
+        return;
+      }
       if (!data.nombre || !data.apellido) {
         sweetAlert.warningAlert('Es una persona jurídica', `ARCA devolvió «${data.denominacion}». Este formulario es para personas: no hay nombre y apellido para separar.`);
         return;
@@ -401,6 +458,7 @@ export const RegistroPage: React.FC = () => {
       }));
       setFieldErrors((prev) => ({ ...prev, firstName: false, lastName: false, documento: false, cuit: false }));
       setValidadoEnArca(true);
+      sweetAlert.success('Datos traídos de ARCA', `${data.nombre} ${data.apellido}${data.documento ? ` · DNI ${data.documento}` : ''}`);
     } catch {
       const m = mensajeErrorArca(undefined, null);
       sweetAlert.error(m.titulo, m.detalle);
@@ -416,6 +474,8 @@ export const RegistroPage: React.FC = () => {
   const bloqueadoHastaValidar = cuilVisible && !validadoEnArca;
   const camposDeArcaBloqueados = validadoEnArca;
   const tituloArca = camposDeArcaBloqueados ? 'Lo trae ARCA para este CUIT. Para cambiarlo, corregí el CUIT y validá de nuevo.' : undefined;
+  /** Bloqueado, pero con el texto legible: tiene un dato real, no está vacío. */
+  const claseArca = camposDeArcaBloqueados ? 'input-field disabled:text-gray-900 dark:disabled:text-white' : fieldClass;
 
   /** Lo traído del Padrón deja de aplicar si cambia el CUIT o aquello de lo que dependía. */
   const limpiarDatosDeArca = () => {
@@ -446,7 +506,7 @@ export const RegistroPage: React.FC = () => {
   // El CUIL solo es obligatorio para argentinos: un extranjero puede no tenerlo (lo declara con el
   // checkbox y en ese caso el campo ni se muestra).
   const REQUIRED_BY_STEP: Record<'general' | 'domicilio', { key: keyof RegistroForm; label: string }[]> = {
-    general: [{ key: 'firstName', label: 'Nombre' }, { key: 'lastName', label: 'Apellido' }, { key: 'email', label: 'Email' }, { key: 'nacionalidadId', label: 'Nacionalidad' }, ...(cuilObligatorio ? [{ key: 'cuit' as keyof RegistroForm, label: 'CUIT / CUIL' }] : []), { key: 'documento', label: 'Documento' }, { key: 'fechaNac', label: 'Fecha de nacimiento' }],
+    general: [{ key: 'firstName', label: 'Nombre' }, { key: 'lastName', label: 'Apellido' }, { key: 'email', label: 'Email' }, { key: 'nacionalidadId', label: 'Nacionalidad' }, ...(cuilObligatorio ? [{ key: 'cuit' as keyof RegistroForm, label: 'CUIT / CUIL' }] : []), { key: 'documento', label: 'Documento' }, { key: 'password', label: 'Contraseña' }, { key: 'fechaNac', label: 'Fecha de nacimiento' }],
     domicilio: [
       { key: 'pais', label: 'País' },
       { key: 'localidad', label: 'Localidad' },
@@ -506,6 +566,11 @@ export const RegistroPage: React.FC = () => {
       return;
     }
     // Validaciones de formato del paso General.
+    if (activeTab === 'general' && form.password.trim().length > 0 && form.password.length < 6) {
+      sweetAlert.error('Contraseña muy corta', 'Tiene que tener al menos 6 caracteres. Podés usar el botón «Generar» y te la copiamos al portapapeles.');
+      setFieldErrors((prev) => ({ ...prev, password: true }));
+      return;
+    }
     if (activeTab === 'general' && !isValidEmail(form.email)) {
       setFieldErrors({ email: true });
       setError('Ingresá un email válido (ej: nombre@dominio.com).');
@@ -563,8 +628,7 @@ export const RegistroPage: React.FC = () => {
         email: form.email,
         // La contraseña de la plataforma ES el documento (DNI). Se envía explícito
         // para que funcione tanto con el backend nuevo (deriva de documento) como
-        // con el actual desplegado (que todavía espera `password`).
-        password: form.documento,
+        password: form.password,
         cuit: form.cuit,
         // Declaración explícita de "no tiene CUIT/CUIL argentino": se persiste para poder listarlos
         // después (pestaña "Sin CUIT") en vez de inferirlo de un campo vacío.
@@ -576,7 +640,7 @@ export const RegistroPage: React.FC = () => {
         nivelEstudioId: form.nivelEstudioId,
         nacionalidadId: form.nacionalidadId,
         estadoCivil: form.estadoCivil,
-        rolFrameId: form.rolFrameId,
+        rolesFrameIds: form.rolesFrameIds,
         pais: form.pais,
         localidad: form.localidad,
         calle: form.calle,
@@ -617,8 +681,9 @@ export const RegistroPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-gray-400">
-        <p>Cargando…</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        {/* El mismo spinner que el resto de la app: un texto suelto no distingue "esperá" de "se colgó". */}
+        <LoadingSpinner message="Cargando el formulario..." />
       </div>
     );
   }
@@ -781,19 +846,19 @@ export const RegistroPage: React.FC = () => {
                     <label className={labelClass}>
                       Nombre <span className="text-red-500">*</span>
                     </label>
-                    <input className={inputClass('firstName')} autoComplete="off" placeholder="Ej: Juan" value={form.firstName} onChange={(e) => set('firstName', e.target.value)} disabled={bloqueadoHastaValidar || camposDeArcaBloqueados} title={tituloArca} />
+                    <input className={camposDeArcaBloqueados ? claseArca : inputClass('firstName')} autoComplete="off" placeholder="Ej: Juan" value={form.firstName} onChange={(e) => set('firstName', e.target.value)} disabled={bloqueadoHastaValidar || camposDeArcaBloqueados} title={tituloArca} />
                   </div>
                   <div>
                     <label className={labelClass}>
                       Apellido <span className="text-red-500">*</span>
                     </label>
-                    <input className={inputClass('lastName')} autoComplete="off" placeholder="Ej: Pérez" value={form.lastName} onChange={(e) => set('lastName', e.target.value)} disabled={bloqueadoHastaValidar || camposDeArcaBloqueados} title={tituloArca} />
+                    <input className={camposDeArcaBloqueados ? claseArca : inputClass('lastName')} autoComplete="off" placeholder="Ej: Pérez" value={form.lastName} onChange={(e) => set('lastName', e.target.value)} disabled={bloqueadoHastaValidar || camposDeArcaBloqueados} title={tituloArca} />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className={labelClass}>Tipo de Documento</label>
-                    <select className={fieldClass} value={form.tipoDocumentoId} onChange={(e) => set('tipoDocumentoId', e.target.value)} disabled={!nacionalidadElegida || bloqueadoHastaValidar || camposDeArcaBloqueados} title={tituloArca}>
+                    <select className={claseArca} value={form.tipoDocumentoId} onChange={(e) => set('tipoDocumentoId', e.target.value)} disabled={!nacionalidadElegida || bloqueadoHastaValidar || camposDeArcaBloqueados} title={tituloArca}>
                       <option value="">Seleccionar...</option>
                       {tiposDocumentoDisponibles.map((o) => (
                         <option key={o.id} value={o.id}>
@@ -806,9 +871,10 @@ export const RegistroPage: React.FC = () => {
                     <label className={labelClass}>
                       Documento <span className="text-red-500">*</span>
                     </label>
-                    <input className={inputClass('documento')} autoComplete="off" placeholder={esArgentino ? 'Nº de documento' : 'DNI / Pasaporte'} value={form.documento} onChange={(e) => set('documento', e.target.value)} disabled={!nacionalidadElegida || bloqueadoHastaValidar || camposDeArcaBloqueados} title={tituloArca} />
+                    <input className={camposDeArcaBloqueados ? claseArca : inputClass('documento')} autoComplete="off" placeholder={esArgentino ? 'Nº de documento' : 'DNI / Pasaporte'} value={form.documento} onChange={(e) => set('documento', e.target.value)} disabled={!nacionalidadElegida || bloqueadoHastaValidar || camposDeArcaBloqueados} title={tituloArca} />
                   </div>
                 </div>
+                {/* Mismo pareo de columnas que Nuevo Usuario: email+contraseña, fecha+nivel, género+estado. */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className={labelClass}>
@@ -818,23 +884,58 @@ export const RegistroPage: React.FC = () => {
                   </div>
                   <div>
                     <label className={labelClass}>
+                      Contraseña <span className="text-red-500">*</span>
+                    </label>
+                    {/*
+                      La contraseña la elige la persona.
+
+                      Antes el registro guardaba SIEMPRE el DNI como contraseña: un dato que figura en el
+                      contrato, en el CUIT y en cualquier planilla del proyecto, o sea que la credencial
+                      de cada quien era pública dentro de la organización.
+                    */}
+                    <div className="flex items-start gap-2">
+                      <div className="relative flex-1 min-w-0">
+                        <input
+                          type={mostrarPassword ? 'text' : 'password'}
+                          className={`${inputClass('password')} pr-10`}
+                          autoComplete="new-password"
+                          placeholder="Mínimo 6 caracteres"
+                          value={form.password}
+                          onChange={(e) => set('password', e.target.value)}
+                        />
+                        <button type="button" onClick={() => setMostrarPassword((v) => !v)} title={mostrarPassword ? 'Ocultar' : 'Mostrar'} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400">
+                          <FontAwesomeIcon icon={mostrarPassword ? faEyeSlash : faEye} className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const nueva = generarPassword();
+                          set('password', nueva);
+                          setMostrarPassword(true);
+                          try {
+                            await navigator.clipboard.writeText(nueva);
+                            sweetAlert.success('Contraseña generada', 'Ya está copiada al portapapeles. Guardala: es con la que vas a entrar.');
+                          } catch {
+                            sweetAlert.success('Contraseña generada', 'Guardala antes de continuar: es con la que vas a entrar.');
+                          }
+                        }}
+                        title="Generar una contraseña segura al azar y copiarla al portapapeles"
+                        className="shrink-0 inline-flex items-center gap-2 px-3 h-[42px] rounded-lg text-xs font-semibold border border-blue-500/50 text-blue-300 hover:bg-blue-500/10 transition-colors whitespace-nowrap"
+                      >
+                        <FontAwesomeIcon icon={faWandMagicSparkles} className="h-3 w-3" />
+                        Generar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelClass}>
                       Fecha de Nacimiento <span className="text-red-500">*</span>
                     </label>
                     <input type="date" className={inputClass('fechaNac')} value={form.fechaNac} onChange={(e) => set('fechaNac', e.target.value)} />
                   </div>
-                  <div>
-                    <label className={labelClass}>Género</label>
-                    <select className={fieldClass} value={form.generoId} onChange={(e) => set('generoId', e.target.value)}>
-                      <option value="">Seleccionar...</option>
-                      {generos.map((o) => (
-                        <option key={o.id} value={o.id}>
-                          {o.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className={labelClass}>Nivel de Estudio</label>
                     <select className={fieldClass} value={form.nivelEstudioId} onChange={(e) => set('nivelEstudioId', e.target.value)}>
@@ -846,16 +947,21 @@ export const RegistroPage: React.FC = () => {
                       ))}
                     </select>
                   </div>
-                  {/* Nacionalidad se movió arriba: es la que decide documento y CUIL. */}
                 </div>
-                {/*
-                 * Acá se pedía la Obra social. Se sacó: quien se registra no puede saber qué RNOS le
-                 * corresponde ante ARCA, y es un dato de la RELACIÓN LABORAL, no de la persona —
-                 * vive en el contrato y se constata en el padrón de la SSS al hacerlo.
-                 */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelClass}>Estado Civil</label>
+                    <label className={labelClass}>Género</label>
+                    <select className={fieldClass} value={form.generoId} onChange={(e) => set('generoId', e.target.value)}>
+                      <option value="">Seleccionar...</option>
+                      {generos.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Estado civil</label>
                     <select className={fieldClass} value={form.estadoCivil} onChange={(e) => set('estadoCivil', e.target.value)}>
                       <option value="">Seleccionar...</option>
                       <option value="Soltero">Soltero/a</option>
@@ -866,12 +972,130 @@ export const RegistroPage: React.FC = () => {
                     </select>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className={labelClass}>Rol/es Empresa</label>
-                    <SearchableSelect title="Rol frame" value={form.rolFrameId} options={rolesFrame} onChange={(v) => set('rolFrameId', v)} />
-                  </div>
+                {/*
+                 * Acá se pedía la Obra social. Se sacó: quien se registra no puede saber qué RNOS le
+                 * corresponde ante ARCA, y es un dato de la RELACIÓN LABORAL, no de la persona —
+                 * vive en el contrato y se constata en el padrón de la SSS al hacerlo.
+                 */}
+                {/* Roles Empresa: la misma grilla de checkboxes que Nuevo Usuario. Son VARIOS a propósito
+                    —alguien puede ser Asistente de Cámara en un proyecto y Foquista en otro—, y con un
+                    selector de a uno ese dato entraba incompleto y había que arreglarlo a mano después. */}
+                {/*
+                  UN CAMPO QUE ABRE UN MODAL, no una grilla incrustada.
+
+                  El listado tiene cientos de especialidades: metido en el formulario ocupaba 300px con
+                  scroll propio dentro del scroll de la tarjeta —dos barras anidadas— y obligaba a
+                  recorrerlo entero para saber qué había marcado. Acá se ve solo lo elegido.
+                */}
+                <div>
+                  <label className={labelClass}>
+                    Rol/es Empresa
+                    <InfoRolesEmpresa />
+                  </label>
+                  {/* El campo abre el selector; lo elegido va DEBAJO, no adentro. */}
+                  <button type="button" onClick={() => setRolesEmpresaOpen(true)} className={`${fieldClass} text-left flex items-center gap-2 hover:border-blue-500 transition-colors`}>
+                    <span className="text-gray-500">Elegí uno o más roles…</span>
+                    <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400 ml-auto shrink-0" />
+                  </button>
+                  {form.rolesFrameIds.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {form.rolesFrameIds.map((id) => {
+                        const rf = rolesFrame.find((x) => String(x.id) === id);
+                        return (
+                          <span key={id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-900/30 text-blue-300 border border-blue-800">
+                            {rf?.name || 'Rol'}
+                            <button type="button" onClick={() => set('rolesFrameIds', form.rolesFrameIds.filter((x) => x !== id))} title={`Quitar ${rf?.name || 'rol'}`} className="rounded-full hover:bg-blue-800/60 p-0.5">
+                              <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
+
+                {rolesEmpresaOpen &&
+                  createPortal(
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={() => setRolesEmpresaOpen(false)}>
+                      {/* Alto FIJO: con `max-h` el modal se encogía a medida que el filtro reducía la lista, así que
+                          escribir en el buscador hacía saltar la ventana y moverse el botón «Listo». */}
+                      <div className="w-full max-w-3xl h-[85vh] flex flex-col rounded-xl border border-gray-700 bg-gray-800 shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700 shrink-0">
+                          <div>
+                            <h3 className="text-sm font-bold text-gray-100">Rol/es Empresa</h3>
+                            <p className="text-[11px] text-gray-400 mt-0.5">{form.rolesFrameIds.length} seleccionado(s) · el oficio con el que trabajás en una producción</p>
+                          </div>
+                          <button type="button" onClick={() => setRolesEmpresaOpen(false)} className="text-gray-400 hover:text-gray-200 text-lg leading-none">
+                            ✕
+                          </button>
+                        </div>
+                        {/* Alto fijo para el cuerpo: lo que scrollea es la grilla, no la ventana. */}
+                        <div className="flex-1 min-h-0 flex flex-col px-5 py-4">
+                          {/* Badges y buscador quedan arriba y fijos: en una lista de cientos, es lo que
+                              hay que tener a mano mientras se scrollea. */}
+                          <div className="shrink-0 space-y-3 pb-3">
+                            {form.rolesFrameIds.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5">
+                                {form.rolesFrameIds.map((id) => {
+                                  const rf = rolesFrame.find((x) => String(x.id) === id);
+                                  return (
+                                    <span key={id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-900/30 text-blue-300 border border-blue-800">
+                                      {rf?.name || 'Rol'}
+                                      <button type="button" onClick={() => set('rolesFrameIds', form.rolesFrameIds.filter((x) => x !== id))} title={`Quitar ${rf?.name || 'rol'}`} className="rounded-full hover:bg-blue-800/60 p-0.5">
+                                        <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+                                      </button>
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            <div className="relative">
+                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <FontAwesomeIcon icon={faSearch} className="h-3.5 w-3.5 text-gray-400" />
+                              </div>
+                              <input type="text" autoFocus value={rolEmpresaBusqueda} onChange={(e) => setRolEmpresaBusqueda(e.target.value)} placeholder="Buscar especialidad..." className={`${fieldClass} pl-9 pr-8`} />
+                              {rolEmpresaBusqueda && (
+                                <button type="button" onClick={() => setRolEmpresaBusqueda('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-200">
+                                  <FontAwesomeIcon icon={faTimes} className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 flex-1 min-h-0 overflow-y-auto content-start pr-1">
+                            {rolesFrame
+                              .filter((rf) => fuzzyMatch(rf.name, rolEmpresaBusqueda))
+                              .map((rf) => (
+                                <label key={rf.id} className={`flex items-center gap-3 p-2.5 rounded-lg border transition-all cursor-pointer ${form.rolesFrameIds.includes(String(rf.id)) ? 'bg-blue-900/20 border-blue-800 ring-2 ring-blue-500/20' : 'bg-gray-900/40 border-gray-700 hover:border-gray-600'}`}>
+                                  <input
+                                    type="checkbox"
+                                    checked={form.rolesFrameIds.includes(String(rf.id))}
+                                    onChange={(e) => {
+                                      const id = String(rf.id);
+                                      set('rolesFrameIds', e.target.checked ? [...form.rolesFrameIds, id] : form.rolesFrameIds.filter((x) => x !== id));
+                                    }}
+                                    className="rounded text-blue-500 focus:ring-blue-500 h-4 w-4 shrink-0"
+                                  />
+                                  <span className="text-xs font-medium text-gray-300 truncate">{rf.name}</span>
+                                </label>
+                              ))}
+                            {rolesFrame.filter((rf) => fuzzyMatch(rf.name, rolEmpresaBusqueda)).length === 0 && (
+                              <div className="col-span-full py-8 text-center text-xs text-gray-500 italic">No se encontraron especialidades que coincidan con "{rolEmpresaBusqueda}"</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-700 shrink-0">
+                          <button type="button" onClick={() => set('rolesFrameIds', [])} disabled={form.rolesFrameIds.length === 0} className="px-4 py-2 rounded-lg text-sm font-semibold border border-gray-600 text-gray-300 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed">
+                            Limpiar
+                          </button>
+                          <button type="button" onClick={() => setRolesEmpresaOpen(false)} className="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700">
+                            Listo
+                          </button>
+                        </div>
+                      </div>
+                    </div>,
+                    document.body,
+                  )}
                 </fieldset>
               </div>
             )}

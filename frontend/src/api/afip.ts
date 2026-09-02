@@ -181,7 +181,7 @@ export const afipAPI = {
    * miles de veces lo que ya se sabía.
    */
   /** Quién es un CUIT según ARCA. No guarda nada: es para completar el alta de un usuario nuevo. */
-  async consultarPadron(cuit: string): Promise<{ cuit: string; nombre: string; apellido: string; denominacion: string; estado: string; tipoPersona?: string; documento: string }> {
+  async consultarPadron(cuit: string): Promise<{ cuit: string; nombre: string; apellido: string; denominacion: string; estado: string; tipoPersona?: string; documento: string; yaExiste?: { _id: string; nombre: string; email?: string } | null }> {
     const { data } = await axios.post("/afip/padron/consultar", { cuit });
     return data;
   },

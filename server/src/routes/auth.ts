@@ -5,7 +5,7 @@ import { Role } from "../models/Role.js";
 import { Client } from "../models/Client.js";
 import { Tenant } from "../models/Tenant.js";
 import { getTenantAfipConfig, consultarPadron } from "../services/afipService.js";
-import { consultarCuitEnArca, ErrorConsultaCuit } from "../services/arca/consultaCuit.js";
+import { consultarCuitEnArca, ErrorConsultaCuit, usuarioExistenteConCuit } from "../services/arca/consultaCuit.js";
 import { cuitEsValido, normalizarCuit } from "../utils/constanciaPdf.js";
 import { Info } from "../models/Info.js";
 import { Banco } from "../models/Banco.js";
@@ -697,7 +697,8 @@ router.post("/registro/validar-cuit", async (req, res) => {
       res.status(401).json({ error: "Link inválido o expirado" });
       return;
     }
-    res.json(await consultarCuitEnArca(payload.tenantId, String(req.body?.cuit || "")));
+    const datos = await consultarCuitEnArca(payload.tenantId, String(req.body?.cuit || ""));
+    res.json({ ...datos, yaExiste: await usuarioExistenteConCuit(payload.tenantId, datos.cuit) });
   } catch (error: any) {
     if (error instanceof ErrorConsultaCuit) {
       res.status(error.status).json({ error: error.message });
@@ -729,8 +730,18 @@ router.post("/registro", async (req, res) => {
     const lastName = String(body.lastName || "").trim();
     const email = String(body.email || "").trim().toLowerCase();
     const documento = String(body.documento || "").trim();
-    // La contraseña de la plataforma es, por defecto, el DNI/Documento del usuario.
-    const password = documento;
+    /*
+      LA CONTRASEÑA LA ELIGE LA PERSONA. El DNI queda solo como respaldo.
+
+      Antes era SIEMPRE el documento: un dato que figura en el contrato, en el CUIT y en cualquier
+      planilla del proyecto, o sea que la credencial de cada quien era pública dentro de la propia
+      organización. Ahora el formulario pide una y ofrece generarla.
+
+      El fallback al documento se mantiene a propósito, para que un link de registro que ya estaba
+      abierto —con el formulario viejo, sin el campo— siga funcionando en vez de romper con un 400.
+    */
+    const passwordElegida = String(body.password || "");
+    const password = passwordElegida.length >= 6 ? passwordElegida : documento;
 
     if (!firstName || !lastName || !email || !documento) {
       res.status(400).json({ error: "Faltan campos obligatorios" });
@@ -743,12 +754,36 @@ router.post("/registro", async (req, res) => {
       return;
     }
 
+    /*
+      Y TAMPOCO SI YA EXISTE ESE CUIT, aunque el email sea otro.
+
+      El email no identifica a una persona: la misma podía registrarse dos veces con dos correos y
+      quedar duplicada. Eso recién se descubría cuando dos contratos apuntaban a legajos distintos del
+      mismo CUIL, con la mitad de los datos en cada uno.
+    */
+    const duplicado = await usuarioExistenteConCuit(tenantId, String(body.cuit || ""));
+    if (duplicado) {
+      res.status(409).json({ error: `Ese CUIT ya está registrado a nombre de ${duplicado.nombre}. Si sos vos, entrá con tu cuenta o pedile a la productora que la recupere.` });
+      return;
+    }
+
     // Rol por defecto: únicamente mobile-colaborador
     const mobileRole = await Role.findOne({ tenantId, name: { $regex: /^mobile-colaborador$/i } }).select("_id");
     const roles = [mobileRole?._id].filter(Boolean) as Types.ObjectId[];
 
     const num = (v: any) => (v != null && v !== "" ? Number(v) : undefined);
-    const rolFrameId = body.rolFrameId && Types.ObjectId.isValid(body.rolFrameId) ? String(body.rolFrameId) : undefined;
+    /*
+      VARIOS roles empresa, no uno.
+
+      Una misma persona puede ser Asistente de Cámara en un proyecto y Foquista en otro; obligarla a
+      elegir uno hacía que el dato entrara incompleto desde el registro y hubiera que arreglarlo a
+      mano después. Se sigue aceptando `rolFrameId` en singular para no romper links ya abiertos.
+    */
+    const rolesFrameIds: string[] = Array.isArray(body.rolesFrameIds)
+      ? body.rolesFrameIds.filter((r: any) => Types.ObjectId.isValid(String(r))).map(String)
+      : body.rolFrameId && Types.ObjectId.isValid(body.rolFrameId)
+        ? [String(body.rolFrameId)]
+        : [];
 
     const metadata: Record<string, any> = {
       activo: true,
@@ -765,8 +800,8 @@ router.post("/registro", async (req, res) => {
       // Sin `osId`: la obra social se declara en el contrato, no en la persona. Aunque un cliente
       // viejo la siga mandando en el body, acá se ignora.
       estadoCivil: body.estadoCivil || undefined,
-      roles_frame: rolFrameId ? [rolFrameId] : [],
-      rolesFrameIds: rolFrameId ? [rolFrameId] : [],
+      roles_frame: rolesFrameIds,
+      rolesFrameIds,
       // Domicilio
       pais: body.pais || undefined,
       localidad: body.localidad || undefined,

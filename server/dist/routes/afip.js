@@ -7,7 +7,7 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import mongoose, { Types } from "mongoose";
 import { Tenant } from "../models/Tenant.js";
-import { consultarCuitEnArca, ErrorConsultaCuit } from "../services/arca/consultaCuit.js";
+import { consultarCuitEnArca, ErrorConsultaCuit, usuarioExistenteConCuit } from "../services/arca/consultaCuit.js";
 import { Project } from "../models/Project.js";
 import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
@@ -275,7 +275,9 @@ router.post("/padron/consultar", async (req, res) => {
             res.status(403).json({ error: "Solo un administrador puede consultar el Padrón." });
             return;
         }
-        res.json(await consultarCuitEnArca(req.tenantObjectId, String(req.body?.cuit || "")));
+        const datos = await consultarCuitEnArca(req.tenantObjectId, String(req.body?.cuit || ""));
+        // Se avisa acá y no recién al guardar: quien está dando de alta ya completó medio formulario.
+        res.json({ ...datos, yaExiste: await usuarioExistenteConCuit(req.tenantObjectId, datos.cuit) });
     }
     catch (error) {
         if (error instanceof ErrorConsultaCuit) {

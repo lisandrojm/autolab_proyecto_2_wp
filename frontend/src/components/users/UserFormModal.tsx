@@ -133,6 +133,17 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     setConsultandoPadron(true);
     try {
       const r = await afipAPI.consultarPadron(cuit);
+      /*
+        Si ese CUIT ya tiene ficha, no se sigue.
+
+        Se corta acá y no al guardar: para cuando el servidor rechaza el alta por duplicado, quien la
+        estaba cargando ya completó tres pestañas. Y el mensaje dice a nombre de quién está, que es lo
+        que hace falta para ir a buscarlo en vez de insistir.
+      */
+      if (r.yaExiste && !user) {
+        sweetAlert.error('Esa persona ya está cargada', `El CUIT ${cuit} pertenece a ${r.yaExiste.nombre}${r.yaExiste.email ? ` (${r.yaExiste.email})` : ''}. Buscala en el listado en vez de crearla de nuevo.`);
+        return;
+      }
       if (!r.nombre || !r.apellido) {
         sweetAlert.warningAlert('Es una persona jurídica', `ARCA devolvió «${r.denominacion}». Este formulario es para personas: no hay nombre y apellido para separar.`);
         return;
@@ -191,6 +202,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
 
   // Rol/es Empresa search
   const [roleFrameSearch, setRoleFrameSearch] = useState('');
+  const [rolesEmpresaInfoOpen, setRolesEmpresaInfoOpen] = useState(false);
+  const [rolesEmpresaOpen, setRolesEmpresaOpen] = useState(false);
 
   // Para inicializar el form una sola vez por apertura
   const initializedRef = useRef(false);
@@ -909,7 +922,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Estado Civil</label>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Estado civil</label>
                       <select value={formData.estadoCivil || ''} onChange={(e) => setFormData((prev) => ({ ...prev, estadoCivil: e.target.value }))} className="input-field">
                         <option value="">Seleccionar...</option>
                         <option value="Soltero">Soltero/a</option>
@@ -950,42 +963,48 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     </div>
                   </div>
 
+                  {/*
+                    UN CAMPO QUE ABRE UN MODAL, no una grilla incrustada.
+
+                    El listado tiene cientos de especialidades: metido en el formulario ocupaba 300px con
+                    scroll propio dentro del scroll del modal —dos barras anidadas—, empujaba todo lo de
+                    abajo fuera de la vista y obligaba a recorrerlo entero para saber qué había marcado.
+
+                    Ahora el formulario muestra solo lo elegido y la elección pasa a una ventana dedicada,
+                    donde hay lugar para buscar y ver la lista completa.
+                  */}
                   <div>
-                    <div className="flex items-center gap-4 mb-2">
-                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Rol/es Empresa</label>
-                      <div className="relative w-48 md:w-64">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400" />
-                        </div>
-                        <input type="text" value={roleFrameSearch} onChange={(e) => setRoleFrameSearch(e.target.value)} placeholder="Buscar especialidad..." className="w-full pl-9 pr-8 py-1.5 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none" />
-                        {roleFrameSearch && (
-                          <button type="button" onClick={() => setRoleFrameSearch('')} className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                            <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
-                          </button>
-                        )}
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      Rol/es Empresa
+                      <button type="button" onClick={() => setRolesEmpresaInfoOpen(true)} title="¿Qué son los roles empresa?" className="ml-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal align-middle">
+                        <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+                      </button>
+                    </label>
+                    {(formData.rolesFrameIds || []).length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {(formData.rolesFrameIds || []).map((id) => {
+                          const rf = allRoleFrames.find((x) => x._id === id);
+                          return (
+                            <span key={id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                              {rf?.name || 'Rol'}
+                              <button type="button" onClick={() => setFormData((prev) => ({ ...prev, rolesFrameIds: (prev.rolesFrameIds || []).filter((x) => x !== id) }))} title={`Quitar ${rf?.name || 'rol'}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
+                                <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+                              </button>
+                            </span>
+                          );
+                        })}
                       </div>
-                    </div>
-                    <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
-                        {allRoleFrames
-                          .filter((rf) => fuzzyMatch(rf.name, roleFrameSearch))
-                          .map((rf) => (
-                            <label key={rf._id} className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.rolesFrameIds?.includes(rf._id) ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20' : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-300'}`}>
-                              <input
-                                type="checkbox"
-                                checked={formData.rolesFrameIds?.includes(rf._id)}
-                                onChange={(e) => {
-                                  const newRF = e.target.checked ? [...(formData.rolesFrameIds || []), rf._id] : (formData.rolesFrameIds || []).filter((id) => id !== rf._id);
-                                  setFormData((prev) => ({ ...prev, rolesFrameIds: newRF }));
-                                }}
-                                className="rounded text-blue-500 focus:ring-blue-500 h-4 w-4"
-                              />
-                              <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{rf.name}</span>
-                            </label>
-                          ))}
-                        {allRoleFrames.filter((rf) => fuzzyMatch(rf.name, roleFrameSearch)).length === 0 && <div className="col-span-full py-8 text-center text-xs text-gray-500 italic">No se encontraron especialidades que coincidan con "{roleFrameSearch}"</div>}
-                      </div>
-                    </div>
+                    )}
+                    {/* Lo elegido va ARRIBA del campo, no adentro: badges dentro de un input lo hacen
+                        crecer de alto y se lee como si el buscador tuviera texto escrito. */}
+                    <button
+                      type="button"
+                      onClick={() => setRolesEmpresaOpen(true)}
+                      className="input-field text-left flex items-center gap-2 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
+                    >
+                      <span className="text-gray-400 dark:text-gray-500">Elegí uno o más roles…</span>
+                      <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400 ml-auto shrink-0" />
+                    </button>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1006,7 +1025,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
 
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Roles de Sistema</label>
-                    <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 max-h-64 overflow-y-auto space-y-4">
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 space-y-4">
                       <div>
                         <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                           <FontAwesomeIcon icon={faUserShield} className="text-gray-300" />
@@ -1228,6 +1247,94 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           </div>
         </form>
       )}
+      {/* El selector, en su propia ventana: acá el listado tiene lugar para respirar. */}
+      {rolesEmpresaOpen && (
+        <Modal
+          isOpen={rolesEmpresaOpen}
+          onClose={() => setRolesEmpresaOpen(false)}
+          title="Rol/es Empresa"
+          subtitle={`${(formData.rolesFrameIds || []).length} seleccionado(s) · el oficio con el que la persona trabaja en una producción`}
+          size="lg"
+          zIndex={90}
+          footer={
+            <>
+              <button type="button" onClick={() => setFormData((prev) => ({ ...prev, rolesFrameIds: [] }))} className="btn-secondary" disabled={(formData.rolesFrameIds || []).length === 0}>
+                Limpiar
+              </button>
+              <button type="button" onClick={() => setRolesEmpresaOpen(false)} className="btn-primary">
+                Listo
+              </button>
+            </>
+          }
+        >
+          {/* Alto fijo: con la altura atada al contenido, filtrar encogía el modal y el botón «Listo»
+              se movía debajo del cursor. Lo que scrollea es la grilla, no la ventana. */}
+          <div className="h-[60vh] flex flex-col">
+            {(formData.rolesFrameIds || []).length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-3 shrink-0">
+                {(formData.rolesFrameIds || []).map((id) => {
+                  const rf = allRoleFrames.find((x) => x._id === id);
+                  return (
+                    <span key={id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                      {rf?.name || 'Rol'}
+                      <button type="button" onClick={() => setFormData((prev) => ({ ...prev, rolesFrameIds: (prev.rolesFrameIds || []).filter((x) => x !== id) }))} title={`Quitar ${rf?.name || 'rol'}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
+                        <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="relative mb-3 shrink-0">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FontAwesomeIcon icon={faSearch} className="h-3.5 w-3.5 text-gray-400" />
+              </div>
+              <input type="text" autoFocus value={roleFrameSearch} onChange={(e) => setRoleFrameSearch(e.target.value)} placeholder="Buscar especialidad..." className="input-field pl-9 pr-8" />
+              {roleFrameSearch && (
+                <button type="button" onClick={() => setRoleFrameSearch('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                  <FontAwesomeIcon icon={faTimes} className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 flex-1 overflow-y-auto content-start pr-1">
+              {allRoleFrames
+                .filter((rf) => fuzzyMatch(rf.name, roleFrameSearch))
+                .map((rf) => (
+                  <label key={rf._id} className={`flex items-center gap-3 p-2.5 rounded-lg border transition-all cursor-pointer ${formData.rolesFrameIds?.includes(rf._id) ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20' : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-300'}`}>
+                    <input
+                      type="checkbox"
+                      checked={formData.rolesFrameIds?.includes(rf._id)}
+                      onChange={(e) => {
+                        const nuevos = e.target.checked ? [...(formData.rolesFrameIds || []), rf._id] : (formData.rolesFrameIds || []).filter((id) => id !== rf._id);
+                        setFormData((prev) => ({ ...prev, rolesFrameIds: nuevos }));
+                      }}
+                      className="rounded text-blue-500 focus:ring-blue-500 h-4 w-4 shrink-0"
+                    />
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{rf.name}</span>
+                  </label>
+                ))}
+              {allRoleFrames.filter((rf) => fuzzyMatch(rf.name, roleFrameSearch)).length === 0 && (
+                <div className="col-span-full py-8 text-center text-xs text-gray-500 italic">No se encontraron especialidades que coincidan con "{roleFrameSearch}"</div>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {rolesEmpresaInfoOpen && (
+        <Modal isOpen={rolesEmpresaInfoOpen} onClose={() => setRolesEmpresaInfoOpen(false)} title="Rol/es Empresa" size="md" zIndex={90}>
+          <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+            <p>Es el oficio con el que la persona trabaja en una producción: Actor, Animador 2D, Asistente de Cámara, Sonidista.</p>
+            <p>
+              <strong>Se puede elegir más de uno.</strong> Es lo normal: alguien puede ser Asistente de Cámara en un proyecto y Foquista en otro. Marcá todos los que correspondan.
+            </p>
+            <p className="text-[11px] text-gray-500">No tiene que ver con los permisos del sistema: eso se define en Usuarios → Roles.</p>
+          </div>
+        </Modal>
+      )}
+
       {sinCuitInfoOpen && (
         <Modal isOpen={sinCuitInfoOpen} onClose={() => setSinCuitInfoOpen(false)} title="Si la persona todavía no tiene CUIT/CUIL" size="md" zIndex={90}>
           <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">

@@ -28,3 +28,18 @@ export declare class ErrorConsultaCuit extends Error {
     constructor(status: number, mensaje: string);
 }
 export declare function consultarCuitEnArca(tenantId: any, cuitCrudo: string): Promise<DatosDeArca>;
+/**
+ * ¿Ya hay alguien con este CUIT en la organización?
+ *
+ * El email no alcanza como identidad: la misma persona puede registrarse dos veces con dos correos y
+ * quedar duplicada, y ahí el problema recién aparece cuando dos contratos apuntan a legajos distintos
+ * del mismo CUIL. El CUIT sí identifica a una persona ante ARCA, así que es la clave que corresponde.
+ *
+ * Compara por DÍGITOS, no por string: `metadata.cuit` se guarda con o sin guiones según de dónde vino,
+ * y comparar crudo devolvía "no existe" para alguien que sí estaba.
+ */
+export declare function usuarioExistenteConCuit(tenantId: any, cuitCrudo: string): Promise<{
+    _id: string;
+    nombre: string;
+    email?: string;
+} | null>;
