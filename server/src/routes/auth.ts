@@ -763,7 +763,7 @@ router.post("/registro", async (req, res) => {
     */
     const duplicado = await usuarioExistenteConCuit(tenantId, String(body.cuit || ""));
     if (duplicado) {
-      res.status(409).json({ error: `Ese CUIT ya está registrado a nombre de ${duplicado.nombre}. Si sos vos, entrá con tu cuenta o pedile a la productora que la recupere.` });
+      res.status(409).json({ error: `Ese CUIT ya figura a nombre de ${duplicado.nombre}. Si sos vos, entrá con tu cuenta o escribile a la productora. Si no, revisá el número.` });
       return;
     }
 

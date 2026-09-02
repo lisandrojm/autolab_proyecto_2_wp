@@ -141,7 +141,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         que hace falta para ir a buscarlo en vez de insistir.
       */
       if (r.yaExiste && !user) {
-        sweetAlert.error('Esa persona ya está cargada', `El CUIT ${cuit} pertenece a ${r.yaExiste.nombre}${r.yaExiste.email ? ` (${r.yaExiste.email})` : ''}. Buscala en el listado en vez de crearla de nuevo.`);
+        sweetAlert.error('CUIT ya registrado', `Ese CUIT ya figura a nombre de ${r.yaExiste.nombre}${r.yaExiste.email ? ` (${r.yaExiste.email})` : ''}.\n\nBuscá esa ficha en el listado, o revisá el número si esperabas otra persona.`);
         return;
       }
       if (!r.nombre || !r.apellido) {

@@ -41,9 +41,29 @@ export async function aplicarNombreDeArca(opts: {
   arca: { nombre?: string; apellido?: string };
 }): Promise<Renombre | null> {
   const { tenantObjectId, userId, cuil, actual, arca } = opts;
-  // Sin las DOS partes no se escribe nada. Una persona jurídica trae `razonSocial` y no se puede
-  // partir sin adivinar, y un nombre adivinado es peor que el que ya estaba.
-  if (!arca.nombre || !arca.apellido) return null;
+
+  /*
+    ARCA A VECES DEVUELVE EL NOMBRE ENTERO EN UNA SOLA PARTE.
+
+    Para bastantes personas físicas el Padrón manda `apellido: "MORENO MARTINA"` y `nombre` vacío,
+    todo junto en un campo. Con la regla anterior —sin las dos partes no se escribe nada— esas
+    consultas se descartaban en silencio: el sello no se ponía, la fila seguía diciendo "Validar" y la
+    corrida informaba "todos los nombres ya coincidían". El botón parecía no hacer nada.
+
+    NO SE PARTE A LA ADIVINANZA. "DE LA TORRE JUAN" no se puede separar sin equivocarse, y un nombre
+    inventado es peor que el que ya estaba. Lo que sí se puede es VERIFICAR: si las palabras que
+    devolvió ARCA son exactamente las que ya están guardadas —sin importar orden, acentos ni
+    mayúsculas—, entonces el nombre está confirmado y el sello corresponde, sin tocar los campos.
+
+    Si no coinciden, no se escribe nada y el caso se informa: ahí hace falta que alguien mire.
+  */
+  if (!arca.nombre || !arca.apellido) {
+    const deArca = `${arca.nombre || ""} ${arca.apellido || ""}`.trim();
+    const guardado = `${actual.firstName || ""} ${actual.lastName || ""}`.trim();
+    if (!deArca || !mismoNombre(deArca, guardado)) return null;
+    await User.updateOne({ _id: userId, tenantId: tenantObjectId }, { $set: { "metadata.nombreValidadoArcaAt": new Date() } });
+    return null; // Confirmado, no renombrado: no hay nada que listar como cambio.
+  }
 
   const antes = `${actual.firstName || ""} ${actual.lastName || ""}`.trim();
   const ahora = `${arca.nombre} ${arca.apellido}`.trim();
@@ -180,6 +200,23 @@ export async function confirmarNombresConElPadron(opts: { tenantObjectId: any; t
             arca: { nombre: r.nombre, apellido: r.apellido },
           });
           if (r.nombre && r.apellido) confirmados.push(cuit);
+          /*
+            ARCA contestó, pero no se pudo dejar el sello: el nombre vino en una sola parte y NO
+            coincide con el guardado. Se informa en vez de descartarlo, que es lo que hacía que el
+            botón pareciera no hacer nada.
+          */
+          if (!r.nombre || !r.apellido) {
+            const u2: any = await User.findById(u._id).select("metadata.nombreValidadoArcaAt").lean();
+            if (!u2?.metadata?.nombreValidadoArcaAt) {
+              const deArca = `${r.nombre || ""} ${r.apellido || ""}`.trim();
+              noEncontrados.push({
+                cuit,
+                motivo: deArca
+                  ? `ARCA devolvió «${deArca}» en un solo campo y no coincide con el nombre guardado. Corregilo a mano y volvé a validar.`
+                  : "ARCA no devolvió nombre ni apellido para este CUIT (puede ser una persona jurídica).",
+              });
+            }
+          }
           if (cambio) renombrados.push(cambio);
         } catch (e: any) {
           // best-effort: un nombre no confirmado no puede tumbar la corrida, pero SÍ se informa.

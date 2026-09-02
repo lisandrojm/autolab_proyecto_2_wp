@@ -922,7 +922,7 @@ router.post("/", requireTenant, authenticateToken, requirePermission("admin_user
         if (cuitAlta) {
             const duplicado = await usuarioExistenteConCuit(req.tenantObjectId, cuitAlta);
             if (duplicado) {
-                res.status(409).json({ error: `Ese CUIT ya pertenece a ${duplicado.nombre}${duplicado.email ? ` (${duplicado.email})` : ""}. Buscalo en el listado en vez de crearlo de nuevo.` });
+                res.status(409).json({ error: `Ese CUIT ya figura a nombre de ${duplicado.nombre}${duplicado.email ? ` (${duplicado.email})` : ""}. Buscá esa ficha en el listado, o revisá el número si esperabas otra persona.` });
                 return;
             }
         }

@@ -441,7 +441,7 @@ export const RegistroPage: React.FC = () => {
       }
       if (data.yaExiste) {
         // Cortar acá y no al final: si no, completa las tres pestañas para recibir un 409.
-        sweetAlert.error('Ya estás registrado', `Ese CUIT ya figura a nombre de ${data.yaExiste.nombre}. Entrá con tu cuenta, o escribile a la productora si no podés acceder.`);
+        sweetAlert.error('CUIT ya registrado', `Ese CUIT ya figura a nombre de ${data.yaExiste.nombre}.\n\nSi sos vos, entrá con tu cuenta o escribile a la productora. Si no, revisá el número: puede haber un dígito mal.`);
         return;
       }
       if (!data.nombre || !data.apellido) {
