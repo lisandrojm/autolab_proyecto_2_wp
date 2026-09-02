@@ -7,10 +7,12 @@ import { InfoModal } from "../ui/InfoModal";
 import { CuitInput, isValidCuit } from "../ui/CuitInput";
 import { Modal } from "../ui/Modal";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { afipAPI } from "../../api/afip";
+import { cuitEsValido } from "../../utils/cuit";
 import { fuzzyMatch } from "../../utils/searchHelpers";
 import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina } from "../../utils/nacionalidadDocumento";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faEye, faEyeSlash, faToggleOn, faToggleOff, faMapMarkerAlt, faUniversity, faSearch, faTimes, faMobileAlt, faKey, faCheck, faXmark, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faEye, faEyeSlash, faToggleOn, faToggleOff, faMapMarkerAlt, faUniversity, faSearch, faTimes, faMobileAlt, faKey, faCheck, faXmark, faCircleInfo , faSpinner, faLandmark, faCircleCheck} from "@fortawesome/free-solid-svg-icons";
 
 
 type ModalTab = "general" | "domicilio" | "bancarios";
@@ -111,6 +113,46 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     esas novedades no las carga nadie y aparecen como vencidas en Cumplimiento, sin ninguna señal de
     por qué. Para cambiarle el rol hay que liberarlo antes desde el equipo del proyecto.
   */
+  /*
+    Traer de ARCA nombre, apellido y DNI a partir del CUIT.
+
+    Escribir a mano el nombre de alguien que después hay que confirmar contra el organismo es hacer
+    dos veces el mismo trabajo, y el 90% de los renombres masivos son tipeos de esta pantalla. El DNI
+    ni siquiera se consulta: en una persona física el CUIT ES el DNI con prefijo y verificador.
+  */
+  const [consultandoPadron, setConsultandoPadron] = useState(false);
+  const [validadoEnArca, setValidadoEnArca] = useState(false);
+
+  const traerDeArca = async () => {
+    const cuit = String(formData.cuit || "").replace(/\D/g, "");
+    if (!cuitEsValido(cuit)) {
+      sweetAlert.error("CUIT inválido", "Revisá los dígitos: con un CUIT que no pasa el verificador, ARCA solo devuelve error.");
+      return;
+    }
+    setConsultandoPadron(true);
+    try {
+      const r = await afipAPI.consultarPadron(cuit);
+      if (!r.nombre || !r.apellido) {
+        sweetAlert.warningAlert("Es una persona jurídica", `ARCA devolvió «${r.denominacion}». Este formulario es para personas: no hay nombre y apellido para separar.`);
+        return;
+      }
+      const tipoDni = tiposDocumentoDisponibles.find((it: any) => /dni/i.test(it.name));
+      setFormData((prev) => ({
+        ...prev,
+        firstName: r.nombre,
+        lastName: r.apellido,
+        documento: r.documento || prev.documento,
+        tipoDocumentoId: tipoDni ? tipoDni.data.id : prev.tipoDocumentoId,
+      }));
+      setValidadoEnArca(true);
+      sweetAlert.success("Datos traídos de ARCA", `${r.nombre} ${r.apellido}${r.documento ? ` · DNI ${r.documento}` : ""}`);
+    } catch (e: any) {
+      sweetAlert.error("ARCA no reconoció ese CUIT", e?.response?.data?.error || "No se pudo consultar el Padrón.");
+    } finally {
+      setConsultandoPadron(false);
+    }
+  };
+
   const coordinaEn = proyectosQueCoordina(user);
   const coordinacionBloqueada = coordinaEn.length > 0;
 
@@ -382,7 +424,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         await usersAPI.update(user._id, submitData);
         sweetAlert.success(formData.isSolicitud ? "Solicitud Aprobada" : "Usuario actualizado", formData.isSolicitud ? "El usuario ha sido dado de alta correctamente" : "Los cambios se han guardado correctamente");
       } else {
-        await usersAPI.create(submitData);
+        // `validarConArca`: el sello lo escribe el SERVIDOR después de ver la respuesta del organismo.
+        // Mandar el `nombreValidadoArcaAt` desde acá sería marcar como confirmado algo que ARCA no vio.
+        await usersAPI.create({ ...submitData, validarConArca: validadoEnArca });
         sweetAlert.success("Usuario creado", "El usuario se ha creado correctamente");
       }
       onSaved?.();
@@ -659,6 +703,27 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     />
                     {!nacionalidadElegida && <p className="text-[11px] text-gray-400 mt-1">Elegí la nacionalidad para completarlo.</p>}
                     {nacionalidadElegida && !cuilVisible && <p className="text-[11px] text-gray-400 mt-1">Se registra sin CUIT/CUIL. Se puede cargar más adelante.</p>}
+                    {/* Solo en el alta: para alguien ya creado, el sello se pone desde la columna ARCA de Usuarios. */}
+                    {cuilVisible && !user && (
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          onClick={traerDeArca}
+                          disabled={consultandoPadron || !cuitEsValido(String(formData.cuit || "").replace(/\D/g, ""))}
+                          title="Consulta el Padrón de ARCA y completa nombre, apellido y documento con lo que tiene el organismo"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <FontAwesomeIcon icon={consultandoPadron ? faSpinner : faLandmark} spin={consultandoPadron} className="h-3 w-3" />
+                          {consultandoPadron ? "Consultando ARCA…" : "Traer datos de ARCA"}
+                        </button>
+                        {validadoEnArca && (
+                          <p className="mt-1.5 text-[11px] text-green-600 dark:text-green-400 inline-flex items-center gap-1.5">
+                            <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3" />
+                            Nombre, apellido y documento son los de ARCA. Se guarda marcado como validado.
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 

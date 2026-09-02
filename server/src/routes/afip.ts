@@ -273,6 +273,58 @@ router.get("/simplificacion/logs", async (req: AuthenticatedRequest & TenantRequ
 });
 
 /**
+ * POST /afip/padron/consultar { cuit } — quién es ese CUIT, según ARCA. SIN EFECTOS.
+ *
+ * No toca la base: se usa desde el alta de usuario, donde todavía NO hay usuario que actualizar. El
+ * resto de los endpoints del Padrón operan sobre alguien ya guardado; este contesta sobre un CUIT
+ * suelto para poder completar el formulario con lo que el organismo tiene.
+ *
+ * El DNI no se pide: en una persona física el CUIT ES el DNI con un prefijo y un verificador
+ * alrededor (`20-28588772-1` → DNI 28588772). Se deriva acá para que el criterio viva en un solo
+ * lugar y no lo re-invente cada pantalla.
+ */
+router.post("/padron/consultar", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    if (!isAdmin(req)) {
+      res.status(403).json({ error: "Solo un administrador puede consultar el Padrón." });
+      return;
+    }
+    const cuit = normalizarCuit(String(req.body?.cuit || ""));
+    if (!cuitEsValido(cuit)) {
+      res.status(400).json({ error: "El CUIT no es válido: revisá los dígitos antes de consultar el Padrón." });
+      return;
+    }
+    const tenant = await Tenant.findById(req.tenantObjectId).lean();
+    const cfg = getTenantAfipConfig(tenant);
+    if (!cfg) {
+      res.status(400).json({ error: "ARCA no está conectado para esta organización." });
+      return;
+    }
+    const r = await consultarPadron(String(req.tenantObjectId), cfg, cuit);
+    if (!r.encontrado) {
+      res.status(404).json({ error: r.faultString || "ARCA no devolvió datos para este CUIT.", faultCode: r.faultCode });
+      return;
+    }
+    res.json({
+      cuit,
+      nombre: r.nombre || "",
+      apellido: r.apellido || "",
+      denominacion: r.denominacion || "",
+      estado: r.estado,
+      tipoPersona: r.tipoPersona,
+      // Los 8 del medio, sin ceros a la izquierda. Solo para personas físicas: una jurídica no tiene DNI.
+      documento: PREFIJOS_PERSONA_FISICA.includes(cuit.slice(0, 2)) ? String(Number(cuit.slice(2, 10))) : "",
+    });
+  } catch (error: any) {
+    console.error("AFIP consultar padrón error:", error);
+    res.status(500).json({ error: String(error?.message || "No se pudo consultar el Padrón.") });
+  }
+});
+
+/** Prefijos de CUIT de persona física: solo en esos el tramo del medio es un DNI. */
+const PREFIJOS_PERSONA_FISICA = ["20", "23", "24", "25", "26", "27"];
+
+/**
  * POST /afip/nombres/validar — confirma nombres contra el Padrón, en masa, desde Usuarios.
  *
  * USA LA CONEXIÓN DE «CONSTANCIA DE CUIT» (el certificado), no la de obras sociales: el nombre y el

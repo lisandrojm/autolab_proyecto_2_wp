@@ -180,6 +180,12 @@ export const afipAPI = {
    * todavía no tienen el sello — revalidar a todos en cada corrida sería consultarle al organismo
    * miles de veces lo que ya se sabía.
    */
+  /** Quién es un CUIT según ARCA. No guarda nada: es para completar el alta de un usuario nuevo. */
+  async consultarPadron(cuit: string): Promise<{ cuit: string; nombre: string; apellido: string; denominacion: string; estado: string; tipoPersona?: string; documento: string }> {
+    const { data } = await axios.post("/afip/padron/consultar", { cuit });
+    return data;
+  },
+
   async validarNombres(opts?: { userIds?: string[]; limite?: number; revalidar?: boolean }): Promise<{
     renombrados: Array<{ userId: string; cuil?: string; antes: string; ahora: string }>;
     confirmados: string[];

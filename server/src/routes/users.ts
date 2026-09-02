@@ -5,6 +5,8 @@ import { User } from "../models/User.js";
 import { Role } from "../models/Role.js";
 import { Project } from "../models/Project.js";
 import { Tenant } from "../models/Tenant.js";
+import { getTenantAfipConfig, consultarPadron } from "../services/afipService.js";
+import { cuitEsValido, normalizarCuit } from "../utils/constanciaPdf.js";
 import { Info } from "../models/Info.js";
 import { RoleFrame } from "../models/RoleFrame.js";
 import UserProject from "../models/UserProject.js"; // This registers the model
@@ -973,6 +975,38 @@ router.post("/", requireTenant, authenticateToken, requirePermission("admin_user
       }
 
       rolesToAssign = roleObjectIds.map((id) => id.toString());
+    }
+
+    /*
+      EL SELLO "validado en ARCA" LO PONE EL SERVIDOR, NUNCA EL CLIENTE.
+
+      El alta puede pedir `validarConArca: true` (lo hace el botón del formulario), pero el sello se
+      escribe solo después de que ESTE proceso vio la respuesta del organismo. Aceptar un
+      `nombreValidadoArcaAt` que viene en el body sería dejar que cualquiera marque como confirmado un
+      nombre que ARCA nunca vio, y ese sello es justamente lo que evita volver a consultarlo: una vez
+      puesto, nadie lo revisa de nuevo.
+
+      Es una consulta más además de la del botón, y está bien que así sea: la del botón sirve para
+      completar el formulario, y esta es la que respalda el sello. Dar de alta a alguien no es una
+      operación frecuente.
+    */
+    delete (data as any).metadata?.nombreValidadoArcaAt;
+    if (req.body?.validarConArca === true) {
+      const cuit = normalizarCuit(String((data as any).metadata?.cuit || ""));
+      const tenantDoc = await Tenant.findById(req.tenantObjectId).lean();
+      const cfg = getTenantAfipConfig(tenantDoc);
+      if (cuitEsValido(cuit) && cfg) {
+        try {
+          const r = await consultarPadron(String(req.tenantObjectId), cfg, cuit);
+          if (r.encontrado && r.nombre && r.apellido) {
+            (data as any).firstName = r.nombre;
+            (data as any).lastName = r.apellido;
+            (data as any).metadata = { ...((data as any).metadata || {}), nombreValidadoArcaAt: new Date() };
+          }
+        } catch {
+          // Sin sello: el alta sigue igual y la persona queda "sin validar", que es lo que es.
+        }
+      }
     }
 
     const user = new User({
