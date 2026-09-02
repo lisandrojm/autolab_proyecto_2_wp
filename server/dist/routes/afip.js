@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import mongoose, { Types } from "mongoose";
 import { Tenant } from "../models/Tenant.js";
+import { consultarCuitEnArca, ErrorConsultaCuit } from "../services/arca/consultaCuit.js";
 import { Project } from "../models/Project.js";
 import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
@@ -274,40 +275,17 @@ router.post("/padron/consultar", async (req, res) => {
             res.status(403).json({ error: "Solo un administrador puede consultar el Padrón." });
             return;
         }
-        const cuit = normalizarCuit(String(req.body?.cuit || ""));
-        if (!cuitEsValido(cuit)) {
-            res.status(400).json({ error: "El CUIT no es válido: revisá los dígitos antes de consultar el Padrón." });
-            return;
-        }
-        const tenant = await Tenant.findById(req.tenantObjectId).lean();
-        const cfg = getTenantAfipConfig(tenant);
-        if (!cfg) {
-            res.status(400).json({ error: "ARCA no está conectado para esta organización." });
-            return;
-        }
-        const r = await consultarPadron(String(req.tenantObjectId), cfg, cuit);
-        if (!r.encontrado) {
-            res.status(404).json({ error: r.faultString || "ARCA no devolvió datos para este CUIT.", faultCode: r.faultCode });
-            return;
-        }
-        res.json({
-            cuit,
-            nombre: r.nombre || "",
-            apellido: r.apellido || "",
-            denominacion: r.denominacion || "",
-            estado: r.estado,
-            tipoPersona: r.tipoPersona,
-            // Los 8 del medio, sin ceros a la izquierda. Solo para personas físicas: una jurídica no tiene DNI.
-            documento: PREFIJOS_PERSONA_FISICA.includes(cuit.slice(0, 2)) ? String(Number(cuit.slice(2, 10))) : "",
-        });
+        res.json(await consultarCuitEnArca(req.tenantObjectId, String(req.body?.cuit || "")));
     }
     catch (error) {
+        if (error instanceof ErrorConsultaCuit) {
+            res.status(error.status).json({ error: error.message });
+            return;
+        }
         console.error("AFIP consultar padrón error:", error);
         res.status(500).json({ error: String(error?.message || "No se pudo consultar el Padrón.") });
     }
 });
-/** Prefijos de CUIT de persona física: solo en esos el tramo del medio es un DNI. */
-const PREFIJOS_PERSONA_FISICA = ["20", "23", "24", "25", "26", "27"];
 /**
  * POST /afip/nombres/validar — confirma nombres contra el Padrón, en masa, desde Usuarios.
  *

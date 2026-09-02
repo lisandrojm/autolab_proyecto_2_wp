@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircleInfo } from '@fortawesome/free-solid-svg-icons';
+import { faCircleInfo, faSpinner, faLandmark, faCircleCheck } from '@fortawesome/free-solid-svg-icons';
 import { useSearchParams, Link } from 'react-router-dom';
 import { CuitInput, isValidCuit } from '../components/ui/CuitInput';
 import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina } from '../utils/nacionalidadDocumento';
@@ -88,8 +88,19 @@ const SIN_BANCO = 'sin_banco';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const isValidEmail = (email: string): boolean => EMAIL_RE.test((email || '').trim());
 
-const labelClass = 'block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2';
-const fieldClass = 'w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-colors';
+/*
+  Las mismas clases que el formulario de Nuevo Usuario, a propósito.
+
+  Es el mismo formulario: uno lo completa un administrativo y el otro la persona, pero los campos, el
+  orden y las reglas son idénticos. Tenían tipografías, altos y paddings distintos, y eso hacía que
+  «copiá el comportamiento de aquel» terminara siendo dos pantallas que se parecen de lejos.
+
+  `input-field` es la clase compartida de la app (ver index.css), la que ya trae el estado
+  `:disabled`. Los 42px de alto que salen de ahí son los que hacen que el botón «Validar CUIT»
+  —también de 42px— quede alineado con el campo, en vez de flotar más arriba.
+*/
+const labelClass = 'block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2';
+const fieldClass = 'input-field';
 
 // Tipos de entidad financiera (espejo del ABM / enum del backend).
 const TIPO_ENTIDAD_OPTIONS = [
@@ -124,13 +135,7 @@ const InfoSinCuit: React.FC = () => {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        title="¿Qué pasa si no tengo CUIT/CUIL?"
-        aria-label="¿Qué pasa si no tengo CUIT/CUIL?"
-        className="ml-1.5 text-gray-400 hover:text-gray-200 transition-colors normal-case tracking-normal font-normal align-middle"
-      >
+      <button type="button" onClick={() => setOpen(true)} title="¿Qué pasa si no tengo CUIT/CUIL?" aria-label="¿Qué pasa si no tengo CUIT/CUIL?" className="ml-1.5 text-gray-400 hover:text-gray-200 transition-colors normal-case tracking-normal font-normal align-middle">
         <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
       </button>
       {open &&
@@ -148,8 +153,7 @@ const InfoSinCuit: React.FC = () => {
                   Podés registrarte igual: destildá <strong>&quot;Tiene CUIT / CUIL argentino&quot;</strong> y seguí con el resto de los datos.
                 </p>
                 <p>
-                  Tu trámite de ARCA/ANSES <strong>no se descarta</strong>: queda <strong>pendiente</strong> hasta que cuentes con la documentación migratoria necesaria (DNI precario, residencia en trámite,
-                  etc.).
+                  Tu trámite de ARCA/ANSES <strong>no se descarta</strong>: queda <strong>pendiente</strong> hasta que cuentes con la documentación migratoria necesaria (DNI precario, residencia en trámite, etc.).
                 </p>
                 <div>
                   <p className="font-semibold text-gray-200 mb-1">Mientras tanto, con tus contratos:</p>
@@ -348,6 +352,72 @@ export const RegistroPage: React.FC = () => {
   const cuilVisible = esArgentino || tieneCuil;
   const cuilObligatorio = cuilVisible;
 
+  /*
+    VALIDAR EL CUIT CONTRA ARCA, igual que en el alta interna de Usuarios.
+
+    Mismo trato: el CUIT es lo único que se tipea, y de él salen nombre, apellido y documento. Acá pesa
+    todavía más que en el alta interna — quien completa esto es la propia persona, escribiendo su
+    nombre como cree que figura en el DNI, y después alguien tiene que corregirlo contra el organismo.
+
+    El endpoint es público pero pide el token de invitación, el mismo del resto del formulario.
+  */
+  const [validadoEnArca, setValidadoEnArca] = useState(false);
+  const [consultandoPadron, setConsultandoPadron] = useState(false);
+
+  const validarCuitEnArca = async () => {
+    const cuit = String(form.cuit || '').replace(/\D/g, '');
+    if (!isValidCuit(cuit)) {
+      setError('El CUIT no es válido: revisá los dígitos.');
+      return;
+    }
+    setConsultandoPadron(true);
+    setError(null);
+    try {
+      const res = await fetch(`${apiUrl}/auth/registro/validar-cuit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, cuit }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data?.error || 'ARCA no reconoció ese CUIT.');
+        return;
+      }
+      if (!data.nombre || !data.apellido) {
+        setError(`ARCA devolvió «${data.denominacion}». Este formulario es para personas.`);
+        return;
+      }
+      const tipoDni = tiposDocumentoDisponibles.find((o) => /dni/i.test(o.name));
+      setForm((prev) => ({
+        ...prev,
+        firstName: data.nombre,
+        lastName: data.apellido,
+        documento: data.documento || prev.documento,
+        tipoDocumentoId: tipoDni ? String(tipoDni.id) : prev.tipoDocumentoId,
+      }));
+      setFieldErrors((prev) => ({ ...prev, firstName: false, lastName: false, documento: false, cuit: false }));
+      setValidadoEnArca(true);
+    } catch {
+      setError('No se pudo consultar el Padrón. Probá de nuevo en un momento.');
+    } finally {
+      setConsultandoPadron(false);
+    }
+  };
+
+  /*
+    Con CUIT, primero se valida; después se llena el resto. Y lo que trajo ARCA no se edita: el
+    registro se guarda marcado como validado, y dejar retocarlo convertiría ese sello en una mentira.
+  */
+  const bloqueadoHastaValidar = cuilVisible && !validadoEnArca;
+  const camposDeArcaBloqueados = validadoEnArca;
+  const tituloArca = camposDeArcaBloqueados ? 'Lo trae ARCA para este CUIT. Para cambiarlo, corregí el CUIT y validá de nuevo.' : undefined;
+
+  /** Lo traído del Padrón deja de aplicar si cambia el CUIT o aquello de lo que dependía. */
+  const limpiarDatosDeArca = () => {
+    setValidadoEnArca(false);
+    setForm((prev) => ({ ...prev, firstName: '', lastName: '', documento: '', tipoDocumentoId: '' }));
+  };
+
   /** Al cambiar la nacionalidad hay que revisar lo que dependía de ella para no dejar datos inválidos. */
   const onNacionalidadChange = (nuevoId: string) => {
     const ahoraEsArgentino = esNacionalidadArgentina(nacionalidades, nuevoId);
@@ -360,6 +430,9 @@ export const RegistroPage: React.FC = () => {
     }));
     // Un argentino/a siempre lleva CUIL: no queda arrastrado un "no tiene" declarado antes.
     if (ahoraEsArgentino) setTieneCuil(true);
+    // El CUIT y lo que ARCA devolvió para él quedaron atados a la nacionalidad anterior.
+    setForm((prev) => ({ ...prev, cuit: '' }));
+    limpiarDatosDeArca();
     setFieldErrors((prev) => ({ ...prev, nacionalidadId: false, tipoDocumentoId: false }));
     setError(null);
   };
@@ -368,15 +441,7 @@ export const RegistroPage: React.FC = () => {
   // El CUIL solo es obligatorio para argentinos: un extranjero puede no tenerlo (lo declara con el
   // checkbox y en ese caso el campo ni se muestra).
   const REQUIRED_BY_STEP: Record<'general' | 'domicilio', { key: keyof RegistroForm; label: string }[]> = {
-    general: [
-      { key: 'firstName', label: 'Nombre' },
-      { key: 'lastName', label: 'Apellido' },
-      { key: 'email', label: 'Email' },
-      { key: 'nacionalidadId', label: 'Nacionalidad' },
-      ...(cuilObligatorio ? [{ key: 'cuit' as keyof RegistroForm, label: 'CUIT / CUIL' }] : []),
-      { key: 'documento', label: 'Documento' },
-      { key: 'fechaNac', label: 'Fecha de nacimiento' },
-    ],
+    general: [{ key: 'firstName', label: 'Nombre' }, { key: 'lastName', label: 'Apellido' }, { key: 'email', label: 'Email' }, { key: 'nacionalidadId', label: 'Nacionalidad' }, ...(cuilObligatorio ? [{ key: 'cuit' as keyof RegistroForm, label: 'CUIT / CUIL' }] : []), { key: 'documento', label: 'Documento' }, { key: 'fechaNac', label: 'Fecha de nacimiento' }],
     domicilio: [
       { key: 'pais', label: 'País' },
       { key: 'localidad', label: 'Localidad' },
@@ -523,6 +588,8 @@ export const RegistroPage: React.FC = () => {
         cbu: form.cbu,
         aliasBancario: form.aliasBancario,
         nroDeCuentaBancaria: form.nroDeCuentaBancaria,
+        // El sello lo pone el servidor: vuelve a consultar el Padrón, no confía en este flag.
+        validarConArca: validadoEnArca,
       };
       const res = await fetch(`${apiUrl}/auth/registro`, {
         method: 'POST',
@@ -577,18 +644,33 @@ export const RegistroPage: React.FC = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-900 text-gray-100">
+    /*
+      Una tarjeta centrada, no la pantalla entera.
+
+      Estirado a todo el ancho, cada fila de dos columnas quedaba con campos larguísimos y una franja
+      de aire a la derecha, y no se parecía en nada al modal donde se hace exactamente lo mismo. Con
+      el mismo ancho que un modal `lg`, las dos pantallas se leen igual.
+    */
+    <div className="min-h-screen bg-gray-900 text-gray-100 py-6 px-4 flex items-start justify-center">
+      <div className="w-full max-w-4xl h-[92vh] flex flex-col rounded-2xl border border-gray-700 bg-gray-800 shadow-xl overflow-hidden">
       {/* Header fijo con los tabs */}
-      <div className="shrink-0 border-b border-gray-800">
-        <div className="max-w-5xl mx-auto px-6 pt-6">
-          <h1 className="text-3xl font-light text-gray-100">Registro</h1>
+      <div className="shrink-0 border-b border-gray-700">
+        <div className="px-6 pt-5">
+          <h1 className="text-xl font-bold text-gray-100">Registro</h1>
           {/* Solo el asterisco va en rojo; el texto usa el gris de las pestañas inactivas. */}
-          <p className="text-center text-sm text-gray-400 -mt-6 mb-4">
+          <p className="text-sm text-gray-400 mt-1 mb-4">
             Los campos marcados con <span className="text-red-500">*</span> son obligatorios
           </p>
           <div className="flex">
             {tabs.map((t) => (
-              <button key={t.key} type="button" onClick={() => setActiveTab(t.key)} className={`flex-1 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === t.key ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-gray-400 hover:text-gray-200'}`}>
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setActiveTab(t.key)}
+                disabled={bloqueadoHastaValidar && t.key !== 'general'}
+                title={bloqueadoHastaValidar && t.key !== 'general' ? 'Validá el CUIT primero' : undefined}
+                className={`flex-1 py-3 text-sm font-bold border-b-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${activeTab === t.key ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-gray-400 hover:text-gray-200'}`}
+              >
                 {t.label}
               </button>
             ))}
@@ -598,31 +680,19 @@ export const RegistroPage: React.FC = () => {
 
       {/* Contenido scrolleable */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-5xl mx-auto px-6 py-6">
+        <div className="px-6 py-6">
           {error && <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>}
 
           <form autoComplete="off" onSubmit={(e) => e.preventDefault()}>
             {/* General */}
             {activeTab === 'general' && (
-              <div className="space-y-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-6">
+                {/* La nacionalidad va PRIMERO: de ella dependen el tipo de documento y el CUIL. */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelClass}>Nombre como figura en el DNI <span className="text-red-500">*</span></label>
-                    <input className={inputClass('firstName')} autoComplete="off" placeholder="Ej: Juan" value={form.firstName} onChange={(e) => set('firstName', e.target.value)} />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Apellido como figura en el DNI <span className="text-red-500">*</span></label>
-                    <input className={inputClass('lastName')} autoComplete="off" placeholder="Ej: Pérez" value={form.lastName} onChange={(e) => set('lastName', e.target.value)} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <label className={labelClass}>Email <span className="text-red-500">*</span></label>
-                    <input type="email" className={inputClass('email')} autoComplete="off" placeholder="usuario@ejemplo.com" value={form.email} onChange={(e) => set('email', e.target.value)} />
-                  </div>
-                  {/* La nacionalidad va PRIMERO: de ella dependen el tipo de documento y el CUIL. */}
-                  <div>
-                    <label className={labelClass}>Nacionalidad <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>
+                      Nacionalidad <span className="text-red-500">*</span>
+                    </label>
                     <SearchableSelect title="Nacionalidad" value={form.nacionalidadId} options={nacionalidades} onChange={onNacionalidadChange} />
                     {!nacionalidadElegida && <p className="text-[11px] text-gray-400 mt-1">Elegila para completar documento y CUIL.</p>}
                   </div>
@@ -638,7 +708,7 @@ export const RegistroPage: React.FC = () => {
                  * DESHABILITADO. Un campo que desaparece hace saltar todo lo de abajo y deja la duda
                  * de si se perdió el dato; apagado se ve que existe y por qué no se puede completar.
                  */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className={labelClass}>
                       CUIT / CUIL {cuilObligatorio && <span className="text-red-500">*</span>}
@@ -654,6 +724,7 @@ export const RegistroPage: React.FC = () => {
                           const nuevo = !tieneCuil;
                           setTieneCuil(nuevo);
                           if (!nuevo) set('cuit', '');
+                          limpiarDatosDeArca();
                         }}
                         className="flex items-center gap-2 mb-2 text-xs text-gray-300"
                       >
@@ -663,22 +734,59 @@ export const RegistroPage: React.FC = () => {
                         Tiene CUIT / CUIL argentino
                       </button>
                     )}
-                    <CuitInput
-                      className={`${fieldClass} ${cuilVisible ? '' : 'opacity-50 cursor-not-allowed'}`}
-                      invalid={!!fieldErrors.cuit}
-                      value={cuilVisible ? form.cuit : ''}
-                      onChange={(v) => set('cuit', v)}
-                      placeholder="20-XXXXXXXX-X"
-                      disabled={!cuilVisible}
-                    />
+                    {/* Input y acción en la misma línea, igual que en el alta interna. */}
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1 min-w-0">
+                        <CuitInput
+                          className={`${fieldClass} ${cuilVisible ? '' : 'opacity-50 cursor-not-allowed'}`}
+                          invalid={!!fieldErrors.cuit}
+                          value={cuilVisible ? form.cuit : ''}
+                          onChange={(v) => {
+                            set('cuit', v);
+                            // Tocar el CUIT invalida lo traído: si no, se valida uno y se guarda otro.
+                            limpiarDatosDeArca();
+                          }}
+                          placeholder="XX-XXXXXXXX-X"
+                          disabled={!cuilVisible}
+                        />
+                      </div>
+                      {cuilVisible && (
+                        <button type="button" onClick={validarCuitEnArca} disabled={consultandoPadron || validadoEnArca || !isValidCuit(String(form.cuit || '').replace(/\D/g, ''))} title={validadoEnArca ? 'Nombre, apellido y documento son los de ARCA. Se guarda marcado como validado.' : 'Consulta el Padrón de ARCA: confirma que el CUIT existe y completa nombre, apellido y documento'} className={`shrink-0 inline-flex items-center gap-2 px-3 h-[42px] rounded-lg text-xs font-semibold border transition-colors disabled:cursor-not-allowed whitespace-nowrap ${validadoEnArca ? 'border-green-500/50 text-green-400 bg-green-500/10 disabled:opacity-100' : 'border-blue-500/50 text-blue-300 hover:bg-blue-500/10 disabled:opacity-50'}`}>
+                          <FontAwesomeIcon icon={consultandoPadron ? faSpinner : validadoEnArca ? faCircleCheck : faLandmark} spin={consultandoPadron} className="h-3 w-3" />
+                          {consultandoPadron ? 'Validando…' : validadoEnArca ? 'Validado' : 'Validar CUIT'}
+                        </button>
+                      )}
+                    </div>
                     {!nacionalidadElegida && <p className="text-[11px] text-gray-400 mt-1">Elegí la nacionalidad para completarlo.</p>}
                     {nacionalidadElegida && !cuilVisible && <p className="text-[11px] text-gray-400 mt-1">Te registrás sin CUIT/CUIL. Se puede cargar más adelante.</p>}
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/*
+                  TODO LO QUE VIENE DESPUÉS DEL CUIT, DESHABILITADO HASTA VALIDARLO.
+
+                  Mismo recurso que en Nuevo Usuario: un <fieldset disabled>, que el navegador
+                  propaga a todos los controles de adentro. No hay que acordarse de poner `disabled`
+                  campo por campo, ni queda ninguno suelto cuando se agregue otro.
+                */}
+                <fieldset disabled={bloqueadoHastaValidar} className={`space-y-6 ${bloqueadoHastaValidar ? "opacity-60" : ""}`}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelClass}>Tipo documento</label>
-                    <select className={fieldClass} value={form.tipoDocumentoId} onChange={(e) => set('tipoDocumentoId', e.target.value)} disabled={!nacionalidadElegida}>
+                    <label className={labelClass}>
+                      Nombre <span className="text-red-500">*</span>
+                    </label>
+                    <input className={inputClass('firstName')} autoComplete="off" placeholder="Ej: Juan" value={form.firstName} onChange={(e) => set('firstName', e.target.value)} disabled={bloqueadoHastaValidar || camposDeArcaBloqueados} title={tituloArca} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>
+                      Apellido <span className="text-red-500">*</span>
+                    </label>
+                    <input className={inputClass('lastName')} autoComplete="off" placeholder="Ej: Pérez" value={form.lastName} onChange={(e) => set('lastName', e.target.value)} disabled={bloqueadoHastaValidar || camposDeArcaBloqueados} title={tituloArca} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelClass}>Tipo de Documento</label>
+                    <select className={fieldClass} value={form.tipoDocumentoId} onChange={(e) => set('tipoDocumentoId', e.target.value)} disabled={!nacionalidadElegida || bloqueadoHastaValidar || camposDeArcaBloqueados} title={tituloArca}>
                       <option value="">Seleccionar...</option>
                       {tiposDocumentoDisponibles.map((o) => (
                         <option key={o.id} value={o.id}>
@@ -688,17 +796,27 @@ export const RegistroPage: React.FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label className={labelClass}>Documento <span className="text-red-500">*</span></label>
-                    <input className={inputClass('documento')} autoComplete="off" placeholder={esArgentino ? 'Nº de documento' : 'DNI / Pasaporte'} value={form.documento} onChange={(e) => set('documento', e.target.value)} disabled={!nacionalidadElegida} />
+                    <label className={labelClass}>
+                      Documento <span className="text-red-500">*</span>
+                    </label>
+                    <input className={inputClass('documento')} autoComplete="off" placeholder={esArgentino ? 'Nº de documento' : 'DNI / Pasaporte'} value={form.documento} onChange={(e) => set('documento', e.target.value)} disabled={!nacionalidadElegida || bloqueadoHastaValidar || camposDeArcaBloqueados} title={tituloArca} />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelClass}>Fecha nacimiento <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>
+                      Email <span className="text-red-500">*</span>
+                    </label>
+                    <input type="email" className={inputClass('email')} autoComplete="off" placeholder="usuario@ejemplo.com" value={form.email} onChange={(e) => set('email', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>
+                      Fecha de Nacimiento <span className="text-red-500">*</span>
+                    </label>
                     <input type="date" className={inputClass('fechaNac')} value={form.fechaNac} onChange={(e) => set('fechaNac', e.target.value)} />
                   </div>
                   <div>
-                    <label className={labelClass}>Genero</label>
+                    <label className={labelClass}>Género</label>
                     <select className={fieldClass} value={form.generoId} onChange={(e) => set('generoId', e.target.value)}>
                       <option value="">Seleccionar...</option>
                       {generos.map((o) => (
@@ -709,9 +827,9 @@ export const RegistroPage: React.FC = () => {
                     </select>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelClass}>Nivel de estudio</label>
+                    <label className={labelClass}>Nivel de Estudio</label>
                     <select className={fieldClass} value={form.nivelEstudioId} onChange={(e) => set('nivelEstudioId', e.target.value)}>
                       <option value="">Seleccionar...</option>
                       {nivelesEstudio.map((o) => (
@@ -728,9 +846,9 @@ export const RegistroPage: React.FC = () => {
                  * corresponde ante ARCA, y es un dato de la RELACIÓN LABORAL, no de la persona —
                  * vive en el contrato y se constata en el padrón de la SSS al hacerlo.
                  */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelClass}>Estado civil</label>
+                    <label className={labelClass}>Estado Civil</label>
                     <select className={fieldClass} value={form.estadoCivil} onChange={(e) => set('estadoCivil', e.target.value)}>
                       <option value="">Seleccionar...</option>
                       <option value="Soltero">Soltero/a</option>
@@ -741,55 +859,68 @@ export const RegistroPage: React.FC = () => {
                     </select>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelClass}>Rol frame</label>
+                    <label className={labelClass}>Rol/es Empresa</label>
                     <SearchableSelect title="Rol frame" value={form.rolFrameId} options={rolesFrame} onChange={(v) => set('rolFrameId', v)} />
                   </div>
                 </div>
+                </fieldset>
               </div>
             )}
 
             {/* Domicilio */}
             {activeTab === 'domicilio' && (
-              <div className="space-y-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelClass}>Pais <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>
+                      Pais <span className="text-red-500">*</span>
+                    </label>
                     <input className={inputClass('pais')} autoComplete="off" placeholder="Ej: Argentina" value={form.pais} onChange={(e) => set('pais', e.target.value)} />
                   </div>
                   <div>
-                    <label className={labelClass}>Localidad <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>
+                      Localidad <span className="text-red-500">*</span>
+                    </label>
                     <input className={inputClass('localidad')} autoComplete="off" placeholder="Ej: CABA" value={form.localidad} onChange={(e) => set('localidad', e.target.value)} />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelClass}>Calle <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>
+                      Calle <span className="text-red-500">*</span>
+                    </label>
                     <input className={inputClass('calle')} autoComplete="off" placeholder="Ej: Av. Libertador" value={form.calle} onChange={(e) => set('calle', e.target.value)} />
                   </div>
                   <div>
-                    <label className={labelClass}>Altura <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>
+                      Altura <span className="text-red-500">*</span>
+                    </label>
                     <input className={inputClass('altura')} autoComplete="off" placeholder="Ej: 1234" value={form.altura} onChange={(e) => set('altura', e.target.value)} />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelClass}>Piso / Depto <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>
+                      Piso / Depto <span className="text-red-500">*</span>
+                    </label>
                     <input className={inputClass('pisoDepto')} autoComplete="off" placeholder="Ej: 4B" value={form.pisoDepto} onChange={(e) => set('pisoDepto', e.target.value)} />
                   </div>
                   <div>
-                    <label className={labelClass}>Codigo postal</label>
+                    <label className={labelClass}>Código postal</label>
                     <input className={fieldClass} autoComplete="off" placeholder="Ej: 1425" value={form.codigoPostal} onChange={(e) => set('codigoPostal', e.target.value)} />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelClass}>Telefono <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>
+                      Telefono <span className="text-red-500">*</span>
+                    </label>
                     <input className={inputClass('telefono')} autoComplete="off" placeholder="Ej: 11 1234-5678" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} />
                   </div>
                   <div>
-                    <label className={labelClass}>Telefono de emergencia</label>
+                    <label className={labelClass}>Teléfono de emergencia</label>
                     <input className={fieldClass} autoComplete="off" placeholder="Ej: 11 8765-4321" value={form.telefono2} onChange={(e) => set('telefono2', e.target.value)} />
                   </div>
                 </div>
@@ -805,11 +936,13 @@ export const RegistroPage: React.FC = () => {
 
             {/* Datos bancarios — flujo en cascada según el tipo de entidad */}
             {activeTab === 'bancarios' && (
-              <div className="space-y-5">
+              <div className="space-y-6">
                 {/* Paso 1: tipo de entidad financiera */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelClass}>Tipo de Entidad Financiera <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>
+                      Tipo de Entidad Financiera <span className="text-red-500">*</span>
+                    </label>
                     <select className={inputClass('tipoEntidadFinanciera')} value={form.tipoEntidadFinanciera} onChange={(e) => onTipoEntidadChange(e.target.value)}>
                       <option value="">Seleccionar...</option>
                       {TIPO_ENTIDAD_OPTIONS.map((o) => (
@@ -841,9 +974,11 @@ export const RegistroPage: React.FC = () => {
 
                 {/* Paso 2: entidad (aparece al elegir el tipo, filtrada por ese tipo) */}
                 {form.tipoEntidadFinanciera && form.tipoEntidadFinanciera !== SIN_BANCO && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className={labelClass}>{labelTipo(form.tipoEntidadFinanciera)} <span className="text-red-500">*</span></label>
+                      <label className={labelClass}>
+                        {labelTipo(form.tipoEntidadFinanciera)} <span className="text-red-500">*</span>
+                      </label>
                       <SearchableSelect title={labelTipo(form.tipoEntidadFinanciera)} value={form.bancoId} options={bancosFiltrados} onChange={(v) => set('bancoId', v)} invalid={fieldErrors.bancoId} />
                       {bancosFiltrados.length === 0 && <p className="mt-2 text-xs text-amber-400">No hay entidades cargadas de este tipo. Cargalas en el ABM de Entidades Financieras.</p>}
                     </div>
@@ -853,10 +988,12 @@ export const RegistroPage: React.FC = () => {
                 {/* Paso 3: datos de la cuenta (aparece al elegir la entidad; los campos dependen del tipo) */}
                 {form.tipoEntidadFinanciera !== SIN_BANCO && form.tipoEntidadFinanciera && form.bancoId && (
                   <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {camposDe(form.tipoEntidadFinanciera).tipoCuenta && (
                         <div>
-                          <label className={labelClass}>Tipo de cuenta <span className="text-red-500">*</span></label>
+                          <label className={labelClass}>
+                            Tipo de cuenta <span className="text-red-500">*</span>
+                          </label>
                           <select className={inputClass('tipoDeCuentaBancaria')} value={form.tipoDeCuentaBancaria} onChange={(e) => set('tipoDeCuentaBancaria', e.target.value)}>
                             <option value="">Seleccionar...</option>
                             <option value="Caja de ahorro $">Caja de ahorro $</option>
@@ -866,18 +1003,24 @@ export const RegistroPage: React.FC = () => {
                         </div>
                       )}
                       <div>
-                        <label className={labelClass}>{camposDe(form.tipoEntidadFinanciera).cbuLabel} <span className="text-red-500">*</span></label>
+                        <label className={labelClass}>
+                          {camposDe(form.tipoEntidadFinanciera).cbuLabel} <span className="text-red-500">*</span>
+                        </label>
                         <input className={inputClass('cbu')} autoComplete="off" placeholder="22 dígitos" minLength={22} maxLength={22} value={form.cbu} onChange={(e) => set('cbu', e.target.value)} />
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className={labelClass}>Alias <span className="text-red-500">*</span></label>
+                        <label className={labelClass}>
+                          Alias <span className="text-red-500">*</span>
+                        </label>
                         <input className={inputClass('aliasBancario')} autoComplete="off" placeholder="Ej: LUNES.MALETA.CUNA" value={form.aliasBancario} onChange={(e) => set('aliasBancario', e.target.value)} />
                       </div>
                       {camposDe(form.tipoEntidadFinanciera).nroCuenta && (
                         <div>
-                          <label className={labelClass}>Nro. de cuenta <span className="text-red-500">*</span></label>
+                          <label className={labelClass}>
+                            Nro. de cuenta <span className="text-red-500">*</span>
+                          </label>
                           <input className={inputClass('nroDeCuentaBancaria')} autoComplete="off" placeholder="Ej: 347-333020/7" value={form.nroDeCuentaBancaria} onChange={(e) => set('nroDeCuentaBancaria', e.target.value)} />
                         </div>
                       )}
@@ -891,12 +1034,19 @@ export const RegistroPage: React.FC = () => {
       </div>
 
       {/* Footer fijo con el botón */}
-      <div className="shrink-0 border-t border-gray-800">
-        <div className="max-w-5xl mx-auto px-6 py-4">
-          <button type="button" onClick={handleNext} disabled={submitting} className="w-full py-4 rounded-lg text-center text-white font-medium tracking-wide uppercase bg-blue-600 hover:bg-blue-700 disabled:opacity-60 transition-colors">
+      <div className="shrink-0 border-t border-gray-700">
+        <div className="px-6 py-4">
+          <button
+            type="button"
+            onClick={handleNext}
+            disabled={submitting || bloqueadoHastaValidar}
+            title={bloqueadoHastaValidar ? 'Validá el CUIT para continuar' : undefined}
+            className="w-full py-4 rounded-lg text-center text-white font-medium tracking-wide uppercase bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+          >
             {submitting ? 'Enviando…' : activeTab === 'bancarios' ? 'Registrarse' : 'Siguiente'}
           </button>
         </div>
+      </div>
       </div>
     </div>
   );

@@ -1230,6 +1230,32 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_
                 }
             }
         }
+        /*
+          EL SELLO, TAMBIÉN AL EDITAR — y con la misma regla que en el alta: lo escribe el servidor.
+    
+          Se borra cualquier `nombreValidadoArcaAt` que venga en el body y, si el cliente pidió
+          `validarConArca`, este proceso consulta el Padrón y recién entonces sella y normaliza el nombre.
+          Un sello puesto desde afuera diría "confirmado contra ARCA" sobre algo que el organismo no vio.
+        */
+        delete data.metadata?.nombreValidadoArcaAt;
+        if (req.body?.validarConArca === true) {
+            const cuitEditado = normalizarCuit(String(data.metadata?.cuit ?? currentUser.metadata?.cuit ?? ""));
+            const tenantDoc = await Tenant.findById(targetTenantId).lean();
+            const cfgArca = getTenantAfipConfig(tenantDoc);
+            if (cuitEsValido(cuitEditado) && cfgArca) {
+                try {
+                    const r = await consultarPadron(String(targetTenantId), cfgArca, cuitEditado);
+                    if (r.encontrado && r.nombre && r.apellido) {
+                        data.firstName = r.nombre;
+                        data.lastName = r.apellido;
+                        data.metadata = { ...(data.metadata || {}), nombreValidadoArcaAt: new Date() };
+                    }
+                }
+                catch {
+                    // Sin sello: la edición sigue igual y la persona queda como estaba.
+                }
+            }
+        }
         // Preparar updateData
         const updateData = { $set: {} };
         const fieldsToUnset = [];

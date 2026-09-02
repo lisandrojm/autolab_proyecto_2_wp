@@ -4,6 +4,9 @@ import { User } from "../models/User.js";
 import { Role } from "../models/Role.js";
 import { Client } from "../models/Client.js";
 import { Tenant } from "../models/Tenant.js";
+import { getTenantAfipConfig, consultarPadron } from "../services/afipService.js";
+import { consultarCuitEnArca, ErrorConsultaCuit } from "../services/arca/consultaCuit.js";
+import { cuitEsValido, normalizarCuit } from "../utils/constanciaPdf.js";
 import { Info } from "../models/Info.js";
 import { Banco } from "../models/Banco.js";
 import { RoleFrame } from "../models/RoleFrame.js";
@@ -677,6 +680,34 @@ router.get("/registro-info", async (req, res) => {
   }
 });
 
+/**
+ * POST /auth/registro/validar-cuit { token, cuit } — el mismo «Validar CUIT» del alta, para el registro.
+ *
+ * ES PÚBLICO, PERO NO ABIERTO: exige el token de invitación, igual que el resto del formulario. Sin
+ * eso sería un consultor de nombres por CUIT gratis para cualquiera que descubra la URL. Con el token,
+ * el alcance es el de las personas efectivamente invitadas.
+ *
+ * No toca la base ni escribe sellos: solo devuelve lo que ARCA tiene para ese CUIT. El sello se pone
+ * en `POST /auth/registro`, donde el servidor vuelve a consultar y recién ahí lo escribe.
+ */
+router.post("/registro/validar-cuit", async (req, res) => {
+  try {
+    const payload = await verifyRegistroToken(String(req.body?.token || ""));
+    if (!payload) {
+      res.status(401).json({ error: "Link inválido o expirado" });
+      return;
+    }
+    res.json(await consultarCuitEnArca(payload.tenantId, String(req.body?.cuit || "")));
+  } catch (error: any) {
+    if (error instanceof ErrorConsultaCuit) {
+      res.status(error.status).json({ error: error.message });
+      return;
+    }
+    console.error("registro validar-cuit error:", error);
+    res.status(500).json({ error: "No se pudo consultar el Padrón." });
+  }
+});
+
 // POST /auth/registro - Registro público de usuario validando token de invitación
 router.post("/registro", async (req, res) => {
   try {
@@ -758,12 +789,37 @@ router.post("/registro", async (req, res) => {
 
     const clientIds = payload.clientId && Types.ObjectId.isValid(payload.clientId) ? [new Types.ObjectId(payload.clientId)] : [];
 
+    /*
+      EL SELLO LO PONE EL SERVIDOR, también acá — y con más razón que en el alta interna.
+
+      Este endpoint es público: cualquiera con un link de invitación manda el body que quiera. Aceptar
+      un `nombreValidadoArcaAt` desde afuera sería dejar que la persona se autocertifique el nombre.
+      Si el formulario dice haber validado, este proceso vuelve a consultar el Padrón y escribe el
+      nombre que devuelve ARCA, no el que vino tipeado.
+    */
+    let nombreArca = { firstName, lastName };
+    if (req.body?.validarConArca === true) {
+      const cuitReg = normalizarCuit(String(metadata.cuit || ""));
+      const cfgReg = getTenantAfipConfig(await Tenant.findById(tenantId).lean());
+      if (cuitEsValido(cuitReg) && cfgReg) {
+        try {
+          const r = await consultarPadron(String(tenantId), cfgReg, cuitReg);
+          if (r.encontrado && r.nombre && r.apellido) {
+            nombreArca = { firstName: r.nombre, lastName: r.apellido };
+            metadata.nombreValidadoArcaAt = new Date();
+          }
+        } catch {
+          // Sin sello: el registro sigue igual y la persona queda "sin validar", que es lo que es.
+        }
+      }
+    }
+
     const user = new User({
       tenantId,
       email,
       password,
-      firstName,
-      lastName,
+      firstName: nombreArca.firstName,
+      lastName: nombreArca.lastName,
       roles,
       clientIds,
       hireDate: new Date(),

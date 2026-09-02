@@ -1,21 +1,21 @@
-import React, { useEffect, useRef, useState } from "react";
-import { usersAPI, User } from "../../api/users";
-import { rolesAPI, Role } from "../../api/roles";
-import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
-import { infoAPI, InfoItem } from "../../api/info";
-import { InfoModal } from "../ui/InfoModal";
-import { CuitInput, isValidCuit } from "../ui/CuitInput";
-import { Modal } from "../ui/Modal";
-import { sweetAlert } from "../../utils/sweetAlert";
-import { afipAPI } from "../../api/afip";
-import { cuitEsValido } from "../../utils/cuit";
-import { fuzzyMatch } from "../../utils/searchHelpers";
-import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina } from "../../utils/nacionalidadDocumento";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faEye, faEyeSlash, faToggleOn, faToggleOff, faMapMarkerAlt, faUniversity, faSearch, faTimes, faMobileAlt, faKey, faCheck, faXmark, faCircleInfo , faSpinner, faLandmark, faCircleCheck} from "@fortawesome/free-solid-svg-icons";
+import React, { useEffect, useRef, useState } from 'react';
+import { usersAPI, User } from '../../api/users';
+import { rolesAPI, Role } from '../../api/roles';
+import { roleFrameAPI, RoleFrameItem } from '../../api/roleFrames';
+import { infoAPI, InfoItem } from '../../api/info';
+import { InfoModal } from '../ui/InfoModal';
+import { CuitInput, isValidCuit } from '../ui/CuitInput';
+import { Modal } from '../ui/Modal';
+import { sweetAlert } from '../../utils/sweetAlert';
+import { afipAPI } from '../../api/afip';
+import { cuitEsValido } from '../../utils/cuit';
+import { generarPassword } from '../../utils/password';
+import { fuzzyMatch } from '../../utils/searchHelpers';
+import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina } from '../../utils/nacionalidadDocumento';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faUser, faUserShield, faEye, faEyeSlash, faToggleOn, faToggleOff, faMapMarkerAlt, faUniversity, faSearch, faTimes, faMobileAlt, faKey, faCheck, faXmark, faCircleInfo, faSpinner, faLandmark, faCircleCheck, faWandMagicSparkles } from '@fortawesome/free-solid-svg-icons';
 
-
-type ModalTab = "general" | "domicilio" | "bancarios";
+type ModalTab = 'general' | 'domicilio' | 'bancarios';
 
 interface UserFormData {
   email: string;
@@ -60,13 +60,13 @@ interface UserFormData {
 const PASSWORD_MIN = 6;
 
 const emptyForm = (): UserFormData => ({
-  email: "",
-  password: "",
-  firstName: "",
-  lastName: "",
+  email: '',
+  password: '',
+  firstName: '',
+  lastName: '',
   isActive: true,
   roles: [],
-  hireDate: new Date().toISOString().split("T")[0],
+  hireDate: new Date().toISOString().split('T')[0],
   extraVacationDays: 0,
   clientIds: [],
   visa: false,
@@ -80,7 +80,7 @@ export interface UserFormModalProps {
   /** Usuario a editar / cambiar contraseña; null para alta */
   user: User | null;
   /** "edit" cubre alta y edición (distinguidas por `user`); "password" para cambio de contraseña */
-  mode?: "edit" | "password";
+  mode?: 'edit' | 'password';
   /** Se llama tras guardar con éxito (refrescar lista, cerrar, etc.) */
   onSaved?: () => void;
   /** z-index opcional para superponer sobre el navbar (host global) */
@@ -97,15 +97,15 @@ export interface UserFormModalProps {
 const proyectosQueCoordina = (u: User | null): string[] => {
   const nombres = new Set<string>();
   for (const up of ((u as any)?.metadata?.projects || []) as any[]) {
-    const proj = typeof up?.projectId === "object" ? up.projectId : null;
+    const proj = typeof up?.projectId === 'object' ? up.projectId : null;
     if (!proj?.coordinatorAssignments) continue;
-    const suyo = proj.coordinatorAssignments.some((asm: any) => String(typeof asm.userId === "object" ? asm.userId?._id : asm.userId) === String(u?._id));
-    if (suyo) nombres.add(proj.name || up.nombre_proyecto || "Proyecto sin nombre");
+    const suyo = proj.coordinatorAssignments.some((asm: any) => String(typeof asm.userId === 'object' ? asm.userId?._id : asm.userId) === String(u?._id));
+    if (suyo) nombres.add(proj.name || up.nombre_proyecto || 'Proyecto sin nombre');
   }
   return [...nombres];
 };
 
-export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, mode = "edit", onSaved, zIndex }) => {
+export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, mode = 'edit', onSaved, zIndex }) => {
   /*
     Si coordina turnos, el rol Mobile-Coordinador queda fijo.
 
@@ -124,16 +124,16 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   const [validadoEnArca, setValidadoEnArca] = useState(false);
 
   const traerDeArca = async () => {
-    const cuit = String(formData.cuit || "").replace(/\D/g, "");
+    const cuit = String(formData.cuit || '').replace(/\D/g, '');
     if (!cuitEsValido(cuit)) {
-      sweetAlert.error("CUIT inválido", "Revisá los dígitos: con un CUIT que no pasa el verificador, ARCA solo devuelve error.");
+      sweetAlert.error('CUIT inválido', 'Revisá los dígitos: con un CUIT que no pasa el verificador, ARCA solo devuelve error.');
       return;
     }
     setConsultandoPadron(true);
     try {
       const r = await afipAPI.consultarPadron(cuit);
       if (!r.nombre || !r.apellido) {
-        sweetAlert.warningAlert("Es una persona jurídica", `ARCA devolvió «${r.denominacion}». Este formulario es para personas: no hay nombre y apellido para separar.`);
+        sweetAlert.warningAlert('Es una persona jurídica', `ARCA devolvió «${r.denominacion}». Este formulario es para personas: no hay nombre y apellido para separar.`);
         return;
       }
       const tipoDni = tiposDocumentoDisponibles.find((it: any) => /dni/i.test(it.name));
@@ -145,9 +145,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         tipoDocumentoId: tipoDni ? tipoDni.data.id : prev.tipoDocumentoId,
       }));
       setValidadoEnArca(true);
-      sweetAlert.success("Datos traídos de ARCA", `${r.nombre} ${r.apellido}${r.documento ? ` · DNI ${r.documento}` : ""}`);
+      sweetAlert.success('Datos traídos de ARCA', `${r.nombre} ${r.apellido}${r.documento ? ` · DNI ${r.documento}` : ''}`);
     } catch (e: any) {
-      sweetAlert.error("ARCA no reconoció ese CUIT", e?.response?.data?.error || "No se pudo consultar el Padrón.");
+      sweetAlert.error('ARCA no reconoció ese CUIT', e?.response?.data?.error || 'No se pudo consultar el Padrón.');
     } finally {
       setConsultandoPadron(false);
     }
@@ -170,7 +170,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
 
   // Estado del formulario
   const [formData, setFormData] = useState<UserFormData>(emptyForm());
-  const [modalActiveTab, setModalActiveTab] = useState<ModalTab>("general");
+  const [modalActiveTab, setModalActiveTab] = useState<ModalTab>('general');
   /** Solo para extranjeros: si declaró tener CUIL. Los argentinos siempre lo llevan. */
   const [tieneCuil, setTieneCuil] = useState(true);
   /** Explicación del circuito "Sin CUIT" de Contratos (modal del ⓘ al lado del CUIT/CUIL). */
@@ -178,9 +178,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   const [showPassword, setShowPassword] = useState(false);
 
   // Password mode
-  const [newPassword, setNewPassword] = useState("");
+  const [newPassword, setNewPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
-  const [repetirPassword, setRepetirPassword] = useState("");
+  const [repetirPassword, setRepetirPassword] = useState('');
   // Validación en vivo: el botón Actualizar queda deshabilitado hasta que las dos condiciones se
   // cumplan, así el error se ve mientras se escribe y no después de mandar.
   const largoOk = newPassword.length >= PASSWORD_MIN;
@@ -188,7 +188,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   const passwordValida = largoOk && passwordsCoinciden;
 
   // Rol/es Empresa search
-  const [roleFrameSearch, setRoleFrameSearch] = useState("");
+  const [roleFrameSearch, setRoleFrameSearch] = useState('');
 
   // Para inicializar el form una sola vez por apertura
   const initializedRef = useRef(false);
@@ -199,19 +199,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     let cancelled = false;
     (async () => {
       try {
-        const [rolesRes, rf, g, dt, c, n, el, b] = await Promise.all([
-          rolesAPI.list({ limit: 100 }),
-          roleFrameAPI.list(),
-          infoAPI.listByType("genero"),
-          infoAPI.listByType("tipo-documento"),
-          infoAPI.listByType("pais"),
-          infoAPI.listByType("nacionalidad"),
-          infoAPI.listByType("nivel-estudio"),
-          infoAPI.listByType("banco"),
-        ]);
+        const [rolesRes, rf, g, dt, c, n, el, b] = await Promise.all([rolesAPI.list({ limit: 100 }), roleFrameAPI.list(), infoAPI.listByType('genero'), infoAPI.listByType('tipo-documento'), infoAPI.listByType('pais'), infoAPI.listByType('nacionalidad'), infoAPI.listByType('nivel-estudio'), infoAPI.listByType('banco')]);
         if (cancelled) return;
         setRoles(rolesRes.roles);
-        const rfArray = Array.isArray(rf) ? rf : (rf && Array.isArray((rf as any).data) ? (rf as any).data : []);
+        const rfArray = Array.isArray(rf) ? rf : rf && Array.isArray((rf as any).data) ? (rf as any).data : [];
         setAllRoleFrames(rfArray);
         setGenders(g);
         setDocumentTypes(dt);
@@ -221,7 +212,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         setBanks(b);
         setCatalogsLoaded(true);
       } catch (error) {
-        console.error("Error cargando catálogos del formulario de usuario:", error);
+        console.error('Error cargando catálogos del formulario de usuario:', error);
       }
     })();
     return () => {
@@ -233,15 +224,25 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   useEffect(() => {
     if (!isOpen) {
       initializedRef.current = false;
-      setRoleFrameSearch("");
+      setRoleFrameSearch('');
+      /*
+        El sello de ARCA también se limpia al cerrar.
+
+        El componente no se desmonta entre aperturas: `formData` se re-inicializa acá, pero
+        `validadoEnArca` es estado aparte y sobrevivía. Al reabrir en blanco quedaba el cartel verde
+        "los datos son los de ARCA" sobre campos vacíos, y peor: seguían bloqueados, así que no se
+        podía cargar a nadie hasta recargar la página.
+      */
+      setValidadoEnArca(false);
+      setConsultandoPadron(false);
       return;
     }
     if (initializedRef.current) return;
 
-    if (mode === "password") {
+    if (mode === 'password') {
       initializedRef.current = true;
-      setNewPassword("");
-      setRepetirPassword("");
+      setNewPassword('');
+      setRepetirPassword('');
       setShowNewPassword(false);
       return;
     }
@@ -249,23 +250,27 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     // edit/create necesitan los catálogos (allRoleFrames para resolver rolesFrameIds, roles para defaults)
     if (!catalogsLoaded) return;
     initializedRef.current = true;
-    setModalActiveTab("general");
+    setModalActiveTab('general');
     setShowPassword(false);
+    // El sello ya existente manda: si la ficha dice validado, el formulario abre en ese estado, con los
+    // campos de ARCA bloqueados igual que en el alta. Sin esto, editar a alguien confirmado permitía
+    // pisarle el nombre a mano y dejar el sello mintiendo.
+    setValidadoEnArca(!!user?.metadata?.nombreValidadoArcaAt);
 
     if (user) {
       // ── Edición ──
       const isSolicitud = user.metadata?.isSolicitud;
-      let hireDate = user.hireDate ? new Date(user.hireDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
+      let hireDate = user.hireDate ? new Date(user.hireDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
 
       if (isSolicitud && user.metadata?.fullName && user.metadata.startDate) {
         hireDate = user.metadata.startDate;
       }
 
       setFormData({
-        email: user.email.startsWith("solicitud_") ? "" : user.email,
-        password: "",
-        firstName: user.firstName || "",
-        lastName: user.lastName || "",
+        email: user.email.startsWith('solicitud_') ? '' : user.email,
+        password: '',
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
         isActive: user.metadata?.activo ?? true,
         roles: user.roles.map((r) => r._id),
         hireDate,
@@ -276,25 +281,25 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         tipoDocumentoId: user.metadata?.tipoDocumentoId,
         documento: user.metadata?.documento,
         cuit: user.metadata?.cuit,
-        estadoCivil: user.metadata?.estadoCivil || "",
+        estadoCivil: user.metadata?.estadoCivil || '',
         calle: user.metadata?.calle,
         altura: user.metadata?.altura,
-        pisoDepto: user.metadata?.pisoDepto || "",
-        codigoPostal: user.metadata?.codigoPostal || "",
-        localidad: user.metadata?.localidad || "",
+        pisoDepto: user.metadata?.pisoDepto || '',
+        codigoPostal: user.metadata?.codigoPostal || '',
+        localidad: user.metadata?.localidad || '',
         paisId: user.metadata?.paisId,
         nacionalidadId: user.metadata?.nacionalidadId || user.metadata?.paisId,
         nivelEstudioId: user.metadata?.nivelEstudioId,
-        fechaNac: user.metadata?.fechaNac ? new Date(user.metadata.fechaNac).toISOString().split("T")[0] : "",
+        fechaNac: user.metadata?.fechaNac ? new Date(user.metadata.fechaNac).toISOString().split('T')[0] : '',
         telefono: user.metadata?.telefono,
-        telefono2: user.metadata?.telefono2 || "",
+        telefono2: user.metadata?.telefono2 || '',
         visa: user.metadata?.visa || false,
         bancoId: user.metadata?.bancoId,
-        cbu: user.metadata?.cbu || "",
-        tipoDeCuentaBancaria: user.metadata?.tipoDeCuentaBancaria || "",
-        nroDeCuentaBancaria: user.metadata?.nroDeCuentaBancaria || "",
-        aliasBancario: user.metadata?.aliasBancario || "",
-        numeroLegajoTango: user.metadata?.numeroLegajoTango || "",
+        cbu: user.metadata?.cbu || '',
+        tipoDeCuentaBancaria: user.metadata?.tipoDeCuentaBancaria || '',
+        nroDeCuentaBancaria: user.metadata?.nroDeCuentaBancaria || '',
+        aliasBancario: user.metadata?.aliasBancario || '',
+        numeroLegajoTango: user.metadata?.numeroLegajoTango || '',
         afiliadoAlSindicato: user.metadata?.afiliadoAlSindicato || false,
         rolesFrameIds: (() => {
           const rawRf = user.metadata?.rolesFrameIds || (user.metadata as any)?.roles_frame || [];
@@ -303,8 +308,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           const resolvedIds = new Set<string>();
           rfArray.forEach((rf: any) => {
             if (!rf) return;
-            const id = typeof rf === "string" ? rf : rf._id;
-            const name = typeof rf === "object" ? rf.name : null;
+            const id = typeof rf === 'string' ? rf : rf._id;
+            const name = typeof rf === 'object' ? rf.name : null;
 
             let match = allRoleFrames.find((item) => item._id === id);
             if (!match && id) {
@@ -315,7 +320,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
             }
             if (match) {
               resolvedIds.add(match._id);
-            } else if (typeof id === "string" && id.length === 24) {
+            } else if (typeof id === 'string' && id.length === 24) {
               resolvedIds.add(id);
             }
           });
@@ -328,7 +333,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     } else {
       // ── Alta ──
       const defaultRole = roles.find((role) => role.isDefault);
-      const mobileCollabRole = roles.find((role) => role.name.toLowerCase() === "mobile-colaborador");
+      const mobileCollabRole = roles.find((role) => role.name.toLowerCase() === 'mobile-colaborador');
       const defaultRolesSet = new Set<string>();
       if (defaultRole) defaultRolesSet.add(defaultRole._id);
       if (mobileCollabRole) defaultRolesSet.add(mobileCollabRole._id);
@@ -351,24 +356,21 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     // El CUIT/CUIL se valida con el algoritmo de ARCA (módulo 11), no solo por largo: un número mal
     // tipeado se detecta acá y no viaja a la base ni al TXT de ARCA.
     if (cuilVisible && formData.cuit && !isValidCuit(formData.cuit)) {
-      sweetAlert.error("CUIT/CUIL inválido", "El CUIT/CUIL no es válido. Revisá los 11 dígitos.");
-      setModalActiveTab("general");
+      sweetAlert.error('CUIT/CUIL inválido', 'El CUIT/CUIL no es válido. Revisá los 11 dígitos.');
+      setModalActiveTab('general');
       return;
     }
     // Se exige cuando la persona DICE TENERLO, no según la nacionalidad: el switch prendido es la
     // declaración de que tiene CUIL, y entonces hay que cargarlo. Si no lo tiene, se destilda y el
     // alta sigue por el circuito "Sin CUIT" — lo que no sirve es un CUIL a medias.
     if (cuilVisible && !formData.cuit) {
-      sweetAlert.error(
-        "Falta el CUIT/CUIL",
-        esArgentino ? "Para una persona argentina el CUIT/CUIL es obligatorio." : 'Está tildado "Tiene CUIT / CUIL argentino": cargalo, o destildá el switch para seguir sin CUIT.',
-      );
-      setModalActiveTab("general");
+      sweetAlert.error('Falta el CUIT/CUIL', esArgentino ? 'Para una persona argentina el CUIT/CUIL es obligatorio.' : 'Está tildado "Tiene CUIT / CUIL argentino": cargalo, o destildá el switch para seguir sin CUIT.');
+      setModalActiveTab('general');
       return;
     }
     if (bloqueadoHastaValidar) {
-      sweetAlert.error("Falta validar el CUIT", "Apretá «Validar CUIT»: nombre, apellido y documento los trae ARCA, y así el alta queda confirmada contra el organismo.");
-      setModalActiveTab("general");
+      sweetAlert.error('Falta validar el CUIT', 'Apretá «Validar CUIT»: nombre, apellido y documento los trae ARCA, y así el alta queda confirmada contra el organismo.');
+      setModalActiveTab('general');
       return;
     }
     try {
@@ -426,19 +428,20 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
 
       if (user) {
         delete submitData.password;
-        await usersAPI.update(user._id, submitData);
-        sweetAlert.success(formData.isSolicitud ? "Solicitud Aprobada" : "Usuario actualizado", formData.isSolicitud ? "El usuario ha sido dado de alta correctamente" : "Los cambios se han guardado correctamente");
+        // Mismo criterio que el alta: el sello lo pone el servidor tras ver la respuesta de ARCA.
+        await usersAPI.update(user._id, { ...submitData, validarConArca: validadoEnArca });
+        sweetAlert.success(formData.isSolicitud ? 'Solicitud Aprobada' : 'Usuario actualizado', formData.isSolicitud ? 'El usuario ha sido dado de alta correctamente' : 'Los cambios se han guardado correctamente');
       } else {
         // `validarConArca`: el sello lo escribe el SERVIDOR después de ver la respuesta del organismo.
         // Mandar el `nombreValidadoArcaAt` desde acá sería marcar como confirmado algo que ARCA no vio.
         await usersAPI.create({ ...submitData, validarConArca: validadoEnArca });
-        sweetAlert.success("Usuario creado", "El usuario se ha creado correctamente");
+        sweetAlert.success('Usuario creado', 'El usuario se ha creado correctamente');
       }
       onSaved?.();
       onClose();
     } catch (error: any) {
-      const message = error.response?.data?.error || "Error al guardar el usuario";
-      sweetAlert.error("Error", message);
+      const message = error.response?.data?.error || 'Error al guardar el usuario';
+      sweetAlert.error('Error', message);
     }
   };
 
@@ -447,58 +450,49 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     if (!user) return;
     // Doble chequeo: el botón ya está deshabilitado, pero el form también se puede mandar con Enter.
     if (!passwordValida) {
-      sweetAlert.error("Revisá la contraseña", `Tiene que tener al menos ${PASSWORD_MIN} caracteres y coincidir en los dos campos.`);
+      sweetAlert.error('Revisá la contraseña', `Tiene que tener al menos ${PASSWORD_MIN} caracteres y coincidir en los dos campos.`);
       return;
     }
     try {
       await usersAPI.updatePassword(user._id, newPassword);
-      sweetAlert.success("Contraseña actualizada", "La contraseña se ha actualizado correctamente");
+      sweetAlert.success('Contraseña actualizada', 'La contraseña se ha actualizado correctamente');
       onSaved?.();
       onClose();
     } catch (error: any) {
-      const message = error.response?.data?.error || "Error al actualizar la contraseña";
-      sweetAlert.error("Error", message);
+      const message = error.response?.data?.error || 'Error al actualizar la contraseña';
+      sweetAlert.error('Error', message);
     }
   };
 
   const title =
-    mode === "password" ? (
+    mode === 'password' ? (
       <span className="flex items-center gap-2">
         <FontAwesomeIcon icon={faKey} className="h-4 w-4 text-blue-500" />
         Cambiar contraseña
       </span>
-    ) : formData.isSolicitud
-        ? "Aprobar Solicitud de Alta"
-        : user
-          ? `Editar Usuario: ${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email
-          : "Nuevo Usuario";
+    ) : formData.isSolicitud ? (
+      'Aprobar Solicitud de Alta'
+    ) : user ? (
+      `Editar Usuario: ${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email
+    ) : (
+      'Nuevo Usuario'
+    );
 
   // En "Cambiar contraseña" el subtítulo dice de QUIÉN es: el modal se abre desde la tarjeta de una
   // persona y antes no había forma de confirmar que era la correcta.
   const subtitle =
-    mode === "password"
-      ? user
-        ? `${`${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email}${user.firstName || user.lastName ? ` · ${user.email}` : ""}`
-        : undefined
-      : (
-          <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-            <span>{formData.isSolicitud ? "Completa los datos para dar de alta al usuario" : "Define datos básicos y roles"}</span>
-            <span className="text-gray-400 dark:text-gray-500">
-              · Los campos marcados con <span className="text-red-500">*</span> son obligatorios
-            </span>
-          </span>
-        );
-
-  const actions =
-    mode === "password"
-      ? [
-          { label: "Actualizar", onClick: () => document.querySelector<HTMLFormElement>("#password-form")?.requestSubmit(), variant: "primary" as const, disabled: !passwordValida },
-          { label: "Cancelar", onClick: onClose, variant: "ghost" as const },
-        ]
-      : [
-          { label: formData.isSolicitud ? "Aprobar y Crear" : user ? "Actualizar" : "Crear", onClick: () => document.querySelector<HTMLFormElement>("#user-form")?.requestSubmit(), variant: "primary" as const },
-          { label: "Cancelar", onClick: onClose, variant: "ghost" as const },
-        ];
+    mode === 'password' ? (
+      user ? (
+        `${`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}${user.firstName || user.lastName ? ` · ${user.email}` : ''}`
+      ) : undefined
+    ) : (
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+        {formData.isSolicitud && <span>Completa los datos para dar de alta al usuario</span>}
+        <span className="text-gray-400 dark:text-gray-500 text-sm">
+          Los campos marcados con <span className="text-red-500">*</span> son obligatorios
+        </span>
+      </span>
+    );
 
   // --- Nacionalidad → Tipo de documento / CUIL (ver utils/nacionalidadDocumento.ts) ---
   // El catálogo de nacionalidades es el de países (no existe un `nacionalidad` propio).
@@ -530,6 +524,73 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   */
   const bloqueadoHastaValidar = !user && cuilVisible && !validadoEnArca;
 
+  /*
+    LO QUE VINO DE ARCA NO SE EDITA.
+
+    Nombre, apellido, tipo y número de documento son literalmente lo que el organismo tiene para ese
+    CUIT, y el alta se guarda marcada como validada. Dejar retocarlos después convertiría ese sello en
+    una mentira: diría "confirmado contra ARCA" sobre un dato que alguien cambió a mano.
+
+    Si están mal, lo que está mal es el CUIT. Cambiarlo apaga el sello (ver el onChange del campo) y
+    todo vuelve a quedar en blanco para validar de nuevo.
+  */
+  const camposDeArcaBloqueados = validadoEnArca;
+  const tituloArca = camposDeArcaBloqueados ? 'Lo trae ARCA para este CUIT. Para cambiarlo, corregí el CUIT y validá de nuevo.' : undefined;
+  /*
+    Bloqueado, pero con el texto en el color normal.
+
+    El gris de `:disabled` está pensado para un campo VACÍO que todavía no se puede usar. Acá el campo
+    tiene un dato real y correcto —el que devolvió ARCA—, y pintarlo gris lo hacía leer como un
+    placeholder: parecía que no se había completado nada. El fondo hundido sigue diciendo que no se
+    edita; el texto en blanco dice que ahí hay contenido.
+  */
+  const claseArca = camposDeArcaBloqueados ? 'input-field disabled:text-gray-900 dark:disabled:text-white' : 'input-field';
+
+  const actions =
+    mode === 'password'
+      ? [
+          { label: 'Actualizar', onClick: () => document.querySelector<HTMLFormElement>('#password-form')?.requestSubmit(), variant: 'primary' as const, disabled: !passwordValida },
+          { label: 'Cancelar', onClick: onClose, variant: 'ghost' as const },
+        ]
+      : [
+          /*
+            EN EL ALTA SE AVANZA POR PASOS: General → Domicilio → Datos Bancarios → Crear.
+
+            Con «Crear» disponible desde la primera pestaña, quien no conocía el formulario lo apretaba
+            ahí y se llevaba el rebote por un campo obligatorio que ni había visto —está dos pestañas
+            más adelante—. Los pasos hacen que el recorrido sea el orden natural, y el botón final
+            aparece recién cuando ya se pasó por todo.
+
+            En la EDICIÓN no: ahí se entra a corregir un dato puntual, casi siempre de una sola
+            pestaña, y obligar a recorrer las tres para guardarlo sería puro trámite.
+          */
+          ...(user
+            ? [{ label: formData.isSolicitud ? 'Aprobar y Crear' : 'Actualizar', onClick: () => document.querySelector<HTMLFormElement>('#user-form')?.requestSubmit(), variant: 'primary' as const }]
+            : modalActiveTab !== 'bancarios'
+              ? [{ label: 'Siguiente', onClick: () => setModalActiveTab(modalActiveTab === 'general' ? 'domicilio' : 'bancarios'), variant: 'primary' as const, disabled: bloqueadoHastaValidar }]
+              : [{ label: 'Crear', onClick: () => document.querySelector<HTMLFormElement>('#user-form')?.requestSubmit(), variant: 'primary' as const }]),
+          { label: 'Cancelar', onClick: onClose, variant: 'ghost' as const },
+        ];
+
+  /*
+    Los datos que trajo ARCA se descartan si cambia aquello de lo que dependían.
+
+    Valen para UN CUIT concreto. Si se cambia la nacionalidad o se declara que la persona no tiene
+    CUIL, ese CUIT deja de estar en juego y lo que quedó en pantalla —nombre, apellido y documento del
+    organismo, más el sello de validado— ya no corresponde a nadie. Peor todavía: el alta se guardaría
+    marcada como confirmada contra ARCA con los datos de otra persona.
+
+    Solo en el ALTA: editando a alguien existente, cambiarle la nacionalidad no tiene por qué borrarle
+    el nombre.
+  */
+  const limpiarDatosDeArca = () => {
+    // El sello cae siempre: dejó de corresponder al CUIT que tiene el formulario.
+    setValidadoEnArca(false);
+    // Vaciar los campos, solo en el alta. Editando a alguien existente sería borrarle datos guardados
+    // por tocar un select; lo que hace falta ahí es destrabarlos para poder corregirlos.
+    if (user) return;
+    setFormData((prev) => ({ ...prev, firstName: '', lastName: '', documento: '', tipoDocumentoId: undefined }));
+  };
 
   /** Al cambiar la nacionalidad hay que revisar lo que dependía de ella para no dejar datos inválidos. */
   const handleNacionalidadChange = (nuevoId: number | undefined) => {
@@ -543,11 +604,14 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     }));
     // Un argentino/a siempre lleva CUIL: no queda arrastrado un "no tiene" declarado antes.
     if (ahoraEsArgentino) setTieneCuil(true);
+    // El CUIT también: quedó atado a la nacionalidad anterior.
+    setFormData((prev) => ({ ...prev, cuit: '' }));
+    limpiarDatosDeArca();
   };
 
   return (
-    <InfoModal isOpen={isOpen} onClose={onClose} title={title} subtitle={subtitle} size={mode === "password" ? "sm" : "lg"} actions={actions} zIndex={zIndex}>
-      {mode === "password" ? (
+    <InfoModal isOpen={isOpen} onClose={onClose} title={title} subtitle={subtitle} size={mode === 'password' ? 'sm' : 'lg'} actions={actions} zIndex={zIndex}>
+      {mode === 'password' ? (
         <form id="password-form" onSubmit={handlePasswordSubmit}>
           <div className="space-y-4">
             <div>
@@ -555,18 +619,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                 Nueva contraseña <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <input
-                  type={showNewPassword ? "text" : "password"}
-                  required
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="input-field pr-10"
-                  placeholder="••••••••"
-                  minLength={PASSWORD_MIN}
-                  autoComplete="new-password"
-                  autoFocus
-                />
-                <button type="button" onClick={() => setShowNewPassword((v) => !v)} title={showNewPassword ? "Ocultar" : "Mostrar"} className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                <input type={showNewPassword ? 'text' : 'password'} required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="input-field pr-10" placeholder="••••••••" minLength={PASSWORD_MIN} autoComplete="new-password" autoFocus />
+                <button type="button" onClick={() => setShowNewPassword((v) => !v)} title={showNewPassword ? 'Ocultar' : 'Mostrar'} className="absolute inset-y-0 right-0 pr-3 flex items-center">
                   <FontAwesomeIcon icon={showNewPassword ? faEyeSlash : faEye} className="h-4 w-4 text-gray-400" />
                 </button>
               </div>
@@ -579,24 +633,16 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                 Repetir contraseña <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <input
-                  type={showNewPassword ? "text" : "password"}
-                  required
-                  value={repetirPassword}
-                  onChange={(e) => setRepetirPassword(e.target.value)}
-                  className={`input-field pr-10 ${repetirPassword && !passwordsCoinciden ? "border-red-400 dark:border-red-600" : ""}`}
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                />
+                <input type={showNewPassword ? 'text' : 'password'} required value={repetirPassword} onChange={(e) => setRepetirPassword(e.target.value)} className={`input-field pr-10 ${repetirPassword && !passwordsCoinciden ? 'border-red-400 dark:border-red-600' : ''}`} placeholder="••••••••" autoComplete="new-password" />
               </div>
             </div>
 
             <ul className="space-y-1 text-xs">
-              <li className={`flex items-center gap-1.5 ${largoOk ? "text-green-600 dark:text-green-400" : "text-gray-500 dark:text-gray-400"}`}>
+              <li className={`flex items-center gap-1.5 ${largoOk ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
                 <FontAwesomeIcon icon={largoOk ? faCheck : faXmark} className="h-3 w-3" />
                 Al menos {PASSWORD_MIN} caracteres
               </li>
-              <li className={`flex items-center gap-1.5 ${repetirPassword ? (passwordsCoinciden ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400") : "text-gray-500 dark:text-gray-400"}`}>
+              <li className={`flex items-center gap-1.5 ${repetirPassword ? (passwordsCoinciden ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400') : 'text-gray-500 dark:text-gray-400'}`}>
                 <FontAwesomeIcon icon={repetirPassword && passwordsCoinciden ? faCheck : faXmark} className="h-3 w-3" />
                 Las dos contraseñas coinciden
               </li>
@@ -610,15 +656,15 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           {/* Tabs Header Sticky Container */}
           <div className="z-20 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm shrink-0">
             <div className="flex">
-              <button type="button" onClick={() => setModalActiveTab("general")} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${modalActiveTab === "general" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+              <button type="button" onClick={() => setModalActiveTab('general')} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${modalActiveTab === 'general' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
                 <FontAwesomeIcon icon={faUser} className="text-xs" />
                 General
               </button>
-              <button type="button" onClick={() => setModalActiveTab("domicilio")} disabled={bloqueadoHastaValidar} title={bloqueadoHastaValidar ? "Validá el CUIT primero" : undefined} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${modalActiveTab === "domicilio" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+              <button type="button" onClick={() => setModalActiveTab('domicilio')} disabled={bloqueadoHastaValidar} title={bloqueadoHastaValidar ? 'Validá el CUIT primero' : undefined} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${modalActiveTab === 'domicilio' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
                 <FontAwesomeIcon icon={faMapMarkerAlt} className="text-xs" />
                 Domicilio
               </button>
-              <button type="button" onClick={() => setModalActiveTab("bancarios")} disabled={bloqueadoHastaValidar} title={bloqueadoHastaValidar ? "Validá el CUIT primero" : undefined} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${modalActiveTab === "bancarios" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+              <button type="button" onClick={() => setModalActiveTab('bancarios')} disabled={bloqueadoHastaValidar} title={bloqueadoHastaValidar ? 'Validá el CUIT primero' : undefined} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${modalActiveTab === 'bancarios' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
                 <FontAwesomeIcon icon={faUniversity} className="text-xs" />
                 Datos Bancarios
               </button>
@@ -627,7 +673,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
 
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {/* Tab Content */}
-            {modalActiveTab === "general" && (
+            {modalActiveTab === 'general' && (
               <div className="space-y-6 animate-fadeIn">
                 {/*
                   ORDEN DEL FORMULARIO: nacionalidad → CUIT → lo que ARCA completa.
@@ -640,8 +686,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                 {/* La nacionalidad va PRIMERO: de ella dependen el tipo de documento y el CUIL. */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nacionalidad <span className="text-red-500">*</span></label>
-                    <select required value={formData.nacionalidadId || ""} onChange={(e) => handleNacionalidadChange(parseInt(e.target.value) || undefined)} className="input-field">
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      Nacionalidad <span className="text-red-500">*</span>
+                    </label>
+                    <select required value={formData.nacionalidadId || ''} onChange={(e) => handleNacionalidadChange(parseInt(e.target.value) || undefined)} className="input-field">
                       <option value="">Seleccionar...</option>
                       {nationalityOptions.map((it) => (
                         <option key={it._id} value={it.data.id}>
@@ -681,12 +729,14 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                         onClick={() => {
                           const nuevo = !tieneCuil;
                           setTieneCuil(nuevo);
-                          if (!nuevo) setFormData((prev) => ({ ...prev, cuit: "" }));
+                          if (!nuevo) setFormData((prev) => ({ ...prev, cuit: '' }));
+                          // Con o sin CUIT, lo traído del Padrón deja de aplicar.
+                          limpiarDatosDeArca();
                         }}
                         className="flex items-center gap-2 mb-2 text-xs text-gray-600 dark:text-gray-300"
                       >
-                        <span className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${tieneCuil ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}>
-                          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${tieneCuil ? "translate-x-[1.15rem]" : "translate-x-0.5"}`} />
+                        <span className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${tieneCuil ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${tieneCuil ? 'translate-x-[1.15rem]' : 'translate-x-0.5'}`} />
                         </span>
                         Tiene CUIT / CUIL argentino
                       </button>
@@ -695,42 +745,34 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     <div className="flex items-start gap-2">
                       <div className="flex-1 min-w-0">
                         <CuitInput
-                          value={cuilVisible ? formData.cuit || "" : ""}
+                          value={cuilVisible ? formData.cuit || '' : ''}
                           onChange={(v) => {
                             setFormData((prev) => ({ ...prev, cuit: v }));
                             // Tocar el CUIT invalida lo traído: si no, se valida uno y se guarda otro.
                             setValidadoEnArca(false);
                           }}
-                          className={`input-field ${cuilVisible ? "" : "opacity-50 cursor-not-allowed"}`}
+                          className={`input-field ${cuilVisible ? '' : 'opacity-50 cursor-not-allowed'}`}
                           placeholder="XX-XXXXXXXX-X"
                           disabled={!cuilVisible}
                         />
                       </div>
-                      {/* Solo en el alta: para alguien ya creado, el sello se pone desde la columna ARCA de Usuarios. */}
-                      {cuilVisible && !user && (
-                        <button
-                          type="button"
-                          onClick={traerDeArca}
-                          disabled={consultandoPadron || !cuitEsValido(String(formData.cuit || "").replace(/\D/g, ""))}
-                          title="Consulta el Padrón de ARCA: confirma que el CUIT existe y completa nombre, apellido y documento con lo que tiene el organismo"
-                          className="shrink-0 inline-flex items-center gap-2 px-3 h-[42px] rounded-lg text-xs font-semibold border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                        >
-                          <FontAwesomeIcon icon={consultandoPadron ? faSpinner : faLandmark} spin={consultandoPadron} className="h-3 w-3" />
-                          {consultandoPadron ? "Validando…" : "Validar CUIT"}
+                      {/*
+                        El botón ES el indicador de estado: validado le cambia el ícono y el color, en vez
+                        de sumar un cartel aparte que ocupa dos renglones para lo mismo.
+
+                        Vale igual en alta y en edición: la ficha de alguien confirmado abre mostrando
+                        «Validado» y con los campos de ARCA bloqueados, y la de alguien sin confirmar
+                        permite hacerlo desde acá, sin ir hasta la columna ARCA del listado.
+                      */}
+                      {cuilVisible && (
+                        <button type="button" onClick={traerDeArca} disabled={consultandoPadron || validadoEnArca || !cuitEsValido(String(formData.cuit || '').replace(/\D/g, ''))} title={validadoEnArca ? 'Nombre, apellido y documento son los de ARCA. Se guarda marcado como validado.' : 'Consulta el Padrón de ARCA: confirma que el CUIT existe y completa nombre, apellido y documento con lo que tiene el organismo'} className={`shrink-0 inline-flex items-center gap-2 px-3 h-[42px] rounded-lg text-xs font-semibold border transition-colors disabled:cursor-not-allowed whitespace-nowrap ${validadoEnArca ? 'border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 disabled:opacity-100' : 'border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-50'}`}>
+                          <FontAwesomeIcon icon={consultandoPadron ? faSpinner : validadoEnArca ? faCircleCheck : faLandmark} spin={consultandoPadron} className="h-3 w-3" />
+                          {consultandoPadron ? 'Validando…' : validadoEnArca ? 'Validado' : 'Validar CUIT'}
                         </button>
                       )}
                     </div>
                     {!nacionalidadElegida && <p className="text-[11px] text-gray-400 mt-1">Elegí la nacionalidad para completarlo.</p>}
                     {nacionalidadElegida && !cuilVisible && <p className="text-[11px] text-gray-400 mt-1">Se registra sin CUIT/CUIL. Se puede cargar más adelante.</p>}
-                    {validadoEnArca && (
-                      <p className="mt-1.5 text-[11px] text-green-600 dark:text-green-400 inline-flex items-center gap-1.5">
-                        <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3" />
-                        Nombre, apellido y documento son los de ARCA. Se guarda marcado como validado.
-                      </p>
-                    )}
-                    {bloqueadoHastaValidar && cuilVisible && (
-                      <p className="mt-1.5 text-[11px] text-amber-600 dark:text-amber-400">Validá el CUIT para habilitar el resto del formulario.</p>
-                    )}
                   </div>
                 </div>
 
@@ -745,284 +787,336 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                   directos, y ahora el fieldset ES un único hijo: sin esto los bloques de adentro
                   quedaban pegados uno contra otro.
                 */}
-                <fieldset disabled={bloqueadoHastaValidar} className={`space-y-6 ${bloqueadoHastaValidar ? "opacity-60" : ""}`}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nombre <span className="text-red-500">*</span></label>
-                    <input type="text" required value={formData.firstName} onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))} className="input-field" placeholder="Ej: Juan" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Apellido <span className="text-red-500">*</span></label>
-                    <input type="text" required value={formData.lastName} onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))} className="input-field" placeholder="Ej: Pérez" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tipo de Documento</label>
-                    <select value={formData.tipoDocumentoId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, tipoDocumentoId: parseInt(e.target.value) || undefined }))} className="input-field" disabled={!nacionalidadElegida}>
-                      <option value="">Seleccionar...</option>
-                      {tiposDocumentoDisponibles.map((it) => (
-                        <option key={it._id} value={it.data.id}>
-                          {it.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Documento <span className="text-red-500">*</span></label>
-                    <input type="text" required value={formData.documento || ""} onChange={(e) => setFormData((prev) => ({ ...prev, documento: e.target.value }))} className="input-field" placeholder={esArgentino ? "Nº de documento" : "DNI / Pasaporte"} disabled={!nacionalidadElegida} />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Email <span className="text-red-500">*</span></label>
-                    <input type="email" required value={formData.email} onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))} className="input-field" placeholder="usuario@ejemplo.com" />
-                  </div>
-                  {(!user || formData.isSolicitud) && (
+                <fieldset disabled={bloqueadoHastaValidar} className={`space-y-6 ${bloqueadoHastaValidar ? 'opacity-60' : ''}`}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{formData.isSolicitud ? "Asignar Contraseña" : "Contraseña"} <span className="text-red-500">*</span></label>
-                      <div className="relative">
-                        <input type={showPassword ? "text" : "password"} required value={formData.password} onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))} className="input-field pr-10" placeholder="••••••••" minLength={6} />
-                        <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                          <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} className="h-4 w-4 text-gray-400" />
-                        </button>
-                      </div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                        Nombre <span className="text-red-500">*</span>
+                      </label>
+                      <input type="text" required value={formData.firstName} onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))} className={claseArca} placeholder="Ej: Juan" disabled={camposDeArcaBloqueados} title={tituloArca} />
                     </div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Fecha de Nacimiento</label>
-                    <input type="date" value={formData.fechaNac || ""} onChange={(e) => setFormData((prev) => ({ ...prev, fechaNac: e.target.value }))} className="input-field" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nivel de Estudio</label>
-                    <select value={formData.nivelEstudioId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, nivelEstudioId: parseInt(e.target.value) || undefined }))} className="input-field">
-                      <option value="">Seleccionar...</option>
-                      {educationLevels.map((it) => (
-                        <option key={it._id} value={it.data.id}>
-                          {it.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* CUIT/CUIL y Nacionalidad se movieron arriba (la nacionalidad decide el resto). */}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Género</label>
-                    <select value={formData.generoId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, generoId: parseInt(e.target.value) || undefined }))} className="input-field">
-                      <option value="">Seleccionar...</option>
-                      {genders.map((it) => (
-                        <option key={it._id} value={it.data.id}>
-                          {it.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Estado Civil</label>
-                    <select value={formData.estadoCivil || ""} onChange={(e) => setFormData((prev) => ({ ...prev, estadoCivil: e.target.value }))} className="input-field">
-                      <option value="">Seleccionar...</option>
-                      <option value="Soltero">Soltero/a</option>
-                      <option value="Casado">Casado/a</option>
-                      <option value="Divorciado">Divorciado/a</option>
-                      <option value="Viudo">Viudo/a</option>
-                      <option value="Concuvino">Concubino/a</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/*
-                 * Acá había un selector de Obra Social y los toggles OS Prepaga / In House.
-                 *
-                 * La obra social se fue porque es un dato de la RELACIÓN LABORAL, no de la persona:
-                 * ARCA la declara en cada alta (pos. 40-45 del TXT), dos contratos de la misma
-                 * persona en dos empleadoras llevan cada uno el suyo, y caduca sola —por
-                 * desregulación alguien cambia de obra social sin que su empleadora se entere—.
-                 * Guardarla acá la propagaba, sin fecha ni verificación, a todos los contratos
-                 * futuros. Ahora vive en el contrato y se constata contra el padrón de la SSS.
-                 *
-                 * Los dos toggles se fueron con ella: describían la cobertura de salud de la persona
-                 * y ya no se decide nada con eso acá. Los campos siguen existiendo porque los MANDA
-                 * FRAME en la sincronización (`utils/additiveSync.ts`), y se ven en Mi Perfil — pero
-                 * son un dato que llega, no uno que se carga a mano.
-                 */}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Fecha de Ingreso <span className="text-red-500">*</span></label>
-                    <input type="date" required value={formData.hireDate} onChange={(e) => setFormData((prev) => ({ ...prev, hireDate: e.target.value }))} className="input-field" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Vacaciones (Días Extra)</label>
-                    <input type="number" min="0" value={formData.extraVacationDays} onChange={(e) => setFormData((prev) => ({ ...prev, extraVacationDays: parseInt(e.target.value) || 0 }))} className="input-field" />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center gap-4 mb-2">
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Rol/es Empresa</label>
-                    <div className="relative w-48 md:w-64">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400" />
-                      </div>
-                      <input type="text" value={roleFrameSearch} onChange={(e) => setRoleFrameSearch(e.target.value)} placeholder="Buscar especialidad..." className="w-full pl-9 pr-8 py-1.5 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none" />
-                      {roleFrameSearch && (
-                        <button type="button" onClick={() => setRoleFrameSearch("")} className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                          <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
-                        </button>
-                      )}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                        Apellido <span className="text-red-500">*</span>
+                      </label>
+                      <input type="text" required value={formData.lastName} onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))} className={claseArca} placeholder="Ej: Pérez" disabled={camposDeArcaBloqueados} title={tituloArca} />
                     </div>
                   </div>
-                  <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
-                      {allRoleFrames
-                        .filter((rf) => fuzzyMatch(rf.name, roleFrameSearch))
-                        .map((rf) => (
-                          <label key={rf._id} className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.rolesFrameIds?.includes(rf._id) ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20" : "bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-300"}`}>
-                            <input
-                              type="checkbox"
-                              checked={formData.rolesFrameIds?.includes(rf._id)}
-                              onChange={(e) => {
-                                const newRF = e.target.checked ? [...(formData.rolesFrameIds || []), rf._id] : (formData.rolesFrameIds || []).filter((id) => id !== rf._id);
-                                setFormData((prev) => ({ ...prev, rolesFrameIds: newRF }));
-                              }}
-                              className="rounded text-blue-500 focus:ring-blue-500 h-4 w-4"
-                            />
-                            <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{rf.name}</span>
-                          </label>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tipo de Documento</label>
+                      <select value={formData.tipoDocumentoId || ''} onChange={(e) => setFormData((prev) => ({ ...prev, tipoDocumentoId: parseInt(e.target.value) || undefined }))} className={claseArca} disabled={!nacionalidadElegida || camposDeArcaBloqueados} title={tituloArca}>
+                        <option value="">Seleccionar...</option>
+                        {tiposDocumentoDisponibles.map((it) => (
+                          <option key={it._id} value={it.data.id}>
+                            {it.name}
+                          </option>
                         ))}
-                      {allRoleFrames.filter((rf) => fuzzyMatch(rf.name, roleFrameSearch)).length === 0 && <div className="col-span-full py-8 text-center text-xs text-gray-500 italic">No se encontraron especialidades que coincidan con "{roleFrameSearch}"</div>}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                        Documento <span className="text-red-500">*</span>
+                      </label>
+                      <input type="text" required value={formData.documento || ''} onChange={(e) => setFormData((prev) => ({ ...prev, documento: e.target.value }))} className={claseArca} placeholder={esArgentino ? 'Nº de documento' : 'DNI / Pasaporte'} disabled={!nacionalidadElegida || camposDeArcaBloqueados} title={tituloArca} />
                     </div>
                   </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Legajo Tango</label>
-                    <input type="text" value={formData.numeroLegajoTango || ""} onChange={(e) => setFormData((prev) => ({ ...prev, numeroLegajoTango: e.target.value }))} className="input-field" placeholder="Ej: 01505" />
-                  </div>
-                  <div className="flex items-center pt-4">
-                    <label className="flex items-center space-x-3 cursor-pointer group">
-                      <div className={`w-10 h-6 flex items-center bg-gray-300 dark:bg-gray-700 rounded-full p-1 duration-300 ease-in-out ${formData.afiliadoAlSindicato ? "bg-blue-500 dark:bg-blue-600" : ""}`}>
-                        <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${formData.afiliadoAlSindicato ? "translate-x-4" : ""}`}></div>
-                      </div>
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Afiliado al Sindicato</span>
-                      <input type="checkbox" className="hidden" checked={formData.afiliadoAlSindicato} onChange={(e) => setFormData((prev) => ({ ...prev, afiliadoAlSindicato: e.target.checked }))} />
-                    </label>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Roles de Sistema</label>
-                  <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 max-h-64 overflow-y-auto space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                        <FontAwesomeIcon icon={faUserShield} className="text-gray-300" />
-                        Sistema
-                      </h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {roles
-                          .filter((r) => r.name.toLowerCase() !== "superadmin" && !r.name.toLowerCase().includes("mobile"))
-                          .map((r) => (
-                            <label key={r._id} className={`flex items-start space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.roles.includes(r._id) ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20" : "bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-200"}`}>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                        Email <span className="text-red-500">*</span>
+                      </label>
+                      <input type="email" required value={formData.email} onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))} className="input-field" placeholder="usuario@ejemplo.com" />
+                    </div>
+                    {(!user || formData.isSolicitud) && (
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                          {formData.isSolicitud ? 'Asignar Contraseña' : 'Contraseña'} <span className="text-red-500">*</span>
+                        </label>
+                        {/* Mismo patrón que el CUIT: campo + acción a la derecha, en la misma línea. */}
+                        <div className="flex items-start gap-2">
+                          <div className="relative flex-1 min-w-0">
+                            <input type={showPassword ? 'text' : 'password'} required value={formData.password} onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))} className="input-field pr-10" placeholder="••••••••" minLength={6} />
+                            <button type="button" onClick={() => setShowPassword((v) => !v)} title={showPassword ? 'Ocultar' : 'Mostrar'} className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                              <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} className="h-4 w-4 text-gray-400" />
+                            </button>
+                          </div>
+                          {/* Generar la revela y la copia: una contraseña que no se puede ver ni pegar hay
+                            que volver a escribirla a mano, que es justo lo que se quiere evitar. */}
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const nueva = generarPassword();
+                              setFormData((prev) => ({ ...prev, password: nueva }));
+                              setShowPassword(true);
+                              try {
+                                await navigator.clipboard.writeText(nueva);
+                                sweetAlert.success('Contraseña generada', 'Ya está copiada al portapapeles.');
+                              } catch {
+                                // Sin permiso de portapapeles (o sin HTTPS): igual queda visible en el campo.
+                                sweetAlert.success('Contraseña generada', 'Copiala del campo antes de guardar.');
+                              }
+                            }}
+                            title="Generar una contraseña segura al azar y copiarla al portapapeles"
+                            className="shrink-0 inline-flex items-center gap-2 px-3 h-[42px] rounded-lg text-xs font-semibold border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                          >
+                            <FontAwesomeIcon icon={faWandMagicSparkles} className="h-3 w-3" />
+                            Generar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Fecha de Nacimiento</label>
+                      <input type="date" value={formData.fechaNac || ''} onChange={(e) => setFormData((prev) => ({ ...prev, fechaNac: e.target.value }))} className="input-field" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nivel de Estudio</label>
+                      <select value={formData.nivelEstudioId || ''} onChange={(e) => setFormData((prev) => ({ ...prev, nivelEstudioId: parseInt(e.target.value) || undefined }))} className="input-field">
+                        <option value="">Seleccionar...</option>
+                        {educationLevels.map((it) => (
+                          <option key={it._id} value={it.data.id}>
+                            {it.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* CUIT/CUIL y Nacionalidad se movieron arriba (la nacionalidad decide el resto). */}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Género</label>
+                      <select value={formData.generoId || ''} onChange={(e) => setFormData((prev) => ({ ...prev, generoId: parseInt(e.target.value) || undefined }))} className="input-field">
+                        <option value="">Seleccionar...</option>
+                        {genders.map((it) => (
+                          <option key={it._id} value={it.data.id}>
+                            {it.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Estado Civil</label>
+                      <select value={formData.estadoCivil || ''} onChange={(e) => setFormData((prev) => ({ ...prev, estadoCivil: e.target.value }))} className="input-field">
+                        <option value="">Seleccionar...</option>
+                        <option value="Soltero">Soltero/a</option>
+                        <option value="Casado">Casado/a</option>
+                        <option value="Divorciado">Divorciado/a</option>
+                        <option value="Viudo">Viudo/a</option>
+                        <option value="Concuvino">Concubino/a</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/*
+                   * Acá había un selector de Obra Social y los toggles OS Prepaga / In House.
+                   *
+                   * La obra social se fue porque es un dato de la RELACIÓN LABORAL, no de la persona:
+                   * ARCA la declara en cada alta (pos. 40-45 del TXT), dos contratos de la misma
+                   * persona en dos empleadoras llevan cada uno el suyo, y caduca sola —por
+                   * desregulación alguien cambia de obra social sin que su empleadora se entere—.
+                   * Guardarla acá la propagaba, sin fecha ni verificación, a todos los contratos
+                   * futuros. Ahora vive en el contrato y se constata contra el padrón de la SSS.
+                   *
+                   * Los dos toggles se fueron con ella: describían la cobertura de salud de la persona
+                   * y ya no se decide nada con eso acá. Los campos siguen existiendo porque los MANDA
+                   * FRAME en la sincronización (`utils/additiveSync.ts`), y se ven en Mi Perfil — pero
+                   * son un dato que llega, no uno que se carga a mano.
+                   */}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                        Fecha de Ingreso <span className="text-red-500">*</span>
+                      </label>
+                      <input type="date" required value={formData.hireDate} onChange={(e) => setFormData((prev) => ({ ...prev, hireDate: e.target.value }))} className="input-field" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Vacaciones (Días Extra)</label>
+                      <input type="number" min="0" value={formData.extraVacationDays} onChange={(e) => setFormData((prev) => ({ ...prev, extraVacationDays: parseInt(e.target.value) || 0 }))} className="input-field" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-4 mb-2">
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Rol/es Empresa</label>
+                      <div className="relative w-48 md:w-64">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400" />
+                        </div>
+                        <input type="text" value={roleFrameSearch} onChange={(e) => setRoleFrameSearch(e.target.value)} placeholder="Buscar especialidad..." className="w-full pl-9 pr-8 py-1.5 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none" />
+                        {roleFrameSearch && (
+                          <button type="button" onClick={() => setRoleFrameSearch('')} className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                            <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+                        {allRoleFrames
+                          .filter((rf) => fuzzyMatch(rf.name, roleFrameSearch))
+                          .map((rf) => (
+                            <label key={rf._id} className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.rolesFrameIds?.includes(rf._id) ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20' : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-300'}`}>
                               <input
                                 type="checkbox"
-                                checked={formData.roles.includes(r._id)}
+                                checked={formData.rolesFrameIds?.includes(rf._id)}
                                 onChange={(e) => {
-                                  let newRoles = e.target.checked ? [...formData.roles, r._id] : formData.roles.filter((id) => id !== r._id);
-                                  const name = r.name.toLowerCase();
-                                  if (e.target.checked) {
-                                    if (name === "admin") newRoles = newRoles.filter((id) => roles.find((ro) => ro._id === id)?.name.toLowerCase() !== "user");
-                                    else if (name === "user") newRoles = newRoles.filter((id) => roles.find((ro) => ro._id === id)?.name.toLowerCase() !== "admin");
-                                  }
-                                  setFormData((prev) => ({ ...prev, roles: newRoles }));
+                                  const newRF = e.target.checked ? [...(formData.rolesFrameIds || []), rf._id] : (formData.rolesFrameIds || []).filter((id) => id !== rf._id);
+                                  setFormData((prev) => ({ ...prev, rolesFrameIds: newRF }));
                                 }}
-                                className="mt-0.5 rounded text-blue-500 focus:ring-blue-500"
+                                className="rounded text-blue-500 focus:ring-blue-500 h-4 w-4"
                               />
-                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{r.name}</span>
+                              <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{rf.name}</span>
                             </label>
                           ))}
+                        {allRoleFrames.filter((rf) => fuzzyMatch(rf.name, roleFrameSearch)).length === 0 && <div className="col-span-full py-8 text-center text-xs text-gray-500 italic">No se encontraron especialidades que coincidan con "{roleFrameSearch}"</div>}
                       </div>
                     </div>
-                    {roles.some((r) => r.name.toLowerCase().includes("mobile")) && (
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Legajo Tango</label>
+                      <input type="text" value={formData.numeroLegajoTango || ''} onChange={(e) => setFormData((prev) => ({ ...prev, numeroLegajoTango: e.target.value }))} className="input-field" placeholder="Ej: 01505" />
+                    </div>
+                    <div className="flex items-center pt-4">
+                      <label className="flex items-center space-x-3 cursor-pointer group">
+                        <div className={`w-10 h-6 flex items-center bg-gray-300 dark:bg-gray-700 rounded-full p-1 duration-300 ease-in-out ${formData.afiliadoAlSindicato ? 'bg-blue-500 dark:bg-blue-600' : ''}`}>
+                          <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${formData.afiliadoAlSindicato ? 'translate-x-4' : ''}`}></div>
+                        </div>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Afiliado al Sindicato</span>
+                        <input type="checkbox" className="hidden" checked={formData.afiliadoAlSindicato} onChange={(e) => setFormData((prev) => ({ ...prev, afiliadoAlSindicato: e.target.checked }))} />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Roles de Sistema</label>
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 max-h-64 overflow-y-auto space-y-4">
                       <div>
-                        <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2">
-                          <FontAwesomeIcon icon={faMobileAlt} className="text-indigo-300" />
-                          Mobile (App)
+                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                          <FontAwesomeIcon icon={faUserShield} className="text-gray-300" />
+                          Sistema
                         </h4>
-                        {coordinacionBloqueada && (
-                          <p className="mb-3 text-[11px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
-                            Coordina turnos en <strong>{coordinaEn.join(", ")}</strong>, así que el rol Mobile no se puede cambiar. Liberalo desde el equipo del proyecto primero.
-                          </p>
-                        )}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {roles
-                            .filter((r) => r.name.toLowerCase().includes("mobile"))
+                            .filter((r) => r.name.toLowerCase() !== 'superadmin' && !r.name.toLowerCase().includes('mobile'))
                             .map((r) => (
-                              <label
-                                key={r._id}
-                                title={coordinacionBloqueada ? `Coordina turnos en ${coordinaEn.join(", ")}. Liberalo desde el equipo del proyecto para poder cambiarle el rol.` : undefined}
-                                className={`flex items-start space-x-3 p-3 rounded-lg border transition-all ${coordinacionBloqueada ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${formData.roles.includes(r._id) ? "bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800 ring-2 ring-indigo-500/20" : "bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-200"}`}
-                              >
+                              <label key={r._id} className={`flex items-start space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.roles.includes(r._id) ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20' : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-200'}`}>
                                 <input
                                   type="checkbox"
                                   checked={formData.roles.includes(r._id)}
-                                  disabled={coordinacionBloqueada}
                                   onChange={(e) => {
-                                    if (coordinacionBloqueada) {
-                                      sweetAlert.warningAlert("No se puede cambiar el rol Mobile", `${user?.firstName || "Esta persona"} coordina turnos en ${coordinaEn.join(", ")}. Sacale la coordinación desde el equipo del proyecto y después cambiale el rol.`);
-                                      return;
-                                    }
                                     let newRoles = e.target.checked ? [...formData.roles, r._id] : formData.roles.filter((id) => id !== r._id);
                                     const name = r.name.toLowerCase();
                                     if (e.target.checked) {
-                                      if (name.includes("coordinador"))
-                                        newRoles = newRoles.filter((id) => !roles.find((ro) => ro._id === id)?.name.toLowerCase().includes("colaborador"));
-                                      else if (name.includes("colaborador"))
-                                        newRoles = newRoles.filter((id) => !roles.find((ro) => ro._id === id)?.name.toLowerCase().includes("coordinador"));
-                                    } else {
-                                      if (!newRoles.some((id) => roles.find((ro) => ro._id === id)?.name.toLowerCase().includes("mobile"))) {
-                                        sweetAlert.warningAlert("Atención", "Debe tener al menos un rol Mobile.");
-                                        return;
-                                      }
+                                      if (name === 'admin') newRoles = newRoles.filter((id) => roles.find((ro) => ro._id === id)?.name.toLowerCase() !== 'user');
+                                      else if (name === 'user') newRoles = newRoles.filter((id) => roles.find((ro) => ro._id === id)?.name.toLowerCase() !== 'admin');
                                     }
                                     setFormData((prev) => ({ ...prev, roles: newRoles }));
                                   }}
-                                  className="mt-0.5 rounded text-indigo-500 focus:ring-indigo-500"
+                                  className="mt-0.5 rounded text-blue-500 focus:ring-blue-500"
                                 />
                                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{r.name}</span>
                               </label>
                             ))}
                         </div>
                       </div>
-                    )}
+                      {roles.some((r) => r.name.toLowerCase().includes('mobile')) && (
+                        <div>
+                          <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2">
+                            <FontAwesomeIcon icon={faMobileAlt} className="text-indigo-300" />
+                            Mobile (App)
+                          </h4>
+                          {coordinacionBloqueada && (
+                            <p className="mb-3 text-[11px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+                              Coordina turnos en <strong>{coordinaEn.join(', ')}</strong>, así que el rol Mobile no se puede cambiar. Liberalo desde el equipo del proyecto primero.
+                            </p>
+                          )}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {roles
+                              .filter((r) => r.name.toLowerCase().includes('mobile'))
+                              .map((r) => (
+                                <label key={r._id} title={coordinacionBloqueada ? `Coordina turnos en ${coordinaEn.join(', ')}. Liberalo desde el equipo del proyecto para poder cambiarle el rol.` : undefined} className={`flex items-start space-x-3 p-3 rounded-lg border transition-all ${coordinacionBloqueada ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${formData.roles.includes(r._id) ? 'bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800 ring-2 ring-indigo-500/20' : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-200'}`}>
+                                  <input
+                                    type="checkbox"
+                                    checked={formData.roles.includes(r._id)}
+                                    disabled={coordinacionBloqueada}
+                                    onChange={(e) => {
+                                      if (coordinacionBloqueada) {
+                                        sweetAlert.warningAlert('No se puede cambiar el rol Mobile', `${user?.firstName || 'Esta persona'} coordina turnos en ${coordinaEn.join(', ')}. Sacale la coordinación desde el equipo del proyecto y después cambiale el rol.`);
+                                        return;
+                                      }
+                                      let newRoles = e.target.checked ? [...formData.roles, r._id] : formData.roles.filter((id) => id !== r._id);
+                                      const name = r.name.toLowerCase();
+                                      if (e.target.checked) {
+                                        if (name.includes('coordinador'))
+                                          newRoles = newRoles.filter(
+                                            (id) =>
+                                              !roles
+                                                .find((ro) => ro._id === id)
+                                                ?.name.toLowerCase()
+                                                .includes('colaborador'),
+                                          );
+                                        else if (name.includes('colaborador'))
+                                          newRoles = newRoles.filter(
+                                            (id) =>
+                                              !roles
+                                                .find((ro) => ro._id === id)
+                                                ?.name.toLowerCase()
+                                                .includes('coordinador'),
+                                          );
+                                      } else {
+                                        if (
+                                          !newRoles.some((id) =>
+                                            roles
+                                              .find((ro) => ro._id === id)
+                                              ?.name.toLowerCase()
+                                              .includes('mobile'),
+                                          )
+                                        ) {
+                                          sweetAlert.warningAlert('Atención', 'Debe tener al menos un rol Mobile.');
+                                          return;
+                                        }
+                                      }
+                                      setFormData((prev) => ({ ...prev, roles: newRoles }));
+                                    }}
+                                    className="mt-0.5 rounded text-indigo-500 focus:ring-indigo-500"
+                                  />
+                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{r.name}</span>
+                                </label>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/30 rounded-xl border border-gray-100 dark:border-gray-800">
-                  <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Estado de la cuenta</span>
-                  <button type="button" onClick={() => setFormData((prev) => ({ ...prev, isActive: !prev.isActive }))} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${formData.isActive ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "bg-gray-400 text-white shadow-lg shadow-gray-400/20"}`}>
-                    <FontAwesomeIcon icon={formData.isActive ? faToggleOn : faToggleOff} className="text-base" />
-                    {formData.isActive ? "Activo" : "Inactivo"}
-                  </button>
-                </div>
+                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/30 rounded-xl border border-gray-100 dark:border-gray-800">
+                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Estado de la cuenta</span>
+                    <button type="button" onClick={() => setFormData((prev) => ({ ...prev, isActive: !prev.isActive }))} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${formData.isActive ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-gray-400 text-white shadow-lg shadow-gray-400/20'}`}>
+                      <FontAwesomeIcon icon={formData.isActive ? faToggleOn : faToggleOff} className="text-base" />
+                      {formData.isActive ? 'Activo' : 'Inactivo'}
+                    </button>
+                  </div>
                 </fieldset>
               </div>
             )}
 
-            {modalActiveTab === "domicilio" && (
+            {modalActiveTab === 'domicilio' && (
               <div className="space-y-6 animate-fadeIn">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">País</label>
-                    <select value={formData.paisId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, paisId: parseInt(e.target.value) || undefined }))} className="input-field">
+                    <select value={formData.paisId || ''} onChange={(e) => setFormData((prev) => ({ ...prev, paisId: parseInt(e.target.value) || undefined }))} className="input-field">
                       <option value="">Seleccionar...</option>
                       {countries.map((it) => (
                         <option key={it._id} value={it.data.id}>
@@ -1033,23 +1127,23 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Localidad</label>
-                    <input type="text" value={formData.localidad || ""} onChange={(e) => setFormData((prev) => ({ ...prev, localidad: e.target.value }))} className="input-field" placeholder="Ej: CABA" />
+                    <input type="text" value={formData.localidad || ''} onChange={(e) => setFormData((prev) => ({ ...prev, localidad: e.target.value }))} className="input-field" placeholder="Ej: CABA" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Calle</label>
-                    <input type="text" value={formData.calle || ""} onChange={(e) => setFormData((prev) => ({ ...prev, calle: e.target.value }))} className="input-field" placeholder="Ej: Av. Libertador" />
+                    <input type="text" value={formData.calle || ''} onChange={(e) => setFormData((prev) => ({ ...prev, calle: e.target.value }))} className="input-field" placeholder="Ej: Av. Libertador" />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Altura</label>
-                      <input type="text" value={formData.altura || ""} onChange={(e) => setFormData((prev) => ({ ...prev, altura: e.target.value }))} className="input-field" placeholder="Ej: 1234" />
+                      <input type="text" value={formData.altura || ''} onChange={(e) => setFormData((prev) => ({ ...prev, altura: e.target.value }))} className="input-field" placeholder="Ej: 1234" />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Piso/Depto</label>
-                      <input type="text" value={formData.pisoDepto || ""} onChange={(e) => setFormData((prev) => ({ ...prev, pisoDepto: e.target.value }))} className="input-field" placeholder="Ej: 4B" />
+                      <input type="text" value={formData.pisoDepto || ''} onChange={(e) => setFormData((prev) => ({ ...prev, pisoDepto: e.target.value }))} className="input-field" placeholder="Ej: 4B" />
                     </div>
                   </div>
                 </div>
@@ -1057,12 +1151,12 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Código Postal</label>
-                    <input type="text" value={formData.codigoPostal || ""} onChange={(e) => setFormData((prev) => ({ ...prev, codigoPostal: e.target.value }))} className="input-field" placeholder="Ej: 1425" />
+                    <input type="text" value={formData.codigoPostal || ''} onChange={(e) => setFormData((prev) => ({ ...prev, codigoPostal: e.target.value }))} className="input-field" placeholder="Ej: 1425" />
                   </div>
                   <div className="flex items-center pt-4">
                     <label className="flex items-center space-x-3 cursor-pointer group">
-                      <div className={`w-10 h-6 flex items-center bg-gray-300 dark:bg-gray-700 rounded-full p-1 duration-300 ease-in-out ${formData.visa ? "bg-blue-500 dark:bg-blue-600" : ""}`}>
-                        <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${formData.visa ? "translate-x-4" : ""}`}></div>
+                      <div className={`w-10 h-6 flex items-center bg-gray-300 dark:bg-gray-700 rounded-full p-1 duration-300 ease-in-out ${formData.visa ? 'bg-blue-500 dark:bg-blue-600' : ''}`}>
+                        <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${formData.visa ? 'translate-x-4' : ''}`}></div>
                       </div>
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Visa / Permiso de Trabajo</span>
                       <input type="checkbox" className="hidden" checked={formData.visa} onChange={(e) => setFormData((prev) => ({ ...prev, visa: e.target.checked }))} />
@@ -1073,22 +1167,22 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Teléfono</label>
-                    <input type="text" value={formData.telefono || ""} onChange={(e) => setFormData((prev) => ({ ...prev, telefono: e.target.value }))} className="input-field" placeholder="Ej: 11 1234-5678" />
+                    <input type="text" value={formData.telefono || ''} onChange={(e) => setFormData((prev) => ({ ...prev, telefono: e.target.value }))} className="input-field" placeholder="Ej: 11 1234-5678" />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Teléfono de Emergencia</label>
-                    <input type="text" value={formData.telefono2 || ""} onChange={(e) => setFormData((prev) => ({ ...prev, telefono2: e.target.value }))} className="input-field" placeholder="Ej: 11 8765-4321" />
+                    <input type="text" value={formData.telefono2 || ''} onChange={(e) => setFormData((prev) => ({ ...prev, telefono2: e.target.value }))} className="input-field" placeholder="Ej: 11 8765-4321" />
                   </div>
                 </div>
               </div>
             )}
 
-            {modalActiveTab === "bancarios" && (
+            {modalActiveTab === 'bancarios' && (
               <div className="space-y-6 animate-fadeIn">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Banco</label>
-                    <select value={formData.bancoId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, bancoId: parseInt(e.target.value) || undefined }))} className="input-field">
+                    <select value={formData.bancoId || ''} onChange={(e) => setFormData((prev) => ({ ...prev, bancoId: parseInt(e.target.value) || undefined }))} className="input-field">
                       <option value="">Seleccionar...</option>
                       {banks.map((it) => (
                         <option key={it._id} value={it.data.id}>
@@ -1099,14 +1193,14 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">CBU / CVU</label>
-                    <input type="text" value={formData.cbu || ""} onChange={(e) => setFormData((prev) => ({ ...prev, cbu: e.target.value }))} className="input-field" placeholder="22 dígitos" minLength={22} maxLength={22} />
+                    <input type="text" value={formData.cbu || ''} onChange={(e) => setFormData((prev) => ({ ...prev, cbu: e.target.value }))} className="input-field" placeholder="22 dígitos" minLength={22} maxLength={22} />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tipo de Cuenta</label>
-                    <select value={formData.tipoDeCuentaBancaria || ""} onChange={(e) => setFormData((prev) => ({ ...prev, tipoDeCuentaBancaria: e.target.value }))} className="input-field">
+                    <select value={formData.tipoDeCuentaBancaria || ''} onChange={(e) => setFormData((prev) => ({ ...prev, tipoDeCuentaBancaria: e.target.value }))} className="input-field">
                       <option value="">Seleccionar...</option>
                       <option value="Caja de ahorro $">Caja de ahorro $</option>
                       <option value="Cuenta Corriente $">Cuenta Corriente $</option>
@@ -1115,13 +1209,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Número de Cuenta</label>
-                    <input type="text" value={formData.nroDeCuentaBancaria || ""} onChange={(e) => setFormData((prev) => ({ ...prev, nroDeCuentaBancaria: e.target.value }))} className="input-field" placeholder="Ej: 347-333020/7" />
+                    <input type="text" value={formData.nroDeCuentaBancaria || ''} onChange={(e) => setFormData((prev) => ({ ...prev, nroDeCuentaBancaria: e.target.value }))} className="input-field" placeholder="Ej: 347-333020/7" />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Alias Bancario</label>
-                  <input type="text" value={formData.aliasBancario || ""} onChange={(e) => setFormData((prev) => ({ ...prev, aliasBancario: e.target.value }))} className="input-field" placeholder="Ej: LUNES.MALETA.CUNA" />
+                  <input type="text" value={formData.aliasBancario || ''} onChange={(e) => setFormData((prev) => ({ ...prev, aliasBancario: e.target.value }))} className="input-field" placeholder="Ej: LUNES.MALETA.CUNA" />
                 </div>
               </div>
             )}
