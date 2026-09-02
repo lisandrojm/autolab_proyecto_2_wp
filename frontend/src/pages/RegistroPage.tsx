@@ -4,6 +4,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCircleInfo, faSpinner, faLandmark, faCircleCheck } from '@fortawesome/free-solid-svg-icons';
 import { useSearchParams, Link } from 'react-router-dom';
 import { CuitInput, isValidCuit } from '../components/ui/CuitInput';
+import { sweetAlert } from '../utils/sweetAlert';
+import { mensajeErrorArca } from '../utils/errorArca';
 import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina } from '../utils/nacionalidadDocumento';
 
 type Tab = 'general' | 'domicilio' | 'bancarios';
@@ -367,7 +369,7 @@ export const RegistroPage: React.FC = () => {
   const validarCuitEnArca = async () => {
     const cuit = String(form.cuit || '').replace(/\D/g, '');
     if (!isValidCuit(cuit)) {
-      setError('El CUIT no es válido: revisá los dígitos.');
+      sweetAlert.error('CUIT inválido', 'Revisá los dígitos: con un CUIT que no pasa el verificador, ARCA solo devuelve error.');
       return;
     }
     setConsultandoPadron(true);
@@ -378,13 +380,15 @@ export const RegistroPage: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, cuit }),
       });
-      const data = await res.json();
+      // Puede no ser JSON (una página de error del proxy, por ejemplo): no se puede asumir.
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'ARCA no reconoció ese CUIT.');
+        const m = mensajeErrorArca(res.status, data);
+        sweetAlert.error(m.titulo, m.detalle);
         return;
       }
       if (!data.nombre || !data.apellido) {
-        setError(`ARCA devolvió «${data.denominacion}». Este formulario es para personas.`);
+        sweetAlert.warningAlert('Es una persona jurídica', `ARCA devolvió «${data.denominacion}». Este formulario es para personas: no hay nombre y apellido para separar.`);
         return;
       }
       const tipoDni = tiposDocumentoDisponibles.find((o) => /dni/i.test(o.name));
@@ -398,7 +402,8 @@ export const RegistroPage: React.FC = () => {
       setFieldErrors((prev) => ({ ...prev, firstName: false, lastName: false, documento: false, cuit: false }));
       setValidadoEnArca(true);
     } catch {
-      setError('No se pudo consultar el Padrón. Probá de nuevo en un momento.');
+      const m = mensajeErrorArca(undefined, null);
+      sweetAlert.error(m.titulo, m.detalle);
     } finally {
       setConsultandoPadron(false);
     }
@@ -712,7 +717,9 @@ export const RegistroPage: React.FC = () => {
                   <div>
                     <label className={labelClass}>
                       CUIT / CUIL {cuilObligatorio && <span className="text-red-500">*</span>}
-                      <InfoSinCuit />
+                      {/* Solo para extranjeros: un argentino siempre tiene CUIL, así que la pregunta que
+                          contesta este ⓘ —«¿y si no tengo?»— ahí no existe. */}
+                      {!esArgentino && <InfoSinCuit />}
                     </label>
                     {/* El switch solo tiene sentido para extranjeros: un argentino siempre tiene CUIL. */}
                     {nacionalidadElegida && !esArgentino && (

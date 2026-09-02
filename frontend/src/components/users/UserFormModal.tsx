@@ -10,6 +10,7 @@ import { sweetAlert } from '../../utils/sweetAlert';
 import { afipAPI } from '../../api/afip';
 import { cuitEsValido } from '../../utils/cuit';
 import { generarPassword } from '../../utils/password';
+import { mensajeErrorArca } from '../../utils/errorArca';
 import { fuzzyMatch } from '../../utils/searchHelpers';
 import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina } from '../../utils/nacionalidadDocumento';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -147,7 +148,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
       setValidadoEnArca(true);
       sweetAlert.success('Datos traídos de ARCA', `${r.nombre} ${r.apellido}${r.documento ? ` · DNI ${r.documento}` : ''}`);
     } catch (e: any) {
-      sweetAlert.error('ARCA no reconoció ese CUIT', e?.response?.data?.error || 'No se pudo consultar el Padrón.');
+      const m = mensajeErrorArca(e?.response?.status, e?.response?.data);
+      sweetAlert.error(m.titulo, m.detalle);
     } finally {
       setConsultandoPadron(false);
     }
@@ -715,9 +717,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                       <span className="inline-flex items-center gap-1.5">
                         {/* El asterisco sigue al switch: si dice tenerlo, hay que cargarlo. */}
                         CUIT / CUIL {cuilVisible && <span className="text-red-500">*</span>}
-                        <button type="button" onClick={() => setSinCuitInfoOpen(true)} title="¿Qué pasa si no tiene CUIT/CUIL?" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
-                          <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
-                        </button>
+                        {/* Solo para extranjeros: un argentino siempre tiene CUIL, así que la pregunta que
+                            contesta este ⓘ —«¿y si no tiene?»— ahí no existe. */}
+                        {!esArgentino && (
+                          <button type="button" onClick={() => setSinCuitInfoOpen(true)} title="¿Qué pasa si no tiene CUIT/CUIL?" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
+                            <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </span>
                     </label>
                     {/* El switch solo tiene sentido para extranjeros: un argentino siempre tiene CUIL. */}
