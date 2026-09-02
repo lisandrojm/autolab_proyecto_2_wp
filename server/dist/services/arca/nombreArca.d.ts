@@ -16,16 +16,6 @@ export interface Renombre {
     antes: string;
     ahora: string;
 }
-/**
- * Escribe el nombre de ARCA sobre el de la persona.
- *
- * SE GUARDA TAL CUAL VIENE, en mayúsculas y sin acomodar nada. Cualquier prolijidad que le agreguemos
- * —capitalizar, reordenar— lo aleja de lo que dice el organismo, que es exactamente el valor que
- * tiene el dato.
- *
- * Devuelve el cambio solo si lo hubo. El sello `nombreValidadoArcaAt` se pone igual cuando ya
- * coincidía: lo que afirma es «esto es lo que ARCA tiene», no «esto se cambió».
- */
 export declare function aplicarNombreDeArca(opts: {
     tenantObjectId: any;
     userId: string;

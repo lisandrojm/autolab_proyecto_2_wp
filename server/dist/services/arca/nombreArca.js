@@ -12,6 +12,34 @@ import { normalizarCuit, cuitEsValido } from "../../utils/constanciaPdf.js";
  * Devuelve el cambio solo si lo hubo. El sello `nombreValidadoArcaAt` se pone igual cuando ya
  * coincidía: lo que afirma es «esto es lo que ARCA tiene», no «esto se cambió».
  */
+/** Un token normalizado para comparar: sin acentos, en mayúsculas, sin puntuación. */
+const clave = (x) => String(x || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z]/g, "");
+/**
+ * Reescribe un campo guardado con la grafía EXACTA que devolvió ARCA.
+ *
+ * Se usa cuando el Padrón manda el nombre entero en un solo campo y ya sabemos que las palabras son
+ * las mismas: ahí no hace falta adivinar qué es nombre y qué apellido —eso ya está decidido en la
+ * ficha—, solo tomar de ARCA cómo se escribe cada palabra. Así "martina moreno" queda "MARTINA" y
+ * "MORENO", que es como figura ante el organismo y como tiene que salir en un contrato.
+ *
+ * Cada palabra de ARCA se consume una sola vez, para que un nombre repetido ("JUAN JUAN") no
+ * termine duplicando la misma.
+ */
+const conGrafiaDeArca = (guardado, palabrasDeArca) => {
+    const disponibles = [...palabrasDeArca];
+    return String(guardado || "")
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((palabra) => {
+        const i = disponibles.findIndex((p) => clave(p) === clave(palabra));
+        return i >= 0 ? disponibles.splice(i, 1)[0] : palabra;
+    })
+        .join(" ");
+};
 export async function aplicarNombreDeArca(opts) {
     const { tenantObjectId, userId, cuil, actual, arca } = opts;
     /*
@@ -34,8 +62,18 @@ export async function aplicarNombreDeArca(opts) {
         const guardado = `${actual.firstName || ""} ${actual.lastName || ""}`.trim();
         if (!deArca || !mismoNombre(deArca, guardado))
             return null;
-        await User.updateOne({ _id: userId, tenantId: tenantObjectId }, { $set: { "metadata.nombreValidadoArcaAt": new Date() } });
-        return null; // Confirmado, no renombrado: no hay nada que listar como cambio.
+        // Mismas palabras: se conserva qué es nombre y qué apellido, y se toma de ARCA cómo se escriben.
+        const palabras = deArca.split(/\s+/).filter(Boolean);
+        const nombreArca = conGrafiaDeArca(actual.firstName || "", palabras);
+        const apellidoArca = conGrafiaDeArca(actual.lastName || "", palabras);
+        const cambiaGrafia = nombreArca !== (actual.firstName || "") || apellidoArca !== (actual.lastName || "");
+        await User.updateOne({ _id: userId, tenantId: tenantObjectId }, {
+            $set: {
+                ...(cambiaGrafia ? { firstName: nombreArca, lastName: apellidoArca, "metadata.nombre": nombreArca, "metadata.apellido": apellidoArca } : {}),
+                "metadata.nombreValidadoArcaAt": new Date(),
+            },
+        });
+        return cambiaGrafia ? { userId, cuil, antes: guardado || "(sin nombre cargado)", ahora: `${nombreArca} ${apellidoArca}`.trim() } : null;
     }
     const antes = `${actual.firstName || ""} ${actual.lastName || ""}`.trim();
     const ahora = `${arca.nombre} ${arca.apellido}`.trim();
