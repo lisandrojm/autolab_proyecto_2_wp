@@ -366,6 +366,11 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
       setModalActiveTab("general");
       return;
     }
+    if (bloqueadoHastaValidar) {
+      sweetAlert.error("Falta validar el CUIT", "Apretá «Validar CUIT»: nombre, apellido y documento los trae ARCA, y así el alta queda confirmada contra el organismo.");
+      setModalActiveTab("general");
+      return;
+    }
     try {
       const submitData: any = {
         email: formData.email,
@@ -513,6 +518,19 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
    */
   const cuilVisible = esArgentino || tieneCuil;
 
+  /*
+    CON CUIT, PRIMERO SE VALIDA. Después se llena el resto.
+
+    Nombre, apellido, tipo y número de documento salen del Padrón: dejarlos escribir antes es invitar
+    a tipear algo que el organismo va a contradecir, y el alta queda con un nombre que no es el de
+    ARCA. Los renombres masivos que corregimos venían casi todos de acá.
+
+    Solo aplica al ALTA y solo si la persona declara tener CUIT/CUIL: quien va por el circuito «Sin
+    CUIT» no tiene nada que validar, y una ficha ya creada se corrige desde la columna ARCA de Usuarios.
+  */
+  const bloqueadoHastaValidar = !user && cuilVisible && !validadoEnArca;
+
+
   /** Al cambiar la nacionalidad hay que revisar lo que dependía de ella para no dejar datos inválidos. */
   const handleNacionalidadChange = (nuevoId: number | undefined) => {
     const ahoraEsArgentino = esNacionalidadArgentina(opcionesNacionalidad, nuevoId);
@@ -596,11 +614,11 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                 <FontAwesomeIcon icon={faUser} className="text-xs" />
                 General
               </button>
-              <button type="button" onClick={() => setModalActiveTab("domicilio")} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${modalActiveTab === "domicilio" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+              <button type="button" onClick={() => setModalActiveTab("domicilio")} disabled={bloqueadoHastaValidar} title={bloqueadoHastaValidar ? "Validá el CUIT primero" : undefined} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${modalActiveTab === "domicilio" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
                 <FontAwesomeIcon icon={faMapMarkerAlt} className="text-xs" />
                 Domicilio
               </button>
-              <button type="button" onClick={() => setModalActiveTab("bancarios")} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${modalActiveTab === "bancarios" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+              <button type="button" onClick={() => setModalActiveTab("bancarios")} disabled={bloqueadoHastaValidar} title={bloqueadoHastaValidar ? "Validá el CUIT primero" : undefined} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${modalActiveTab === "bancarios" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
                 <FontAwesomeIcon icon={faUniversity} className="text-xs" />
                 Datos Bancarios
               </button>
@@ -611,35 +629,14 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
             {/* Tab Content */}
             {modalActiveTab === "general" && (
               <div className="space-y-6 animate-fadeIn">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nombre <span className="text-red-500">*</span></label>
-                    <input type="text" required value={formData.firstName} onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))} className="input-field" placeholder="Ej: Juan" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Apellido <span className="text-red-500">*</span></label>
-                    <input type="text" required value={formData.lastName} onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))} className="input-field" placeholder="Ej: Pérez" />
-                  </div>
-                </div>
+                {/*
+                  ORDEN DEL FORMULARIO: nacionalidad → CUIT → lo que ARCA completa.
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Email <span className="text-red-500">*</span></label>
-                    <input type="email" required value={formData.email} onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))} className="input-field" placeholder="usuario@ejemplo.com" />
-                  </div>
-                  {(!user || formData.isSolicitud) && (
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{formData.isSolicitud ? "Asignar Contraseña" : "Contraseña"} <span className="text-red-500">*</span></label>
-                      <div className="relative">
-                        <input type={showPassword ? "text" : "password"} required value={formData.password} onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))} className="input-field pr-10" placeholder="••••••••" minLength={6} />
-                        <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                          <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} className="h-4 w-4 text-gray-400" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
+                  La nacionalidad decide si hay CUIL y qué tipos de documento existen; el CUIT es lo
+                  único que hay que tipear, y de él salen nombre, apellido, tipo y número de documento.
+                  Tenerlos en el orden inverso —escribir a mano un nombre que dos campos más abajo se
+                  iba a pisar con el de ARCA— era hacer dos veces el mismo trabajo.
+                */}
                 {/* La nacionalidad va PRIMERO: de ella dependen el tipo de documento y el CUIL. */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -694,36 +691,69 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                         Tiene CUIT / CUIL argentino
                       </button>
                     )}
-                    <CuitInput
-                      value={cuilVisible ? formData.cuit || "" : ""}
-                      onChange={(v) => setFormData((prev) => ({ ...prev, cuit: v }))}
-                      className={`input-field ${cuilVisible ? "" : "opacity-50 cursor-not-allowed"}`}
-                      placeholder="XX-XXXXXXXX-X"
-                      disabled={!cuilVisible}
-                    />
-                    {!nacionalidadElegida && <p className="text-[11px] text-gray-400 mt-1">Elegí la nacionalidad para completarlo.</p>}
-                    {nacionalidadElegida && !cuilVisible && <p className="text-[11px] text-gray-400 mt-1">Se registra sin CUIT/CUIL. Se puede cargar más adelante.</p>}
-                    {/* Solo en el alta: para alguien ya creado, el sello se pone desde la columna ARCA de Usuarios. */}
-                    {cuilVisible && !user && (
-                      <div className="mt-2">
+                    {/* Input y botón en la misma línea: el botón es lo que hace ese campo, no un paso aparte. */}
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1 min-w-0">
+                        <CuitInput
+                          value={cuilVisible ? formData.cuit || "" : ""}
+                          onChange={(v) => {
+                            setFormData((prev) => ({ ...prev, cuit: v }));
+                            // Tocar el CUIT invalida lo traído: si no, se valida uno y se guarda otro.
+                            setValidadoEnArca(false);
+                          }}
+                          className={`input-field ${cuilVisible ? "" : "opacity-50 cursor-not-allowed"}`}
+                          placeholder="XX-XXXXXXXX-X"
+                          disabled={!cuilVisible}
+                        />
+                      </div>
+                      {/* Solo en el alta: para alguien ya creado, el sello se pone desde la columna ARCA de Usuarios. */}
+                      {cuilVisible && !user && (
                         <button
                           type="button"
                           onClick={traerDeArca}
                           disabled={consultandoPadron || !cuitEsValido(String(formData.cuit || "").replace(/\D/g, ""))}
-                          title="Consulta el Padrón de ARCA y completa nombre, apellido y documento con lo que tiene el organismo"
-                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Consulta el Padrón de ARCA: confirma que el CUIT existe y completa nombre, apellido y documento con lo que tiene el organismo"
+                          className="shrink-0 inline-flex items-center gap-2 px-3 h-[42px] rounded-lg text-xs font-semibold border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                         >
                           <FontAwesomeIcon icon={consultandoPadron ? faSpinner : faLandmark} spin={consultandoPadron} className="h-3 w-3" />
-                          {consultandoPadron ? "Consultando ARCA…" : "Traer datos de ARCA"}
+                          {consultandoPadron ? "Validando…" : "Validar CUIT"}
                         </button>
-                        {validadoEnArca && (
-                          <p className="mt-1.5 text-[11px] text-green-600 dark:text-green-400 inline-flex items-center gap-1.5">
-                            <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3" />
-                            Nombre, apellido y documento son los de ARCA. Se guarda marcado como validado.
-                          </p>
-                        )}
-                      </div>
+                      )}
+                    </div>
+                    {!nacionalidadElegida && <p className="text-[11px] text-gray-400 mt-1">Elegí la nacionalidad para completarlo.</p>}
+                    {nacionalidadElegida && !cuilVisible && <p className="text-[11px] text-gray-400 mt-1">Se registra sin CUIT/CUIL. Se puede cargar más adelante.</p>}
+                    {validadoEnArca && (
+                      <p className="mt-1.5 text-[11px] text-green-600 dark:text-green-400 inline-flex items-center gap-1.5">
+                        <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3" />
+                        Nombre, apellido y documento son los de ARCA. Se guarda marcado como validado.
+                      </p>
                     )}
+                    {bloqueadoHastaValidar && cuilVisible && (
+                      <p className="mt-1.5 text-[11px] text-amber-600 dark:text-amber-400">Validá el CUIT para habilitar el resto del formulario.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/*
+                  TODO LO QUE VIENE DESPUÉS DEL CUIT, DESHABILITADO HASTA VALIDARLO.
+
+                  Se hace con un <fieldset disabled>, que el navegador propaga a TODOS los controles
+                  de adentro: no hay que acordarse de poner `disabled` campo por campo, ni queda
+                  ninguno suelto cuando mañana se agregue otro.
+
+                  Lleva su propio `space-y-6` porque el del contenedor padre solo separa a sus hijos
+                  directos, y ahora el fieldset ES un único hijo: sin esto los bloques de adentro
+                  quedaban pegados uno contra otro.
+                */}
+                <fieldset disabled={bloqueadoHastaValidar} className={`space-y-6 ${bloqueadoHastaValidar ? "opacity-60" : ""}`}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nombre <span className="text-red-500">*</span></label>
+                    <input type="text" required value={formData.firstName} onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))} className="input-field" placeholder="Ej: Juan" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Apellido <span className="text-red-500">*</span></label>
+                    <input type="text" required value={formData.lastName} onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))} className="input-field" placeholder="Ej: Pérez" />
                   </div>
                 </div>
 
@@ -743,6 +773,24 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Documento <span className="text-red-500">*</span></label>
                     <input type="text" required value={formData.documento || ""} onChange={(e) => setFormData((prev) => ({ ...prev, documento: e.target.value }))} className="input-field" placeholder={esArgentino ? "Nº de documento" : "DNI / Pasaporte"} disabled={!nacionalidadElegida} />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Email <span className="text-red-500">*</span></label>
+                    <input type="email" required value={formData.email} onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))} className="input-field" placeholder="usuario@ejemplo.com" />
+                  </div>
+                  {(!user || formData.isSolicitud) && (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{formData.isSolicitud ? "Asignar Contraseña" : "Contraseña"} <span className="text-red-500">*</span></label>
+                      <div className="relative">
+                        <input type={showPassword ? "text" : "password"} required value={formData.password} onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))} className="input-field pr-10" placeholder="••••••••" minLength={6} />
+                        <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                          <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} className="h-4 w-4 text-gray-400" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -965,6 +1013,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     {formData.isActive ? "Activo" : "Inactivo"}
                   </button>
                 </div>
+                </fieldset>
               </div>
             )}
 

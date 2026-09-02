@@ -68,6 +68,11 @@
 
   .input-field {
     @apply w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white;
+    /* Un campo apagado tiene que VERSE apagado. Sin esto se dibujaba igual que uno activo y la única
+       señal era que no aceptaba el cursor, que se descubre recién al intentar escribir.
+       `:disabled` cubre también los campos dentro de un <fieldset disabled>. */
+    @apply disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200 disabled:cursor-not-allowed;
+    @apply dark:disabled:bg-gray-800/60 dark:disabled:text-gray-500 dark:disabled:border-gray-700;
   }
 
   .line-clamp-2 {
