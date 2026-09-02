@@ -44,9 +44,15 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, 
       case "95":
         return "max-w-[95vw]";
       case "fullscreen":
-        return "max-w-[98vw] max-h-svh";
+        // `100svh` a secas se pasa: el contenedor de afuera tiene `p-2`, así que un panel de alto
+        // completo deja el overlay 16px más largo que la pantalla y aparece un scroll de un renglón
+        // que no lleva a ningún lado. Se le descuenta ese padding.
+        return "max-w-[98vw] max-h-[calc(100svh-1rem)]";
       case "full":
-        return "max-w-[1600px] h-[96svh]";
+        // 98vw, con tope: la tabla de Reportes tiene ~14 columnas y a 1600px quedaban márgenes
+        // grandes al costado mientras el contenido scrolleaba en horizontal. El tope de 2200px es
+        // para que en un monitor ultrawide no se estire hasta volverse incómoda de leer.
+        return "max-w-[min(98vw,2200px)] h-[96svh]";
       default:
         return "max-w-2xl";
     }

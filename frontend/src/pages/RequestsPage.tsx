@@ -164,21 +164,18 @@ export const RequestsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
   const [listLayout, setListLayout] = useState<"table" | "cards">("table");
-  // Persistida: así al volver del detalle de una novedad (o tras recargar) seguís en Cumplimiento.
-  const [showCompliance, setShowCompliance] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem("novedades_showCompliance") === "true";
-    } catch {
-      return false;
-    }
-  });
-  useEffect(() => {
-    try {
-      localStorage.setItem("novedades_showCompliance", String(showCompliance));
-    } catch {
-      /* storage no disponible */
-    }
-  }, [showCompliance]);
+  /*
+    Cumplimiento de coordinadores es un MODAL, no una vista que reemplaza la lista.
+
+    Antes `showCompliance` cambiaba el contenido de la página: abrirlo hacía desaparecer la tabla de
+    novedades, y para cotejar un DEM-REG del calendario contra la lista había que cerrarlo y volver a
+    abrirlo. Ahora la tabla queda siempre atrás y el calendario se superpone.
+
+    Tampoco se persiste ya en localStorage: recordar "estaba abierto" tenía sentido cuando era una
+    vista —volvías del detalle y seguías donde estabas—, pero un modal que se reabre solo en cada
+    recarga es una molestia. La lista, que es lo que hay que no perder, ahora nunca se va.
+  */
+  const [showCompliance, setShowCompliance] = useState(false);
 
   // Force cards view on screen resize < 1200px
   useEffect(() => {
@@ -1020,11 +1017,11 @@ export const RequestsPage: React.FC = () => {
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         <div className="flex items-center gap-2">
-          <button onClick={() => setShowCompliance((v) => !v)} className={`p-2 rounded transition-colors flex items-center gap-2 text-sm ${showCompliance ? "bg-blue-700 text-white ring-2 ring-blue-300 dark:ring-blue-500" : "bg-blue-600 text-white hover:bg-blue-700"}`} aria-label="Cumplimiento de coordinadores" title="Cumplimiento de coordinadores">
-            <FontAwesomeIcon icon={faCalendarCheck} className="h-4 w-4" />
-          </button>
           <button onClick={() => setShowStatsModal(true)} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen" title="Resumen de Novedades">
             <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
+          </button>
+          <button onClick={() => setShowCompliance((v) => !v)} className={`p-2 rounded transition-colors flex items-center gap-2 text-sm ${showCompliance ? "bg-blue-700 text-white ring-2 ring-blue-300 dark:ring-blue-500" : "bg-blue-600 text-white hover:bg-blue-700"}`} aria-label="Cumplimiento de coordinadores" title="Cumplimiento de coordinadores">
+            <FontAwesomeIcon icon={faCalendarCheck} className="h-4 w-4" />
           </button>
           <button onClick={() => setShowReportsModal(true)} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Reportes" title="Reportes">
             <FontAwesomeIcon icon={faFileLines} className="h-4 w-4" />
@@ -1121,10 +1118,10 @@ export const RequestsPage: React.FC = () => {
           </div>
 
           <div className="hidden min-[1200px]:flex items-center gap-2 shrink-0">
-            <button onClick={() => { setShowCompliance(false); setListLayout("cards"); }} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${!showCompliance && listLayout === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
+            <button onClick={() => setListLayout("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${listLayout === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
               <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
             </button>
-            <button onClick={() => { setShowCompliance(false); setListLayout("table"); }} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${!showCompliance && listLayout === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
+            <button onClick={() => setListLayout("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${listLayout === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
               <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
             </button>
           </div>
@@ -1133,18 +1130,7 @@ export const RequestsPage: React.FC = () => {
     >
       <div className="space-y-6">
         {/* List Content */}
-        {showCompliance ? (
-          <ComplianceView
-            projectFilter={projectFilter}
-            areaFilter={areaFilter}
-            shiftFilter={shiftFilter}
-            onOpenReport={(reportNumber) => {
-              const rep = reports.find((r) => r.reportNumber === reportNumber);
-              if (rep) handleViewDetail(rep);
-              else sweetAlert.error("Novedad no encontrada", `No se pudo abrir ${reportNumber}. Puede haber sido eliminada.`);
-            }}
-          />
-        ) : loading ? (
+        {loading ? (
           <div className="flex justify-center items-center py-12">
             <LoadingSpinner message="Cargando novedades..." />
           </div>
@@ -1305,6 +1291,23 @@ export const RequestsPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      <Modal isOpen={showCompliance} onClose={() => setShowCompliance(false)} title="Cumplimiento de coordinadores" subtitle="Qué novedades se esperaban de cada coordinador y cuáles faltan." size="fullscreen">
+        <ComplianceView
+          projectFilter={projectFilter}
+          areaFilter={areaFilter}
+          shiftFilter={shiftFilter}
+          onOpenReport={(reportNumber) => {
+            const rep = reports.find((r) => r.reportNumber === reportNumber);
+            // Abrir el detalle reemplaza la pantalla entera, así que el modal se cierra primero: si
+            // no, al volver de la novedad el calendario seguiría tapando la lista.
+            if (rep) {
+              setShowCompliance(false);
+              handleViewDetail(rep);
+            } else sweetAlert.error("Novedad no encontrada", `No se pudo abrir ${reportNumber}. Puede haber sido eliminada.`);
+          }}
+        />
+      </Modal>
 
       <Modal isOpen={showStatsModal} onClose={() => setShowStatsModal(false)} title="Resumen de Novedades" size="md">
         <div className="space-y-4">
