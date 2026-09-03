@@ -337,6 +337,8 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission('config_convenios:view')) base.push({ path: '/convenios', icon: faFileContract, label: 'Convenios', scope: 'global' });
       // `config_sindicatos:view` es nuevo: hasta que se tilde en los roles se muestra a quien ya
       // administra Convenios, que es la configuración más cercana (misma familia de relación laboral).
+      // Queda SUELTO en Configuración, no adentro del subgrupo ARCA: Convenios está ahí por ser un
+      // nomenclador del organismo, y este catálogo es propio de la plataforma. Ver `configPaths`.
       if (hasPermission('config_sindicatos:view') || hasPermission('config_convenios:view')) base.push({ path: '/sindicatos', icon: faPeopleGroup, label: 'Sindicatos', scope: 'global' });
       if (hasPermission('config_centros_costo:view')) base.push({ path: '/centros-costo', icon: faPiggyBank, label: 'Centros de Costos', scope: 'global' });
       if (hasPermission('config_contratos_frame:view')) base.push({ path: '/contratos-frame', icon: faFilePdf, label: 'Contratos', scope: 'global' });
@@ -446,7 +448,7 @@ export const MobileNavbar: React.FC = () => {
 
     // Ojo: los paths de CONFIG_GROUPS (Plantillas, ARCA, Usuarios, Documentos) NO van acá: se sacan
     // del listado plano para meterlos adentro de su subgrupo, y dejarlos también acá los duplicaría.
-    const configPaths = ['/requests/config', '/order-types', '/vacations-rules', '/holidays', '/clients', '/centros-costo', '/bancos', '/contratos', '/releases-tipos', '/admin/sedes'];
+    const configPaths = ['/requests/config', '/order-types', '/vacations-rules', '/holidays', '/clients', '/centros-costo', '/bancos', '/sindicatos', '/contratos', '/releases-tipos', '/admin/sedes'];
     // "Mi Perfil" está en los DOS lados a propósito: como atajo en la barra de arriba (junto al
     // usuario) y acá, para quien lo busca recorriendo el menú. Entra en el orden alfabético.
     const profileItem = { path: '/mi-perfil', icon: faIdCard, label: 'Mi Perfil', scope: 'global' as const };
