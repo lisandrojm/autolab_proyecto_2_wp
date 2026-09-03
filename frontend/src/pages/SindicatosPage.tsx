@@ -21,6 +21,9 @@ export const SindicatosPage: React.FC = () => (
     entityLabel="sindicato"
     api={sindicatosApi}
     templateBaseName="sindicatos"
+    /* Se carga a mano y no lo identifica ningún organismo: el "ID Externo" acá era una columna
+       siempre vacía. Ver `showExternalId` en SimpleCatalogManager. */
+    showExternalId={false}
     extraFields={[
       {
         key: "sigla",

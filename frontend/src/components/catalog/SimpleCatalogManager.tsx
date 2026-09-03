@@ -108,6 +108,18 @@ interface SimpleCatalogManagerProps {
   resumen?: (items: SimpleCatalogItem[]) => React.ReactNode;
   /** Clave de ayuda para el modal de info (i). */
   helpKey?: HelpKey;
+  /**
+   * ¿Este catálogo EXPONE su `externalId`? Default `true`.
+   *
+   * En `false` desaparece de la pantalla —columna, tarjeta y campo del formulario— y deja de viajar
+   * en los payloads de alta y edición. El campo sigue existiendo en el modelo y el backend lo sigue
+   * aceptando: lo que cambia es que esta pantalla no lo pide ni lo muestra.
+   *
+   * Existe para los catálogos que NO vienen de FRAME ni de un nomenclador de ARCA, donde ese id no
+   * tiene ningún significado y aparecía como una columna vacía que hay que explicar (Sindicatos es
+   * el primero: se carga a mano, no lo identifica ningún organismo).
+   */
+  showExternalId?: boolean;
   /** Etiqueta de "ID Externo" (columna, campo del form, badge de tarjeta), por si en este catálogo
    *  ese id tiene otro nombre de dominio (ej. Obras Sociales → "RNOS"). Default: "ID Externo". */
   externalIdLabel?: string;
@@ -138,7 +150,7 @@ interface SimpleCatalogManagerProps {
   pestanas?: Array<{ id: string; label: string; icon?: IconDefinition; render: (items: SimpleCatalogItem[], recargar: () => Promise<void>) => React.ReactNode }>;
 }
 
-export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], extraSeccion, helpKey, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, externalIdNumerico, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia, extraSuperior, resumen }) => {
+export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], extraSeccion, helpKey, showExternalId = true, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, externalIdNumerico, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia, extraSuperior, resumen }) => {
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
   const [tabActiva, setTabActiva] = useState<string>('catalogo');
   const [loading, setLoading] = useState(true);
@@ -246,8 +258,11 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
    * que produce `formatExternalId`.
    */
   const textoBuscable = (it: SimpleCatalogItem): string => {
-    const id = String(it.externalId || '');
-    const partes = [it.name || '', id, id.replace(/[^a-zA-Z0-9]/g, ''), formatExternalId ? formatExternalId(id) : ''];
+    // Con la columna oculta el id sale del buscador: si no está en pantalla, un registro que aparece
+    // por coincidir con él se lee como un resultado sin causa —el problema inverso al que este
+    // buscador vino a resolver—.
+    const id = showExternalId ? String(it.externalId || '') : '';
+    const partes = [it.name || '', id, id.replace(/[^a-zA-Z0-9]/g, ''), formatExternalId && id ? formatExternalId(id) : ''];
     // Los campos extra son columnas de la tabla en varios catálogos (el signatario del convenio, el
     // tipo de entidad de un banco). Se toman los de texto: un select guarda un id que nadie tipea.
     for (const f of extraFields) {
@@ -317,14 +332,19 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
       return;
     }
     const extraPayload = Object.fromEntries(extraFields.map((f) => [f.key, String(extraValues[f.key] ?? '').trim()]));
-    const cleanExternalId = sanitizeExternalId ? sanitizeExternalId(externalId.trim()) : externalId.trim();
+    /*
+      Con el campo oculto el id NO viaja, y la diferencia importa al EDITAR: mandarlo como `''`
+      —que es lo que tendría el input que nunca se dibujó— le borraría al registro el `externalId`
+      que ya tuviera guardado. Omitir la clave deja el valor intacto del lado del servidor.
+    */
+    const externalIdPayload = showExternalId ? { externalId: sanitizeExternalId ? sanitizeExternalId(externalId.trim()) : externalId.trim() } : {};
     setSaving(true);
     try {
       if (editing) {
-        await api.update(editing._id, { nombre: nombre.trim(), externalId: cleanExternalId, ...extraPayload });
+        await api.update(editing._id, { nombre: nombre.trim(), ...externalIdPayload, ...extraPayload });
         sweetAlert.success('Actualizado', `${title} actualizado correctamente.`);
       } else {
-        await api.create({ nombre: nombre.trim(), externalId: cleanExternalId, ...extraPayload });
+        await api.create({ nombre: nombre.trim(), ...externalIdPayload, ...extraPayload });
         sweetAlert.success('Creado', `Registro de ${entityLabel} creado.`);
       }
       setShowModal(false);
@@ -486,7 +506,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
               header={{
                 title: item.name,
                 icon,
-                badges: [...extraFields.filter((f) => f.showColumn && item[f.key]).map((f) => ({ text: extraDisplay(f, item[f.key]), variant: 'cyan' as const })), ...(item.externalId ? [{ text: `${externalIdLabel} ${formatExternalId ? formatExternalId(item.externalId) : item.externalId}`, variant: 'blue' as const }] : [])],
+                badges: [...extraFields.filter((f) => f.showColumn && item[f.key]).map((f) => ({ text: extraDisplay(f, item[f.key]), variant: 'cyan' as const })), ...(showExternalId && item.externalId ? [{ text: `${externalIdLabel} ${formatExternalId ? formatExternalId(item.externalId) : item.externalId}`, variant: 'blue' as const }] : [])],
               }}
               footer={{
                 actions: [
@@ -553,7 +573,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                 {/* `w-px` + `whitespace-nowrap`: la columna se encoge a lo que mide el código y no
                     lo parte. Un RNOS cortado en dos renglones ("9-0500-" / "8") deja de leerse como
                     un código y no se puede cotejar de un vistazo contra un padrón de ARCA. */}
-                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">{externalIdLabel}</th>
+                {showExternalId && <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">{externalIdLabel}</th>}
                 <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
@@ -580,7 +600,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                       {c.render(item)}
                     </td>
                   ))}
-                  <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono whitespace-nowrap w-px">{item.externalId ? (formatExternalId ? formatExternalId(item.externalId) : item.externalId) : '—'}</td>
+                  {showExternalId && <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono whitespace-nowrap w-px">{item.externalId ? (formatExternalId ? formatExternalId(item.externalId) : item.externalId) : '—'}</td>}
                   <td className="px-5 py-3 text-sm text-right">
                     <button onClick={() => openEdit(item)} className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 mr-3" title="Editar">
                       <FontAwesomeIcon icon={faEdit} />
@@ -652,6 +672,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                   )}
                 </div>
               ))}
+              {showExternalId && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{externalIdLabel} (opcional)</label>
                 {/*
@@ -670,6 +691,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                 />
                 {externalIdNumerico && <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Solo números: es el id con el que FRAME lo identifica, y se compara como número.</p>}
               </div>
+              )}
               {/* Va al final y separado: lo de arriba se guarda con «Guardar», esto se guarda solo. */}
               {editing && extraSeccion && <div className="border-t border-gray-200 dark:border-gray-700 pt-4">{extraSeccion(editing)}</div>}
         </div>
@@ -692,7 +714,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
               </button>
             </div>
             <div className="px-5 py-4 space-y-3">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Descargá la plantilla, completala y subila acá. Los registros se actualizan/crean por nombre o {externalIdLabel.toLowerCase()}.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Descargá la plantilla, completala y subila acá. Los registros se actualizan/crean por nombre{showExternalId ? ` o ${externalIdLabel.toLowerCase()}` : ''}.</p>
               <label className="flex items-center gap-3 px-4 py-6 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900/30">
                 <FontAwesomeIcon icon={faFileExcel} className="text-emerald-600 text-xl" />
                 <span className="text-sm text-gray-600 dark:text-gray-300">{importFile ? importFile.name : 'Seleccionar archivo .xlsx'}</span>
