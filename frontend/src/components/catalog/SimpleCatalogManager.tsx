@@ -505,6 +505,8 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
               className="cursor-pointer hover:scale-[1.03] hover:shadow-lg transition-all duration-200"
               header={{
                 title: item.name,
+                // Los nombres de catálogo son largos y se parecen entre sí: ver `titleLines` en Card.
+                titleLines: 2 as const,
                 icon,
                 badges: [...extraFields.filter((f) => f.showColumn && item[f.key]).map((f) => ({ text: extraDisplay(f, item[f.key]), variant: 'cyan' as const })), ...(showExternalId && item.externalId ? [{ text: `${externalIdLabel} ${formatExternalId ? formatExternalId(item.externalId) : item.externalId}`, variant: 'blue' as const }] : [])],
               }}

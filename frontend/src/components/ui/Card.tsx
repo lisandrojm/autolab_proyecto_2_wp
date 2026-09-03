@@ -43,6 +43,16 @@ type BreadcrumbsProps = {
 
 interface CardHeaderProps {
   title: React.ReactNode;
+  /**
+   * En cuántas líneas puede entrar el título antes de cortarse. Default `1`.
+   *
+   * El default es una línea porque en casi todas las tarjetas el título es corto —una persona, un
+   * cliente, un proyecto— y ahí una segunda línea solo desalinearía la grilla. Los catálogos son la
+   * excepción: "Asociación Gremial de Operadores de Sistemas Informáticos y Afines de la República
+   * Argentina" cortado a una línea queda en "Asociación Gremial de Operadores de Sistem…", que no
+   * alcanza para distinguirlo de los otros tres que empiezan igual.
+   */
+  titleLines?: 1 | 2;
   subtitle?: string;
   icon?: IconDefinition;
   iconClassName?: string;
@@ -223,7 +233,12 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
 
                 <div className="min-w-0 flex-1 flex justify-between items-start">
                   <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm truncate">{header.title}</h3>
+                    {/* `title` nativo siempre: en una y en dos líneas el nombre puede cortarse, y el
+                        tooltip es la única forma de leerlo entero sin abrir la tarjeta. Solo se pone
+                        cuando el título es texto — un nodo React no se puede volcar a un atributo. */}
+                    <h3 title={typeof header.title === 'string' ? header.title : undefined} className={`font-semibold text-gray-900 dark:text-white text-sm ${header.titleLines === 2 ? 'line-clamp-2' : 'truncate'}`}>
+                      {header.title}
+                    </h3>
                     {header.subtitle && <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{header.subtitle}</p>}
                   </div>
                   <div className="flex items-center gap-2">
