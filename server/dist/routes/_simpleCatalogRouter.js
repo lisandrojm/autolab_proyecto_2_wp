@@ -1,6 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import xlsx from "xlsx";
+import mongoose from "mongoose";
 import { authenticateToken } from "../middleware/auth.js";
 /**
  * Convierte a número lo que llega de un formulario. Devuelve `undefined` para "sin valor" —vacío,
@@ -13,11 +14,53 @@ const aNumeroOpcional = (v) => {
     const n = Number(v);
     return Number.isFinite(n) ? n : undefined;
 };
+/**
+ * Tres resultados y no dos:
+ *   `undefined` → no vino en el body: el campo no se toca.
+ *   `null`      → vino vacío a propósito: se desvincula.
+ *   ObjectId    → se vincula.
+ *
+ * Un id mal formado NO se convierte a `null`: eso es la misma clase de bug que descartar un campo
+ * desconocido y contestar 200 —el cliente pidió una cosa, pasó otra, y nadie se enteró—.
+ */
+const parsearRef = (campo, v) => {
+    if (v === undefined)
+        return {}; // no vino: `valor` queda undefined y el campo no se toca
+    const s = v === null ? "" : String(v).trim();
+    if (s === "" || s === "null")
+        return { valor: null }; // desvincular: `null` NO es `undefined`
+    if (!mongoose.Types.ObjectId.isValid(s))
+        return { motivo: `${campo}: "${s}" no es un id válido.` };
+    return { valor: new mongoose.Types.ObjectId(s) };
+};
 export function createSimpleCatalogRouter(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 model, config) {
     const router = Router();
     const upload = multer({ storage: multer.memoryStorage() });
+    /**
+     * Las claves que este catálogo sabe guardar. Todo lo demás es un error del cliente.
+     *
+     * El schema de Mongoose es `strict` por defecto, así que un campo que no está declarado se
+     * DESCARTA EN SILENCIO y la respuesta vuelve 200: quien mandó el update cree que guardó algo que
+     * no se guardó, y lo descubre recién cuando recarga. Un update que no guarda nada no puede
+     * contestar OK, así que se corta antes con un 400 que dice qué clave sobra.
+     *
+     * El nombre y el id externo entran con sus tres vocabularios porque el cliente usa cualquiera de
+     * ellos: el del catálogo (`nombre`/`externalId`) y el de ARCA (`descripcion`/`codigo`).
+     */
+    const CLAVES_ACEPTADAS = new Set([
+        "nombre",
+        "name",
+        "descripcion",
+        "externalId",
+        "codigo",
+        ...(config.extraStringFields || []).map((f) => f.key),
+        ...(config.extraNumberFields || []).map((f) => f.key),
+        ...(config.extraRefFields || []).map((f) => f.key),
+    ]);
+    /** Las claves del body que este catálogo no sabe guardar. Vacío = todo bien. */
+    const clavesDeMas = (body) => (body && typeof body === "object" ? Object.keys(body).filter((k) => !CLAVES_ACEPTADAS.has(k)) : []);
     /**
      * Las operaciones de upsert de una carga masiva. La usan el import de Excel y el de lote JSON: son
      * la misma semántica y separarlas es garantizar que en algún momento se comporten distinto.
@@ -46,9 +89,21 @@ model, config) {
         };
     });
     // GET / - listar
-    router.get("/", authenticateToken, async (_req, res) => {
+    router.get("/", authenticateToken, async (req, res) => {
         try {
-            const items = await model.find().sort({ name: 1 }).lean();
+            // Solo los declarados en `filtrosPermitidos`; el resto de la query se ignora. Un catálogo sin
+            // esa lista se comporta exactamente como antes.
+            const filtro = {};
+            for (const campo of config.filtrosPermitidos || []) {
+                const valor = req.query[campo];
+                if (valor === undefined)
+                    continue;
+                filtro[campo] = valor === "null" || valor === "" ? null : valor;
+            }
+            let consulta = model.find(filtro).sort({ name: 1 });
+            for (const p of config.populate || [])
+                consulta = consulta.populate(p.path, p.select);
+            const items = await consulta.lean();
             res.json(items);
         }
         catch (error) {
@@ -202,6 +257,15 @@ model, config) {
                     if (val !== undefined && val !== null && String(val).trim() !== "")
                         extras[f.key] = String(val).trim();
                 }
+                for (const f of config.extraRefFields || []) {
+                    const ref = parsearRef(f.key, item[f.key]);
+                    if (ref.motivo) {
+                        errores.push(`Registro ${i + 1}: ${ref.motivo}`);
+                        return;
+                    }
+                    if (ref.valor !== undefined)
+                        extras[f.key] = ref.valor;
+                }
                 parsed.push({ externalId: config.sanitizeExternalId ? config.sanitizeExternalId(rawExternalId) : rawExternalId, nombre, extras });
             });
             if (errores.length > 0) {
@@ -225,6 +289,11 @@ model, config) {
     // POST / - crear manualmente
     router.post("/", authenticateToken, async (req, res) => {
         try {
+            const sobran = clavesDeMas(req.body);
+            if (sobran.length > 0) {
+                res.status(400).json({ error: `Campos no reconocidos para ${config.entityLabel}: ${sobran.join(", ")}`, campos: sobran });
+                return;
+            }
             const { nombre, externalId } = req.body;
             if (!nombre || !nombre.trim()) {
                 res.status(400).json({ error: "El nombre es obligatorio" });
@@ -247,6 +316,15 @@ model, config) {
                 if (n !== undefined)
                     newItem[f.key] = n;
             }
+            for (const f of config.extraRefFields || []) {
+                const ref = parsearRef(f.key, req.body[f.key]);
+                if (ref.motivo) {
+                    res.status(400).json({ error: ref.motivo });
+                    return;
+                }
+                if (ref.valor !== undefined)
+                    newItem[f.key] = ref.valor;
+            }
             const created = await model.create(newItem);
             res.status(201).json(created);
         }
@@ -259,6 +337,11 @@ model, config) {
     router.put("/:id", authenticateToken, async (req, res) => {
         try {
             const { id } = req.params;
+            const sobran = clavesDeMas(req.body);
+            if (sobran.length > 0) {
+                res.status(400).json({ error: `Campos no reconocidos para ${config.entityLabel}: ${sobran.join(", ")}`, campos: sobran });
+                return;
+            }
             const { nombre, externalId } = req.body;
             const item = await model.findById(id);
             if (!item) {
@@ -287,6 +370,15 @@ model, config) {
                 // `undefined` = el cliente no lo mandó (no se toca). Vacío/null = se limpia a `null`.
                 if (bruto !== undefined)
                     item[f.key] = aNumeroOpcional(bruto) ?? null;
+            }
+            for (const f of config.extraRefFields || []) {
+                const ref = parsearRef(f.key, req.body[f.key]);
+                if (ref.motivo) {
+                    res.status(400).json({ error: ref.motivo });
+                    return;
+                }
+                if (ref.valor !== undefined)
+                    item[f.key] = ref.valor;
             }
             await item.save();
             res.json(item);

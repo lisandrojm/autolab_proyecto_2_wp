@@ -38,6 +38,38 @@ export interface SimpleCatalogConfig {
         key: string;
     }>;
     /**
+     * Campos que son una REFERENCIA a otro documento (ej. Convenios → `sindicatoId`).
+     *
+     * Aparte de los numéricos porque el modo de fallar es otro: `Number("x")` da NaN y se descarta,
+     * pero un ObjectId mal formado hace estallar el `save` con un CastError que llega al cliente como
+     * un 500 sin causa. Acá se valida antes y se contesta 400 diciendo cuál es el campo.
+     *
+     * `null` es un valor que se GUARDA (desvincular), distinto de `undefined` = "no vino en el body,
+     * no se toca". Sin esa diferencia no habría forma de sacarle el sindicato a un convenio.
+     *
+     * NO participan del import de Excel: una planilla trae texto, y resolver ese texto a un documento
+     * es exactamente lo que no se puede automatizar sobre este dominio.
+     */
+    extraRefFields?: Array<{
+        key: string;
+    }>;
+    /**
+     * Qué popular en el listado, para que el front no resuelva las refs con un pedido por fila.
+     * Ej. Convenios → `{ path: "sindicatoId", select: "_id name sigla" }`.
+     */
+    populate?: Array<{
+        path: string;
+        select: string;
+    }>;
+    /**
+     * Query params por los que se puede filtrar el listado. Lista blanca explícita: pasar `req.query`
+     * como filtro dejaría armar consultas arbitrarias sobre la colección.
+     *
+     * El valor `"null"` (texto) filtra por ausencia — los convenios sin gremio son un subconjunto que
+     * se consulta como cualquier otro.
+     */
+    filtrosPermitidos?: string[];
+    /**
      * Encabezado de columna del Excel (plantilla + import) para "ID Externo", por si en este catálogo
      * ese id tiene otro nombre de dominio (ej. Obras Sociales → "RNOS"). Default: "ID Externo (opcional)".
      * Los alias de import siempre incluyen además "ID Externo (opcional)"/"ID Externo"/"externalId"/"Id"/"ID".

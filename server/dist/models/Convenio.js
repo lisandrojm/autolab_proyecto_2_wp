@@ -4,6 +4,10 @@ const convenioSchema = new Schema({
     name: { type: String, required: true },
     signatario: { type: String },
     obraSocialDefaultId: { type: Number },
+    // `index` porque se filtra por él (los convenios de un sindicato) sobre 2.669 documentos.
+    // `default: null` y no ausente: acá el vacío es una respuesta ("no tiene gremio"), no una falta.
+    sindicatoId: { type: Schema.Types.ObjectId, ref: "Sindicato", default: null, index: true },
+    sindicatosAdicionalesIds: [{ type: Schema.Types.ObjectId, ref: "Sindicato" }],
     /*
       Sin `default` a nivel schema y a propósito: el default de los 2.669 es la AUSENCIA del campo, y
       ponerle uno escribiría "sin_revisar" en cada documento que se toque por cualquier otro motivo.

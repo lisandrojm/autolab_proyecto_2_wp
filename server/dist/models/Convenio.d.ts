@@ -1,4 +1,4 @@
-import { Document, Model } from "mongoose";
+import mongoose, { Document, Model } from "mongoose";
 /**
  * Convenio Colectivo de Trabajo (CCT) del nomenclador de AFIP/ARCA — Simplificación Registral.
  *
@@ -25,6 +25,28 @@ export interface IConvenio extends Document {
      * CONVENIO", que por definición no tiene sindicato: ahí manda la default de la empleadora.
      */
     obraSocialDefaultId?: number;
+    /**
+     * EL SINDICATO QUE FIRMÓ ESTE CONVENIO. Ref al catálogo `Sindicato`.
+     *
+     * La relación se guarda ACÁ y no como una lista de convenios en el sindicato: es N:1 —SATSAID
+     * firma el 0131/75 y el 0634/11— y del lado del convenio hay un solo valor que mantener. Un array
+     * del otro lado sería el mismo dato escrito dos veces, con la posibilidad de que discrepen.
+     *
+     * `null` es un valor legítimo y FRECUENTE, no un pendiente: el 9999/99 «EXCLUIDO DE CONVENIO» no
+     * tiene gremio por definición, y de los 2.669 la enorme mayoría nombra seccionales provinciales y
+     * gremios de empresa que no están en el maestro de 180. Se completa cuando una empresa registra el
+     * convenio y hay alguien que sabe cuál es el gremio; nunca por inferencia sobre `signatario`.
+     */
+    sindicatoId?: mongoose.Types.ObjectId | null;
+    /**
+     * Co-firmantes, cuando del lado laboral firmó más de una entidad.
+     *
+     * Existe porque el caso es real, pero es la excepción: por eso van aparte y no reemplazan a
+     * `sindicatoId` por un array. Con N:M pura, «el sindicato de este convenio» —que es la pregunta
+     * que se hace todo el tiempo— dejaría de tener una respuesta y habría que elegir una de la lista
+     * en cada consumidor, cada uno con su propio criterio. Se guarda y se lee; hoy no tiene UI.
+     */
+    sindicatosAdicionalesIds?: mongoose.Types.ObjectId[];
     /**
      * DÓNDE PUBLICA SUS PARITARIAS ESTE CONVENIO — la parte que se declara a mano.
      *
