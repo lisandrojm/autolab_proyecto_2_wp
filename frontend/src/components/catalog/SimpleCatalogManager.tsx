@@ -362,22 +362,6 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
 
   // Arranca acotado salvo que el catálogo diga lo contrario (ver `arrancaAcotado`).
   const [soloDestacados, setSoloDestacados] = useState(filtroDestacado?.arrancaAcotado !== false);
-  /*
-    LA BÚSQUEDA SE APLICA PRIMERO, y de ahí salen los recuentos de los botones.
-
-    Antes contaban sobre el catálogo entero mientras la tabla mostraba el cruce de búsqueda y filtro,
-    así que con algo escrito en el buscador los números no correspondían a nada de lo que se veía: el
-    botón decía «(2)» sobre una tabla de 1 fila, y pasar a «Ver todos (180)» no cambiaba ninguna fila
-    porque la búsqueda seguía mandando. El filtro parecía inerte.
-
-    Contando sobre lo buscado, el número de cada botón es exactamente lo que aparece al tocarlo.
-  */
-  const coincideBusqueda = (it: SimpleCatalogItem) => !search.trim() || fuzzyMatch(textoBuscable(it), search);
-  const buscados = items.filter(coincideBusqueda);
-  const destacados = filtroDestacado ? buscados.filter(filtroDestacado.aplica) : buscados;
-  const recorteCliente = filtroServidor?.opciones.find((o) => o.value === filtroServidorValor)?.clienteOnly;
-  const itemsFiltrados = recorteCliente ? buscados.filter(recorteCliente) : buscados;
-  const base = filtroDestacado && soloDestacados ? destacados : itemsFiltrados;
   /**
    * Dónde busca el buscador: en TODO lo que la tabla muestra.
    *
@@ -407,6 +391,28 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
     }
     return partes.filter(Boolean).join(' ');
   };
+
+  /*
+    LA BÚSQUEDA SE APLICA PRIMERO, y de ahí salen los recuentos de los botones.
+
+    Antes contaban sobre el catálogo entero mientras la tabla mostraba el cruce de búsqueda y filtro,
+    así que con algo escrito en el buscador los números no correspondían a nada de lo que se veía: el
+    botón decía «(2)» sobre una tabla de 1 fila, y pasar a «Ver todos (180)» no cambiaba ninguna fila
+    porque la búsqueda seguía mandando. El filtro parecía inerte.
+
+    Contando sobre lo buscado, el número de cada botón es exactamente lo que aparece al tocarlo.
+
+    VA DESPUÉS de `textoBuscable` y no antes: `coincideBusqueda` lo invoca, y `buscados` corre en la
+    línea siguiente. Declarado más arriba, ese `const` todavía está en su zona muerta temporal y la
+    pantalla muere con "Cannot access 'textoBuscable' before initialization". No lo ve `tsc`: la
+    referencia vive dentro de una closure y el compilador no sigue cuándo se la llama.
+  */
+  const coincideBusqueda = (it: SimpleCatalogItem) => !search.trim() || fuzzyMatch(textoBuscable(it), search);
+  const buscados = items.filter(coincideBusqueda);
+  const destacados = filtroDestacado ? buscados.filter(filtroDestacado.aplica) : buscados;
+  const recorteCliente = filtroServidor?.opciones.find((o) => o.value === filtroServidorValor)?.clienteOnly;
+  const itemsFiltrados = recorteCliente ? buscados.filter(recorteCliente) : buscados;
+  const base = filtroDestacado && soloDestacados ? destacados : itemsFiltrados;
 
   // `base` ya viene con la búsqueda aplicada (ver `buscados`): volver a filtrar acá sería hacer dos
   // veces el mismo recorrido sobre los 2.669 de Convenios, en cada tecla.
