@@ -17,9 +17,18 @@ import { getHelp, hasHelp, HelpKey } from '../../data/help/helpContent';
 export interface CatalogExtraField {
   key: string;
   label: string;
-  type?: 'text' | 'select';
-  /** Opciones para type "select". El value es lo que se persiste; el label lo que se muestra. */
+  /**
+   * `ref` es un select BUSCABLE sobre otro catálogo (ej. Convenios → Sindicato).
+   *
+   * Va aparte de `select` porque el `<select>` nativo no se puede buscar, y con 180 opciones
+   * encontrar una es scrollear a ojo. Se persiste el `_id`, y VACÍO SE MANDA COMO CADENA VACÍA:
+   * el server la traduce a `null` (desvincular), que es distinto de no mandar la clave (no tocar).
+   */
+  type?: 'text' | 'select' | 'ref';
+  /** Opciones para type "select" y "ref". El value es lo que se persiste; el label lo que se muestra. */
   options?: Array<{ value: string; label: string }>;
+  /** Solo `ref`: texto de ayuda del buscador. */
+  searchPlaceholder?: string;
   required?: boolean;
   /** Si se muestra como columna en la vista de tabla. */
   showColumn?: boolean;
@@ -39,6 +48,27 @@ interface SimpleCatalogManagerProps {
   templateBaseName: string;
   /** Campos extra propios del catálogo (ej. Bancos → "Tipo de Entidad"). */
   extraFields?: CatalogExtraField[];
+  /**
+   * Un filtro que resuelve el SERVIDOR, al lado del buscador.
+   *
+   * Distinto del buscador y de `filtroDestacado`, que trabajan sobre lo ya cargado: acá cada cambio
+   * vuelve a pedir la lista con el parámetro puesto. Es lo que corresponde cuando el subconjunto no
+   * se puede sacar de lo que hay en memoria —o cuando lo que hay en memoria es todo el catálogo y
+   * traer menos es justamente el punto—.
+   *
+   * `clienteOnly` marca las opciones que el server NO sabe resolver: se piden sin filtro y se
+   * recortan acá. Existe para "Con sindicato", que necesitaría `$ne: null` y el filtro del server es
+   * por igualdad. Es un recorrido por cambio de opción, no por tecla.
+   */
+  filtroServidor?: {
+    /** Nombre del query param, ej. "sindicatoId". */
+    param: string;
+    /** Texto de la opción vacía (sin filtro). */
+    etiquetaTodos: string;
+    opciones: Array<{ value: string; label: string; clienteOnly?: (item: SimpleCatalogItem) => boolean }>;
+    /** Valor elegido desde afuera, para poder abrir la pantalla ya filtrada por un link. */
+    valorInicial?: string;
+  };
   /**
    * Bloque propio del catálogo, al final del formulario de edición.
    *
@@ -150,8 +180,74 @@ interface SimpleCatalogManagerProps {
   pestanas?: Array<{ id: string; label: string; icon?: IconDefinition; render: (items: SimpleCatalogItem[], recargar: () => Promise<void>) => React.ReactNode }>;
 }
 
-export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], extraSeccion, helpKey, showExternalId = true, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, externalIdNumerico, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia, extraSuperior, resumen }) => {
+/**
+ * Selector buscable de una referencia, para `type: 'ref'`.
+ *
+ * Un combo y no un modal: el formulario ya vive adentro de uno, y anidar ventanas para elegir un
+ * valor de una lista es más ceremonia de la que el campo merece.
+ *
+ * VACÍO ES UN VALOR, no la ausencia de uno: limpiar deja `''`, que el manager manda igual y el
+ * server traduce a `null`. Si en vez de eso se omitiera la clave, desvincular sería imposible —el
+ * server dejaría el valor anterior— y limpiar el campo se vería como que no pasó nada.
+ */
+const RefField: React.FC<{ campo: CatalogExtraField; valor: string; onChange: (v: string) => void }> = ({ campo, valor, onChange }) => {
+  const [abierto, setAbierto] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
+  const opciones = campo.options || [];
+  const elegida = opciones.find((o) => o.value === valor);
+  // `fuzzyMatch` sobre el label, que ya trae sigla y nombre juntos: así "SATSAID" y "televisión"
+  // encuentran el mismo registro sin pedirle al que busca que sepa cuál de los dos está cargado.
+  const filtradas = busqueda.trim() ? opciones.filter((o) => fuzzyMatch(o.label, busqueda)) : opciones;
+
+  if (elegida && !abierto) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white truncate" title={elegida.label}>
+          {elegida.label}
+        </span>
+        <button type="button" onClick={() => { setBusqueda(''); setAbierto(true); }} className="px-2 py-2 text-xs text-blue-600 dark:text-blue-400 hover:underline shrink-0">
+          Cambiar
+        </button>
+        {/* Limpiar manda `''`, que el server convierte en `null`. Es la única forma de desvincular. */}
+        <button type="button" onClick={() => onChange('')} title="Quitar" className="px-2 py-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 shrink-0">
+          <FontAwesomeIcon icon={faTimes} className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <input
+        type="text"
+        autoFocus={abierto}
+        value={busqueda}
+        onChange={(e) => setBusqueda(e.target.value)}
+        placeholder={campo.searchPlaceholder || 'Buscar...'}
+        className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white"
+      />
+      <div className="mt-1 max-h-48 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60">
+        {filtradas.slice(0, 50).map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => { onChange(o.value); setAbierto(false); setBusqueda(''); }}
+            className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+          >
+            {o.label}
+          </button>
+        ))}
+        {filtradas.length === 0 && <div className="px-3 py-4 text-center text-xs text-gray-500 italic">Sin resultados</div>}
+        {/* El corte se dice: una lista que se queda en 50 sin avisar parece que no tiene el resto. */}
+        {filtradas.length > 50 && <div className="px-3 py-2 text-center text-[11px] text-gray-400">y {filtradas.length - 50} más — afiná la búsqueda</div>}
+      </div>
+    </div>
+  );
+};
+
+export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], filtroServidor, extraSeccion, helpKey, showExternalId = true, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, externalIdNumerico, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia, extraSuperior, resumen }) => {
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
+  const [filtroServidorValor, setFiltroServidorValor] = useState(filtroServidor?.valorInicial || '');
   const [tabActiva, setTabActiva] = useState<string>('catalogo');
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -191,11 +287,17 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
 
   // Valor por defecto de un campo extra al crear (primer option del select, o "").
   const defaultExtra = (f: CatalogExtraField): string => (f.type === 'select' && f.options && f.options.length > 0 ? f.options[0].value : '');
+  /** El valor de formulario de un campo del registro. Para `ref` es el id, venga poblado o pelado. */
+  const idDeRef = (f: CatalogExtraField, valor: unknown): string => {
+    if (valor == null) return defaultExtra(f);
+    if (f.type === 'ref') return typeof valor === 'object' ? String((valor as { _id?: unknown })._id ?? '') : String(valor);
+    return String(valor);
+  };
   // Etiqueta legible de un valor guardado (mapea value → label en selects).
   const extraDisplay = (f: CatalogExtraField, value: unknown): string => {
     const v = value == null ? '' : String(value);
     if (!v) return '—';
-    if (f.type === 'select') return f.options?.find((o) => o.value === v)?.label ?? v;
+    if (f.type === 'select' || f.type === 'ref') return f.options?.find((o) => o.value === v)?.label ?? v;
     return v;
   };
 
@@ -217,10 +319,14 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
    */
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = async (valorFiltro = filtroServidorValor) => {
     setLoading(true);
     try {
-      const data = await api.list();
+      // La opción marcada `clienteOnly` no viaja: el server no la sabe resolver, así que se pide todo
+      // y se recorta abajo, en `base`.
+      const opcion = filtroServidor?.opciones.find((o) => o.value === valorFiltro);
+      const params = filtroServidor && valorFiltro && !opcion?.clienteOnly ? { [filtroServidor.param]: valorFiltro } : undefined;
+      const data = await api.list(params);
       setItems(data);
       setLoadError(null);
     } catch (err: any) {
@@ -242,7 +348,9 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
   // Arranca ACOTADO cuando el catálogo trae filtro destacado: el universo es referencia, no trabajo.
   const [soloDestacados, setSoloDestacados] = useState(true);
   const destacados = filtroDestacado ? items.filter(filtroDestacado.aplica) : items;
-  const base = filtroDestacado && soloDestacados ? destacados : items;
+  const recorteCliente = filtroServidor?.opciones.find((o) => o.value === filtroServidorValor)?.clienteOnly;
+  const itemsFiltrados = recorteCliente ? items.filter(recorteCliente) : items;
+  const base = filtroDestacado && soloDestacados ? destacados : itemsFiltrados;
   /**
    * Dónde busca el buscador: en TODO lo que la tabla muestra.
    *
@@ -317,7 +425,12 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
     setEditing(item);
     setNombre(item.name || '');
     setExternalId((formatExternalId ? formatExternalId(item.externalId || '') : item.externalId) || '');
-    setExtraValues(Object.fromEntries(extraFields.map((f) => [f.key, item[f.key] != null ? String(item[f.key]) : defaultExtra(f)])));
+    /*
+      Una `ref` poblada llega como `{_id, name, sigla}`, no como un id: `String(objeto)` daría
+      "[object Object]", que después se mandaría como sindicatoId y el server lo rechazaría por id
+      inválido. Se extrae el `_id`; si vino sin popular (un id pelado), se usa tal cual.
+    */
+    setExtraValues(Object.fromEntries(extraFields.map((f) => [f.key, idDeRef(f, item[f.key])])));
     setShowModal(true);
   };
 
@@ -464,6 +577,25 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
       {resumen && <div className="mb-4">{resumen(items)}</div>}
       <div className="mb-4 flex flex-col md:flex-row gap-4 items-center justify-between">
         <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Buscar ${entityLabel}...`} className="w-full max-w-md px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white" />
+        {filtroServidor && (
+          <select
+            value={filtroServidorValor}
+            onChange={(e) => {
+              setFiltroServidorValor(e.target.value);
+              // Se le pasa el valor nuevo: `load` leería el del estado, que en este tick todavía es
+              // el viejo, y la lista quedaría un cambio atrás.
+              void load(e.target.value);
+            }}
+            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white"
+          >
+            <option value="">{filtroServidor.etiquetaTodos}</option>
+            {filtroServidor.opciones.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        )}
         <div className="flex items-center gap-3 shrink-0">
           {/* Dos estados, no un checkbox suelto: el contador de cada uno dice cuánto es "el universo"
               y cuánto "lo que se usa", que es la diferencia que hace útil el filtro. */}
@@ -489,7 +621,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
           <div className="min-w-0">
             <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">{loadError}</p>
             <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">No es que el catálogo esté vacío: la consulta no llegó a responder. Si el problema sigue, revisá que el servidor esté levantado.</p>
-            <button type="button" onClick={load} className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-400 dark:border-amber-700 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors">
+            <button type="button" onClick={() => void load()} className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-400 dark:border-amber-700 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors">
               Reintentar
             </button>
           </div>
@@ -669,6 +801,8 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                         </option>
                       ))}
                     </select>
+                  ) : f.type === 'ref' ? (
+                    <RefField campo={f} valor={extraValues[f.key] ?? ''} onChange={(v) => setExtraValues((prev) => ({ ...prev, [f.key]: v }))} />
                   ) : (
                     <input type="text" value={extraValues[f.key] ?? ''} onChange={(e) => setExtraValues((prev) => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.placeholder} className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white" />
                   )}

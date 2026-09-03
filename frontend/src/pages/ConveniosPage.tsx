@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileContract, faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
@@ -19,6 +19,33 @@ import { vigilanciaDe, avisoDeVigilancia, textoUltimaRevision } from "../compone
 import { formatearInstante } from "../utils/fechas";
 
 const conveniosApi = createSimpleCatalogApi("/convenios");
+const sindicatosApi = createSimpleCatalogApi("/sindicatos");
+
+/*
+  Los dos valores del filtro que no son un sindicato puntual.
+
+  `FILTRO_SIN` vale literalmente "null" porque es lo que el server entiende como "sin asignar"
+  (`filtrosPermitidos` traduce el texto "null" al valor null). `FILTRO_CON` no viaja: no hay un
+  filtro de desigualdad del otro lado, así que se resuelve en el cliente.
+*/
+const FILTRO_SIN = "null";
+const FILTRO_CON = "__con__";
+
+/** El sindicato de un convenio, ya poblado por el server como {_id, name, sigla}. */
+interface SindicatoPoblado {
+  _id: string;
+  name: string;
+  sigla?: string;
+}
+const sindicatoDe = (c: SimpleCatalogItem): SindicatoPoblado | null => {
+  const v = c.sindicatoId;
+  return v && typeof v === "object" ? (v as SindicatoPoblado) : null;
+};
+/** Cómo se nombra un sindicato en una lista: sigla adelante, que es como se lo conoce. */
+const etiquetaSindicato = (s: { name: string; sigla?: unknown }): string => {
+  const sigla = typeof s.sigla === "string" ? s.sigla.trim() : "";
+  return sigla ? `${sigla} — ${s.name}` : s.name;
+};
 const obrasSocialesApi = createSimpleCatalogApi("/obras-sociales");
 
 /**
@@ -81,6 +108,13 @@ const EmpresasDelConvenioModal: React.FC<{
 };
 
 export const ConveniosPage: React.FC = () => {
+  /*
+    Permite entrar acá ya filtrado por un gremio, con `/convenios?sindicatoId=<id>`. Es lo que usa el
+    ABM de Sindicatos para mostrar «sus» convenios: reusa esta pantalla completa —columnas, buscador,
+    paritarias, edición— en vez de construir una vista de detalle que mostraría lo mismo peor.
+  */
+  const [paramsUrl] = useSearchParams();
+  const sindicatoDelLink = paramsUrl.get("sindicatoId") || "";
   const [obrasSociales, setObrasSociales] = useState<SimpleCatalogItem[]>([]);
   /** Qué empresas registraron cada convenio, por `_id`. */
   const [empresasPorConvenio, setEmpresasPorConvenio] = useState<Map<string, Company[]>>(new Map());
@@ -110,6 +144,8 @@ export const ConveniosPage: React.FC = () => {
    * lista de códigos que cada fuente tiene hoy.
    */
   const [fuentes, setFuentes] = useState<FuenteParitaria[]>([]);
+  /** Los 180 sindicatos, para el selector del formulario y para el filtro de arriba. */
+  const [sindicatos, setSindicatos] = useState<SimpleCatalogItem[]>([]);
   /**
    * Convenios en uso que nadie revisó. Sale del SERVER, no se recalcula acá.
    *
@@ -136,6 +172,15 @@ export const ConveniosPage: React.FC = () => {
       setFuentes([]);
     }
   };
+  useEffect(() => {
+    // Con su propio catch: si el catálogo de sindicatos no responde, la pantalla de convenios tiene
+    // que seguir funcionando — lo único que se pierde es poder asignar o filtrar por gremio.
+    void sindicatosApi
+      .list()
+      .then((s) => setSindicatos(Array.isArray(s) ? s : []))
+      .catch(() => setSindicatos([]));
+  }, []);
+
   useEffect(() => {
     void cargarParitarias();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -276,6 +321,28 @@ export const ConveniosPage: React.FC = () => {
     );
   };
 
+  /**
+   * La columna SINDICATO: chip azul con la sigla, nombre completo en el tooltip.
+   *
+   * CHIP y no texto plano a propósito. «Fuente de paritarias», dos columnas más allá, también imprime
+   * nombres de gremio —y para la mayoría de los convenios va a decir lo mismo, porque la fuente suele
+   * ser el sitio del propio gremio—. La forma es lo único que las distingue de un vistazo: esta es un
+   * dato del convenio, aquella es dónde se buscan sus acuerdos.
+   */
+  const renderSindicato = (c: ConvenioFila) => {
+    const s = sindicatoDe(c as SimpleCatalogItem);
+    if (!s) return <span className="text-gray-400 dark:text-gray-600">—</span>;
+    return (
+      <span
+        title={s.name}
+        className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800"
+      >
+        {/* La sigla si la hay; si no, el nombre, que es lo único que queda para identificarlo. */}
+        {typeof s.sigla === 'string' && s.sigla.trim() ? s.sigla.trim() : s.name}
+      </span>
+    );
+  };
+
   return (
     <>
       <SimpleCatalogManager
@@ -294,6 +361,25 @@ export const ConveniosPage: React.FC = () => {
         // cargarle la obra social a uno que nadie usa es trabajo perdido, y los 2.664 restantes
         // llenaban la columna de guiones como si faltaran 2.664 configuraciones.
         filtroDestacado={{ etiqueta: "Registrados por alguna empresa", aplica: (c) => (empresasPorConvenio.get(c._id) || []).length > 0 }}
+        /*
+          Filtro por gremio. Los 180 y «Sin sindicato» los resuelve el SERVER (`?sindicatoId=…`, y
+          `null` para los que no tienen); «Con sindicato» se recorta acá porque el filtro del server
+          es por igualdad y esto necesitaría `$ne: null`. Es un recorrido por cambio de opción, no
+          por tecla.
+
+          «Sin sindicato» primero y no al final de los 180: con 2.665 de 2.669 sin asignar, es la
+          consulta que se va a hacer todos los días.
+        */
+        filtroServidor={{
+          param: "sindicatoId",
+          etiquetaTodos: "Todos los sindicatos",
+          valorInicial: sindicatoDelLink,
+          opciones: [
+            { value: FILTRO_SIN, label: "Sin sindicato" },
+            { value: FILTRO_CON, label: "Con sindicato", clienteOnly: (c) => !!sindicatoDe(c) },
+            ...sindicatos.map((s) => ({ value: s._id, label: etiquetaSindicato(s as { name: string; sigla?: unknown }) })),
+          ],
+        }}
         // LA MISMA tabla que usa la ficha de empresa: eran dos, con encabezados distintos para los
         // mismos datos ("Nombre" vs "Actividad", el código al final vs primero) y ya habían divergido.
         // Acá se le suma la columna "Empresas" y las acciones de ABM que aporta el manager.
@@ -323,6 +409,7 @@ export const ConveniosPage: React.FC = () => {
           <ConveniosTable
             convenios={items as ConvenioFila[]}
             obraSocialDe={(c) => ({ os: porDataId(c.obraSocialDefaultId) })}
+            renderSindicato={renderSindicato}
             renderEmpresas={(c) => {
               const lista = empresasPorConvenio.get(c._id) || [];
               if (lista.length === 0) return <span className="text-gray-400 dark:text-gray-600">—</span>;
@@ -350,6 +437,19 @@ export const ConveniosPage: React.FC = () => {
         extraFields={[
           { key: "signatario", label: "Signatario", placeholder: "Ej: FAECYS" },
           { key: "obraSocialDefaultId", label: "Obra social del convenio", type: "select", options: opcionesObraSocial },
+          /*
+            El gremio firmante. NO se sugiere ni se autocompleta a partir del signatario: ese texto es
+            inconsistente —el orden de las partes varía, los nombres no coinciden con el maestro, y la
+            mayoría de los 2.669 nombra seccionales que no están entre los 180—, así que cualquier
+            propuesta automática acierta poco y se acepta sin mirar. Se elige a mano o queda vacío.
+          */
+          {
+            key: "sindicatoId",
+            label: "Sindicato firmante",
+            type: "ref",
+            searchPlaceholder: "Buscar por nombre o sigla...",
+            options: sindicatos.map((s) => ({ value: s._id, label: etiquetaSindicato(s as { name: string; sigla?: unknown }) })),
+          },
         ]}
         /*
           Las empresas que lo tienen registrado, editables desde acá.
