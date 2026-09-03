@@ -1,7 +1,7 @@
 import { Router, Response } from "express";
 import multer from "multer";
 import xlsx from "xlsx";
-import { Model } from "mongoose";
+import mongoose, { Model } from "mongoose";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 
 /**
@@ -35,6 +35,33 @@ export interface SimpleCatalogConfig {
    * no trae este dato.
    */
   extraNumberFields?: Array<{ key: string }>;
+  /**
+   * Campos que son una REFERENCIA a otro documento (ej. Convenios → `sindicatoId`).
+   *
+   * Aparte de los numéricos porque el modo de fallar es otro: `Number("x")` da NaN y se descarta,
+   * pero un ObjectId mal formado hace estallar el `save` con un CastError que llega al cliente como
+   * un 500 sin causa. Acá se valida antes y se contesta 400 diciendo cuál es el campo.
+   *
+   * `null` es un valor que se GUARDA (desvincular), distinto de `undefined` = "no vino en el body,
+   * no se toca". Sin esa diferencia no habría forma de sacarle el sindicato a un convenio.
+   *
+   * NO participan del import de Excel: una planilla trae texto, y resolver ese texto a un documento
+   * es exactamente lo que no se puede automatizar sobre este dominio.
+   */
+  extraRefFields?: Array<{ key: string }>;
+  /**
+   * Qué popular en el listado, para que el front no resuelva las refs con un pedido por fila.
+   * Ej. Convenios → `{ path: "sindicatoId", select: "_id name sigla" }`.
+   */
+  populate?: Array<{ path: string; select: string }>;
+  /**
+   * Query params por los que se puede filtrar el listado. Lista blanca explícita: pasar `req.query`
+   * como filtro dejaría armar consultas arbitrarias sobre la colección.
+   *
+   * El valor `"null"` (texto) filtra por ausencia — los convenios sin gremio son un subconjunto que
+   * se consulta como cualquier otro.
+   */
+  filtrosPermitidos?: string[];
   /**
    * Encabezado de columna del Excel (plantilla + import) para "ID Externo", por si en este catálogo
    * ese id tiene otro nombre de dominio (ej. Obras Sociales → "RNOS"). Default: "ID Externo (opcional)".
@@ -70,6 +97,31 @@ const aNumeroOpcional = (v: unknown): number | undefined => {
   return Number.isFinite(n) ? n : undefined;
 };
 
+/**
+ * Una referencia parseada desde el body, o el motivo por el que no se pudo.
+ *
+ * Se devuelve el motivo en vez de lanzar porque el que llama tiene que poder decir QUÉ campo estaba
+ * mal: "sindicatoId inválido" se corrige solo, "500" no.
+ */
+type RefParseada = { valor?: mongoose.Types.ObjectId | null; motivo?: string };
+
+/**
+ * Tres resultados y no dos:
+ *   `undefined` → no vino en el body: el campo no se toca.
+ *   `null`      → vino vacío a propósito: se desvincula.
+ *   ObjectId    → se vincula.
+ *
+ * Un id mal formado NO se convierte a `null`: eso es la misma clase de bug que descartar un campo
+ * desconocido y contestar 200 —el cliente pidió una cosa, pasó otra, y nadie se enteró—.
+ */
+const parsearRef = (campo: string, v: unknown): RefParseada => {
+  if (v === undefined) return {}; // no vino: `valor` queda undefined y el campo no se toca
+  const s = v === null ? "" : String(v).trim();
+  if (s === "" || s === "null") return { valor: null }; // desvincular: `null` NO es `undefined`
+  if (!mongoose.Types.ObjectId.isValid(s)) return { motivo: `${campo}: "${s}" no es un id válido.` };
+  return { valor: new mongoose.Types.ObjectId(s) };
+};
+
 interface SimpleCatalogDoc {
   externalId?: string;
   name: string;
@@ -86,13 +138,38 @@ export function createSimpleCatalogRouter(
   const upload = multer({ storage: multer.memoryStorage() });
 
   /**
+   * Las claves que este catálogo sabe guardar. Todo lo demás es un error del cliente.
+   *
+   * El schema de Mongoose es `strict` por defecto, así que un campo que no está declarado se
+   * DESCARTA EN SILENCIO y la respuesta vuelve 200: quien mandó el update cree que guardó algo que
+   * no se guardó, y lo descubre recién cuando recarga. Un update que no guarda nada no puede
+   * contestar OK, así que se corta antes con un 400 que dice qué clave sobra.
+   *
+   * El nombre y el id externo entran con sus tres vocabularios porque el cliente usa cualquiera de
+   * ellos: el del catálogo (`nombre`/`externalId`) y el de ARCA (`descripcion`/`codigo`).
+   */
+  const CLAVES_ACEPTADAS = new Set<string>([
+    "nombre",
+    "name",
+    "descripcion",
+    "externalId",
+    "codigo",
+    ...(config.extraStringFields || []).map((f) => f.key),
+    ...(config.extraNumberFields || []).map((f) => f.key),
+    ...(config.extraRefFields || []).map((f) => f.key),
+  ]);
+
+  /** Las claves del body que este catálogo no sabe guardar. Vacío = todo bien. */
+  const clavesDeMas = (body: unknown): string[] => (body && typeof body === "object" ? Object.keys(body as Record<string, unknown>).filter((k) => !CLAVES_ACEPTADAS.has(k)) : []);
+
+  /**
    * Las operaciones de upsert de una carga masiva. La usan el import de Excel y el de lote JSON: son
    * la misma semántica y separarlas es garantizar que en algún momento se comporten distinto.
    *
    * Se setean las claves de `data` una por una en lugar de reemplazar el objeto: si se pisara entero,
    * reimportar borraría los campos que no vienen en la carga (ej. la marca de obra social por defecto).
    */
-  const construirUpserts = (parsed: Array<{ externalId: string; nombre: string; extras: Record<string, string> }>) =>
+  const construirUpserts = (parsed: Array<{ externalId: string; nombre: string; extras: Record<string, unknown> }>) =>
     parsed.map((item) => {
       const idNum = item.externalId ? Number(item.externalId) : undefined;
       const set: Record<string, unknown> = {
@@ -114,9 +191,19 @@ export function createSimpleCatalogRouter(
     });
 
   // GET / - listar
-  router.get("/", authenticateToken, async (_req: AuthenticatedRequest, res: Response) => {
+  router.get("/", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const items = await model.find().sort({ name: 1 }).lean();
+      // Solo los declarados en `filtrosPermitidos`; el resto de la query se ignora. Un catálogo sin
+      // esa lista se comporta exactamente como antes.
+      const filtro: Record<string, unknown> = {};
+      for (const campo of config.filtrosPermitidos || []) {
+        const valor = req.query[campo];
+        if (valor === undefined) continue;
+        filtro[campo] = valor === "null" || valor === "" ? null : valor;
+      }
+      let consulta = model.find(filtro).sort({ name: 1 });
+      for (const p of config.populate || []) consulta = consulta.populate(p.path, p.select);
+      const items = await consulta.lean();
       res.json(items);
     } catch (error) {
       console.error(`Get ${config.sheetName} error:`, error);
@@ -268,7 +355,7 @@ export function createSimpleCatalogRouter(
       }
 
       const errores: string[] = [];
-      const parsed: Array<{ externalId: string; nombre: string; extras: Record<string, string> }> = [];
+      const parsed: Array<{ externalId: string; nombre: string; extras: Record<string, unknown> }> = [];
 
       items.forEach((item, i) => {
         // Se aceptan los dos vocabularios: el del catálogo (`nombre`/`externalId`) y el del dominio
@@ -279,10 +366,18 @@ export function createSimpleCatalogRouter(
           errores.push(`Registro ${i + 1}: falta el nombre.`);
           return;
         }
-        const extras: Record<string, string> = {};
+        const extras: Record<string, unknown> = {};
         for (const f of config.extraStringFields || []) {
           const val = item[f.key];
           if (val !== undefined && val !== null && String(val).trim() !== "") extras[f.key] = String(val).trim();
+        }
+        for (const f of config.extraRefFields || []) {
+          const ref = parsearRef(f.key, item[f.key]);
+          if (ref.motivo) {
+            errores.push(`Registro ${i + 1}: ${ref.motivo}`);
+            return;
+          }
+          if (ref.valor !== undefined) extras[f.key] = ref.valor;
         }
         parsed.push({ externalId: config.sanitizeExternalId ? config.sanitizeExternalId(rawExternalId) : rawExternalId, nombre, extras });
       });
@@ -309,6 +404,11 @@ export function createSimpleCatalogRouter(
   // POST / - crear manualmente
   router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const sobran = clavesDeMas(req.body);
+      if (sobran.length > 0) {
+        res.status(400).json({ error: `Campos no reconocidos para ${config.entityLabel}: ${sobran.join(", ")}`, campos: sobran });
+        return;
+      }
       const { nombre, externalId } = req.body as { nombre?: string; externalId?: string };
       if (!nombre || !nombre.trim()) {
         res.status(400).json({ error: "El nombre es obligatorio" });
@@ -329,6 +429,14 @@ export function createSimpleCatalogRouter(
         const n = aNumeroOpcional((req.body as Record<string, unknown>)[f.key]);
         if (n !== undefined) newItem[f.key] = n;
       }
+      for (const f of config.extraRefFields || []) {
+        const ref = parsearRef(f.key, (req.body as Record<string, unknown>)[f.key]);
+        if (ref.motivo) {
+          res.status(400).json({ error: ref.motivo });
+          return;
+        }
+        if (ref.valor !== undefined) newItem[f.key] = ref.valor;
+      }
       const created = await model.create(newItem);
       res.status(201).json(created);
     } catch (error) {
@@ -341,6 +449,11 @@ export function createSimpleCatalogRouter(
   router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
+      const sobran = clavesDeMas(req.body);
+      if (sobran.length > 0) {
+        res.status(400).json({ error: `Campos no reconocidos para ${config.entityLabel}: ${sobran.join(", ")}`, campos: sobran });
+        return;
+      }
       const { nombre, externalId } = req.body as { nombre?: string; externalId?: string };
 
       const item = await model.findById(id);
@@ -369,6 +482,14 @@ export function createSimpleCatalogRouter(
         const bruto = (req.body as Record<string, unknown>)[f.key];
         // `undefined` = el cliente no lo mandó (no se toca). Vacío/null = se limpia a `null`.
         if (bruto !== undefined) item[f.key] = aNumeroOpcional(bruto) ?? null;
+      }
+      for (const f of config.extraRefFields || []) {
+        const ref = parsearRef(f.key, (req.body as Record<string, unknown>)[f.key]);
+        if (ref.motivo) {
+          res.status(400).json({ error: ref.motivo });
+          return;
+        }
+        if (ref.valor !== undefined) item[f.key] = ref.valor;
       }
 
       await item.save();
