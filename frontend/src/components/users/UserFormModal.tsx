@@ -419,6 +419,18 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
       setModalActiveTab('general');
       return;
     }
+    /*
+      Afiliado/a pero sin gremio elegido no es un estado que se pueda guardar.
+
+      Guardado así sería indistinguible de "no afiliado/a" para cualquiera que lea la ficha —el dato
+      no dice a qué sindicato, que es lo único que lo hace servir para algo—, con la diferencia de
+      que además afirma una afiliación. O se elige el gremio, o se apaga el switch.
+    */
+    if (formData.afiliadoAlSindicato && (formData.sindicatoIds || []).length === 0) {
+      sweetAlert.error('Falta el sindicato', 'Está encendido "Afiliado a un sindicato": elegí al menos uno, o apagá el switch para registrar a la persona como no afiliada.');
+      setModalActiveTab('general');
+      return;
+    }
     if (bloqueadoHastaValidar) {
       sweetAlert.error('Falta validar el CUIT', 'Apretá «Validar CUIT»: nombre, apellido y documento los trae ARCA, y así el alta queda confirmada contra el organismo.');
       setModalActiveTab('general');
@@ -1091,6 +1103,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                         <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
                       </button>
                     </label>
+                    {/* Mismo marco que "Afiliación sindical" y "Roles de Sistema": los tres son
+                        bloques de elección múltiple, y encuadrarlos igual los agrupa a la vista en
+                        vez de dejarlos como campos sueltos entre inputs de una sola línea. */}
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30">
                     {(formData.rolesFrameIds || []).length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mb-2">
                         {(formData.rolesFrameIds || []).map((id) => {
@@ -1116,6 +1132,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                       <span className="text-gray-400 dark:text-gray-500">Elegí uno o más roles…</span>
                       <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400 ml-auto shrink-0" />
                     </button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1136,7 +1153,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Afiliación sindical</label>
                     <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 space-y-4">
                       <label className="flex items-center space-x-3 cursor-pointer group w-fit">
-                        <div className={`w-10 h-6 flex items-center bg-gray-300 dark:bg-gray-700 rounded-full p-1 duration-300 ease-in-out ${formData.afiliadoAlSindicato ? 'bg-blue-500 dark:bg-blue-600' : ''}`}>
+                        <div className={`w-10 h-6 flex items-center rounded-full p-1 duration-300 ease-in-out ${formData.afiliadoAlSindicato ? 'bg-blue-500 dark:bg-blue-600' : 'bg-gray-300 dark:bg-gray-700'}`}>
                           <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${formData.afiliadoAlSindicato ? 'translate-x-4' : ''}`}></div>
                         </div>
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Afiliado a un sindicato</span>
@@ -1152,7 +1169,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                       */}
                       {formData.afiliadoAlSindicato && (
                         <div>
-                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Sindicato</label>
+                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                            Sindicato <span className="text-red-500">*</span>
+                          </label>
                           {sindicatosElegidos.length > 0 && (
                             <div className="flex flex-wrap gap-1.5 mb-2">
                               {sindicatosElegidos.map((sind) => (
@@ -1342,7 +1361,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                   </div>
                   <div className="flex items-center pt-4">
                     <label className="flex items-center space-x-3 cursor-pointer group">
-                      <div className={`w-10 h-6 flex items-center bg-gray-300 dark:bg-gray-700 rounded-full p-1 duration-300 ease-in-out ${formData.visa ? 'bg-blue-500 dark:bg-blue-600' : ''}`}>
+                      <div className={`w-10 h-6 flex items-center rounded-full p-1 duration-300 ease-in-out ${formData.visa ? 'bg-blue-500 dark:bg-blue-600' : 'bg-gray-300 dark:bg-gray-700'}`}>
                         <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${formData.visa ? 'translate-x-4' : ''}`}></div>
                       </div>
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Visa / Permiso de Trabajo</span>

@@ -11,6 +11,7 @@ import { clientsAPI, Client } from '../api/clients';
 import { projectsAPI, Project } from '../api/projects';
 import { roleFrameAPI, RoleFrameItem } from '../api/roleFrames';
 import { infoAPI, InfoItem } from '../api/info';
+import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
 import { shiftsAPI, Shift } from '../api/shifts';
 import { vacationsAPI, VacationRequest } from '../api/vacations';
 import { PageLayout } from '../components/ui/PageLayout';
@@ -24,7 +25,7 @@ import { UserFormModal } from '../components/users/UserFormModal';
 import { Card } from '../components/ui/Card';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faUserShield, faEdit, faTrash, faKey, faPlus, faLayerGroup, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faUserPlus, faCopy, faCheck, faBan, faBell, faSort, faSortUp, faSortDown, faLandmark, faCircleCheck, faTriangleExclamation, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faUserShield, faEdit, faTrash, faKey, faPlus, faLayerGroup, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faUserPlus, faCopy, faCheck, faBan, faBell, faSort, faSortUp, faSortDown, faLandmark, faCircleCheck, faTriangleExclamation, faSpinner, faPeopleGroup } from '@fortawesome/free-solid-svg-icons';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getImageUrl } from '../utils/imageHelpers';
@@ -179,6 +180,8 @@ export const UsersPage: React.FC = () => {
   const [educationLevels, setEducationLevels] = useState<InfoItem[]>([]);
   const [banks, setBanks] = useState<InfoItem[]>([]);
   const [insuranceCompanies, setInsuranceCompanies] = useState<InfoItem[]>([]);
+  /** Para resolver `metadata.sindicatoIds` a nombres en la ficha. */
+  const [sindicatos, setSindicatos] = useState<SimpleCatalogItem[]>([]);
   const [contractTypes, setContractTypes] = useState<InfoItem[]>([]);
   const [employeeStatuses, setEmployeeStatuses] = useState<InfoItem[]>([]);
 
@@ -280,6 +283,16 @@ export const UsersPage: React.FC = () => {
       setEducationLevels(el);
       setBanks(b);
       setInsuranceCompanies(ic);
+      /*
+        Aparte del `Promise.all` de arriba y con su propio catch: es el único catálogo que puede no
+        existir del otro lado —es nuevo—, y si entrara en el `all` un 404 suyo dejaría la pantalla de
+        usuarios sin géneros, sin bancos y sin obras sociales. Que falte deja un solo dato sin
+        resolver en la ficha.
+      */
+      void createSimpleCatalogApi('/sindicatos')
+        .list()
+        .then((sind) => setSindicatos(Array.isArray(sind) ? sind : []))
+        .catch(() => setSindicatos([]));
       setContractTypes(ct);
       setEmployeeStatuses(es);
     } catch (error) {
@@ -1150,6 +1163,50 @@ export const UsersPage: React.FC = () => {
                       </div>
                     )}
 
+                    {/*
+                      SIN CONDICIÓN, a diferencia de los demás campos de la ficha: acá el "no" es
+                      información. Los otros se esconden cuando están vacíos porque un dato que falta
+                      no dice nada; "no está afiliado" sí dice algo —es lo que define si corresponde
+                      retenerle la cuota sindical— y esconderlo obligaría a abrir el formulario de
+                      edición para enterarse.
+                    */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faPeopleGroup} className="text-gray-300" />
+                        Afiliación sindical
+                      </label>
+                      {viewUser.metadata?.afiliadoAlSindicato ? (
+                        (() => {
+                          const suyos = (viewUser.metadata?.sindicatoIds || []).map((id) => sindicatos.find((s) => s._id === id)).filter(Boolean) as SimpleCatalogItem[];
+                          /*
+                            Afiliado/a sin ningún gremio se lee como NO afiliado/a, no como un tercer
+                            estado: el formulario ya no deja guardarlo, y sin el gremio el dato no
+                            distingue nada de quien no está afiliado. Queda como red para lo que
+                            hubiera quedado cargado antes de esa validación.
+                          */
+                          if (suyos.length === 0) return <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">No afiliado/a</p>;
+                          return (
+                            <div className="flex flex-wrap gap-1.5">
+                              {suyos.map((sind) => {
+                                const sigla = typeof sind.sigla === 'string' ? sind.sigla.trim() : '';
+                                return (
+                                  <span
+                                    key={sind._id}
+                                    title={sind.name}
+                                    className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800"
+                                  >
+                                    {sigla || sind.name}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()
+                      ) : (
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">No afiliado/a</p>
+                      )}
+                    </div>
+
                     {viewUser.hireDate && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
@@ -1890,6 +1947,9 @@ export const UsersPage: React.FC = () => {
                       <SortableTh columna="cuit" activa={sortBy} direccion={sortDir} onSort={toggleSort} className="hidden lg:table-cell">CUIT</SortableTh>
                       <SortableTh columna="contratos" activa={sortBy} direccion={sortDir} onSort={toggleSort} className="hidden md:table-cell text-center">Contratos</SortableTh>
                       <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest text-center" title="Nombre confirmado contra el Padrón de ARCA">ARCA</th>
+                      {/* `hidden lg:table-cell`: la tabla ya venía con siete columnas, y en pantallas
+                          chicas esta es la primera que sobra — el dato completo sigue en la ficha. */}
+                      <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest hidden lg:table-cell" title="Sindicato al que está afiliada la persona">Sindicato</th>
                       <SortableTh columna="estado" activa={sortBy} direccion={sortDir} onSort={toggleSort}>Estado</SortableTh>
                       <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Acciones</th>
                     </tr>
@@ -2021,6 +2081,31 @@ export const UsersPage: React.FC = () => {
                                 <FontAwesomeIcon icon={validandoFila === user._id ? faSpinner : faLandmark} spin={validandoFila === user._id} className="h-3 w-3" />
                                 Validar
                               </button>
+                            );
+                          })()}
+                        </td>
+                        <td className="py-4 px-6 hidden lg:table-cell">
+                          {(() => {
+                            if (!user.metadata?.afiliadoAlSindicato) return <span className="text-gray-400 dark:text-gray-600">—</span>;
+                            const suyos = (user.metadata?.sindicatoIds || []).map((id) => sindicatos.find((sind) => sind._id === id)).filter(Boolean) as SimpleCatalogItem[];
+                            // Sin gremio elegido no hay afiliación que mostrar: mismo criterio que la
+                            // ficha. El formulario ya no deja guardar ese estado.
+                            if (suyos.length === 0) return <span className="text-gray-400 dark:text-gray-600">—</span>;
+                            return (
+                              <div className="flex flex-wrap gap-1">
+                                {suyos.map((sind) => {
+                                  const sigla = typeof sind.sigla === 'string' ? sind.sigla.trim() : '';
+                                  return (
+                                    <span
+                                      key={sind._id}
+                                      title={sind.name}
+                                      className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800"
+                                    >
+                                      {sigla || sind.name}
+                                    </span>
+                                  );
+                                })}
+                              </div>
                             );
                           })()}
                         </td>
