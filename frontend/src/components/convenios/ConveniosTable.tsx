@@ -65,9 +65,14 @@ interface Props {
    * advertencias sobre convenios que nadie usa.
    */
   ayudaSinObraSocial?: string;
+  /**
+   * La columna SINDICATO (el gremio firmante). Opcional como las demás: la ficha de empresa no la
+   * muestra, porque ahí lo que importa es qué convenios tiene registrados, no quién los firmó.
+   */
+  renderSindicato?: (c: ConvenioFila) => React.ReactNode;
 }
 
-export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, renderEmpresas, renderVigilancia, renderPorDefecto, renderAcciones, ayudaSinObraSocial }) => (
+export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, renderEmpresas, renderVigilancia, renderPorDefecto, renderAcciones, ayudaSinObraSocial, renderSindicato }) => (
   <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-xl">
     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
       <thead className="bg-gray-50 dark:bg-gray-900/50">
@@ -76,6 +81,10 @@ export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, rende
           <th className="px-4 py-2.5 whitespace-nowrap w-px">Código</th>
           <th className="px-4 py-2.5">Actividad</th>
           <th className="px-4 py-2.5">Signatario</th>
+          {/* Pegada al signatario, que es el texto crudo del que sale: verlos juntos hace evidente
+              si la asignación es correcta. NO es lo mismo que «Fuente de paritarias», que también
+              nombra gremios — por eso esta va como chip y aquella queda en texto plano. */}
+          {renderSindicato && <th className="px-4 py-2.5 whitespace-nowrap w-px">Sindicato</th>}
           {/* «por defecto» y no «obra social» a secas: es la que rige cuando ARCA no devuelve una
               propia para la persona, no la que va a tener sí o sí. La diferencia importa: la
               validación contra el padrón puede traer otra. */}
@@ -107,9 +116,14 @@ export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, rende
               <td className="px-4 py-3 align-top font-mono text-xs font-bold text-blue-700 dark:text-blue-400 whitespace-nowrap">{c.externalId || '—'}</td>
               <td className="px-4 py-3 align-top text-sm text-gray-900 dark:text-gray-100 max-w-[18rem]">{c.name}</td>
               <td className="px-4 py-3 align-top text-xs text-gray-500 dark:text-gray-400 max-w-[18rem]">{c.signatario || '—'}</td>
+              {renderSindicato && <td className="px-4 py-3 align-top whitespace-nowrap">{renderSindicato(c)}</td>}
               <td className="px-4 py-3 align-top">
                 {r.sinSindicato && !r.os ? (
-                  <span className="text-xs text-gray-500 dark:text-gray-400 italic">Sin sindicato → la define la empresa, en Obras Sociales.</span>
+                  /* «Excluido de convenio» y no «Sin sindicato»: es lo que este caso realmente
+                     comprueba (externalId === 9999/99). Con la columna SINDICATO al lado, decir «sin
+                     sindicato» acá hacía que la misma palabra significara dos cosas en la misma fila
+                     —«no le asignamos gremio» y «este CCT no tiene gremio por definición»—. */
+                  <span className="text-xs text-gray-500 dark:text-gray-400 italic">Excluido de convenio → la define la empresa, en Obras Sociales.</span>
                 ) : r.os ? (
                   <>
                     <span className={`block text-sm ${r.noRegistrada ? 'text-red-700 dark:text-red-400 font-semibold' : 'text-gray-900 dark:text-gray-100'}`}>

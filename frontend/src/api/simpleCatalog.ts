@@ -12,7 +12,11 @@ export interface SimpleCatalogItem {
 }
 
 export interface SimpleCatalogApi {
-  list(): Promise<SimpleCatalogItem[]>;
+  /**
+   * Lista el catálogo. `filtros` viaja como querystring y el server solo atiende los que declaró en
+   * su lista blanca (`filtrosPermitidos`); el resto los ignora, no falla.
+   */
+  list(filtros?: Record<string, string>): Promise<SimpleCatalogItem[]>;
   downloadTemplate(): Promise<Blob>;
   importExcel(file: File): Promise<{ message: string; count: number }>;
   /**
@@ -34,8 +38,8 @@ export interface SimpleCatalogApi {
  */
 export function createSimpleCatalogApi(basePath: string): SimpleCatalogApi {
   return {
-    async list() {
-      const { data } = await axios.get(basePath);
+    async list(filtros?: Record<string, string>) {
+      const { data } = await axios.get(basePath, filtros && Object.keys(filtros).length > 0 ? { params: filtros } : undefined);
       return data;
     },
     async downloadTemplate() {
