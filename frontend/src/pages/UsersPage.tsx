@@ -134,6 +134,14 @@ export const UsersPage: React.FC = () => {
   const [limit] = useState(25);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
   const [validandoNombres, setValidandoNombres] = useState(false);
+  /*
+    QUÉ FILA se está validando, además de "se está validando algo".
+
+    `validandoNombres` es uno solo para toda la tabla: alcanzaba para el botón masivo, pero al usarlo
+    también en el botón de cada fila, validar a UNA persona ponía las 1564 filas en "Validando…" a la
+    vez. Este id acota el spinner y el disabled a la fila que se apretó.
+  */
+  const [validandoFila, setValidandoFila] = useState<string | null>(null);
   /**
    * A quiénes se les va a validar el nombre. La acción es SOLO sobre lo tildado.
    *
@@ -432,6 +440,7 @@ export const UsersPage: React.FC = () => {
     );
     if (!ok.isConfirmed) return;
     setValidandoNombres(true);
+    setValidandoFila(idsPedidos?.length === 1 ? idsPedidos[0] : null);
     try {
       // Sin `revalidar`: los que ya tienen el sello no se vuelven a consultar. Igual no pueden estar
       // acá, porque su check está apagado — esto es el cinturón además de los tirantes.
@@ -486,6 +495,7 @@ export const UsersPage: React.FC = () => {
       sweetAlert.error('No se pudo', e?.response?.data?.error || 'No se pudieron validar los nombres contra ARCA.');
     } finally {
       setValidandoNombres(false);
+      setValidandoFila(null);
     }
   };
 
@@ -1108,9 +1118,15 @@ export const UsersPage: React.FC = () => {
                           {(() => {
                             const targetId = viewUser.metadata?.nacionalidadId || viewUser.metadata?.paisId;
                             const list = nationalities.length > 0 ? nationalities : countries;
-                            return list.find((n) => n.data.id === targetId)?.name || '—';
+                            const nombre = list.find((n) => n.data.id === targetId)?.name || '—';
+                            // Sin esto el dato de "nacionalizado/a" se cargaba y no se volvía a ver
+                            // en ningún lado: quedaba invisible fuera del formulario de edición.
+                            return viewUser.metadata?.nacionalizado ? `${nombre} (Nacionalizado/a)` : nombre;
                           })()}
                         </p>
+                        {viewUser.metadata?.nacionalizado && viewUser.metadata?.paisNacimientoId && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Nació en {countries.find((c) => c.data.id === viewUser.metadata?.paisNacimientoId)?.name || '—'}</p>
+                        )}
                       </div>
                     )}
 
@@ -1996,11 +2012,13 @@ export const UsersPage: React.FC = () => {
                             return (
                               <button
                                 onClick={() => validarNombresEnArca([user._id])}
+                                // Deshabilitado mientras corre CUALQUIER validación —no se pisan entre sí—,
+                                // pero el spinner solo gira en la fila que se apretó.
                                 disabled={validandoNombres}
                                 title="Consultar el Padrón de ARCA y confirmar el nombre de esta persona"
                                 className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                               >
-                                <FontAwesomeIcon icon={validandoNombres ? faSpinner : faLandmark} spin={validandoNombres} className="h-3 w-3" />
+                                <FontAwesomeIcon icon={validandoFila === user._id ? faSpinner : faLandmark} spin={validandoFila === user._id} className="h-3 w-3" />
                                 Validar
                               </button>
                             );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { Logo } from "../components/ui/Logo";
 import { useAuthStore } from "../stores/authStore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMagicWandSparkles, faCheckCircle, faTimesCircle, faEye, faEyeSlash, faBuilding, faLayerGroup, faMobileScreen, faLaptop } from "@fortawesome/free-solid-svg-icons";
+import { faMagicWandSparkles, faEye, faEyeSlash, faBuilding, faMobileScreen, faLaptop, faEnvelope, faLock, faSpinner } from "@fortawesome/free-solid-svg-icons";
 
 // ===== Validación =====
 const loginWithClientSchema = z.object({
@@ -29,29 +29,6 @@ interface TenantOption {
   name: string;
   slug: string;
 }
-interface DemoUser {
-  _id: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  roles: {
-    _id: string;
-    name: string;
-    description?: string;
-  }[];
-  metadata?: {
-    activo?: boolean;
-  };
-  tenant?: {
-    _id: string;
-    name: string;
-    slug: string;
-  };
-  area?: {
-    _id: string;
-    name: string;
-  };
-}
 
 // ===== Página de Login =====
 export const LoginPage: React.FC = () => {
@@ -61,7 +38,6 @@ export const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [lastErrorObj, setLastErrorObj] = useState<any>(null);
-  const [demoUsers, setDemoUsers] = useState<DemoUser[]>([]);
   const [showPassword, setShowPassword] = useState(false);
   const [availableClients, setAvailableClients] = useState<ClientOption[]>([]);
   const [showClientSelector, setShowClientSelector] = useState(false);
@@ -122,11 +98,6 @@ export const LoginPage: React.FC = () => {
     }
   }, []);
 
-  // Cargar usuarios demo al montar el componente
-  useEffect(() => {
-    fetchDemoUsers();
-  }, []);
-
   // Verificar clientes disponibles cuando cambia el email
   useEffect(() => {
     if (watchedEmail && watchedEmail.includes("@")) {
@@ -136,25 +107,6 @@ export const LoginPage: React.FC = () => {
       setShowClientSelector(false);
     }
   }, [watchedEmail]);
-
-  const fetchDemoUsers = async () => {
-    try {
-      const usersResponse = await fetch(`${import.meta.env.VITE_API_URL}/auth/demo-users`);
-
-      if (usersResponse.ok) {
-        const usersData = await usersResponse.json();
-        const allUsers = usersData.users || [];
-        console.log("📋 Usuarios cargados desde todos los tenants:", allUsers.length);
-        setDemoUsers(allUsers);
-      } else {
-        console.warn("Error al cargar usuarios desde la DB");
-        setDemoUsers([]);
-      }
-    } catch (error) {
-      console.error("No se pudieron cargar los usuarios demo:", error);
-      setDemoUsers([]);
-    }
-  };
 
   const extractApiError = (err: any): string => {
     const isProduction = import.meta.env.PROD;
@@ -280,118 +232,120 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const autofill = (user: DemoUser) => {
-    setValue("email", user.email, { shouldValidate: true });
-
-    // Establecer el tenant del usuario seleccionado
-    if (user.tenant?.slug) {
-      setValue("tenantSlug", user.tenant.slug, { shouldValidate: true });
-    }
-
-    const demoPasswords: Record<string, string> = {
-      "superadmin@example.com": "superadmin123",
-      "admin@example.com": "admin123",
-      "manager@example.com": "manager123",
-      "user@example.com": "user123",
-      "cliente@example.com": "changeme",
-      "coordinador@mobile.com": "coordinador-123",
-      "colaborador@mobile.com": "colaborador123",
-      "coordinador2@mobile.com": "coordinador-123",
-      "colaborador2@mobile.com": "colaborador123",
-    };
-    const password = demoPasswords[user.email] || "tenant123";
-    setValue("password", password, { shouldValidate: true });
-  };
-
   const checkClientsForEmail = async (_email: string) => {
     // Esta función ahora no se usa, se maneja en el login
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-      {/* Controles globales */}
-      <div className="absolute top-4 right-4 flex flex-col items-end gap-2">
-        <div className="flex gap-2">
-          {/* <button onClick={handleLanguageToggle} className="p-2 rounded bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-all duration-200" title="Toggle Language">
-            <FontAwesomeIcon icon={faGlobe} className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-          </button> */}
-          {/* El cambio de tema se sacó: la app es siempre oscura (ver `stores/themeStore.ts`). */}
-        </div>
-      </div>
+  /*
+    LOGIN: una tarjeta centrada, sin adornos.
 
-      {/* Card de login */}
-      <div className="w-full max-w-md">
-        <div className="bg-white dark:bg-gray-800 shadow-xl rounded-2xl p-8 animate-slide-up">
-          <div className="text-center mb-4">
-            <div className="flex justify-center items-center">
-              <Logo sizeClass="text-3xl" />
-            </div>
-            <div>
-              <p className="text-gray-600 dark:text-gray-400">{t("auth.loginSubtitle")}</p>
-            </div>
+    Lo único que se hace acá es entrar. Un panel de marca al costado con un titular y degradés le
+    agrega peso visual a una pantalla que se ve dos segundos, y en un monitor ancho deja el formulario
+    corrido a la derecha en vez de donde uno lo busca. Queda el fondo plano, la tarjeta al medio y los
+    campos grandes.
+
+    Los campos NO usan `input-field`: esa clase está pensada para formularios densos dentro de la app.
+    Acá hay lugar de sobra y una sola tarea, así que el campo puede ser más alto y llevar su ícono.
+  */
+  /*
+    ETIQUETAS FLOTANTES.
+
+    El label vive DENTRO del campo y sube cuando hay foco o contenido. Se apoya en dos cosas del CSS,
+    sin una línea de JS: `peer`, que deja que el label reaccione al estado del input, y
+    `:placeholder-shown`, que distingue "vacío" de "escrito" — por eso cada input lleva
+    `placeholder=" "` (un espacio): sin placeholder, ese selector nunca aplica.
+
+    El alto es de 64px: con menos, la etiqueta flotada queda encima del valor y se leen pisados.
+  */
+  const campoBase =
+    "login-input peer h-16 w-full rounded-xl border border-gray-300 bg-gray-50 pl-11 dark:border-gray-700 dark:bg-gray-900 pr-4 pt-7 pb-2.5 text-[15px] text-gray-100 outline-none transition-all placeholder:text-transparent focus:border-blue-500 focus:ring-1 focus:ring-blue-500";
+
+  /** El label: chico y arriba cuando hay foco o texto; centrado y grande cuando el campo está vacío. */
+  const labelFlotante =
+    "pointer-events-none absolute left-11 top-1/2 -translate-y-1/2 text-[15px] text-gray-500 transition-all " +
+    "peer-focus:top-3 peer-focus:translate-y-0 peer-focus:text-[10px] peer-focus:font-semibold peer-focus:uppercase peer-focus:tracking-wider peer-focus:text-blue-400 " +
+    "peer-[:not(:placeholder-shown)]:top-3 peer-[:not(:placeholder-shown)]:translate-y-0 peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:font-semibold peer-[:not(:placeholder-shown)]:uppercase peer-[:not(:placeholder-shown)]:tracking-wider peer-[:not(:placeholder-shown)]:text-gray-400";
+
+  /** Un <select> siempre muestra algo, así que su etiqueta va arriba desde el principio. */
+  const labelFijo = "pointer-events-none absolute left-11 top-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400";
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100 p-6 text-gray-100 dark:bg-gray-900">
+      <div className="w-full max-w-[400px] animate-slide-up">
+        <div className="rounded-2xl border border-gray-200 bg-white p-8 dark:border-gray-700 dark:bg-gray-800">
+          <div className="mb-6 text-center">
+            {/* `Logo` trae `flex items-center` propio, así que el `text-center` del padre no lo mueve:
+                hay que centrarlo con `justify-center` en su wrapper. */}
+            <Logo sizeClass="text-3xl" wrapperClassName="flex items-center justify-center select-none" />
+            {/* Sin título ni bajada: el botón de abajo ya dice "Iniciar sesión", y arriba del logo
+                sobraba. Los dos campos alcanzan para saber qué hay que hacer acá. */}
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" autoComplete="off">
-            {/* Tenant Selector - solo cuando hay múltiples tenants */}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" autoComplete="off">
+            {/* Solo cuando la persona pertenece a más de una organización. */}
             {showTenantSelector && availableTenants.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  <FontAwesomeIcon icon={faBuilding} className="h-4 w-4 mr-2" />
-                  Selecciona tu organización
-                </label>
-                <select
-                  {...register("tenantSlug")}
-                  className="input-field"
-                  required
-                  onChange={(e) => {
-                    setValue("tenantSlug", e.target.value);
-                    setShowTenantSelector(false);
-                  }}
-                >
-                  <option value="">Seleccionar organización...</option>
-                  {availableTenants.map((tenant) => (
-                    <option key={tenant._id} value={tenant.slug}>
-                      {tenant.name}
-                    </option>
-                  ))}
-                </select>
+              <div className="relative">
+                <FontAwesomeIcon icon={faBuilding} className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-gray-500" />
+                <label className={labelFijo}>Organización</label>
+                <div>
+                  <select
+                    {...register("tenantSlug")}
+                    className={`${campoBase} appearance-none`}
+                    required
+                    onChange={(e) => {
+                      setValue("tenantSlug", e.target.value);
+                      setShowTenantSelector(false);
+                    }}
+                  >
+                    <option value="">Seleccionar organización...</option>
+                    {availableTenants.map((tenant) => (
+                      <option key={tenant._id} value={tenant.slug}>
+                        {tenant.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("auth.email")}</label>
-              <input
-                {...register("email")}
-                type="email"
-                className="input-field"
-                placeholder="admin@example.com"
-                autoComplete="username"
-                onBlur={(e) => {
-                  register("email").onBlur(e); // Mantener validación original
-                  if (e.target.value && !errors.email) {
-                    checkUserStatus(e.target.value);
-                  }
-                }}
-              />
-              {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
+              <div className="relative">
+                <FontAwesomeIcon icon={faEnvelope} className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+                <input
+                  {...register("email")}
+                  type="email"
+                  id="login-email"
+                  className={`${campoBase} ${errors.email ? "border-red-500/60" : ""}`}
+                  placeholder=" "
+                  autoComplete="username"
+                  onBlur={(e) => {
+                    register("email").onBlur(e); // Mantener validación original
+                    if (e.target.value && !errors.email) {
+                      checkUserStatus(e.target.value);
+                    }
+                  }}
+                />
+                <label htmlFor="login-email" className={labelFlotante}>
+                  {t("auth.email")}
+                </label>
+              </div>
+              {errors.email && <p className="mt-1.5 text-xs text-red-400">{errors.email.message}</p>}
             </div>
 
             {/* Aviso de primer ingreso */}
             {showFirstTimeMessage && (
-              <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 animate-fade-in text-sm">
+              <div className="animate-fade-in rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 text-sm">
                 <div className="flex gap-3">
-                  <div className="flex-shrink-0 mt-0.5">
-                    <FontAwesomeIcon icon={faMagicWandSparkles} className="text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div className="text-blue-800 dark:text-blue-200">
-                    <p className="font-semibold mb-1">¿Es tu primera vez ingresando?</p>
-                    <p className="mb-2">Tus credenciales de ingreso son:</p>
-                    <ul className="list-disc list-inside space-y-1 opacity-90">
+                  <FontAwesomeIcon icon={faMagicWandSparkles} className="mt-0.5 shrink-0 text-blue-400" />
+                  <div className="text-blue-200/90">
+                    <p className="mb-1 font-semibold text-blue-200">¿Es tu primera vez ingresando?</p>
+                    <p className="mb-2 text-blue-200/70">Tus credenciales de ingreso son:</p>
+                    <ul className="space-y-1 text-blue-200/70">
                       <li>
-                        <strong>Correo:</strong> El que registraste en la plataforma
+                        <strong className="text-blue-200">Correo:</strong> el que registraste en la plataforma
                       </li>
                       <li>
-                        <strong>Contraseña:</strong> Tu número de DNI
+                        <strong className="text-blue-200">Contraseña:</strong> tu número de DNI
                       </li>
                     </ul>
                   </div>
@@ -400,25 +354,28 @@ export const LoginPage: React.FC = () => {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("auth.password")}</label>
               <div className="relative">
-                <input {...register("password")} type={showPassword ? "text" : "password"} className="input-field pr-10" placeholder="••••••••" autoComplete="current-password" />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                  <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} className="h-4 w-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
+                <FontAwesomeIcon icon={faLock} className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+                <input {...register("password")} type={showPassword ? "text" : "password"} id="login-password" className={`${campoBase} pr-12 ${errors.password ? "border-red-500/60" : ""}`} placeholder=" " autoComplete="current-password" />
+                <label htmlFor="login-password" className={labelFlotante}>
+                  {t("auth.password")}
+                </label>
+                <button type="button" onClick={() => setShowPassword(!showPassword)} title={showPassword ? "Ocultar" : "Mostrar"} className="absolute inset-y-0 right-0 flex items-center px-4 text-gray-500 transition-colors hover:text-gray-300">
+                  <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} className="h-4 w-4" />
                 </button>
               </div>
-              {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>}
+              {errors.password && <p className="mt-1.5 text-xs text-red-400">{errors.password.message}</p>}
             </div>
 
             {error && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-800 dark:border-red-800 rounded">
-                <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+              <div className="animate-fade-in rounded-xl border border-red-500/30 bg-red-500/10 p-3.5">
+                <p className="text-sm text-red-300">{error}</p>
 
                 {/* Solo en desarrollo: ver objeto de error completo */}
                 {import.meta.env.DEV && lastErrorObj && (
-                  <details className="mt-2 rounded border border-red-500 p-2 text-red-200">
-                    <summary className="cursor-pointer text-xs text-red-200">Detalles del error (solo dev)</summary>
-                    <pre className="mt-2 max-h-56 overflow-auto text-[10px] leading-4">{JSON.stringify(lastErrorObj, null, 2)}</pre>
+                  <details className="mt-2 rounded border border-red-500/40 p-2">
+                    <summary className="cursor-pointer text-xs text-red-300/80">Detalles del error (solo dev)</summary>
+                    <pre className="mt-2 max-h-56 overflow-auto text-[10px] leading-4 text-red-200/80">{JSON.stringify(lastErrorObj, null, 2)}</pre>
                   </details>
                 )}
               </div>
@@ -426,107 +383,80 @@ export const LoginPage: React.FC = () => {
 
             {/* Client Selector */}
             {showClientSelector && availableClients.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  <FontAwesomeIcon icon={faBuilding} className="h-4 w-4 mr-2" />
-                  Cliente
-                </label>
-                <select {...register("clientId")} className="input-field" required={availableClients.length > 1}>
-                  {availableClients.length > 1 && <option value="">Seleccionar cliente...</option>}
-                  {availableClients.map((client) => (
-                    <option key={client._id} value={client._id}>
-                      {client.name}
-                    </option>
-                  ))}
-                </select>
+              <div className="relative">
+                <FontAwesomeIcon icon={faBuilding} className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-gray-500" />
+                <label className={labelFijo}>Cliente</label>
+                <div>
+                  <select {...register("clientId")} className={`${campoBase} appearance-none`} required={availableClients.length > 1}>
+                    {availableClients.length > 1 && <option value="">Seleccionar cliente...</option>}
+                    {availableClients.map((client) => (
+                      <option key={client._id} value={client._id}>
+                        {client.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             )}
 
-            <button type="submit" disabled={isLoading} className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isLoading && <FontAwesomeIcon icon={faSpinner} spin className="h-4 w-4" />}
               {isLoading ? t("common.loading") : t("auth.signIn")}
             </button>
           </form>
 
-          {/*Portal Selector Modal*/}
-          {showPortalSelector && (
-            <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md mx-4 lg:w-full transform scale-100 animate-scale-in">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 text-center mb-2">Bienvenido</h3>
-                <p className="text-gray-500 dark:text-gray-400 text-center mb-6">Selecciona dónde deseas ingresar</p>
+          {/*
+            SIN «Crear cuenta» Y SIN LA LISTA DE USUARIOS DEMO.
 
-                <div className="flex flex-col lg:grid lg:grid-cols-2 gap-4">
-                  <button onClick={() => handlePortalSelect("platform")} className="flex flex-col items-center justify-center p-6 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 border-2 border-transparent hover:border-indigo-500 dark:hover:border-indigo-400 transition-all group">
-                    <div className="h-12 w-12 rounded bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <FontAwesomeIcon icon={faLaptop} className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-                    </div>
-                    <span className="font-semibold text-gray-900 dark:text-gray-100">Plataforma</span>
-                    <span className="text-xs text-center text-gray-500 dark:text-gray-400 mt-1">Administración y Gestión</span>
-                  </button>
+            El alta no es autoservicio: se entra por un link de invitación con token (`/registro`),
+            que es lo que ata a la persona a un tenant y a un cliente. El link a `/register` ofrecía
+            un camino que no existe.
 
-                  <button onClick={() => handlePortalSelect("mobile")} className="flex flex-col items-center justify-center p-6 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 border-2 border-transparent hover:border-emerald-500 dark:hover:border-emerald-400 transition-all group">
-                    <div className="h-12 w-12 rounded bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <FontAwesomeIcon icon={faMobileScreen} className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <span className="font-semibold text-gray-900 dark:text-gray-100">App Mobile</span>
-                    <span className="text-xs text-center text-gray-500 dark:text-gray-400 mt-1">Portal de Empleado</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* --- Usuarios disponibles --- */}
-          <div className="mt-6">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              ¿No tienes cuenta?{" "}
-              <Link to="/register" className="font-medium text-primary-600 dark:text-primary-400 hover:text-primary-500 dark:hover:text-primary-300">
-                Crear cuenta
-              </Link>
-            </p>
-          </div>
-
-          {/* Solo mostrar usuarios disponibles en modo development */}
-          {import.meta.env.DEV && demoUsers.length > 0 && (
-            <div className="mt-4">
-              <details className="rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40">
-                <summary className="cursor-pointer select-none px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300">Usuarios disponibles ({demoUsers.length})</summary>
-                <div className="p-4 space-y-3">
-                  {demoUsers.map((user) => (
-                    <div key={user._id} className="flex items-center justify-between gap-3 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3">
-                      <div className="flex-1">
-                        {/* Tenant Badge - destacado arriba */}
-                        {user.tenant && (
-                          <div className="mb-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-primary-300 dark:border-primary-700">
-                            <FontAwesomeIcon icon={faBuilding} className="h-3 w-3" />
-                            {user.tenant.name}
-                          </div>
-                        )}
-                        <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : user.email.split("@")[0]}</div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400">Email: {user.email}</div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400">Roles: {user.roles.map((r) => r.name).join(", ") || "Sin roles"}</div>
-                        {user.area && (
-                          <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                            <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3" />
-                            Area: {user.area.name}
-                          </div>
-                        )}
-                        <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                          Estado:
-                          {user.metadata?.activo ? <FontAwesomeIcon icon={faCheckCircle} className="text-blue-500" /> : <FontAwesomeIcon icon={faTimesCircle} className="text-red-500" />}
-                        </div>
-                      </div>
-                      <button type="button" onClick={() => autofill(user)} disabled={!user.metadata?.activo} className="inline-flex items-center gap-1 px-3 py-2 rounded-md text-sm bg-primary-600 text-white hover:bg-primary-700 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed">
-                        <FontAwesomeIcon icon={faMagicWandSparkles} className="h-4 w-4" />
-                        Usar
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </details>
-            </div>
-          )}
+            El desplegable de usuarios era una ayuda de desarrollo que listaba nombres, emails y roles
+            reales, y con un botón para autocompletar el login. Aunque estaba limitado a `import.meta.env.DEV`,
+            un build de desarrollo servido por error lo dejaba expuesto en la pantalla de login.
+          */}
         </div>
+
+        <p className="mt-6 text-center text-xs text-gray-600">
+          © {new Date().getFullYear()} Frame
+        </p>
       </div>
+
+      {/* Selector de portal: se muestra cuando la persona puede entrar por más de un lado. */}
+      {showPortalSelector && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md animate-scale-in rounded-2xl border border-gray-200 bg-white p-8 dark:border-gray-700 dark:bg-gray-800">
+            {/* Mismos colores que el título/subtítulo de cualquier otro modal de la app (ver Modal.tsx):
+                antes "Bienvenido" era `text-white` a secas, sin contraparte para el modo claro —con el
+                container ya soportando los dos temas, quedaba invisible sobre fondo blanco. */}
+            <h3 className="text-center text-xl font-bold text-gray-900 dark:text-white">Bienvenido</h3>
+            <p className="mb-6 mt-1 text-center text-sm text-gray-600 dark:text-gray-400">Elegí dónde querés ingresar</p>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button onClick={() => handlePortalSelect("platform")} className="group flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-gray-50 p-6 transition-all hover:border-blue-500/50 hover:bg-blue-500/10 dark:border-gray-700 dark:bg-gray-900">
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/15 transition-transform group-hover:scale-110">
+                  <FontAwesomeIcon icon={faLaptop} className="h-5 w-5 text-blue-400" />
+                </div>
+                <span className="font-semibold text-gray-100">Plataforma</span>
+                <span className="mt-1 text-center text-xs text-gray-500">Administración y gestión</span>
+              </button>
+
+              <button onClick={() => handlePortalSelect("mobile")} className="group flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-gray-50 p-6 transition-all hover:border-emerald-500/50 hover:bg-emerald-500/10 dark:border-gray-700 dark:bg-gray-900">
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/15 transition-transform group-hover:scale-110">
+                  <FontAwesomeIcon icon={faMobileScreen} className="h-5 w-5 text-emerald-400" />
+                </div>
+                <span className="font-semibold text-gray-100">App Mobile</span>
+                <span className="mt-1 text-center text-xs text-gray-500">Portal de empleado</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

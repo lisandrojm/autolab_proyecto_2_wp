@@ -3,6 +3,7 @@ import { usersAPI, User } from '../../api/users';
 import { rolesAPI, Role } from '../../api/roles';
 import { roleFrameAPI, RoleFrameItem } from '../../api/roleFrames';
 import { infoAPI, InfoItem } from '../../api/info';
+import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { InfoModal } from '../ui/InfoModal';
 import { CuitInput, isValidCuit } from '../ui/CuitInput';
 import { Modal } from '../ui/Modal';
@@ -12,11 +13,25 @@ import { cuitEsValido } from '../../utils/cuit';
 import { generarPassword } from '../../utils/password';
 import { mensajeErrorArca } from '../../utils/errorArca';
 import { fuzzyMatch } from '../../utils/searchHelpers';
-import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina } from '../../utils/nacionalidadDocumento';
+import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina, esCuilObligatorio, opcionesDeNacionalidad, valorDeNacionalidad, leerNacionalidadElegida } from '../../utils/nacionalidadDocumento';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faUserShield, faEye, faEyeSlash, faToggleOn, faToggleOff, faMapMarkerAlt, faUniversity, faSearch, faTimes, faMobileAlt, faKey, faCheck, faXmark, faCircleInfo, faSpinner, faLandmark, faCircleCheck, faWandMagicSparkles } from '@fortawesome/free-solid-svg-icons';
 
 type ModalTab = 'general' | 'domicilio' | 'bancarios';
+
+const sindicatosApi = createSimpleCatalogApi('/sindicatos');
+
+/**
+ * Cómo se muestra un sindicato en la lista: "SIGLA — Nombre".
+ *
+ * La sigla adelante porque es como se los nombra en la práctica (nadie dice "Sindicato Argentino de
+ * Televisión"), pero sin tapar el nombre: dos gremios distintos pueden tener siglas parecidas y la
+ * sigla sola no alcanza para elegir bien. Si el registro no tiene sigla, queda solo el nombre.
+ */
+const nombreSindicato = (s: SimpleCatalogItem): string => {
+  const sigla = typeof s.sigla === 'string' ? s.sigla.trim() : '';
+  return sigla ? `${sigla} — ${s.name}` : s.name;
+};
 
 interface UserFormData {
   email: string;
@@ -42,6 +57,10 @@ interface UserFormData {
   localidad?: string;
   paisId?: number;
   nacionalidadId?: number;
+  /** Argentino/a por naturalización: ver `esCuilObligatorio`. Solo aplica si nacionalidadId es Argentina. */
+  nacionalizado?: boolean;
+  /** Solo si `nacionalizado`: un nativo nació acá, no hace falta preguntarlo. */
+  paisNacimientoId?: number;
   nivelEstudioId?: number;
   fechaNac?: string;
   telefono?: string;
@@ -54,6 +73,8 @@ interface UserFormData {
   aliasBancario?: string;
   numeroLegajoTango?: string;
   afiliadoAlSindicato?: boolean;
+  /** A qué sindicato. Solo con `afiliadoAlSindicato`; se limpia al apagarlo. */
+  sindicatoId?: string;
   rolesFrameIds?: string[];
 }
 
@@ -70,8 +91,10 @@ const emptyForm = (): UserFormData => ({
   hireDate: new Date().toISOString().split('T')[0],
   extraVacationDays: 0,
   clientIds: [],
+  nacionalizado: false,
   visa: false,
   afiliadoAlSindicato: false,
+  sindicatoId: '',
   rolesFrameIds: [],
 });
 
@@ -178,6 +201,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   const [nationalities, setNationalities] = useState<InfoItem[]>([]);
   const [educationLevels, setEducationLevels] = useState<InfoItem[]>([]);
   const [banks, setBanks] = useState<InfoItem[]>([]);
+  const [sindicatos, setSindicatos] = useState<SimpleCatalogItem[]>([]);
   // El catálogo de obras sociales ya no se carga acá: el campo se mudó al contrato.
   const [catalogsLoaded, setCatalogsLoaded] = useState(false);
 
@@ -214,7 +238,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     let cancelled = false;
     (async () => {
       try {
-        const [rolesRes, rf, g, dt, c, n, el, b] = await Promise.all([rolesAPI.list({ limit: 100 }), roleFrameAPI.list(), infoAPI.listByType('genero'), infoAPI.listByType('tipo-documento'), infoAPI.listByType('pais'), infoAPI.listByType('nacionalidad'), infoAPI.listByType('nivel-estudio'), infoAPI.listByType('banco')]);
+        /*
+          Sindicatos va con su propio catch y no seco como los demás: `Promise.all` es todo o nada, y
+          este catálogo es el único que puede no existir del otro lado —es nuevo, y el VPS corre el
+          dist commiteado—. Sin el catch, un 404 suyo dejaría el formulario entero sin nacionalidades,
+          sin bancos y sin tipos de documento. Que falte la lista de gremios vacía un solo select.
+        */
+        const [rolesRes, rf, g, dt, c, n, el, b, sind] = await Promise.all([rolesAPI.list({ limit: 100 }), roleFrameAPI.list(), infoAPI.listByType('genero'), infoAPI.listByType('tipo-documento'), infoAPI.listByType('pais'), infoAPI.listByType('nacionalidad'), infoAPI.listByType('nivel-estudio'), infoAPI.listByType('banco'), sindicatosApi.list().catch(() => [] as SimpleCatalogItem[])]);
         if (cancelled) return;
         setRoles(rolesRes.roles);
         const rfArray = Array.isArray(rf) ? rf : rf && Array.isArray((rf as any).data) ? (rf as any).data : [];
@@ -224,6 +254,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         setCountries(c);
         setNationalities(n);
         setEducationLevels(el);
+        setSindicatos(Array.isArray(sind) ? sind : []);
         setBanks(b);
         setCatalogsLoaded(true);
       } catch (error) {
@@ -304,6 +335,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         localidad: user.metadata?.localidad || '',
         paisId: user.metadata?.paisId,
         nacionalidadId: user.metadata?.nacionalidadId || user.metadata?.paisId,
+        nacionalizado: user.metadata?.nacionalizado || false,
+        paisNacimientoId: user.metadata?.paisNacimientoId,
         nivelEstudioId: user.metadata?.nivelEstudioId,
         fechaNac: user.metadata?.fechaNac ? new Date(user.metadata.fechaNac).toISOString().split('T')[0] : '',
         telefono: user.metadata?.telefono,
@@ -316,6 +349,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         aliasBancario: user.metadata?.aliasBancario || '',
         numeroLegajoTango: user.metadata?.numeroLegajoTango || '',
         afiliadoAlSindicato: user.metadata?.afiliadoAlSindicato || false,
+        sindicatoId: user.metadata?.sindicatoId || '',
         rolesFrameIds: (() => {
           const rawRf = user.metadata?.rolesFrameIds || (user.metadata as any)?.roles_frame || [];
           const rfArray = Array.isArray(rawRf) ? rawRf : [rawRf];
@@ -379,7 +413,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     // declaración de que tiene CUIL, y entonces hay que cargarlo. Si no lo tiene, se destilda y el
     // alta sigue por el circuito "Sin CUIT" — lo que no sirve es un CUIL a medias.
     if (cuilVisible && !formData.cuit) {
-      sweetAlert.error('Falta el CUIT/CUIL', esArgentino ? 'Para una persona argentina el CUIT/CUIL es obligatorio.' : 'Está tildado "Tiene CUIT / CUIL argentino": cargalo, o destildá el switch para seguir sin CUIT.');
+      sweetAlert.error('Falta el CUIT/CUIL', cuilObligatorio ? 'Para una persona argentina nativa el CUIT/CUIL es obligatorio.' : 'Está tildado "Tiene CUIT / CUIL argentino": cargalo, o destildá el switch para seguir sin CUIT.');
       setModalActiveTab('general');
       return;
     }
@@ -406,7 +440,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           cuit: formData.cuit,
           // Se persiste la declaración de "no tiene CUIT/CUIL argentino" para poder listarlos
           // después (pestaña "Sin CUIT"): no alcanza con inferirlo de un campo vacío.
-          sinCuit: !esArgentino && !tieneCuil,
+          sinCuit: !cuilVisible,
+          // Ver `esCuilObligatorio`: solo importa cuando nacionalidadId es Argentina.
+          nacionalizado: !!formData.nacionalizado,
+          paisNacimientoId: formData.paisNacimientoId,
           estadoCivil: formData.estadoCivil,
           calle: formData.calle,
           altura: formData.altura,
@@ -427,6 +464,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           aliasBancario: formData.aliasBancario,
           numeroLegajoTango: formData.numeroLegajoTango,
           afiliadoAlSindicato: formData.afiliadoAlSindicato,
+          // Sin el switch no hay sindicato que guardar: mandarlo igual dejaría en la base un gremio
+          // colgado de alguien que declaró no estar afiliado.
+          sindicatoId: formData.afiliadoAlSindicato ? formData.sindicatoId || '' : '',
           roles_frame: formData.rolesFrameIds,
           rolesFrameIds: formData.rolesFrameIds,
         },
@@ -513,19 +553,22 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   // El catálogo de nacionalidades es el de países (no existe un `nacionalidad` propio).
   const nationalityOptions = nationalities.length > 0 ? nationalities : countries;
   const opcionesNacionalidad = nationalityOptions.map((it) => ({ id: it.data.id, name: it.name }));
+  // Para dibujar el desplegable. Las reglas siguen mirando el catálogo crudo, sin la sintética.
+  const opcionesNacionalidadSelect = opcionesDeNacionalidad(opcionesNacionalidad);
   const nacionalidadElegida = !!formData.nacionalidadId;
   const esArgentino = esNacionalidadArgentina(opcionesNacionalidad, formData.nacionalidadId);
-  // Argentino/a: sin Pasaporte. Otra nacionalidad: con Pasaporte (puede estar nacionalizado/a).
+  // Argentino/a (nativo/a o nacionalizado/a): sin Pasaporte. Otra nacionalidad: con Pasaporte.
   const tiposDocumentoDisponibles = tiposDocumentoParaNacionalidad(documentTypes, esArgentino);
   /**
-   * El CUIL se pide cuando la persona DICE TENERLO, no según la nacionalidad.
-   *
-   * Un argentino siempre lo tiene (el switch ni se muestra y `tieneCuil` queda en true). Un extranjero
-   * que lo declara está diciendo que lo tiene, así que habilitado y obligatorio son la misma
-   * condición: o va completo y válido, o se destilda el switch y el alta sigue por el circuito
-   * "Sin CUIT". Un CUIL a medias pasa los controles de la pantalla y falla recién contra ARCA.
+   * El CUIL se pide cuando la persona DICE TENERLO, salvo en el único caso donde no hay nada que
+   * decir: argentino/a nativo/a (`cuilObligatorio`, ver utils/nacionalidadDocumento.ts). Ahí el
+   * switch ni se muestra y `tieneCuil` queda en true. En los otros dos casos —nacionalizado/a o de
+   * otra nacionalidad— declararlo con el switch es lo mismo que hacerlo obligatorio: o va completo y
+   * válido, o se destilda y el alta sigue por el circuito "Sin CUIT". Un CUIL a medias pasa los
+   * controles de la pantalla y falla recién contra ARCA.
    */
-  const cuilVisible = esArgentino || tieneCuil;
+  const cuilObligatorio = esCuilObligatorio(esArgentino, !!formData.nacionalizado);
+  const cuilVisible = cuilObligatorio || tieneCuil;
 
   /*
     CON CUIT, PRIMERO SE VALIDA. Después se llena el resto.
@@ -598,6 +641,17 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     Solo en el ALTA: editando a alguien existente, cambiarle la nacionalidad no tiene por qué borrarle
     el nombre.
   */
+  /**
+   * El switch de afiliación. Al apagarlo se limpia el sindicato elegido.
+   *
+   * Si no se limpiara, apagar y volver a prender devolvería un gremio que la persona ya había
+   * desmarcado, y en el medio el formulario tendría "no afiliado" con un sindicato cargado al
+   * lado — dos campos que se contradicen.
+   */
+  const handleAfiliadoChange = (afiliado: boolean) => {
+    setFormData((prev) => ({ ...prev, afiliadoAlSindicato: afiliado, sindicatoId: afiliado ? prev.sindicatoId : '' }));
+  };
+
   const limpiarDatosDeArca = () => {
     // El sello cae siempre: dejó de corresponder al CUIT que tiene el formulario.
     setValidadoEnArca(false);
@@ -607,8 +661,22 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     setFormData((prev) => ({ ...prev, firstName: '', lastName: '', documento: '', tipoDocumentoId: undefined }));
   };
 
-  /** Al cambiar la nacionalidad hay que revisar lo que dependía de ella para no dejar datos inválidos. */
-  const handleNacionalidadChange = (nuevoId: number | undefined) => {
+  /**
+   * Al cambiar la nacionalidad hay que revisar lo que dependía de ella para no dejar datos inválidos.
+   *
+   * Recibe el value crudo del <select> porque una de las opciones es sintética: "Argentino/a
+   * nacionalizado/a" no es una entrada del catálogo, se traduce a Argentina + `nacionalizado`.
+   *
+   * `paisNacimientoId` se resetea siempre: solo tiene sentido para un nacionalizado/a, y dejarlo
+   * pegado de una elección anterior es el mismo problema que el CUIT arrastrado que ya se resolvía.
+   *
+   * `tieneCuil` se fija explícito en los dos sentidos (antes solo se forzaba a `true` al entrar a
+   * Argentina, y quedaba en lo que fuera al salir): un extranjero recién elegido tiene que arrancar
+   * en "no tiene CUIL" por default, no en lo último que haya quedado prendido.
+   */
+  const handleNacionalidadChange = (value: string) => {
+    const { nacionalidadId, nacionalizado } = leerNacionalidadElegida(opcionesNacionalidad, value);
+    const nuevoId = parseInt(nacionalidadId) || undefined;
     const ahoraEsArgentino = esNacionalidadArgentina(opcionesNacionalidad, nuevoId);
     const tiposValidos = tiposDocumentoParaNacionalidad(documentTypes, ahoraEsArgentino).map((t) => ({ id: t.data.id, name: t.name }));
     setFormData((prev) => ({
@@ -616,11 +684,14 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
       nacionalidadId: nuevoId,
       // Si el tipo elegido ya no está disponible (tenía Pasaporte y pasó a argentino/a), se limpia.
       tipoDocumentoId: tipoDocumentoSigueValido(tiposValidos, prev.tipoDocumentoId) ? prev.tipoDocumentoId : undefined,
+      nacionalizado,
+      paisNacimientoId: undefined,
+      // El CUIT también: quedó atado a la nacionalidad anterior.
+      cuit: '',
     }));
-    // Un argentino/a siempre lleva CUIL: no queda arrastrado un "no tiene" declarado antes.
-    if (ahoraEsArgentino) setTieneCuil(true);
-    // El CUIT también: quedó atado a la nacionalidad anterior.
-    setFormData((prev) => ({ ...prev, cuit: '' }));
+    // Nativo/a argentino/a → obligatorio (el switch ni se muestra). Cualquier otro caso —incluido el
+    // nacionalizado/a— arranca en "no tiene", que es lo más común y evita darlo por hecho.
+    setTieneCuil(esCuilObligatorio(ahoraEsArgentino, nacionalizado));
     limpiarDatosDeArca();
   };
 
@@ -704,16 +775,35 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                       Nacionalidad <span className="text-red-500">*</span>
                     </label>
-                    <select required value={formData.nacionalidadId || ''} onChange={(e) => handleNacionalidadChange(parseInt(e.target.value) || undefined)} className="input-field">
+                    {/* "Argentino/a nacionalizado/a" es una opción más acá adentro, debajo de
+                        Argentina: es la misma pregunta, no una segunda. Ver `opcionesDeNacionalidad`. */}
+                    <select required value={valorDeNacionalidad(formData.nacionalidadId, !!formData.nacionalizado)} onChange={(e) => handleNacionalidadChange(e.target.value)} className="input-field">
                       <option value="">Seleccionar...</option>
-                      {nationalityOptions.map((it) => (
-                        <option key={it._id} value={it.data.id}>
+                      {opcionesNacionalidadSelect.map((it) => (
+                        <option key={it.id} value={it.id}>
                           {it.name}
                         </option>
                       ))}
                     </select>
                     {!nacionalidadElegida && <p className="text-[11px] text-gray-400 mt-1">Elegí la nacionalidad para completar documento y CUIL.</p>}
                   </div>
+                  {/* Solo se abre cuando corresponde: un nacionalizado/a nació en otro país, y a un
+                      nativo/a o a un extranjero no hay por qué preguntárselo. */}
+                  {formData.nacionalizado && (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                        País de nacimiento <span className="text-red-500">*</span>
+                      </label>
+                      <select required value={formData.paisNacimientoId || ''} onChange={(e) => setFormData((prev) => ({ ...prev, paisNacimientoId: parseInt(e.target.value) || undefined }))} className="input-field">
+                        <option value="">Seleccionar...</option>
+                        {countries.map((it) => (
+                          <option key={it._id} value={it.data.id}>
+                            {it.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 {/*
@@ -732,15 +822,18 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                         CUIT / CUIL {cuilVisible && <span className="text-red-500">*</span>}
                         {/* Solo para extranjeros: un argentino siempre tiene CUIL, así que la pregunta que
                             contesta este ⓘ —«¿y si no tiene?»— ahí no existe. */}
-                        {!esArgentino && (
+                        {/* Antes solo para "no argentino": un nacionalizado/a también puede no tenerlo
+                            todavía, así que la pregunta le cabe igual. */}
+                        {!cuilObligatorio && (
                           <button type="button" onClick={() => setSinCuitInfoOpen(true)} title="¿Qué pasa si no tiene CUIT/CUIL?" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
                             <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
                           </button>
                         )}
                       </span>
                     </label>
-                    {/* El switch solo tiene sentido para extranjeros: un argentino siempre tiene CUIL. */}
-                    {nacionalidadElegida && !esArgentino && (
+                    {/* El switch tiene sentido salvo para el nativo/a argentino/a: nacionalizado/a o
+                        de otra nacionalidad comparten el mismo "puede tenerlo o no". */}
+                    {nacionalidadElegida && !cuilObligatorio && (
                       <button
                         type="button"
                         role="switch"
@@ -1012,14 +1105,42 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Legajo Tango</label>
                       <input type="text" value={formData.numeroLegajoTango || ''} onChange={(e) => setFormData((prev) => ({ ...prev, numeroLegajoTango: e.target.value }))} className="input-field" placeholder="Ej: 01505" />
                     </div>
-                    <div className="flex items-center pt-4">
-                      <label className="flex items-center space-x-3 cursor-pointer group">
+                  </div>
+
+                  {/*
+                    AFILIACIÓN SINDICAL — bloque propio, con el mismo marco que "Roles de Sistema".
+
+                    Antes era un checkbox suelto al lado de Legajo Tango, y ahí no se entendía: la
+                    afiliación es un dato con su propia pregunta de seguimiento (a QUÉ gremio), y un
+                    tilde perdido en la fila de otro campo no deja lugar para hacerla.
+                  */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Afiliación sindical</label>
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 space-y-4">
+                      <label className="flex items-center space-x-3 cursor-pointer group w-fit">
                         <div className={`w-10 h-6 flex items-center bg-gray-300 dark:bg-gray-700 rounded-full p-1 duration-300 ease-in-out ${formData.afiliadoAlSindicato ? 'bg-blue-500 dark:bg-blue-600' : ''}`}>
                           <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${formData.afiliadoAlSindicato ? 'translate-x-4' : ''}`}></div>
                         </div>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Afiliado al Sindicato</span>
-                        <input type="checkbox" className="hidden" checked={formData.afiliadoAlSindicato} onChange={(e) => setFormData((prev) => ({ ...prev, afiliadoAlSindicato: e.target.checked }))} />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Afiliado a un sindicato</span>
+                        <input type="checkbox" className="hidden" checked={!!formData.afiliadoAlSindicato} onChange={(e) => handleAfiliadoChange(e.target.checked)} />
                       </label>
+
+                      {/* La pregunta de seguimiento: solo existe si la respuesta anterior fue que sí. */}
+                      {formData.afiliadoAlSindicato && (
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Sindicato</label>
+                          <select value={formData.sindicatoId || ''} onChange={(e) => setFormData((prev) => ({ ...prev, sindicatoId: e.target.value }))} className="input-field">
+                            <option value="">Seleccionar...</option>
+                            {sindicatos.map((s) => (
+                              <option key={s._id} value={s._id}>
+                                {nombreSindicato(s)}
+                              </option>
+                            ))}
+                          </select>
+                          {/* Un select vacío sin explicación se lee como un error de la pantalla. */}
+                          {sindicatos.length === 0 && <p className="text-[11px] text-gray-400 mt-1">Todavía no hay sindicatos cargados. Se cargan en Configuración → Sindicatos.</p>}
+                        </div>
+                      )}
                     </div>
                   </div>
 

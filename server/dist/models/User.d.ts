@@ -60,6 +60,16 @@ export interface IUserMetadata {
     localidad?: string | null;
     paisId?: number;
     nacionalidadId?: number;
+    /**
+     * Argentino/a por naturalización, no nativo/a. Solo tiene sentido cuando `nacionalidadId` es
+     * Argentina: es lo que distingue a un argentino de toda la vida (CUIL automático desde el DNI) de
+     * alguien que se naturalizó (puede estar en trámite y no tenerlo todavía). Ver `esCuilObligatorio`
+     * en el frontend (`utils/nacionalidadDocumento.ts`), que es la única lógica que lee este campo.
+     */
+    nacionalizado?: boolean;
+    /** País de nacimiento, solo para quien se declaró `nacionalizado`: alguien nativo nació acá y no
+     *  hace falta preguntarlo; un extranjero no nacionalizado ya lo dice con la nacionalidad. */
+    paisNacimientoId?: number;
     nivelEstudioId?: number;
     osId?: number | null;
     osPrepaga?: boolean | null;
@@ -91,6 +101,14 @@ export interface IUserMetadata {
     inHouse?: boolean | null;
     numeroLegajoTango?: string | null;
     afiliadoAlSindicato?: boolean | null;
+    /**
+     * A qué sindicato está afiliado/a. Guarda el `_id` del catálogo `Sindicato`.
+     *
+     * Solo tiene sentido con `afiliadoAlSindicato` en true, y se limpia cuando se apaga: un sindicato
+     * colgado de alguien que declaró no estar afiliado no significa nada y se lee como una
+     * contradicción. La afiliación es voluntaria y NO se deduce del convenio (ver `models/Sindicato.ts`).
+     */
+    sindicatoId?: string | null;
     rutaImagen?: string | null;
     bancoReceptor?: string | null;
     swift?: string | null;

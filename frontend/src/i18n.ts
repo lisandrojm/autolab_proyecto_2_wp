@@ -67,11 +67,11 @@ const resources = {
       // Auth
       "auth.login": "Iniciar sesión",
       "auth.logout": "Cerrar sesión",
-      "auth.email": "Correo electrónico",
+      "auth.email": "Email",
       "auth.password": "Contraseña",
       "auth.signIn": "Iniciar sesión",
       "auth.welcome": "Bienvenido",
-      "auth.loginSubtitle": "Inicia sesión en tu cuenta para continuar test",
+      "auth.loginSubtitle": "Iniciar sesión",
       "auth.registerSubtitle": "Crea tu cuenta para continuar",
       "auth.invalidCredentials": "Credenciales inválidas",
       "auth.loginSuccess": "Inicio de sesión exitoso",

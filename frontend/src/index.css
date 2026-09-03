@@ -66,6 +66,30 @@
     @apply bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
   }
 
+  /*
+    EL AUTOCOMPLETADO DE CHROME NO RESPETA `background-color`.
+
+    Cuando el navegador rellena un campo guardado le aplica `:-webkit-autofill` con un fondo claro
+    propio, y `background-color` sobre esa regla se ignora por completo. El único modo de taparlo es
+    pintar una sombra interior enorme del color que uno quiere, y forzar el color del texto aparte.
+
+    La transición larguísima es el otro truco del oficio: Chrome aplica su fondo con una animación,
+    y demorar la nuestra evita el parpadeo claro del primer instante.
+
+    `#111827` es `gray-900`, el mismo fondo que usa el campo. Va acotado a esa clase y no a todos los
+    inputs, porque el resto de la app usa `dark:bg-gray-700`, bastante más claro.
+  */
+  .login-input:-webkit-autofill,
+  .login-input:-webkit-autofill:hover,
+  .login-input:-webkit-autofill:focus,
+  .login-input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px #111827 inset !important;
+    box-shadow: 0 0 0 1000px #111827 inset !important;
+    -webkit-text-fill-color: #f3f4f6 !important;
+    caret-color: #f3f4f6;
+    transition: background-color 9999s ease-in-out 0s;
+  }
+
   .input-field {
     @apply w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white;
     /* Un campo apagado tiene que VERSE apagado. Sin esto se dibujaba igual que uno activo y la única

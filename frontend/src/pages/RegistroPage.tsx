@@ -9,7 +9,7 @@ import { sweetAlert } from '../utils/sweetAlert';
 import { generarPassword } from '../utils/password';
 import { fuzzyMatch } from '../utils/searchHelpers';
 import { mensajeErrorArca } from '../utils/errorArca';
-import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina } from '../utils/nacionalidadDocumento';
+import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina, esCuilObligatorio, opcionesDeNacionalidad, valorDeNacionalidad, leerNacionalidadElegida } from '../utils/nacionalidadDocumento';
 
 type Tab = 'general' | 'domicilio' | 'bancarios';
 
@@ -33,6 +33,10 @@ interface RegistroForm {
   generoId: string;
   nivelEstudioId: string;
   nacionalidadId: string;
+  /** Argentino/a por naturalización, no nativo/a. Solo tiene sentido con nacionalidadId = Argentina. */
+  nacionalizado: boolean;
+  /** Solo si `nacionalizado`: un nativo nació acá, no hace falta preguntarlo. */
+  paisNacimientoId: string;
   estadoCivil: string;
   password: string;
   rolesFrameIds: string[];
@@ -67,6 +71,8 @@ const emptyForm: RegistroForm = {
   generoId: '',
   nivelEstudioId: '',
   nacionalidadId: '',
+  nacionalizado: false,
+  paisNacimientoId: '',
   estadoCivil: '',
   password: '',
   rolesFrameIds: [],
@@ -312,6 +318,8 @@ export const RegistroPage: React.FC = () => {
   const [tiposDocumento, setTiposDocumento] = useState<InfoOption[]>([]);
   const [nivelesEstudio, setNivelesEstudio] = useState<InfoOption[]>([]);
   const [nacionalidades, setNacionalidades] = useState<InfoOption[]>([]);
+  // País de NACIMIENTO (solo para nacionalizado/a): catálogo aparte del de nacionalidad.
+  const [paises, setPaises] = useState<InfoOption[]>([]);
   const [bancos, setBancos] = useState<BancoOption[]>([]);
   const [rolesFrame, setRolesFrame] = useState<InfoOption[]>([]);
 
@@ -347,6 +355,7 @@ export const RegistroPage: React.FC = () => {
         setNivelesEstudio(data.nivelesEstudio || []);
         const nacs: InfoOption[] = data.nacionalidades || [];
         setNacionalidades(nacs);
+        setPaises(data.paises || []);
         // Argentina viene preseleccionada: es la nacionalidad de casi todas las altas, y hasta que se
         // elegía una, los campos que dependen de ella —documento y CUIL— quedaban apagados. Sigue
         // siendo un default: cambiarla reajusta los tipos de documento y muestra el switch del CUIL.
@@ -388,20 +397,20 @@ export const RegistroPage: React.FC = () => {
   // --- Nacionalidad → Tipo de documento / CUIL (ver utils/nacionalidadDocumento.ts) ---
   const nacionalidadElegida = !!form.nacionalidadId;
   const esArgentino = useMemo(() => esNacionalidadArgentina(nacionalidades, form.nacionalidadId), [nacionalidades, form.nacionalidadId]);
-  // Argentino/a: sin Pasaporte. Otra nacionalidad: con Pasaporte (puede estar nacionalizado/a).
+  // Para dibujar el desplegable. Las reglas siguen mirando el catálogo crudo, sin la sintética.
+  const opcionesNacionalidadSelect = useMemo(() => opcionesDeNacionalidad(nacionalidades), [nacionalidades]);
+  // Argentino/a (nativo/a o nacionalizado/a): sin Pasaporte. Otra nacionalidad: con Pasaporte.
   const tiposDocumentoDisponibles = useMemo(() => tiposDocumentoParaNacionalidad(tiposDocumento, esArgentino), [tiposDocumento, esArgentino]);
   /**
-   * El CUIL se pide cuando la persona DICE TENERLO, y no según la nacionalidad.
-   *
-   * Un argentino siempre lo tiene (el switch ni se muestra, `tieneCuil` queda en true). Un extranjero
-   * que lo declara está diciendo que lo tiene, así que cargarlo a medias no sirve: o va completo y
-   * válido, o se destilda el switch y el alta sigue por el circuito "Sin CUIT". Un CUIL a medias es
-   * peor que ninguno — pasa los controles de la pantalla y falla recién contra ARCA.
-   *
-   * Habilitado y obligatorio son, por eso, la misma condición.
+   * El CUIL se pide cuando la persona DICE TENERLO, salvo un único caso: argentino/a nativo/a
+   * (`cuilObligatorio`, ver utils/nacionalidadDocumento.ts) — ahí no hay switch, es obligatorio y
+   * punto. Un nacionalizado/a comparte el switch con un extranjero, aunque su nacionalidad sea
+   * Argentina: puede tener el trámite hecho o no. Cargarlo a medias no sirve: o va completo y válido,
+   * o se destilda el switch y el alta sigue por el circuito "Sin CUIT" — un CUIL a medias es peor que
+   * ninguno, pasa los controles de la pantalla y falla recién contra ARCA.
    */
-  const cuilVisible = esArgentino || tieneCuil;
-  const cuilObligatorio = cuilVisible;
+  const cuilObligatorio = esCuilObligatorio(esArgentino, form.nacionalizado);
+  const cuilVisible = cuilObligatorio || tieneCuil;
 
   /*
     VALIDAR EL CUIT CONTRA ARCA, igual que en el alta interna de Usuarios.
@@ -483,22 +492,37 @@ export const RegistroPage: React.FC = () => {
     setForm((prev) => ({ ...prev, firstName: '', lastName: '', documento: '', tipoDocumentoId: '' }));
   };
 
-  /** Al cambiar la nacionalidad hay que revisar lo que dependía de ella para no dejar datos inválidos. */
-  const onNacionalidadChange = (nuevoId: string) => {
-    const ahoraEsArgentino = esNacionalidadArgentina(nacionalidades, nuevoId);
+  /**
+   * Al cambiar la nacionalidad hay que revisar lo que dependía de ella para no dejar datos inválidos.
+   *
+   * Recibe el value crudo del desplegable porque una de las opciones es sintética: "Argentino/a
+   * nacionalizado/a" no es una entrada del catálogo, se traduce a Argentina + `nacionalizado`.
+   *
+   * `paisNacimientoId` se resetea siempre: solo tiene sentido para un nacionalizado/a, y dejarlo
+   * pegado de una elección anterior repite el problema que ya se resolvía con el CUIT arrastrado.
+   * `tieneCuil` se fija en los dos sentidos —antes solo se forzaba a `true` al elegir Argentina, y
+   * quedaba en lo que fuera al salir— para que un extranjero recién elegido arranque en "no tiene
+   * CUIL" por default, que es la situación real más común.
+   */
+  const onNacionalidadChange = (value: string) => {
+    const { nacionalidadId, nacionalizado } = leerNacionalidadElegida(nacionalidades, value);
+    const ahoraEsArgentino = esNacionalidadArgentina(nacionalidades, nacionalidadId);
     const tiposValidos = tiposDocumentoParaNacionalidad(tiposDocumento, ahoraEsArgentino);
     setForm((prev) => ({
       ...prev,
-      nacionalidadId: nuevoId,
+      nacionalidadId,
       // Si el tipo elegido ya no está disponible (tenía Pasaporte y pasó a argentino/a), se limpia.
       tipoDocumentoId: tipoDocumentoSigueValido(tiposValidos, prev.tipoDocumentoId) ? prev.tipoDocumentoId : '',
+      nacionalizado,
+      paisNacimientoId: '',
+      // El CUIT y lo que ARCA devolvió para él quedaron atados a la nacionalidad anterior.
+      cuit: '',
     }));
-    // Un argentino/a siempre lleva CUIL: no queda arrastrado un "no tiene" declarado antes.
-    if (ahoraEsArgentino) setTieneCuil(true);
-    // El CUIT y lo que ARCA devolvió para él quedaron atados a la nacionalidad anterior.
-    setForm((prev) => ({ ...prev, cuit: '' }));
+    // Nativo/a argentino/a → obligatorio (el switch ni se muestra). Cualquier otro caso —incluido el
+    // nacionalizado/a— arranca en "no tiene", que es lo más común y evita darlo por hecho.
+    setTieneCuil(esCuilObligatorio(ahoraEsArgentino, nacionalizado));
     limpiarDatosDeArca();
-    setFieldErrors((prev) => ({ ...prev, nacionalidadId: false, tipoDocumentoId: false }));
+    setFieldErrors((prev) => ({ ...prev, nacionalidadId: false, tipoDocumentoId: false, paisNacimientoId: false }));
     setError(null);
   };
 
@@ -506,7 +530,7 @@ export const RegistroPage: React.FC = () => {
   // El CUIL solo es obligatorio para argentinos: un extranjero puede no tenerlo (lo declara con el
   // checkbox y en ese caso el campo ni se muestra).
   const REQUIRED_BY_STEP: Record<'general' | 'domicilio', { key: keyof RegistroForm; label: string }[]> = {
-    general: [{ key: 'firstName', label: 'Nombre' }, { key: 'lastName', label: 'Apellido' }, { key: 'email', label: 'Email' }, { key: 'nacionalidadId', label: 'Nacionalidad' }, ...(cuilObligatorio ? [{ key: 'cuit' as keyof RegistroForm, label: 'CUIT / CUIL' }] : []), { key: 'documento', label: 'Documento' }, { key: 'password', label: 'Contraseña' }, { key: 'fechaNac', label: 'Fecha de nacimiento' }],
+    general: [{ key: 'firstName', label: 'Nombre' }, { key: 'lastName', label: 'Apellido' }, { key: 'email', label: 'Email' }, { key: 'nacionalidadId', label: 'Nacionalidad' }, ...(cuilObligatorio ? [{ key: 'cuit' as keyof RegistroForm, label: 'CUIT / CUIL' }] : []), ...(form.nacionalizado ? [{ key: 'paisNacimientoId' as keyof RegistroForm, label: 'País de nacimiento' }] : []), { key: 'documento', label: 'Documento' }, { key: 'password', label: 'Contraseña' }, { key: 'fechaNac', label: 'Fecha de nacimiento' }],
     domicilio: [
       { key: 'pais', label: 'País' },
       { key: 'localidad', label: 'Localidad' },
@@ -632,7 +656,10 @@ export const RegistroPage: React.FC = () => {
         cuit: form.cuit,
         // Declaración explícita de "no tiene CUIT/CUIL argentino": se persiste para poder listarlos
         // después (pestaña "Sin CUIT") en vez de inferirlo de un campo vacío.
-        sinCuit: !esArgentino && !tieneCuil,
+        sinCuit: !cuilVisible,
+        // Ver `esCuilObligatorio`: solo importa cuando nacionalidadId es Argentina.
+        nacionalizado: form.nacionalizado,
+        paisNacimientoId: form.paisNacimientoId,
         tipoDocumentoId: form.tipoDocumentoId,
         documento: form.documento,
         fechaNac: form.fechaNac,
@@ -763,9 +790,21 @@ export const RegistroPage: React.FC = () => {
                     <label className={labelClass}>
                       Nacionalidad <span className="text-red-500">*</span>
                     </label>
-                    <SearchableSelect title="Nacionalidad" value={form.nacionalidadId} options={nacionalidades} onChange={onNacionalidadChange} />
+                    {/* "Argentino/a nacionalizado/a" es una opción más acá adentro, debajo de
+                        Argentina: es la misma pregunta, no una segunda. Ver `opcionesDeNacionalidad`. */}
+                    <SearchableSelect title="Nacionalidad" value={valorDeNacionalidad(form.nacionalidadId, form.nacionalizado)} options={opcionesNacionalidadSelect} onChange={onNacionalidadChange} />
                     {!nacionalidadElegida && <p className="text-[11px] text-gray-400 mt-1">Elegila para completar documento y CUIL.</p>}
                   </div>
+                  {/* Solo se abre cuando corresponde: un nacionalizado/a nació en otro país, y a un
+                      nativo/a o a un extranjero no hay por qué preguntárselo. */}
+                  {form.nacionalizado && (
+                    <div>
+                      <label className={labelClass}>
+                        País de nacimiento <span className="text-red-500">*</span>
+                      </label>
+                      <SearchableSelect title="País de nacimiento" value={form.paisNacimientoId} options={paises} onChange={(v) => set('paisNacimientoId', v)} invalid={!!fieldErrors.paisNacimientoId} />
+                    </div>
+                  )}
                 </div>
                 {/*
                  * ORDEN: nacionalidad → CUIT/CUIL → tipo y número de documento.
@@ -784,10 +823,13 @@ export const RegistroPage: React.FC = () => {
                       CUIT / CUIL {cuilObligatorio && <span className="text-red-500">*</span>}
                       {/* Solo para extranjeros: un argentino siempre tiene CUIL, así que la pregunta que
                           contesta este ⓘ —«¿y si no tengo?»— ahí no existe. */}
-                      {!esArgentino && <InfoSinCuit />}
+                      {/* Antes solo para "no argentino": un nacionalizado/a también puede no tenerlo
+                          todavía, así que la pregunta le cabe igual. */}
+                      {!cuilObligatorio && <InfoSinCuit />}
                     </label>
-                    {/* El switch solo tiene sentido para extranjeros: un argentino siempre tiene CUIL. */}
-                    {nacionalidadElegida && !esArgentino && (
+                    {/* El switch tiene sentido salvo para el nativo/a argentino/a: nacionalizado/a o
+                        de otra nacionalidad comparten el mismo "puede tenerlo o no". */}
+                    {nacionalidadElegida && !cuilObligatorio && (
                       <button
                         type="button"
                         role="switch"

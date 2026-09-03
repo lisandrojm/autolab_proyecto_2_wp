@@ -59,6 +59,7 @@ const ADMIN_PERMISSIONS = [
     'config_arca_sucursales:view', // ARCA: sucursales (domicilios de desempeño)
     'config_arca_tablas:view', // ARCA: tablas oficiales (modalidad de contratación / liquidación, tipo de servicio)
     'config_convenios:view', // Convenios Colectivos de Trabajo
+    'config_sindicatos:view', // Sindicatos (a los que se afilia una persona)
     'config_centros_costo:view', // Centros de Costos
     'config_contratos_frame:view', // Contratos FRAME
     'config_empresas:view', // Empresas

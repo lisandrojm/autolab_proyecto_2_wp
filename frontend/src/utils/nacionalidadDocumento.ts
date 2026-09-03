@@ -5,9 +5,21 @@
  *
  * La nacionalidad se pregunta PRIMERO porque de ella dependen los demás campos:
  *
- * - Argentino/a → el pasaporte NO es una opción de tipo de documento, y el CUIL es obligatorio.
+ * - Argentino/a → el pasaporte NO es una opción de tipo de documento.
  * - Otra nacionalidad → el pasaporte SÍ es una opción (además de DNI/CI/LE/LC, porque puede estar
- *   nacionalizado), y el CUIL es opcional: se declara aparte si tiene o no.
+ *   nacionalizado).
+ *
+ * EL CUIL TIENE TRES CASOS, no dos (ver `esCuilObligatorio` más abajo):
+ *
+ * - Argentino/a NATIVO/a → CUIL obligatorio, sin vuelta: es automático desde el DNI.
+ * - Argentino/a NACIONALIZADO/a → puede tenerlo o no, según en qué etapa del trámite esté. Además se
+ *   le pide el país de nacimiento: a diferencia de un nativo/a, no nació acá.
+ * - Otra nacionalidad → lo normal es que no tenga CUIL argentino, aunque puede declarar que sí
+ *   (switch "Tiene CUIT/CUIL argentino", el mismo que usa el nacionalizado/a).
+ *
+ * Los tres se eligen en el MISMO desplegable de nacionalidad (ver `opcionesDeNacionalidad`): para
+ * quien completa el formulario es una sola pregunta, y partirla en un select más un switch aparte
+ * obligaba a leer los dos controles para entender cualquiera de los dos.
  *
  * Tanto "Argentina" como "Pasaporte" se detectan por NOMBRE y no por id: los catálogos vienen de
  * FRAME y los ids podrían no ser los mismos en todos los entornos.
@@ -50,6 +62,17 @@ export function tiposDocumentoParaNacionalidad<T extends { name: string }>(tipos
 }
 
 /**
+ * ¿El CUIT/CUIL es obligatorio, SIN el switch de "no lo tengo"?
+ *
+ * Es el único caso de los tres: argentino/a nativo/a. Un nacionalizado/a comparte el switch con un
+ * extranjero, aunque su nacionalidad figure como Argentina — por eso esto no alcanza con mirar
+ * `esArgentino` solo, hace falta la declaración aparte de si está o no nacionalizado/a.
+ */
+export function esCuilObligatorio(esArgentino: boolean, nacionalizado: boolean): boolean {
+  return esArgentino && !nacionalizado;
+}
+
+/**
  * ¿El tipo de documento ya elegido sigue siendo válido tras cambiar la nacionalidad? Se usa para
  * limpiarlo cuando deja de serlo (ej. tenía Pasaporte y pasa a ser argentino/a), en vez de dejar
  * seleccionado un valor que ya no está en la lista.
@@ -69,4 +92,56 @@ export function tipoDocumentoSigueValido(tiposDisponibles: OpcionCatalogo[], tip
  */
 export function opcionArgentina<T extends { name?: string }>(opciones: T[]): T | undefined {
   return opciones.find((o) => esOpcionArgentina(o));
+}
+
+/* ────────────────────────────────────────────────────────────────────────────────────────────────
+   "Argentino/a nacionalizado/a" como una opción más del desplegable
+
+   El catálogo de nacionalidades viene de FRAME y no tiene esa entrada —ni debería: la nacionalidad
+   de un nacionalizado/a ES Argentina—. Así que la opción se agrega solo en pantalla, y al elegirla
+   se guarda la Argentina real del catálogo más el booleano `nacionalizado`. El modelo de datos no
+   se entera de que existe: no hay ids inventados dando vueltas en la base.
+   ──────────────────────────────────────────────────────────────────────────────────────────────── */
+
+/** El value de esa opción. Es texto, así que no puede chocar con ningún id numérico del catálogo. */
+export const VALOR_NACIONALIZADO = "nacionalizado";
+
+/** Su nombre visible, en un solo lugar para que los dos formularios digan exactamente lo mismo. */
+export const NOMBRE_NACIONALIZADO = "Argentino/a nacionalizado/a";
+
+/**
+ * Las opciones a dibujar en el desplegable: las del catálogo más la sintética, insertada JUSTO
+ * DEBAJO de Argentina —es una variante de esa misma nacionalidad, no una nacionalidad más, y al
+ * final de una lista de 200 países nadie la encontraría— y una sola vez, aunque el catálogo trajera
+ * más de una entrada que matchee.
+ */
+export function opcionesDeNacionalidad<T extends OpcionCatalogo>(opciones: T[]): OpcionCatalogo[] {
+  const salida: OpcionCatalogo[] = [];
+  let yaInsertada = false;
+  for (const o of opciones) {
+    salida.push({ id: o.id, name: o.name });
+    if (!yaInsertada && esOpcionArgentina(o)) {
+      salida.push({ id: VALOR_NACIONALIZADO, name: NOMBRE_NACIONALIZADO });
+      yaInsertada = true;
+    }
+  }
+  return salida;
+}
+
+/** Qué opción mostrar elegida, a partir de un estado guardado que no conoce el value sintético. */
+export function valorDeNacionalidad(nacionalidadId: number | string | undefined | null, nacionalizado: boolean): string {
+  if (nacionalizado) return VALOR_NACIONALIZADO;
+  return nacionalidadId === undefined || nacionalidadId === null ? "" : String(nacionalidadId);
+}
+
+/**
+ * Lo inverso: qué par (nacionalidadId, nacionalizado) representa la opción elegida.
+ *
+ * Si el catálogo no trajera Argentina —no debería pasar, pero es data de FRAME— el id queda vacío y
+ * el campo sigue contando como incompleto. Es preferible a guardar un id inventado.
+ */
+export function leerNacionalidadElegida<T extends OpcionCatalogo>(opciones: T[], value: string): { nacionalidadId: string; nacionalizado: boolean } {
+  if (value !== VALOR_NACIONALIZADO) return { nacionalidadId: value, nacionalizado: false };
+  const argentina = opcionArgentina(opciones);
+  return { nacionalidadId: argentina === undefined ? "" : String(argentina.id), nacionalizado: true };
 }

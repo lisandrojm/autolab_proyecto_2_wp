@@ -51,6 +51,7 @@ import { HolidaysPage } from "./pages/HolidaysPage";
 import { ArcaCategoriasPage } from "./pages/ArcaCategoriasPage";
 import { BancosPage } from "./pages/BancosPage";
 import { ObrasSocialesPage } from "./pages/ObrasSocialesPage";
+import { SindicatosPage } from "./pages/SindicatosPage";
 import { ArcaSucursalesPage } from "./pages/ArcaSucursalesPage";
 import { ArcaComoFuncionaPage } from "./pages/ArcaComoFuncionaPage";
 import { GuiaObrasSocialesPage } from "./pages/GuiaObrasSocialesPage";
@@ -549,6 +550,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ObrasSocialesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/sindicatos"
+                element={
+                  <ProtectedRoute>
+                    <SindicatosPage />
                   </ProtectedRoute>
                 }
               />

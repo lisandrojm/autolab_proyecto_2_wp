@@ -292,6 +292,10 @@ export interface User {
     localidad?: string;
     paisId?: number;
     nacionalidadId?: number;
+    /** Argentino/a por naturalización, no nativo/a. Ver `esCuilObligatorio`. */
+    nacionalizado?: boolean;
+    /** País de nacimiento, solo para quien se declaró `nacionalizado`. */
+    paisNacimientoId?: number;
     nivelEstudioId?: number;
     osId?: number;
     osPrepaga?: boolean;
@@ -312,6 +316,9 @@ export interface User {
     tipoDeCuentaBancaria?: string;
     nroDeCuentaBancaria?: string;
     aliasBancario?: string;
+    afiliadoAlSindicato?: boolean;
+    /** `_id` del catálogo Sindicato. Solo con `afiliadoAlSindicato`. */
+    sindicatoId?: string;
   };
 }
 

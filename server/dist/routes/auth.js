@@ -574,6 +574,9 @@ router.get("/registro-info", async (req, res) => {
         const items = await Info.find({ type: { $in: types } }).sort({ name: 1 }).lean();
         const pick = (t) => items.filter((i) => i.type === t).map((i) => ({ id: i.data?.id, name: i.name }));
         const nacionalidades = pick("nacionalidad").length > 0 ? pick("nacionalidad") : pick("pais");
+        // País de NACIMIENTO: catálogo aparte, para quien se declara nacionalizado/a. Antes `pick("pais")`
+        // se pedía solo como fallback de `nacionalidades` y nunca viajaba al front por su cuenta.
+        const paises = pick("pais");
         const rolesFrame = (await RoleFrame.find().select("name").sort({ name: 1 }).lean()).map((r) => ({ id: String(r._id), name: r.name }));
         // Entidades financieras desde el catálogo del ABM (colección `bancos`), con su tipoEntidad
         // para permitir el filtrado en cascada del formulario de registro.
@@ -588,6 +591,7 @@ router.get("/registro-info", async (req, res) => {
             tiposDocumento: pick("tipo-documento"),
             nivelesEstudio: pick("nivel-estudio"),
             nacionalidades,
+            paises,
             // Sin `obrasSociales`: el registro dejó de pedirla. Quien se registra no puede saber qué RNOS
             // le corresponde ante ARCA —se constata en el padrón de la SSS al hacer el contrato—, y eran
             // 496 registros viajando en un endpoint público sin que nadie los usara.
@@ -709,6 +713,9 @@ router.post("/registro", async (req, res) => {
             generoId: num(body.generoId),
             nivelEstudioId: num(body.nivelEstudioId),
             nacionalidadId: num(body.nacionalidadId),
+            // Ver `esCuilObligatorio` en el frontend: solo cambia algo cuando nacionalidadId es Argentina.
+            nacionalizado: body.nacionalizado === true || body.nacionalizado === "true" ? true : undefined,
+            paisNacimientoId: num(body.paisNacimientoId),
             // Sin `osId`: la obra social se declara en el contrato, no en la persona. Aunque un cliente
             // viejo la siga mandando en el body, acá se ignora.
             estadoCivil: body.estadoCivil || undefined,
