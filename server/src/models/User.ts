@@ -107,13 +107,17 @@ export interface IUserMetadata {
   numeroLegajoTango?: string | null;
   afiliadoAlSindicato?: boolean | null;
   /**
-   * A qué sindicato está afiliado/a. Guarda el `_id` del catálogo `Sindicato`.
+   * A qué sindicato/s está afiliado/a. Guarda los `_id` del catálogo `Sindicato`.
    *
-   * Solo tiene sentido con `afiliadoAlSindicato` en true, y se limpia cuando se apaga: un sindicato
-   * colgado de alguien que declaró no estar afiliado no significa nada y se lee como una
+   * Es una LISTA y no uno solo: quien trabaja en más de una actividad puede estar afiliado a más de
+   * un gremio a la vez (el caso típico es técnica y actuación), y forzar uno obligaría a elegir cuál
+   * declarar. Vacío = no se eligió ninguno todavía.
+   *
+   * Solo tiene sentido con `afiliadoAlSindicato` en true, y se vacía cuando se apaga: gremios
+   * colgados de alguien que declaró no estar afiliado no significan nada y se leen como una
    * contradicción. La afiliación es voluntaria y NO se deduce del convenio (ver `models/Sindicato.ts`).
    */
-  sindicatoId?: string | null;
+  sindicatoIds?: string[] | null;
   rutaImagen?: string | null;
   bancoReceptor?: string | null;
   swift?: string | null;
@@ -237,7 +241,7 @@ const userSchema = new Schema<IUser>(
       inHouse: Boolean,
       numeroLegajoTango: String,
       afiliadoAlSindicato: Boolean,
-      sindicatoId: String,
+      sindicatoIds: [String],
       rutaImagen: String,
       bancoReceptor: String,
       swift: String,

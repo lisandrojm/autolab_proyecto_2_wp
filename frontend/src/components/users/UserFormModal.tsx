@@ -73,8 +73,8 @@ interface UserFormData {
   aliasBancario?: string;
   numeroLegajoTango?: string;
   afiliadoAlSindicato?: boolean;
-  /** A qué sindicato. Solo con `afiliadoAlSindicato`; se limpia al apagarlo. */
-  sindicatoId?: string;
+  /** A qué sindicato/s. Solo con `afiliadoAlSindicato`; se vacía al apagarlo. */
+  sindicatoIds?: string[];
   rolesFrameIds?: string[];
 }
 
@@ -94,7 +94,7 @@ const emptyForm = (): UserFormData => ({
   nacionalizado: false,
   visa: false,
   afiliadoAlSindicato: false,
-  sindicatoId: '',
+  sindicatoIds: [],
   rolesFrameIds: [],
 });
 
@@ -228,6 +228,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   const [roleFrameSearch, setRoleFrameSearch] = useState('');
   const [rolesEmpresaInfoOpen, setRolesEmpresaInfoOpen] = useState(false);
   const [rolesEmpresaOpen, setRolesEmpresaOpen] = useState(false);
+  const [sindicatoOpen, setSindicatoOpen] = useState(false);
+  const [sindicatoSearch, setSindicatoSearch] = useState('');
 
   // Para inicializar el form una sola vez por apertura
   const initializedRef = useRef(false);
@@ -349,7 +351,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         aliasBancario: user.metadata?.aliasBancario || '',
         numeroLegajoTango: user.metadata?.numeroLegajoTango || '',
         afiliadoAlSindicato: user.metadata?.afiliadoAlSindicato || false,
-        sindicatoId: user.metadata?.sindicatoId || '',
+        sindicatoIds: user.metadata?.sindicatoIds || [],
         rolesFrameIds: (() => {
           const rawRf = user.metadata?.rolesFrameIds || (user.metadata as any)?.roles_frame || [];
           const rfArray = Array.isArray(rawRf) ? rawRf : [rawRf];
@@ -464,9 +466,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           aliasBancario: formData.aliasBancario,
           numeroLegajoTango: formData.numeroLegajoTango,
           afiliadoAlSindicato: formData.afiliadoAlSindicato,
-          // Sin el switch no hay sindicato que guardar: mandarlo igual dejaría en la base un gremio
-          // colgado de alguien que declaró no estar afiliado.
-          sindicatoId: formData.afiliadoAlSindicato ? formData.sindicatoId || '' : '',
+          // Sin el switch no hay sindicatos que guardar: mandarlos igual dejaría en la base gremios
+          // colgados de alguien que declaró no estar afiliado.
+          sindicatoIds: formData.afiliadoAlSindicato ? formData.sindicatoIds || [] : [],
           roles_frame: formData.rolesFrameIds,
           rolesFrameIds: formData.rolesFrameIds,
         },
@@ -556,6 +558,22 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   // Para dibujar el desplegable. Las reglas siguen mirando el catálogo crudo, sin la sintética.
   const opcionesNacionalidadSelect = opcionesDeNacionalidad(opcionesNacionalidad);
   const nacionalidadElegida = !!formData.nacionalidadId;
+  /**
+   * Los sindicatos elegidos, resueltos contra el catálogo.
+   *
+   * Un id puede no encontrarse: si alguien borra el registro del catálogo, el usuario queda apuntando
+   * a algo que ya no existe. Ese id se omite en vez de dibujar un badge con un nombre inventado.
+   */
+  const sindicatosElegidos = (formData.sindicatoIds || []).map((id) => sindicatos.find((sind) => sind._id === id)).filter((sind): sind is SimpleCatalogItem => !!sind);
+  /** Agregar o quitar uno, sin duplicarlo. */
+  const toggleSindicato = (id: string, elegido: boolean) => {
+    setFormData((prev) => {
+      const actuales = prev.sindicatoIds || [];
+      return { ...prev, sindicatoIds: elegido ? [...actuales.filter((x) => x !== id), id] : actuales.filter((x) => x !== id) };
+    });
+  };
+  // `nombreSindicato` y no `.name`: así el buscador encuentra también por sigla ("SATSAID").
+  const sindicatosFiltrados = sindicatos.filter((sind) => fuzzyMatch(nombreSindicato(sind), sindicatoSearch));
   const esArgentino = esNacionalidadArgentina(opcionesNacionalidad, formData.nacionalidadId);
   // Argentino/a (nativo/a o nacionalizado/a): sin Pasaporte. Otra nacionalidad: con Pasaporte.
   const tiposDocumentoDisponibles = tiposDocumentoParaNacionalidad(documentTypes, esArgentino);
@@ -642,14 +660,14 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     el nombre.
   */
   /**
-   * El switch de afiliación. Al apagarlo se limpia el sindicato elegido.
+   * El switch de afiliación. Al apagarlo se vacían los sindicatos elegidos.
    *
-   * Si no se limpiara, apagar y volver a prender devolvería un gremio que la persona ya había
-   * desmarcado, y en el medio el formulario tendría "no afiliado" con un sindicato cargado al
+   * Si no se vaciaran, apagar y volver a prender devolvería gremios que la persona ya había
+   * desmarcado, y en el medio el formulario tendría "no afiliado" con sindicatos cargados al
    * lado — dos campos que se contradicen.
    */
   const handleAfiliadoChange = (afiliado: boolean) => {
-    setFormData((prev) => ({ ...prev, afiliadoAlSindicato: afiliado, sindicatoId: afiliado ? prev.sindicatoId : '' }));
+    setFormData((prev) => ({ ...prev, afiliadoAlSindicato: afiliado, sindicatoIds: afiliado ? prev.sindicatoIds : [] }));
   };
 
   const limpiarDatosDeArca = () => {
@@ -1125,19 +1143,42 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                         <input type="checkbox" className="hidden" checked={!!formData.afiliadoAlSindicato} onChange={(e) => handleAfiliadoChange(e.target.checked)} />
                       </label>
 
-                      {/* La pregunta de seguimiento: solo existe si la respuesta anterior fue que sí. */}
+                      {/*
+                        La pregunta de seguimiento: solo existe si la respuesta anterior fue que sí.
+
+                        Mismo patrón que Rol/es Empresa —badge arriba, campo que abre una ventana con
+                        buscador— y no un <select>: son dos elecciones de catálogo en la misma pantalla,
+                        y que se vieran distinto era la única razón para tener que mirarlas dos veces.
+                      */}
                       {formData.afiliadoAlSindicato && (
                         <div>
                           <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Sindicato</label>
-                          <select value={formData.sindicatoId || ''} onChange={(e) => setFormData((prev) => ({ ...prev, sindicatoId: e.target.value }))} className="input-field">
-                            <option value="">Seleccionar...</option>
-                            {sindicatos.map((s) => (
-                              <option key={s._id} value={s._id}>
-                                {nombreSindicato(s)}
-                              </option>
-                            ))}
-                          </select>
-                          {/* Un select vacío sin explicación se lee como un error de la pantalla. */}
+                          {sindicatosElegidos.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mb-2">
+                              {sindicatosElegidos.map((sind) => (
+                                <span key={sind._id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                                  {nombreSindicato(sind)}
+                                  <button type="button" onClick={() => toggleSindicato(sind._id, false)} title={`Quitar ${nombreSindicato(sind)}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
+                                    <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {/* Lo elegido va ARRIBA del campo, no adentro: un badge dentro de un input lo
+                              hace crecer de alto y se lee como si el buscador tuviera texto escrito. */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSindicatoSearch('');
+                              setSindicatoOpen(true);
+                            }}
+                            className="input-field text-left flex items-center gap-2 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
+                          >
+                            <span className="text-gray-400 dark:text-gray-500">Elegí uno o más sindicatos…</span>
+                            <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400 ml-auto shrink-0" />
+                          </button>
+                          {/* Un catálogo vacío sin explicación se lee como un error de la pantalla. */}
                           {sindicatos.length === 0 && <p className="text-[11px] text-gray-400 mt-1">Todavía no hay sindicatos cargados. Se cargan en Configuración → Sindicatos.</p>}
                         </div>
                       )}
@@ -1438,6 +1479,77 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                 ))}
               {allRoleFrames.filter((rf) => fuzzyMatch(rf.name, roleFrameSearch)).length === 0 && (
                 <div className="col-span-full py-8 text-center text-xs text-gray-500 italic">No se encontraron especialidades que coincidan con "{roleFrameSearch}"</div>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {sindicatoOpen && (
+        <Modal
+          isOpen={sindicatoOpen}
+          onClose={() => setSindicatoOpen(false)}
+          title="Sindicato"
+          subtitle={`${(formData.sindicatoIds || []).length} seleccionado(s) · el o los gremios a los que está afiliada la persona`}
+          size="lg"
+          zIndex={90}
+          footer={
+            <>
+              <button type="button" onClick={() => setFormData((prev) => ({ ...prev, sindicatoIds: [] }))} className="btn-secondary" disabled={(formData.sindicatoIds || []).length === 0}>
+                Limpiar
+              </button>
+              <button type="button" onClick={() => setSindicatoOpen(false)} className="btn-primary">
+                Listo
+              </button>
+            </>
+          }
+        >
+          {/* Alto fijo: con la altura atada al contenido, filtrar encogía el modal y el botón «Listo»
+              se movía debajo del cursor. Lo que scrollea es la grilla, no la ventana. */}
+          <div className="h-[60vh] flex flex-col">
+            {sindicatosElegidos.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-3 shrink-0">
+                              {sindicatosElegidos.map((sind) => (
+                                <span key={sind._id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                                  {nombreSindicato(sind)}
+                                  <button type="button" onClick={() => toggleSindicato(sind._id, false)} title={`Quitar ${nombreSindicato(sind)}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
+                                    <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+            )}
+
+            <div className="relative mb-3 shrink-0">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FontAwesomeIcon icon={faSearch} className="h-3.5 w-3.5 text-gray-400" />
+              </div>
+              <input type="text" autoFocus value={sindicatoSearch} onChange={(e) => setSindicatoSearch(e.target.value)} placeholder="Buscar sindicato..." className="input-field pl-9 pr-8" />
+              {sindicatoSearch && (
+                <button type="button" onClick={() => setSindicatoSearch('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                  <FontAwesomeIcon icon={faTimes} className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 flex-1 overflow-y-auto content-start pr-1">
+              {sindicatosFiltrados.map((sind) => (
+                <label key={sind._id} className={`flex items-center gap-3 p-2.5 rounded-lg border transition-all cursor-pointer ${(formData.sindicatoIds || []).includes(sind._id) ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20' : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-300'}`}>
+                  <input
+                    type="checkbox"
+                    checked={(formData.sindicatoIds || []).includes(sind._id)}
+                    onChange={(e) => toggleSindicato(sind._id, e.target.checked)}
+                    className="rounded text-blue-500 focus:ring-blue-500 h-4 w-4 shrink-0"
+                  />
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate" title={nombreSindicato(sind)}>
+                    {nombreSindicato(sind)}
+                  </span>
+                </label>
+              ))}
+              {sindicatosFiltrados.length === 0 && (
+                <div className="col-span-full py-8 text-center text-xs text-gray-500 italic">
+                  {sindicatos.length === 0 ? 'Todavía no hay sindicatos cargados. Se cargan en Configuración → Sindicatos.' : `No se encontraron sindicatos que coincidan con "${sindicatoSearch}"`}
+                </div>
               )}
             </div>
           </div>

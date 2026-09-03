@@ -317,8 +317,8 @@ export interface User {
     nroDeCuentaBancaria?: string;
     aliasBancario?: string;
     afiliadoAlSindicato?: boolean;
-    /** `_id` del catálogo Sindicato. Solo con `afiliadoAlSindicato`. */
-    sindicatoId?: string;
+    /** `_id` del catálogo Sindicato. Solo con `afiliadoAlSindicato`; puede ser más de uno. */
+    sindicatoIds?: string[];
   };
 }
 

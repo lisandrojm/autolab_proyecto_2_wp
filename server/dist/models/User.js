@@ -70,7 +70,7 @@ const userSchema = new Schema({
         inHouse: Boolean,
         numeroLegajoTango: String,
         afiliadoAlSindicato: Boolean,
-        sindicatoId: String,
+        sindicatoIds: [String],
         rutaImagen: String,
         bancoReceptor: String,
         swift: String,
