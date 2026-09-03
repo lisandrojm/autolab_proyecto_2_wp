@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileContract, faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
+import { faFileContract, faArrowUpRightFromSquare, faEye } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
 import { createSimpleCatalogApi, SimpleCatalogItem } from "../api/simpleCatalog";
 import { companiesAPI, Company } from "../api/companies";
@@ -333,12 +333,28 @@ export const ConveniosPage: React.FC = () => {
     const s = sindicatoDe(c as SimpleCatalogItem);
     if (!s) return <span className="text-gray-400 dark:text-gray-600">—</span>;
     return (
-      <span
-        title={s.name}
-        className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800"
-      >
-        {/* La sigla si la hay; si no, el nombre, que es lo único que queda para identificarlo. */}
-        {typeof s.sigla === 'string' && s.sigla.trim() ? s.sigla.trim() : s.name}
+      <span className="inline-flex items-center gap-1.5">
+        <span
+          title={s.name}
+          className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800"
+        >
+          {/* La sigla si la hay; si no, el nombre, que es lo único que queda para identificarlo. */}
+          {typeof s.sigla === 'string' && s.sigla.trim() ? s.sigla.trim() : s.name}
+        </span>
+        {/*
+          El camino de vuelta al gremio, simétrico al ojito que hay en Sindicatos.
+
+          Lleva al ABM con el buscador ya cargado y no a una ficha, porque este catálogo no tiene
+          una: `?buscar=` deja la fila a la vista, con su sigla y sus otros convenios al lado.
+        */}
+        <Link
+          to={`/sindicatos?buscar=${encodeURIComponent(s.name)}`}
+          title={`Ver ${s.name} en Sindicatos`}
+          aria-label={`Ver ${s.name} en Sindicatos`}
+          className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+        >
+          <FontAwesomeIcon icon={faEye} className="h-3.5 w-3.5" />
+        </Link>
       </span>
     );
   };

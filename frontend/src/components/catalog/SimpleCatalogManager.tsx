@@ -48,6 +48,8 @@ interface SimpleCatalogManagerProps {
   templateBaseName: string;
   /** Campos extra propios del catálogo (ej. Bancos → "Tipo de Entidad"). */
   extraFields?: CatalogExtraField[];
+  /** Texto con el que arranca el buscador, para poder linkear a este catálogo ya filtrado. */
+  busquedaInicial?: string;
   /**
    * Un filtro que resuelve el SERVIDOR, al lado del buscador.
    *
@@ -61,8 +63,12 @@ interface SimpleCatalogManagerProps {
    * por igualdad. Es un recorrido por cambio de opción, no por tecla.
    */
   filtroServidor?: {
-    /** Nombre del query param, ej. "sindicatoId". */
-    param: string;
+    /**
+     * Nombre del query param, ej. "sindicatoId". Opcional: un filtro cuyas opciones son TODAS
+     * `clienteOnly` no tiene nada que mandarle al server, y obligarlo a inventar un nombre haría
+     * creer que hay una consulta detrás.
+     */
+    param?: string;
     /** Texto de la opción vacía (sin filtro). */
     etiquetaTodos: string;
     opciones: Array<{ value: string; label: string; clienteOnly?: (item: SimpleCatalogItem) => boolean }>;
@@ -97,6 +103,15 @@ interface SimpleCatalogManagerProps {
     etiqueta: string;
     /** `true` si el item pasa el filtro acotado. */
     aplica: (item: SimpleCatalogItem) => boolean;
+    /**
+     * Si la pantalla abre ya acotada. Default `true`.
+     *
+     * En Convenios sí: el universo de 2.669 es referencia y lo que se trabaja son los pocos que
+     * alguna empresa registró. En un catálogo que se ADMINISTRA es al revés — abrir Sindicatos
+     * mostrando 2 de 180 se lee como que se perdieron 178, y el filtro pasa a ser algo de lo que hay
+     * que salir antes de poder trabajar.
+     */
+    arrancaAcotado?: boolean;
   };
   /**
    * Reemplaza la tabla genérica por una propia del dominio, conservando el resto del manager
@@ -245,12 +260,12 @@ const RefField: React.FC<{ campo: CatalogExtraField; valor: string; onChange: (v
   );
 };
 
-export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], filtroServidor, extraSeccion, helpKey, showExternalId = true, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, externalIdNumerico, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia, extraSuperior, resumen }) => {
+export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, icon, entityLabel, api, templateBaseName, extraFields = [], busquedaInicial, filtroServidor, extraSeccion, helpKey, showExternalId = true, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, externalIdNumerico, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia, extraSuperior, resumen }) => {
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
   const [filtroServidorValor, setFiltroServidorValor] = useState(filtroServidor?.valorInicial || '');
   const [tabActiva, setTabActiva] = useState<string>('catalogo');
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(busquedaInicial || '');
   const [showInfo, setShowInfo] = useState(false);
   const helpEntry = helpKey ? getHelp(helpKey) : null;
 
@@ -325,7 +340,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
       // La opción marcada `clienteOnly` no viaja: el server no la sabe resolver, así que se pide todo
       // y se recorta abajo, en `base`.
       const opcion = filtroServidor?.opciones.find((o) => o.value === valorFiltro);
-      const params = filtroServidor && valorFiltro && !opcion?.clienteOnly ? { [filtroServidor.param]: valorFiltro } : undefined;
+      const params = filtroServidor?.param && valorFiltro && !opcion?.clienteOnly ? { [filtroServidor.param]: valorFiltro } : undefined;
       const data = await api.list(params);
       setItems(data);
       setLoadError(null);
@@ -345,8 +360,8 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Arranca ACOTADO cuando el catálogo trae filtro destacado: el universo es referencia, no trabajo.
-  const [soloDestacados, setSoloDestacados] = useState(true);
+  // Arranca acotado salvo que el catálogo diga lo contrario (ver `arrancaAcotado`).
+  const [soloDestacados, setSoloDestacados] = useState(filtroDestacado?.arrancaAcotado !== false);
   const destacados = filtroDestacado ? items.filter(filtroDestacado.aplica) : items;
   const recorteCliente = filtroServidor?.opciones.find((o) => o.value === filtroServidorValor)?.clienteOnly;
   const itemsFiltrados = recorteCliente ? items.filter(recorteCliente) : items;
