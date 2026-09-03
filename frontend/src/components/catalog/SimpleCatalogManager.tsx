@@ -362,9 +362,21 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
 
   // Arranca acotado salvo que el catálogo diga lo contrario (ver `arrancaAcotado`).
   const [soloDestacados, setSoloDestacados] = useState(filtroDestacado?.arrancaAcotado !== false);
-  const destacados = filtroDestacado ? items.filter(filtroDestacado.aplica) : items;
+  /*
+    LA BÚSQUEDA SE APLICA PRIMERO, y de ahí salen los recuentos de los botones.
+
+    Antes contaban sobre el catálogo entero mientras la tabla mostraba el cruce de búsqueda y filtro,
+    así que con algo escrito en el buscador los números no correspondían a nada de lo que se veía: el
+    botón decía «(2)» sobre una tabla de 1 fila, y pasar a «Ver todos (180)» no cambiaba ninguna fila
+    porque la búsqueda seguía mandando. El filtro parecía inerte.
+
+    Contando sobre lo buscado, el número de cada botón es exactamente lo que aparece al tocarlo.
+  */
+  const coincideBusqueda = (it: SimpleCatalogItem) => !search.trim() || fuzzyMatch(textoBuscable(it), search);
+  const buscados = items.filter(coincideBusqueda);
+  const destacados = filtroDestacado ? buscados.filter(filtroDestacado.aplica) : buscados;
   const recorteCliente = filtroServidor?.opciones.find((o) => o.value === filtroServidorValor)?.clienteOnly;
-  const itemsFiltrados = recorteCliente ? items.filter(recorteCliente) : items;
+  const itemsFiltrados = recorteCliente ? buscados.filter(recorteCliente) : buscados;
   const base = filtroDestacado && soloDestacados ? destacados : itemsFiltrados;
   /**
    * Dónde busca el buscador: en TODO lo que la tabla muestra.
@@ -396,7 +408,9 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
     return partes.filter(Boolean).join(' ');
   };
 
-  const filtered = base.filter((it) => !search.trim() || fuzzyMatch(textoBuscable(it), search));
+  // `base` ya viene con la búsqueda aplicada (ver `buscados`): volver a filtrar acá sería hacer dos
+  // veces el mismo recorrido sobre los 2.669 de Convenios, en cada tecla.
+  const filtered = base;
 
   /*
     SE PAGINA LO QUE SE DIBUJA, NO LO QUE SE BUSCA.
@@ -620,7 +634,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                 {filtroDestacado.etiqueta} ({destacados.length})
               </button>
               <button type="button" onClick={() => setSoloDestacados(false)} className={`px-3 py-2 border-l border-gray-300 dark:border-gray-600 transition-colors ${!soloDestacados ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
-                Ver todos ({items.length})
+                Ver todos ({buscados.length})
               </button>
             </div>
           )}
