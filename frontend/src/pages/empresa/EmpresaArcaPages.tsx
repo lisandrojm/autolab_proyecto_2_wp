@@ -14,6 +14,7 @@ import { arcaCategoriasAPI, ConvenioDetalle } from '../../api/arcaCategorias';
 import { companiesAPI, Company } from '../../api/companies';
 import { paritariasAPI, EstadoParitarias } from '../../api/paritarias';
 import { CeldaFuenteParitarias } from '../../components/convenios/CeldaFuenteParitarias';
+import { CeldaSindicato } from '../../components/convenios/CeldaSindicato';
 import { useEmpresaContextStore } from '../../stores/empresaContextStore';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { formatRnos } from '../../utils/rnos';
@@ -477,16 +478,7 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
             Las mismas columnas que el nomenclador salvo «Empresas», que acá no aporta: la empleadora
             ES el contexto de la pantalla, y la columna diría en cuántas OTRAS está registrado.
           */
-          renderSindicato={(cv) => {
-            const sind = cv.sindicatoId && typeof cv.sindicatoId === 'object' ? (cv.sindicatoId as { _id: string; name: string; sigla?: unknown }) : null;
-            if (!sind) return <span className="text-gray-400 dark:text-gray-600">—</span>;
-            const sigla = typeof sind.sigla === 'string' ? sind.sigla.trim() : '';
-            return (
-              <span title={sind.name} className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
-                {sigla || sind.name}
-              </span>
-            );
-          }}
+          renderSindicato={(cv) => <CeldaSindicato convenio={cv} />}
           renderVigilancia={(cv) => <CeldaFuenteParitarias convenio={cv} vigilancia={vigilancia} declarado={declarado} />}
           // Acá la falta SÍ es accionable: ese convenio le afecta los contratos a esta empleadora.
           // En el nomenclador va un guion, porque serían 2.664 avisos sobre convenios que nadie usa.

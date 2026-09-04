@@ -130,7 +130,7 @@ export const SindicatosPage: React.FC = () => {
                 ))}
                 {resto > 0 && <span className="text-[11px] text-gray-500 dark:text-gray-400">+{resto}</span>}
                 <Link
-                  to={`/convenios?sindicatoId=${item._id}`}
+                  to={`/convenios?buscar=${encodeURIComponent(item.name)}`}
                   title={`Ver los ${suyos.length} convenio(s) de ${item.name}`}
                   aria-label={`Ver los convenios de ${item.name}`}
                   className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 ml-0.5"

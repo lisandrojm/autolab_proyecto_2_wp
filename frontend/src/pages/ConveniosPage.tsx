@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faFileContract, faArrowUpRightFromSquare, faEye } from '@fortawesome/free-solid-svg-icons';
+import { faFileContract, faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
 import { SimpleCatalogManager } from '../components/catalog/SimpleCatalogManager';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
 import { companiesAPI, Company } from '../api/companies';
@@ -16,30 +16,11 @@ import { BannerParitarias } from '../components/paritarias/BannerParitarias';
 import { FuenteDelConvenio } from '../components/convenios/FuenteDelConvenio';
 import { PanelCoberturaFuentes } from '../components/convenios/PanelCoberturaFuentes';
 import { CeldaFuenteParitarias } from '../components/convenios/CeldaFuenteParitarias';
+import { CeldaSindicato } from '../components/convenios/CeldaSindicato';
 
 const conveniosApi = createSimpleCatalogApi('/convenios');
 const sindicatosApi = createSimpleCatalogApi('/sindicatos');
 
-/*
-  Los dos valores del filtro que no son un sindicato puntual.
-
-  `FILTRO_SIN` vale literalmente "null" porque es lo que el server entiende como "sin asignar"
-  (`filtrosPermitidos` traduce el texto "null" al valor null). `FILTRO_CON` no viaja: no hay un
-  filtro de desigualdad del otro lado, así que se resuelve en el cliente.
-*/
-const FILTRO_SIN = 'null';
-const FILTRO_CON = '__con__';
-
-/** El sindicato de un convenio, ya poblado por el server como {_id, name, sigla}. */
-interface SindicatoPoblado {
-  _id: string;
-  name: string;
-  sigla?: string;
-}
-const sindicatoDe = (c: SimpleCatalogItem): SindicatoPoblado | null => {
-  const v = c.sindicatoId;
-  return v && typeof v === 'object' ? (v as SindicatoPoblado) : null;
-};
 /** Cómo se nombra un sindicato en una lista: sigla adelante, que es como se lo conoce. */
 const etiquetaSindicato = (s: { name: string; sigla?: unknown }): string => {
   const sigla = typeof s.sigla === 'string' ? s.sigla.trim() : '';
@@ -108,12 +89,17 @@ const EmpresasDelConvenioModal: React.FC<{
 
 export const ConveniosPage: React.FC = () => {
   /*
-    Permite entrar acá ya filtrado por un gremio, con `/convenios?sindicatoId=<id>`. Es lo que usa el
+    Permite entrar acá ya filtrado por un gremio, con `/convenios?buscar=<nombre>`. Es lo que usa el
     ABM de Sindicatos para mostrar «sus» convenios: reusa esta pantalla completa —columnas, buscador,
     paritarias, edición— en vez de construir una vista de detalle que mostraría lo mismo peor.
+
+    Va por el BUSCADOR y no por un filtro propio: el desplegable de sindicatos que había acá ocupaba
+    media barra para una elección entre 180 valores de los que hoy solo 2 aparecen en algún convenio.
+    El buscador ya resuelve lo mismo —encuentra por sigla y por nombre del gremio, ver `textoBuscable`—
+    y además deja ver QUÉ se está filtrando, que un select cerrado no mostraba.
   */
   const [paramsUrl] = useSearchParams();
-  const sindicatoDelLink = paramsUrl.get('sindicatoId') || '';
+  const busquedaInicial = paramsUrl.get('buscar') || '';
   const [obrasSociales, setObrasSociales] = useState<SimpleCatalogItem[]>([]);
   /** Qué empresas registraron cada convenio, por `_id`. */
   const [empresasPorConvenio, setEmpresasPorConvenio] = useState<Map<string, Company[]>>(new Map());
@@ -231,35 +217,8 @@ export const ConveniosPage: React.FC = () => {
   */
   const renderFuente = (c: ConvenioFila) => <CeldaFuenteParitarias convenio={c} vigilancia={vigilancia} declarado={declarado} onAnotar={setAnotando} />;
 
-  /**
-   * La columna SINDICATO: chip azul con la sigla, nombre completo en el tooltip.
-   *
-   * CHIP y no texto plano a propósito. «Fuente de paritarias», dos columnas más allá, también imprime
-   * nombres de gremio —y para la mayoría de los convenios va a decir lo mismo, porque la fuente suele
-   * ser el sitio del propio gremio—. La forma es lo único que las distingue de un vistazo: esta es un
-   * dato del convenio, aquella es dónde se buscan sus acuerdos.
-   */
-  const renderSindicato = (c: ConvenioFila) => {
-    const s = sindicatoDe(c as SimpleCatalogItem);
-    if (!s) return <span className="text-gray-400 dark:text-gray-600">—</span>;
-    return (
-      <span className="inline-flex items-center gap-1.5">
-        <span title={s.name} className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
-          {/* La sigla si la hay; si no, el nombre, que es lo único que queda para identificarlo. */}
-          {typeof s.sigla === 'string' && s.sigla.trim() ? s.sigla.trim() : s.name}
-        </span>
-        {/*
-          El camino de vuelta al gremio, simétrico al ojito que hay en Sindicatos.
-
-          Lleva al ABM con el buscador ya cargado y no a una ficha, porque este catálogo no tiene
-          una: `?buscar=` deja la fila a la vista, con su sigla y sus otros convenios al lado.
-        */}
-        <Link to={`/sindicatos?buscar=${encodeURIComponent(s.name)}`} title={`Ver ${s.name} en Sindicatos`} aria-label={`Ver ${s.name} en Sindicatos`} className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
-          <FontAwesomeIcon icon={faEye} className="h-3.5 w-3.5" />
-        </Link>
-      </span>
-    );
-  };
+  // La celda vive en `components/convenios/CeldaSindicato`: la ficha de empresa muestra la misma.
+  const renderSindicato = (c: ConvenioFila) => <CeldaSindicato convenio={c} />;
 
   return (
     <>
@@ -270,6 +229,7 @@ export const ConveniosPage: React.FC = () => {
         entityLabel="convenio"
         api={conveniosApi}
         templateBaseName="convenios"
+        busquedaInicial={busquedaInicial}
         externalIdLabel="Código"
         externalIdPlaceholder="Formato NNNN/AA, ej: 0130/75"
         // La cascada de obras sociales se decide en cuatro lugares distintos (persona, excepción de
@@ -279,21 +239,6 @@ export const ConveniosPage: React.FC = () => {
         // cargarle la obra social a uno que nadie usa es trabajo perdido, y los 2.664 restantes
         // llenaban la columna de guiones como si faltaran 2.664 configuraciones.
         filtroDestacado={{ etiqueta: 'Registrados por alguna empresa', aplica: (c) => (empresasPorConvenio.get(c._id) || []).length > 0 }}
-        /*
-          Filtro por gremio. Los 180 y «Sin sindicato» los resuelve el SERVER (`?sindicatoId=…`, y
-          `null` para los que no tienen); «Con sindicato» se recorta acá porque el filtro del server
-          es por igualdad y esto necesitaría `$ne: null`. Es un recorrido por cambio de opción, no
-          por tecla.
-
-          «Sin sindicato» primero y no al final de los 180: con 2.665 de 2.669 sin asignar, es la
-          consulta que se va a hacer todos los días.
-        */
-        filtroServidor={{
-          param: 'sindicatoId',
-          etiquetaTodos: 'Todos los sindicatos',
-          valorInicial: sindicatoDelLink,
-          opciones: [{ value: FILTRO_SIN, label: 'Sin sindicato' }, { value: FILTRO_CON, label: 'Con sindicato', clienteOnly: (c) => !!sindicatoDe(c) }, ...sindicatos.map((s) => ({ value: s._id, label: etiquetaSindicato(s as { name: string; sigla?: unknown }) }))],
-        }}
         // LA MISMA tabla que usa la ficha de empresa: eran dos, con encabezados distintos para los
         // mismos datos ("Nombre" vs "Actividad", el código al final vs primero) y ya habían divergido.
         // Acá se le suma la columna "Empresas" y las acciones de ABM que aporta el manager.

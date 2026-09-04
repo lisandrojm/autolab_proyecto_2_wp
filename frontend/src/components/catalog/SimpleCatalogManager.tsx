@@ -387,6 +387,17 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
     for (const f of extraFields) {
       if (f.type === 'select') continue;
       const v = (it as Record<string, unknown>)[f.key];
+      /*
+        Una `ref` guarda un id que nadie tipea, pero SÍ se busca por lo que la columna muestra: en
+        Convenios, escribir «SATSAID» tiene que traer los convenios de ese gremio. Se resuelve el id
+        —venga poblado o pelado— contra las opciones del campo, que es de donde sale la etiqueta.
+      */
+      if (f.type === 'ref') {
+        const id = v && typeof v === 'object' ? String((v as { _id?: unknown })._id ?? '') : v ? String(v) : '';
+        const etiqueta = id ? f.options?.find((o) => o.value === id)?.label : undefined;
+        if (etiqueta) partes.push(etiqueta);
+        continue;
+      }
       if (typeof v === 'string' || typeof v === 'number') partes.push(String(v));
     }
     return partes.filter(Boolean).join(' ');
