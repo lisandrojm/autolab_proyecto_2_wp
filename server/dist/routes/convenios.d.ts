@@ -5,5 +5,5 @@
  * (Código / Actividad / Signatario), así que el XLSX que genera
  * `src/scripts/convenios/conveniosToXlsx.ts` se importa sin tocar nada.
  */
-declare const router: import('express').Router;
+declare const router: import("express").Router;
 export { router as convenioRoutes };

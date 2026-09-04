@@ -9,12 +9,22 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Modal } from '../ui/Modal';
 import { sweetAlert } from '../../utils/sweetAlert';
 
-/** Badge de categoría: código de ARCA + nombre, con el convenio del que cuelga. */
-const CategoriaSatBadge: React.FC<{ label: string; convenio?: string }> = ({ label, convenio }) => (
+/**
+ * Badge de categoría: código de ARCA + nombre, con el convenio del que cuelga.
+ *
+ * `onQuitar` lo convierte en removible, para el formulario. El mismo badge que usan las tarjetas del
+ * listado: es la misma cosa mostrada en dos lados, y dos versiones terminan divergiendo.
+ */
+const CategoriaSatBadge: React.FC<{ label: string; convenio?: string; onQuitar?: () => void }> = ({ label, convenio, onQuitar }) => (
   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
     <FontAwesomeIcon icon={faLayerGroup} className="h-2.5 w-2.5" />
     {convenio && <span className="font-mono opacity-70">{convenio}</span>}
     {label}
+    {onQuitar && (
+      <button type="button" onClick={onQuitar} title={`Quitar ${label}`} aria-label={`Quitar ${label}`} className="ml-0.5 rounded hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
+        <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
+      </button>
+    )}
   </span>
 );
 
@@ -238,6 +248,29 @@ export const RolesEmpresaAbm: React.FC = () => {
   }, [allCategories, catSearch]);
 
   const totalParaSelect = useMemo(() => gruposParaSelect.reduce((acc, g) => acc + g.cats.length, 0), [gruposParaSelect]);
+
+  /**
+   * Las categorías elegidas, para los badges de arriba del buscador.
+   *
+   * Se resuelven contra `allCategories` —el catálogo COMPLETO— y no contra `gruposParaSelect`, que
+   * está filtrado por el buscador: si no, escribir cualquier cosa haría desaparecer los badges de
+   * categorías que siguen tildadas, y con la lista scrolleada no habría forma de ver qué hay puesto.
+   *
+   * Incluye las que ya no son elegibles (alias viejos que quedaron asociados): esconderlas dejaría
+   * un recuento «(4)» sobre tres badges.
+   */
+  const categoriasElegidas = useMemo(() => {
+    const porId = new Map(allCategories.map((c) => [c._id, c]));
+    return selectedCategoryIds
+      .map((id) => porId.get(id))
+      .filter(Boolean)
+      .map((cat) => {
+        const c = cat as CategoriaSatItem;
+        const codigo = String(c.data?.codigoArca || '').trim();
+        const nombre = c.data?.nombre || c.name || 'Sin nombre';
+        return { id: c._id, label: codigo ? `${codigo} · ${nombre}` : nombre, convenio: String(c.data?.convenio || '').trim() };
+      });
+  }, [allCategories, selectedCategoryIds]);
 
   /** Los CCT de lo que está tildado ahora mismo: avisa antes de guardar, no después. */
   const conveniosSeleccionados = useMemo(() => {
@@ -489,6 +522,15 @@ export const RolesEmpresaAbm: React.FC = () => {
                   Limpiar
                 </button>
               </div>
+              {/* Lo elegido va ARRIBA del buscador: adentro lo haría crecer de alto y se leería como
+                  texto ya escrito en el campo. Mismo criterio que Rol/es Empresa y Sindicatos. */}
+              {categoriasElegidas.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {categoriasElegidas.map((c) => (
+                    <CategoriaSatBadge key={c.id} label={c.label} convenio={c.convenio} onQuitar={() => setSelectedCategoryIds(selectedCategoryIds.filter((id) => id !== c.id))} />
+                  ))}
+                </div>
+              )}
               <div className="relative mb-2">
                 <input type="text" value={catSearch} onChange={(e) => setCatSearch(e.target.value)} className="input-field w-full pl-9 pr-8 py-2 border rounded bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100" placeholder="Buscar por nombre, código ARCA o convenio..." />
                 <div className="absolute inset-y-0 left-3 pl-3 flex items-center pointer-events-none text-gray-400">
@@ -510,14 +552,23 @@ export const RolesEmpresaAbm: React.FC = () => {
                 </div>
               )}
 
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 max-h-60 overflow-y-auto space-y-3 bg-gray-50 dark:bg-gray-900/50">
+              {/*
+                `pt-0` y fondo OPACO, las dos cosas por el encabezado sticky de adentro:
+
+                - Con `p-3`, esos 12px de padding scrollean por encima del sticky —que se pega al
+                  borde del área de contenido— y dejaban una franja donde las filas pasaban sin que
+                  nada las tapara. El aire de arriba lo pone ahora el propio encabezado.
+                - `dark:bg-gray-900/50` es medio transparente. Un encabezado sticky con ese fondo deja
+                  ver el contenido pasando por debajo, que es justo lo que un sticky viene a evitar.
+              */}
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg px-3 pb-3 pt-0 max-h-60 overflow-y-auto space-y-3 bg-gray-50 dark:bg-gray-900">
                 {totalParaSelect === 0 ? (
                   <p className="text-sm text-gray-500 italic p-2">No se encontraron categorías</p>
                 ) : (
                   gruposParaSelect.map((grupo) => (
                     <div key={grupo.convenio}>
                       {/* El convenio como encabezado: es el nivel del que cuelga la categoría, no una etiqueta más. */}
-                      <div className="sticky top-0 flex items-center gap-2 px-1.5 py-1 mb-1 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                      <div className="sticky top-0 z-10 flex items-center gap-2 px-1.5 pt-3 pb-1 mb-1 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                         <span className="font-mono text-[11px] font-bold text-blue-700 dark:text-blue-400">{grupo.convenio}</span>
                         <span className="text-[10px] text-gray-400">{grupo.cats.length} categoría(s)</span>
                       </div>

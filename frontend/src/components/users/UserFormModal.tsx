@@ -15,11 +15,36 @@ import { mensajeErrorArca } from '../../utils/errorArca';
 import { fuzzyMatch } from '../../utils/searchHelpers';
 import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina, esCuilObligatorio, opcionesDeNacionalidad, valorDeNacionalidad, leerNacionalidadElegida } from '../../utils/nacionalidadDocumento';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faUserShield, faEye, faEyeSlash, faToggleOn, faToggleOff, faMapMarkerAlt, faUniversity, faSearch, faTimes, faMobileAlt, faKey, faCheck, faXmark, faCircleInfo, faSpinner, faLandmark, faCircleCheck, faWandMagicSparkles } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faUserShield, faEye, faEyeSlash, faToggleOn, faToggleOff, faMapMarkerAlt, faUniversity, faSearch, faTimes, faMobileAlt, faKey, faCheck, faXmark, faCircleInfo, faSpinner, faLandmark, faCircleCheck, faWandMagicSparkles, faPlus } from '@fortawesome/free-solid-svg-icons';
 
 type ModalTab = 'general' | 'domicilio' | 'bancarios';
 
 const sindicatosApi = createSimpleCatalogApi('/sindicatos');
+
+/**
+ * El [+] que abre el selector de un campo de elección múltiple.
+ *
+ * Mismo estilo que el «nuevo» del encabezado de Usuarios —azul, cuadrado, solo el ícono— para que
+ * «agregar» se vea igual en toda la pantalla. Vive en la CABECERA del bloque y no entre los badges:
+ * ahí no se mueve de lugar a medida que se eligen cosas, así que se puede volver a apretar sin
+ * buscarlo.
+ */
+const BotonAgregar: React.FC<{ onClick: () => void; title: string }> = ({ onClick, title }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    /*
+      SIN `title`, a propósito: el tooltip nativo se dibuja arriba y a la izquierda del cursor, y acá
+      eso cae justo sobre el nombre del campo y su ⓘ, tapándolos. No hay forma de reposicionarlo.
+      El `aria-label` queda para los lectores de pantalla, que es lo que el `title` aportaba de más:
+      un [+] pegado al nombre del bloque ya dice qué agrega.
+    */
+    aria-label={title}
+    className="inline-flex items-center justify-center px-1.5 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors normal-case tracking-normal font-normal"
+  >
+    <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
+  </button>
+);
 
 /**
  * Cómo se muestra un sindicato en la lista: "SIGLA — Nombre".
@@ -1102,6 +1127,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                       <button type="button" onClick={() => setRolesEmpresaInfoOpen(true)} title="¿Qué son los roles empresa?" className="ml-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal align-middle">
                         <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
                       </button>
+                      {/* Solo con algo elegido: sin nada, abajo está el buscador ancho y este [+]
+                          sería un segundo camino a lo mismo. */}
+                      {(formData.rolesFrameIds || []).length > 0 && (
+                        <span className="ml-2 align-middle inline-flex">
+                          <BotonAgregar onClick={() => setRolesEmpresaOpen(true)} title="Agregar otro rol" />
+                        </span>
+                      )}
                     </label>
                     {/* Mismo marco que "Afiliación sindical" y "Roles de Sistema": los tres son
                         bloques de elección múltiple, y encuadrarlos igual los agrupa a la vista en
@@ -1122,16 +1154,25 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                         })}
                       </div>
                     )}
-                    {/* Lo elegido va ARRIBA del campo, no adentro: badges dentro de un input lo hacen
-                        crecer de alto y se lee como si el buscador tuviera texto escrito. */}
-                    <button
-                      type="button"
-                      onClick={() => setRolesEmpresaOpen(true)}
-                      className="input-field text-left flex items-center gap-2 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
-                    >
-                      <span className="text-gray-400 dark:text-gray-500">Elegí uno o más roles…</span>
-                      <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400 ml-auto shrink-0" />
-                    </button>
+                    {/*
+                      El buscador ancho SOLO cuando no hay nada elegido.
+
+                      Con roles ya puestos, ese campo repetía la invitación a elegir debajo de lo que
+                      ya estaba elegido y se llevaba el alto de una fila entera para eso. Con algo
+                      seleccionado alcanza un «+ Más» al lado de los badges, que abre la misma
+                      ventana. Lo elegido va ARRIBA y no adentro del input: badges dentro de un campo
+                      lo hacen crecer y se leen como texto escrito en el buscador.
+                    */}
+                    {(formData.rolesFrameIds || []).length === 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setRolesEmpresaOpen(true)}
+                        className="input-field text-left flex items-center gap-2 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
+                      >
+                        <span className="text-gray-400 dark:text-gray-500">Elegí uno o más roles…</span>
+                        <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400 ml-auto shrink-0" />
+                      </button>
+                    )}
                     </div>
                   </div>
 
@@ -1151,7 +1192,15 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                   */}
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Afiliación sindical</label>
-                    <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 space-y-4">
+                    {/*
+                      El switch va FUERA del recuadro, y el recuadro solo aparece cuando hay algo
+                      adentro.
+
+                      Encerrarlo junto a los sindicatos daba a entender que el marco agrupaba las dos
+                      cosas, cuando el switch es la pregunta y el recuadro es la respuesta. Y con el
+                      switch apagado el marco quedaba dibujado alrededor de una sola línea.
+                    */}
+                    <div className="flex items-center gap-3">
                       <label className="flex items-center space-x-3 cursor-pointer group w-fit">
                         <div className={`w-10 h-6 flex items-center rounded-full p-1 duration-300 ease-in-out ${formData.afiliadoAlSindicato ? 'bg-blue-500 dark:bg-blue-600' : 'bg-gray-300 dark:bg-gray-700'}`}>
                           <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${formData.afiliadoAlSindicato ? 'translate-x-4' : ''}`}></div>
@@ -1159,6 +1208,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Afiliado a un sindicato</span>
                         <input type="checkbox" className="hidden" checked={!!formData.afiliadoAlSindicato} onChange={(e) => handleAfiliadoChange(e.target.checked)} />
                       </label>
+                      {/* Al lado del switch, y solo con algo elegido: sin nada, abajo está el
+                          buscador ancho. Va FUERA del <label> del switch — adentro, apretarlo
+                          también lo tildaría, porque un label propaga el click a su control. */}
+                      {formData.afiliadoAlSindicato && sindicatosElegidos.length > 0 && (
+                        <BotonAgregar onClick={() => { setSindicatoSearch(''); setSindicatoOpen(true); }} title="Agregar otro sindicato" />
+                      )}
+                    </div>
 
                       {/*
                         La pregunta de seguimiento: solo existe si la respuesta anterior fue que sí.
@@ -1168,7 +1224,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                         y que se vieran distinto era la única razón para tener que mirarlas dos veces.
                       */}
                       {formData.afiliadoAlSindicato && (
-                        <div>
+                        <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 mt-2">
                           <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                             Sindicato <span className="text-red-500">*</span>
                           </label>
@@ -1184,24 +1240,29 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                               ))}
                             </div>
                           )}
-                          {/* Lo elegido va ARRIBA del campo, no adentro: un badge dentro de un input lo
-                              hace crecer de alto y se lee como si el buscador tuviera texto escrito. */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSindicatoSearch('');
-                              setSindicatoOpen(true);
-                            }}
-                            className="input-field text-left flex items-center gap-2 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
-                          >
-                            <span className="text-gray-400 dark:text-gray-500">Elegí uno o más sindicatos…</span>
-                            <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400 ml-auto shrink-0" />
-                          </button>
+                          {/*
+                            El buscador ancho SOLO cuando no hay nada elegido: con sindicatos ya
+                            puestos repetía la invitación a elegir debajo de lo elegido y se llevaba
+                            el alto de una fila para eso. Lo elegido va ARRIBA y no adentro del input:
+                            un badge dentro de un campo lo hace crecer y se lee como texto escrito.
+                          */}
+                          {sindicatosElegidos.length === 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSindicatoSearch('');
+                                setSindicatoOpen(true);
+                              }}
+                              className="input-field text-left flex items-center gap-2 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
+                            >
+                              <span className="text-gray-400 dark:text-gray-500">Elegí uno o más sindicatos…</span>
+                              <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400 ml-auto shrink-0" />
+                            </button>
+                          )}
                           {/* Un catálogo vacío sin explicación se lee como un error de la pantalla. */}
                           {sindicatos.length === 0 && <p className="text-[11px] text-gray-400 mt-1">Todavía no hay sindicatos cargados. Se cargan en Configuración → Sindicatos.</p>}
                         </div>
                       )}
-                    </div>
                   </div>
 
                   <div>
