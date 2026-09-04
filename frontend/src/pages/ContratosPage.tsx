@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PageLayout } from '../components/ui/PageLayout';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faFileContract, faFilePdf } from '@fortawesome/free-solid-svg-icons';
-import { ContractTypesTab } from '../components/contratos/ContractTypesTab';
+import { faFileContract, faFilePdf, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { ContractTypesTab, type ContractTypesTabHandle } from '../components/contratos/ContractTypesTab';
 import { ContractStatesTab } from '../components/contratos/ContractStatesTab';
 import { DependencyFlowEditor } from '../components/contratos/DependencyFlowEditor';
 
@@ -89,6 +89,9 @@ export const ContratosPage: React.FC = () => {
   }, [searchParams]);
   const [showInfoModal, setShowInfoModal] = useState(false);
 
+  // El [+] de «Nuevo contrato» se dibuja en el encabezado, pero el formulario vive en la pestaña.
+  const tiposRef = useRef<ContractTypesTabHandle>(null);
+
   const cambiarTab = (tab: TabKey) => {
     setActiveTab(tab);
     navigate(`/contratos?tab=${tab}`, { replace: true });
@@ -108,6 +111,12 @@ export const ContratosPage: React.FC = () => {
             <FontAwesomeIcon icon={faFilePdf} />
             <span className="hidden lg:block">Plantillas | Contratos</span>
           </button>
+          {/* Solo en «Tipos»: es la única pestaña que da de alta desde acá. */}
+          {activeTab === 'types' && (
+            <button onClick={() => tiposRef.current?.abrirCrear()} title="Nuevo contrato" aria-label="Nuevo contrato" className="px-2 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-semibold">
+              <FontAwesomeIcon icon={faPlus} />
+            </button>
+          )}
         </div>
       }
       infoModal={{
@@ -134,7 +143,7 @@ export const ContratosPage: React.FC = () => {
 
           {/* Tab Content */}
           <div className="animate-in fade-in duration-300">
-            {activeTab === 'types' && <ContractTypesTab />}
+            {activeTab === 'types' && <ContractTypesTab ref={tiposRef} />}
             {activeTab === 'states' && <ContractStatesTab />}
             {activeTab === 'dependencies' && <DependencyFlowEditor />}
           </div>

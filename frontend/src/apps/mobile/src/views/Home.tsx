@@ -83,7 +83,7 @@ export default function Home({ onNavigate }: HomeProps) {
   const userCreateAction = {
     icon: faUserPlus,
     title: "Usuarios",
-    description: "Alta de usuarios",
+    description: "Solicitud de contratación",
     view: "user_history" as ViewType,
     roles: ["mobile-coordinador"],
     disabled: false,

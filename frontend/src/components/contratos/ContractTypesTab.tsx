@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { SearchAndFilters } from '../ui/SearchAndFilters';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
@@ -8,7 +8,8 @@ import { InfoModal } from '../ui/InfoModal';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { BloqueEstado } from '../ui/BloqueEstado';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash, faFileContract, faGrip, faTable, faFileInvoiceDollar, faInfinity, faFileSignature, faCircleInfo, faFilePdf, faArrowUpRightFromSquare, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import { faEdit, faTrash, faFileContract, faGrip, faTable, faFileInvoiceDollar, faInfinity, faFileSignature, faCircleInfo, faFilePdf, faArrowUpRightFromSquare, faTriangleExclamation, faUserShield } from '@fortawesome/free-solid-svg-icons';
 import { contratosAPI, ContratoItem } from '../../api/contratos';
 import { contratoFrameAPI, ContratoFrameItem } from '../../api/contratosFrame';
 import { infoAPI, InfoItem } from '../../api/info';
@@ -54,6 +55,21 @@ interface FormState {
   afipModalidadLiquidacion: string;
   generaAlta: boolean;
 }
+
+type TabContrato = 'general' | 'arca' | 'sistema';
+
+/**
+ * El orden de las pestañas, en un solo lugar: lo usan el «Siguiente» y el «Anterior» del alta.
+ *
+ * Mismo criterio que el formulario de usuario —de donde se copió la mecánica—: en el ALTA se recorre
+ * paso a paso y el botón final aparece recién al terminar; en la EDICIÓN se entra a corregir algo
+ * puntual y se guarda desde cualquier pestaña.
+ */
+const TABS_CONTRATO: { key: TabContrato; label: string; icon: IconDefinition }[] = [
+  { key: 'general', label: 'General', icon: faFileContract },
+  { key: 'arca', label: 'ARCA', icon: faFileInvoiceDollar },
+  { key: 'sistema', label: 'Sistema', icon: faUserShield },
+];
 
 const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDiario: '', esTiempoIndeterminado: false, requiereFirma: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true };
 
@@ -102,7 +118,10 @@ const CardFooterAction: React.FC<{ icon: typeof faEdit; title: string; onClick: 
   </div>
 );
 
-export const ContractTypesTab: React.FC = () => {
+/** Lo que la página puede pedirle a esta pestaña: el [+] de «Nuevo contrato» vive en el encabezado. */
+export type ContractTypesTabHandle = { abrirCrear: () => void };
+
+export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref) => {
   const [contratos, setContratos] = useState<ContratoItem[]>([]);
   const [plantillas, setPlantillas] = useState<ContratoFrameItem[]>([]);
   const [estados, setEstados] = useState<InfoItem[]>([]);
@@ -111,6 +130,7 @@ export const ContractTypesTab: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showFirmaInfo, setShowFirmaInfo] = useState(false);
+  const [tabModal, setTabModal] = useState<TabContrato>('general');
   const [showTiempoIndetInfo, setShowTiempoIndetInfo] = useState(false);
   const [editando, setEditando] = useState<ContratoItem | null>(null);
   const [form, setForm] = useState<FormState>(FORM_VACIO);
@@ -283,8 +303,12 @@ export const ContractTypesTab: React.FC = () => {
     setEditando(null);
     setForm(FORM_VACIO);
     setEstadoIdsOriginal([]);
+    setTabModal('general');
     setShowModal(true);
   };
+
+  // Declarado después de `abrirCrear` a propósito: adentro del callback sería una referencia en TDZ.
+  useImperativeHandle(ref, () => ({ abrirCrear }), []);
 
   const abrirEditar = (contrato: ContratoItem) => {
     const seleccionActual = estadoIdsDe(contrato._id);
@@ -303,6 +327,7 @@ export const ContractTypesTab: React.FC = () => {
       generaAlta: contrato.data?.generaAlta !== false,
     });
     setEstadoIdsOriginal(seleccionActual);
+    setTabModal('general');
     setShowModal(true);
   };
 
@@ -358,9 +383,26 @@ export const ContractTypesTab: React.FC = () => {
     }
   };
 
+  const pasoActual = TABS_CONTRATO.findIndex((t) => t.key === tabModal);
+
+  /**
+   * Avanza de pestaña, pero no deja atrás campos requeridos vacíos: si no, la persona llega a la
+   * última pestaña, aprieta Crear y recién ahí se entera de que el error está dos pasos atrás.
+   * Hoy el único requerido es el nombre, en General.
+   */
+  const avanzar = () => {
+    if (tabModal === 'general' && !form.name.trim()) {
+      sweetAlert.error('Falta el nombre', 'El contrato necesita un nombre.');
+      return;
+    }
+    setTabModal(TABS_CONTRATO[pasoActual + 1].key);
+  };
+
   const guardar = async () => {
     const name = form.name.trim();
     if (!name) {
+      // Se llega acá desde la última pestaña, así que el aviso tiene que devolver a la primera.
+      setTabModal('general');
       sweetAlert.error('Falta el nombre', 'El contrato necesita un nombre.');
       return;
     }
@@ -421,9 +463,6 @@ export const ContractTypesTab: React.FC = () => {
           <SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar contrato..." />
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <button onClick={abrirCrear} title="Nuevo contrato" aria-label="Nuevo contrato" className="inline-flex items-center gap-2 px-2 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">
-            <FontAwesomeIcon icon={faPlus} />
-          </button>
           {isLarge && (
             <div className="flex items-center gap-2">
               <button onClick={() => setViewMode('cards')} title="Vista de tarjetas" className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'cards' ? 'bg-blue-500 text-white border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
@@ -611,287 +650,342 @@ export const ContractTypesTab: React.FC = () => {
         onClose={() => setShowModal(false)}
         title={editando ? 'Editar Contrato' : 'Nuevo Contrato'}
         subtitle={editando ? editando.name : 'Se va a poder asignar a una o varias Plantillas'}
-        size="md"
+        size="lg"
         footer={
           <div className="flex items-center justify-end gap-3 w-full">
+            {/* «Anterior» no valida nada: se está saliendo del paso, no avanzando. */}
+            {pasoActual > 0 && (
+              <button onClick={() => setTabModal(TABS_CONTRATO[pasoActual - 1].key)} className="btn-secondary mr-auto" disabled={saving}>
+                Anterior
+              </button>
+            )}
             <button onClick={() => setShowModal(false)} className="btn-secondary" disabled={saving}>
               Cancelar
             </button>
-            <button onClick={guardar} className="btn-primary" disabled={saving}>
-              {saving ? 'Guardando...' : editando ? 'Actualizar' : 'Crear'}
-            </button>
+            {pasoActual < TABS_CONTRATO.length - 1 ? (
+              <button onClick={avanzar} className="btn-primary" disabled={saving}>
+                Siguiente
+              </button>
+            ) : (
+              <button onClick={guardar} className="btn-primary" disabled={saving}>
+                {saving ? 'Guardando...' : editando ? 'Actualizar' : 'Crear'}
+              </button>
+            )}
           </div>
         }
       >
-        <div className="space-y-5">
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Nombre *</label>
-            <input className="input-field w-full" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Ej: Plazo fijo 5x7" />
+        {/*
+          Alto fijo y scroll adentro: las tres pestañas tienen contenidos de largos muy distintos
+          (ARCA es tres veces General), y sin esto el modal salta de tamaño en cada click y los
+          botones del pie se mueven bajo el cursor.
+        */}
+        <div className="flex flex-col h-[min(560px,calc(100svh-16rem))]">
+          {/* Las pestañas, con el mismo aspecto que el formulario de usuario. */}
+          <div className="flex border-b border-gray-200 dark:border-gray-700 -mx-6 px-6 shrink-0">
+            {TABS_CONTRATO.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTabModal(t.key)}
+                className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${tabModal === t.key ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+              >
+                <FontAwesomeIcon icon={t.icon} className="text-xs" />
+                {t.label}
+              </button>
+            ))}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="flex-1 overflow-y-auto pt-5 pr-1">
+          {tabModal === 'general' && <div className="space-y-5 animate-fadeIn">
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Cantidad de Jornadas</label>
-              <input type="number" className="input-field w-full" value={form.cantidadJornadas} onChange={(e) => setForm((p) => ({ ...p, cantidadJornadas: e.target.value }))} />
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Nombre *</label>
+              <input className="input-field w-full" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Ej: Plazo fijo 5x7" />
             </div>
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Multiplicador Diario</label>
-              <input type="number" className="input-field w-full" value={form.multiplicadorDiario} onChange={(e) => setForm((p) => ({ ...p, multiplicadorDiario: e.target.value }))} />
-            </div>
-          </div>
 
-          <div className="flex items-center gap-2">
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" checked={form.esTiempoIndeterminado} onChange={(e) => setForm((p) => ({ ...p, esTiempoIndeterminado: e.target.checked }))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
-              <span className="text-gray-700 dark:text-gray-300">Es tiempo indeterminado</span>
-            </label>
-            <button type="button" onClick={() => setShowTiempoIndetInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Qué significa?" aria-label="Información sobre tiempo indeterminado">
-              <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" checked={form.requiereFirma} onChange={(e) => setForm((p) => ({ ...p, requiereFirma: e.target.checked }))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
-              <span className="text-gray-700 dark:text-gray-300">Se envía a firmar</span>
-            </label>
-            <button type="button" onClick={() => setShowFirmaInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Qué significa?" aria-label="Información sobre envío a firmar">
-              <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
-            </button>
-          </div>
-
-          {/* Códigos ARCA para el TXT de Alta masiva: específicos del convenio/modalidad de este tipo de contrato. */}
-          <div className="space-y-3 p-3 rounded-lg border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/40 dark:bg-indigo-900/10">
-            <div className="flex items-center gap-1.5">
-              <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-3.5 w-3.5 text-indigo-500" />
-              <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">Códigos ARCA (Alta masiva)</p>
-            </div>
-            {/*
-              VA ARRIBA DE LOS TRES CÓDIGOS PORQUE DECIDE SI TIENEN SENTIDO.
-
-              Sin esto, un tipo que no declara nada —una locación de servicios no es relación
-              laboral— queda con los tres campos en blanco, exactamente igual que uno al que le
-              falta cargarlos. Y lo que se ve igual, tarde o temprano alguien lo «completa»:
-              declarando ante el organismo una relación que no existe.
-            */}
-            <label className="flex items-start gap-2 cursor-pointer select-none rounded-lg border border-gray-200 dark:border-gray-700 p-3">
-              <input type="checkbox" checked={form.generaAlta} onChange={(e) => setForm((p) => ({ ...p, generaAlta: e.target.checked }))} className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-              <span className="min-w-0">
-                <span className="block text-sm text-gray-700 dark:text-gray-300">Este tipo de contrato genera alta temprana ante ARCA</span>
-                <span className="block text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                  Desmarcado, no se le piden los códigos de abajo y sus contratos dejan de contarse como incompletos: es lo que corresponde a una locación de servicios, que no es relación laboral.
-                </span>
-              </span>
-            </label>
-
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-0.5">
-              Códigos de la interfaz de "Alta masiva" de ARCA, específicos del convenio/modalidad. Se usan para generar el TXT. Dejalos en blanco si no aplican. La <strong>actividad del domicilio</strong> no va acá: depende del domicilio de explotación y de la empleadora, así que se carga en la ficha de la empresa, en ARCA → Domicilios de Explotación.
-            </p>
-
-            <div className={`space-y-3 ${form.generaAlta ? "" : "opacity-40 pointer-events-none"}`}>
-              <SelectorCodigoArca
-                label="Modalidad de contrato"
-                sufijoLabel="(3 díg.)"
-                items={modalidadesOfrecidas}
-                cargando={cargandoArca}
-                value={form.afipModalidadContrato}
-                onChange={(c) => setForm((p) => ({ ...p, afipModalidadContrato: c }))}
-                formatCodigo={pad3}
-                placeholder="Sin elegir — ej. 008 tiempo completo indeterminado"
-                vacioHint="El catálogo de Modalidades de Contrato está vacío. Se siembra en Configuración → ARCA → Modalidades de Contrato."
-              />
-
-              {/*
-               * El grupo va ARRIBA del tipo de servicio porque lo filtra, igual que Convenio →
-               * Categoría y Domicilio → Actividad. No se guarda: solo recorta la lista.
-               */}
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">Grupo de tipo de servicio <span className="normal-case tracking-normal text-gray-400">(no va al TXT)</span></label>
-                <select className="input-field w-full" value={grupoTipoServicio} onChange={(e) => setGrupoTipoServicio(e.target.value)} disabled={gruposTipoServicio.length === 0}>
-                  <option value="">Todos los tipos de servicio</option>
-                  {gruposTipoServicio.map((g) => (
-                    <option key={g._id} value={String(g.externalId || '')}>
-                      {g.externalId} — {g.name}
-                    </option>
-                  ))}
-                </select>
-                {!hayGruposCargados ? (
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Cantidad de Jornadas</label>
+                <input type="number" className="input-field w-full" value={form.cantidadJornadas} onChange={(e) => setForm((p) => ({ ...p, cantidadJornadas: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Multiplicador Diario</label>
+                <input type="number" className="input-field w-full" value={form.multiplicadorDiario} onChange={(e) => setForm((p) => ({ ...p, multiplicadorDiario: e.target.value }))} />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={form.esTiempoIndeterminado} onChange={(e) => setForm((p) => ({ ...p, esTiempoIndeterminado: e.target.checked }))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                <span className="text-gray-700 dark:text-gray-300">Es tiempo indeterminado</span>
+              </label>
+              <button type="button" onClick={() => setShowTiempoIndetInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Qué significa?" aria-label="Información sobre tiempo indeterminado">
+                <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={form.requiereFirma} onChange={(e) => setForm((p) => ({ ...p, requiereFirma: e.target.checked }))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                <span className="text-gray-700 dark:text-gray-300">Se envía a firmar</span>
+              </label>
+              <button type="button" onClick={() => setShowFirmaInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Qué significa?" aria-label="Información sobre envío a firmar">
+                <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {/* Códigos ARCA para el TXT de Alta masiva: específicos del convenio/modalidad de este tipo de contrato. */}
+          </div>}
+
+          {tabModal === 'arca' && <div className="space-y-5 animate-fadeIn">
+            <div className="space-y-3 p-3 rounded-lg border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/40 dark:bg-indigo-900/10">
+              <div className="flex items-center gap-1.5">
+                <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-3.5 w-3.5 text-indigo-500" />
+                <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">Códigos ARCA (Alta masiva)</p>
+                {/* La explicación del bloque, detrás del ⓘ de SU título. */}
+                <span
+                  title={'Son los códigos de la interfaz de «Alta masiva» de ARCA, específicos del convenio y la modalidad de este tipo de contrato. Se usan para generar el TXT; dejalos en blanco si no aplican. La actividad del domicilio NO va acá: depende del domicilio de explotación y de la empleadora, y se carga en la ficha de la empresa, en ARCA → Domicilios de Explotación.'}
+                  className="text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 cursor-help">
+                  <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                </span>
+              </div>
+              {/*
+                VA ARRIBA DE LOS TRES CÓDIGOS PORQUE DECIDE SI TIENEN SENTIDO.
+
+                Sin esto, un tipo que no declara nada —una locación de servicios no es relación
+                laboral— queda con los tres campos en blanco, exactamente igual que uno al que le
+                falta cargarlos. Y lo que se ve igual, tarde o temprano alguien lo «completa»:
+                declarando ante el organismo una relación que no existe.
+              */}
+              <label className="flex items-center gap-3 cursor-pointer select-none rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                {/* Switch y no tilde: no es un atributo más de la lista, decide si los tres códigos
+                    de abajo se piden o no. Mismo control que «Afiliado a un sindicato». */}
+                <span className={`w-10 h-6 flex items-center rounded-full p-1 shrink-0 duration-300 ease-in-out ${form.generaAlta ? 'bg-blue-500 dark:bg-blue-600' : 'bg-gray-300 dark:bg-gray-700'}`}>
+                  <span className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${form.generaAlta ? 'translate-x-4' : ''}`} />
+                </span>
+                <input type="checkbox" checked={form.generaAlta} onChange={(e) => setForm((p) => ({ ...p, generaAlta: e.target.checked }))} className="hidden" />
+                <span className="min-w-0">
+                  <span className="flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300">
+                    Este tipo de contrato genera alta temprana ante ARCA
+                    <span
+                      title="Desmarcado, no se le piden los códigos de abajo y sus contratos dejan de contarse como incompletos: es lo que corresponde a una locación de servicios, que no es relación laboral."
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help shrink-0"
+                    >
+                      <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                    </span>
+                  </span>
+                </span>
+              </label>
+
+              <div className={`space-y-3 ${form.generaAlta ? "" : "opacity-40 pointer-events-none"}`}>
+                <SelectorCodigoArca
+                  label="Modalidad de contrato"
+                  sufijoLabel="(3 díg.)"
+                  items={modalidadesOfrecidas}
+                  cargando={cargandoArca}
+                  value={form.afipModalidadContrato}
+                  onChange={(c) => setForm((p) => ({ ...p, afipModalidadContrato: c }))}
+                  formatCodigo={pad3}
+                  placeholder="Sin elegir — ej. 008 tiempo completo indeterminado"
+                  vacioHint="El catálogo de Modalidades de Contrato está vacío. Se siembra en Configuración → ARCA → Modalidades de Contrato."
+                />
+
+                {/*
+                 * El grupo va ARRIBA del tipo de servicio porque lo filtra, igual que Convenio →
+                 * Categoría y Domicilio → Actividad. No se guarda: solo recorta la lista.
+                 */}
+                {/* El MISMO selector que los otros tres. Era el único <select> nativo del bloque, y esa
+                    diferencia de forma sugería que el grupo se guarda como los demás — no se guarda:
+                    solo recorta la lista de abajo. */}
+                <SelectorCodigoArca
+                  label="Grupo de tipo de servicio"
+                  sufijoLabel="(no va al TXT)"
+                  items={gruposTipoServicio}
+                  cargando={cargandoArca}
+                  value={grupoTipoServicio}
+                  onChange={setGrupoTipoServicio}
+                  formatCodigo={(v) => v}
+                  placeholder="Todos los tipos de servicio"
+                  ayuda={`Hay 49 nombres repetidos entre los ${tiposServicio.length} tipos de servicio (el mismo texto con dos códigos). Elegir el grupo deja a la vista solo los de ese grupo. No viaja en el TXT y no se guarda: solo filtra.`}
+                  vacioHint="El catálogo de Grupos de Tipo de Servicio está vacío. Se siembra en Configuración → ARCA → Grupos de Tipo de Servicio."
+                />
+                {/* El aviso SÍ queda a la vista: no es una explicación, es algo que hay que ir a
+                    arreglar para que el filtro sirva. */}
+                {!hayGruposCargados && (
                   <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1 flex items-start gap-1.5">
                     <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5 mt-1 shrink-0" />
                     Todavía ningún tipo de servicio tiene grupo cargado, así que el filtro no se aplica. Clasificalos en Configuración → ARCA → Tipos de Servicio.
                   </p>
-                ) : (
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
-                    Hay 49 nombres repetidos entre los {tiposServicio.length} tipos de servicio (el mismo texto con dos códigos). Elegir el grupo deja a la vista solo los de ese grupo.
-                  </p>
                 )}
+
+                <SelectorCodigoArca
+                  label="Tipo de servicio"
+                  sufijoLabel={grupoTipoServicio && hayGruposCargados ? `(3 díg. · ${tiposServicioFiltrados.length} del grupo)` : '(3 díg.)'}
+                  items={tiposServicioFiltrados}
+                  cargando={cargandoArca}
+                  value={form.afipTipoServicio}
+                  onChange={(c) => setForm((p) => ({ ...p, afipTipoServicio: c }))}
+                  formatCodigo={pad3}
+                  placeholder="Sin elegir — ej. 000 servicios comunes continuos"
+                  vacioHint="El catálogo de Tipos de Servicio está vacío. Se siembra en Configuración → ARCA → Tipos de Servicio."
+                />
+
+                <SelectorCodigoArca
+                  label="Modalidad de liquidación"
+                  sufijoLabel="(1 díg.)"
+                  items={modalidadesLiq}
+                  cargando={cargandoArca}
+                  value={form.afipModalidadLiquidacion}
+                  onChange={(c) => setForm((p) => ({ ...p, afipModalidadLiquidacion: c }))}
+                  formatCodigo={pad1}
+                  placeholder="Sin elegir — ej. 1 por mes"
+                  vacioHint="El catálogo de Modalidades de Liquidación está vacío. Se siembra en Configuración → ARCA → Modalidades de Liquidación."
+                />
               </div>
-
-              <SelectorCodigoArca
-                label="Tipo de servicio"
-                sufijoLabel={grupoTipoServicio && hayGruposCargados ? `(3 díg. · ${tiposServicioFiltrados.length} del grupo)` : '(3 díg.)'}
-                items={tiposServicioFiltrados}
-                cargando={cargandoArca}
-                value={form.afipTipoServicio}
-                onChange={(c) => setForm((p) => ({ ...p, afipTipoServicio: c }))}
-                formatCodigo={pad3}
-                placeholder="Sin elegir — ej. 000 servicios comunes continuos"
-                vacioHint="El catálogo de Tipos de Servicio está vacío. Se siembra en Configuración → ARCA → Tipos de Servicio."
-              />
-
-              <SelectorCodigoArca
-                label="Modalidad de liquidación"
-                sufijoLabel="(1 díg.)"
-                items={modalidadesLiq}
-                cargando={cargandoArca}
-                value={form.afipModalidadLiquidacion}
-                onChange={(c) => setForm((p) => ({ ...p, afipModalidadLiquidacion: c }))}
-                formatCodigo={pad1}
-                placeholder="Sin elegir — ej. 1 por mes"
-                vacioHint="El catálogo de Modalidades de Liquidación está vacío. Se siembra en Configuración → ARCA → Modalidades de Liquidación."
-              />
             </div>
-          </div>
+          </div>}
 
-          {(() => {
-            const misPlantillas = editando ? plantillasDe(editando._id) : [];
-            return (
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
-                  Plantilla{misPlantillas.length === 1 ? '' : 's'} asignada{misPlantillas.length === 1 ? '' : 's'}
-                  {misPlantillas.length > 0 ? <span className="ml-1.5 normal-case tracking-normal text-gray-500 dark:text-gray-400">({misPlantillas.length})</span> : null}
-                </label>
-                {misPlantillas.length === 0 ? (
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
-                    Todavía no tiene ninguna Plantilla asignada: creá una desde{' '}
-                    <Link to="/contratos-frame" target="_blank" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-                      Plantillas | Contratos
-                    </Link>{' '}
-                    y elegí este Contrato.
-                  </p>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {misPlantillas.map((p) => (
-                      <Link
-                        key={p._id}
-                        to={`/contratos-frame?edit=${p._id}`}
-                        target="_blank"
-                        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border border-violet-100 dark:border-violet-800/50 hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors"
-                        title="Abrir la plantilla en Plantillas | Contratos"
-                      >
-                        <FontAwesomeIcon icon={faFilePdf} className="h-3 w-3" />
-                        {p.name}
-                        <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
+          {tabModal === 'sistema' && <div className="space-y-5 animate-fadeIn">
+            {(() => {
+              const misPlantillas = editando ? plantillasDe(editando._id) : [];
+              return (
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                    Plantilla{misPlantillas.length === 1 ? '' : 's'} asignada{misPlantillas.length === 1 ? '' : 's'}
+                    {misPlantillas.length > 0 ? <span className="ml-1.5 normal-case tracking-normal text-gray-500 dark:text-gray-400">({misPlantillas.length})</span> : null}
+                  </label>
+                  {misPlantillas.length === 0 ? (
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
+                      Todavía no tiene ninguna Plantilla asignada: creá una desde{' '}
+                      <Link to="/contratos-frame" target="_blank" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                        Plantillas | Contratos
+                      </Link>{' '}
+                      y elegí este Contrato.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {misPlantillas.map((p) => (
+                        <Link
+                          key={p._id}
+                          to={`/contratos-frame?edit=${p._id}`}
+                          target="_blank"
+                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border border-violet-100 dark:border-violet-800/50 hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors"
+                          title="Abrir la plantilla en Plantillas | Contratos"
+                        >
+                          <FontAwesomeIcon icon={faFilePdf} className="h-3 w-3" />
+                          {p.name}
+                          <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {(() => {
+              const misPlantillaIds = editando ? plantillaIdsDe(editando._id) : [];
+              const estadosImpositivos = estados.filter((e) => e.data?.esImpositivo);
+              const estadosRegulares = estados.filter((e) => !e.data?.esImpositivo && (e.data?.contratoFrameIds || []).length > 0);
+              const estadosGlobales = estados.filter((e) => (e.data?.contratoFrameIds || []).length === 0);
+              const estadosNoGlobales = estadosImpositivos.length + estadosRegulares.length;
+              return (
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                    Estados
+                    {misPlantillaIds.length > 0 ? <span className="ml-1.5 normal-case tracking-normal text-gray-500 dark:text-gray-400">({form.estadoIds.length} de {estadosNoGlobales})</span> : null}
+                  </label>
+                  {misPlantillaIds.length === 0 ? (
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
+                      Este Contrato todavía no tiene ninguna Plantilla asignada. Vas a poder elegir sus Estados una vez que le asignes una desde{' '}
+                      <Link to="/contratos-frame" target="_blank" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                        Plantillas | Contratos
                       </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
-          {(() => {
-            const misPlantillaIds = editando ? plantillaIdsDe(editando._id) : [];
-            const estadosImpositivos = estados.filter((e) => e.data?.esImpositivo);
-            const estadosRegulares = estados.filter((e) => !e.data?.esImpositivo && (e.data?.contratoFrameIds || []).length > 0);
-            const estadosGlobales = estados.filter((e) => (e.data?.contratoFrameIds || []).length === 0);
-            const estadosNoGlobales = estadosImpositivos.length + estadosRegulares.length;
-            return (
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
-                  Estados
-                  {misPlantillaIds.length > 0 ? <span className="ml-1.5 normal-case tracking-normal text-gray-500 dark:text-gray-400">({form.estadoIds.length} de {estadosNoGlobales})</span> : null}
-                </label>
-                {misPlantillaIds.length === 0 ? (
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
-                    Este Contrato todavía no tiene ninguna Plantilla asignada. Vas a poder elegir sus Estados una vez que le asignes una desde{' '}
-                    <Link to="/contratos-frame" target="_blank" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-                      Plantillas | Contratos
-                    </Link>
-                    .
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {estadosImpositivos.length > 0 && (
-                      <div className="space-y-1.5">
-                        <p className="text-[11px] font-semibold text-purple-700 dark:text-purple-300 ml-1 flex items-center gap-1.5">
-                          <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" />
-                          Estados impositivos — elegí uno solo
-                        </p>
-                        <div className="rounded-lg border border-purple-200 dark:border-purple-800/60 divide-y divide-purple-100 dark:divide-purple-800/40 overflow-hidden">
-                          {estadosImpositivos.map((estado) => {
-                            const checked = form.estadoIds.includes(estado._id);
-                            return (
-                              <label key={estado._id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/10 transition-colors">
-                                <input type="checkbox" checked={checked} onChange={() => toggleEstadoImpositivo(estado._id)} className="rounded-full border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer" />
-                                <EstadoBadge name={estado.name} className="text-[10px]" />
-                                <EstadoSecundarioBadge estado={estado} className="text-[10px]" />
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    <div>
-                      <div className="flex items-center justify-between gap-2 ml-1">
-                        <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Estados no impositivos</span>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setForm((p) => ({ ...p, estadoIds: [...p.estadoIds.filter((id) => !estadosRegulares.some((e) => e._id === id)), ...estadosRegulares.map((e) => e._id)] }))}
-                            disabled={estadosRegulares.length === 0 || estadosRegulares.every((e) => form.estadoIds.includes(e._id))}
-                            className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
-                          >
-                            Seleccionar todos
-                          </button>
-                          <span className="text-gray-300 dark:text-gray-600">·</span>
-                          <button
-                            type="button"
-                            onClick={() => setForm((p) => ({ ...p, estadoIds: p.estadoIds.filter((id) => !estadosRegulares.some((e) => e._id === id)) }))}
-                            disabled={!estadosRegulares.some((e) => form.estadoIds.includes(e._id))}
-                            className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
-                          >
-                            Limpiar
-                          </button>
-                        </div>
-                      </div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1 mb-1.5 mt-0.5">
-                        Se aplica a todas las Plantillas de este Contrato. Los Estados sin ningún tipo marcado se ofrecen siempre y no se pueden restringir acá.
-                      </p>
-                      <div className="max-h-52 overflow-auto rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60">
-                        {estadosRegulares.length === 0 && estadosGlobales.length === 0 ? (
-                          <p className="px-3 py-3 text-sm text-gray-500">No hay más estados cargados.</p>
-                        ) : (
-                          <>
-                            {estadosRegulares.map((estado) => {
+                      .
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {estadosImpositivos.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-[11px] font-semibold text-purple-700 dark:text-purple-300 ml-1 flex items-center gap-1.5">
+                            <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" />
+                            Estados impositivos — elegí uno solo
+                          </p>
+                          <div className="rounded-lg border border-purple-200 dark:border-purple-800/60 divide-y divide-purple-100 dark:divide-purple-800/40 overflow-hidden">
+                            {estadosImpositivos.map((estado) => {
                               const checked = form.estadoIds.includes(estado._id);
                               return (
-                                <label key={estado._id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
-                                  <input type="checkbox" checked={checked} onChange={() => toggleEstado(estado._id)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                                <label key={estado._id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/10 transition-colors">
+                                  <input type="checkbox" checked={checked} onChange={() => toggleEstadoImpositivo(estado._id)} className="rounded-full border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer" />
                                   <EstadoBadge name={estado.name} className="text-[10px]" />
+                                  <EstadoSecundarioBadge estado={estado} className="text-[10px]" />
                                 </label>
                               );
                             })}
-                            {estadosGlobales.map((estado) => (
-                              <label key={estado._id} className="flex items-center gap-3 px-3 py-2 opacity-60 cursor-not-allowed" title="Se aplica a todos los tipos de contrato">
-                                <input type="checkbox" checked disabled className="rounded border-gray-300 text-blue-600 cursor-not-allowed" />
-                                <EstadoBadge name={estado.name} className="text-[10px]" />
-                                <span className="ml-auto text-[10px] text-gray-500 dark:text-gray-400 whitespace-nowrap">todos</span>
-                              </label>
-                            ))}
-                          </>
-                        )}
+                          </div>
+                        </div>
+                      )}
+
+                      <div>
+                        <div className="flex items-center justify-between gap-2 ml-1">
+                          <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Estados no impositivos</span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setForm((p) => ({ ...p, estadoIds: [...p.estadoIds.filter((id) => !estadosRegulares.some((e) => e._id === id)), ...estadosRegulares.map((e) => e._id)] }))}
+                              disabled={estadosRegulares.length === 0 || estadosRegulares.every((e) => form.estadoIds.includes(e._id))}
+                              className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
+                            >
+                              Seleccionar todos
+                            </button>
+                            <span className="text-gray-300 dark:text-gray-600">·</span>
+                            <button
+                              type="button"
+                              onClick={() => setForm((p) => ({ ...p, estadoIds: p.estadoIds.filter((id) => !estadosRegulares.some((e) => e._id === id)) }))}
+                              disabled={!estadosRegulares.some((e) => form.estadoIds.includes(e._id))}
+                              className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
+                            >
+                              Limpiar
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1 mb-1.5 mt-0.5">
+                          Se aplica a todas las Plantillas de este Contrato. Los Estados sin ningún tipo marcado se ofrecen siempre y no se pueden restringir acá.
+                        </p>
+                        <div className="max-h-52 overflow-auto rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60">
+                          {estadosRegulares.length === 0 && estadosGlobales.length === 0 ? (
+                            <p className="px-3 py-3 text-sm text-gray-500">No hay más estados cargados.</p>
+                          ) : (
+                            <>
+                              {estadosRegulares.map((estado) => {
+                                const checked = form.estadoIds.includes(estado._id);
+                                return (
+                                  <label key={estado._id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+                                    <input type="checkbox" checked={checked} onChange={() => toggleEstado(estado._id)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                                    <EstadoBadge name={estado.name} className="text-[10px]" />
+                                  </label>
+                                );
+                              })}
+                              {estadosGlobales.map((estado) => (
+                                <label key={estado._id} className="flex items-center gap-3 px-3 py-2 opacity-60 cursor-not-allowed" title="Se aplica a todos los tipos de contrato">
+                                  <input type="checkbox" checked disabled className="rounded border-gray-300 text-blue-600 cursor-not-allowed" />
+                                  <EstadoBadge name={estado.name} className="text-[10px]" />
+                                  <span className="ml-auto text-[10px] text-gray-500 dark:text-gray-400 whitespace-nowrap">todos</span>
+                                </label>
+                              ))}
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
+                  )}
+                </div>
+              );
+            })()}
 
-          {/* El mismo bloque que Proyecto y Usuario, y al final: ver `components/ui/BloqueEstado`. */}
-          <BloqueEstado activo={form.isActive} onChange={(activo) => setForm((p) => ({ ...p, isActive: activo }))} />
+            {/* El mismo bloque que Proyecto y Usuario, y al final: ver `components/ui/BloqueEstado`. */}
+            <BloqueEstado activo={form.isActive} onChange={(activo) => setForm((p) => ({ ...p, isActive: activo }))} />
+          </div>}
+          </div>
         </div>
       </Modal>
 
@@ -932,6 +1026,7 @@ export const ContractTypesTab: React.FC = () => {
       </InfoModal>
     </div>
   );
-};
+});
+ContractTypesTab.displayName = 'ContractTypesTab';
 
 export default ContractTypesTab;

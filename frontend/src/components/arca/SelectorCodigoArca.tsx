@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faXmark, faSpinner, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faXmark, faSpinner, faTriangleExclamation, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { SimpleCatalogItem } from '../../api/simpleCatalog';
 
 /**
@@ -34,7 +34,15 @@ export const SelectorCodigoArca: React.FC<{
   bloqueadoPor?: string;
   /** Texto cuando el catálogo está vacío: dice dónde se llena. */
   vacioHint?: string;
-}> = ({ label, sufijoLabel, items, cargando, value, onChange, formatCodigo, placeholder, bloqueadoPor, vacioHint }) => {
+  /**
+   * La explicación del campo, detrás de un ⓘ al lado de la etiqueta.
+   *
+   * Va acá y no como párrafo debajo del selector: son textos que se leen una vez y después estorban
+   * en cada edición. El ⓘ va FUERA del <label> — adentro, el label se asocia al botón y toda la fila
+   * queda como área activa suya.
+   */
+  ayuda?: string;
+}> = ({ label, sufijoLabel, items, cargando, value, onChange, formatCodigo, placeholder, bloqueadoPor, vacioHint, ayuda }) => {
   const [abierto, setAbierto] = useState(false);
   const [q, setQ] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -72,9 +80,16 @@ export const SelectorCodigoArca: React.FC<{
 
   return (
     <div className="space-y-1.5">
-      <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">
-        {label} {sufijoLabel && <span className="normal-case tracking-normal text-gray-400">{sufijoLabel}</span>}
-      </label>
+      <span className="flex items-center gap-1.5 ml-1">
+        <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+          {label} {sufijoLabel && <span className="normal-case tracking-normal text-gray-400">{sufijoLabel}</span>}
+        </label>
+        {ayuda && (
+          <span title={ayuda} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help shrink-0">
+            <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+          </span>
+        )}
+      </span>
 
       {/* Lo elegido, o el hueco. */}
       <div className={`rounded-lg border px-3 py-2 flex items-center gap-3 ${desconocido ? 'border-amber-300 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-950/20' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/40'}`}>

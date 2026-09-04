@@ -42,7 +42,7 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
           </button>
           <div className="flex items-center gap-2">
             <FontAwesomeIcon icon={faUsers} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
-            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Altas de Usuarios</h1>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Solicitud de Contratación</h1>
           </div>
         </div>
       </div>
