@@ -7,6 +7,7 @@ import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatal
 import { InfoModal } from '../ui/InfoModal';
 import { CuitInput, isValidCuit } from '../ui/CuitInput';
 import { Modal } from '../ui/Modal';
+import { BloqueEstado } from '../ui/BloqueEstado';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { afipAPI } from '../../api/afip';
 import { cuitEsValido } from '../../utils/cuit';
@@ -15,7 +16,7 @@ import { mensajeErrorArca } from '../../utils/errorArca';
 import { fuzzyMatch } from '../../utils/searchHelpers';
 import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina, esCuilObligatorio, opcionesDeNacionalidad, valorDeNacionalidad, leerNacionalidadElegida } from '../../utils/nacionalidadDocumento';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faUserShield, faEye, faEyeSlash, faToggleOn, faToggleOff, faMapMarkerAlt, faUniversity, faSearch, faTimes, faMobileAlt, faKey, faCheck, faXmark, faCircleInfo, faSpinner, faLandmark, faCircleCheck, faWandMagicSparkles, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faUserShield, faEye, faEyeSlash, faMapMarkerAlt, faUniversity, faSearch, faTimes, faMobileAlt, faKey, faCheck, faXmark, faCircleInfo, faSpinner, faLandmark, faCircleCheck, faWandMagicSparkles, faPlus } from '@fortawesome/free-solid-svg-icons';
 
 type ModalTab = 'general' | 'domicilio' | 'bancarios';
 
@@ -871,7 +872,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                  */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                    {/* Mismo motivo que en Rol/es Empresa: el ⓘ adentro de un <label> `block` deja
+                        toda la fila como área activa de ese botón. Ver el comentario de allá. */}
+                    <div className="flex items-center gap-1.5 mb-2 text-xs font-bold text-gray-500 uppercase tracking-wider">
                       <span className="inline-flex items-center gap-1.5">
                         {/* El asterisco sigue al switch: si dice tenerlo, hay que cargarlo. */}
                         CUIT / CUIL {cuilVisible && <span className="text-red-500">*</span>}
@@ -885,7 +888,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                           </button>
                         )}
                       </span>
-                    </label>
+                    </div>
                     {/* El switch tiene sentido salvo para el nativo/a argentino/a: nacionalizado/a o
                         de otra nacionalidad comparten el mismo "puede tenerlo o no". */}
                     {nacionalidadElegida && !cuilObligatorio && (
@@ -1122,19 +1125,24 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     donde hay lugar para buscar y ver la lista completa.
                   */}
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                      Rol/es Empresa
-                      <button type="button" onClick={() => setRolesEmpresaInfoOpen(true)} title="¿Qué son los roles empresa?" className="ml-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal align-middle">
+                    {/*
+                      Los botones van FUERA del <label>, en una fila propia.
+
+                      Un <label> que contiene un control se asocia a él, y este es `block`: con el ⓘ
+                      adentro, TODA la fila —los 100% de ancho, incluido el vacío a la derecha—
+                      quedaba como área activa de ese botón. Un <span> nombra el campo sin capturar
+                      clicks; el campo real de acá abajo es un botón que abre una ventana, no un input
+                      al que un label pueda dar foco.
+                    */}
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Rol/es Empresa</span>
+                      <button type="button" onClick={() => setRolesEmpresaInfoOpen(true)} title="¿Qué son los roles empresa?" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                         <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
                       </button>
                       {/* Solo con algo elegido: sin nada, abajo está el buscador ancho y este [+]
                           sería un segundo camino a lo mismo. */}
-                      {(formData.rolesFrameIds || []).length > 0 && (
-                        <span className="ml-2 align-middle inline-flex">
-                          <BotonAgregar onClick={() => setRolesEmpresaOpen(true)} title="Agregar otro rol" />
-                        </span>
-                      )}
-                    </label>
+                      {(formData.rolesFrameIds || []).length > 0 && <BotonAgregar onClick={() => setRolesEmpresaOpen(true)} title="Agregar otro rol" />}
+                    </div>
                     {/* Mismo marco que "Afiliación sindical" y "Roles de Sistema": los tres son
                         bloques de elección múltiple, y encuadrarlos igual los agrupa a la vista en
                         vez de dejarlos como campos sueltos entre inputs de una sola línea. */}
@@ -1367,13 +1375,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/30 rounded-xl border border-gray-100 dark:border-gray-800">
-                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Estado de la cuenta</span>
-                    <button type="button" onClick={() => setFormData((prev) => ({ ...prev, isActive: !prev.isActive }))} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${formData.isActive ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-gray-400 text-white shadow-lg shadow-gray-400/20'}`}>
-                      <FontAwesomeIcon icon={formData.isActive ? faToggleOn : faToggleOff} className="text-base" />
-                      {formData.isActive ? 'Activo' : 'Inactivo'}
-                    </button>
-                  </div>
+                  {/* El mismo bloque que Proyecto y Contrato: ver `components/ui/BloqueEstado`. */}
+                  <BloqueEstado activo={!!formData.isActive} onChange={(activo) => setFormData((prev) => ({ ...prev, isActive: activo }))} />
                 </fieldset>
               </div>
             )}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { nombreCentroCosto, cargarCentrosCosto, idOpcional } from '../utils/centroCosto';
 import { fuzzyMatch } from '../utils/searchHelpers';
+import { BloqueEstado } from '../components/ui/BloqueEstado';
 import { useNavigate } from 'react-router-dom';
 import { projectsAPI, Project } from '../api/projects';
 import { clientsAPI, Client } from '../api/clients';
@@ -916,27 +917,13 @@ export const ProjectsPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Estado - al final */}
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4 col-span-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Estado</label>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData((p) => ({
-                        ...p,
-                        status: p.status === 'active' ? 'on_hold' : 'active',
-                      }))
-                    }
-                    className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors ${formData.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-400'}`}
-                  >
-                    <svg data-prefix="fas" data-icon={formData.status === 'active' ? 'toggle-on' : 'toggle-off'} className="svg-inline--fa mr-1 h-4 w-4" role="img" viewBox="0 0 576 512" aria-hidden="true">
-                      <path fill="currentColor" d={formData.status === 'active' ? 'M192 64C86 64 0 150 0 256S86 448 192 448l192 0c106 0 192-86 192-192S490 64 384 64L192 64zm192 96a96 96 0 1 1 0 192 96 96 0 1 1 0-192z' : 'M384 64l-192 0C86 64 0 150 0 256s86 192 192 192l192 0c106 0 192-86 192-192S490 64 384 64M192 352a96 96 0 1 1 0-192 96 96 0 1 1 0 192z'}></path>
-                    </svg>
-                    {formData.status === 'active' ? 'Activo' : 'En Espera'}
-                  </button>
-                </div>
-              </div>
+              {/* Estado, al final. El bloque es compartido: ver `components/ui/BloqueEstado`. */}
+              <BloqueEstado
+                activo={formData.status === 'active'}
+                onChange={(activo) => setFormData((p) => ({ ...p, status: activo ? 'active' : 'on_hold' }))}
+                etiquetaInactivo="En Espera"
+                className="col-span-2"
+              />
             </div>
           </div>
 

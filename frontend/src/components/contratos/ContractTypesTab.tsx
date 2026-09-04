@@ -6,6 +6,7 @@ import { EmptyState } from '../ui/EmptyState';
 import { Modal } from '../ui/Modal';
 import { InfoModal } from '../ui/InfoModal';
 import { sweetAlert } from '../../utils/sweetAlert';
+import { BloqueEstado } from '../ui/BloqueEstado';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faEdit, faTrash, faFileContract, faGrip, faTable, faFileInvoiceDollar, faInfinity, faFileSignature, faCircleInfo, faFilePdf, faArrowUpRightFromSquare, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { contratosAPI, ContratoItem } from '../../api/contratos';
@@ -659,11 +660,6 @@ export const ContractTypesTab: React.FC = () => {
             </button>
           </div>
 
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input type="checkbox" checked={form.isActive} onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
-            <span className="text-gray-700 dark:text-gray-300">Contrato activo</span>
-          </label>
-
           {/* Códigos ARCA para el TXT de Alta masiva: específicos del convenio/modalidad de este tipo de contrato. */}
           <div className="space-y-3 p-3 rounded-lg border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/40 dark:bg-indigo-900/10">
             <div className="flex items-center gap-1.5">
@@ -893,6 +889,9 @@ export const ContractTypesTab: React.FC = () => {
               </div>
             );
           })()}
+
+          {/* El mismo bloque que Proyecto y Usuario, y al final: ver `components/ui/BloqueEstado`. */}
+          <BloqueEstado activo={form.isActive} onChange={(activo) => setForm((p) => ({ ...p, isActive: activo }))} />
         </div>
       </Modal>
 
