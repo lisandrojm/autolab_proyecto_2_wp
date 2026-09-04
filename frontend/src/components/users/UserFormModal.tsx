@@ -1294,10 +1294,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                         sería un segundo camino a lo mismo. */}
                     {(formData.rolesFrameIds || []).length > 0 && <BotonAgregar onClick={() => setRolesEmpresaOpen(true)} title="Agregar otro rol" />}
                   </div>
-                  {/* Mismo marco que "Afiliación sindical" y "Roles de Sistema": los tres son
-                      bloques de elección múltiple, y encuadrarlos igual los agrupa a la vista en
-                      vez de dejarlos como campos sueltos entre inputs de una sola línea. */}
-                  <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30">
+                  <div>
                   {(formData.rolesFrameIds || []).length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mb-2">
                       {(formData.rolesFrameIds || []).map((id) => {
@@ -1383,7 +1380,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                       y que se vieran distinto era la única razón para tener que mirarlas dos veces.
                     */}
                     {formData.afiliadoAlSindicato && (
-                      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 mt-2">
+                      <div className="mt-2">
                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                           Sindicato <span className="text-red-500">*</span>
                         </label>
@@ -1426,7 +1423,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
 
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Roles de Sistema</label>
-                  <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 space-y-4">
+                  <div className="space-y-4">
                     <div>
                       <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                         <FontAwesomeIcon icon={faUserShield} className="text-gray-300" />
