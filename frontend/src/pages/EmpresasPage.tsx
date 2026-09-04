@@ -80,7 +80,7 @@ const DetalleListaModal: React.FC<{
 
   const { empresa, tipo } = detalle;
   const meta = {
-    convenios: { titulo: 'Convenios colectivos', ayuda: 'Definen qué categorías profesionales se le pueden dar de alta.' },
+    convenios: { titulo: 'Convenios', ayuda: 'Definen qué categorías profesionales se le pueden dar de alta.' },
     obrasSociales: { titulo: 'Obras sociales registradas', ayuda: 'ARCA solo acepta altas con una de estas. La ⭐ es la que se usa por defecto cuando la persona no tiene una propia y su convenio tampoco.' },
     sucursales: { titulo: 'Sucursales de ARCA', ayuda: 'Domicilios de explotación declarados. El alta usa uno de ellos y una de sus actividades.' },
   }[tipo];
@@ -314,7 +314,6 @@ export const EmpresasPage: React.FC = () => {
     const id = c.obraSocialDefaultId ?? c.obraSocialId;
     return id == null ? undefined : obrasSociales.find((o) => Number((o.data as { id?: number } | undefined)?.id) === id);
   };
-
 
   /**
    * Celda de una lista larga: el CONTADOR es el dato, y abre el detalle.
@@ -663,25 +662,21 @@ export const EmpresasPage: React.FC = () => {
 
           {/* Convenios */}
           <div className="pt-4 border-t border-gray-100 dark:border-gray-700/50">
-            <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Convenios colectivos</h4>
+            <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Convenios</h4>
             <ConvenioSelector convenios={convenios} cargando={cargandoConvenios} value={form.convenioIds || []} onChange={(ids) => setForm((prev) => ({ ...prev, convenioIds: ids }))} />
           </div>
 
           {/* Obras sociales registradas ante ARCA para este CUIT */}
           <div className="pt-4 border-t border-gray-100 dark:border-gray-700/50">
             <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Obras sociales</h4>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-              Las que este CUIT tiene registradas ante ARCA (&laquo;obras sociales relacionadas a su actividad&raquo;). El organismo solo acepta altas con una de ellas. Cuál se usa por defecto se elige en la ficha de la empresa, en ARCA &rarr; Obras Sociales.
-            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Las que este CUIT tiene registradas ante ARCA (&laquo;obras sociales relacionadas a su actividad&raquo;). El organismo solo acepta altas con una de ellas. Cuál se usa por defecto se elige en la ficha de la empresa, en ARCA &rarr; Obras Sociales.</p>
             <ObraSocialSelector obrasSociales={obrasSociales} cargando={cargandoObrasSociales} value={form.obrasSocialesIds || []} onChange={(ids) => setForm((prev) => ({ ...prev, obrasSocialesIds: ids }))} />
           </div>
 
           {/* Sucursales de ARCA asignadas */}
           <div className="pt-4 border-t border-gray-100 dark:border-gray-700/50">
             <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Sucursales de ARCA</h4>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-              Cuáles de las sucursales del padrón le corresponden a esta empresa. Los datos de cada una (código, domicilio, actividades) se cargan en Configuración → ARCA → Sucursales.
-            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Cuáles de las sucursales del padrón le corresponden a esta empresa. Los datos de cada una (código, domicilio, actividades) se cargan en Configuración → ARCA → Sucursales.</p>
             <SucursalSelector sucursales={sucursales} cargando={cargandoSucursales} value={form.sucursalIds || []} onChange={(ids) => setForm((prev) => ({ ...prev, sucursalIds: ids }))} />
           </div>
 
@@ -697,14 +692,7 @@ export const EmpresasPage: React.FC = () => {
       </Modal>
 
       {/* Detalle de una lista (convenios / obras sociales / sucursales) de UNA empresa. */}
-      <DetalleListaModal
-        detalle={detalleLista}
-        onClose={() => setDetalleLista(null)}
-        convenios={detalleLista ? conveniosDe(detalleLista.empresa) : []}
-        obrasSociales={detalleLista ? obrasSocialesDe(detalleLista.empresa) : []}
-        sucursales={detalleLista ? sucursalesDe(detalleLista.empresa) : []}
-        obraSocialPorDefectoId={detalleLista ? obraSocialPorDefectoDe(detalleLista.empresa)?._id : undefined}
-      />
+      <DetalleListaModal detalle={detalleLista} onClose={() => setDetalleLista(null)} convenios={detalleLista ? conveniosDe(detalleLista.empresa) : []} obrasSociales={detalleLista ? obrasSocialesDe(detalleLista.empresa) : []} sucursales={detalleLista ? sucursalesDe(detalleLista.empresa) : []} obraSocialPorDefectoId={detalleLista ? obraSocialPorDefectoDe(detalleLista.empresa)?._id : undefined} />
 
       {/* Los cuatro requisitos de ARCA para ESTA empleadora. Es el MISMO modal que abre su ficha:
           una sola definición de qué hace falta, mostrada en las dos pantallas. */}

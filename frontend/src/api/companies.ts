@@ -1,4 +1,4 @@
-import axios from "./axiosConfig";
+import axios from './axiosConfig';
 
 export interface Company {
   _id: string;
@@ -35,7 +35,7 @@ export interface Company {
   /** Excepciones: para ESE convenio, esta empleadora usa otra obra social que la sindical del CCT. */
   /** @deprecated Nombre viejo de `obraSocialDefaultId`. El server sirve los dos; usar el nuevo. */
   obraSocialId?: number | null;
-  /** Ids de los Convenios Colectivos asociados a la empresa. */
+  /** Ids de los Convenios asociados a la empresa. */
   convenioIds?: string[];
   /**
    * Sucursales del padrón de ARCA asignadas a esta empresa. Son referencias al catálogo de
@@ -80,12 +80,11 @@ export interface Company {
   updatedAt?: string;
 }
 
-
-export type CompanyInput = Omit<Company, "_id" | "createdAt" | "updatedAt">;
+export type CompanyInput = Omit<Company, '_id' | 'createdAt' | 'updatedAt'>;
 
 class CompaniesAPI {
   async list(): Promise<Company[]> {
-    const { data } = await axios.get("/companies");
+    const { data } = await axios.get('/companies');
     return Array.isArray(data) ? data : [];
   }
 
@@ -100,7 +99,7 @@ class CompaniesAPI {
   }
 
   async create(payload: Partial<CompanyInput>): Promise<Company> {
-    const { data } = await axios.post("/companies", payload);
+    const { data } = await axios.post('/companies', payload);
     return data;
   }
 

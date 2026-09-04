@@ -1,25 +1,24 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileContract, faArrowUpRightFromSquare, faEye } from "@fortawesome/free-solid-svg-icons";
-import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
-import { createSimpleCatalogApi, SimpleCatalogItem } from "../api/simpleCatalog";
-import { companiesAPI, Company } from "../api/companies";
-import { sweetAlert } from "../utils/sweetAlert";
-import { formatRnos } from "../utils/rnos";
-import { InfoModal } from "../components/ui/InfoModal";
-import { Modal } from "../components/ui/Modal";
-import { ConveniosTable } from "../components/convenios/ConveniosTable";
-import type { ConvenioFila } from "../components/convenios/ConveniosTable";
-import { paritariasAPI, EstadoParitarias, FuenteParitaria, EstadoFuenteConvenio } from "../api/paritarias";
-import { BannerParitarias } from "../components/paritarias/BannerParitarias";
-import { FuenteDelConvenio } from "../components/convenios/FuenteDelConvenio";
-import { PanelCoberturaFuentes } from "../components/convenios/PanelCoberturaFuentes";
-import { vigilanciaDe, avisoDeVigilancia, textoUltimaRevision } from "../components/paritarias/estadoFuente";
-import { formatearInstante } from "../utils/fechas";
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faFileContract, faArrowUpRightFromSquare, faEye } from '@fortawesome/free-solid-svg-icons';
+import { SimpleCatalogManager } from '../components/catalog/SimpleCatalogManager';
+import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
+import { companiesAPI, Company } from '../api/companies';
+import { sweetAlert } from '../utils/sweetAlert';
+import { formatRnos } from '../utils/rnos';
+import { InfoModal } from '../components/ui/InfoModal';
+import { Modal } from '../components/ui/Modal';
+import { ConveniosTable } from '../components/convenios/ConveniosTable';
+import type { ConvenioFila } from '../components/convenios/ConveniosTable';
+import { paritariasAPI, EstadoParitarias, FuenteParitaria } from '../api/paritarias';
+import { BannerParitarias } from '../components/paritarias/BannerParitarias';
+import { FuenteDelConvenio } from '../components/convenios/FuenteDelConvenio';
+import { PanelCoberturaFuentes } from '../components/convenios/PanelCoberturaFuentes';
+import { CeldaFuenteParitarias } from '../components/convenios/CeldaFuenteParitarias';
 
-const conveniosApi = createSimpleCatalogApi("/convenios");
-const sindicatosApi = createSimpleCatalogApi("/sindicatos");
+const conveniosApi = createSimpleCatalogApi('/convenios');
+const sindicatosApi = createSimpleCatalogApi('/sindicatos');
 
 /*
   Los dos valores del filtro que no son un sindicato puntual.
@@ -28,8 +27,8 @@ const sindicatosApi = createSimpleCatalogApi("/sindicatos");
   (`filtrosPermitidos` traduce el texto "null" al valor null). `FILTRO_CON` no viaja: no hay un
   filtro de desigualdad del otro lado, así que se resuelve en el cliente.
 */
-const FILTRO_SIN = "null";
-const FILTRO_CON = "__con__";
+const FILTRO_SIN = 'null';
+const FILTRO_CON = '__con__';
 
 /** El sindicato de un convenio, ya poblado por el server como {_id, name, sigla}. */
 interface SindicatoPoblado {
@@ -39,17 +38,17 @@ interface SindicatoPoblado {
 }
 const sindicatoDe = (c: SimpleCatalogItem): SindicatoPoblado | null => {
   const v = c.sindicatoId;
-  return v && typeof v === "object" ? (v as SindicatoPoblado) : null;
+  return v && typeof v === 'object' ? (v as SindicatoPoblado) : null;
 };
 /** Cómo se nombra un sindicato en una lista: sigla adelante, que es como se lo conoce. */
 const etiquetaSindicato = (s: { name: string; sigla?: unknown }): string => {
-  const sigla = typeof s.sigla === "string" ? s.sigla.trim() : "";
+  const sigla = typeof s.sigla === 'string' ? s.sigla.trim() : '';
   return sigla ? `${sigla} — ${s.name}` : s.name;
 };
-const obrasSocialesApi = createSimpleCatalogApi("/obras-sociales");
+const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
 
 /**
- * Catálogo de Convenios Colectivos de Trabajo (CCT), con el nomenclador de ARCA.
+ * Catálogo de Convenios de Trabajo (CCT), con el nomenclador de ARCA.
  *
  * El "ID Externo" acá es el código CCT con formato "NNNN/AA" (ej. 0130/75). A diferencia del RNOS de
  * Obras Sociales no es numérico —lleva barra y ceros a la izquierda—, así que se guarda tal cual.
@@ -78,7 +77,7 @@ const EmpresasDelConvenioModal: React.FC<{
   const sindical = obraSocialDe(convenio.obraSocialDefaultId);
 
   return (
-    <InfoModal isOpen onClose={onClose} title="Empresas que registraron este convenio" subtitle={`${convenio.externalId} — ${convenio.name}`} size="lg" actions={[{ label: "Cerrar", onClick: onClose, variant: "primary" }]}>
+    <InfoModal isOpen onClose={onClose} title="Empresas que registraron este convenio" subtitle={`${convenio.externalId} — ${convenio.name}`} size="lg" actions={[{ label: 'Cerrar', onClick: onClose, variant: 'primary' }]}>
       <div className="space-y-3">
         <p className="text-xs text-gray-500 dark:text-gray-400">ARCA solo acepta un alta si la empleadora tiene el convenio registrado en su padrón. Estas son las que lo tienen.</p>
 
@@ -101,7 +100,7 @@ const EmpresasDelConvenioModal: React.FC<{
           })}
         </div>
 
-        {!sindical && convenio.externalId !== "9999/99" && <p className="text-[11px] text-amber-700 dark:text-amber-400">Este convenio todavía no tiene obra social sindical cargada: las altas de estas empresas van a caer en la obra social global.</p>}
+        {!sindical && convenio.externalId !== '9999/99' && <p className="text-[11px] text-amber-700 dark:text-amber-400">Este convenio todavía no tiene obra social sindical cargada: las altas de estas empresas van a caer en la obra social global.</p>}
       </div>
     </InfoModal>
   );
@@ -114,7 +113,7 @@ export const ConveniosPage: React.FC = () => {
     paritarias, edición— en vez de construir una vista de detalle que mostraría lo mismo peor.
   */
   const [paramsUrl] = useSearchParams();
-  const sindicatoDelLink = paramsUrl.get("sindicatoId") || "";
+  const sindicatoDelLink = paramsUrl.get('sindicatoId') || '';
   const [obrasSociales, setObrasSociales] = useState<SimpleCatalogItem[]>([]);
   /** Qué empresas registraron cada convenio, por `_id`. */
   const [empresasPorConvenio, setEmpresasPorConvenio] = useState<Map<string, Company[]>>(new Map());
@@ -204,7 +203,7 @@ export const ConveniosPage: React.FC = () => {
         // SIEMPRE por `_id`, nunca por `externalId`: 1.555 de los 2.669 convenios llevan sufijo " E"
         // y "0131/75" y "0131/75 E" son registros distintos y legítimos del nomenclador.
         for (const e of empresas) for (const id of e.convenioIds || []) porConvenio.set(String(id), [...(porConvenio.get(String(id)) || []), e]);
-        for (const [, lista] of porConvenio) lista.sort((a, b) => a.razonSocial.localeCompare(b.razonSocial, "es", { sensitivity: "base" }));
+        for (const [, lista] of porConvenio) lista.sort((a, b) => a.razonSocial.localeCompare(b.razonSocial, 'es', { sensitivity: 'base' }));
         setEmpresasPorConvenio(porConvenio);
       })
       .catch(() => setEmpresasPorConvenio(new Map()));
@@ -214,112 +213,23 @@ export const ConveniosPage: React.FC = () => {
     // La primera opción es el vacío y tiene que existir: el formulario genérico preselecciona la
     // primera de la lista, y sin ella todo convenio nuevo nacería con una obra social al azar.
     // Además el vacío es un valor legítimo: "9999/99 — EXCLUIDO DE CONVENIO" no tiene sindicato.
-    const vacio = { value: "", label: "— Sin obra social sindical (define la empresa) —" };
+    const vacio = { value: '', label: '— Sin obra social sindical (define la empresa) —' };
     const items = obrasSociales
-      .map((o) => ({ value: String((o.data as { id?: number } | undefined)?.id ?? ""), label: `${formatRnos(o.externalId)} — ${o.name}` }))
+      .map((o) => ({ value: String((o.data as { id?: number } | undefined)?.id ?? ''), label: `${formatRnos(o.externalId)} — ${o.name}` }))
       .filter((o) => o.value)
-      .sort((a, b) => a.label.localeCompare(b.label, "es", { sensitivity: "base" }));
+      .sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }));
     return [vacio, ...items];
   }, [obrasSociales]);
 
   /** La obra social sindical del convenio, resuelta contra el catálogo por `data.id`. */
   const porDataId = (id?: number | null) => (id == null ? undefined : obrasSociales.find((o) => Number((o.data as { id?: number } | undefined)?.id) === id));
 
-  /**
-   * En qué estado está el conocimiento sobre dónde publica sus paritarias este convenio.
-   *
-   * `con_fuente` se DERIVA de los enlaces, no de un campo: si hay una fuente que lista el código,
-   * está cubierto, y si le sacan la última deja de estarlo sin que haya nada que actualizar. Un
-   * booleano guardado seguiría diciendo «vigilado» — el tipo de mentira silenciosa que costó los 163
-   * contratos del `legacyId 43`.
-   */
-  const estadoFuenteDe = (c: ConvenioFila): EstadoFuenteConvenio => {
-    const asignadas = vigilancia[String(c.externalId || '').trim()] || [];
-    if (asignadas.length > 0) return 'con_fuente';
-    const d = declarado[c._id]?.estado;
-    return d === 'sin_fuente_conocida' || d === 'no_aplica' ? d : 'sin_revisar';
-  };
-
-  // `revisadaEl` es un INSTANTE (cuándo alguien lo declaró), no una fecha de calendario: se convierte
-  // a hora local y lleva hora. Ver `utils/fechas.ts`.
-
-  /**
-   * La columna, en las DOS pestañas.
-   *
-   * En la primera entrega estaba solo en la acotada, porque decía «No vigilado» y sobre los 2.669
-   * eran 2.664 filas que se leían como pendientes. Ahora dice otra cosa: dónde publica sus acuerdos
-   * un convenio es una propiedad del convenio —verdad para cualquier empresa, hoy y en tres años— y
-   * anotarla vale aunque nadie lo use todavía. Por eso el gris no lleva ícono de alerta y el recuento
-   * está ARRIBA, encuadrando el total como conocimiento acumulado y no como una lista de deudas.
-   */
-  const renderFuente = (c: ConvenioFila) => {
-    const estado = estadoFuenteDe(c);
-    const dec = declarado[c._id];
-
-    if (estado === 'con_fuente') {
-      const asignadas = vigilancia[String(c.externalId || '').trim()] || [];
-      const rota = asignadas.some((f) => f.conProblema);
-      /*
-        Que exista la fuente no quiere decir que se esté bajando: son dos cosas, y callar la segunda
-        haría creer que el convenio está cubierto cuando su vigilancia está pausada.
-
-        Se lee con `vigilanciaDe`, EL MISMO lector que usa el ABM. La versión anterior preguntaba
-        `!f.activa` acá y algo distinto allá, y con el campo ausente esta pantalla escribía «pausada»
-        sobre las tres fuentes que la otra mostraba corriendo.
-      */
-      const avisos = [...new Set(asignadas.map((f) => avisoDeVigilancia(vigilanciaDe(f))).filter(Boolean))];
-      const noSeSabe = asignadas.some((f) => vigilanciaDe(f) === 'desconocida');
-      return (
-        <span className="text-gray-700 dark:text-gray-200">
-          {asignadas.map((f) => f.entidad).join(', ')}
-          <span className={`block text-[11px] ${rota ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>{textoUltimaRevision(asignadas[0])}</span>
-          {avisos.map((a) => (
-            // El estado que no se pudo leer va en ROJO y no en ámbar: no es «pausada», es que la
-            // consulta vino incompleta. Confundirlos volvería a esconder el problema.
-            <span key={a} className={`block text-[11px] ${noSeSabe ? 'text-red-600 dark:text-red-400' : 'text-amber-700 dark:text-amber-400'}`}>
-              {a}
-            </span>
-          ))}
-        </span>
-      );
-    }
-
-    if (estado === 'no_aplica') {
-      // Sin acción, como pide el caso 9999/99: no tiene paritaria y no la va a tener. Si hubo un
-      // error se corrige desde el modal de edición del convenio, que tiene el bloque completo.
-      return (
-        <span className="text-gray-400 dark:text-gray-600" title={dec?.nota || 'No tiene paritaria y no la va a tener.'}>
-          No aplica
-          {dec?.revisadaEl && <span className="block text-[11px]">marcado el {formatearInstante(dec.revisadaEl)}</span>}
-        </span>
-      );
-    }
-
-    if (estado === 'sin_fuente_conocida') {
-      return (
-        <button
-          type="button"
-          onClick={() => setAnotando(c)}
-          title={`${dec?.nota || 'Se buscó y no se encontró página que publique sus acuerdos.'}${dec?.revisadaPor ? ` — ${dec.revisadaPor}` : ''}`}
-          className="text-left text-gray-400 dark:text-gray-600 hover:text-blue-600 dark:hover:text-blue-400"
-        >
-          Sin fuente conocida
-          <span className="block text-[11px]">revisado el {formatearInstante(dec?.revisadaEl)}</span>
-        </button>
-      );
-    }
-
-    return (
-      // Gris y sin ícono de alerta: que nadie haya buscado todavía dónde publica un gremio que
-      // ninguna empresa usa no es un error que haya que arreglar hoy.
-      <span className="text-gray-400 dark:text-gray-600">
-        Sin revisar
-        <button type="button" onClick={() => setAnotando(c)} className="ml-2 text-blue-600 dark:text-blue-400 hover:underline">
-          asignar fuente
-        </button>
-      </span>
-    );
-  };
+  /*
+    `estadoFuenteDe` y la celda entera se mudaron a `components/convenios/CeldaFuenteParitarias`,
+    para que la ficha de empresa muestre exactamente lo mismo. Acá se le pasa `onAnotar`, que es lo
+    único que esta pantalla agrega: desde el nomenclador sí se administra dónde publica un gremio.
+  */
+  const renderFuente = (c: ConvenioFila) => <CeldaFuenteParitarias convenio={c} vigilancia={vigilancia} declarado={declarado} onAnotar={setAnotando} />;
 
   /**
    * La columna SINDICATO: chip azul con la sigla, nombre completo en el tooltip.
@@ -334,10 +244,7 @@ export const ConveniosPage: React.FC = () => {
     if (!s) return <span className="text-gray-400 dark:text-gray-600">—</span>;
     return (
       <span className="inline-flex items-center gap-1.5">
-        <span
-          title={s.name}
-          className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800"
-        >
+        <span title={s.name} className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
           {/* La sigla si la hay; si no, el nombre, que es lo único que queda para identificarlo. */}
           {typeof s.sigla === 'string' && s.sigla.trim() ? s.sigla.trim() : s.name}
         </span>
@@ -347,12 +254,7 @@ export const ConveniosPage: React.FC = () => {
           Lleva al ABM con el buscador ya cargado y no a una ficha, porque este catálogo no tiene
           una: `?buscar=` deja la fila a la vista, con su sigla y sus otros convenios al lado.
         */}
-        <Link
-          to={`/sindicatos?buscar=${encodeURIComponent(s.name)}`}
-          title={`Ver ${s.name} en Sindicatos`}
-          aria-label={`Ver ${s.name} en Sindicatos`}
-          className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-        >
+        <Link to={`/sindicatos?buscar=${encodeURIComponent(s.name)}`} title={`Ver ${s.name} en Sindicatos`} aria-label={`Ver ${s.name} en Sindicatos`} className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
           <FontAwesomeIcon icon={faEye} className="h-3.5 w-3.5" />
         </Link>
       </span>
@@ -363,7 +265,7 @@ export const ConveniosPage: React.FC = () => {
     <>
       <SimpleCatalogManager
         title="Convenios"
-        subtitle="Convenios Colectivos de Trabajo (CCT). Cada uno define la obra social de quien trabaja bajo él."
+        subtitle="Convenios de Trabajo (CCT). Cada uno define la obra social de quien trabaja bajo él."
         icon={faFileContract}
         entityLabel="convenio"
         api={conveniosApi}
@@ -376,7 +278,7 @@ export const ConveniosPage: React.FC = () => {
         // El nomenclador tiene 2.669 convenios y solo importan los que alguna empresa registró:
         // cargarle la obra social a uno que nadie usa es trabajo perdido, y los 2.664 restantes
         // llenaban la columna de guiones como si faltaran 2.664 configuraciones.
-        filtroDestacado={{ etiqueta: "Registrados por alguna empresa", aplica: (c) => (empresasPorConvenio.get(c._id) || []).length > 0 }}
+        filtroDestacado={{ etiqueta: 'Registrados por alguna empresa', aplica: (c) => (empresasPorConvenio.get(c._id) || []).length > 0 }}
         /*
           Filtro por gremio. Los 180 y «Sin sindicato» los resuelve el SERVER (`?sindicatoId=…`, y
           `null` para los que no tienen); «Con sindicato» se recorta acá porque el filtro del server
@@ -387,14 +289,10 @@ export const ConveniosPage: React.FC = () => {
           consulta que se va a hacer todos los días.
         */
         filtroServidor={{
-          param: "sindicatoId",
-          etiquetaTodos: "Todos los sindicatos",
+          param: 'sindicatoId',
+          etiquetaTodos: 'Todos los sindicatos',
           valorInicial: sindicatoDelLink,
-          opciones: [
-            { value: FILTRO_SIN, label: "Sin sindicato" },
-            { value: FILTRO_CON, label: "Con sindicato", clienteOnly: (c) => !!sindicatoDe(c) },
-            ...sindicatos.map((s) => ({ value: s._id, label: etiquetaSindicato(s as { name: string; sigla?: unknown }) })),
-          ],
+          opciones: [{ value: FILTRO_SIN, label: 'Sin sindicato' }, { value: FILTRO_CON, label: 'Con sindicato', clienteOnly: (c) => !!sindicatoDe(c) }, ...sindicatos.map((s) => ({ value: s._id, label: etiquetaSindicato(s as { name: string; sigla?: unknown }) }))],
         }}
         // LA MISMA tabla que usa la ficha de empresa: eran dos, con encabezados distintos para los
         // mismos datos ("Nombre" vs "Actividad", el código al final vs primero) y ya habían divergido.
@@ -432,13 +330,7 @@ export const ConveniosPage: React.FC = () => {
               // Mismo gesto que en Empresas: el número solo, y qué abre en el tooltip. El recuadro
               // ya dice que es un botón; el ojito al lado repetía lo mismo y ensuciaba la columna.
               return (
-                <button
-                  type="button"
-                  onClick={() => setDetalle(c)}
-                  title={`Ver las ${lista.length} empresa(s) que registraron ${c.externalId}`}
-                  aria-label={`Ver las ${lista.length} empresas que registraron ${c.externalId}`}
-                  className="inline-flex items-center justify-center min-w-[2rem] px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
-                >
+                <button type="button" onClick={() => setDetalle(c)} title={`Ver las ${lista.length} empresa(s) que registraron ${c.externalId}`} aria-label={`Ver las ${lista.length} empresas que registraron ${c.externalId}`} className="inline-flex items-center justify-center min-w-[2rem] px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-blue-400 dark:hover:border-blue-600 transition-colors">
                   <span className="text-sm font-bold tabular-nums">{lista.length}</span>
                 </button>
               );
@@ -451,8 +343,8 @@ export const ConveniosPage: React.FC = () => {
         // Sin `showColumn`: las columnas las dibuja `ConveniosTable`. Estos descriptores quedan solo
         // para el formulario de alta/edición, que sigue siendo el genérico del manager.
         extraFields={[
-          { key: "signatario", label: "Signatario", placeholder: "Ej: FAECYS" },
-          { key: "obraSocialDefaultId", label: "Obra social del convenio", type: "select", options: opcionesObraSocial },
+          { key: 'signatario', label: 'Signatario', placeholder: 'Ej: FAECYS' },
+          { key: 'obraSocialDefaultId', label: 'Obra social del convenio', type: 'select', options: opcionesObraSocial },
           /*
             El gremio firmante. NO se sugiere ni se autocompleta a partir del signatario: ese texto es
             inconsistente —el orden de las partes varía, los nombres no coinciden con el maestro, y la
@@ -460,10 +352,10 @@ export const ConveniosPage: React.FC = () => {
             propuesta automática acierta poco y se acepta sin mirar. Se elige a mano o queda vacío.
           */
           {
-            key: "sindicatoId",
-            label: "Sindicato firmante",
-            type: "ref",
-            searchPlaceholder: "Buscar por nombre o sigla...",
+            key: 'sindicatoId',
+            label: 'Sindicato firmante',
+            type: 'ref',
+            searchPlaceholder: 'Buscar por nombre o sigla...',
             options: sindicatos.map((s) => ({ value: s._id, label: etiquetaSindicato(s as { name: string; sigla?: unknown }) })),
           },
         ]}
@@ -481,56 +373,56 @@ export const ConveniosPage: React.FC = () => {
         extraSeccion={(convenio) => (
           <div className="space-y-5">
             <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Empresas que lo tienen registrado</label>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">ARCA solo acepta un alta si la empleadora tiene el convenio en su padrón. Cada cambio se guarda solo.</p>
-            {todasLasEmpresas.length === 0 ? (
-              <p className="text-xs text-gray-400">No hay empresas cargadas.</p>
-            ) : (
-              <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60">
-                {todasLasEmpresas.map((e) => {
-                  const tiene = (e.convenioIds || []).map(String).includes(convenio._id);
-                  return (
-                    <div key={e._id} className="flex items-center justify-between gap-3 px-3 py-2">
-                      <span className="min-w-0">
-                        <span className="block text-sm text-gray-800 dark:text-gray-200 truncate">{e.razonSocial}</span>
-                        <span className="block text-[11px] font-mono text-gray-400">{e.cuit || "—"}</span>
-                      </span>
-                      {/* Mismo switch que el resto de la app (ver `ContractStatesTab`): un check se
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Empresas que lo tienen registrado</label>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">ARCA solo acepta un alta si la empleadora tiene el convenio en su padrón. Cada cambio se guarda solo.</p>
+              {todasLasEmpresas.length === 0 ? (
+                <p className="text-xs text-gray-400">No hay empresas cargadas.</p>
+              ) : (
+                <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60">
+                  {todasLasEmpresas.map((e) => {
+                    const tiene = (e.convenioIds || []).map(String).includes(convenio._id);
+                    return (
+                      <div key={e._id} className="flex items-center justify-between gap-3 px-3 py-2">
+                        <span className="min-w-0">
+                          <span className="block text-sm text-gray-800 dark:text-gray-200 truncate">{e.razonSocial}</span>
+                          <span className="block text-[11px] font-mono text-gray-400">{e.cuit || '—'}</span>
+                        </span>
+                        {/* Mismo switch que el resto de la app (ver `ContractStatesTab`): un check se
                           lee como «seleccionar de una lista» y esto es prender o apagar una relación. */}
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={tiene}
-                        aria-label={`${tiene ? "Quitar" : "Registrar"} ${convenio.externalId || convenio.name} en ${e.razonSocial}`}
-                        disabled={guardandoEmpresa === e._id}
-                        onClick={async () => {
-                          setGuardandoEmpresa(e._id);
-                          try {
-                            const ids = (e.convenioIds || []).map(String);
-                            // Se manda la lista COMPLETA: el server la reemplaza, no la fusiona.
-                            const nuevos = tiene ? ids.filter((x) => x !== convenio._id) : [...ids, convenio._id];
-                            await companiesAPI.update(e._id, { convenioIds: nuevos } as any);
-                            const empresas = await companiesAPI.list();
-                            setTodasLasEmpresas(empresas);
-                            const porConvenio = new Map<string, Company[]>();
-                            for (const emp of empresas) for (const id of emp.convenioIds || []) porConvenio.set(String(id), [...(porConvenio.get(String(id)) || []), emp]);
-                            for (const [, lista] of porConvenio) lista.sort((a, b) => a.razonSocial.localeCompare(b.razonSocial, "es", { sensitivity: "base" }));
-                            setEmpresasPorConvenio(porConvenio);
-                          } catch (err: any) {
-                            sweetAlert.error("Error", err?.response?.data?.error || "No se pudo cambiar el convenio de esa empresa.");
-                          } finally {
-                            setGuardandoEmpresa("");
-                          }
-                        }}
-                        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${tiene ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${tiene ? "translate-x-6" : "translate-x-1"}`} />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={tiene}
+                          aria-label={`${tiene ? 'Quitar' : 'Registrar'} ${convenio.externalId || convenio.name} en ${e.razonSocial}`}
+                          disabled={guardandoEmpresa === e._id}
+                          onClick={async () => {
+                            setGuardandoEmpresa(e._id);
+                            try {
+                              const ids = (e.convenioIds || []).map(String);
+                              // Se manda la lista COMPLETA: el server la reemplaza, no la fusiona.
+                              const nuevos = tiene ? ids.filter((x) => x !== convenio._id) : [...ids, convenio._id];
+                              await companiesAPI.update(e._id, { convenioIds: nuevos } as any);
+                              const empresas = await companiesAPI.list();
+                              setTodasLasEmpresas(empresas);
+                              const porConvenio = new Map<string, Company[]>();
+                              for (const emp of empresas) for (const id of emp.convenioIds || []) porConvenio.set(String(id), [...(porConvenio.get(String(id)) || []), emp]);
+                              for (const [, lista] of porConvenio) lista.sort((a, b) => a.razonSocial.localeCompare(b.razonSocial, 'es', { sensitivity: 'base' }));
+                              setEmpresasPorConvenio(porConvenio);
+                            } catch (err: any) {
+                              sweetAlert.error('Error', err?.response?.data?.error || 'No se pudo cambiar el convenio de esa empresa.');
+                            } finally {
+                              setGuardandoEmpresa('');
+                            }
+                          }}
+                          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${tiene ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${tiene ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/*

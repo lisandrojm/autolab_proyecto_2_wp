@@ -1,5 +1,5 @@
 /*
- * Extracción del nomenclador de Convenios Colectivos de Trabajo desde la tabla informativa de
+ * Extracción del nomenclador de Convenios de Trabajo desde la tabla informativa de
  * Simplificación Registral (AFIP/ARCA).
  *
  *   https://serviciossegsoc.afip.gob.ar/tramites_con_clave_fiscal/miSimplificacion/app/
@@ -17,8 +17,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // PASO 1 — pedir todas las filas (búsqueda vacía = sin filtro) y esperar la recarga.
 // ─────────────────────────────────────────────────────────────────────────────
-document.getElementById("txt_buscar").value = "";
-document.getElementById("buscar_button").click();
+document.getElementById('txt_buscar').value = '';
+document.getElementById('buscar_button').click();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PASO 2 — cuando la tabla ya se ve en pantalla, pegar esto. Descarga convenios.json.
@@ -29,9 +29,17 @@ document.getElementById("buscar_button").click();
    * circunflejo (ALGODÔN → ALGODÓN, MECÂNICOS → MECÁNICOS). El circunflejo no existe en español, así
    * que el reemplazo no puede romper texto legítimo.
    */
-  const fix = (s) => s.replace(/Â/g, "Á").replace(/Ê/g, "É").replace(/Î/g, "Í").replace(/Ô/g, "Ó").replace(/Û/g, "Ú");
+  const fix = (s) => s.replace(/Â/g, 'Á').replace(/Ê/g, 'É').replace(/Î/g, 'Í').replace(/Ô/g, 'Ó').replace(/Û/g, 'Ú');
 
-  const tabla = [...document.querySelectorAll("table")].find((x) => x.rows.length > 3 && [...x.rows[0].cells].map((c) => c.innerText).join("|").toUpperCase().includes("CÓDIGO"));
+  const tabla = [...document.querySelectorAll('table')].find(
+    (x) =>
+      x.rows.length > 3 &&
+      [...x.rows[0].cells]
+        .map((c) => c.innerText)
+        .join('|')
+        .toUpperCase()
+        .includes('CÓDIGO'),
+  );
 
   if (!tabla) {
     console.error('No se encontró la tabla de convenios. ¿Ya se ejecutó el PASO 1 y terminó de cargar? Debería verse la grilla con "CÓDIGO | DESCRIPCIÓN ACTIVIDAD | DESCRIPCIÓN SIGNATARIO".');
@@ -45,7 +53,7 @@ document.getElementById("buscar_button").click();
     .map(([codigo, actividad, signatario]) => ({ codigo, actividad: fix(actividad), signatario: fix(signatario) }));
 
   if (data.length === 0) {
-    console.error("La tabla está pero no tiene filas de datos.");
+    console.error('La tabla está pero no tiene filas de datos.');
     return;
   }
 
@@ -61,13 +69,13 @@ document.getElementById("buscar_button").click();
 
   console.log(`Filas: ${data.length}`);
   console.table(data.slice(0, 5));
-  if (raros.size) console.warn("Caracteres sin normalizar (revisar antes de importar):", [...raros].join(" "));
-  else console.log("Codificación OK: no quedaron caracteres raros.");
+  if (raros.size) console.warn('Caracteres sin normalizar (revisar antes de importar):', [...raros].join(' '));
+  else console.log('Codificación OK: no quedaron caracteres raros.');
 
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = "convenios.json";
+  a.download = 'convenios.json';
   a.click();
   URL.revokeObjectURL(a.href);
   console.log('Descargado "convenios.json". Ahora: npm run convenios -- ~/Downloads/convenios.json');

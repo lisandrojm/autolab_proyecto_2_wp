@@ -107,27 +107,16 @@ export const EmpresaContextLayout: React.FC<Props> = ({ titulo, subtitulo, icono
  * padrón de ESTE CUIT. Se repite en cada pantalla del contexto porque es lo que las distingue del
  * nomenclador universal que vive en Configuración → ARCA.
  */
-export const SeccionEmpleador: React.FC<{ titulo: string; descripcion: string; nota?: string; children: React.ReactNode }> = ({ titulo, descripcion, nota, children }) => (
-  <div className="space-y-4">
-    <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4">
-      <h3 className="text-sm font-bold text-blue-900 dark:text-blue-200">{titulo}</h3>
-      <p className="text-xs text-blue-800 dark:text-blue-300 mt-1">{descripcion}</p>
-      {nota && <p className="text-xs text-blue-700/80 dark:text-blue-400/80 mt-1.5">{nota}</p>}
-      {/*
-       * REGLA DE GUARDADO, explícita para que la diferencia con el nomenclador deje de leerse como
-       * inconsistencia y pase a ser una señal:
-       *
-       *   Nomenclador (Configuración → ARCA)  → edición inmediata, por registro.
-       *   Ficha de empresa                    → edición en lote, con "Guardar cambios".
-       *
-       * Es coherente con lo que se edita en cada lado: allá un registro maestro que ven todas las
-       * empresas; acá un CONJUNTO de asociaciones de esta empleadora, donde marcar varias y guardar
-       * una vez es lo natural. Si hay botón de guardar, estás tocando lo de esta empresa.
-       */}
-      <p className="text-[11px] text-blue-700/70 dark:text-blue-400/70 mt-2 pt-2 border-t border-blue-200/60 dark:border-blue-800/60">
-        Los cambios de esta pantalla se aplican al apretar <strong>Guardar cambios</strong>. Es lo que la distingue del nomenclador de Configuración → ARCA, donde cada registro se guarda al instante.
-      </p>
-    </div>
-    {children}
-  </div>
-);
+/**
+ * El contenedor de una sección de la ficha de empleadora. Hoy solo aporta el espaciado.
+ *
+ * Tenía además un cartel azul con título, descripción y una nota — y esa información YA ESTABA, casi
+ * palabra por palabra, en el ⓘ del encabezado de cada pantalla. Eran dos textos que decían lo mismo
+ * y que había que mantener sincronizados a mano: el de Convenios repetía hasta la regla de «se
+ * guarda con Guardar cambios». Ahora la explicación vive en un solo lugar, el ⓘ, y la pantalla
+ * arranca mostrando los datos.
+ *
+ * Se conserva el componente en vez de reemplazarlo por un <div>: nombra qué es cada bloque en el
+ * árbol y deja dónde volver a colgar algo común a las siete pantallas.
+ */
+export const SeccionEmpleador: React.FC<{ children: React.ReactNode }> = ({ children }) => <div className="space-y-4">{children}</div>;

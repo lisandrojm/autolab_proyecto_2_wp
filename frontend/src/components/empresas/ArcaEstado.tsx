@@ -33,7 +33,7 @@ const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno
 export const REQUISITOS_ARCA: RequisitoArca[] = [
   {
     clave: 'convenios',
-    titulo: 'Convenios colectivos',
+    titulo: 'Convenios',
     ok: (c) => (c.convenioIds || []).length > 0,
     resumen: (c) => plural((c.convenioIds || []).length, 'convenio registrado', 'convenios registrados'),
     desbloquea: 'Definen qué categorías profesionales se le pueden dar de alta: ARCA solo ofrece las de los convenios que el CUIT tiene registrados. Sin convenio no hay categoría posible.',
@@ -94,16 +94,15 @@ export const EstadoArcaBadge: React.FC<{ empresa: Company; onClick: (c: Company)
       }}
       title={listo ? `Ver qué tiene registrado ante ARCA ${empresa.razonSocial}` : `Ver qué le falta a ${empresa.razonSocial} para ARCA`}
       aria-label={listo ? `Ver qué tiene registrado ante ARCA ${empresa.razonSocial}` : `Ver qué le falta a ${empresa.razonSocial} para ARCA`}
-      className={`inline-flex items-center gap-1.5 rounded border transition-colors ${chico ? 'px-1.5 py-1' : 'px-2.5 py-1.5'} ${
-        listo
-          ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-200 dark:hover:bg-emerald-900/60 hover:border-emerald-400 dark:hover:border-emerald-600'
-          : 'bg-amber-100 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800 hover:bg-amber-200 dark:hover:bg-amber-900/60 hover:border-amber-400 dark:hover:border-amber-600'
-      }`}
+      className={`inline-flex items-center gap-1.5 rounded border transition-colors ${chico ? 'px-1.5 py-1' : 'px-2.5 py-1.5'} ${listo ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-200 dark:hover:bg-emerald-900/60 hover:border-emerald-400 dark:hover:border-emerald-600' : 'bg-amber-100 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800 hover:bg-amber-200 dark:hover:bg-amber-900/60 hover:border-amber-400 dark:hover:border-amber-600'}`}
     >
       <FontAwesomeIcon icon={listo ? faCheck : faTriangleExclamation} className={`${chico ? 'h-2.5 w-2.5' : 'h-3 w-3'} ${listo ? 'text-emerald-800 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-300'}`} />
       <span className={`font-bold whitespace-nowrap ${chico ? 'text-[10px]' : 'text-xs'} ${listo ? 'text-emerald-800 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-300'}`}>
         {listo ? 'Lista para ARCA' : 'Sin configurar'}
-        <span className="opacity-70 font-semibold"> · {cumplidos} de {REQUISITOS_ARCA.length}</span>
+        <span className="opacity-70 font-semibold">
+          {' '}
+          · {cumplidos} de {REQUISITOS_ARCA.length}
+        </span>
       </span>
       <FontAwesomeIcon icon={faCircleInfo} className={`${chico ? 'h-3 w-3' : 'h-3.5 w-3.5'} ${listo ? 'text-emerald-700/70 dark:text-emerald-400/70' : 'text-amber-700/70 dark:text-amber-400/70'}`} />
     </button>
@@ -156,9 +155,7 @@ export const ArcaRequisitosModal: React.FC<{ empresa: Company | null; onClose: (
           })}
         </div>
 
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          El dato real sale del padrón del organismo, logueado con este CUIT: en Datos del Empleador están las obras sociales, los convenios y los domicilios que tiene declarados. Acá se refleja cuáles son.
-        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">El dato real sale del padrón del organismo, logueado con este CUIT: en Datos del Empleador están las obras sociales, los convenios y los domicilios que tiene declarados. Acá se refleja cuáles son.</p>
       </div>
     </InfoModal>
   );

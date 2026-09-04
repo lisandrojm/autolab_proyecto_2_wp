@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Schema, Document, Model } from 'mongoose';
 
 // Empresa / Productora usada para armar los contratos (datos de "La Empleadora").
 export interface ICompany extends Document {
@@ -56,7 +56,7 @@ export interface ICompany extends Document {
    */
   obraSocialDefaultId?: number;
   /**
-   * Convenios Colectivos (CCT) habilitados para esta empleadora. Referencias al catálogo de Convenios.
+   * Convenios (CCT) habilitados para esta empleadora. Referencias al catálogo de Convenios.
    *
    * NO se manda al TXT: el campo Convenio del registro de 130 (pos. 91-100) va en blanco a propósito.
    * Su función es ser el CONJUNTO VÁLIDO contra el que se valida la categoría del contrato: ARCA
@@ -158,29 +158,29 @@ const companySchema = new Schema<ICompany>(
     representanteLegalEmail: { type: String },
     logoUrl: { type: String },
     signatureUrl: { type: String },
-    obrasSocialesIds: [{ type: Schema.Types.ObjectId, ref: "ObraSocial" }],
+    obrasSocialesIds: [{ type: Schema.Types.ObjectId, ref: 'ObraSocial' }],
     obraSocialDefaultId: { type: Number },
-    convenioIds: [{ type: Schema.Types.ObjectId, ref: "Convenio" }],
-    sucursalIds: [{ type: Schema.Types.ObjectId, ref: "ArcaSucursal" }],
+    convenioIds: [{ type: Schema.Types.ObjectId, ref: 'Convenio' }],
+    sucursalIds: [{ type: Schema.Types.ObjectId, ref: 'ArcaSucursal' }],
     sucursalActividades: [
       {
         _id: false,
-        sucursalId: { type: Schema.Types.ObjectId, ref: "ArcaSucursal", required: true },
-        actividades: [{ _id: false, codigo: { type: String, required: true }, descripcion: { type: String, default: "" } }],
+        sucursalId: { type: Schema.Types.ObjectId, ref: 'ArcaSucursal', required: true },
+        actividades: [{ _id: false, codigo: { type: String, required: true }, descripcion: { type: String, default: '' } }],
       },
     ],
     defaultsArca: {
-      grupoTipoServicio: { type: String, default: "" },
-      tipoServicio: { type: String, default: "" },
-      modalidadLiquidacion: { type: String, default: "" },
-      sucursalId: { type: Schema.Types.ObjectId, ref: "ArcaSucursal", default: null },
-      convenioId: { type: Schema.Types.ObjectId, ref: "Convenio", default: null },
+      grupoTipoServicio: { type: String, default: '' },
+      tipoServicio: { type: String, default: '' },
+      modalidadLiquidacion: { type: String, default: '' },
+      sucursalId: { type: Schema.Types.ObjectId, ref: 'ArcaSucursal', default: null },
+      convenioId: { type: Schema.Types.ObjectId, ref: 'Convenio', default: null },
     },
   },
   {
     timestamps: true,
-    collection: "companies",
-  }
+    collection: 'companies',
+  },
 );
 
-export const Company: Model<ICompany> = mongoose.model<ICompany>("Company", companySchema);
+export const Company: Model<ICompany> = mongoose.model<ICompany>('Company', companySchema);

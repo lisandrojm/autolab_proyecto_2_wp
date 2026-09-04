@@ -12,6 +12,8 @@ import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatal
 import { arcaSucursalesAPI, ArcaSucursal } from '../../api/arcaSucursales';
 import { arcaCategoriasAPI, ConvenioDetalle } from '../../api/arcaCategorias';
 import { companiesAPI, Company } from '../../api/companies';
+import { paritariasAPI, EstadoParitarias } from '../../api/paritarias';
+import { CeldaFuenteParitarias } from '../../components/convenios/CeldaFuenteParitarias';
 import { useEmpresaContextStore } from '../../stores/empresaContextStore';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { formatRnos } from '../../utils/rnos';
@@ -145,11 +147,8 @@ const ObrasSocialesBody: React.FC<{ empresa: Company; recargar: () => Promise<vo
       const contratos = enUso.contratos[String(osId)] || 0;
       const convenios = enUso.convenios[String(osId)] || [];
       if (contratos > 0 || convenios.length > 0) {
-        const partes = [
-          contratos > 0 ? `${contratos} contrato(s) la tienen cargada` : "",
-          convenios.length > 0 ? `${convenios.length === 1 ? "el convenio" : "los convenios"} ${convenios.join(", ")} la usa${convenios.length === 1 ? "" : "n"}` : "",
-        ].filter(Boolean);
-        const r = await sweetAlert.confirm(`¿Quitar ${os.name}?`, `${partes.join(" y ")}. Al quitarla, esas altas van a ser rechazadas por ARCA.`, "Sí, quitar");
+        const partes = [contratos > 0 ? `${contratos} contrato(s) la tienen cargada` : '', convenios.length > 0 ? `${convenios.length === 1 ? 'el convenio' : 'los convenios'} ${convenios.join(', ')} la usa${convenios.length === 1 ? '' : 'n'}` : ''].filter(Boolean);
+        const r = await sweetAlert.confirm(`¿Quitar ${os.name}?`, `${partes.join(' y ')}. Al quitarla, esas altas van a ser rechazadas por ARCA.`, 'Sí, quitar');
         if (!r.isConfirmed) return;
       }
     }
@@ -173,11 +172,7 @@ const ObrasSocialesBody: React.FC<{ empresa: Company; recargar: () => Promise<vo
   const registrarTodas = async () => {
     const faltan = catalogo.filter((o) => !ids.includes(o._id));
     if (faltan.length === 0) return;
-    const r = await sweetAlert.confirm(
-      `¿Registrar las ${faltan.length} que faltan?`,
-      `Van a quedar registradas las ${catalogo.length} del catálogo. Tené en cuenta que ARCA solo acepta las que este CUIT tenga declaradas en su padrón: con todas puestas, el chequeo de consistencia deja pasar cualquiera y el rechazo aparece recién al subir el TXT. Todavía no se guarda nada.`,
-      "Sí, registrar todas",
-    );
+    const r = await sweetAlert.confirm(`¿Registrar las ${faltan.length} que faltan?`, `Van a quedar registradas las ${catalogo.length} del catálogo. Tené en cuenta que ARCA solo acepta las que este CUIT tenga declaradas en su padrón: con todas puestas, el chequeo de consistencia deja pasar cualquiera y el rechazo aparece recién al subir el TXT. Todavía no se guarda nada.`, 'Sí, registrar todas');
     if (!r.isConfirmed) return;
     setIds((prev) => [...prev, ...faltan.map((o) => o._id)]);
   };
@@ -185,11 +180,7 @@ const ObrasSocialesBody: React.FC<{ empresa: Company; recargar: () => Promise<vo
   if (cargando) return <LoadingSpinner message="Cargando el catálogo de obras sociales..." />;
 
   return (
-    <SeccionEmpleador
-      titulo="Obras sociales relacionadas a su actividad"
-      descripcion={`Son las que este CUIT tiene registradas ante ARCA. El organismo solo acepta altas con una de ellas: el catálogo tiene ${catalogo.length} obras sociales, pero cada empleadora declara su subconjunto.`}
-      nota="El listado real sale del padrón, en Datos del Empleador → Obras Sociales, logueado con este CUIT. Acá se refleja cuáles son."
-    >
+    <SeccionEmpleador>
       <div className="flex justify-end">
         <BotonGuardar guardando={guardando} sucio={sucio} onClick={() => guardar({ obrasSocialesIds: ids, obraSocialDefaultId: defaultId }, `${ids.length} obra(s) social(es) registrada(s) para ${empresa.razonSocial}.`)} />
       </div>
@@ -197,9 +188,7 @@ const ObrasSocialesBody: React.FC<{ empresa: Company; recargar: () => Promise<vo
       {ids.length === 0 && (
         <div className="rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3 flex items-start gap-2">
           <FontAwesomeIcon icon={faTriangleExclamation} className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-          <p className="text-xs text-amber-800 dark:text-amber-300">
-            Sin obras sociales registradas no se puede verificar que la del contrato sea válida para esta empleadora. El chequeo de Datos ARCA deja pasar cualquiera, y ARCA la rechaza al subir el archivo.
-          </p>
+          <p className="text-xs text-amber-800 dark:text-amber-300">Sin obras sociales registradas no se puede verificar que la del contrato sea válida para esta empleadora. El chequeo de Datos ARCA deja pasar cualquiera, y ARCA la rechaza al subir el archivo.</p>
         </div>
       )}
 
@@ -216,11 +205,7 @@ const ObrasSocialesBody: React.FC<{ empresa: Company; recargar: () => Promise<vo
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 mb-3">
           Solo aplica a quienes están bajo <span className="font-mono">{CONVENIO_EXCLUIDO}</span>. El resto hereda la obra social de su convenio.
         </p>
-        <select
-          value={defaultId ?? ''}
-          onChange={(e) => setDefaultId(e.target.value ? Number(e.target.value) : null)}
-          className="w-full max-w-xl px-3 py-2 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
-        >
+        <select value={defaultId ?? ''} onChange={(e) => setDefaultId(e.target.value ? Number(e.target.value) : null)} className="w-full max-w-xl px-3 py-2 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200">
           <option value="">— Sin definir: se usa la global del catálogo —</option>
           {registradas
             .slice()
@@ -260,13 +245,7 @@ const ObrasSocialesBody: React.FC<{ empresa: Company; recargar: () => Promise<vo
                 </button>
               )}
             </div>
-            <button
-              type="button"
-              onClick={registrarTodas}
-              disabled={registradas.length === catalogo.length}
-              title={registradas.length === catalogo.length ? 'Ya están registradas las del catálogo' : `Registrar las ${catalogo.length - registradas.length} que faltan`}
-              className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-            >
+            <button type="button" onClick={registrarTodas} disabled={registradas.length === catalogo.length} title={registradas.length === catalogo.length ? 'Ya están registradas las del catálogo' : `Registrar las ${catalogo.length - registradas.length} que faltan`} className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
               <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
               Registrar todas
             </button>
@@ -376,16 +355,8 @@ const ObraSocialPorConvenio: React.FC<{ empresa: Company; catalogo: SimpleCatalo
       <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Consistencia con los convenios</p>
       {/* Se muestran SIEMPRE, también en verde: son los chequeos que se rompen cuando alguien cambia
           la obra social de un convenio o saca una de las registradas, y en cero avisan que están vivos. */}
-      <Chequeo
-        mal={rotos.length > 0}
-        texto={rotos.length === 0 ? 'Ningún convenio apunta a una obra social no registrada' : `${rotos.length} convenio(s) apuntan a una obra social que esta empleadora no tiene registrada`}
-        detalle={rotos.length === 0 ? undefined : `${rotos.map((c) => c.externalId).join(', ')} — ARCA va a rechazar esas altas. Registralas acá, o poné una excepción en ARCA → Convenios.`}
-      />
-      <Chequeo
-        mal={sinCargar.length > 0}
-        texto={sinCargar.length === 0 ? 'Todos los convenios tienen su obra social cargada' : `${sinCargar.length} convenio(s) no tienen obra social cargada`}
-        detalle={sinCargar.length === 0 ? undefined : `${sinCargar.map((c) => c.externalId).join(', ')} — sus contratos no van a poder generar el alta: el RNOS queda sin resolver. Se carga en Configuración → ARCA → Convenios.`}
-      />
+      <Chequeo mal={rotos.length > 0} texto={rotos.length === 0 ? 'Ningún convenio apunta a una obra social no registrada' : `${rotos.length} convenio(s) apuntan a una obra social que esta empleadora no tiene registrada`} detalle={rotos.length === 0 ? undefined : `${rotos.map((c) => c.externalId).join(', ')} — ARCA va a rechazar esas altas. Registralas acá, o poné una excepción en ARCA → Convenios.`} />
+      <Chequeo mal={sinCargar.length > 0} texto={sinCargar.length === 0 ? 'Todos los convenios tienen su obra social cargada' : `${sinCargar.length} convenio(s) no tienen obra social cargada`} detalle={sinCargar.length === 0 ? undefined : `${sinCargar.map((c) => c.externalId).join(', ')} — sus contratos no van a poder generar el alta: el RNOS queda sin resolver. Se carga en Configuración → ARCA → Convenios.`} />
       <p className="text-[11px] text-gray-500 dark:text-gray-400">
         El detalle de qué obra social resuelve cada convenio está en{' '}
         <Link to={`/empresas/${empresa._id}/arca/convenios`} className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
@@ -400,7 +371,7 @@ const ObraSocialPorConvenio: React.FC<{ empresa: Company; catalogo: SimpleCatalo
 // ───────────────────────────────────────────────────────────── Convenios
 
 export const EmpresaConveniosPage: React.FC = () => (
-  <EmpresaContextLayout titulo="Convenios Colectivos" icono={faFileContract} ayuda="empresaConvenios">
+  <EmpresaContextLayout titulo="Convenios" icono={faFileContract} ayuda="empresaConvenios">
     {(empresa, recargar) => <ConveniosBody empresa={empresa} recargar={recargar} />}
   </EmpresaContextLayout>
 );
@@ -412,6 +383,15 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
   const [cargando, setCargando] = useState(true);
   const [ids, setIds] = useState<string[]>(empresa.convenioIds || []);
   const [agregando, setAgregando] = useState(false);
+  /*
+    Estado de paritarias, para la columna «Fuente de paritarias».
+
+    Es la MISMA celda que el nomenclador (`CeldaFuenteParitarias`), en modo lectura: acá se registra
+    qué convenios tiene el CUIT, y dónde publica sus acuerdos un gremio es una propiedad del convenio
+    que se administra en Configuración → ARCA → Convenios. Por eso no se le pasa `onAnotar`.
+  */
+  const [vigilancia, setVigilancia] = useState<EstadoParitarias['porConvenio']>({});
+  const [declarado, setDeclarado] = useState<EstadoParitarias['declarado']>({});
 
   useEffect(() => {
     Promise.all([conveniosApi.list().catch(() => []), obrasSocialesApi.list().catch(() => [])])
@@ -420,6 +400,15 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
         setObrasSociales(os);
       })
       .finally(() => setCargando(false));
+    // Aparte y con su propio catch: si el estado de paritarias no responde, esta pantalla —que es
+    // para registrar convenios— tiene que seguir funcionando con esa columna en "Sin revisar".
+    void paritariasAPI
+      .estado()
+      .then((e) => {
+        setVigilancia(e.porConvenio || {});
+        setDeclarado(e.declarado || {});
+      })
+      .catch(() => undefined);
   }, []);
   useEffect(() => {
     setIds(empresa.convenioIds || []);
@@ -436,10 +425,7 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
   /** Marca o desmarca el convenio habitual. Se guarda con el click. */
   const marcarConvenioPorDefecto = async (convenioId: string) => {
     const nuevo = convenioPorDefectoId === convenioId ? null : convenioId;
-    await guardar(
-      { defaultsArca: { ...(empresa.defaultsArca || {}), convenioId: nuevo } } as any,
-      nuevo ? `${convenios.find((c) => c._id === nuevo)?.externalId || 'El convenio'} queda por defecto para ${empresa.razonSocial}.` : 'Se quitó el convenio por defecto.',
-    );
+    await guardar({ defaultsArca: { ...(empresa.defaultsArca || {}), convenioId: nuevo } } as any, nuevo ? `${convenios.find((c) => c._id === nuevo)?.externalId || 'El convenio'} queda por defecto para ${empresa.razonSocial}.` : 'Se quitó el convenio por defecto.');
   };
 
   const guardarTodo = () => {
@@ -456,11 +442,7 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
   };
 
   return (
-    <SeccionEmpleador
-      titulo="Convenios Colectivos registrados"
-      descripcion="Los CCT que este CUIT tiene registrados ante ARCA. De cada uno cuelgan DOS cosas: qué categorías profesionales se le pueden dar de alta, y qué obra social le corresponde a quien trabaja bajo él."
-      nota="La obra social y la escala salarial son del CONVENIO, iguales para todas las empleadoras que lo tengan registrado: se editan en Configuración → ARCA → Convenios. Acá solo se registra cuáles aplican y, si hace falta, se pisa la obra social como excepción."
-    >
+    <SeccionEmpleador>
       {/*
         Los avisos de paritarias, ACOTADOS A ESTA EMPLEADORA.
 
@@ -491,6 +473,21 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
         // MISMA tabla que el nomenclador: solo cambian las acciones y la columna "Empresas".
         <ConveniosTable
           convenios={registrados}
+          /*
+            Las mismas columnas que el nomenclador salvo «Empresas», que acá no aporta: la empleadora
+            ES el contexto de la pantalla, y la columna diría en cuántas OTRAS está registrado.
+          */
+          renderSindicato={(cv) => {
+            const sind = cv.sindicatoId && typeof cv.sindicatoId === 'object' ? (cv.sindicatoId as { _id: string; name: string; sigla?: unknown }) : null;
+            if (!sind) return <span className="text-gray-400 dark:text-gray-600">—</span>;
+            const sigla = typeof sind.sigla === 'string' ? sind.sigla.trim() : '';
+            return (
+              <span title={sind.name} className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                {sigla || sind.name}
+              </span>
+            );
+          }}
+          renderVigilancia={(cv) => <CeldaFuenteParitarias convenio={cv} vigilancia={vigilancia} declarado={declarado} />}
           // Acá la falta SÍ es accionable: ese convenio le afecta los contratos a esta empleadora.
           // En el nomenclador va un guion, porque serían 2.664 avisos sobre convenios que nadie usa.
           ayudaSinObraSocial="Asignásela al convenio en Configuración → ARCA → Convenios."
@@ -515,12 +512,7 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
             de arriba — es una decisión sola, no parte del formulario de registro.
           */
           renderPorDefecto={(cv) => (
-            <button
-              onClick={() => marcarConvenioPorDefecto(cv._id)}
-              disabled={guardando}
-              title={convenioPorDefectoId === cv._id ? 'Es el convenio por defecto. Click para quitarlo.' : 'Marcar como convenio por defecto de esta empleadora'}
-              className={`transition-colors disabled:opacity-50 ${convenioPorDefectoId === cv._id ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}
-            >
+            <button onClick={() => marcarConvenioPorDefecto(cv._id)} disabled={guardando} title={convenioPorDefectoId === cv._id ? 'Es el convenio por defecto. Click para quitarlo.' : 'Marcar como convenio por defecto de esta empleadora'} className={`transition-colors disabled:opacity-50 ${convenioPorDefectoId === cv._id ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}>
               <FontAwesomeIcon icon={faStar} />
             </button>
           )}
@@ -539,11 +531,9 @@ const ConveniosBody: React.FC<{ empresa: Company; recargar: () => Promise<void> 
           )}
         />
       )}
-
     </SeccionEmpleador>
   );
 };
-
 
 // ───────────────────────────────────────────────────────────── Domicilios
 
@@ -570,8 +560,7 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
     import del padrón trae códigos y no ids del catálogo, así que la descripción tiene que viajar con
     el dato o se pierde si el catálogo cambia.
   */
-  const mapaDeclaradas = (e: Company): Record<string, ActividadDomicilio[]> =>
-    Object.fromEntries((e.sucursalActividades || []).map((x) => [String(x.sucursalId), (x.actividades || []).map((a) => ({ codigo: String(a.codigo), descripcion: a.descripcion || '' }))]));
+  const mapaDeclaradas = (e: Company): Record<string, ActividadDomicilio[]> => Object.fromEntries((e.sucursalActividades || []).map((x) => [String(x.sucursalId), (x.actividades || []).map((a) => ({ codigo: String(a.codigo), descripcion: a.descripcion || '' }))]));
 
   const [actividadesPorSucursal, setActividadesPorSucursal] = useState<Record<string, ActividadDomicilio[]>>(() => mapaDeclaradas(empresa));
   /** El domicilio cuyas actividades se están editando. `null` = modal cerrado. */
@@ -589,10 +578,8 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
     setActividadesPorSucursal(mapaDeclaradas(empresa));
   }, [empresa]);
 
-  const normalizar = (m: Record<string, ActividadDomicilio[]>) =>
-    JSON.stringify(Object.fromEntries(Object.entries(m).map(([k, v]) => [k, [...v].map((a) => a.codigo).sort()])));
-  const sucio =
-    JSON.stringify([...ids].sort()) !== JSON.stringify([...(empresa.sucursalIds || [])].sort()) || normalizar(actividadesPorSucursal) !== normalizar(mapaDeclaradas(empresa));
+  const normalizar = (m: Record<string, ActividadDomicilio[]>) => JSON.stringify(Object.fromEntries(Object.entries(m).map(([k, v]) => [k, [...v].map((a) => a.codigo).sort()])));
+  const sucio = JSON.stringify([...ids].sort()) !== JSON.stringify([...(empresa.sucursalIds || [])].sort()) || normalizar(actividadesPorSucursal) !== normalizar(mapaDeclaradas(empresa));
   const elegidas = useMemo(() => sucursales.filter((s) => ids.includes(s._id)), [sucursales, ids]);
   const porDefectoId = empresa.defaultsArca?.sucursalId || '';
 
@@ -601,18 +588,11 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
     const nuevo = porDefectoId === sucursalId ? null : sucursalId;
     // Los otros defaults se mandan tal cual están: el PATCH reemplaza el subdocumento entero, y
     // omitirlos los borraría.
-    await guardar(
-      { defaultsArca: { ...(empresa.defaultsArca || {}), sucursalId: nuevo } } as any,
-      nuevo ? `${sucursales.find((s) => s._id === nuevo)?.domicilio || 'El domicilio'} queda por defecto para ${empresa.razonSocial}.` : 'Se quitó el domicilio por defecto.',
-    );
+    await guardar({ defaultsArca: { ...(empresa.defaultsArca || {}), sucursalId: nuevo } } as any, nuevo ? `${sucursales.find((s) => s._id === nuevo)?.domicilio || 'El domicilio'} queda por defecto para ${empresa.razonSocial}.` : 'Se quitó el domicilio por defecto.');
   };
 
   return (
-    <SeccionEmpleador
-      titulo="Domicilios de explotación"
-      descripcion="Los domicilios que este CUIT tiene declarados en el padrón, cada uno con sus actividades. El alta declara UNO de ellos y una de sus actividades."
-      nota="Las actividades salen de estos domicilios, pero se declaran POR CUIT: tildá cuáles declaró ESTA empleadora en cada uno. ARCA rechaza un alta con una actividad que este CUIT no declaró ahí, aunque otra empresa sí la tenga."
-    >
+    <SeccionEmpleador>
       <div className="flex justify-end">
         <BotonGuardar
           guardando={guardando}
@@ -653,11 +633,7 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
             <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">
               <FontAwesomeIcon icon={faStar} className="h-3 w-3" />
               Por defecto
-              <FontAwesomeIcon
-                icon={faCircleInfo}
-                title="El domicilio habitual de esta empleadora: en el alta aparece PRIMERO en el select y marcado con ★. No obliga a usarlo — se puede elegir cualquiera de los otros declarados."
-                className="h-3 w-3 normal-case"
-              />
+              <FontAwesomeIcon icon={faCircleInfo} title="El domicilio habitual de esta empleadora: en el alta aparece PRIMERO en el select y marcado con ★. No obliga a usarlo — se puede elegir cualquiera de los otros declarados." className="h-3 w-3 normal-case" />
             </span>
           </div>
           <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-100 dark:divide-gray-700/60">
@@ -666,8 +642,8 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
               // título: alineado arriba quedaba flotando y no se leía como la acción de la fila.
               <div key={s._id} className="px-3 py-2.5 flex items-center gap-3">
                 <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  {/*
+                  <div className="flex items-center gap-2">
+                    {/*
                     ★ EL DOMICILIO HABITUAL DE ESTA EMPLEADORA.
 
                     Es por empleadora y no global porque el código de domicilio es POR CUIT: el mismo
@@ -679,20 +655,14 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
                     viéndose completo con un domicilio que nadie miró — y el domicilio es el que
                     decide qué actividades acepta ARCA.
                   */}
-                  <button
-                    type="button"
-                    onClick={() => marcarPorDefecto(s._id)}
-                    disabled={guardando}
-                    title={porDefectoId === s._id ? 'Es el domicilio por defecto. Click para quitarlo.' : 'Marcar como domicilio por defecto de esta empleadora'}
-                    className={`shrink-0 transition-colors disabled:opacity-50 ${porDefectoId === s._id ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}
-                  >
-                    <FontAwesomeIcon icon={faStar} className="h-3.5 w-3.5" />
-                  </button>
-                  <span className="font-mono text-xs text-blue-700 dark:text-blue-400 font-bold">{s.codigo}</span>
-                  <span className="text-sm text-gray-900 dark:text-gray-100">{s.domicilio}</span>
-                  {porDefectoId === s._id && <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">por defecto</span>}
-                </div>
-                {/*
+                    <button type="button" onClick={() => marcarPorDefecto(s._id)} disabled={guardando} title={porDefectoId === s._id ? 'Es el domicilio por defecto. Click para quitarlo.' : 'Marcar como domicilio por defecto de esta empleadora'} className={`shrink-0 transition-colors disabled:opacity-50 ${porDefectoId === s._id ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}>
+                      <FontAwesomeIcon icon={faStar} className="h-3.5 w-3.5" />
+                    </button>
+                    <span className="font-mono text-xs text-blue-700 dark:text-blue-400 font-bold">{s.codigo}</span>
+                    <span className="text-sm text-gray-900 dark:text-gray-100">{s.domicilio}</span>
+                    {porDefectoId === s._id && <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">por defecto</span>}
+                  </div>
+                  {/*
                   BADGES + LÁPIZ, y la edición en un modal.
 
                   Estaban como filas de ancho completo, una debajo de la otra: cuatro domicilios con
@@ -703,44 +673,28 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
                   La ✕ del badge quita en el acto; agregar abre el modal, porque elegir del catálogo
                   necesita buscador y no entra en una fila.
                 */}
-                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                  {(actividadesPorSucursal[s._id] || []).length === 0 ? (
-                    <span className="text-xs text-amber-700 dark:text-amber-400">
-                      Sin actividades declaradas para esta empleadora: sus contratos en este domicilio no pueden generar el alta.
-                    </span>
-                  ) : (
-                    (actividadesPorSucursal[s._id] || []).map((a) => (
-                      <span
-                        key={a.codigo}
-                        title={a.descripcion}
-                        className="inline-flex items-center gap-1.5 pl-2 pr-1 py-0.5 rounded text-[11px] bg-blue-50 dark:bg-blue-900/25 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
-                      >
-                        <span className="font-mono font-semibold">{a.codigo}</span>
-                        {a.descripcion && <span className="truncate max-w-[16rem]">{a.descripcion}</span>}
-                        <button
-                          type="button"
-                          onClick={() => setActividadesPorSucursal((prev) => ({ ...prev, [s._id]: (prev[s._id] || []).filter((x) => x.codigo !== a.codigo) }))}
-                          title={`Quitar ${a.codigo} de este domicilio`}
-                          className="ml-0.5 text-blue-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                        >
-                          <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
-                        </button>
-                      </span>
-                    ))
-                  )}
-                </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    {(actividadesPorSucursal[s._id] || []).length === 0 ? (
+                      <span className="text-xs text-amber-700 dark:text-amber-400">Sin actividades declaradas para esta empleadora: sus contratos en este domicilio no pueden generar el alta.</span>
+                    ) : (
+                      (actividadesPorSucursal[s._id] || []).map((a) => (
+                        <span key={a.codigo} title={a.descripcion} className="inline-flex items-center gap-1.5 pl-2 pr-1 py-0.5 rounded text-[11px] bg-blue-50 dark:bg-blue-900/25 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                          <span className="font-mono font-semibold">{a.codigo}</span>
+                          {a.descripcion && <span className="truncate max-w-[16rem]">{a.descripcion}</span>}
+                          <button type="button" onClick={() => setActividadesPorSucursal((prev) => ({ ...prev, [s._id]: (prev[s._id] || []).filter((x) => x.codigo !== a.codigo) }))} title={`Quitar ${a.codigo} de este domicilio`} className="ml-0.5 text-blue-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                            <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+                          </button>
+                        </span>
+                      ))
+                    )}
+                  </div>
                 </div>
                 {/*
                   EXACTAMENTE el ✎ de la columna «Acciones» de las tablas de catálogo: mismas clases
                   y mismo tamaño por defecto del ícono. Copiado y no aproximado — un ícono del mismo
                   gesto que se ve apenas distinto en cada pantalla hace dudar de si hace lo mismo.
                 */}
-                <button
-                  type="button"
-                  onClick={() => setEditandoActividades(s)}
-                  title="Editar"
-                  className="shrink-0 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300"
-                >
+                <button type="button" onClick={() => setEditandoActividades(s)} title="Editar" className="shrink-0 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300">
                   <FontAwesomeIcon icon={faEdit} />
                 </button>
               </div>
@@ -768,19 +722,12 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
           subtitle={`${empresa.razonSocial} · domicilio ${editandoActividades.codigo}. ARCA las declara por CUIT: esta lista es de esta empleadora.`}
           size="lg"
           footer={
-            <button
-              type="button"
-              onClick={() => setEditandoActividades(null)}
-              className="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-            >
+            <button type="button" onClick={() => setEditandoActividades(null)} className="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors">
               Listo
             </button>
           }
         >
-          <ActividadesDelDomicilio
-            actividades={actividadesPorSucursal[editandoActividades._id] || []}
-            onChange={(actividades) => setActividadesPorSucursal((prev) => ({ ...prev, [editandoActividades._id]: actividades }))}
-          />
+          <ActividadesDelDomicilio actividades={actividadesPorSucursal[editandoActividades._id] || []} onChange={(actividades) => setActividadesPorSucursal((prev) => ({ ...prev, [editandoActividades._id]: actividades }))} />
           <p className="mt-3 text-[11px] text-amber-700 dark:text-amber-400">Los cambios se aplican al apretar «Guardar cambios» en la pantalla, no al cerrar este modal.</p>
         </Modal>
       )}
@@ -813,7 +760,10 @@ const CategoriasBody: React.FC<{ empresa: Company }> = ({ empresa }) => {
       try {
         const catalogo = await conveniosApi.list();
         setConvenios(catalogo);
-        const codigos = catalogo.filter((c) => (empresa.convenioIds || []).map(String).includes(c._id)).map((c) => String(c.externalId || '').trim()).filter(Boolean);
+        const codigos = catalogo
+          .filter((c) => (empresa.convenioIds || []).map(String).includes(c._id))
+          .map((c) => String(c.externalId || '').trim())
+          .filter(Boolean);
         const resueltos = await Promise.all(codigos.map((c) => arcaCategoriasAPI.detalle(c).catch(() => null)));
         setDetalles(resueltos.filter(Boolean) as ConvenioDetalle[]);
       } finally {
@@ -822,24 +772,18 @@ const CategoriasBody: React.FC<{ empresa: Company }> = ({ empresa }) => {
     })();
   }, [empresa]);
 
-  const total = detalles.reduce((acc, d) => acc + d.grupos.reduce((a, g) => a + g.categorias.length, 0), 0);
-
   if (cargando) return <LoadingSpinner message="Resolviendo las categorías de sus convenios..." />;
 
   return (
-    <SeccionEmpleador
-      titulo="Categorías disponibles"
-      descripcion={`Solo lectura: son las de los ${empresa.convenioIds?.length || 0} convenio(s) que esta empleadora registró — ${total} categoría(s) en total. No se configuran acá.`}
-      nota="Para cambiarlas, registrá o quitá convenios. Para editar sus escalas, entrá a Configuración → ARCA → Convenios: la escala es del CCT, no de la empresa."
-    >
+    <SeccionEmpleador>
       {(empresa.convenioIds || []).length === 0 ? (
         <div className="rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-4">
           <p className="text-sm text-amber-800 dark:text-amber-300">Esta empleadora no tiene convenios registrados, así que no hay ninguna categoría que se le pueda dar de alta.</p>
         </div>
       ) : (
         <>
-        <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/60">
-          {/*
+          <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/60">
+            {/*
             UNA FILA POR CONVENIO, Y EL DETALLE EN UN MODAL.
 
             Esto listaba los grupos y las 107 categorías de los cuatro convenios, una debajo de la
@@ -847,44 +791,44 @@ const CategoriasBody: React.FC<{ empresa: Company }> = ({ empresa }) => {
             contestar «¿qué le puedo dar de alta a esta empleadora?». La respuesta a esa pregunta es
             el conteo; el detalle es para cuando alguien lo busca, y por eso está detrás del ojito.
           */}
-          {detalles.map((d) => {
-            const categorias = d.grupos.reduce((a, g) => a + g.categorias.length, 0);
-            const sinEscala = d.grupos.filter((g) => !g.sueldoBruto).length;
-            return (
-              <div key={d.convenio} className="px-4 py-3 flex items-center gap-3">
-                <div className="min-w-0 flex-1">
-                  <span className="font-mono text-sm font-bold text-blue-700 dark:text-blue-400">{d.convenio}</span>
-                  <span className="text-sm text-gray-600 dark:text-gray-300"> — {d.nombre || 'sin descripción'}</span>
-                  <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    {d.grupos.length} grupo(s) · {categorias} categoría(s)
-                    {/* Lo que BLOQUEA el alta se dice en la fila: es lo único accionable de acá. */}
-                    {sinEscala > 0 && <span className="text-red-600 dark:text-red-400"> · {sinEscala} sin escala: bloquea{sinEscala === 1 ? '' : 'n'} el alta</span>}
-                  </span>
+            {detalles.map((d) => {
+              const categorias = d.grupos.reduce((a, g) => a + g.categorias.length, 0);
+              const sinEscala = d.grupos.filter((g) => !g.sueldoBruto).length;
+              return (
+                <div key={d.convenio} className="px-4 py-3 flex items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <span className="font-mono text-sm font-bold text-blue-700 dark:text-blue-400">{d.convenio}</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-300"> — {d.nombre || 'sin descripción'}</span>
+                    <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {d.grupos.length} grupo(s) · {categorias} categoría(s)
+                      {/* Lo que BLOQUEA el alta se dice en la fila: es lo único accionable de acá. */}
+                      {sinEscala > 0 && (
+                        <span className="text-red-600 dark:text-red-400">
+                          {' '}
+                          · {sinEscala} sin escala: bloquea{sinEscala === 1 ? '' : 'n'} el alta
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <button type="button" onClick={() => setViendoConvenio(d)} title={`Ver las ${categorias} categorías de ${d.convenio}`} className="shrink-0 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300">
+                    <FontAwesomeIcon icon={faEye} />
+                  </button>
+                  <Link to="/arca/categorias" title="Editar las escalas de este convenio" className="shrink-0 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300">
+                    <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+                  </Link>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setViendoConvenio(d)}
-                  title={`Ver las ${categorias} categorías de ${d.convenio}`}
-                  className="shrink-0 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300"
-                >
-                  <FontAwesomeIcon icon={faEye} />
-                </button>
-                <Link to="/arca/categorias" title="Editar las escalas de este convenio" className="shrink-0 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300">
-                  <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
-                </Link>
-              </div>
-            );
-          })}
-        </div>
-        <div className="mt-4 space-y-4">
-          {/* Un convenio registrado que no resolvió es un convenio sin categorías cargadas. */}
-          {detalles.length < (empresa.convenioIds || []).length && (
-            <p className="text-xs text-amber-700 dark:text-amber-400">
-              {(empresa.convenioIds || []).length - detalles.length} convenio(s) registrado(s) todavía no tienen categorías cargadas: sus altas no van a poder generarse.
-              {convenios.length === 0 ? '' : ' Cargalas desde Configuración → ARCA → Convenios.'}
-            </p>
-          )}
-        </div>
+              );
+            })}
+          </div>
+          <div className="mt-4 space-y-4">
+            {/* Un convenio registrado que no resolvió es un convenio sin categorías cargadas. */}
+            {detalles.length < (empresa.convenioIds || []).length && (
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                {(empresa.convenioIds || []).length - detalles.length} convenio(s) registrado(s) todavía no tienen categorías cargadas: sus altas no van a poder generarse.
+                {convenios.length === 0 ? '' : ' Cargalas desde Configuración → ARCA → Convenios.'}
+              </p>
+            )}
+          </div>
         </>
       )}
 
@@ -893,22 +837,14 @@ const CategoriasBody: React.FC<{ empresa: Company }> = ({ empresa }) => {
         CCT y se edita en el nomenclador, no por empresa.
       */}
       {viendoConvenio && (
-        <Modal
-          isOpen
-          onClose={() => setViendoConvenio(null)}
-          title={`${viendoConvenio.convenio} — ${viendoConvenio.nombre || 'sin descripción'}`}
-          subtitle={`${viendoConvenio.grupos.length} grupo(s) · ${viendoConvenio.grupos.reduce((a, g) => a + g.categorias.length, 0)} categoría(s) que se le pueden dar de alta a ${empresa.razonSocial}`}
-          size="lg"
-        >
+        <Modal isOpen onClose={() => setViendoConvenio(null)} title={`${viendoConvenio.convenio} — ${viendoConvenio.nombre || 'sin descripción'}`} subtitle={`${viendoConvenio.grupos.length} grupo(s) · ${viendoConvenio.grupos.reduce((a, g) => a + g.categorias.length, 0)} categoría(s) que se le pueden dar de alta a ${empresa.razonSocial}`} size="lg">
           <div className="divide-y divide-gray-100 dark:divide-gray-700/60">
             {viendoConvenio.grupos.map((g) => (
               <div key={g._id} className="py-2.5">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="inline-flex items-center justify-center h-6 w-9 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-[11px] font-bold">G{g.numero}</span>
                   {g.nombre && <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{g.nombre}</span>}
-                  <span className={`text-xs font-semibold ${g.sueldoBruto ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {g.sueldoBruto ? `Bruto ${g.sueldoBruto.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}` : 'Sin escala: bloquea el alta'}
-                  </span>
+                  <span className={`text-xs font-semibold ${g.sueldoBruto ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{g.sueldoBruto ? `Bruto ${g.sueldoBruto.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}` : 'Sin escala: bloquea el alta'}</span>
                   <span className="text-xs text-gray-400">· {g.categorias.length} categoría(s)</span>
                 </div>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -952,7 +888,7 @@ const CategoriasBody: React.FC<{ empresa: Company }> = ({ empresa }) => {
  * NO ES UN CANDADO. En el alta el grupo marcado aparece primero; el otro se sigue pudiendo elegir.
  */
 export const EmpresaGruposTipoServicioPage: React.FC = () => (
-  <EmpresaContextLayout titulo="Grupos de Tipo de Servicio" icono={faLayerGroup} ayuda="empresaDefaults">
+  <EmpresaContextLayout titulo="Grupos de Tipo de Servicio" icono={faLayerGroup} ayuda="empresaGruposTipoServicio">
     {(empresa, recargar) => <GruposTipoServicioBody empresa={empresa} recargar={recargar} />}
   </EmpresaContextLayout>
 );
@@ -987,20 +923,11 @@ const GruposTipoServicioBody: React.FC<{ empresa: Company; recargar: () => Promi
     const tipoActual = empresa.defaultsArca?.tipoServicio || '';
     const pierdeElTipo = !!tipoActual && !!nuevo && grupoDelCodigo(tipoActual) !== nuevo;
     const nombre = grupos.find((g) => String(g.externalId) === nuevo)?.name || 'El grupo';
-    await guardar(
-      { defaultsArca: { ...(empresa.defaultsArca || {}), grupoTipoServicio: nuevo, ...(pierdeElTipo ? { tipoServicio: '' } : {}) } } as any,
-      nuevo
-        ? `${nombre} queda por defecto para ${empresa.razonSocial}.${pierdeElTipo ? ' Se limpió el tipo de servicio por defecto: era del otro grupo.' : ''}`
-        : 'Se quitó el grupo por defecto.',
-    );
+    await guardar({ defaultsArca: { ...(empresa.defaultsArca || {}), grupoTipoServicio: nuevo, ...(pierdeElTipo ? { tipoServicio: '' } : {}) } } as any, nuevo ? `${nombre} queda por defecto para ${empresa.razonSocial}.${pierdeElTipo ? ' Se limpió el tipo de servicio por defecto: era del otro grupo.' : ''}` : 'Se quitó el grupo por defecto.');
   };
 
   return (
-    <SeccionEmpleador
-      titulo="Grupo de Tipo de Servicio habitual"
-      descripcion="ARCA divide los tipos de servicio en dos grupos, y en Simplificación Registral se elige primero el grupo y recién ahí el tipo. Marcá el que esta empleadora usa casi siempre: en el alta aparece primero, y el otro se sigue pudiendo elegir."
-      nota="Los dos grupos son del nomenclador de ARCA, iguales para todas las empleadoras: no se agregan ni se editan acá. El grupo NO viaja en el TXT — lo que viaja es el tipo de servicio (posiciones 107-109); el grupo existe para que elegir entre 293 tipos no sea elegir a ciegas."
-    >
+    <SeccionEmpleador>
       {cargando ? (
         <LoadingSpinner message="Cargando grupos..." />
       ) : (
@@ -1014,11 +941,7 @@ const GruposTipoServicioBody: React.FC<{ empresa: Company; recargar: () => Promi
                 <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                   <span className="inline-flex items-center gap-1.5">
                     Por defecto
-                    <button
-                      type="button"
-                      title="El grupo marcado aparece primero al cargar un contrato y deja preseleccionado el filtro de Tipo de Servicio. Se puede elegir el otro igual: es una sugerencia, no un candado."
-                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal"
-                    >
+                    <button type="button" title="El grupo marcado aparece primero al cargar un contrato y deja preseleccionado el filtro de Tipo de Servicio. Se puede elegir el otro igual: es una sugerencia, no un candado." className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal">
                       <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
                     </button>
                   </span>
@@ -1040,12 +963,7 @@ const GruposTipoServicioBody: React.FC<{ empresa: Company; recargar: () => Promi
                         filtro importa — sin él, el combo del alta son 293 opciones. */}
                     <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">{cuantos > 0 ? `${cuantos} de ${tipos.length}` : 'sin clasificar'}</td>
                     <td className="px-4 py-3 text-center">
-                      <button
-                        onClick={() => marcarPorDefecto(codigo)}
-                        disabled={guardando || !codigo}
-                        title={esDefecto ? 'Es el grupo por defecto. Click para quitarlo.' : `Marcar ${g.name} como grupo por defecto de esta empleadora`}
-                        className={`transition-colors disabled:opacity-50 ${esDefecto ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}
-                      >
+                      <button onClick={() => marcarPorDefecto(codigo)} disabled={guardando || !codigo} title={esDefecto ? 'Es el grupo por defecto. Click para quitarlo.' : `Marcar ${g.name} como grupo por defecto de esta empleadora`} className={`transition-colors disabled:opacity-50 ${esDefecto ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}>
                         <FontAwesomeIcon icon={faStar} />
                       </button>
                     </td>
@@ -1127,11 +1045,7 @@ const DefaultsBody: React.FC<{ empresa: Company; recargar: () => Promise<void> }
   if (cargando) return <LoadingSpinner message="Cargando los nomencladores..." />;
 
   return (
-    <SeccionEmpleador
-      titulo="Valores por defecto de ARCA"
-      descripcion="La elección habitual de esta empleadora dentro del nomenclador, para no repetirla en cada alta."
-      nota="No pisan al Tipo de Contrato: si el contrato trae su propio código, manda el del contrato. Estos son el valor de arranque."
-    >
+    <SeccionEmpleador>
       <div className="flex justify-end">
         <BotonGuardar guardando={guardando} sucio={sucio} onClick={() => guardar({ defaultsArca: form }, `Defaults de ARCA guardados para ${empresa.razonSocial}.`)} />
       </div>
