@@ -184,6 +184,32 @@ export const MiPerfilPage: React.FC = () => {
           </div>
         </div>
 
+        {/*
+          POR QUÉ ESTA PANTALLA NO SE EDITA.
+
+          Los datos personales se cambian por el circuito de PEDIDOS —categoría «datos personales»,
+          que al aprobarse aplica el cambio sobre el usuario (`utils/personalDataFields.ts`)—, y ese
+          formulario hoy vive solo en la app. Agregar edición directa acá dejaría sin efecto ese
+          circuito, incluida la confirmación de cambio de cuenta bancaria que el modelo ya contempla
+          (`solicitaCambioCuenta` / `cambioCuentaConfirmada`): sin ella, cualquiera podría redirigir
+          su cobro sin que nadie lo apruebe.
+
+          Se dice acá en vez de dejar la pantalla muda: sin este aviso, «no puedo editar mis datos»
+          se lee como que falta una función, no como una decisión.
+        */}
+        <div className="px-6 pt-4">
+          <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
+            <p className="text-sm text-blue-900 dark:text-blue-200">
+              <strong>Estos datos se ven desde acá, pero se cambian desde la app.</strong> Entrá a <strong>Pedidos → Datos personales</strong> en WeProdu Mobile y pedí la
+              modificación: queda registrada y la aprueba quien administra.
+            </p>
+            <p className="text-xs text-blue-800 dark:text-blue-300 mt-2">
+              Nombre, apellido, tipo y número de documento y CUIT/CUIL no se modifican por ningún camino: salen del padrón de ARCA y se
+              confirman contra él.
+            </p>
+          </div>
+        </div>
+
         {/* Contenido */}
         <div className="p-6">
           {activeTab === "general" && (

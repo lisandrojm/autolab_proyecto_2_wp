@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBuilding, faPlus, faEdit, faTrash, faSearch, faFilePdf, faStar } from '@fortawesome/free-solid-svg-icons';
 import { PageLayout } from '../components/ui/PageLayout';
-import { Modal } from '../components/ui/Modal';
 import { InfoModal } from '../components/ui/InfoModal';
 import { EstadoArcaBadge, ArcaRequisitosModal } from '../components/empresas/ArcaEstado';
 import { formatRnos } from '../utils/rnos';
@@ -12,12 +11,10 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { Card } from '../components/ui/Card';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { sweetAlert } from '../utils/sweetAlert';
+import { EmpresaFormModal } from '../components/empresas/EmpresaFormModal';
 import { fuzzyMatch } from '../utils/searchHelpers';
-import { companiesAPI, Company, CompanyInput } from '../api/companies';
+import { companiesAPI, Company } from '../api/companies';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
-import { ConvenioSelector } from '../components/empresas/ConvenioSelector';
-import { ObraSocialSelector } from '../components/empresas/ObraSocialSelector';
-import { SucursalSelector } from '../components/empresas/SucursalSelector';
 import { arcaSucursalesAPI, ArcaSucursal } from '../api/arcaSucursales';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 
@@ -27,25 +24,6 @@ const HELP_KEY = 'empresas' as const;
 const conveniosApi = createSimpleCatalogApi('/convenios');
 const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
 
-const EMPTY_FORM: CompanyInput = {
-  razonSocial: '',
-  cuit: '',
-  domicilioCalle: '',
-  domicilioNumero: '',
-  domicilioPisoDepto: '',
-  localidad: '',
-  provincia: '',
-  codigoPostal: '',
-  firmanteNombre: '',
-  firmanteDni: '',
-  firmanteCargo: '',
-  firmanteEmail: '',
-  representanteLegalNombre: '',
-  representanteLegalEmail: '',
-  convenioIds: [],
-  sucursalIds: [],
-  obrasSocialesIds: [],
-};
 
 /**
  * Qué le falta a la empleadora para poder dar altas en ARCA.
@@ -179,8 +157,6 @@ export const EmpresasPage: React.FC = () => {
 
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Company | null>(null);
-  const [form, setForm] = useState<CompanyInput>(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   // Empresa cuyo aviso "Sin configurar para ARCA" se está explicando. El modal es UNO para toda la
   // página y no uno por fila: el contenido es el mismo y solo cambia qué le falta a esta empleadora.
@@ -267,31 +243,11 @@ export const EmpresasPage: React.FC = () => {
 
   const openCreate = () => {
     setEditing(null);
-    setForm(EMPTY_FORM);
     setShowModal(true);
   };
 
   const openEdit = (c: Company) => {
     setEditing(c);
-    setForm({
-      razonSocial: c.razonSocial || '',
-      cuit: c.cuit || '',
-      domicilioCalle: c.domicilioCalle || '',
-      domicilioNumero: c.domicilioNumero || '',
-      domicilioPisoDepto: c.domicilioPisoDepto || '',
-      localidad: c.localidad || '',
-      provincia: c.provincia || '',
-      codigoPostal: c.codigoPostal || '',
-      firmanteNombre: c.firmanteNombre || '',
-      firmanteDni: c.firmanteDni || '',
-      firmanteCargo: c.firmanteCargo || '',
-      firmanteEmail: c.firmanteEmail || '',
-      representanteLegalNombre: c.representanteLegalNombre || '',
-      representanteLegalEmail: c.representanteLegalEmail || '',
-      convenioIds: (c.convenioIds || []).map((x) => String(x)),
-      sucursalIds: (c.sucursalIds || []).map((x) => String(x)),
-      obrasSocialesIds: (c.obrasSocialesIds || []).map((x) => String(x)),
-    });
     setShowModal(true);
   };
 
@@ -360,33 +316,7 @@ export const EmpresasPage: React.FC = () => {
     return sucursales.filter((s) => ids.includes(s._id)).sort((a, b) => a.codigo.localeCompare(b.codigo));
   };
 
-  const setField = (key: keyof CompanyInput, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.razonSocial.trim()) {
-      sweetAlert.error('Datos incompletos', 'La razón social es obligatoria');
-      return;
-    }
-    const payload: CompanyInput = form;
-    try {
-      setSaving(true);
-      if (editing) {
-        await companiesAPI.update(editing._id, payload);
-        sweetAlert.success('Empresa actualizada', 'Los cambios se guardaron correctamente');
-      } else {
-        await companiesAPI.create(payload);
-        sweetAlert.success('Empresa creada', 'La empresa se creó correctamente');
-      }
-      setShowModal(false);
-      fetchCompanies();
-    } catch (error: any) {
-      console.error('Error saving company:', error);
-      sweetAlert.error('Error', error?.response?.data?.error || 'No se pudo guardar la empresa');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleDelete = async (c: Company) => {
     const result = await sweetAlert.confirm('¿Eliminar empresa?', `¿Seguro que querés eliminar "${c.razonSocial}"? Esta acción no se puede deshacer.`);
@@ -402,16 +332,7 @@ export const EmpresasPage: React.FC = () => {
   };
 
   const inputClass = 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-transparent dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm';
-  const labelClass = 'block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1';
 
-  const field = (label: string, key: keyof CompanyInput, opts?: { required?: boolean; placeholder?: string; type?: string }) => (
-    <div>
-      <label className={labelClass}>
-        {label} {opts?.required && <span className="text-red-500">*</span>}
-      </label>
-      <input type={opts?.type || 'text'} className={inputClass} value={(form[key] as string) || ''} onChange={(e) => setField(key, e.target.value)} placeholder={opts?.placeholder} required={opts?.required} />
-    </div>
-  );
 
   const domicilioResumen = (c: Company) => [c.domicilioCalle, c.domicilioNumero].filter(Boolean).join(' ') + (c.localidad ? `, ${c.localidad}` : '') + (c.codigoPostal ? ` (${c.codigoPostal})` : '');
 
@@ -605,91 +526,12 @@ export const EmpresasPage: React.FC = () => {
         </div>
       )}
 
-      <Modal
+      <EmpresaFormModal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        title={editing ? 'Editar Empresa' : 'Nueva Empresa'}
-        subtitle="Datos de la empresa para armar los contratos"
-        size="lg"
-        footer={
-          <div className="flex justify-end gap-3">
-            <button type="button" onClick={() => setShowModal(false)} className="px-5 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-              Cancelar
-            </button>
-            <button type="submit" form="company-form" disabled={saving} className="btn-primary px-6 py-2 disabled:opacity-50">
-              {saving ? 'Guardando...' : editing ? 'Guardar' : 'Crear'}
-            </button>
-          </div>
-        }
-      >
-        <form id="company-form" onSubmit={handleSave} className="space-y-6">
-          {/* Datos generales */}
-          <div>
-            <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Datos generales</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {field('Razón Social', 'razonSocial', { required: true, placeholder: 'Ej: 2030 S.R.L.' })}
-              {field('CUIT', 'cuit', { placeholder: '30-71706837-4' })}
-            </div>
-          </div>
-
-          {/* Domicilio legal */}
-          <div className="pt-4 border-t border-gray-100 dark:border-gray-700/50">
-            <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Domicilio legal</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {field('Calle', 'domicilioCalle', { placeholder: 'Ruiz Huidobro' })}
-              {field('Número', 'domicilioNumero', { placeholder: '4365' })}
-              {field('Piso / Depto', 'domicilioPisoDepto')}
-              {field('Localidad', 'localidad', { placeholder: 'CABA' })}
-              {field('Provincia', 'provincia')}
-              {field('Código Postal', 'codigoPostal', { placeholder: '1430' })}
-            </div>
-          </div>
-
-          {/* Firmante */}
-          <div className="pt-4 border-t border-gray-100 dark:border-gray-700/50">
-            <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Firmante</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {field('Nombre', 'firmanteNombre', { placeholder: 'Norma Olivo' })}
-              {field('DNI', 'firmanteDni', { placeholder: '5.453.082' })}
-              {field('Cargo', 'firmanteCargo', { placeholder: 'Socio Gerente' })}
-              {/* Va acá y no en Representante legal: son dos personas distintas. En 2030 S.R.L. firma
-                  Norma Olivo y el representante legal es Hernán Pellegrini — el bloque de partes del
-                  contrato imprime el nombre y el DNI del FIRMANTE, así que el mail que va al lado
-                  tiene que ser el suyo. */}
-              {field('Email', 'firmanteEmail', { type: 'email', placeholder: 'norma.olivo@frame.com.ar' })}
-            </div>
-          </div>
-
-          {/* Convenios */}
-          <div className="pt-4 border-t border-gray-100 dark:border-gray-700/50">
-            <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Convenios</h4>
-            <ConvenioSelector convenios={convenios} cargando={cargandoConvenios} value={form.convenioIds || []} onChange={(ids) => setForm((prev) => ({ ...prev, convenioIds: ids }))} />
-          </div>
-
-          {/* Obras sociales registradas ante ARCA para este CUIT */}
-          <div className="pt-4 border-t border-gray-100 dark:border-gray-700/50">
-            <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Obras sociales</h4>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Las que este CUIT tiene registradas ante ARCA (&laquo;obras sociales relacionadas a su actividad&raquo;). El organismo solo acepta altas con una de ellas. Cuál se usa por defecto se elige en la ficha de la empresa, en ARCA &rarr; Obras Sociales.</p>
-            <ObraSocialSelector obrasSociales={obrasSociales} cargando={cargandoObrasSociales} value={form.obrasSocialesIds || []} onChange={(ids) => setForm((prev) => ({ ...prev, obrasSocialesIds: ids }))} />
-          </div>
-
-          {/* Sucursales de ARCA asignadas */}
-          <div className="pt-4 border-t border-gray-100 dark:border-gray-700/50">
-            <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Sucursales de ARCA</h4>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Cuáles de las sucursales del padrón le corresponden a esta empresa. Los datos de cada una (código, domicilio, actividades) se cargan en Configuración → ARCA → Sucursales.</p>
-            <SucursalSelector sucursales={sucursales} cargando={cargandoSucursales} value={form.sucursalIds || []} onChange={(ids) => setForm((prev) => ({ ...prev, sucursalIds: ids }))} />
-          </div>
-
-          {/* Representante legal */}
-          <div className="pt-4 border-t border-gray-100 dark:border-gray-700/50">
-            <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Representante legal</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {field('Nombre', 'representanteLegalNombre', { placeholder: 'Hernán Marcelo Pellegrini' })}
-              {field('Email', 'representanteLegalEmail', { type: 'email', placeholder: 'hernan.pellegrini@frame.com.ar' })}
-            </div>
-          </div>
-        </form>
-      </Modal>
+        empresa={editing}
+        onGuardado={fetchCompanies}
+      />
 
       {/* Detalle de una lista (convenios / obras sociales / sucursales) de UNA empresa. */}
       <DetalleListaModal detalle={detalleLista} onClose={() => setDetalleLista(null)} convenios={detalleLista ? conveniosDe(detalleLista.empresa) : []} obrasSociales={detalleLista ? obrasSocialesDe(detalleLista.empresa) : []} sucursales={detalleLista ? sucursalesDe(detalleLista.empresa) : []} obraSocialPorDefectoId={detalleLista ? obraSocialPorDefectoDe(detalleLista.empresa)?._id : undefined} />

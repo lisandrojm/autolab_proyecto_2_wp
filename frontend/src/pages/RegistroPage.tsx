@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircleInfo, faSpinner, faLandmark, faCircleCheck, faEye, faEyeSlash, faWandMagicSparkles, faSearch, faTimes, faXmark } from '@fortawesome/free-solid-svg-icons';
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import { faCircleInfo, faSpinner, faLandmark, faCircleCheck, faEye, faEyeSlash, faWandMagicSparkles, faSearch, faTimes, faXmark, faUser, faMapMarkerAlt, faUniversity } from '@fortawesome/free-solid-svg-icons';
 import { useSearchParams, Link } from 'react-router-dom';
 import { CuitInput, isValidCuit } from '../components/ui/CuitInput';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -526,14 +527,13 @@ export const RegistroPage: React.FC = () => {
   // El CUIL solo es obligatorio para argentinos: un extranjero puede no tenerlo (lo declara con el
   // checkbox y en ese caso el campo ni se muestra).
   const REQUIRED_BY_STEP: Record<'general' | 'domicilio', { key: keyof RegistroForm; label: string }[]> = {
-    general: [{ key: 'firstName', label: 'Nombre' }, { key: 'lastName', label: 'Apellido' }, { key: 'email', label: 'Email' }, { key: 'nacionalidadId', label: 'Nacionalidad' }, ...(cuilObligatorio ? [{ key: 'cuit' as keyof RegistroForm, label: 'CUIT / CUIL' }] : []), ...(form.nacionalizado ? [{ key: 'paisNacimientoId' as keyof RegistroForm, label: 'País de nacimiento' }] : []), { key: 'documento', label: 'Documento' }, { key: 'password', label: 'Contraseña' }, { key: 'fechaNac', label: 'Fecha de nacimiento' }],
+    general: [{ key: 'firstName', label: 'Nombre' }, { key: 'lastName', label: 'Apellido' }, { key: 'email', label: 'Email' }, { key: 'nacionalidadId', label: 'Nacionalidad' }, ...(cuilObligatorio ? [{ key: 'cuit' as keyof RegistroForm, label: 'CUIT / CUIL' }] : []), ...(form.nacionalizado ? [{ key: 'paisNacimientoId' as keyof RegistroForm, label: 'País de nacimiento' }] : []), { key: 'documento', label: 'Documento' }, { key: 'password', label: 'Contraseña' }, { key: 'fechaNac', label: 'Fecha de nacimiento' }, { key: 'telefono', label: 'Teléfono' }],
     domicilio: [
       { key: 'pais', label: 'País' },
       { key: 'localidad', label: 'Localidad' },
       { key: 'calle', label: 'Calle' },
       { key: 'altura', label: 'Altura' },
       { key: 'pisoDepto', label: 'Piso / Depto' },
-      { key: 'telefono', label: 'Teléfono' },
     ],
   };
 
@@ -570,11 +570,11 @@ export const RegistroPage: React.FC = () => {
     }
   };
 
-  const tabs: { key: Tab; label: string }[] = useMemo(
+  const tabs: { key: Tab; label: string; icon: IconDefinition }[] = useMemo(
     () => [
-      { key: 'general', label: 'General' },
-      { key: 'domicilio', label: 'Domicilio' },
-      { key: 'bancarios', label: 'Datos bancarios' },
+      { key: 'general', label: 'Personales', icon: faUser },
+      { key: 'domicilio', label: 'Domicilio', icon: faMapMarkerAlt },
+      { key: 'bancarios', label: 'Bancarios', icon: faUniversity },
     ],
     [],
   );
@@ -760,8 +760,9 @@ export const RegistroPage: React.FC = () => {
                 onClick={() => setActiveTab(t.key)}
                 disabled={bloqueadoHastaValidar && t.key !== 'general'}
                 title={bloqueadoHastaValidar && t.key !== 'general' ? 'Validá el CUIT primero' : undefined}
-                className={`flex-1 py-3 text-sm font-bold border-b-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${activeTab === t.key ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-gray-400 hover:text-gray-200'}`}
+                className={`flex-1 py-3 text-sm font-bold border-b-2 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${activeTab === t.key ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-gray-400 hover:text-gray-200'}`}
               >
+                <FontAwesomeIcon icon={t.icon} className="text-xs" />
                 {t.label}
               </button>
             ))}
@@ -963,6 +964,14 @@ export const RegistroPage: React.FC = () => {
                         Generar
                       </button>
                     </div>
+                  </div>
+                  {/* El teléfono, con el email: los dos son cómo se contacta a la persona. Estaba en
+                      Domicilio —dónde vive— y en Nuevo Usuario ya vive acá. */}
+                  <div>
+                    <label className={labelClass}>
+                      Telefono <span className="text-red-500">*</span>
+                    </label>
+                    <input className={inputClass('telefono')} autoComplete="off" placeholder="Ej: 11 1234-5678" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1177,14 +1186,6 @@ export const RegistroPage: React.FC = () => {
                   <div>
                     <label className={labelClass}>Código postal</label>
                     <input className={fieldClass} autoComplete="off" placeholder="Ej: 1425" value={form.codigoPostal} onChange={(e) => set('codigoPostal', e.target.value)} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className={labelClass}>
-                      Telefono <span className="text-red-500">*</span>
-                    </label>
-                    <input className={inputClass('telefono')} autoComplete="off" placeholder="Ej: 11 1234-5678" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} />
                   </div>
                 </div>
               </div>

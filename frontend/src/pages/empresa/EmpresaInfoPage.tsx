@@ -6,6 +6,7 @@ import { EmpresaContextLayout } from '../../components/empresa/EmpresaContextLay
 import { Company } from '../../api/companies';
 import { empresaAssetUrl } from '../../utils/empresaAssets';
 import { EstadoArcaBadge, ArcaRequisitosModal } from '../../components/empresas/ArcaEstado';
+import { EmpresaFormModal } from '../../components/empresas/EmpresaFormModal';
 
 /**
  * "Información" del contexto Empresa: los datos propios de la empleadora (razón social, CUIT,
@@ -55,11 +56,45 @@ const Imagen: React.FC<{ label: string; url?: string }> = ({ label, url }) => (
   </div>
 );
 
-export const EmpresaInfoPage: React.FC = () => (
-  <EmpresaContextLayout titulo="Información" icono={faInfoCircle} ayuda="empresaFicha" acciones={<Link to="/empresas" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"><FontAwesomeIcon icon={faPenToSquare} className="h-4 w-4" />Editar en el ABM</Link>}>
-    {(empresa) => <InfoBody empresa={empresa} />}
-  </EmpresaContextLayout>
-);
+export const EmpresaInfoPage: React.FC = () => {
+  const [editando, setEditando] = useState(false);
+
+  return (
+    <EmpresaContextLayout
+      titulo="Información"
+      icono={faInfoCircle}
+      ayuda="empresaFicha"
+      /*
+        EDITAR ACÁ MISMO, con el MISMO modal del ABM (`EmpresaFormModal`).
+
+        Antes el botón mandaba a /empresas: los datos que esta pantalla muestra se editaban en otra,
+        y había que volver a entrar a la ficha para seguir. Son los mismos campos y el mismo guardado
+        —el formulario se extrajo de `EmpresasPage` justamente para no tener dos—.
+      */
+      acciones={
+        <button
+          type="button"
+          onClick={() => setEditando(true)}
+          title="Editar los datos de la empresa"
+          aria-label="Editar los datos de la empresa"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          <FontAwesomeIcon icon={faPenToSquare} className="h-4 w-4" />
+          Editar
+        </button>
+      }
+    >
+      {(empresa, recargar) => (
+        <>
+          <InfoBody empresa={empresa} />
+          {/* Al guardar se recarga la ficha: si no, la pantalla seguiría mostrando lo viejo hasta
+              que alguien la refresque a mano. */}
+          <EmpresaFormModal isOpen={editando} onClose={() => setEditando(false)} empresa={empresa} onGuardado={() => void recargar()} />
+        </>
+      )}
+    </EmpresaContextLayout>
+  );
+};
 
 const InfoBody: React.FC<{ empresa: Company }> = ({ empresa }) => {
   const domicilio = [empresa.domicilioCalle, empresa.domicilioNumero, empresa.domicilioPisoDepto].filter(Boolean).join(' ');
@@ -108,9 +143,10 @@ const InfoBody: React.FC<{ empresa: Company }> = ({ empresa }) => {
                 resolverlo contra la API. Usarlo crudo en el `src` es lo que rompía la imagen. */}
             <Imagen label="Logo" url={empresa.logoUrl} />
             <Imagen label="Firma" url={empresa.signatureUrl} />
-            {/* Mismo botón que "Editar en el ABM": las dos cosas son lo mismo —salir de la ficha a la
-                pantalla donde ese dato se edita—, así que se ven igual. Como link de texto se leía
-                como una nota al pie y no como la acción que es. */}
+            {/* Sigue siendo un link a otra pantalla, y no el modal de arriba: el membrete y la firma
+                se editan con subida de archivos, que es un formulario distinto del de los datos. Se
+                ve igual que el botón «Editar» del encabezado porque las dos son la misma acción
+                —modificar algo de esta empresa—, aunque una abra un modal y la otra navegue. */}
             <Link to="/empresas-membretes" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
               <FontAwesomeIcon icon={faPenToSquare} className="h-4 w-4" />
               Editar membrete y firma
