@@ -28,8 +28,6 @@ export const PERSONAL_DATA_FIELD_META = [
     { key: "pisoDepto", label: "Piso / Depto", section: "Domicilio", type: "text" },
     { key: "codigoPostal", label: "Código postal", section: "Domicilio", type: "text" },
     { key: "telefono", label: "Teléfono", section: "Domicilio", type: "text" },
-    { key: "telefono2", label: "Teléfono de emergencia", section: "Domicilio", type: "text" },
-    { key: "visa", label: "Visa", section: "Domicilio", type: "boolean" },
     { key: "bancoId", label: "Banco", section: "Datos bancarios", type: "catalog", catalogType: "banco" },
     { key: "tipoDeCuentaBancaria", label: "Tipo de cuenta", section: "Datos bancarios", type: "text" },
     { key: "cbu", label: "CBU", section: "Datos bancarios", type: "text" },
@@ -119,8 +117,6 @@ export const PERSONAL_DATA_FIELD_KEYS = [
     "pisoDepto",
     "codigoPostal",
     "telefono",
-    "telefono2",
-    "visa",
     // Bancarios
     "bancoId",
     "tipoDeCuentaBancaria",

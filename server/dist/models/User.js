@@ -50,8 +50,6 @@ const userSchema = new Schema({
         fechaNac: String,
         fechaAlta: String,
         telefono: String,
-        telefono2: String,
-        visa: Boolean,
         activo: { type: Boolean, default: true },
         tipoEntidadFinanciera: String,
         solicitaCreacionCuenta: Boolean,

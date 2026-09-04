@@ -332,7 +332,6 @@ export async function buildEmployeeDocData(user, up, contract, empresa) {
         fechaNacimiento: formatDateAr(meta.fechaNac),
         estadoCivil: meta.estadoCivil || "",
         telefono: meta.telefono || "",
-        telefono2: meta.telefono2 || "",
         // ── Domicilio ──
         direccion: meta.calle || "",
         calle: meta.calle || "",
