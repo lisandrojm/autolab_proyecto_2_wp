@@ -10,6 +10,7 @@ import { Modal } from '../ui/Modal';
 import { BloqueEstado } from '../ui/BloqueEstado';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { afipAPI } from '../../api/afip';
+import { CondicionFiscalArca, CondicionFiscalArcaData } from '../arca/CondicionFiscalArca';
 import { cuitEsValido } from '../../utils/cuit';
 import { generarPassword } from '../../utils/password';
 import { mensajeErrorArca } from '../../utils/errorArca';
@@ -179,7 +180,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   const [consultandoPadron, setConsultandoPadron] = useState(false);
   const [validadoEnArca, setValidadoEnArca] = useState(false);
 
-  const traerDeArca = async () => {
+  const traerDeArca = async (refrescar = false) => {
     const cuit = String(formData.cuit || '').replace(/\D/g, '');
     if (!cuitEsValido(cuit)) {
       sweetAlert.error('CUIT inválido', 'Revisá los dígitos: con un CUIT que no pasa el verificador, ARCA solo devuelve error.');
@@ -187,7 +188,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     }
     setConsultandoPadron(true);
     try {
-      const r = await afipAPI.consultarPadron(cuit);
+      const r = await afipAPI.consultarPadron(cuit, { refrescar });
+      setCondicionFiscal(r.condicionFiscal ?? null);
       /*
         Si ese CUIT ya tiene ficha, no se sigue.
 
@@ -244,6 +246,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   const [tieneCuil, setTieneCuil] = useState(true);
   /** Explicación del circuito "Sin CUIT" de Contratos (modal del ⓘ al lado del CUIT/CUIL). */
   const [sinCuitInfoOpen, setSinCuitInfoOpen] = useState(false);
+  /** Lo que ARCA dice de este CUIT. `null` mientras no se validó: el componente no muestra nada. */
+  const [condicionFiscal, setCondicionFiscal] = useState<CondicionFiscalArcaData | null>(null);
   const [vacacionesInfoOpen, setVacacionesInfoOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -681,6 +685,16 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
             En la EDICIÓN no: ahí se entra a corregir un dato puntual, casi siempre de una sola
             pestaña, y obligar a recorrer las tres para guardarlo sería puro trámite.
           */
+          /*
+            «Anterior» a partir del segundo paso, solo en el ALTA.
+
+            Sin él, revisar algo que quedó atrás obligaba a tocar la pestaña en el encabezado, que no
+            se lee como parte del recorrido: los pasos avanzaban con un botón y se volvía por otro
+            lado. Editando no hace falta, porque ahí no hay recorrido.
+          */
+          ...(!user && ORDEN_TABS.indexOf(modalActiveTab) > 0
+            ? [{ label: 'Anterior', onClick: () => setModalActiveTab(ORDEN_TABS[ORDEN_TABS.indexOf(modalActiveTab) - 1]), variant: 'secondary' as const }]
+            : []),
           ...(user
             ? [{ label: formData.isSolicitud ? 'Aprobar y Crear' : 'Actualizar', onClick: () => document.querySelector<HTMLFormElement>('#user-form')?.requestSubmit(), variant: 'primary' as const }]
             : modalActiveTab !== ORDEN_TABS[ORDEN_TABS.length - 1]
@@ -942,7 +956,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                         permite hacerlo desde acá, sin ir hasta la columna ARCA del listado.
                       */}
                       {cuilVisible && (
-                        <button type="button" onClick={traerDeArca} disabled={consultandoPadron || validadoEnArca || !cuitEsValido(String(formData.cuit || '').replace(/\D/g, ''))} title={validadoEnArca ? 'Nombre, apellido y documento son los de ARCA. Se guarda marcado como validado.' : 'Consulta el Padrón de ARCA: confirma que el CUIT existe y completa nombre, apellido y documento con lo que tiene el organismo'} className={`shrink-0 inline-flex items-center gap-2 px-3 h-[42px] rounded-lg text-xs font-semibold border transition-colors disabled:cursor-not-allowed whitespace-nowrap ${validadoEnArca ? 'border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 disabled:opacity-100' : 'border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-50'}`}>
+                        <button type="button" onClick={() => void traerDeArca()} disabled={consultandoPadron || validadoEnArca || !cuitEsValido(String(formData.cuit || '').replace(/\D/g, ''))} title={validadoEnArca ? 'Nombre, apellido y documento son los de ARCA. Se guarda marcado como validado.' : 'Consulta el Padrón de ARCA: confirma que el CUIT existe y completa nombre, apellido y documento con lo que tiene el organismo'} className={`shrink-0 inline-flex items-center gap-2 px-3 h-[42px] rounded-lg text-xs font-semibold border transition-colors disabled:cursor-not-allowed whitespace-nowrap ${validadoEnArca ? 'border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 disabled:opacity-100' : 'border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-50'}`}>
                           <FontAwesomeIcon icon={consultandoPadron ? faSpinner : validadoEnArca ? faCircleCheck : faLandmark} spin={consultandoPadron} className="h-3 w-3" />
                           {consultandoPadron ? 'Validando…' : validadoEnArca ? 'Validado' : 'Validar CUIT'}
                         </button>
@@ -950,6 +964,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     </div>
                     {!nacionalidadElegida && <p className="text-[11px] text-gray-400 mt-1">Elegí la nacionalidad para completarlo.</p>}
                     {nacionalidadElegida && !cuilVisible && <p className="text-[11px] text-gray-400 mt-1">Se registra sin CUIT/CUIL. Se puede cargar más adelante.</p>}
+                    {/* Debajo del CUIT y antes de nombre/apellido: es donde está puesta la vista de
+                        quien acaba de apretar «Validar CUIT». */}
+                    <CondicionFiscalArca data={condicionFiscal} cargando={consultandoPadron} onActualizar={() => void traerDeArca(true)} />
                   </div>
                 </div>
 

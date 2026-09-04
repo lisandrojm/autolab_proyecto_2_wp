@@ -1,4 +1,5 @@
 import axios from "./axiosConfig";
+import type { CondicionFiscalArcaData } from "../components/arca/CondicionFiscalArca";
 import { SinCuitValidacion } from "./users";
 
 /** "ok" = autoconsulta contra Padrón A13 respondió bien; "no_autorizado" = el login WSAA funciona
@@ -181,8 +182,24 @@ export const afipAPI = {
    * miles de veces lo que ya se sabía.
    */
   /** Quién es un CUIT según ARCA. No guarda nada: es para completar el alta de un usuario nuevo. */
-  async consultarPadron(cuit: string): Promise<{ cuit: string; nombre: string; apellido: string; denominacion: string; estado: string; tipoPersona?: string; documento: string; yaExiste?: { _id: string; nombre: string; email?: string } | null }> {
-    const { data } = await axios.post("/afip/padron/consultar", { cuit });
+  async consultarPadron(
+    cuit: string,
+    opts?: { refrescar?: boolean },
+  ): Promise<{
+    cuit: string;
+    nombre: string;
+    apellido: string;
+    denominacion: string;
+    estado: string;
+    tipoPersona?: string;
+    documento: string;
+    tipoClave?: string;
+    estadoClave?: string;
+    /** Ausente si el backend todavía no se actualizó: el front lo trata como «no consultado». */
+    condicionFiscal?: CondicionFiscalArcaData;
+    yaExiste?: { _id: string; nombre: string; email?: string } | null;
+  }> {
+    const { data } = await axios.post("/afip/padron/consultar", { cuit, refrescar: opts?.refrescar === true });
     return data;
   },
 

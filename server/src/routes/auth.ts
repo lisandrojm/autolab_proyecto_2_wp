@@ -6,6 +6,7 @@ import { Client } from "../models/Client.js";
 import { Tenant } from "../models/Tenant.js";
 import { getTenantAfipConfig, consultarPadron } from "../services/afipService.js";
 import { consultarCuitEnArca, ErrorConsultaCuit, usuarioExistenteConCuit } from "../services/arca/consultaCuit.js";
+import { condicionFiscalDeCuit } from "../services/arca/condicionFiscalDeCuit.js";
 import { cuitEsValido, normalizarCuit } from "../utils/constanciaPdf.js";
 import { Info } from "../models/Info.js";
 import { Banco } from "../models/Banco.js";
@@ -702,7 +703,15 @@ router.post("/registro/validar-cuit", async (req, res) => {
       return;
     }
     const datos = await consultarCuitEnArca(payload.tenantId, String(req.body?.cuit || ""));
-    res.json({ ...datos, yaExiste: await usuarioExistenteConCuit(payload.tenantId, datos.cuit) });
+    // Igual que en el alta del admin: aparte, y sin poder frenar el registro si falla.
+    const condicionFiscal = await condicionFiscalDeCuit(payload.tenantId, datos.cuit, { refrescar: req.body?.refrescar === true });
+    res.json({
+      ...datos,
+      tipoClave: condicionFiscal.tipoClave,
+      estadoClave: condicionFiscal.estadoClave,
+      condicionFiscal,
+      yaExiste: await usuarioExistenteConCuit(payload.tenantId, datos.cuit),
+    });
   } catch (error: any) {
     if (error instanceof ErrorConsultaCuit) {
       res.status(error.status).json({ error: error.message });
