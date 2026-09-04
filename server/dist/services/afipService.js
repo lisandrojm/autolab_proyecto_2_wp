@@ -32,23 +32,6 @@ const PADRON_A13_URL = {
     produccion: "https://aws.afip.gov.ar/sr-padron/webservices/personaServiceA13",
 };
 const PADRON_A13_SERVICE = "ws_sr_padron_a13";
-/*
-  PADRÓN A5 — el que trae la condición fiscal.
-
-  El A13 devuelve quién es la persona (nombre, documento, estado de la clave) y nada más. Monotributo,
-  régimen general, impuestos y actividades vienen del A5, que además trae el domicilio DESGLOSADO
-  (calle, número, piso) en vez de un string único — por eso se eligió A5 y no la constancia de
-  inscripción: la misma llamada sirve para el autocompletado de domicilio más adelante.
-
-  Es un servicio APARTE en AFIP: hay que autorizarlo para el certificado en el Administrador de
-  Relaciones, igual que el A13. Mientras no lo esté, la consulta devuelve un Fault y la condición
-  fiscal queda en DESCONOCIDO — sin romper la validación de nombre, que sigue yendo por A13.
-*/
-const PADRON_A5_SERVICE = "ws_sr_padron_a5";
-const PADRON_A5_URL = {
-    homologacion: "https://awshomo.afip.gov.ar/sr-padron/webservices/personaServiceA5",
-    produccion: "https://aws.afip.gov.ar/sr-padron/webservices/personaServiceA5",
-};
 const SOAP_TIMEOUT_MS = 20_000;
 /** Lee y descifra la config de AFIP del tenant. Devuelve null si no está conectado. */
 export function getTenantAfipConfig(tenant) {
@@ -335,53 +318,6 @@ export async function consultarPadron(tenantId, cfg, cuitConsultado, opts) {
     }
     await registrarLogAfip({ tenantId, tipo, cuitConsultado: cuit, cuitRepresentada: cfg.cuitRepresentada, ambiente: cfg.ambiente, encontrado: resultado.encontrado, estado: resultado.estado, faultCode: resultado.faultCode, faultString: resultado.faultString, raw: resultado.raw });
     return resultado;
-}
-/**
- * Los datos FISCALES de un CUIT, desde el Padrón A5.
- *
- * Separada de `consultarPadron` a propósito: son dos servicios distintos de AFIP, con autorizaciones
- * distintas, y la validación de nombre —que ya funciona en producción— no puede depender de que este
- * ande. El caller consulta A13 primero y esto después; si esto falla, se degrada.
- *
- * NO tira excepción por un Fault ni por falta de datos: devuelve `{ ok: false, motivo }` para que el
- * endpoint pueda contestar 200 con la condición en DESCONOCIDO. Que no se pueda averiguar la
- * condición fiscal no es motivo para frenar un alta.
- */
-export async function consultarPadronFiscal(tenantId, cfg, cuitConsultado) {
-    const cuit = normalizarCuit(cuitConsultado);
-    if (!cuit)
-        return { motivo: `CUIT inválido: "${cuitConsultado}"` };
-    try {
-        const ticket = await obtenerTicket(tenantId, cfg, PADRON_A5_SERVICE);
-        const envelope = `<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:a5="http://a5.soap.ws.server.puc.sr/">
-  <soapenv:Header/>
-  <soapenv:Body>
-    <a5:getPersona>
-      <token>${ticket.token}</token>
-      <sign>${ticket.sign}</sign>
-      <cuitRepresentada>${normalizarCuit(cfg.cuitRepresentada)}</cuitRepresentada>
-      <idPersona>${cuit}</idPersona>
-    </a5:getPersona>
-  </soapenv:Body>
-</soapenv:Envelope>`;
-        const { parsed } = await soapPost(PADRON_A5_URL[cfg.ambiente], "", envelope);
-        const body = buscar(buscar(parsed, "Envelope"), "Body");
-        const fault = buscar(body, "Fault");
-        if (fault) {
-            const { faultCode, faultString } = extraerFault(fault);
-            // El motivo se conserva tal cual lo dio AFIP: «servicio no autorizado» y «CUIT inexistente» se
-            // arreglan de maneras distintas, y un mensaje genérico obligaría a adivinar cuál de las dos es.
-            return { motivo: [faultCode, faultString].filter(Boolean).join(": ") || "Fault sin detalle" };
-        }
-        const personaReturn = buscar(buscar(body, "getPersonaResponse"), "personaReturn");
-        if (!personaReturn)
-            return { motivo: "La respuesta no trae personaReturn" };
-        return { personaReturn };
-    }
-    catch (e) {
-        return { motivo: e?.code === "ECONNABORTED" ? "timeout" : e?.message || String(e) };
-    }
 }
 /** Valida credenciales pidiendo un ticket real — se usa al conectar, antes de guardar nada. Ojo: esto
  *  SOLO prueba el login WSAA (que el certificado/clave son válidos); no prueba que el servicio

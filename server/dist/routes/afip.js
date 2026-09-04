@@ -8,7 +8,6 @@ import { dirname } from "path";
 import mongoose, { Types } from "mongoose";
 import { Tenant } from "../models/Tenant.js";
 import { consultarCuitEnArca, ErrorConsultaCuit, usuarioExistenteConCuit } from "../services/arca/consultaCuit.js";
-import { condicionFiscalDeCuit } from "../services/arca/condicionFiscalDeCuit.js";
 import { Project } from "../models/Project.js";
 import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
@@ -277,20 +276,8 @@ router.post("/padron/consultar", async (req, res) => {
             return;
         }
         const datos = await consultarCuitEnArca(req.tenantObjectId, String(req.body?.cuit || ""));
-        /*
-          La condición fiscal va DESPUÉS y por su cuenta: es otro servicio de AFIP (Padrón A5), con otra
-          autorización. Si falla, `condicionFiscalDeCuit` devuelve DESCONOCIDO en vez de tirar, así que la
-          validación de nombre —que es lo que hace que el formulario se complete— no se ve afectada.
-        */
-        const condicionFiscal = await condicionFiscalDeCuit(req.tenantObjectId, datos.cuit, { refrescar: req.body?.refrescar === true });
         // Se avisa acá y no recién al guardar: quien está dando de alta ya completó medio formulario.
-        res.json({
-            ...datos,
-            tipoClave: condicionFiscal.tipoClave,
-            estadoClave: condicionFiscal.estadoClave,
-            condicionFiscal,
-            yaExiste: await usuarioExistenteConCuit(req.tenantObjectId, datos.cuit),
-        });
+        res.json({ ...datos, yaExiste: await usuarioExistenteConCuit(req.tenantObjectId, datos.cuit) });
     }
     catch (error) {
         if (error instanceof ErrorConsultaCuit) {

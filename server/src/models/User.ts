@@ -105,28 +105,6 @@ export interface IUserMetadata {
   numeroLegajoTango?: string | null;
   afiliadoAlSindicato?: boolean | null;
   /**
-   * CONDICIÓN FISCAL SEGÚN ARCA. Se llena al validar el CUIT; no se tipea a mano.
-   *
-   * Es una FOTO del padrón al momento de la consulta, no la verdad de hoy: alguien puede pasar de
-   * monotributo a responsable inscripto y esto seguir diciendo lo viejo. Por eso `fechaConsulta`
-   * viaja al lado y la pantalla la muestra — sin ella, el dato se leería como vigente para siempre.
-   */
-  fiscal?: {
-    condicion?: string | null;
-    descripcion?: string | null;
-    monotributoCategoria?: string | null;
-    monotributoCategoriaId?: number | null;
-    actividadPrincipalId?: number | null;
-    actividadPrincipalDescripcion?: string | null;
-    impuestos?: Array<{ id?: number; descripcion?: string; estado?: string; periodo?: string }>;
-    tipoClave?: string | null;
-    estadoClave?: string | null;
-    claveInactiva?: boolean | null;
-    validadoEnArca?: boolean | null;
-    fechaConsulta?: Date | null;
-    fuente?: string | null;
-  } | null;
-  /**
    * A qué sindicato/s está afiliado/a. Guarda los `_id` del catálogo `Sindicato`.
    *
    * Es una LISTA y no uno solo: quien trabaja en más de una actividad puede estar afiliado a más de
@@ -260,23 +238,6 @@ const userSchema = new Schema<IUser>(
       numeroLegajoTango: String,
       afiliadoAlSindicato: Boolean,
       sindicatoIds: [String],
-      fiscal: {
-        // Sin `enum` a nivel schema: los valores los define `services/arca/condicionFiscal.ts`, que es
-        // donde está la regla. Duplicarlos acá deja dos listas que hay que acordarse de sincronizar.
-        condicion: String,
-        descripcion: String,
-        monotributoCategoria: String,
-        monotributoCategoriaId: Number,
-        actividadPrincipalId: Number,
-        actividadPrincipalDescripcion: String,
-        impuestos: [{ id: Number, descripcion: String, estado: String, periodo: String }],
-        tipoClave: String,
-        estadoClave: String,
-        claveInactiva: Boolean,
-        validadoEnArca: Boolean,
-        fechaConsulta: Date,
-        fuente: String,
-      },
       rutaImagen: String,
       bancoReceptor: String,
       swift: String,

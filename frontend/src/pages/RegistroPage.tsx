@@ -10,7 +10,6 @@ import { sweetAlert } from '../utils/sweetAlert';
 import { generarPassword } from '../utils/password';
 import { fuzzyMatch } from '../utils/searchHelpers';
 import { mensajeErrorArca } from '../utils/errorArca';
-import { CondicionFiscalArca, CondicionFiscalArcaData } from '../components/arca/CondicionFiscalArca';
 import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina, esCuilObligatorio, opcionesDeNacionalidad, valorDeNacionalidad, leerNacionalidadElegida } from '../utils/nacionalidadDocumento';
 
 type Tab = 'general' | 'domicilio' | 'bancarios';
@@ -424,10 +423,8 @@ export const RegistroPage: React.FC = () => {
   const [rolesEmpresaOpen, setRolesEmpresaOpen] = useState(false);
   const [validadoEnArca, setValidadoEnArca] = useState(false);
   const [consultandoPadron, setConsultandoPadron] = useState(false);
-  /** Lo que ARCA dice de este CUIT. `null` mientras no se validó. */
-  const [condicionFiscal, setCondicionFiscal] = useState<CondicionFiscalArcaData | null>(null);
 
-  const validarCuitEnArca = async (refrescar = false) => {
+  const validarCuitEnArca = async () => {
     const cuit = String(form.cuit || '').replace(/\D/g, '');
     if (!isValidCuit(cuit)) {
       sweetAlert.error('CUIT inválido', 'Revisá los dígitos: con un CUIT que no pasa el verificador, ARCA solo devuelve error.');
@@ -439,13 +436,10 @@ export const RegistroPage: React.FC = () => {
       const res = await fetch(`${apiUrl}/auth/registro/validar-cuit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, cuit, refrescar }),
+        body: JSON.stringify({ token, cuit }),
       });
       // Puede no ser JSON (una página de error del proxy, por ejemplo): no se puede asumir.
       const data = await res.json().catch(() => ({}));
-      // Se guarda antes de los cortes por duplicado o persona jurídica: en esos casos el formulario no
-      // sigue, pero lo que ARCA contestó ya se sabe.
-      if (res.ok) setCondicionFiscal(data.condicionFiscal ?? null);
       if (!res.ok) {
         const m = mensajeErrorArca(res.status, data);
         sweetAlert.error(m.titulo, m.detalle);
@@ -876,7 +870,7 @@ export const RegistroPage: React.FC = () => {
                         />
                       </div>
                       {cuilVisible && (
-                        <button type="button" onClick={() => void validarCuitEnArca()} disabled={consultandoPadron || validadoEnArca || !isValidCuit(String(form.cuit || '').replace(/\D/g, ''))} title={validadoEnArca ? 'Nombre, apellido y documento son los de ARCA. Se guarda marcado como validado.' : 'Consulta el Padrón de ARCA: confirma que el CUIT existe y completa nombre, apellido y documento'} className={`shrink-0 inline-flex items-center gap-2 px-3 h-[42px] rounded-lg text-xs font-semibold border transition-colors disabled:cursor-not-allowed whitespace-nowrap ${validadoEnArca ? 'border-green-500/50 text-green-400 bg-green-500/10 disabled:opacity-100' : 'border-blue-500/50 text-blue-300 hover:bg-blue-500/10 disabled:opacity-50'}`}>
+                        <button type="button" onClick={validarCuitEnArca} disabled={consultandoPadron || validadoEnArca || !isValidCuit(String(form.cuit || '').replace(/\D/g, ''))} title={validadoEnArca ? 'Nombre, apellido y documento son los de ARCA. Se guarda marcado como validado.' : 'Consulta el Padrón de ARCA: confirma que el CUIT existe y completa nombre, apellido y documento'} className={`shrink-0 inline-flex items-center gap-2 px-3 h-[42px] rounded-lg text-xs font-semibold border transition-colors disabled:cursor-not-allowed whitespace-nowrap ${validadoEnArca ? 'border-green-500/50 text-green-400 bg-green-500/10 disabled:opacity-100' : 'border-blue-500/50 text-blue-300 hover:bg-blue-500/10 disabled:opacity-50'}`}>
                           <FontAwesomeIcon icon={consultandoPadron ? faSpinner : validadoEnArca ? faCircleCheck : faLandmark} spin={consultandoPadron} className="h-3 w-3" />
                           {consultandoPadron ? 'Validando…' : validadoEnArca ? 'Validado' : 'Validar CUIT'}
                         </button>
@@ -884,15 +878,6 @@ export const RegistroPage: React.FC = () => {
                     </div>
                     {!nacionalidadElegida && <p className="text-[11px] text-gray-400 mt-1">Elegí la nacionalidad para completarlo.</p>}
                     {nacionalidadElegida && !cuilVisible && <p className="text-[11px] text-gray-400 mt-1">Te registrás sin CUIT/CUIL. Se puede cargar más adelante.</p>}
-                    {/* La misma celda que en el alta del admin, con un texto propio: acá lo lee la
-                        persona sobre sí misma, y lo útil es saber a quién avisarle si algo no coincide.
-                        NUNCA frena el registro: la condición fiscal no puede rechazar a nadie. */}
-                    <CondicionFiscalArca
-                      data={condicionFiscal}
-                      cargando={consultandoPadron}
-                      onActualizar={() => void validarCuitEnArca(true)}
-                      ayuda="Trajimos estos datos de ARCA a partir de tu CUIT. Si algo no coincide, avisale a tu productor."
-                    />
                   </div>
                 </div>
                 {/*
