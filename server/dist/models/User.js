@@ -69,6 +69,23 @@ const userSchema = new Schema({
         numeroLegajoTango: String,
         afiliadoAlSindicato: Boolean,
         sindicatoIds: [String],
+        fiscal: {
+            // Sin `enum` a nivel schema: los valores los define `services/arca/condicionFiscal.ts`, que es
+            // donde está la regla. Duplicarlos acá deja dos listas que hay que acordarse de sincronizar.
+            condicion: String,
+            descripcion: String,
+            monotributoCategoria: String,
+            monotributoCategoriaId: Number,
+            actividadPrincipalId: Number,
+            actividadPrincipalDescripcion: String,
+            impuestos: [{ id: Number, descripcion: String, estado: String, periodo: String }],
+            tipoClave: String,
+            estadoClave: String,
+            claveInactiva: Boolean,
+            validadoEnArca: Boolean,
+            fechaConsulta: Date,
+            fuente: String,
+        },
         rutaImagen: String,
         bancoReceptor: String,
         swift: String,

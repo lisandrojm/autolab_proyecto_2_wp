@@ -41,6 +41,21 @@ export interface ResultadoPadron {
 export declare function consultarPadron(tenantId: string, cfg: TenantAfipConfig, cuitConsultado: string, opts?: {
     tipo?: "padron" | "servicio_test";
 }): Promise<ResultadoPadron>;
+/**
+ * Los datos FISCALES de un CUIT, desde el Padrón A5.
+ *
+ * Separada de `consultarPadron` a propósito: son dos servicios distintos de AFIP, con autorizaciones
+ * distintas, y la validación de nombre —que ya funciona en producción— no puede depender de que este
+ * ande. El caller consulta A13 primero y esto después; si esto falla, se degrada.
+ *
+ * NO tira excepción por un Fault ni por falta de datos: devuelve `{ ok: false, motivo }` para que el
+ * endpoint pueda contestar 200 con la condición en DESCONOCIDO. Que no se pueda averiguar la
+ * condición fiscal no es motivo para frenar un alta.
+ */
+export declare function consultarPadronFiscal(tenantId: string, cfg: TenantAfipConfig, cuitConsultado: string): Promise<{
+    personaReturn?: any;
+    motivo?: string;
+}>;
 /** Valida credenciales pidiendo un ticket real — se usa al conectar, antes de guardar nada. Ojo: esto
  *  SOLO prueba el login WSAA (que el certificado/clave son válidos); no prueba que el servicio
  *  Consulta Padrón A13 esté autorizado para este certificado en AFIP — para eso ver
