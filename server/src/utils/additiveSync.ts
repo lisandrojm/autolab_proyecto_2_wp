@@ -243,8 +243,6 @@ export const USER_FRAME_WHITELIST: readonly string[] = [
   "metadata.fechaNac",
   "metadata.fechaAlta",
   "metadata.telefono",
-  "metadata.telefono2",
-  "metadata.visa",
   "metadata.activo",
   "metadata.tipoEntidadFinanciera",
   "metadata.solicitaCreacionCuenta",

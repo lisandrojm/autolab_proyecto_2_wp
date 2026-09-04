@@ -35,7 +35,7 @@ import { noPoseeCuit } from '../components/contratos/ConstanciaBulk';
 
 const HELP_KEY = 'users' as const;
 
-type ModalTab = 'general' | 'domicilio' | 'bancarios' | 'proyectos';
+type ModalTab = 'general' | 'domicilio' | 'bancarios' | 'sistema' | 'proyectos';
 
 type ModalMode = 'edit' | 'password';
 
@@ -1025,7 +1025,7 @@ export const UsersPage: React.FC = () => {
               <div className="flex">
                 <button type="button" onClick={() => setViewActiveTab('general')} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === 'general' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
                   <FontAwesomeIcon icon={faUser} className="text-xs" />
-                  General
+                  Personales
                 </button>
                 <button type="button" onClick={() => setViewActiveTab('domicilio')} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === 'domicilio' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
                   <FontAwesomeIcon icon={faMapMarkerAlt} className="text-xs" />
@@ -1033,8 +1033,12 @@ export const UsersPage: React.FC = () => {
                 </button>
                 <button type="button" onClick={() => setViewActiveTab('bancarios')} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === 'bancarios' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
                   <FontAwesomeIcon icon={faUniversity} className="text-xs" />
-                  Datos Bancarios
+                  Bancarios
                   {((viewUser.metadata?.solicitaCreacionCuenta && !viewUser.metadata?.cuentaBancariaConfirmada) || (viewUser.metadata?.solicitaCambioCuenta && !viewUser.metadata?.cambioCuentaConfirmada)) && <FontAwesomeIcon icon={faBell} className="text-xs text-amber-500 animate-pulse" title="Acción bancaria pendiente" />}
+                </button>
+                <button type="button" onClick={() => setViewActiveTab('sistema')} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === 'sistema' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+                  <FontAwesomeIcon icon={faUserShield} className="text-xs" />
+                  Sistema
                 </button>
                 <button type="button" onClick={() => setViewActiveTab('proyectos')} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === 'proyectos' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
                   <FontAwesomeIcon icon={faBriefcase} className="text-xs" />
@@ -1163,6 +1167,223 @@ export const UsersPage: React.FC = () => {
                       </div>
                     )}
 
+                  </div>
+                </div>
+              )}
+
+              {viewActiveTab === 'domicilio' && (
+                <div className="space-y-6 animate-fadeIn transition-opacity duration-300">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-4">
+                    {viewUser.metadata?.paisId && (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                          <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-300" />
+                          País
+                        </label>
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{countries.find((c) => c.data.id === viewUser.metadata?.paisId)?.name || '—'}</p>
+                      </div>
+                    )}
+
+                    {viewUser.metadata?.localidad && (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                          <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-300" />
+                          Localidad
+                        </label>
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.localidad}</p>
+                      </div>
+                    )}
+
+                    {viewUser.metadata?.calle && (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                          <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-300" />
+                          Calle
+                        </label>
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                          {viewUser.metadata.calle} {viewUser.metadata.altura}
+                        </p>
+                      </div>
+                    )}
+
+                    {viewUser.metadata?.pisoDepto && (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                          <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-300" />
+                          Piso/Depto
+                        </label>
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.pisoDepto}</p>
+                      </div>
+                    )}
+
+                    {viewUser.metadata?.codigoPostal && (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                          <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-300" />
+                          Código Postal
+                        </label>
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.codigoPostal}</p>
+                      </div>
+                    )}
+
+                    {viewUser.metadata?.telefono && (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                          <FontAwesomeIcon icon={faUser} className="text-gray-300" />
+                          Teléfono
+                        </label>
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.telefono}</p>
+                      </div>
+                    )}
+
+
+                  </div>
+                </div>
+              )}
+
+              {viewActiveTab === 'bancarios' && (
+                <div className="space-y-6 animate-fadeIn transition-opacity duration-300">
+                  {viewUser.metadata?.solicitaCreacionCuenta && !viewUser.metadata?.cuentaBancariaConfirmada && (
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-900/20 p-4">
+                      <FontAwesomeIcon icon={faBell} className="text-amber-500 mt-0.5 animate-pulse shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-amber-800 dark:text-amber-300">Acción pendiente: crear cuenta bancaria</p>
+                        <p className="text-xs text-amber-700 dark:text-amber-400/90 mt-0.5">
+                          El usuario indicó que <strong>no tiene banco</strong> y solicitó que le creen una cuenta. Cargá sus datos bancarios (Editar) y luego confirmá.
+                        </p>
+                      </div>
+                      {(() => {
+                        const tieneDatos = !!(viewUser.metadata?.bancoId || viewUser.metadata?.cbu);
+                        return (
+                          <button type="button" onClick={() => handleConfirmarCuenta(viewUser)} disabled={!tieneDatos} title={tieneDatos ? 'Confirmar que la cuenta fue creada y los datos cargados' : 'Cargá primero los datos bancarios (Editar)'} className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                            <FontAwesomeIcon icon={faCheck} />
+                            Confirmar cuenta creada
+                          </button>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {viewUser.metadata?.cuentaBancariaConfirmada && (
+                    <div className="flex items-start gap-3 rounded-lg border border-emerald-300 dark:border-emerald-700/60 bg-emerald-50 dark:bg-emerald-900/20 p-4">
+                      <FontAwesomeIcon icon={faCheck} className="text-emerald-500 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">Cuenta bancaria creada y confirmada</p>
+                        <p className="text-xs text-emerald-700 dark:text-emerald-400/90 mt-0.5">
+                          Los datos están cargados en la plataforma y en el banco.
+                          {viewUser.metadata?.cuentaBancariaConfirmadaAt && <> Confirmada el {new Date(viewUser.metadata.cuentaBancariaConfirmadaAt).toLocaleDateString('es-AR')}.</>}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {viewUser.metadata?.solicitaCambioCuenta && !viewUser.metadata?.cambioCuentaConfirmada && (
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-900/20 p-4">
+                      <FontAwesomeIcon icon={faBell} className="text-amber-500 mt-0.5 animate-pulse shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-amber-800 dark:text-amber-300">Acción pendiente: cambio de datos bancarios</p>
+                        <p className="text-xs text-amber-700 dark:text-amber-400/90 mt-0.5">
+                          El usuario <strong>solicitó cambiar sus datos bancarios</strong>. Aplicá el cambio en el banco/FRAME y luego confirmá acá.
+                        </p>
+                      </div>
+                      <button type="button" onClick={() => handleConfirmarCambio(viewUser)} title="Confirmar que el cambio fue aplicado en el banco/FRAME" className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors">
+                        <FontAwesomeIcon icon={faCheck} />
+                        Confirmar cambio realizado
+                      </button>
+                    </div>
+                  )}
+
+                  {viewUser.metadata?.cambioCuentaConfirmada && (
+                    <div className="flex items-start gap-3 rounded-lg border border-emerald-300 dark:border-emerald-700/60 bg-emerald-50 dark:bg-emerald-900/20 p-4">
+                      <FontAwesomeIcon icon={faCheck} className="text-emerald-500 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">Cambio de datos bancarios confirmado</p>
+                        <p className="text-xs text-emerald-700 dark:text-emerald-400/90 mt-0.5">
+                          El cambio fue aplicado en la plataforma y en el banco/FRAME.
+                          {viewUser.metadata?.cambioCuentaConfirmadaAt && <> Confirmado el {new Date(viewUser.metadata.cambioCuentaConfirmadaAt).toLocaleDateString('es-AR')}.</>}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-4">
+                    {viewUser.metadata?.bancoId && (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                          <FontAwesomeIcon icon={faUniversity} className="text-gray-300" />
+                          Banco
+                        </label>
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{banks.find((b) => b.data.id === viewUser.metadata?.bancoId)?.name || '—'}</p>
+                      </div>
+                    )}
+
+                    {viewUser.metadata?.cbu && (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                          <FontAwesomeIcon icon={faCreditCard} className="text-gray-300" />
+                          CBU / CVU
+                        </label>
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 tracking-wider transition-all hover:bg-gray-100 dark:hover:bg-gray-800 rounded px-1 -mx-1">{viewUser.metadata.cbu}</p>
+                      </div>
+                    )}
+
+                    {viewUser.metadata?.tipoDeCuentaBancaria && (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                          <FontAwesomeIcon icon={faUniversity} className="text-gray-300" />
+                          Tipo de Cuenta
+                        </label>
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.tipoDeCuentaBancaria}</p>
+                      </div>
+                    )}
+
+                    {viewUser.metadata?.nroDeCuentaBancaria && (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                          <FontAwesomeIcon icon={faCreditCard} className="text-gray-300" />
+                          Número de Cuenta
+                        </label>
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.nroDeCuentaBancaria}</p>
+                      </div>
+                    )}
+
+                    {viewUser.metadata?.aliasBancario && (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                          <FontAwesomeIcon icon={faUniversity} className="text-gray-300" />
+                          Alias Bancario
+                        </label>
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.aliasBancario}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {viewActiveTab === 'sistema' && (
+                <div className="space-y-6 animate-fadeIn transition-opacity duration-300">
+                  {/* Las mismas secciones que la pestaña Sistema del formulario, en solo lectura: lo
+                      que se ve acá es exactamente lo que se edita allá. */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {viewUser.metadata?.numeroLegajoTango && (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                          <FontAwesomeIcon icon={faIdCard} className="text-gray-300" />
+                          Legajo Tango
+                        </label>
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.numeroLegajoTango}</p>
+                      </div>
+                    )}
+
+                    {/* Sin condición: 0 días extra es una respuesta, y esconderla obligaría a abrir el
+                        formulario para saber si tiene o no. */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faUmbrellaBeach} className="text-gray-300" />
+                        Vacaciones (días extra)
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.extraVacationDays || 0}</p>
+                    </div>
+
                     {/*
                       SIN CONDICIÓN, a diferencia de los demás campos de la ficha: acá el "no" es
                       información. Los otros se esconden cuando están vacíos porque un dato que falta
@@ -1288,212 +1509,6 @@ export const UsersPage: React.FC = () => {
                         </div>
                       );
                     })()}
-                  </div>
-                </div>
-              )}
-
-              {viewActiveTab === 'domicilio' && (
-                <div className="space-y-6 animate-fadeIn transition-opacity duration-300">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-4">
-                    {viewUser.metadata?.paisId && (
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                          <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-300" />
-                          País
-                        </label>
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{countries.find((c) => c.data.id === viewUser.metadata?.paisId)?.name || '—'}</p>
-                      </div>
-                    )}
-
-                    {viewUser.metadata?.localidad && (
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                          <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-300" />
-                          Localidad
-                        </label>
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.localidad}</p>
-                      </div>
-                    )}
-
-                    {viewUser.metadata?.calle && (
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                          <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-300" />
-                          Calle
-                        </label>
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                          {viewUser.metadata.calle} {viewUser.metadata.altura}
-                        </p>
-                      </div>
-                    )}
-
-                    {viewUser.metadata?.pisoDepto && (
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                          <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-300" />
-                          Piso/Depto
-                        </label>
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.pisoDepto}</p>
-                      </div>
-                    )}
-
-                    {viewUser.metadata?.codigoPostal && (
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                          <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-300" />
-                          Código Postal
-                        </label>
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.codigoPostal}</p>
-                      </div>
-                    )}
-
-                    {viewUser.metadata?.telefono && (
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                          <FontAwesomeIcon icon={faUser} className="text-gray-300" />
-                          Teléfono
-                        </label>
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.telefono}</p>
-                      </div>
-                    )}
-
-                    {viewUser.metadata?.telefono2 && (
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                          <FontAwesomeIcon icon={faUser} className="text-gray-300" />
-                          Teléfono Emergencia
-                        </label>
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.telefono2}</p>
-                      </div>
-                    )}
-
-                    {viewUser.metadata?.visa !== undefined && (
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                          <FontAwesomeIcon icon={faPassport} className="text-gray-300" />
-                          Visa
-                        </label>
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.visa ? 'Sí' : 'No'}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {viewActiveTab === 'bancarios' && (
-                <div className="space-y-6 animate-fadeIn transition-opacity duration-300">
-                  {viewUser.metadata?.solicitaCreacionCuenta && !viewUser.metadata?.cuentaBancariaConfirmada && (
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-900/20 p-4">
-                      <FontAwesomeIcon icon={faBell} className="text-amber-500 mt-0.5 animate-pulse shrink-0" />
-                      <div className="flex-1">
-                        <p className="text-sm font-bold text-amber-800 dark:text-amber-300">Acción pendiente: crear cuenta bancaria</p>
-                        <p className="text-xs text-amber-700 dark:text-amber-400/90 mt-0.5">
-                          El usuario indicó que <strong>no tiene banco</strong> y solicitó que le creen una cuenta. Cargá sus datos bancarios (Editar) y luego confirmá.
-                        </p>
-                      </div>
-                      {(() => {
-                        const tieneDatos = !!(viewUser.metadata?.bancoId || viewUser.metadata?.cbu);
-                        return (
-                          <button type="button" onClick={() => handleConfirmarCuenta(viewUser)} disabled={!tieneDatos} title={tieneDatos ? 'Confirmar que la cuenta fue creada y los datos cargados' : 'Cargá primero los datos bancarios (Editar)'} className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                            <FontAwesomeIcon icon={faCheck} />
-                            Confirmar cuenta creada
-                          </button>
-                        );
-                      })()}
-                    </div>
-                  )}
-
-                  {viewUser.metadata?.cuentaBancariaConfirmada && (
-                    <div className="flex items-start gap-3 rounded-lg border border-emerald-300 dark:border-emerald-700/60 bg-emerald-50 dark:bg-emerald-900/20 p-4">
-                      <FontAwesomeIcon icon={faCheck} className="text-emerald-500 mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">Cuenta bancaria creada y confirmada</p>
-                        <p className="text-xs text-emerald-700 dark:text-emerald-400/90 mt-0.5">
-                          Los datos están cargados en la plataforma y en el banco.
-                          {viewUser.metadata?.cuentaBancariaConfirmadaAt && <> Confirmada el {new Date(viewUser.metadata.cuentaBancariaConfirmadaAt).toLocaleDateString('es-AR')}.</>}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {viewUser.metadata?.solicitaCambioCuenta && !viewUser.metadata?.cambioCuentaConfirmada && (
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-900/20 p-4">
-                      <FontAwesomeIcon icon={faBell} className="text-amber-500 mt-0.5 animate-pulse shrink-0" />
-                      <div className="flex-1">
-                        <p className="text-sm font-bold text-amber-800 dark:text-amber-300">Acción pendiente: cambio de datos bancarios</p>
-                        <p className="text-xs text-amber-700 dark:text-amber-400/90 mt-0.5">
-                          El usuario <strong>solicitó cambiar sus datos bancarios</strong>. Aplicá el cambio en el banco/FRAME y luego confirmá acá.
-                        </p>
-                      </div>
-                      <button type="button" onClick={() => handleConfirmarCambio(viewUser)} title="Confirmar que el cambio fue aplicado en el banco/FRAME" className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors">
-                        <FontAwesomeIcon icon={faCheck} />
-                        Confirmar cambio realizado
-                      </button>
-                    </div>
-                  )}
-
-                  {viewUser.metadata?.cambioCuentaConfirmada && (
-                    <div className="flex items-start gap-3 rounded-lg border border-emerald-300 dark:border-emerald-700/60 bg-emerald-50 dark:bg-emerald-900/20 p-4">
-                      <FontAwesomeIcon icon={faCheck} className="text-emerald-500 mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">Cambio de datos bancarios confirmado</p>
-                        <p className="text-xs text-emerald-700 dark:text-emerald-400/90 mt-0.5">
-                          El cambio fue aplicado en la plataforma y en el banco/FRAME.
-                          {viewUser.metadata?.cambioCuentaConfirmadaAt && <> Confirmado el {new Date(viewUser.metadata.cambioCuentaConfirmadaAt).toLocaleDateString('es-AR')}.</>}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-4">
-                    {viewUser.metadata?.bancoId && (
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                          <FontAwesomeIcon icon={faUniversity} className="text-gray-300" />
-                          Banco
-                        </label>
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{banks.find((b) => b.data.id === viewUser.metadata?.bancoId)?.name || '—'}</p>
-                      </div>
-                    )}
-
-                    {viewUser.metadata?.cbu && (
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                          <FontAwesomeIcon icon={faCreditCard} className="text-gray-300" />
-                          CBU / CVU
-                        </label>
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 tracking-wider transition-all hover:bg-gray-100 dark:hover:bg-gray-800 rounded px-1 -mx-1">{viewUser.metadata.cbu}</p>
-                      </div>
-                    )}
-
-                    {viewUser.metadata?.tipoDeCuentaBancaria && (
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                          <FontAwesomeIcon icon={faUniversity} className="text-gray-300" />
-                          Tipo de Cuenta
-                        </label>
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.tipoDeCuentaBancaria}</p>
-                      </div>
-                    )}
-
-                    {viewUser.metadata?.nroDeCuentaBancaria && (
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                          <FontAwesomeIcon icon={faCreditCard} className="text-gray-300" />
-                          Número de Cuenta
-                        </label>
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.nroDeCuentaBancaria}</p>
-                      </div>
-                    )}
-
-                    {viewUser.metadata?.aliasBancario && (
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                          <FontAwesomeIcon icon={faUniversity} className="text-gray-300" />
-                          Alias Bancario
-                        </label>
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.aliasBancario}</p>
-                      </div>
-                    )}
                   </div>
                 </div>
               )}

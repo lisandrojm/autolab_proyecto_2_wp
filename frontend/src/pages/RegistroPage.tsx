@@ -48,8 +48,6 @@ interface RegistroForm {
   pisoDepto: string;
   codigoPostal: string;
   telefono: string;
-  telefono2: string;
-  visa: boolean;
   // Bancarios
   tipoEntidadFinanciera: string;
   bancoId: string;
@@ -83,8 +81,6 @@ const emptyForm: RegistroForm = {
   pisoDepto: '',
   codigoPostal: '',
   telefono: '',
-  telefono2: '',
-  visa: false,
   tipoEntidadFinanciera: '',
   bancoId: '',
   tipoDeCuentaBancaria: '',
@@ -675,8 +671,6 @@ export const RegistroPage: React.FC = () => {
         pisoDepto: form.pisoDepto,
         codigoPostal: form.codigoPostal,
         telefono: form.telefono,
-        telefono2: form.telefono2,
-        visa: form.visa,
         tipoEntidadFinanciera: form.tipoEntidadFinanciera,
         solicitaCreacionCuenta: form.solicitaCreacionCuenta,
         bancoId: form.bancoId,
@@ -1192,18 +1186,7 @@ export const RegistroPage: React.FC = () => {
                     </label>
                     <input className={inputClass('telefono')} autoComplete="off" placeholder="Ej: 11 1234-5678" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} />
                   </div>
-                  <div>
-                    <label className={labelClass}>Teléfono de emergencia</label>
-                    <input className={fieldClass} autoComplete="off" placeholder="Ej: 11 8765-4321" value={form.telefono2} onChange={(e) => set('telefono2', e.target.value)} />
-                  </div>
                 </div>
-                {/* Checkbox "Visa" oculto a pedido: el valor (form.visa) se sigue enviando en el payload y sincronizando con FRAME sin cambios en lógica ni DB. */}
-                {false && (
-                  <label className="flex items-center gap-2 cursor-pointer text-gray-200">
-                    <input type="checkbox" className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500" checked={form.visa} onChange={(e) => set('visa', e.target.checked)} />
-                    <span>Visa</span>
-                  </label>
-                )}
               </div>
             )}
 

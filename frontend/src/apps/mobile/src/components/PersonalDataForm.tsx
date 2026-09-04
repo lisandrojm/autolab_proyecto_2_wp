@@ -29,8 +29,6 @@ export const PersonalDataForm: React.FC<PersonalDataFormProps> = ({ enabledKeys,
         return meta.apellido ?? (profile as any)?.lastName ?? "";
       case "rolesFrameIds":
         return Array.isArray(meta.roles_frame) ? meta.roles_frame.map((rf: any) => (typeof rf === "string" ? rf : rf._id)) : [];
-      case "visa":
-        return !!meta.visa;
       default:
         return meta[field.key] ?? "";
     }

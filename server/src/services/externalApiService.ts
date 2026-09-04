@@ -372,8 +372,6 @@ export class ExternalApiService {
                         fechaNac: emp.fechaNac,
                         fechaAlta: emp.fechaAlta,
                         telefono: emp.telefono,
-                        telefono2: emp.telefono2,
-                        visa: emp.visa,
                         activo: emp.activo,
                         bancoId: emp.bancoId,
                         cbu: emp.cbu,

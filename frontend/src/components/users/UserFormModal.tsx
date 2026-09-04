@@ -18,7 +18,16 @@ import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoS
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faUserShield, faEye, faEyeSlash, faMapMarkerAlt, faUniversity, faSearch, faTimes, faMobileAlt, faKey, faCheck, faXmark, faCircleInfo, faSpinner, faLandmark, faCircleCheck, faWandMagicSparkles, faPlus } from '@fortawesome/free-solid-svg-icons';
 
-type ModalTab = 'general' | 'domicilio' | 'bancarios';
+type ModalTab = 'general' | 'domicilio' | 'bancarios' | 'sistema';
+
+/**
+ * El orden de las pestañas, en un solo lugar.
+ *
+ * Lo usa el «Siguiente» del alta para saber a cuál ir. Antes era un ternario encadenado
+ * (`general ? domicilio : bancarios`), que con una pestaña más habría que anidar otra vez y ya no
+ * diría cuál es el orden de un vistazo.
+ */
+const ORDEN_TABS: ModalTab[] = ['general', 'domicilio', 'bancarios', 'sistema'];
 
 const sindicatosApi = createSimpleCatalogApi('/sindicatos');
 
@@ -90,8 +99,6 @@ interface UserFormData {
   nivelEstudioId?: number;
   fechaNac?: string;
   telefono?: string;
-  telefono2?: string;
-  visa?: boolean;
   bancoId?: number;
   cbu?: string;
   tipoDeCuentaBancaria?: string;
@@ -118,7 +125,6 @@ const emptyForm = (): UserFormData => ({
   extraVacationDays: 0,
   clientIds: [],
   nacionalizado: false,
-  visa: false,
   afiliadoAlSindicato: false,
   sindicatoIds: [],
   rolesFrameIds: [],
@@ -238,6 +244,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   const [tieneCuil, setTieneCuil] = useState(true);
   /** Explicación del circuito "Sin CUIT" de Contratos (modal del ⓘ al lado del CUIT/CUIL). */
   const [sinCuitInfoOpen, setSinCuitInfoOpen] = useState(false);
+  const [vacacionesInfoOpen, setVacacionesInfoOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   // Password mode
@@ -368,8 +375,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         nivelEstudioId: user.metadata?.nivelEstudioId,
         fechaNac: user.metadata?.fechaNac ? new Date(user.metadata.fechaNac).toISOString().split('T')[0] : '',
         telefono: user.metadata?.telefono,
-        telefono2: user.metadata?.telefono2 || '',
-        visa: user.metadata?.visa || false,
         bancoId: user.metadata?.bancoId,
         cbu: user.metadata?.cbu || '',
         tipoDeCuentaBancaria: user.metadata?.tipoDeCuentaBancaria || '',
@@ -495,8 +500,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           nivelEstudioId: formData.nivelEstudioId,
           fechaNac: formData.fechaNac,
           telefono: formData.telefono,
-          telefono2: formData.telefono2,
-          visa: formData.visa,
           bancoId: formData.bancoId,
           cbu: formData.cbu,
           tipoDeCuentaBancaria: formData.tipoDeCuentaBancaria,
@@ -680,8 +683,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           */
           ...(user
             ? [{ label: formData.isSolicitud ? 'Aprobar y Crear' : 'Actualizar', onClick: () => document.querySelector<HTMLFormElement>('#user-form')?.requestSubmit(), variant: 'primary' as const }]
-            : modalActiveTab !== 'bancarios'
-              ? [{ label: 'Siguiente', onClick: () => setModalActiveTab(modalActiveTab === 'general' ? 'domicilio' : 'bancarios'), variant: 'primary' as const, disabled: bloqueadoHastaValidar }]
+            : modalActiveTab !== ORDEN_TABS[ORDEN_TABS.length - 1]
+              ? [{ label: 'Siguiente', onClick: () => setModalActiveTab(ORDEN_TABS[ORDEN_TABS.indexOf(modalActiveTab) + 1]), variant: 'primary' as const, disabled: bloqueadoHastaValidar }]
               : [{ label: 'Crear', onClick: () => document.querySelector<HTMLFormElement>('#user-form')?.requestSubmit(), variant: 'primary' as const }]),
           { label: 'Cancelar', onClick: onClose, variant: 'ghost' as const },
         ];
@@ -800,7 +803,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
             <div className="flex">
               <button type="button" onClick={() => setModalActiveTab('general')} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${modalActiveTab === 'general' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
                 <FontAwesomeIcon icon={faUser} className="text-xs" />
-                General
+                Personales
               </button>
               <button type="button" onClick={() => setModalActiveTab('domicilio')} disabled={bloqueadoHastaValidar} title={bloqueadoHastaValidar ? 'Validá el CUIT primero' : undefined} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${modalActiveTab === 'domicilio' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
                 <FontAwesomeIcon icon={faMapMarkerAlt} className="text-xs" />
@@ -808,7 +811,11 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
               </button>
               <button type="button" onClick={() => setModalActiveTab('bancarios')} disabled={bloqueadoHastaValidar} title={bloqueadoHastaValidar ? 'Validá el CUIT primero' : undefined} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${modalActiveTab === 'bancarios' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
                 <FontAwesomeIcon icon={faUniversity} className="text-xs" />
-                Datos Bancarios
+                Bancarios
+              </button>
+              <button type="button" onClick={() => setModalActiveTab('sistema')} disabled={bloqueadoHastaValidar} title={bloqueadoHastaValidar ? 'Validá el CUIT primero' : undefined} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${modalActiveTab === 'sistema' ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+                <FontAwesomeIcon icon={faUserShield} className="text-xs" />
+                Sistema
               </button>
             </div>
           </div>
@@ -1000,6 +1007,18 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                       </label>
                       <input type="email" required value={formData.email} onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))} className="input-field" placeholder="usuario@ejemplo.com" />
                     </div>
+                    {/*
+                      El teléfono, al lado del email: los dos son cómo se contacta a la persona, y
+                      estaba en Domicilio, que es dónde vive.
+
+                      Va al final de esta grilla y no en una fila propia: editando, la celda de la
+                      derecha está libre —la contraseña solo aparece en el alta— así que cae
+                      exactamente al lado; en el alta pasa al renglón siguiente por su cuenta.
+                    */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Teléfono</label>
+                      <input type="text" value={formData.telefono || ''} onChange={(e) => setFormData((prev) => ({ ...prev, telefono: e.target.value }))} className="input-field" placeholder="Ej: 11 1234-5678" />
+                    </div>
                     {(!user || formData.isSolicitud) && (
                       <div>
                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
@@ -1101,18 +1120,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                    * son un dato que llega, no uno que se carga a mano.
                    */}
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                        Fecha de Ingreso <span className="text-red-500">*</span>
-                      </label>
-                      <input type="date" required value={formData.hireDate} onChange={(e) => setFormData((prev) => ({ ...prev, hireDate: e.target.value }))} className="input-field" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Vacaciones (Días Extra)</label>
-                      <input type="number" min="0" value={formData.extraVacationDays} onChange={(e) => setFormData((prev) => ({ ...prev, extraVacationDays: parseInt(e.target.value) || 0 }))} className="input-field" />
-                    </div>
-                  </div>
 
                   {/*
                     UN CAMPO QUE ABRE UN MODAL, no una grilla incrustada.
@@ -1124,259 +1131,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     Ahora el formulario muestra solo lo elegido y la elección pasa a una ventana dedicada,
                     donde hay lugar para buscar y ver la lista completa.
                   */}
-                  <div>
-                    {/*
-                      Los botones van FUERA del <label>, en una fila propia.
-
-                      Un <label> que contiene un control se asocia a él, y este es `block`: con el ⓘ
-                      adentro, TODA la fila —los 100% de ancho, incluido el vacío a la derecha—
-                      quedaba como área activa de ese botón. Un <span> nombra el campo sin capturar
-                      clicks; el campo real de acá abajo es un botón que abre una ventana, no un input
-                      al que un label pueda dar foco.
-                    */}
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Rol/es Empresa</span>
-                      <button type="button" onClick={() => setRolesEmpresaInfoOpen(true)} title="¿Qué son los roles empresa?" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                        <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
-                      </button>
-                      {/* Solo con algo elegido: sin nada, abajo está el buscador ancho y este [+]
-                          sería un segundo camino a lo mismo. */}
-                      {(formData.rolesFrameIds || []).length > 0 && <BotonAgregar onClick={() => setRolesEmpresaOpen(true)} title="Agregar otro rol" />}
-                    </div>
-                    {/* Mismo marco que "Afiliación sindical" y "Roles de Sistema": los tres son
-                        bloques de elección múltiple, y encuadrarlos igual los agrupa a la vista en
-                        vez de dejarlos como campos sueltos entre inputs de una sola línea. */}
-                    <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30">
-                    {(formData.rolesFrameIds || []).length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mb-2">
-                        {(formData.rolesFrameIds || []).map((id) => {
-                          const rf = allRoleFrames.find((x) => x._id === id);
-                          return (
-                            <span key={id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
-                              {rf?.name || 'Rol'}
-                              <button type="button" onClick={() => setFormData((prev) => ({ ...prev, rolesFrameIds: (prev.rolesFrameIds || []).filter((x) => x !== id) }))} title={`Quitar ${rf?.name || 'rol'}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
-                                <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
-                              </button>
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
-                    {/*
-                      El buscador ancho SOLO cuando no hay nada elegido.
-
-                      Con roles ya puestos, ese campo repetía la invitación a elegir debajo de lo que
-                      ya estaba elegido y se llevaba el alto de una fila entera para eso. Con algo
-                      seleccionado alcanza un «+ Más» al lado de los badges, que abre la misma
-                      ventana. Lo elegido va ARRIBA y no adentro del input: badges dentro de un campo
-                      lo hacen crecer y se leen como texto escrito en el buscador.
-                    */}
-                    {(formData.rolesFrameIds || []).length === 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setRolesEmpresaOpen(true)}
-                        className="input-field text-left flex items-center gap-2 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
-                      >
-                        <span className="text-gray-400 dark:text-gray-500">Elegí uno o más roles…</span>
-                        <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400 ml-auto shrink-0" />
-                      </button>
-                    )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Legajo Tango</label>
-                      <input type="text" value={formData.numeroLegajoTango || ''} onChange={(e) => setFormData((prev) => ({ ...prev, numeroLegajoTango: e.target.value }))} className="input-field" placeholder="Ej: 01505" />
-                    </div>
-                  </div>
-
-                  {/*
-                    AFILIACIÓN SINDICAL — bloque propio, con el mismo marco que "Roles de Sistema".
-
-                    Antes era un checkbox suelto al lado de Legajo Tango, y ahí no se entendía: la
-                    afiliación es un dato con su propia pregunta de seguimiento (a QUÉ gremio), y un
-                    tilde perdido en la fila de otro campo no deja lugar para hacerla.
-                  */}
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Afiliación sindical</label>
-                    {/*
-                      El switch va FUERA del recuadro, y el recuadro solo aparece cuando hay algo
-                      adentro.
-
-                      Encerrarlo junto a los sindicatos daba a entender que el marco agrupaba las dos
-                      cosas, cuando el switch es la pregunta y el recuadro es la respuesta. Y con el
-                      switch apagado el marco quedaba dibujado alrededor de una sola línea.
-                    */}
-                    <div className="flex items-center gap-3">
-                      <label className="flex items-center space-x-3 cursor-pointer group w-fit">
-                        <div className={`w-10 h-6 flex items-center rounded-full p-1 duration-300 ease-in-out ${formData.afiliadoAlSindicato ? 'bg-blue-500 dark:bg-blue-600' : 'bg-gray-300 dark:bg-gray-700'}`}>
-                          <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${formData.afiliadoAlSindicato ? 'translate-x-4' : ''}`}></div>
-                        </div>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Afiliado a un sindicato</span>
-                        <input type="checkbox" className="hidden" checked={!!formData.afiliadoAlSindicato} onChange={(e) => handleAfiliadoChange(e.target.checked)} />
-                      </label>
-                      {/* Al lado del switch, y solo con algo elegido: sin nada, abajo está el
-                          buscador ancho. Va FUERA del <label> del switch — adentro, apretarlo
-                          también lo tildaría, porque un label propaga el click a su control. */}
-                      {formData.afiliadoAlSindicato && sindicatosElegidos.length > 0 && (
-                        <BotonAgregar onClick={() => { setSindicatoSearch(''); setSindicatoOpen(true); }} title="Agregar otro sindicato" />
-                      )}
-                    </div>
-
-                      {/*
-                        La pregunta de seguimiento: solo existe si la respuesta anterior fue que sí.
-
-                        Mismo patrón que Rol/es Empresa —badge arriba, campo que abre una ventana con
-                        buscador— y no un <select>: son dos elecciones de catálogo en la misma pantalla,
-                        y que se vieran distinto era la única razón para tener que mirarlas dos veces.
-                      */}
-                      {formData.afiliadoAlSindicato && (
-                        <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 mt-2">
-                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                            Sindicato <span className="text-red-500">*</span>
-                          </label>
-                          {sindicatosElegidos.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 mb-2">
-                              {sindicatosElegidos.map((sind) => (
-                                <span key={sind._id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
-                                  {nombreSindicato(sind)}
-                                  <button type="button" onClick={() => toggleSindicato(sind._id, false)} title={`Quitar ${nombreSindicato(sind)}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
-                                    <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
-                                  </button>
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          {/*
-                            El buscador ancho SOLO cuando no hay nada elegido: con sindicatos ya
-                            puestos repetía la invitación a elegir debajo de lo elegido y se llevaba
-                            el alto de una fila para eso. Lo elegido va ARRIBA y no adentro del input:
-                            un badge dentro de un campo lo hace crecer y se lee como texto escrito.
-                          */}
-                          {sindicatosElegidos.length === 0 && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSindicatoSearch('');
-                                setSindicatoOpen(true);
-                              }}
-                              className="input-field text-left flex items-center gap-2 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
-                            >
-                              <span className="text-gray-400 dark:text-gray-500">Elegí uno o más sindicatos…</span>
-                              <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400 ml-auto shrink-0" />
-                            </button>
-                          )}
-                          {/* Un catálogo vacío sin explicación se lee como un error de la pantalla. */}
-                          {sindicatos.length === 0 && <p className="text-[11px] text-gray-400 mt-1">Todavía no hay sindicatos cargados. Se cargan en Configuración → Sindicatos.</p>}
-                        </div>
-                      )}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Roles de Sistema</label>
-                    <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 space-y-4">
-                      <div>
-                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                          <FontAwesomeIcon icon={faUserShield} className="text-gray-300" />
-                          Sistema
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {roles
-                            .filter((r) => r.name.toLowerCase() !== 'superadmin' && !r.name.toLowerCase().includes('mobile'))
-                            .map((r) => (
-                              <label key={r._id} className={`flex items-start space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.roles.includes(r._id) ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20' : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-200'}`}>
-                                <input
-                                  type="checkbox"
-                                  checked={formData.roles.includes(r._id)}
-                                  onChange={(e) => {
-                                    let newRoles = e.target.checked ? [...formData.roles, r._id] : formData.roles.filter((id) => id !== r._id);
-                                    const name = r.name.toLowerCase();
-                                    if (e.target.checked) {
-                                      if (name === 'admin') newRoles = newRoles.filter((id) => roles.find((ro) => ro._id === id)?.name.toLowerCase() !== 'user');
-                                      else if (name === 'user') newRoles = newRoles.filter((id) => roles.find((ro) => ro._id === id)?.name.toLowerCase() !== 'admin');
-                                    }
-                                    setFormData((prev) => ({ ...prev, roles: newRoles }));
-                                  }}
-                                  className="mt-0.5 rounded text-blue-500 focus:ring-blue-500"
-                                />
-                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{r.name}</span>
-                              </label>
-                            ))}
-                        </div>
-                      </div>
-                      {roles.some((r) => r.name.toLowerCase().includes('mobile')) && (
-                        <div>
-                          <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2">
-                            <FontAwesomeIcon icon={faMobileAlt} className="text-indigo-300" />
-                            Mobile (App)
-                          </h4>
-                          {coordinacionBloqueada && (
-                            <p className="mb-3 text-[11px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
-                              Coordina turnos en <strong>{coordinaEn.join(', ')}</strong>, así que el rol Mobile no se puede cambiar. Liberalo desde el equipo del proyecto primero.
-                            </p>
-                          )}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {roles
-                              .filter((r) => r.name.toLowerCase().includes('mobile'))
-                              .map((r) => (
-                                <label key={r._id} title={coordinacionBloqueada ? `Coordina turnos en ${coordinaEn.join(', ')}. Liberalo desde el equipo del proyecto para poder cambiarle el rol.` : undefined} className={`flex items-start space-x-3 p-3 rounded-lg border transition-all ${coordinacionBloqueada ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${formData.roles.includes(r._id) ? 'bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800 ring-2 ring-indigo-500/20' : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-200'}`}>
-                                  <input
-                                    type="checkbox"
-                                    checked={formData.roles.includes(r._id)}
-                                    disabled={coordinacionBloqueada}
-                                    onChange={(e) => {
-                                      if (coordinacionBloqueada) {
-                                        sweetAlert.warningAlert('No se puede cambiar el rol Mobile', `${user?.firstName || 'Esta persona'} coordina turnos en ${coordinaEn.join(', ')}. Sacale la coordinación desde el equipo del proyecto y después cambiale el rol.`);
-                                        return;
-                                      }
-                                      let newRoles = e.target.checked ? [...formData.roles, r._id] : formData.roles.filter((id) => id !== r._id);
-                                      const name = r.name.toLowerCase();
-                                      if (e.target.checked) {
-                                        if (name.includes('coordinador'))
-                                          newRoles = newRoles.filter(
-                                            (id) =>
-                                              !roles
-                                                .find((ro) => ro._id === id)
-                                                ?.name.toLowerCase()
-                                                .includes('colaborador'),
-                                          );
-                                        else if (name.includes('colaborador'))
-                                          newRoles = newRoles.filter(
-                                            (id) =>
-                                              !roles
-                                                .find((ro) => ro._id === id)
-                                                ?.name.toLowerCase()
-                                                .includes('coordinador'),
-                                          );
-                                      } else {
-                                        if (
-                                          !newRoles.some((id) =>
-                                            roles
-                                              .find((ro) => ro._id === id)
-                                              ?.name.toLowerCase()
-                                              .includes('mobile'),
-                                          )
-                                        ) {
-                                          sweetAlert.warningAlert('Atención', 'Debe tener al menos un rol Mobile.');
-                                          return;
-                                        }
-                                      }
-                                      setFormData((prev) => ({ ...prev, roles: newRoles }));
-                                    }}
-                                    className="mt-0.5 rounded text-indigo-500 focus:ring-indigo-500"
-                                  />
-                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{r.name}</span>
-                                </label>
-                              ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* El mismo bloque que Proyecto y Contrato: ver `components/ui/BloqueEstado`. */}
-                  <BloqueEstado activo={!!formData.isActive} onChange={(activo) => setFormData((prev) => ({ ...prev, isActive: activo }))} />
                 </fieldset>
               </div>
             )}
@@ -1418,30 +1172,12 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                   </div>
                 </div>
 
+                {/* El teléfono se fue a General, al lado del email: es un dato de contacto de la
+                    persona, no de dónde vive. */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Código Postal</label>
                     <input type="text" value={formData.codigoPostal || ''} onChange={(e) => setFormData((prev) => ({ ...prev, codigoPostal: e.target.value }))} className="input-field" placeholder="Ej: 1425" />
-                  </div>
-                  <div className="flex items-center pt-4">
-                    <label className="flex items-center space-x-3 cursor-pointer group">
-                      <div className={`w-10 h-6 flex items-center rounded-full p-1 duration-300 ease-in-out ${formData.visa ? 'bg-blue-500 dark:bg-blue-600' : 'bg-gray-300 dark:bg-gray-700'}`}>
-                        <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${formData.visa ? 'translate-x-4' : ''}`}></div>
-                      </div>
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Visa / Permiso de Trabajo</span>
-                      <input type="checkbox" className="hidden" checked={formData.visa} onChange={(e) => setFormData((prev) => ({ ...prev, visa: e.target.checked }))} />
-                    </label>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Teléfono</label>
-                    <input type="text" value={formData.telefono || ''} onChange={(e) => setFormData((prev) => ({ ...prev, telefono: e.target.value }))} className="input-field" placeholder="Ej: 11 1234-5678" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Teléfono de Emergencia</label>
-                    <input type="text" value={formData.telefono2 || ''} onChange={(e) => setFormData((prev) => ({ ...prev, telefono2: e.target.value }))} className="input-field" placeholder="Ej: 11 8765-4321" />
                   </div>
                 </div>
               </div>
@@ -1487,6 +1223,301 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Alias Bancario</label>
                   <input type="text" value={formData.aliasBancario || ''} onChange={(e) => setFormData((prev) => ({ ...prev, aliasBancario: e.target.value }))} className="input-field" placeholder="Ej: LUNES.MALETA.CUNA" />
                 </div>
+              </div>
+            )}
+
+            {modalActiveTab === 'sistema' && (
+              <div className="space-y-6 animate-fadeIn">
+                {/*
+                  DATOS SISTEMA: lo que la plataforma necesita saber de la persona, no la persona.
+
+                  Roles, legajo, afiliación y estado de la cuenta se decidían en «General», que es
+                  donde van nombre, documento y contacto. Son dos cosas distintas —quién es y cómo
+                  opera dentro del sistema— y juntas hacían de General una pestaña que había que
+                  scrollear entera para llegar a lo último.
+
+                  Sin <fieldset disabled>: el bloqueo hasta validar el CUIT protege los datos que
+                  ARCA completa, y acá no hay ninguno. Igual la pestaña no se puede abrir sin validar,
+                  como las otras dos.
+                */}
+                {/* La fecha de ingreso y los días extra son del VÍNCULO con la empresa, no de la
+                    persona: por eso viajan con los roles y el estado de la cuenta. */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      Fecha de Ingreso <span className="text-red-500">*</span>
+                    </label>
+                    <input type="date" required value={formData.hireDate} onChange={(e) => setFormData((prev) => ({ ...prev, hireDate: e.target.value }))} className="input-field" />
+                  </div>
+                </div>
+
+                {/* Debajo de la fecha de ingreso y no al lado: es una EXCEPCIÓN, y ponerla en la misma
+                    fila la hacía ver como un dato de carga habitual. El ⓘ va fuera del <label>: uno
+                    que contiene un control se asocia a él y toda la fila queda como área activa. */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Vacaciones (Días Extra)</span>
+                      <button type="button" onClick={() => setVacacionesInfoOpen(true)} title="¿Para qué sirven los días extra?" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    <input type="number" min="0" value={formData.extraVacationDays} onChange={(e) => setFormData((prev) => ({ ...prev, extraVacationDays: parseInt(e.target.value) || 0 }))} className="input-field" />
+                  </div>
+                </div>
+                <div>
+                  {/*
+                    Los botones van FUERA del <label>, en una fila propia.
+
+                    Un <label> que contiene un control se asocia a él, y este es `block`: con el ⓘ
+                    adentro, TODA la fila —los 100% de ancho, incluido el vacío a la derecha—
+                    quedaba como área activa de ese botón. Un <span> nombra el campo sin capturar
+                    clicks; el campo real de acá abajo es un botón que abre una ventana, no un input
+                    al que un label pueda dar foco.
+                  */}
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Rol/es Empresa</span>
+                    <button type="button" onClick={() => setRolesEmpresaInfoOpen(true)} title="¿Qué son los roles empresa?" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                      <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+                    </button>
+                    {/* Solo con algo elegido: sin nada, abajo está el buscador ancho y este [+]
+                        sería un segundo camino a lo mismo. */}
+                    {(formData.rolesFrameIds || []).length > 0 && <BotonAgregar onClick={() => setRolesEmpresaOpen(true)} title="Agregar otro rol" />}
+                  </div>
+                  {/* Mismo marco que "Afiliación sindical" y "Roles de Sistema": los tres son
+                      bloques de elección múltiple, y encuadrarlos igual los agrupa a la vista en
+                      vez de dejarlos como campos sueltos entre inputs de una sola línea. */}
+                  <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30">
+                  {(formData.rolesFrameIds || []).length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {(formData.rolesFrameIds || []).map((id) => {
+                        const rf = allRoleFrames.find((x) => x._id === id);
+                        return (
+                          <span key={id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                            {rf?.name || 'Rol'}
+                            <button type="button" onClick={() => setFormData((prev) => ({ ...prev, rolesFrameIds: (prev.rolesFrameIds || []).filter((x) => x !== id) }))} title={`Quitar ${rf?.name || 'rol'}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
+                              <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {/*
+                    El buscador ancho SOLO cuando no hay nada elegido.
+
+                    Con roles ya puestos, ese campo repetía la invitación a elegir debajo de lo que
+                    ya estaba elegido y se llevaba el alto de una fila entera para eso. Con algo
+                    seleccionado alcanza un «+ Más» al lado de los badges, que abre la misma
+                    ventana. Lo elegido va ARRIBA y no adentro del input: badges dentro de un campo
+                    lo hacen crecer y se leen como texto escrito en el buscador.
+                  */}
+                  {(formData.rolesFrameIds || []).length === 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setRolesEmpresaOpen(true)}
+                      className="input-field text-left flex items-center gap-2 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
+                    >
+                      <span className="text-gray-400 dark:text-gray-500">Elegí uno o más roles…</span>
+                      <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400 ml-auto shrink-0" />
+                    </button>
+                  )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Legajo Tango</label>
+                    <input type="text" value={formData.numeroLegajoTango || ''} onChange={(e) => setFormData((prev) => ({ ...prev, numeroLegajoTango: e.target.value }))} className="input-field" placeholder="Ej: 01505" />
+                  </div>
+                </div>
+
+                {/*
+                  AFILIACIÓN SINDICAL — bloque propio, con el mismo marco que "Roles de Sistema".
+
+                  Antes era un checkbox suelto al lado de Legajo Tango, y ahí no se entendía: la
+                  afiliación es un dato con su propia pregunta de seguimiento (a QUÉ gremio), y un
+                  tilde perdido en la fila de otro campo no deja lugar para hacerla.
+                */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Afiliación sindical</label>
+                  {/*
+                    El switch va FUERA del recuadro, y el recuadro solo aparece cuando hay algo
+                    adentro.
+
+                    Encerrarlo junto a los sindicatos daba a entender que el marco agrupaba las dos
+                    cosas, cuando el switch es la pregunta y el recuadro es la respuesta. Y con el
+                    switch apagado el marco quedaba dibujado alrededor de una sola línea.
+                  */}
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center space-x-3 cursor-pointer group w-fit">
+                      <div className={`w-10 h-6 flex items-center rounded-full p-1 duration-300 ease-in-out ${formData.afiliadoAlSindicato ? 'bg-blue-500 dark:bg-blue-600' : 'bg-gray-300 dark:bg-gray-700'}`}>
+                        <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${formData.afiliadoAlSindicato ? 'translate-x-4' : ''}`}></div>
+                      </div>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Afiliado a un sindicato</span>
+                      <input type="checkbox" className="hidden" checked={!!formData.afiliadoAlSindicato} onChange={(e) => handleAfiliadoChange(e.target.checked)} />
+                    </label>
+                    {/* Al lado del switch, y solo con algo elegido: sin nada, abajo está el
+                        buscador ancho. Va FUERA del <label> del switch — adentro, apretarlo
+                        también lo tildaría, porque un label propaga el click a su control. */}
+                    {formData.afiliadoAlSindicato && sindicatosElegidos.length > 0 && (
+                      <BotonAgregar onClick={() => { setSindicatoSearch(''); setSindicatoOpen(true); }} title="Agregar otro sindicato" />
+                    )}
+                  </div>
+
+                    {/*
+                      La pregunta de seguimiento: solo existe si la respuesta anterior fue que sí.
+
+                      Mismo patrón que Rol/es Empresa —badge arriba, campo que abre una ventana con
+                      buscador— y no un <select>: son dos elecciones de catálogo en la misma pantalla,
+                      y que se vieran distinto era la única razón para tener que mirarlas dos veces.
+                    */}
+                    {formData.afiliadoAlSindicato && (
+                      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 mt-2">
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                          Sindicato <span className="text-red-500">*</span>
+                        </label>
+                        {sindicatosElegidos.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mb-2">
+                            {sindicatosElegidos.map((sind) => (
+                              <span key={sind._id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                                {nombreSindicato(sind)}
+                                <button type="button" onClick={() => toggleSindicato(sind._id, false)} title={`Quitar ${nombreSindicato(sind)}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
+                                  <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {/*
+                          El buscador ancho SOLO cuando no hay nada elegido: con sindicatos ya
+                          puestos repetía la invitación a elegir debajo de lo elegido y se llevaba
+                          el alto de una fila para eso. Lo elegido va ARRIBA y no adentro del input:
+                          un badge dentro de un campo lo hace crecer y se lee como texto escrito.
+                        */}
+                        {sindicatosElegidos.length === 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSindicatoSearch('');
+                              setSindicatoOpen(true);
+                            }}
+                            className="input-field text-left flex items-center gap-2 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
+                          >
+                            <span className="text-gray-400 dark:text-gray-500">Elegí uno o más sindicatos…</span>
+                            <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400 ml-auto shrink-0" />
+                          </button>
+                        )}
+                        {/* Un catálogo vacío sin explicación se lee como un error de la pantalla. */}
+                        {sindicatos.length === 0 && <p className="text-[11px] text-gray-400 mt-1">Todavía no hay sindicatos cargados. Se cargan en Configuración → Sindicatos.</p>}
+                      </div>
+                    )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Roles de Sistema</label>
+                  <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 space-y-4">
+                    <div>
+                      <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faUserShield} className="text-gray-300" />
+                        Sistema
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {roles
+                          .filter((r) => r.name.toLowerCase() !== 'superadmin' && !r.name.toLowerCase().includes('mobile'))
+                          .map((r) => (
+                            <label key={r._id} className={`flex items-start space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.roles.includes(r._id) ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20' : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-200'}`}>
+                              <input
+                                type="checkbox"
+                                checked={formData.roles.includes(r._id)}
+                                onChange={(e) => {
+                                  let newRoles = e.target.checked ? [...formData.roles, r._id] : formData.roles.filter((id) => id !== r._id);
+                                  const name = r.name.toLowerCase();
+                                  if (e.target.checked) {
+                                    if (name === 'admin') newRoles = newRoles.filter((id) => roles.find((ro) => ro._id === id)?.name.toLowerCase() !== 'user');
+                                    else if (name === 'user') newRoles = newRoles.filter((id) => roles.find((ro) => ro._id === id)?.name.toLowerCase() !== 'admin');
+                                  }
+                                  setFormData((prev) => ({ ...prev, roles: newRoles }));
+                                }}
+                                className="mt-0.5 rounded text-blue-500 focus:ring-blue-500"
+                              />
+                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{r.name}</span>
+                            </label>
+                          ))}
+                      </div>
+                    </div>
+                    {roles.some((r) => r.name.toLowerCase().includes('mobile')) && (
+                      <div>
+                        <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2">
+                          <FontAwesomeIcon icon={faMobileAlt} className="text-indigo-300" />
+                          Mobile (App)
+                        </h4>
+                        {coordinacionBloqueada && (
+                          <p className="mb-3 text-[11px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+                            Coordina turnos en <strong>{coordinaEn.join(', ')}</strong>, así que el rol Mobile no se puede cambiar. Liberalo desde el equipo del proyecto primero.
+                          </p>
+                        )}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {roles
+                            .filter((r) => r.name.toLowerCase().includes('mobile'))
+                            .map((r) => (
+                              <label key={r._id} title={coordinacionBloqueada ? `Coordina turnos en ${coordinaEn.join(', ')}. Liberalo desde el equipo del proyecto para poder cambiarle el rol.` : undefined} className={`flex items-start space-x-3 p-3 rounded-lg border transition-all ${coordinacionBloqueada ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${formData.roles.includes(r._id) ? 'bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800 ring-2 ring-indigo-500/20' : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-200'}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={formData.roles.includes(r._id)}
+                                  disabled={coordinacionBloqueada}
+                                  onChange={(e) => {
+                                    if (coordinacionBloqueada) {
+                                      sweetAlert.warningAlert('No se puede cambiar el rol Mobile', `${user?.firstName || 'Esta persona'} coordina turnos en ${coordinaEn.join(', ')}. Sacale la coordinación desde el equipo del proyecto y después cambiale el rol.`);
+                                      return;
+                                    }
+                                    let newRoles = e.target.checked ? [...formData.roles, r._id] : formData.roles.filter((id) => id !== r._id);
+                                    const name = r.name.toLowerCase();
+                                    if (e.target.checked) {
+                                      if (name.includes('coordinador'))
+                                        newRoles = newRoles.filter(
+                                          (id) =>
+                                            !roles
+                                              .find((ro) => ro._id === id)
+                                              ?.name.toLowerCase()
+                                              .includes('colaborador'),
+                                        );
+                                      else if (name.includes('colaborador'))
+                                        newRoles = newRoles.filter(
+                                          (id) =>
+                                            !roles
+                                              .find((ro) => ro._id === id)
+                                              ?.name.toLowerCase()
+                                              .includes('coordinador'),
+                                        );
+                                    } else {
+                                      if (
+                                        !newRoles.some((id) =>
+                                          roles
+                                            .find((ro) => ro._id === id)
+                                            ?.name.toLowerCase()
+                                            .includes('mobile'),
+                                        )
+                                      ) {
+                                        sweetAlert.warningAlert('Atención', 'Debe tener al menos un rol Mobile.');
+                                        return;
+                                      }
+                                    }
+                                    setFormData((prev) => ({ ...prev, roles: newRoles }));
+                                  }}
+                                  className="mt-0.5 rounded text-indigo-500 focus:ring-indigo-500"
+                                />
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{r.name}</span>
+                              </label>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* El mismo bloque que Proyecto y Contrato: ver `components/ui/BloqueEstado`. */}
+                <BloqueEstado activo={!!formData.isActive} onChange={(activo) => setFormData((prev) => ({ ...prev, isActive: activo }))} />
               </div>
             )}
           </div>
@@ -1647,6 +1678,25 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
               <strong>Se puede elegir más de uno.</strong> Es lo normal: alguien puede ser Asistente de Cámara en un proyecto y Foquista en otro. Marcá todos los que correspondan.
             </p>
             <p className="text-[11px] text-gray-500">No tiene que ver con los permisos del sistema: eso se define en Usuarios → Roles.</p>
+          </div>
+        </Modal>
+      )}
+
+      {vacacionesInfoOpen && (
+        <Modal isOpen={vacacionesInfoOpen} onClose={() => setVacacionesInfoOpen(false)} title="Vacaciones: días extra" size="md" zIndex={90}>
+          <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+            <p>
+              Son días que <strong>se suman</strong> a los que ya le corresponden a la persona por antigüedad. No los reemplazan: el cálculo
+              habitual sigue funcionando igual y esto se agrega arriba.
+            </p>
+            <p>
+              Es una <strong>excepción</strong>, no la regla. Se usa cuando la empresa decide reconocerle días adicionales a alguien en
+              particular —una política interna, un acuerdo puntual, una situación que se quiera compensar— y por eso se carga persona por
+              persona y no en una configuración general.
+            </p>
+            <p>
+              Se aplica solo a quienes la empresa defina. Si a esta persona no le corresponde ninguno, dejalo en <strong>0</strong>.
+            </p>
           </div>
         </Modal>
       )}

@@ -817,8 +817,6 @@ router.post("/registro", async (req, res) => {
       pisoDepto: body.pisoDepto || undefined,
       codigoPostal: body.codigoPostal || undefined,
       telefono: body.telefono || undefined,
-      telefono2: body.telefono2 || undefined,
-      visa: !!body.visa,
       // Datos bancarios
       tipoEntidadFinanciera: body.tipoEntidadFinanciera || undefined,
       solicitaCreacionCuenta: !!body.solicitaCreacionCuenta,

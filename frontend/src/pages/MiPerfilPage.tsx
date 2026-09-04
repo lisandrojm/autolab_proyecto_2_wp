@@ -8,9 +8,9 @@ import { getHelp, hasHelp } from "../data/help/helpContent";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faIdCard, faUser, faMapMarkerAlt, faUniversity, faCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faIdCard, faUser, faMapMarkerAlt, faUniversity, faCheck, faXmark, faUserShield } from "@fortawesome/free-solid-svg-icons";
 
-type ProfileTab = "general" | "domicilio" | "bancarios";
+type ProfileTab = "general" | "domicilio" | "bancarios" | "sistema";
 
 /** Campo de solo lectura: etiqueta arriba, texto plano debajo (sin recuadro de input). */
 const Field: React.FC<{ label: string; value?: React.ReactNode; full?: boolean }> = ({ label, value, full }) => (
@@ -148,9 +148,10 @@ export const MiPerfilPage: React.FC = () => {
   const displayName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email;
 
   const tabs: { key: ProfileTab; label: string; icon: any }[] = [
-    { key: "general", label: "General", icon: faUser },
+    { key: "general", label: "Personales", icon: faUser },
     { key: "domicilio", label: "Domicilio", icon: faMapMarkerAlt },
-    { key: "bancarios", label: "Datos Bancarios", icon: faUniversity },
+    { key: "bancarios", label: "Bancarios", icon: faUniversity },
+    { key: "sistema", label: "Sistema", icon: faUserShield },
   ];
 
   return (
@@ -202,13 +203,48 @@ export const MiPerfilPage: React.FC = () => {
                 {/* La obra social ya no es un dato de la persona: se declara en cada contrato y se
                     constata contra el padrón de la SSS. Mostrarla acá volvería a sugerir que hay una
                     sola y que este es su lugar. */}
+              </div>
+
+              {/* «OS Prepaga» ya no se muestra: quedó deprecado junto con el resto de la obra social
+                  como dato de la persona —se declara por contrato y se constata contra el padrón de
+                  la SSS—. Ver el comentario de más arriba. */}
+
+            </div>
+          )}
+
+          {activeTab === "domicilio" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
+              <Field label="País" value={nameFromInfo(countries, md?.paisId)} />
+              <Field label="Localidad" value={md?.localidad} />
+              <Field label="Calle" value={md?.calle} />
+              <Field label="Altura" value={md?.altura} />
+              <Field label="Piso/Depto" value={md?.pisoDepto} />
+              <Field label="Código Postal" value={md?.codigoPostal} />
+              <Field label="Teléfono" value={md?.telefono} />
+            </div>
+          )}
+
+          {activeTab === "bancarios" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
+              <Field label="Banco" value={nameFromInfo(banks, md?.bancoId)} />
+              <Field label="CBU / CVU" value={md?.cbu} />
+              <Field label="Tipo de Cuenta" value={md?.tipoDeCuentaBancaria} />
+              <Field label="Número de Cuenta" value={md?.nroDeCuentaBancaria} />
+              <Field label="Alias Bancario" value={md?.aliasBancario} full />
+            </div>
+          )}
+
+          {/* Las mismas secciones que la pestaña Sistema del formulario y del detalle de usuario:
+              lo del VÍNCULO con la empresa, separado de quién es la persona. */}
+          {activeTab === "sistema" && (
+            <div className="space-y-6 animate-fadeIn">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Field label="Fecha de Ingreso" value={formatDate(user.hireDate)} />
                 <Field label="Vacaciones (Días Extra)" value={user.extraVacationDays ?? 0} />
                 <Field label="Legajo Tango" value={(md as any)?.numeroLegajoTango} />
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <BoolPill label="OS Prepaga" value={md?.osPrepaga} />
                 <BoolPill label="In House" value={(md as any)?.inHouse} />
                 <BoolPill label="Afiliado al Sindicato" value={(md as any)?.afiliadoAlSindicato} />
                 <BoolPill label="Cuenta Activa" value={md?.activo ?? true} />
@@ -243,30 +279,6 @@ export const MiPerfilPage: React.FC = () => {
                   <span className="text-gray-400 italic text-sm">Sin roles de sistema</span>
                 )}
               </div>
-            </div>
-          )}
-
-          {activeTab === "domicilio" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
-              <Field label="País" value={nameFromInfo(countries, md?.paisId)} />
-              <Field label="Localidad" value={md?.localidad} />
-              <Field label="Calle" value={md?.calle} />
-              <Field label="Altura" value={md?.altura} />
-              <Field label="Piso/Depto" value={md?.pisoDepto} />
-              <Field label="Código Postal" value={md?.codigoPostal} />
-              <Field label="Teléfono" value={md?.telefono} />
-              <Field label="Teléfono de Emergencia" value={md?.telefono2} />
-              <BoolPill label="Visa / Permiso de Trabajo" value={md?.visa} />
-            </div>
-          )}
-
-          {activeTab === "bancarios" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
-              <Field label="Banco" value={nameFromInfo(banks, md?.bancoId)} />
-              <Field label="CBU / CVU" value={md?.cbu} />
-              <Field label="Tipo de Cuenta" value={md?.tipoDeCuentaBancaria} />
-              <Field label="Número de Cuenta" value={md?.nroDeCuentaBancaria} />
-              <Field label="Alias Bancario" value={md?.aliasBancario} full />
             </div>
           )}
         </div>

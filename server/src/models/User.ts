@@ -81,8 +81,6 @@ export interface IUserMetadata {
   fechaNac?: string;
   fechaAlta?: string;
   telefono?: string;
-  telefono2?: string | null;
-  visa?: boolean | null;
   activo?: boolean;
   /** Tipo de entidad financiera: "banco" | "billetera_virtual" | "compania_financiera" | "caja_credito" | "sin_banco". */
   tipoEntidadFinanciera?: string | null;
@@ -221,8 +219,6 @@ const userSchema = new Schema<IUser>(
       fechaNac: String,
       fechaAlta: String,
       telefono: String,
-      telefono2: String,
-      visa: Boolean,
       activo: { type: Boolean, default: true },
       tipoEntidadFinanciera: String,
       solicitaCreacionCuenta: Boolean,

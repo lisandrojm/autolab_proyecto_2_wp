@@ -301,8 +301,6 @@ export interface User {
     osPrepaga?: boolean;
     fechaNac?: string;
     telefono?: string;
-    telefono2?: string;
-    visa?: boolean;
     // Bancarios
     tipoEntidadFinanciera?: string;
     solicitaCreacionCuenta?: boolean;
@@ -316,6 +314,8 @@ export interface User {
     tipoDeCuentaBancaria?: string;
     nroDeCuentaBancaria?: string;
     aliasBancario?: string;
+    /** Nº de legajo en Tango. Estaba en el modelo del server pero faltaba acá. */
+    numeroLegajoTango?: string;
     afiliadoAlSindicato?: boolean;
     /** `_id` del catálogo Sindicato. Solo con `afiliadoAlSindicato`; puede ser más de uno. */
     sindicatoIds?: string[];

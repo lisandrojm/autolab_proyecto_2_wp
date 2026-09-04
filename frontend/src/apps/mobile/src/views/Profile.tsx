@@ -573,7 +573,6 @@ export default function Profile({ onChangePersonalData }: { onChangePersonalData
               <InfoRow label="Piso / Depto" value={md.pisoDepto} />
               <InfoRow label="Código postal" value={md.codigoPostal} />
               <InfoRow label="Teléfono" value={md.telefono} />
-              <InfoRow label="Tel. de emergencia" value={md.telefono2} />
             </div>
           )}
 

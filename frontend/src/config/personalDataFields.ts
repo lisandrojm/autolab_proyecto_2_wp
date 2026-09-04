@@ -52,8 +52,6 @@ export const PERSONAL_DATA_FIELDS: PersonalDataField[] = [
   { key: "pisoDepto", label: "Piso / Depto", section: "domicilio", type: "text" },
   { key: "codigoPostal", label: "Código postal", section: "domicilio", type: "text" },
   { key: "telefono", label: "Teléfono", section: "domicilio", type: "text" },
-  { key: "telefono2", label: "Teléfono de emergencia", section: "domicilio", type: "text" },
-  { key: "visa", label: "Visa", section: "domicilio", type: "boolean" },
   // Bancarios
   { key: "bancoId", label: "Banco", section: "bancarios", type: "catalog", catalog: "bancos" },
   { key: "tipoDeCuentaBancaria", label: "Tipo de cuenta", section: "bancarios", type: "text" },
