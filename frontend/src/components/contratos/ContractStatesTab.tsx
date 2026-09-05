@@ -5,6 +5,7 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { EmptyState } from '../ui/EmptyState';
 import { Modal } from '../ui/Modal';
 import { InfoModal } from '../ui/InfoModal';
+import { SelectorBadges } from '../ui/SelectorBadges';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faEdit, faTrash, faTags, faFileContract, faGrip, faTable, faFileInvoiceDollar, faGripVertical, faCheck, faMultiply, faCircleInfo, faSitemap, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
@@ -351,20 +352,6 @@ export const ContractStatesTab: React.FC = () => {
   };
 
   /** Tipos que se pueden elegir ahora: si el estado es impositivo, los tomados por otro quedan afuera. */
-  const tiposSeleccionables = useMemo(
-    () => contratoFrames.filter((cf) => !(form.esImpositivo && tiposTomadosPorOtroImpositivo.has(String(cf._id)))),
-    [contratoFrames, form.esImpositivo, tiposTomadosPorOtroImpositivo],
-  );
-
-  const seleccionarTodosLosTipos = () => setForm((prev) => ({ ...prev, contratoFrameIds: tiposSeleccionables.map((cf) => String(cf._id)) }));
-  const limpiarTiposContrato = () => setForm((prev) => ({ ...prev, contratoFrameIds: [] }));
-
-  const toggleTipoContrato = (id: string) => {
-    setForm((prev) => ({
-      ...prev,
-      contratoFrameIds: prev.contratoFrameIds.includes(id) ? prev.contratoFrameIds.filter((x) => x !== id) : [...prev.contratoFrameIds, id],
-    }));
-  };
 
   const guardar = async () => {
     const name = form.name.trim();
@@ -758,64 +745,37 @@ export const ContractStatesTab: React.FC = () => {
             </div>
           )}
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2 ml-1">
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
-                Tipos de contrato
-                {form.contratoFrameIds.length > 0 ? <span className="ml-1.5 normal-case tracking-normal text-gray-500 dark:text-gray-400">({form.contratoFrameIds.length} de {tiposSeleccionables.length})</span> : null}
-              </label>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={seleccionarTodosLosTipos}
-                  disabled={tiposSeleccionables.length === 0 || form.contratoFrameIds.length === tiposSeleccionables.length}
-                  className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
-                >
-                  Seleccionar todos
-                </button>
-                <span className="text-gray-300 dark:text-gray-600">·</span>
-                <button
-                  type="button"
-                  onClick={limpiarTiposContrato}
-                  disabled={form.contratoFrameIds.length === 0}
-                  className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
-                >
-                  Limpiar
-                </button>
-              </div>
-            </div>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
-              {form.esImpositivo
+          {/*
+            MISMO GESTO QUE «Rol/es Empresa» en la ficha de usuario: badges arriba, buscador aparte.
+
+            Acá había una lista de checkboxes con scroll propio, dentro del scroll del modal: cinco
+            filas visibles de una lista que crece con cada tipo de contrato, y ninguna forma de
+            buscar. Con badges, en el formulario queda solo lo elegido —que es lo único que importa
+            después de elegir— y la búsqueda usa la pantalla entera.
+
+            El bloqueo por «ya lo usa otro estado impositivo» viaja como MOTIVO y no como booleano:
+            es la única parte de esta pantalla que no se explica sola.
+          */}
+          <SelectorBadges
+            etiqueta="Tipos de contrato"
+            tituloModal="Tipos de Contrato"
+            descripcion="en qué tipos de contrato se ofrece este estado"
+            placeholder="Buscar tipo de contrato…"
+            permitirTodos
+            zIndex={110}
+            items={contratoFrames.map((cf) => {
+              const tomadoPor = form.esImpositivo ? tiposTomadosPorOtroImpositivo.get(String(cf._id)) : undefined;
+              return { id: String(cf._id), nombre: cf.name, bloqueadoPor: tomadoPor ? `ya lo usa «${tomadoPor}»` : undefined };
+            })}
+            value={form.contratoFrameIds}
+            onChange={(ids) => setForm((prev) => ({ ...prev, contratoFrameIds: ids }))}
+            textoVacio={contratoFrames.length === 0 ? "No hay tipos de contrato cargados." : "Elegir tipos de contrato…"}
+            ayuda={
+              form.esImpositivo
                 ? 'Cada tipo de contrato puede tener un solo estado impositivo: los que ya tomó otro aparecen bloqueados.'
-                : 'Sin ninguno seleccionado, el estado se ofrece en todos los tipos de contrato.'}
-            </p>
-            <div className="max-h-52 overflow-auto rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60">
-              {contratoFrames.length === 0 ? (
-                <p className="px-3 py-3 text-sm text-gray-500">No hay tipos de contrato cargados.</p>
-              ) : (
-                contratoFrames.map((cf) => {
-                  const tomadoPor = form.esImpositivo ? tiposTomadosPorOtroImpositivo.get(String(cf._id)) : undefined;
-                  return (
-                    <label
-                      key={cf._id}
-                      className={`flex items-center gap-3 px-3 py-2 transition-colors ${tomadoPor ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40'}`}
-                      title={tomadoPor ? `Ya lo usa el estado impositivo "${tomadoPor}"` : undefined}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={form.contratoFrameIds.includes(String(cf._id))}
-                        disabled={!!tomadoPor}
-                        onChange={() => toggleTipoContrato(String(cf._id))}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed"
-                      />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">{cf.name}</span>
-                      {tomadoPor ? <span className="ml-auto text-[10px] text-gray-500 dark:text-gray-400 whitespace-nowrap">ya lo usa "{tomadoPor}"</span> : null}
-                    </label>
-                  );
-                })
-              )}
-            </div>
-          </div>
+                : 'Sin ninguno seleccionado, el estado se ofrece en todos los tipos de contrato.'
+            }
+          />
         </div>
       </Modal>
 

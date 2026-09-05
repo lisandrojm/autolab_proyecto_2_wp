@@ -6,17 +6,45 @@ import { InfoItem } from "../../api/info";
 import { ArcaSucursal } from "../../api/arcaSucursales";
 import { cuitEsValido } from "../../utils/cuit";
 import { fechaAfip } from "./afipTxt";
+import { estadoGeneraAltaTemprana } from "./altaTemprana";
+import { claveEstado } from "../../utils/estadoClave";
 
 /**
  * Chequeo de completitud de datos para la generación del TXT de Alta masiva de ARCA.
  * Resuelve cada campo requerido contra los catálogos y marca si está presente o falta.
  * Reutilizable por la vista de completitud (Fase 1b) y por el generador del TXT (Fase 2).
  */
+/**
+ * ¿Este contrato genera alta temprana? DEL ESTADO, no de un switch.
+ *
+ * El estado impositivo del contrato es la única fuente de verdad: es el mismo que decide en qué
+ * bandeja aparece y qué carpeta de Dropbox lo hace avanzar. El switch del tipo de contrato podía
+ * contradecirlo y se eliminó.
+ *
+ * Sin `estados` en el catálogo se lee el booleano viejo del tipo: mientras alguna pantalla no los
+ * pase, es preferible el valor de antes a decidir que ningún contrato declara.
+ */
+const generaAltaDeLaFila = (row: ContractOverviewRow, cat: AfipCatalogs, tipo?: ContratoItem): boolean => {
+  if (cat.estados?.length) {
+    const estado = cat.estados.find((e) => claveEstado(e.name) === claveEstado(row.nombre_estado_empleado || ""));
+    if (estado) return estadoGeneraAltaTemprana(estado);
+  }
+  return tipo?.data?.generaAlta !== false;
+};
+
 export interface AfipCatalogs {
   categorias: CategoriaSatItem[]; // retribución (sueldoBruto) + categoría profesional (codigoAfip)
   tipos: ContratoItem[]; // códigos ARCA por Tipo de Contrato
   obrasSociales: SimpleCatalogItem[]; // código RNOS
   sedes: InfoItem[]; // catálogo de Sedes (lugar de trabajo; NO tiene relación con ARCA)
+  /**
+   * Los Estados, para derivar si el contrato genera alta temprana.
+   *
+   * OPCIONAL a propósito: sin ellos se cae al booleano persistido del tipo de contrato, que es lo
+   * que había antes de que el estado impositivo fuera la única fuente. Es una red de contención de
+   * la transición, no un segundo criterio — la expresión sigue siendo una sola (`altaTemprana.ts`).
+   */
+  estados?: InfoItem[];
   /**
    * Empleadoras, con lo que cada una tiene REGISTRADO ante ARCA. Los nomencladores son universales;
    * cada CUIT registra su subconjunto, y ARCA solo acepta altas dentro de él.
@@ -512,7 +540,7 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
      * Se resuelve acá, junto al resto, para que la pantalla, el checklist y el TXT vean lo mismo.
      * Sin tipo resuelto NO se asume `false`: no saber si declara es distinto de saber que no.
      */
-    generaAlta: tipo?.data?.generaAlta !== false,
+    generaAlta: generaAltaDeLaFila(row, cat, tipo),
     modalidadContrato: tipo?.data?.afipModalidadContrato || "",
     // El default de la empleadora entra DESPUÉS del tipo de contrato, nunca antes: es lo que dice
     // la pantalla de Defaults y es la regla que hace que el default sea seguro de poner.

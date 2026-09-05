@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown, faFileInvoiceDollar } from "@fortawesome/free-solid-svg-icons";
 import { useEstadoCatalogStore } from "../stores/estadoCatalogStore";
 import { useThemeStore } from "../stores/themeStore";
+import { claveEstado } from "../utils/estadoClave";
 
 interface EstadoOption {
   value: string;
@@ -79,18 +80,9 @@ const ESTADO_COLOR_HEX: Record<string, string> = {
 
 const COLOR_HEX_GENERICO = "#64748b";
 
-/**
- * Alias históricos: el mismo estado se guardó con más de un nombre en los contratos.
- * Sin esto, un contrato con "Falta pedido de ARCA" no encontraría al estado "Pedido de ARCA" del
- * ABM y seguiría pintándose con el color viejo en vez del configurado.
- */
-const ESTADO_ALIAS: Record<string, string> = { "falta pedido de afip": "pedido de afip", "pedido servicios": "pedido de servicios" };
-
 /** Clave con la que se compara un estado contra el catálogo del ABM (normalizada + alias). */
-export const claveEstado = (name: string): string => {
-  const n = normalize(name);
-  return ESTADO_ALIAS[n] || n;
-};
+/* Vive en `utils/estadoClave.ts`: es pura, y desde ahí la puede importar código que no es de pantalla. */
+export { claveEstado } from "../utils/estadoClave";
 
 /** Color con el que se muestra un estado que todavía no tiene color propio configurado. */
 export const estadoColorPorDefecto = (name: string): string => ESTADO_COLOR_HEX[normalize(name)] || COLOR_HEX_GENERICO;

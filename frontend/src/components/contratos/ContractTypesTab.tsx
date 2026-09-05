@@ -17,6 +17,7 @@ import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatal
 import { SelectorCodigoArca } from '../arca/SelectorCodigoArca';
 import { MODALIDADES_OFRECIDAS } from './afipCompleteness';
 import { EstadoBadge, EstadoSecundarioBadge } from '../EstadoSelect';
+import { estadoImpositivoElegido, estadoGeneraAltaTemprana } from './altaTemprana';
 
 // Nomencladores de ARCA de los que salen los tres códigos. Se leen enteros (153 / 293 / 8 / 2): son
 // chicos y se cargan una vez al abrir la pestaña.
@@ -56,7 +57,7 @@ interface FormState {
   generaAlta: boolean;
 }
 
-type TabContrato = 'general' | 'arca' | 'sistema';
+type TabContrato = 'general' | 'sistema';
 
 /**
  * El orden de las pestañas, en un solo lugar: lo usan el «Siguiente» y el «Anterior» del alta.
@@ -67,7 +68,6 @@ type TabContrato = 'general' | 'arca' | 'sistema';
  */
 const TABS_CONTRATO: { key: TabContrato; label: string; icon: IconDefinition }[] = [
   { key: 'general', label: 'General', icon: faFileContract },
-  { key: 'arca', label: 'ARCA', icon: faFileInvoiceDollar },
   { key: 'sistema', label: 'Sistema', icon: faUserShield },
 ];
 
@@ -91,6 +91,29 @@ const BadgeFirma: React.FC<{ activo: boolean }> = ({ activo }) => (
     <FontAwesomeIcon icon={faFileSignature} className="h-2.5 w-2.5" />
     {activo ? 'Se envía a firmar' : 'No se envía a firmar'}
   </span>
+);
+
+/**
+ * Ir a «Plantillas | Contratos». UN botón, no dos.
+ *
+ * Las dos secciones del tab Sistema —Plantillas asignadas y Estados— dicen lo mismo cuando el
+ * contrato no tiene plantilla, y cada una traía su propio enlace al mismo lugar: dos invitaciones
+ * a hacer exactamente el mismo click, una debajo de la otra. Ahora el botón se dibuja una sola vez,
+ * en la sección que lo origina, y la de Estados solo explica por qué está vacía.
+ *
+ * Botón y no enlace de texto: es la única acción de esa pantalla vacía, y un enlace embebido en un
+ * párrafo de 11px no se lee como algo que se puede tocar.
+ */
+const BotonIrAPlantillas: React.FC = () => (
+  <Link
+    to="/contratos-frame"
+    target="_blank"
+    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border border-violet-200 dark:border-violet-800/60 hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors"
+  >
+    <FontAwesomeIcon icon={faFilePdf} className="h-3 w-3" />
+    Plantillas | Contratos
+    <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
+  </Link>
 );
 
 /** Chip con link a una Plantilla ("Plantillas | Contratos"): abre su editor en una pestaña nueva. */
@@ -222,6 +245,53 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
    * salió. Guardarlo sería inventar un dato que puede quedar contradiciendo al código.
    */
   const [grupoTipoServicio, setGrupoTipoServicio] = useState('');
+
+  /**
+   * EL VALOR DERIVADO QUE REEMPLAZÓ AL SWITCH.
+   *
+   * Antes esto era `form.generaAlta`, editable, y podía contradecir al estado impositivo elegido.
+   * Ahora sale de una sola expresión compartida (`altaTemprana.ts`), la misma que usa el TXT.
+   */
+  const estadoImpositivo = useMemo(() => estadoImpositivoElegido(estados, form.estadoIds), [estados, form.estadoIds]);
+  const generaAlta = estadoGeneraAltaTemprana(estadoImpositivo);
+  /** Hay algo cargado en los códigos: decide si vale la pena avisar que se conservan. */
+  const hayCodigosCargados = !!(form.afipModalidadContrato || form.afipTipoServicio || form.afipModalidadLiquidacion);
+  /** Cuáles de los cuatro faltan. Vacío = se puede guardar. */
+  const codigosFaltantes = useMemo(() => {
+    if (!generaAlta) return [] as string[];
+    const faltan: string[] = [];
+    if (!form.afipModalidadContrato) faltan.push('afipModalidadContrato');
+    if (!grupoTipoServicio) faltan.push('grupoTipoServicio');
+    if (!form.afipTipoServicio) faltan.push('afipTipoServicio');
+    if (!form.afipModalidadLiquidacion) faltan.push('afipModalidadLiquidacion');
+    return faltan;
+  }, [generaAlta, form.afipModalidadContrato, form.afipTipoServicio, form.afipModalidadLiquidacion, grupoTipoServicio]);
+  /**
+   * Los errores recién se muestran después del primer intento de guardar.
+   *
+   * Un formulario que se abre ya en rojo culpa a la persona por no haber empezado. El botón sí
+   * queda deshabilitado desde el principio: eso informa sin acusar.
+   */
+  const [intentoGuardar, setIntentoGuardar] = useState(false);
+  /**
+   * El error de UN campo, debajo de ese campo.
+   *
+   * Debajo del campo y no en un toast: un toast dice «faltan códigos» y deja a la persona
+   * buscando cuál. Y solo después de intentar guardar, para no abrir el formulario en rojo.
+   */
+  const errorCodigo = (campo: string) =>
+    intentoGuardar && codigosFaltantes.includes(campo) ? (
+      <p className="text-[11px] text-red-600 dark:text-red-400 ml-1 mt-1 flex items-start gap-1.5">
+        <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5 mt-0.5 shrink-0" />
+        Falta este código: sin él no se puede generar el TXT del alta.
+      </p>
+    ) : null;
+  /** Para llevar la vista al bloque cuando aparece, y para enfocar el primer campo que falta. */
+  const bloqueArcaRef = React.useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (generaAlta) bloqueArcaRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [generaAlta]);
+
   useEffect(() => {
     if (!showModal) return;
     const ts = tiposServicio.find((t) => pad3(String(t.externalId || '')) === pad3(form.afipTipoServicio));
@@ -289,6 +359,30 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
 
   /** Plantillas ("Plantillas | Contratos") que ya tiene asignadas un Contrato (vacío si todavía no tiene ninguna). */
   const plantillasDe = (contratoId: string): ContratoFrameItem[] => plantillas.filter((p) => (typeof p.contratoId === 'object' ? p.contratoId?._id : p.contratoId) === contratoId);
+
+  /**
+   * Los códigos ARCA que tiene cargados un tipo de contrato, resueltos contra sus catálogos.
+   *
+   * Se compara con `pad3` porque el código se guarda como lo dejó el formulario ("2" o "002") y en el
+   * catálogo vive con ceros a la izquierda: sin normalizar, un código perfectamente cargado aparecería
+   * sin nombre. Es la misma normalización que ya usan los pickers del modal.
+   *
+   * Un código cargado que no resuelve a ningún nombre SE MUESTRA IGUAL, con su etiqueta: significa
+   * que el catálogo no lo tiene —cambió o no se sembró— y esconderlo dejaría al TXT llevando un
+   * código que en pantalla no existe.
+   */
+  const codigosArcaDe = (contrato: ContratoItem): Array<{ campo: string; etiqueta: string; codigo: string; nombre: string }> => {
+    const buscar = (catalogo: SimpleCatalogItem[], crudo: unknown) => {
+      const codigo = String(crudo ?? '').trim();
+      if (!codigo) return null;
+      return { codigo: pad3(codigo), nombre: catalogo.find((c) => pad3(String(c.externalId || '')) === pad3(codigo))?.name || '' };
+    };
+    return [
+      { campo: 'modalidadContrato', etiqueta: 'Modalidad de contrato', ...buscar(modalidadesContrato, contrato.data?.afipModalidadContrato) },
+      { campo: 'tipoServicio', etiqueta: 'Tipo de servicio', ...buscar(tiposServicio, contrato.data?.afipTipoServicio) },
+      { campo: 'modalidadLiquidacion', etiqueta: 'Modalidad de liquidación', ...buscar(modalidadesLiq, contrato.data?.afipModalidadLiquidacion) },
+    ].filter((c): c is { campo: string; etiqueta: string; codigo: string; nombre: string } => 'codigo' in c);
+  };
 
   /** Ids de las Plantillas que ya tiene asignadas un Contrato (vacío si todavía no tiene ninguna). */
   const plantillaIdsDe = (contratoId: string): string[] => plantillasDe(contratoId).map((p) => String(p._id));
@@ -391,6 +485,19 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
    * Hoy el único requerido es el nombre, en General.
    */
   const avanzar = () => {
+    setIntentoGuardar(true);
+    /*
+      Los códigos bloquean SOLO cuando el estado los exige.
+
+      Con un estado que no es de alta temprana, un código a medias no impide nada: no viaja a
+      ningún lado. Bloquear ahí sería exigir datos para un trámite que no se va a hacer.
+    */
+    if (codigosFaltantes.length > 0) {
+      setTabModal('sistema');
+      // Llevar a la pestaña no alcanza: el bloque puede estar fuera de la vista dentro de su scroll.
+      setTimeout(() => bloqueArcaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
+      return;
+    }
     if (tabModal === 'general' && !form.name.trim()) {
       sweetAlert.error('Falta el nombre', 'El contrato necesita un nombre.');
       return;
@@ -417,7 +524,13 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       afipModalidadContrato: form.afipModalidadContrato.trim(),
       afipTipoServicio: form.afipTipoServicio.trim(),
       afipModalidadLiquidacion: form.afipModalidadLiquidacion.trim(),
-      generaAlta: form.generaAlta,
+      /*
+        `generaAlta` YA NO SE MANDA desde el formulario.
+
+        Era el switch, y era la segunda fuente de verdad. El valor se deriva del estado impositivo
+        elegido (`altaTemprana.ts`), que es lo que ya decide el resto del circuito. El campo sigue
+        existiendo en el modelo para los tipos que nunca se vuelvan a editar; el TXT lo lee derivado.
+      */
     };
 
     try {
@@ -571,9 +684,10 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filtrados.map((contrato) => {
             const cantPlantillas = plantillasPorContrato.get(contrato._id) || 0;
+            const codigosArca = codigosArcaDe(contrato);
             const misEstados = estadosPorContrato.get(contrato._id) || [];
             return (
               <div key={contrato._id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex flex-col gap-3">
@@ -604,6 +718,36 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                     <div className="flex flex-wrap gap-1">
                       {plantillasDe(contrato._id).map((p) => (
                         <PlantillaChip key={p._id} plantilla={p} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/*
+                  LOS CÓDIGOS ARCA, como badges y con el mismo peso visual que los estados.
+
+                  Son lo que decide si el TXT de alta temprana se puede generar, y hasta acá no se
+                  veían en ninguna parte de la tarjeta: había que abrir el modal de cada tipo para
+                  saber si estaban cargados. Se muestran el CÓDIGO y el nombre porque el código es
+                  lo que viaja al TXT y el nombre es lo único que alguien reconoce.
+
+                  Si no hay ninguno cargado, no se dibuja la sección: un tipo que no genera alta
+                  no los necesita, y una fila vacía se leería como algo que falta.
+                */}
+                {codigosArca.length > 0 && (
+                  <div className="flex flex-col gap-1 pt-1 border-t border-gray-100 dark:border-gray-700/60">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Códigos ARCA</label>
+                    <div className="flex flex-wrap gap-1">
+                      {codigosArca.map((c) => (
+                        <span
+                          key={c.campo}
+                          title={`${c.etiqueta}: ${c.codigo}${c.nombre ? ` — ${c.nombre}` : ""}`}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide whitespace-nowrap bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800"
+                        >
+                          <span className="font-mono">{c.codigo}</span>
+                          {/* El nombre se corta, el código no: el código es el dato, el nombre es la ayuda. */}
+                          <span className="normal-case font-semibold truncate max-w-[9rem]">{c.nombre || c.etiqueta}</span>
+                        </span>
                       ))}
                     </div>
                   </div>
@@ -667,7 +811,13 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                 Siguiente
               </button>
             ) : (
-              <button onClick={guardar} className="btn-primary" disabled={saving}>
+              <button
+                onClick={guardar}
+                className="btn-primary"
+                /* Deshabilitado desde el principio, sin esperar a que intente guardar: informa sin acusar. */
+                disabled={saving || codigosFaltantes.length > 0}
+                title={codigosFaltantes.length > 0 ? `Faltan ${codigosFaltantes.length} código(s) de ARCA: el estado impositivo elegido requiere alta temprana.` : undefined}
+              >
                 {saving ? 'Guardando...' : editando ? 'Actualizar' : 'Crear'}
               </button>
             )}
@@ -691,6 +841,15 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
               >
                 <FontAwesomeIcon icon={t.icon} className="text-xs" />
                 {t.label}
+                {/*
+                  El punto rojo en la pestaña que tiene el problema.
+
+                  Sin esto, alguien parado en General ve el botón deshabilitado y no tiene forma de
+                  saber que lo que falta está en la otra pestaña.
+                */}
+                {t.key === 'sistema' && codigosFaltantes.length > 0 && (
+                  <span title={`Faltan ${codigosFaltantes.length} código(s) de ARCA`} className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
+                )}
               </button>
             ))}
           </div>
@@ -736,113 +895,6 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
             {/* Códigos ARCA para el TXT de Alta masiva: específicos del convenio/modalidad de este tipo de contrato. */}
           </div>}
 
-          {tabModal === 'arca' && <div className="space-y-5 animate-fadeIn">
-            <div className="space-y-3 p-3 rounded-lg border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/40 dark:bg-indigo-900/10">
-              <div className="flex items-center gap-1.5">
-                <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-3.5 w-3.5 text-indigo-500" />
-                <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">Códigos ARCA (Alta masiva)</p>
-                {/* La explicación del bloque, detrás del ⓘ de SU título. */}
-                <span
-                  title={'Son los códigos de la interfaz de «Alta masiva» de ARCA, específicos del convenio y la modalidad de este tipo de contrato. Se usan para generar el TXT; dejalos en blanco si no aplican. La actividad del domicilio NO va acá: depende del domicilio de explotación y de la empleadora, y se carga en la ficha de la empresa, en ARCA → Domicilios de Explotación.'}
-                  className="text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 cursor-help">
-                  <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-                </span>
-              </div>
-              {/*
-                VA ARRIBA DE LOS TRES CÓDIGOS PORQUE DECIDE SI TIENEN SENTIDO.
-
-                Sin esto, un tipo que no declara nada —una locación de servicios no es relación
-                laboral— queda con los tres campos en blanco, exactamente igual que uno al que le
-                falta cargarlos. Y lo que se ve igual, tarde o temprano alguien lo «completa»:
-                declarando ante el organismo una relación que no existe.
-              */}
-              <label className="flex items-center gap-3 cursor-pointer select-none rounded-lg border border-gray-200 dark:border-gray-700 p-3">
-                {/* Switch y no tilde: no es un atributo más de la lista, decide si los tres códigos
-                    de abajo se piden o no. Mismo control que «Afiliado a un sindicato». */}
-                <span className={`w-10 h-6 flex items-center rounded-full p-1 shrink-0 duration-300 ease-in-out ${form.generaAlta ? 'bg-blue-500 dark:bg-blue-600' : 'bg-gray-300 dark:bg-gray-700'}`}>
-                  <span className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${form.generaAlta ? 'translate-x-4' : ''}`} />
-                </span>
-                <input type="checkbox" checked={form.generaAlta} onChange={(e) => setForm((p) => ({ ...p, generaAlta: e.target.checked }))} className="hidden" />
-                <span className="min-w-0">
-                  <span className="flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300">
-                    Este tipo de contrato genera alta temprana ante ARCA
-                    <span
-                      title="Desmarcado, no se le piden los códigos de abajo y sus contratos dejan de contarse como incompletos: es lo que corresponde a una locación de servicios, que no es relación laboral."
-                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help shrink-0"
-                    >
-                      <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-                    </span>
-                  </span>
-                </span>
-              </label>
-
-              <div className={`space-y-3 ${form.generaAlta ? "" : "opacity-40 pointer-events-none"}`}>
-                <SelectorCodigoArca
-                  label="Modalidad de contrato"
-                  sufijoLabel="(3 díg.)"
-                  items={modalidadesOfrecidas}
-                  cargando={cargandoArca}
-                  value={form.afipModalidadContrato}
-                  onChange={(c) => setForm((p) => ({ ...p, afipModalidadContrato: c }))}
-                  formatCodigo={pad3}
-                  placeholder="Sin elegir — ej. 008 tiempo completo indeterminado"
-                  vacioHint="El catálogo de Modalidades de Contrato está vacío. Se siembra en Configuración → ARCA → Modalidades de Contrato."
-                />
-
-                {/*
-                 * El grupo va ARRIBA del tipo de servicio porque lo filtra, igual que Convenio →
-                 * Categoría y Domicilio → Actividad. No se guarda: solo recorta la lista.
-                 */}
-                {/* El MISMO selector que los otros tres. Era el único <select> nativo del bloque, y esa
-                    diferencia de forma sugería que el grupo se guarda como los demás — no se guarda:
-                    solo recorta la lista de abajo. */}
-                <SelectorCodigoArca
-                  label="Grupo de tipo de servicio"
-                  sufijoLabel="(no va al TXT)"
-                  items={gruposTipoServicio}
-                  cargando={cargandoArca}
-                  value={grupoTipoServicio}
-                  onChange={setGrupoTipoServicio}
-                  formatCodigo={(v) => v}
-                  placeholder="Todos los tipos de servicio"
-                  ayuda={`Hay 49 nombres repetidos entre los ${tiposServicio.length} tipos de servicio (el mismo texto con dos códigos). Elegir el grupo deja a la vista solo los de ese grupo. No viaja en el TXT y no se guarda: solo filtra.`}
-                  vacioHint="El catálogo de Grupos de Tipo de Servicio está vacío. Se siembra en Configuración → ARCA → Grupos de Tipo de Servicio."
-                />
-                {/* El aviso SÍ queda a la vista: no es una explicación, es algo que hay que ir a
-                    arreglar para que el filtro sirva. */}
-                {!hayGruposCargados && (
-                  <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1 flex items-start gap-1.5">
-                    <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5 mt-1 shrink-0" />
-                    Todavía ningún tipo de servicio tiene grupo cargado, así que el filtro no se aplica. Clasificalos en Configuración → ARCA → Tipos de Servicio.
-                  </p>
-                )}
-
-                <SelectorCodigoArca
-                  label="Tipo de servicio"
-                  sufijoLabel={grupoTipoServicio && hayGruposCargados ? `(3 díg. · ${tiposServicioFiltrados.length} del grupo)` : '(3 díg.)'}
-                  items={tiposServicioFiltrados}
-                  cargando={cargandoArca}
-                  value={form.afipTipoServicio}
-                  onChange={(c) => setForm((p) => ({ ...p, afipTipoServicio: c }))}
-                  formatCodigo={pad3}
-                  placeholder="Sin elegir — ej. 000 servicios comunes continuos"
-                  vacioHint="El catálogo de Tipos de Servicio está vacío. Se siembra en Configuración → ARCA → Tipos de Servicio."
-                />
-
-                <SelectorCodigoArca
-                  label="Modalidad de liquidación"
-                  sufijoLabel="(1 díg.)"
-                  items={modalidadesLiq}
-                  cargando={cargandoArca}
-                  value={form.afipModalidadLiquidacion}
-                  onChange={(c) => setForm((p) => ({ ...p, afipModalidadLiquidacion: c }))}
-                  formatCodigo={pad1}
-                  placeholder="Sin elegir — ej. 1 por mes"
-                  vacioHint="El catálogo de Modalidades de Liquidación está vacío. Se siembra en Configuración → ARCA → Modalidades de Liquidación."
-                />
-              </div>
-            </div>
-          </div>}
 
           {tabModal === 'sistema' && <div className="space-y-5 animate-fadeIn">
             {(() => {
@@ -854,13 +906,10 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                     {misPlantillas.length > 0 ? <span className="ml-1.5 normal-case tracking-normal text-gray-500 dark:text-gray-400">({misPlantillas.length})</span> : null}
                   </label>
                   {misPlantillas.length === 0 ? (
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
-                      Todavía no tiene ninguna Plantilla asignada: creá una desde{' '}
-                      <Link to="/contratos-frame" target="_blank" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-                        Plantillas | Contratos
-                      </Link>{' '}
-                      y elegí este Contrato.
-                    </p>
+                    <div className="space-y-2 ml-1">
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">Todavía no tiene ninguna Plantilla asignada: creá una y elegí este Contrato.</p>
+                      <BotonIrAPlantillas />
+                    </div>
                   ) : (
                     <div className="flex flex-wrap gap-1.5">
                       {misPlantillas.map((p) => (
@@ -895,13 +944,9 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                     {misPlantillaIds.length > 0 ? <span className="ml-1.5 normal-case tracking-normal text-gray-500 dark:text-gray-400">({form.estadoIds.length} de {estadosNoGlobales})</span> : null}
                   </label>
                   {misPlantillaIds.length === 0 ? (
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
-                      Este Contrato todavía no tiene ninguna Plantilla asignada. Vas a poder elegir sus Estados una vez que le asignes una desde{' '}
-                      <Link to="/contratos-frame" target="_blank" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-                        Plantillas | Contratos
-                      </Link>
-                      .
-                    </p>
+                    /* Sin botón propio: el de arriba ya lleva al mismo lugar. Acá solo se explica */
+                    /* por qué esta sección está vacía y qué la va a llenar. */
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Vas a poder elegir sus Estados una vez que le asignes una Plantilla.</p>
                   ) : (
                     <div className="space-y-3">
                       {estadosImpositivos.length > 0 && (
@@ -923,6 +968,117 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                             })}
                           </div>
                         </div>
+                      )}
+
+                      {/*
+                        LOS CÓDIGOS ARCA, revelados por el estado que se acaba de elegir.
+
+                        Estaban en una pestaña ANTERIOR a esta, así que se pedían antes de que nadie
+                        hubiera decidido si hacían falta. Acá se leen como lo que son: la consecuencia
+                        de haber elegido un estado de alta temprana.
+                      */}
+                      {generaAlta ? (
+                        <div ref={bloqueArcaRef} className="animate-fadeIn">
+                          <p className="text-[11px] text-indigo-700 dark:text-indigo-300 ml-1 mb-1.5">
+                            El estado «{estadoImpositivo?.name}» requiere alta temprana ante ARCA — completá los códigos para la generación del TXT.
+                          </p>
+                  <div className="space-y-3 p-3 rounded-lg border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/40 dark:bg-indigo-900/10">
+                    <div className="flex items-center gap-1.5">
+                      <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-3.5 w-3.5 text-indigo-500" />
+                      <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">Códigos ARCA (Alta masiva)</p>
+                      {/* La explicación del bloque, detrás del ⓘ de SU título. */}
+                      <span
+                        title={'Son los códigos de la interfaz de «Alta masiva» de ARCA, específicos del convenio y la modalidad de este tipo de contrato. Se usan para generar el TXT; dejalos en blanco si no aplican. La actividad del domicilio NO va acá: depende del domicilio de explotación y de la empleadora, y se carga en la ficha de la empresa, en ARCA → Domicilios de Explotación.'}
+                        className="text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 cursor-help">
+                        <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      <SelectorCodigoArca
+                        label="Modalidad de contrato"
+                        sufijoLabel="(3 díg.)"
+                        items={modalidadesOfrecidas}
+                        cargando={cargandoArca}
+                        value={form.afipModalidadContrato}
+                        onChange={(c) => setForm((p) => ({ ...p, afipModalidadContrato: c }))}
+                        formatCodigo={pad3}
+                        placeholder="Sin elegir — ej. 008 tiempo completo indeterminado"
+                        vacioHint="El catálogo de Modalidades de Contrato está vacío. Se siembra en Configuración → ARCA → Modalidades de Contrato."
+                      />
+                {errorCodigo('afipModalidadContrato')}
+
+                      {/*
+                       * El grupo va ARRIBA del tipo de servicio porque lo filtra, igual que Convenio →
+                       * Categoría y Domicilio → Actividad. No se guarda: solo recorta la lista.
+                       */}
+                      {/* El MISMO selector que los otros tres. Era el único <select> nativo del bloque, y esa
+                          diferencia de forma sugería que el grupo se guarda como los demás — no se guarda:
+                          solo recorta la lista de abajo. */}
+                      <SelectorCodigoArca
+                        label="Grupo de tipo de servicio"
+                        sufijoLabel="(no va al TXT)"
+                        items={gruposTipoServicio}
+                        cargando={cargandoArca}
+                        value={grupoTipoServicio}
+                        onChange={setGrupoTipoServicio}
+                        formatCodigo={(v) => v}
+                        placeholder="Todos los tipos de servicio"
+                        ayuda={`Hay 49 nombres repetidos entre los ${tiposServicio.length} tipos de servicio (el mismo texto con dos códigos). Elegir el grupo deja a la vista solo los de ese grupo. No viaja en el TXT y no se guarda: solo filtra.`}
+                        vacioHint="El catálogo de Grupos de Tipo de Servicio está vacío. Se siembra en Configuración → ARCA → Grupos de Tipo de Servicio."
+                      />
+                {errorCodigo('grupoTipoServicio')}
+                      {/* El aviso SÍ queda a la vista: no es una explicación, es algo que hay que ir a
+                          arreglar para que el filtro sirva. */}
+                      {!hayGruposCargados && (
+                        <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1 flex items-start gap-1.5">
+                          <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5 mt-1 shrink-0" />
+                          Todavía ningún tipo de servicio tiene grupo cargado, así que el filtro no se aplica. Clasificalos en Configuración → ARCA → Tipos de Servicio.
+                        </p>
+                      )}
+
+                      <SelectorCodigoArca
+                        label="Tipo de servicio"
+                        sufijoLabel={grupoTipoServicio && hayGruposCargados ? `(3 díg. · ${tiposServicioFiltrados.length} del grupo)` : '(3 díg.)'}
+                        items={tiposServicioFiltrados}
+                        cargando={cargandoArca}
+                        value={form.afipTipoServicio}
+                        onChange={(c) => setForm((p) => ({ ...p, afipTipoServicio: c }))}
+                        formatCodigo={pad3}
+                        placeholder="Sin elegir — ej. 000 servicios comunes continuos"
+                        vacioHint="El catálogo de Tipos de Servicio está vacío. Se siembra en Configuración → ARCA → Tipos de Servicio."
+                      />
+                {errorCodigo('afipTipoServicio')}
+
+                      <SelectorCodigoArca
+                        label="Modalidad de liquidación"
+                        sufijoLabel="(1 díg.)"
+                        items={modalidadesLiq}
+                        cargando={cargandoArca}
+                        value={form.afipModalidadLiquidacion}
+                        onChange={(c) => setForm((p) => ({ ...p, afipModalidadLiquidacion: c }))}
+                        formatCodigo={pad1}
+                        placeholder="Sin elegir — ej. 1 por mes"
+                        vacioHint="El catálogo de Modalidades de Liquidación está vacío. Se siembra en Configuración → ARCA → Modalidades de Liquidación."
+                      />
+                {errorCodigo('afipModalidadLiquidacion')}
+                    </div>
+                  </div>
+                        </div>
+                      ) : (
+                        /*
+                          Los códigos NO se borran al cambiar de estado.
+
+                          Borrarlos sería perder trabajo por haber probado otra opción, y volver atrás
+                          obligaría a cargarlos de nuevo. Se conservan, se guardan, y simplemente no
+                          viajan al TXT — que es lo que decide el estado, no la presencia del dato.
+                        */
+                        hayCodigosCargados && (
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1 flex items-start gap-1.5 animate-fadeIn">
+                            <FontAwesomeIcon icon={faCircleInfo} className="h-2.5 w-2.5 mt-1 shrink-0" />
+                            Los códigos ARCA cargados se conservan, pero no se usan con este estado.
+                          </p>
+                        )
                       )}
 
                       <div>

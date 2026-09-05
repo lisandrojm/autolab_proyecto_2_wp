@@ -1155,7 +1155,9 @@ export const ContractBulkAfipTab: React.FC<{
   }, []);
 
   // Las empresas entran al catálogo por su obra social por defecto (ver la cascada en resolveAfipValues).
-  const afipCat = useMemo(() => ({ categorias, tipos, obrasSociales, sedes, empresas: companies, sucursales: arcaSucursales, convenios }), [categorias, tipos, obrasSociales, sedes, companies, arcaSucursales, convenios]);
+  // `estados` entra al catálogo para que el TXT derive el alta temprana del estado del contrato y no
+  // del switch que se eliminó. `allEstados` ya estaba en scope: es la misma lista que arma las bandejas.
+  const afipCat = useMemo(() => ({ categorias, tipos, obrasSociales, sedes, empresas: companies, sucursales: arcaSucursales, convenios, estados: allEstados }), [categorias, tipos, obrasSociales, sedes, companies, arcaSucursales, convenios, allEstados]);
 
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
 
