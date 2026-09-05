@@ -3373,6 +3373,19 @@ export const ProjectTeamPage: React.FC = () => {
                       <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Define qué convenios y categorías se pueden elegir abajo.</p>
                     </div>
 
+                    {/* Las dos empresas juntas: se eligen de la misma lista y se confunden si están separadas. */}
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empresa del Release</label>
+                      <select className="input-field w-full" value={wizardData.empresaReleaseId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaReleaseId: e.target.value }))}>
+                        <option value="">{releaseEmpresas.length ? 'Selecciona empresa...' : 'No hay empresas cargadas'}</option>
+                        {releaseEmpresas.map((emp) => (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
                     {/*
                       CONVENIO — es un FILTRO, no un dato del contrato.
 
@@ -3582,41 +3595,47 @@ export const ProjectTeamPage: React.FC = () => {
                       )}
                     </div>
 
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empresa del Release</label>
-                      <select className="input-field w-full" value={wizardData.empresaReleaseId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaReleaseId: e.target.value }))}>
-                        <option value="">{releaseEmpresas.length ? 'Selecciona empresa...' : 'No hay empresas cargadas'}</option>
-                        {releaseEmpresas.map((emp) => (
-                          <option key={emp.id} value={emp.id}>
-                            {emp.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    {/*
+                      Alta y baja del contrato, juntas: son los dos extremos del mismo período.
 
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Hora inicio - HH:MM</label>
-                      <input type="time" className="input-field w-full" value={wizardData.hora_inicio} onChange={(e) => setWizardData((prev) => ({ ...prev, hora_inicio: e.target.value }))} />
-                      <p className="text-[10px] text-gray-400 ml-1">Horario del contrato de este miembro (independiente de los turnos).</p>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Hora fin - HH:MM</label>
-                      <input type="time" className="input-field w-full" value={wizardData.hora_fin} onChange={(e) => setWizardData((prev) => ({ ...prev, hora_fin: e.target.value }))} />
-                      <p className="text-[10px] text-gray-400 ml-1">Horario del contrato de este miembro (independiente de los turnos).</p>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha alta contrato</label>
-                      <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_alta_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_alta_contrato: e.target.value }))} />
-                    </div>
-
-                    {!(contratos.find((c) => c._id === wizardData.contrato_id)?.data.esTiempoIndeterminado ?? false) && (
+                      Cada par va en su PROPIA fila de dos columnas y no suelto en el grid de arriba:
+                      «Fecha baja» desaparece cuando el tipo de contrato es de tiempo indeterminado, y
+                      con los campos sueltos ese hueco corría a todos los de abajo — las horas quedaban
+                      apareadas con una fecha según qué contrato estuviera elegido.
+                    */}
+                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha alta contrato</label>
+                        <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_alta_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_alta_contrato: e.target.value }))} />
+                      </div>
+                      {!(contratos.find((c) => c._id === wizardData.contrato_id)?.data.esTiempoIndeterminado ?? false) && (
                       <div className="space-y-1.5">
                         <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha baja contrato <span className="text-red-500">*</span></label>
                         <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_baja_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_baja_contrato: e.target.value }))} />
                       </div>
-                    )}
+                      )}
+                    </div>
+
+                    {/*
+                      El horario, junto: son inicio y fin de lo mismo, y separados se leen como dos
+                      datos sin relación. La aclaración va una sola vez, debajo del par.
+                    */}
+                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Hora inicio - HH:MM</label>
+                        <input type="time" className="input-field w-full" value={wizardData.hora_inicio} onChange={(e) => setWizardData((prev) => ({ ...prev, hora_inicio: e.target.value }))} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Hora fin - HH:MM</label>
+                        <input type="time" className="input-field w-full" value={wizardData.hora_fin} onChange={(e) => setWizardData((prev) => ({ ...prev, hora_fin: e.target.value }))} />
+                      </div>
+                      <p className="md:col-span-2 text-[10px] text-gray-400 ml-1 -mt-2">Horario del contrato de este miembro (independiente de los turnos).</p>
+                    </div>
+
+
+
+
+
 
                     {/* --- REEMPLAZO --- va antes del área porque define el área/turno por defecto --- */}
                     <div className="md:col-span-2 space-y-3 pt-6 border-t border-gray-100 dark:border-gray-700">
