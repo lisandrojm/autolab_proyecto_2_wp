@@ -48,3 +48,27 @@ export const estadoImpositivoElegido = (estados: InfoItem[], idsElegidos: string
 
 /** El booleano derivado, para un conjunto de estados elegidos. Es lo que reemplaza al switch. */
 export const generaAltaTempranaARCA = (estados: InfoItem[], idsElegidos: string[]): boolean => estadoGeneraAltaTemprana(estadoImpositivoElegido(estados, idsElegidos));
+
+/**
+ * EL IMPOSITIVO POR DEFECTO: el de alta temprana.
+ *
+ * Todo tipo de contrato declara uno de los dos —si no es un alta temprana, es una locación de
+ * servicios— así que la ausencia no es un estado válido, es un formulario a medio llenar. El default
+ * es el alta porque es el caso que exige códigos y validación: arrancar por el que no pide nada
+ * dejaría pasar sin fricción justo al que sí la necesita.
+ */
+export const impositivoPorDefecto = (estados: InfoItem[]): InfoItem | null =>
+  estados.find((e) => estadoGeneraAltaTemprana(e)) || estados.find((e) => e.data?.esImpositivo) || null;
+
+/**
+ * La selección de estados, garantizando que haya UN impositivo.
+ *
+ * Si ya hay uno, no se toca. Si no hay ninguno, se agrega el de alta temprana. No se elige por la
+ * persona en silencio: la pantalla muestra cuál quedó y por qué (los dos son excluyentes y uno tiene
+ * que estar).
+ */
+export const conImpositivoGarantizado = (estados: InfoItem[], idsElegidos: string[]): string[] => {
+  if (estadoImpositivoElegido(estados, idsElegidos)) return idsElegidos;
+  const porDefecto = impositivoPorDefecto(estados);
+  return porDefecto ? [...idsElegidos, porDefecto._id] : idsElegidos;
+};

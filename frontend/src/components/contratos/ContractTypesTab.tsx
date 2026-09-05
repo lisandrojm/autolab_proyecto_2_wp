@@ -8,7 +8,6 @@ import { InfoModal } from '../ui/InfoModal';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { BloqueEstado } from '../ui/BloqueEstado';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { faEdit, faTrash, faFileContract, faGrip, faTable, faFileInvoiceDollar, faInfinity, faFileSignature, faCircleInfo, faFilePdf, faArrowUpRightFromSquare, faTriangleExclamation, faUserShield } from '@fortawesome/free-solid-svg-icons';
 import { contratosAPI, ContratoItem } from '../../api/contratos';
 import { contratoFrameAPI, ContratoFrameItem } from '../../api/contratosFrame';
@@ -17,7 +16,7 @@ import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatal
 import { SelectorCodigoArca } from '../arca/SelectorCodigoArca';
 import { MODALIDADES_OFRECIDAS } from './afipCompleteness';
 import { EstadoBadge, EstadoSecundarioBadge } from '../EstadoSelect';
-import { estadoImpositivoElegido, estadoGeneraAltaTemprana } from './altaTemprana';
+import { estadoImpositivoElegido, estadoGeneraAltaTemprana, conImpositivoGarantizado } from './altaTemprana';
 
 // Nomencladores de ARCA de los que salen los tres códigos. Se leen enteros (153 / 293 / 8 / 2): son
 // chicos y se cargan una vez al abrir la pestaña.
@@ -56,20 +55,6 @@ interface FormState {
   afipModalidadLiquidacion: string;
   generaAlta: boolean;
 }
-
-type TabContrato = 'general' | 'sistema';
-
-/**
- * El orden de las pestañas, en un solo lugar: lo usan el «Siguiente» y el «Anterior» del alta.
- *
- * Mismo criterio que el formulario de usuario —de donde se copió la mecánica—: en el ALTA se recorre
- * paso a paso y el botón final aparece recién al terminar; en la EDICIÓN se entra a corregir algo
- * puntual y se guarda desde cualquier pestaña.
- */
-const TABS_CONTRATO: { key: TabContrato; label: string; icon: IconDefinition }[] = [
-  { key: 'general', label: 'General', icon: faFileContract },
-  { key: 'sistema', label: 'Sistema', icon: faUserShield },
-];
 
 const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDiario: '', esTiempoIndeterminado: false, requiereFirma: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true };
 
@@ -153,7 +138,8 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showFirmaInfo, setShowFirmaInfo] = useState(false);
-  const [tabModal, setTabModal] = useState<TabContrato>('general');
+  /** Para enfocar el nombre cuando falta: sin pestañas, el error se resuelve en la misma vista. */
+  const nombreRef = React.useRef<HTMLInputElement | null>(null);
   const [showTiempoIndetInfo, setShowTiempoIndetInfo] = useState(false);
   const [editando, setEditando] = useState<ContratoItem | null>(null);
   const [form, setForm] = useState<FormState>(FORM_VACIO);
@@ -395,14 +381,21 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
 
   const abrirCrear = () => {
     setEditando(null);
-    setForm(FORM_VACIO);
+    // Un contrato nuevo arranca declarando alta temprana: es el caso que pide códigos, y arrancar
+    // por el que no pide nada dejaría pasar sin fricción justo al que sí la necesita.
+    setForm({ ...FORM_VACIO, estadoIds: conImpositivoGarantizado(estados, []) });
     setEstadoIdsOriginal([]);
-    setTabModal('general');
     setShowModal(true);
   };
 
-  // Declarado después de `abrirCrear` a propósito: adentro del callback sería una referencia en TDZ.
-  useImperativeHandle(ref, () => ({ abrirCrear }), []);
+  /*
+    Declarado después de `abrirCrear` a propósito: adentro del callback sería una referencia en TDZ.
+
+    Las deps NO pueden quedar vacías: con `[]` el handle congela la versión de `abrirCrear` del primer
+    render, cuando `estados` todavía está vacío — y el estado impositivo por defecto no se
+    preseleccionaría nunca al crear desde el [+] del encabezado.
+  */
+  useImperativeHandle(ref, () => ({ abrirCrear }), [estados]);
 
   const abrirEditar = (contrato: ContratoItem) => {
     const seleccionActual = estadoIdsDe(contrato._id);
@@ -414,14 +407,15 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       esTiempoIndeterminado: !!contrato.data?.esTiempoIndeterminado,
       requiereFirma: contrato.data?.requiereFirma !== false,
       isActive: contrato.isActive !== false,
-      estadoIds: seleccionActual,
+      // Si el contrato no tenía ninguno —quedaron así los de antes de esta regla— se muestra el
+      // default elegido, a la vista y editable, en vez de dejar el formulario a medio llenar.
+      estadoIds: conImpositivoGarantizado(estados, seleccionActual),
       afipModalidadContrato: contrato.data?.afipModalidadContrato || '',
       afipTipoServicio: contrato.data?.afipTipoServicio || '',
       afipModalidadLiquidacion: contrato.data?.afipModalidadLiquidacion || '',
       generaAlta: contrato.data?.generaAlta !== false,
     });
     setEstadoIdsOriginal(seleccionActual);
-    setTabModal('general');
     setShowModal(true);
   };
 
@@ -433,12 +427,21 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
   };
 
   /** Los Estados impositivos son mutuamente excluyentes: tildar uno destilda cualquier otro. */
-  const toggleEstadoImpositivo = (id: string) => {
+  /**
+   * Elegir el estado impositivo. SIEMPRE hay uno: es un radio, no una tilde.
+   *
+   * Antes se podía destildar y quedarse sin ninguno, y eso no es un estado válido del mundo: todo
+   * tipo de contrato declara uno de los dos —si no es un alta temprana, es una locación de
+   * servicios—. Sin ninguno, el TXT no sabía si ese contrato se declara, y la pantalla lo mostraba
+   * igual que a uno recién creado.
+   *
+   * Volver a hacer click en el que ya está elegido no lo apaga: cambiar de trámite es elegir EL OTRO.
+   */
+  const elegirEstadoImpositivo = (id: string) => {
     setForm((prev) => {
-      const yaEstaba = prev.estadoIds.includes(id);
       const impositivoIds = new Set(estados.filter((e) => e.data?.esImpositivo).map((e) => e._id));
       const sinImpositivos = prev.estadoIds.filter((x) => !impositivoIds.has(x));
-      return { ...prev, estadoIds: yaEstaba ? sinImpositivos : [...sinImpositivos, id] };
+      return { ...prev, estadoIds: [...sinImpositivos, id] };
     });
   };
 
@@ -492,20 +495,6 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
     }
   };
 
-  const pasoActual = TABS_CONTRATO.findIndex((t) => t.key === tabModal);
-
-  /**
-   * Avanza de pestaña, pero no deja atrás campos requeridos vacíos: si no, la persona llega a la
-   * última pestaña, aprieta Crear y recién ahí se entera de que el error está dos pasos atrás.
-   * Hoy el único requerido es el nombre, en General.
-   */
-  const avanzar = () => {
-    if (tabModal === 'general' && !form.name.trim()) {
-      sweetAlert.error('Falta el nombre', 'El contrato necesita un nombre.');
-      return;
-    }
-    setTabModal(TABS_CONTRATO[pasoActual + 1].key);
-  };
 
   const guardar = async () => {
     setIntentoGuardar(true);
@@ -516,15 +505,14 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       ningún lado. Bloquear ahí sería exigir datos para un trámite que no se va a hacer.
     */
     if (codigosFaltantes.length > 0) {
-      setTabModal('sistema');
       // Llevar a la pestaña no alcanza: el bloque puede estar fuera de la vista dentro de su scroll.
       setTimeout(() => bloqueArcaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
       return;
     }
     const name = form.name.trim();
     if (!name) {
-      // Se llega acá desde la última pestaña, así que el aviso tiene que devolver a la primera.
-      setTabModal('general');
+      // El campo está en la misma vista: alcanza con el aviso y con el foco.
+      nombreRef.current?.focus();
       sweetAlert.error('Falta el nombre', 'El contrato necesita un nombre.');
       return;
     }
@@ -812,20 +800,9 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
         size="lg"
         footer={
           <div className="flex items-center justify-end gap-3 w-full">
-            {/* «Anterior» no valida nada: se está saliendo del paso, no avanzando. */}
-            {pasoActual > 0 && (
-              <button onClick={() => setTabModal(TABS_CONTRATO[pasoActual - 1].key)} className="btn-secondary mr-auto" disabled={saving}>
-                Anterior
-              </button>
-            )}
             <button onClick={() => setShowModal(false)} className="btn-secondary" disabled={saving}>
               Cancelar
             </button>
-            {pasoActual < TABS_CONTRATO.length - 1 ? (
-              <button onClick={avanzar} className="btn-primary" disabled={saving}>
-                Siguiente
-              </button>
-            ) : (
               <button
                 onClick={guardar}
                 className="btn-primary"
@@ -835,45 +812,27 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
               >
                 {saving ? 'Guardando...' : editando ? 'Actualizar' : 'Crear'}
               </button>
-            )}
           </div>
         }
       >
         {/*
-          Alto fijo y scroll adentro: las tres pestañas tienen contenidos de largos muy distintos
-          (ARCA es tres veces General), y sin esto el modal salta de tamaño en cada click y los
-          botones del pie se mueven bajo el cursor.
+          Alto fijo y scroll adentro, aunque ya no haya pestañas.
+
+          El formulario cambia de largo con lo que se elige —el bloque de códigos ARCA aparece y
+          desaparece según el estado impositivo—, y sin alto fijo el modal saltaría de tamaño y los
+          botones del pie se moverían bajo el cursor.
         */}
         <div className="flex flex-col h-[min(560px,calc(100svh-16rem))]">
-          {/* Las pestañas, con el mismo aspecto que el formulario de usuario. */}
-          <div className="flex border-b border-gray-200 dark:border-gray-700 -mx-6 px-6 shrink-0">
-            {TABS_CONTRATO.map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setTabModal(t.key)}
-                className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${tabModal === t.key ? 'border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
-              >
-                <FontAwesomeIcon icon={t.icon} className="text-xs" />
-                {t.label}
-                {/*
-                  El punto rojo en la pestaña que tiene el problema.
-
-                  Sin esto, alguien parado en General ve el botón deshabilitado y no tiene forma de
-                  saber que lo que falta está en la otra pestaña.
-                */}
-                {t.key === 'sistema' && codigosFaltantes.length > 0 && (
-                  <span title={`Faltan ${codigosFaltantes.length} código(s) de ARCA`} className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
-                )}
-              </button>
-            ))}
-          </div>
 
           <div className="flex-1 overflow-y-auto pt-5 pr-1">
-          {tabModal === 'general' && <div className="space-y-5 animate-fadeIn">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1 mb-4 flex items-center gap-2">
+            <FontAwesomeIcon icon={faFileContract} className="h-3 w-3" />
+            General
+          </p>
+          <div className="space-y-5">
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Nombre *</label>
-              <input className="input-field w-full" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Ej: Plazo fijo 5x7" />
+              <input ref={nombreRef} className="input-field w-full" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Ej: Plazo fijo 5x7" />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -908,10 +867,23 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
             </div>
 
             {/* Códigos ARCA para el TXT de Alta masiva: específicos del convenio/modalidad de este tipo de contrato. */}
-          </div>}
+          </div>
 
 
-          {tabModal === 'sistema' && <div className="space-y-5 animate-fadeIn">
+          {/*
+            UN SOLO FORMULARIO, sin pestañas.
+
+            Eran dos pasos para seis campos: obligaban a un click extra para ver la mitad del
+            contenido, y a volver atrás para corregir. El separador y el título de sección alcanzan
+            para que no se lea como una lista corrida.
+          */}
+          <div className="pt-5 mt-5 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1 mb-4 flex items-center gap-2">
+              <FontAwesomeIcon icon={faUserShield} className="h-3 w-3" />
+              Sistema
+            </p>
+          </div>
+          <div className="space-y-5">
             {(() => {
               const misPlantillas = editando ? plantillasDe(editando._id) : [];
               return (
@@ -968,14 +940,17 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                         <div className="space-y-1.5">
                           <p className="text-[11px] font-semibold text-purple-700 dark:text-purple-300 ml-1 flex items-center gap-1.5">
                             <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" />
-                            Estados impositivos — elegí uno solo
+                            Estados impositivos — uno de los dos, siempre
+                          </p>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
+                            Todo tipo de contrato declara uno: si no es un alta temprana ante ARCA, es una locación de servicios.
                           </p>
                           <div className="rounded-lg border border-purple-200 dark:border-purple-800/60 divide-y divide-purple-100 dark:divide-purple-800/40 overflow-hidden">
                             {estadosImpositivos.map((estado) => {
                               const checked = form.estadoIds.includes(estado._id);
                               return (
                                 <label key={estado._id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/10 transition-colors">
-                                  <input type="checkbox" checked={checked} onChange={() => toggleEstadoImpositivo(estado._id)} className="rounded-full border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer" />
+                                  <input type="radio" name="estado-impositivo" checked={checked} onChange={() => elegirEstadoImpositivo(estado._id)} className="rounded-full border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer" />
                                   <EstadoBadge name={estado.name} className="text-[10px]" />
                                   <EstadoSecundarioBadge estado={estado} className="text-[10px]" />
                                 </label>
@@ -1155,7 +1130,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
 
             {/* El mismo bloque que Proyecto y Usuario, y al final: ver `components/ui/BloqueEstado`. */}
             <BloqueEstado activo={form.isActive} onChange={(activo) => setForm((p) => ({ ...p, isActive: activo }))} />
-          </div>}
+          </div>
           </div>
         </div>
       </Modal>
