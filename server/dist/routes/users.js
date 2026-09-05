@@ -1499,6 +1499,10 @@ router.put("/:id/approve-solicitud", requireTenant, authenticateToken, requirePe
                 fecha_baja_contrato: meta?.dueDate || "",
                 tipo_contrato_id: 0,
                 cantidad_jornadas_laborales: meta?.workdaysCount || 0,
+                // Los días viajan de la solicitud al contrato: si no, aprobarla perdería lo que la persona
+                // acaba de cargar y el contrato quedaría con las jornadas pero sin saber cuáles.
+                dias_semana: meta?.diasSemana || [],
+                dias_rotativos: !!meta?.diasRotativos,
                 sueldo_jornada,
                 sueldo_mano,
                 sueldo_mano_texto: `$${sueldo_mano}`,

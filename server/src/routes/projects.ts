@@ -28,6 +28,48 @@ import { Company } from "../models/Company.js";
 import { ObraSocial } from "../models/ObraSocial.js";
 import { ArcaSucursal } from "../models/ArcaSucursal.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
+
+/**
+ * El filtro del buscador de proyectos: por NOMBRE o por CENTRO DE COSTO, en el mismo campo.
+ *
+ * El centro de costo se identifica por un número («720») y es lo que la gente tiene a mano cuando
+ * busca un proyecto — pero vive en otra colección, así que hay que resolverlo primero: se buscan
+ * los centros cuyo nombre matchee y después los proyectos que apunten a alguno de ellos.
+ *
+ * Se agrega el número CRUDO como id además del nombre: `metadata.centroCostoId` guarda el id del
+ * catálogo, y en algunos casos ese id ES el número que la gente escribe. Buscar por las dos vías
+ * cuesta una query y evita que «no aparece» dependa de cuál de los dos números conozca quien busca.
+ */
+async function filtroBusquedaProyecto(q: string): Promise<Record<string, unknown>> {
+  const regex = { $regex: createFuzzySearchRegex(String(q)), $options: "i" };
+  const centros = await CentroCosto.find({ $or: [{ name: regex }, { "data.nombre": regex }] })
+    .select("data.id")
+    .lean();
+  const ids = (centros as any[]).map((c) => c?.data?.id).filter((n) => typeof n === "number");
+
+  const comoNumero = Number(String(q).trim());
+  if (Number.isFinite(comoNumero) && !ids.includes(comoNumero)) ids.push(comoNumero);
+
+  const o: Record<string, unknown>[] = [{ name: regex }];
+  if (ids.length > 0) o.push({ "metadata.centroCostoId": { $in: ids } });
+  return { $or: o };
+}
+
+/**
+ * Suma una condición al filtro sin pisar un `$or` que ya esté puesto.
+ *
+ * El listado por cliente YA usa `$or` para matchear por `clientId` o por `metadata.clienteId`.
+ * Asignarle otro `$or` encima lo reemplazaría en silencio y el listado pasaría a devolver los
+ * proyectos de todos los clientes.
+ */
+function sumarAlFiltro(filter: any, condicion: Record<string, unknown>): void {
+  if (filter.$or) {
+    filter.$and = [...(filter.$and || []), { $or: filter.$or }, condicion];
+    delete filter.$or;
+    return;
+  }
+  Object.assign(filter, condicion);
+}
 import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
 import { esContratoVigente, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
 
@@ -221,7 +263,7 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
     };
 
     if (q) {
-      filter.name = { $regex: createFuzzySearchRegex(String(q)), $options: "i" };
+      sumarAlFiltro(filter, await filtroBusquedaProyecto(String(q)));
     }
 
     const userRoles = (req.user?.roles || []).map((r) => r.toString().toLowerCase());
@@ -582,7 +624,7 @@ router.get(
       }
 
       if (q) {
-        filter.name = { $regex: createFuzzySearchRegex(String(q)), $options: "i" };
+        sumarAlFiltro(filter, await filtroBusquedaProyecto(String(q)));
       }
 
       const userRoles = (req.user?.roles || []).map((r) => r.toString().toLowerCase());

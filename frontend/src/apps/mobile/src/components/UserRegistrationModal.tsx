@@ -3,6 +3,7 @@ import { Modal } from "./Modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faTimes, faBriefcase, faClock, faMoneyBillWave, faExchangeAlt, faArrowRight, faSearch, faFilter } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI } from "../../../../api/users";
+import { DiasDeTrabajo } from "../../../../components/contratos/DiasDeTrabajo";
 import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -42,6 +43,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     startDate: "",
     dueDate: "",
     workdaysCount: "",
+    diasSemana: [] as number[],
+    diasRotativos: false,
     inTime: "",
     outTime: "",
     dailyRate: "",
@@ -102,6 +105,10 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         startDate: meta.startDate || editingUser.hireDate?.split("T")[0] || "",
         dueDate: meta.dueDate || "",
         workdaysCount: meta.workdaysCount?.toString() || "",
+        // Las solicitudes anteriores a este campo no traen días: se abren vacías y hay que
+        // elegirlos, en vez de inventar una semana que nadie declaró.
+        diasSemana: Array.isArray((meta as any).diasSemana) ? ((meta as any).diasSemana as number[]) : [],
+        diasRotativos: !!(meta as any).diasRotativos,
         inTime: inTime || "",
         outTime: outTime || "",
         dailyRate: meta.dailyRate?.toString() || "",
@@ -116,6 +123,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         startDate: "",
         dueDate: "",
         workdaysCount: "",
+        diasSemana: [],
+        diasRotativos: false,
         inTime: "",
         outTime: "",
         dailyRate: "",
@@ -170,6 +179,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           startDate: formData.startDate,
           dueDate: formData.dueDate,
           workdaysCount: Number(formData.workdaysCount),
+          diasSemana: formData.diasSemana,
+          diasRotativos: formData.diasRotativos,
           schedule: `${formData.inTime} - ${formData.outTime}`,
           dailyRate: Number(formData.dailyRate),
           isReplacement: formData.isReplacement,
@@ -194,6 +205,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         startDate: "",
         dueDate: "",
         workdaysCount: "",
+        diasSemana: [],
+        diasRotativos: false,
         inTime: "",
         outTime: "",
         dailyRate: "",
@@ -521,9 +534,22 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Cantidad de Jornadas</label>
-            <input type="number" name="workdaysCount" value={formData.workdaysCount} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium" placeholder="Ej: 5" />
+          {/*
+            Los días de la semana. EL MISMO componente que «Agregar miembro» del escritorio.
+
+            Antes acá había un número suelto —«Cantidad de Jornadas»— que no decía QUÉ días, así que
+            «trabaja 3» no distinguía entre tres días fijos y tres rotando entre seis.
+          */}
+          <div className="md:col-span-3">
+            <DiasDeTrabajo
+              variante="mobile"
+              jornadas={Number(formData.workdaysCount) || 0}
+              onJornadas={(n) => setFormData((p) => ({ ...p, workdaysCount: n ? String(n) : "" }))}
+              rotativos={formData.diasRotativos}
+              onRotativos={(v) => setFormData((p) => ({ ...p, diasRotativos: v }))}
+              dias={formData.diasSemana}
+              onDias={(d) => setFormData((p) => ({ ...p, diasSemana: d }))}
+            />
           </div>
           <div className="space-y-1 md:col-span-2">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">

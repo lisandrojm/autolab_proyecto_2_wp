@@ -8,6 +8,15 @@ interface IContract {
     fecha_baja_contrato: string;
     tipo_contrato_id: number;
     cantidad_jornadas_laborales: number;
+    /**
+     * Los días de la semana del contrato (0 = domingo … 6 = sábado).
+     *
+     * Qué significan depende de `dias_rotativos`: con esquema FIJO son los días que trabaja; con
+     * ROTATIVO son los días ENTRE los que rota, y pueden ser más que las jornadas. Sin el flag,
+     * «trabaja 3 días rotando entre 6» se leería como «trabaja 6 días».
+     */
+    dias_semana?: number[];
+    dias_rotativos?: boolean;
     sueldo_jornada: number;
     sueldo_mano: number;
     sueldo_mano_texto: string;

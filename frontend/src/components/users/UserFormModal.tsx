@@ -239,6 +239,11 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
 
   // Estado del formulario
   const [formData, setFormData] = useState<UserFormData>(emptyForm());
+  /** Un CBU argentino tiene exactamente 22 dígitos. */
+  const CBU_DIGITOS = 22;
+  /** Se queda con los dígitos: el CBU no lleva puntos, guiones ni espacios. */
+  const soloDigitos = (v: string) => String(v || '').replace(/[^0-9]/g, '');
+
   const [modalActiveTab, setModalActiveTab] = useState<ModalTab>('general');
   /** Solo para extranjeros: si declaró tener CUIL. Los argentinos siempre lo llevan. */
   const [tieneCuil, setTieneCuil] = useState(true);
@@ -433,10 +438,28 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   }, [isOpen, user, mode, catalogsLoaded]);
 
   // ─────────── Submit ───────────
+  /**
+   * Un CBU argentino tiene 22 dígitos. Los CVU también, pero acá el campo es el CBU: llamarlo
+   * «CBU / CVU» daba a entender que acepta dos cosas distintas cuando el formato es uno solo.
+   */
+  const cbuIncompleto = !!formData.cbu && formData.cbu.length > 0 && formData.cbu.length < CBU_DIGITOS;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // El CUIT/CUIL se valida con el algoritmo de ARCA (módulo 11), no solo por largo: un número mal
     // tipeado se detecta acá y no viaja a la base ni al TXT de ARCA.
+    /*
+      Un CBU a medias no se guarda.
+
+      Vacío SÍ: no todo el mundo tiene los datos bancarios cargados, y exigirlo bloquearía editar
+      cualquier otra cosa de la ficha. Lo que no puede pasar es guardar 12 dígitos y que después
+      una transferencia falle contra un número que nunca fue un CBU.
+    */
+    if (cbuIncompleto) {
+      sweetAlert.error('CBU incompleto', `Un CBU tiene ${CBU_DIGITOS} dígitos y cargaste ${(formData.cbu || '').length}. Completalo o dejalo vacío.`);
+      setModalActiveTab('bancarios');
+      return;
+    }
     if (cuilVisible && formData.cuit && !isValidCuit(formData.cuit)) {
       sweetAlert.error('CUIT/CUIL inválido', 'El CUIT/CUIL no es válido. Revisá los 11 dígitos.');
       setModalActiveTab('general');
@@ -1208,8 +1231,33 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">CBU / CVU</label>
-                    <input type="text" value={formData.cbu || ''} onChange={(e) => setFormData((prev) => ({ ...prev, cbu: e.target.value }))} className="input-field" placeholder="22 dígitos" minLength={22} maxLength={22} />
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">CBU</label>
+                    {/*
+                      SOLO DÍGITOS, Y EXACTAMENTE 22.
+
+                      Era un campo de texto libre con `minLength`/`maxLength`: `maxLength` frena el
+                      largo pero no el contenido —entraba cualquier cosa tipeada— y `minLength` solo
+                      actúa en una validación nativa de formulario que este modal no dispara, así que
+                      un CBU de 12 caracteres se guardaba igual.
+
+                      Se filtra al escribir en vez de avisar después: un CBU con letras no es un CBU
+                      mal cargado, es otra cosa, y no hay motivo para dejar que llegue al campo.
+                    */}
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={formData.cbu || ''}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, cbu: soloDigitos(e.target.value).slice(0, CBU_DIGITOS) }))}
+                      className="input-field"
+                      placeholder={`${CBU_DIGITOS} dígitos`}
+                    />
+                    {/* El contador y el aviso, mientras está incompleto: el largo es la única regla */}
+                    {/* que hay que cumplir y verla evita contar dígitos a mano. */}
+                    {cbuIncompleto && (
+                      <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-1">
+                        Faltan {CBU_DIGITOS - (formData.cbu || '').length} dígito(s): un CBU tiene {CBU_DIGITOS}.
+                      </p>
+                    )}
                   </div>
                 </div>
 

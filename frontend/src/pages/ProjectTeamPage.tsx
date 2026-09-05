@@ -22,6 +22,7 @@ import { vacationsAPI, VacationRequest } from '../api/vacations';
 import { TeamSolicitudesTab } from '../components/team/TeamSolicitudesTab';
 import { TeamCoordinadoresTab } from '../components/team/TeamCoordinadoresTab';
 import { EmployeeContractsModal } from '../components/team/EmployeeContractsModal';
+import { DiasDeTrabajo } from '../components/contratos/DiasDeTrabajo';
 import { EstadoSelect, EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../components/EstadoSelect';
 import { estadoImpositivoDelContrato } from '../components/team/ContractCard';
 import { esContratoVigente, getContratoActivo } from '../utils/contratoVigencia';
@@ -333,6 +334,12 @@ export const ProjectTeamPage: React.FC = () => {
     hora_fin: '18:00',
     fecha_alta_contrato: new Date().toISOString().split('T')[0],
     fecha_baja_contrato: '',
+    /*
+      Los días del contrato. `cantidad_jornadas_laborales` ya existía —la usa el cálculo del
+      sueldo— pero no se editaba en ninguna parte del escritorio: se guardaba siempre 5.
+    */
+    dias_semana: [] as number[],
+    dias_rotativos: false,
     // Step 2: Sueldo
     cantidad_jornadas_laborales: 5,
     sueldo_jornada: 0,
@@ -1630,6 +1637,10 @@ export const ProjectTeamPage: React.FC = () => {
       fecha_alta_contrato: formatDate(lastContract?.fecha_alta_contrato) || formatDate(new Date()),
       fecha_baja_contrato: formatDate(lastContract?.fecha_baja_contrato),
       cantidad_jornadas_laborales: lastContract?.cantidad_jornadas_laborales || 5,
+      // Los contratos anteriores a este campo no traen días: se abren vacíos y hay que elegirlos,
+      // en vez de inventar una semana que nadie declaró.
+      dias_semana: Array.isArray((lastContract as any)?.dias_semana) ? ((lastContract as any).dias_semana as number[]) : [],
+      dias_rotativos: !!(lastContract as any)?.dias_rotativos,
       sueldo_jornada: lastContract?.sueldo_jornada || 0,
       sueldo_mano: lastContract?.sueldo_mano || 0,
       sueldo_mano_texto: lastContract?.sueldo_mano_texto || '',
@@ -1737,6 +1748,8 @@ export const ProjectTeamPage: React.FC = () => {
           nombre_rol_frame: rfSel?.name || '',
           rol_frame_id: Number(wizardData.rol_frame_id),
           empleado_id_reemplezado: wizardData.empleado_id_reemplezado ? Number(wizardData.empleado_id_reemplezado) : null,
+          dias_semana: wizardData.dias_semana,
+          dias_rotativos: wizardData.dias_rotativos,
           // Enviar null (no "") para que Mongoose no falle al castear a ObjectId cuando no se elige empresa.
           empresaContratoId: wizardData.empresaContratoId || null,
           empresaReleaseId: wizardData.empresaReleaseId || null,
@@ -3630,6 +3643,24 @@ export const ProjectTeamPage: React.FC = () => {
                         <input type="time" className="input-field w-full" value={wizardData.hora_fin} onChange={(e) => setWizardData((prev) => ({ ...prev, hora_fin: e.target.value }))} />
                       </div>
                       <p className="md:col-span-2 text-[10px] text-gray-400 ml-1 -mt-2">Horario del contrato de este miembro (independiente de los turnos).</p>
+                    </div>
+
+                    {/*
+                      Los días de la semana. EL MISMO componente que la Solicitud de Alta de mobile.
+
+                      Va debajo del horario porque es la otra mitad del mismo dato: el horario dice a
+                      qué hora, esto dice qué días. Estaban separados —uno acá y el otro solo en
+                      mobile— y el escritorio guardaba 5 jornadas fijas sin que nadie lo eligiera.
+                    */}
+                    <div className="md:col-span-2">
+                      <DiasDeTrabajo
+                        jornadas={wizardData.cantidad_jornadas_laborales}
+                        onJornadas={(n) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: n }))}
+                        rotativos={wizardData.dias_rotativos}
+                        onRotativos={(v) => setWizardData((prev) => ({ ...prev, dias_rotativos: v }))}
+                        dias={wizardData.dias_semana}
+                        onDias={(d) => setWizardData((prev) => ({ ...prev, dias_semana: d }))}
+                      />
                     </div>
 
 
