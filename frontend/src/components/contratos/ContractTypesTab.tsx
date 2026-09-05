@@ -463,12 +463,27 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
         misPlantillas.forEach((id) => nuevosIds.delete(id));
       }
       try {
+        /*
+          SE REENVÍA EL ESTADO COMPLETO, cambiando SOLO `contratoFrameIds`.
+
+          Antes se armaba a mano una lista corta de campos y faltaba `tipoImpositivo`. El PATCH valida
+          que todo estado impositivo declare su trámite, así que devolvía 400 y NINGÚN estado
+          impositivo se podía vincular desde acá — los no impositivos sí, porque no pasan por esa
+          validación. El síntoma era exactamente «no se guardan los estados impositivos».
+
+          Cherry-pickear campos obliga a acordarse de cada requisito que el backend agregue. Copiar lo
+          que el estado YA tiene y tocar solo lo que se está cambiando no tiene esa deuda.
+        */
         await infoAPI.updateEstado(estado._id, {
           name: estado.name,
           color: estado.data?.color,
           esImpositivo: estado.data?.esImpositivo,
           etiquetaSecundaria: estado.data?.etiquetaSecundaria,
           colorEtiquetaSecundaria: estado.data?.colorEtiquetaSecundaria,
+          tipoImpositivo: estado.data?.tipoImpositivo,
+          aceptaSinCuit: estado.data?.aceptaSinCuit,
+          // `transicionAutomatica` NO se manda: omitirla es lo que le dice al backend que la preserve.
+          // Mandarla reconstruida desde acá arriesgaría pisar las carpetas vigiladas del estado.
           contratoFrameIds: Array.from(nuevosIds),
         });
       } catch (e: any) {
@@ -485,6 +500,14 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
    * Hoy el único requerido es el nombre, en General.
    */
   const avanzar = () => {
+    if (tabModal === 'general' && !form.name.trim()) {
+      sweetAlert.error('Falta el nombre', 'El contrato necesita un nombre.');
+      return;
+    }
+    setTabModal(TABS_CONTRATO[pasoActual + 1].key);
+  };
+
+  const guardar = async () => {
     setIntentoGuardar(true);
     /*
       Los códigos bloquean SOLO cuando el estado los exige.
@@ -498,14 +521,6 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       setTimeout(() => bloqueArcaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
       return;
     }
-    if (tabModal === 'general' && !form.name.trim()) {
-      sweetAlert.error('Falta el nombre', 'El contrato necesita un nombre.');
-      return;
-    }
-    setTabModal(TABS_CONTRATO[pasoActual + 1].key);
-  };
-
-  const guardar = async () => {
     const name = form.name.trim();
     if (!name) {
       // Se llega acá desde la última pestaña, así que el aviso tiene que devolver a la primera.
