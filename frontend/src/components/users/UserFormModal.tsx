@@ -178,6 +178,14 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   */
   const [consultandoPadron, setConsultandoPadron] = useState(false);
   const [validadoEnArca, setValidadoEnArca] = useState(false);
+  /**
+   * Se consulto el padron y contesto que el CUIT esta INACTIVO.
+   *
+   * Es distinto de validado —no hay sello, ARCA no devolvio ningun dato— y distinto de no haber
+   * consultado: se consulto, contesto, y lo que contesto no frena el alta. Sin este tercer estado,
+   * el unico camino era bloquear para siempre o dar por validado algo que nadie confirmo.
+   */
+  const [inactivoEnArca, setInactivoEnArca] = useState(false);
 
   const traerDeArca = async () => {
     const cuit = String(formData.cuit || '').replace(/\D/g, '');
@@ -199,11 +207,35 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         sweetAlert.error('CUIT ya registrado', `Ese CUIT ya figura a nombre de ${r.yaExiste.nombre}${r.yaExiste.email ? ` (${r.yaExiste.email})` : ''}.\n\nBuscá esa ficha en el listado, o revisá el número si esperabas otra persona.`);
         return;
       }
+      const tipoDni = tiposDocumentoDisponibles.find((it: any) => /dni/i.test(it.name));
+      /*
+        CUIT INACTIVO: se avisa y se sigue. No es un CUIT equivocado.
+
+        ARCA contesta el inactivo con un fault que NO trae nombre, apellido ni documento, así que no
+        hay nada que traer y el alta no queda sellada. Lo que no corresponde es frenarla: la persona
+        existe y puede tener que firmar igual; que su CUIT esté dado de baja es un trámite suyo ante
+        el organismo, no algo que se arregle en esta pantalla.
+
+        Se completa SOLO el documento, y no porque lo haya dicho ARCA: son los ocho dígitos del medio
+        del propio CUIT. El nombre y el apellido los carga quien está dando el alta.
+      */
+      if (r.estado === 'inactivo') {
+        setInactivoEnArca(true);
+        setFormData((prev) => ({
+          ...prev,
+          documento: r.documento || prev.documento,
+          tipoDocumentoId: tipoDni ? tipoDni.data.id : prev.tipoDocumentoId,
+        }));
+        sweetAlert.warningAlert(
+          'El CUIT existe, pero figura INACTIVO en ARCA',
+          'El número está bien: lo que pasa es que ese CUIT está dado de baja en el organismo.\n\nEl alta se puede hacer igual, pero ARCA no devuelve nombre ni apellido de un CUIT inactivo: cargalos a mano. La ficha queda SIN el sello de validado, y se puede validar más adelante desde la columna ARCA de Usuarios si la persona regulariza su situación.',
+        );
+        return;
+      }
       if (!r.nombre || !r.apellido) {
         sweetAlert.warningAlert('Es una persona jurídica', `ARCA devolvió «${r.denominacion}». Este formulario es para personas: no hay nombre y apellido para separar.`);
         return;
       }
-      const tipoDni = tiposDocumentoDisponibles.find((it: any) => /dni/i.test(it.name));
       setFormData((prev) => ({
         ...prev,
         firstName: r.nombre,
@@ -320,6 +352,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
         podía cargar a nadie hasta recargar la página.
       */
       setValidadoEnArca(false);
+      setInactivoEnArca(false);
       setConsultandoPadron(false);
       return;
     }
@@ -662,7 +695,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
     Solo aplica al ALTA y solo si la persona declara tener CUIT/CUIL: quien va por el circuito «Sin
     CUIT» no tiene nada que validar, y una ficha ya creada se corrige desde la columna ARCA de Usuarios.
   */
-  const bloqueadoHastaValidar = !user && cuilVisible && !validadoEnArca;
+  const bloqueadoHastaValidar = !user && cuilVisible && !validadoEnArca && !inactivoEnArca;
 
   /*
     LO QUE VINO DE ARCA NO SE EDITA.
@@ -747,6 +780,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   const limpiarDatosDeArca = () => {
     // El sello cae siempre: dejó de corresponder al CUIT que tiene el formulario.
     setValidadoEnArca(false);
+    setInactivoEnArca(false);
     // Vaciar los campos, solo en el alta. Editando a alguien existente sería borrarle datos guardados
     // por tocar un select; lo que hace falta ahí es destrabarlos para poder corregirlos.
     if (user) return;
@@ -960,6 +994,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                             setFormData((prev) => ({ ...prev, cuit: v }));
                             // Tocar el CUIT invalida lo traído: si no, se valida uno y se guarda otro.
                             setValidadoEnArca(false);
+                            setInactivoEnArca(false);
                           }}
                           className={`input-field ${cuilVisible ? '' : 'opacity-50 cursor-not-allowed'}`}
                           placeholder="XX-XXXXXXXX-X"

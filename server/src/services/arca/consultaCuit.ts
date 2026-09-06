@@ -49,6 +49,35 @@ export async function consultarCuitEnArca(tenantId: any, cuitCrudo: string): Pro
   if (!cfg) throw new ErrorConsultaCuit(400, "ARCA no está conectado para esta organización.");
 
   const r = await consultarPadron(String(tenantId), cfg, cuit);
+
+  /*
+    EL CUIT INACTIVO NO ES UN ERROR: SE INFORMA Y SE SIGUE.
+
+    Es el mismo criterio con el que se validan las obras sociales —«las filas que no pasan NO frenan a
+    las demás: se informan y se sigue»—, y es el que corresponde acá. Un CUIT dado de baja es de una
+    persona que EXISTE: puede tener que firmar un contrato igual, y regularizar su situación ante el
+    organismo no es algo que se resuelva desde esta pantalla. Tratarlo como «no existe» dejaba el alta
+    imposible, y con un mensaje que mandaba a corregir un número que estaba bien.
+
+    Lo que sigue siendo un error es el CUIT INEXISTENTE: ahí no hay nadie a quien dar de alta.
+
+    NO SE INVENTA EL NOMBRE. El fault de ARCA no trae nombre, apellido ni denominación, así que salen
+    vacíos y los carga una persona. Lo único que se completa es el DOCUMENTO, y no porque lo haya
+    dicho el organismo: son los ocho dígitos del medio del propio CUIT, una cuenta que se puede hacer
+    sin consultar nada. El `estado` viaja para que quien consume sepa que este dato no lleva sello.
+  */
+  if (r.estado === "inactivo") {
+    return {
+      cuit,
+      nombre: "",
+      apellido: "",
+      denominacion: "",
+      estado: "inactivo",
+      tipoPersona: undefined,
+      documento: PREFIJOS_PERSONA_FISICA.includes(cuit.slice(0, 2)) ? String(Number(cuit.slice(2, 10))) : "",
+    };
+  }
+
   if (!r.encontrado) throw new ErrorConsultaCuit(404, r.faultString || "ARCA no devolvió datos para este CUIT.");
 
   return {

@@ -221,6 +221,25 @@ async function obtenerTicket(tenantId, cfg, service) {
     ticketCache.set(cacheKey, ticket);
     return ticket;
 }
+/**
+ * ¿ESTE FAULT DICE «INACTIVO» O DICE «NO EXISTE»? La diferencia decide si se puede dar un alta.
+ *
+ * El A13 no devuelve `persona` con `estadoClave: INACTIVO`: cuando el CUIT está dado de baja contesta
+ * un SOAP Fault, igual que cuando el CUIT no existe. Son los dos únicos faults que aparecen en el log
+ * de producción, seis veces cada uno sobre 273 consultas:
+ *
+ *     «La Clave (CUIT/CUIL) consultada es inexistente»           → no hay nadie
+ *     «La clave (CUIT/CUIL) consultada se encuentra INACTIVA»    → hay alguien, está de baja
+ *
+ * Tratarlos igual hacía imposible dar de alta a una persona con el CUIT inactivo, y el mensaje le
+ * pedía corregir un número que estaba bien.
+ *
+ * Se matchea por «inactiv» y no por la frase completa: el organismo cambia mayúsculas y redacción sin
+ * avisar, y ningún otro fault de este servicio contiene esa raíz. Si algún día aparece uno que la
+ * contenga y signifique otra cosa, el peor resultado es dejar pasar un alta sin sello — que es
+ * exactamente lo que ya pasa hoy con cualquier CUIT que no se valida.
+ */
+export const faultEsCuitInactivo = (faultString) => /inactiv/i.test(String(faultString || ""));
 /** Lee faultcode/faultstring reales de un SOAP Fault ya parseado (buscar() ya ignora prefijos ns). */
 function extraerFault(fault) {
     const faultCode = buscar(fault, "faultcode");
@@ -271,7 +290,27 @@ export async function consultarPadron(tenantId, cfg, cuitConsultado, opts) {
             // faultCode/faultString sin parsear un mensaje de Error. Errores de transporte/parseo reales
             // siguen tirando excepción (catch de abajo) sin cambios.
             const { faultCode, faultString } = extraerFault(fault);
-            resultado = { cuit, encontrado: false, estado: "desconocido", faultCode, faultString, raw: fault };
+            /*
+              UN CUIT INACTIVO LLEGA COMO FAULT, NO COMO PERSONA. Y no es lo mismo que uno inexistente.
+      
+              El A13 contesta con dos faults distintos, y hasta acá los dos caían en "desconocido":
+      
+                «La Clave (CUIT/CUIL) consultada es inexistente»              → ese CUIT no existe
+                «La clave (CUIT/CUIL) consultada se encuentra INACTIVA»       → existe, está dado de baja
+      
+              En el log de producción están los dos, seis veces cada uno sobre 273 consultas. Mezclarlos
+              hacía que dar de alta a alguien con el CUIT inactivo fuera imposible: el alta pedía validar,
+              la validación devolvía 404 y el mensaje decía «revisá el número», que es un consejo inútil
+              cuando el número está bien.
+      
+              La rama de abajo que lee `estadoClave === "INACTIVO"` NUNCA se ejecuta para este servicio —cero
+              registros en el log—: cuando el CUIT está inactivo no viene `persona`, viene este fault. Se deja
+              porque describe el contrato del webservice, pero el caso real se resuelve acá.
+      
+              `encontrado` sigue en false y es correcto: el fault NO trae nombre, apellido ni documento. Lo
+              que cambia es que ahora se sabe POR QUÉ, y quien consume decide si eso frena algo.
+            */
+            resultado = { cuit, encontrado: false, estado: faultEsCuitInactivo(faultString) ? "inactivo" : "desconocido", faultCode, faultString, raw: fault };
         }
         else {
             const getPersonaResponse = buscar(body, "getPersonaResponse");

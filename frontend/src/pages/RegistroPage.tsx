@@ -422,6 +422,8 @@ export const RegistroPage: React.FC = () => {
   const [rolEmpresaBusqueda, setRolEmpresaBusqueda] = useState('');
   const [rolesEmpresaOpen, setRolesEmpresaOpen] = useState(false);
   const [validadoEnArca, setValidadoEnArca] = useState(false);
+  /** Se consulto el padron y contesto INACTIVO: no hay sello, pero tampoco se frena el registro. */
+  const [inactivoEnArca, setInactivoEnArca] = useState(false);
   const [consultandoPadron, setConsultandoPadron] = useState(false);
 
   const validarCuitEnArca = async () => {
@@ -450,11 +452,35 @@ export const RegistroPage: React.FC = () => {
         sweetAlert.error('CUIT ya registrado', `Ese CUIT ya figura a nombre de ${data.yaExiste.nombre}.\n\nSi sos vos, entrá con tu cuenta o escribile a la productora. Si no, revisá el número: puede haber un dígito mal.`);
         return;
       }
+      const tipoDni = tiposDocumentoDisponibles.find((o) => /dni/i.test(o.name));
+      /*
+        CUIT INACTIVO: se avisa y se sigue. Mismo criterio que en el alta desde Usuarios.
+
+        ARCA contesta el inactivo con un fault que no trae nombre ni apellido, así que no hay nada que
+        traer y el registro no queda sellado. Pero frenarlo sería dejar afuera a alguien que existe y
+        que tiene que firmar: que su CUIT esté dado de baja es un trámite suyo ante el organismo.
+
+        Acá importa más que en el alta interna: del otro lado del link hay una persona sola, sin nadie
+        a quien preguntarle por qué el formulario no la deja seguir.
+      */
+      if (data.estado === 'inactivo') {
+        setInactivoEnArca(true);
+        setForm((prev) => ({
+          ...prev,
+          documento: data.documento || prev.documento,
+          tipoDocumentoId: tipoDni ? String(tipoDni.id) : prev.tipoDocumentoId,
+        }));
+        setFieldErrors((prev) => ({ ...prev, documento: false, cuit: false }));
+        sweetAlert.warningAlert(
+          'Tu CUIT existe, pero figura INACTIVO en ARCA',
+          'El número está bien: lo que pasa es que ese CUIT está dado de baja en el organismo.\n\nPodés terminar el registro igual. Como ARCA no devuelve el nombre de un CUIT inactivo, cargá tu nombre y apellido a mano tal como figuran en tu documento.',
+        );
+        return;
+      }
       if (!data.nombre || !data.apellido) {
         sweetAlert.warningAlert('Es una persona jurídica', `ARCA devolvió «${data.denominacion}». Este formulario es para personas: no hay nombre y apellido para separar.`);
         return;
       }
-      const tipoDni = tiposDocumentoDisponibles.find((o) => /dni/i.test(o.name));
       setForm((prev) => ({
         ...prev,
         firstName: data.nombre,
@@ -477,7 +503,7 @@ export const RegistroPage: React.FC = () => {
     Con CUIT, primero se valida; después se llena el resto. Y lo que trajo ARCA no se edita: el
     registro se guarda marcado como validado, y dejar retocarlo convertiría ese sello en una mentira.
   */
-  const bloqueadoHastaValidar = cuilVisible && !validadoEnArca;
+  const bloqueadoHastaValidar = cuilVisible && !validadoEnArca && !inactivoEnArca;
   const camposDeArcaBloqueados = validadoEnArca;
   const tituloArca = camposDeArcaBloqueados ? 'Lo trae ARCA para este CUIT. Para cambiarlo, corregí el CUIT y validá de nuevo.' : undefined;
   /** Bloqueado, pero con el texto legible: tiene un dato real, no está vacío. */
@@ -486,6 +512,7 @@ export const RegistroPage: React.FC = () => {
   /** Lo traído del Padrón deja de aplicar si cambia el CUIT o aquello de lo que dependía. */
   const limpiarDatosDeArca = () => {
     setValidadoEnArca(false);
+    setInactivoEnArca(false);
     setForm((prev) => ({ ...prev, firstName: '', lastName: '', documento: '', tipoDocumentoId: '' }));
   };
 

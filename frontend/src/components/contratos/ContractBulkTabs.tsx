@@ -1612,6 +1612,30 @@ export const ContractBulkAfipTab: React.FC<{
   const layoutConstancia = filterTipo === 'constancia_cuit' || filterTipo === 'sin_cuit';
 
   /**
+   * EL ENCUADRE —convenio, categoría y obra social— SOLO EXISTE EN LA RELACIÓN LABORAL.
+   *
+   * Los tres son atributos de un empleado en relación de dependencia: el CCT que lo encuadra, la
+   * categoría dentro de ese CCT y la obra social que le corresponde. Una Constancia de CUIT es un
+   * contrato con un MONOTRIBUTISTA — locación de servicios, no relación laboral—, así que ahí no hay
+   * convenio que lo encuadre, ni categoría, ni obra social que declarar. No es que falten: no existen.
+   *
+   * Pedirlos igual tenía dos costos, y el segundo es el grave:
+   *
+   *   - tres columnas por fila diciendo «Elegí la empleadora» sobre datos que nunca van a ir;
+   *   - y la invitación a completarlos. Cargarle un convenio y una categoría a un monotributista es
+   *     declarar un encuadre que no corresponde, y el sueldo de esa categoría empieza a arrastrarse
+   *     por cálculos que no son los suyos.
+   *
+   * Para el alta lo único que hace falta es la EMPRESA —con qué empleadora se firma— y de ahí ya sale
+   * a firmar. El chequeo de completitud ya lo sabía: `resolveAfip` no reporta faltantes cuando el
+   * contrato no genera alta temprana. Lo que faltaba era que la tabla dijera lo mismo.
+   *
+   * `sin_cuit` ya lo tenía resuelto por otro camino, y por eso la condición estaba escrita como
+   * «distinto de sin_cuit» en siete lugares. Queda un solo nombre para la regla real.
+   */
+  const hayEncuadre = filterTipo === 'alta_temprana_afip';
+
+  /**
    * El check es de selección GENERAL: se puede marcar cualquier fila. Cada acción masiva aplica
    * después su propio criterio (el TXT arma solo los completos y avisa cuántos omitió; Validar ARCA
    * solo consulta los que tienen CUIT válido). Antes solo se podían marcar los contratos ya
@@ -1801,8 +1825,8 @@ export const ContractBulkAfipTab: React.FC<{
       {seleccionados.length > 0 && <span className="text-xs text-gray-500 dark:text-gray-400">{seleccionados.length} seleccionado(s)</span>}
       <AsignarEmpresaMasivo campo="contrato" filas={seleccionados.map((x) => x.row)} filasParaOpciones={filtered.map((x) => x.row)} bloqueado={bloqueoPorValidacion} onAplicado={aplicarPatchesEmpresa} />
       <AsignarEmpresaMasivo campo="release" filas={seleccionados.map((x) => x.row)} filasParaOpciones={filtered.map((x) => x.row)} bloqueado={bloqueoPorValidacion} onAplicado={aplicarPatchesEmpresa} />
-      {/* El encuadre solo existe en Alta temprana: en «Sin CUIT» no hay convenio ni categoría. */}
-      {filterTipo !== 'sin_cuit' && (
+      {/* El encuadre solo existe en Alta temprana: ni «Constancia de CUIT» ni «Sin CUIT» lo tienen. */}
+      {hayEncuadre && (
         <AsignarEncuadreMasivo
           filas={seleccionados.map((x) => x.row)}
           cat={afipCat}
@@ -2232,7 +2256,9 @@ export const ContractBulkAfipTab: React.FC<{
                   {filterTipo !== 'sin_cuit' && <ContractDocsHeaders showContrato={false} showRelease={false} altaLabel={filterTipo === 'alta_temprana_afip' ? 'Alta ARCA' : 'Alta Servicios'} />}
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">CUIT</th>
-                  <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${filterTipo === 'sin_cuit' ? '' : GRUPO_ENCUADRE_INICIO}`}>
+                  {/* El fondo y el borde de «grupo encuadre» solo cuando hay grupo: sin las tres
+                      columnas de al lado, abrir un grupo en Empresa Contrato lo dejaría sin cerrar. */}
+                  <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${hayEncuadre ? GRUPO_ENCUADRE_INICIO : ''}`}>
                     <span className="inline-flex items-center gap-1.5">
                       Empresa Contrato
                       {filterTipo === 'alta_temprana_afip' && (
@@ -2243,12 +2269,12 @@ export const ContractBulkAfipTab: React.FC<{
                           </button>
                         </>
                       )}
-                      {filterTipo !== 'sin_cuit' && <FlechaEncuadre />}
+                      {hayEncuadre && <FlechaEncuadre />}
                     </span>
                   </th>
                   {/* Entre Empresa Contrato y Obra Social, que es el orden en que se resuelven: la
                       obra social por defecto sale del convenio, y el convenio de la categoría. */}
-                  {filterTipo !== 'sin_cuit' && (
+                  {hayEncuadre && (
                     <>
                       <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE}`}>
                         Convenio
@@ -2263,7 +2289,7 @@ export const ContractBulkAfipTab: React.FC<{
                   {/* Pegada a Empresa Contrato: la obra social se valida contra el CUIT de la
                       empleadora, así que las dos columnas se leen juntas —sin empresa, esta no se
                       puede resolver—. */}
-                  {filterTipo !== 'sin_cuit' && (
+                  {hayEncuadre && (
                     <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_FIN}`} title="Código RNOS (pos. 40-45). Ordena por estado: primero lo que hay que resolver.">
                       <button type="button" onClick={() => setOrdenObraSocial((v) => !v)} className={`uppercase tracking-wider font-bold inline-flex items-center gap-1.5 hover:text-gray-700 dark:hover:text-gray-300 ${ordenObraSocial ? 'text-blue-600 dark:text-blue-400' : ''}`}>
                         Obra Social
@@ -2361,10 +2387,10 @@ export const ContractBulkAfipTab: React.FC<{
                       <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
-                    <td className={`px-4 py-3 ${filterTipo === 'sin_cuit' ? '' : GRUPO_ENCUADRE_INICIO}`} onClick={(e) => e.stopPropagation()}>
+                    <td className={`px-4 py-3 ${hayEncuadre ? GRUPO_ENCUADRE_INICIO : ''}`} onClick={(e) => e.stopPropagation()}>
                       <EmpresaSelectCell record={r} campo="contrato" requerido={filterTipo === 'alta_temprana_afip'} onGuardado={(patch) => aplicarCambio(r, patch)} />
                     </td>
-                    {filterTipo !== 'sin_cuit' && (
+                    {hayEncuadre && (
                       <>
                         <td className={`px-4 py-3 ${GRUPO_ENCUADRE}`} onClick={(e) => e.stopPropagation()}>
                           <ConvenioSelectCell
@@ -2395,7 +2421,7 @@ export const ContractBulkAfipTab: React.FC<{
                         </td>
                       </>
                     )}
-                    {filterTipo !== 'sin_cuit' && (
+                    {hayEncuadre && (
                       <td className={`px-4 py-3 ${GRUPO_ENCUADRE_FIN}`} onClick={(e) => e.stopPropagation()}>
                         <ObraSocialCell
                           record={r}

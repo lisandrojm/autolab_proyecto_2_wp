@@ -35,6 +35,25 @@ export interface ResultadoPadron {
      *  por si hace falta algún dato que el mapeo de arriba no extrajo. */
     raw: any;
 }
+/**
+ * ¿ESTE FAULT DICE «INACTIVO» O DICE «NO EXISTE»? La diferencia decide si se puede dar un alta.
+ *
+ * El A13 no devuelve `persona` con `estadoClave: INACTIVO`: cuando el CUIT está dado de baja contesta
+ * un SOAP Fault, igual que cuando el CUIT no existe. Son los dos únicos faults que aparecen en el log
+ * de producción, seis veces cada uno sobre 273 consultas:
+ *
+ *     «La Clave (CUIT/CUIL) consultada es inexistente»           → no hay nadie
+ *     «La clave (CUIT/CUIL) consultada se encuentra INACTIVA»    → hay alguien, está de baja
+ *
+ * Tratarlos igual hacía imposible dar de alta a una persona con el CUIT inactivo, y el mensaje le
+ * pedía corregir un número que estaba bien.
+ *
+ * Se matchea por «inactiv» y no por la frase completa: el organismo cambia mayúsculas y redacción sin
+ * avisar, y ningún otro fault de este servicio contiene esa raíz. Si algún día aparece uno que la
+ * contenga y signifique otra cosa, el peor resultado es dejar pasar un alta sin sello — que es
+ * exactamente lo que ya pasa hoy con cualquier CUIT que no se valida.
+ */
+export declare const faultEsCuitInactivo: (faultString?: string | null) => boolean;
 /** Consulta el estado de un CUIT/CUIL en el Padrón de AFIP (servicio A13). `tipo` es solo para el
  *  log persistente: "servicio_test" cuando la llama `verificarServicioPadron` (autoconsulta),
  *  "padron" para el resto (consultas reales a terceros o a uno mismo desde "Validar CUIT"). */
