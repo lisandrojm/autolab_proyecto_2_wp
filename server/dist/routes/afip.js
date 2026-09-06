@@ -581,6 +581,23 @@ router.post("/consulta-padron/bulk", async (req, res) => {
                                 dropboxSubido = false;
                                 dropboxError = 'No se encontró ninguna carpeta de Dropbox configurada como "Constancia de cuit" en Documentos → Configurar transición automática.';
                             }
+                            else if (!up.contracts[t.contractIndex]?.empresaContratoId) {
+                                /*
+                                  SIN EMPLEADORA NO SE ARCHIVA. El nombre del archivo saldría incompleto.
+              
+                                  La nomenclatura incluye `{{empresaCuit}}`, que sale de la empresa del contrato:
+                                  sin ella, `datosEmpresa` devuelve cadena vacía y el comprobante queda en Dropbox
+                                  con un hueco donde va el CUIT de la empleadora. Y ahí ya no se corrige — el
+                                  escaneo lo lee de ese nombre, y arreglarlo es volver a subirlo a mano.
+              
+                                  La pantalla ya no deja llegar hasta acá sin empresa, pero el chequeo va igual: es
+                                  esta ruta la que ESCRIBE el archivo, y una validación que solo vive en el botón se
+                                  saltea desde cualquier otro llamador. La consulta a ARCA sí se hizo y su resultado
+                                  se devuelve; lo único que se frena es el archivado.
+                                */
+                                dropboxSubido = false;
+                                dropboxError = "El contrato no tiene Empresa del Contrato asignada, y su CUIT va en el nombre del comprobante. Elegí la empleadora y volvé a validar.";
+                            }
                             else {
                                 try {
                                     const user = userById.get(t.userId);

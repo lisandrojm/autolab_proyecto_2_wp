@@ -349,6 +349,118 @@ const ConvenioSelectCell: React.FC<{ record: ContractOverviewRow; valores: AfipV
   );
 };
 
+/**
+ * SUCURSAL Y ACTIVIDAD, EN LA GRILLA. Los dos últimos campos editables que solo vivían en el modal.
+ *
+ * La regla de esta tabla es que todo lo que se puede modificar tenga su columna: se completan quince
+ * contratos seguidos, y bajar al modal de cada uno para elegir un domicilio es el mismo viaje quince
+ * veces. Empresa, convenio, categoría y obra social ya estaban; faltaban estos dos.
+ *
+ * SON UN PAR, y en ese orden: las actividades que ARCA acepta son las que la empleadora declaró en
+ * ESE domicilio. Por eso Actividad no se puede elegir antes que la Sucursal, y cambiar la sucursal
+ * borra la actividad (lo hace el server, y por eso el parche de abajo la limpia también acá).
+ */
+const SucursalSelectCell: React.FC<{ record: ContractOverviewRow; valores: AfipValues; onGuardado: (patch?: Partial<ContractOverviewRow>) => void }> = ({ record, valores, onGuardado }) => {
+  const [guardando, setGuardando] = useState(false);
+
+  const guardar = async (sucursalId: string) => {
+    setGuardando(true);
+    try {
+      const res = await projectsAPI.updateSucursalArca(record.projectId, record.userId, record.contractIndex, sucursalId);
+      // La actividad viene en la respuesta porque el server la recalcula: con una sola declarada la
+      // hereda, y si cambió el domicilio la limpia. Tomar solo la sucursal dejaría la de antes.
+      onGuardado({ sucursalArcaId: res.sucursalArcaId || '', actividadArca: res.actividadArca || '' } as Partial<ContractOverviewRow>);
+    } catch (e: any) {
+      sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo guardar la sucursal.');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  if (!record.empresaContratoId) return <span className="text-xs text-amber-600 dark:text-amber-400">Elegí la empleadora</span>;
+  if (valores.sucursalesDisponibles.length === 0) {
+    return (
+      <span className="text-xs text-amber-600 dark:text-amber-400" title="Cargá los domicilios de explotación en la ficha de la empresa, en ARCA → Domicilios">
+        Sin domicilios
+      </span>
+    );
+  }
+
+  return (
+    <select
+      value={valores.sucursal ? valores.sucursalesDisponibles.find((s) => s.codigo === valores.sucursal)?._id || '' : ''}
+      onChange={(e) => guardar(e.target.value)}
+      disabled={guardando}
+      className={`input-field py-1 text-xs min-w-[13rem] ${!valores.sucursal ? 'border-amber-400 dark:border-amber-600' : ''}`}
+    >
+      <option value="">Elegí el domicilio…</option>
+      {valores.sucursalesDisponibles.map((s) => (
+        <option key={s._id} value={s._id}>
+          {s.codigo} — {s.domicilio}
+          {s.actividades.length === 0 ? ' (sin actividades)' : ''}
+        </option>
+      ))}
+    </select>
+  );
+};
+
+/**
+ * La actividad SOLO es un selector cuando hay algo que elegir.
+ *
+ * Con una sola declarada en ese domicilio el valor queda determinado y se hereda: mostrar un combo de
+ * una opción sería pedir una decisión que no existe. Es la misma regla que en el modal — acá se ve el
+ * valor heredado, en texto, y el selector aparece recién con dos o más.
+ */
+const ActividadSelectCell: React.FC<{ record: ContractOverviewRow; valores: AfipValues; onGuardado: (patch?: Partial<ContractOverviewRow>) => void }> = ({ record, valores, onGuardado }) => {
+  const [guardando, setGuardando] = useState(false);
+  const disponibles = valores.actividadesDisponibles;
+
+  const guardar = async (codigo: string) => {
+    setGuardando(true);
+    try {
+      await projectsAPI.updateActividadArca(record.projectId, record.userId, record.contractIndex, codigo);
+      onGuardado({ actividadArca: codigo } as Partial<ContractOverviewRow>);
+    } catch (e: any) {
+      sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo guardar la actividad.');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  if (!valores.sucursal) return <span className="text-xs text-gray-400">Elegí la sucursal</span>;
+  if (disponibles.length === 0) {
+    return (
+      <span className="text-xs text-amber-600 dark:text-amber-400" title="La empleadora no declaró actividades en ese domicilio: cargalas en ARCA → Sucursales">
+        Sin actividades
+      </span>
+    );
+  }
+  if (disponibles.length === 1) {
+    // Heredada: no hay decisión. Se muestra el valor para que la fila no se lea como incompleta.
+    return (
+      <span className="text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap" title={`${disponibles[0].descripcion || ''} — única declarada en ese domicilio, se hereda`}>
+        <span className="font-mono">{disponibles[0].codigo}</span> <span className="text-gray-400">única</span>
+      </span>
+    );
+  }
+
+  return (
+    <select
+      value={valores.actividad || ''}
+      onChange={(e) => guardar(e.target.value)}
+      disabled={guardando}
+      className={`input-field py-1 text-xs min-w-[13rem] ${!valores.actividad ? 'border-amber-400 dark:border-amber-600' : ''}`}
+    >
+      <option value="">Elegí la actividad…</option>
+      {disponibles.map((a) => (
+        <option key={a.codigo} value={a.codigo}>
+          {a.codigo} — {a.descripcion}
+        </option>
+      ))}
+    </select>
+  );
+};
+
 const CategoriaSelectCell: React.FC<{ record: ContractOverviewRow; valores: AfipValues; cat: AfipCatalogs; convenio: string; onGuardado: (patch?: Partial<ContractOverviewRow>) => void }> = ({ record, valores, cat, convenio, onGuardado }) => {
   const [guardando, setGuardando] = useState(false);
   const efectivo = valores.convenioCategoria || convenio;
@@ -2297,6 +2409,19 @@ export const ContractBulkAfipTab: React.FC<{
                       </button>
                     </th>
                   )}
+                  {/* Los dos últimos editables que solo estaban en el modal. Van juntos y en este
+                      orden: la actividad depende del domicilio, no al revés. */}
+                  {hayEncuadre && (
+                    <>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Domicilio de explotación declarado por la empleadora (pos. 74-78)">
+                        Sucursal
+                        <FlechaEncuadre />
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Actividad declarada en ese domicilio (pos. 79-84). Con una sola, se hereda.">
+                        Actividad
+                      </th>
+                    </>
+                  )}
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Empresa Release</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Cliente</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto</th>
@@ -2432,6 +2557,17 @@ export const ContractBulkAfipTab: React.FC<{
                           onQuitado={(patch) => aplicarCambio(r, patch)}
                         />
                       </td>
+                    )}
+                    {/* Mismo orden que los encabezados: Sucursal y después Actividad, que depende de ella. */}
+                    {hayEncuadre && (
+                      <>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <SucursalSelectCell record={r} valores={resolveAfipValues(r, afipCat)} onGuardado={(patch) => aplicarCambio(r, patch)} />
+                        </td>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <ActividadSelectCell record={r} valores={resolveAfipValues(r, afipCat)} onGuardado={(patch) => aplicarCambio(r, patch)} />
+                        </td>
+                      </>
                     )}
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <EmpresaSelectCell record={r} campo="release" requerido={false} onGuardado={(patch) => aplicarCambio(r, patch)} />

@@ -1,16 +1,18 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLock, faChevronDown, faChevronRight, faRotate, faArrowUpRightFromSquare, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { faLock, faChevronDown, faChevronRight, faRotate, faPenToSquare, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { ContractOverviewRow } from "../../api/users";
 import { AfipCatalogs, AfipValues, MODALIDADES_PLAZO_DETERMINADO, MODALIDADES_TIEMPO_INDETERMINADO, buscarTipoContrato } from "./afipCompleteness";
 import { createSimpleCatalogApi, SimpleCatalogItem } from "../../api/simpleCatalog";
-import { ContratoItem } from "../../api/contratos";
+import { contratosAPI, ContratoItem } from "../../api/contratos";
 import { projectsAPI } from "../../api/projects";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { CampoArca, FilaArca, DepGroup } from "./CampoArca";
 import { useResaltadoDependencias } from "./useResaltadoDependencias";
 import { CampoObraSocial } from "./CampoObraSocial";
 import { PickerArca } from "./PickerArca";
+import { Modal } from "../ui/Modal";
+import { SelectorCodigoArca } from "../arca/SelectorCodigoArca";
 
 /**
  * El formulario de Datos ARCA, con la forma de la pantalla del organismo: trece campos en tres
@@ -30,6 +32,8 @@ import { PickerArca } from "./PickerArca";
 const tiposServicioApi = createSimpleCatalogApi("/arca/tipos-servicio");
 const modalidadesContratoApi = createSimpleCatalogApi("/arca/modalidades-contratacion");
 const modalidadesLiqApi = createSimpleCatalogApi("/arca/modalidades-liquidacion");
+// Vuelve para el FILTRO del selector de tipo de servicio del modal de codigos. No se guarda.
+const gruposTipoServicioApi = createSimpleCatalogApi("/arca/grupos-tipo-servicio");
 
 /** Qué campo tiene el picker abierto. */
 type CampoAbierto = null | "sucursal" | "actividad" | "convenio" | "categoria";
@@ -71,9 +75,177 @@ const fechaLegible = (valor?: string): string => {
  * cuáles faltan y ofrece el link. El botón de descargar ya estaba deshabilitado en ese caso: lo que
  * faltaba era la razón a la vista.
  */
+/** Los códigos van con ceros a la izquierda: `1` no es lo mismo que `001` para el registro de 130. */
+const pad3 = (v: string) => (v ? String(v).replace(/\D/g, "").padStart(3, "0").slice(-3) : "");
+const pad1 = (v: string) => (v ? String(v).replace(/\D/g, "").slice(-1) : "");
+
+/**
+ * EDITAR LOS CÓDIGOS SIN IRSE DE ACÁ. Modal apilado sobre el de Datos ARCA.
+ *
+ * Antes esto era un link que abría `/contratos` en otra pestaña. Resolvía no perder lo cargado, pero
+ * a costa de mandar a otra pantalla a buscar el tipo entre todos, cargar tres códigos y volver — y
+ * del otro lado quedaba una pestaña abierta que después hay que acordarse de cerrar.
+ *
+ * El modal se abre ENCIMA y el de atrás no se cierra: se completan los códigos, se guarda, y la
+ * pantalla de la persona sigue donde estaba con los valores nuevos.
+ *
+ * SIGUE SIENDO UNA EDICIÓN DE NIVEL, y eso no se disimula. Estos códigos son del TIPO de contrato:
+ * guardarlos alcanza a todos los contratos que lo usan, no solo a esta persona. Por eso el aviso
+ * ámbar del pie dice cuál es el tipo y qué implica — la ventaja de editar sin irse no puede pagarse
+ * con que alguien no se entere de a cuántos le cambió el alta.
+ */
+const EditarCodigosDelTipo: React.FC<{
+  abierto: boolean;
+  onCerrar: () => void;
+  tipo?: ContratoItem;
+  nombreTipo: string;
+  modalidadesContrato: SimpleCatalogItem[];
+  tiposServicio: SimpleCatalogItem[];
+  modalidadesLiq: SimpleCatalogItem[];
+  gruposTipoServicio: SimpleCatalogItem[];
+  onGuardado: () => void;
+}> = ({ abierto, onCerrar, tipo, nombreTipo, modalidadesContrato, tiposServicio, modalidadesLiq, gruposTipoServicio, onGuardado }) => {
+  const [modalidad, setModalidad] = useState("");
+  const [servicio, setServicio] = useState("");
+  const [liquidacion, setLiquidacion] = useState("");
+  const [grupo, setGrupo] = useState("");
+  const [guardando, setGuardando] = useState(false);
+
+  // Se re-siembra al abrir: el modal no se desmonta entre aperturas y el estado sobreviviría con los
+  // códigos del tipo anterior, que es la forma de guardarle a uno los códigos de otro.
+  useEffect(() => {
+    if (!abierto) return;
+    setModalidad(pad3(String(tipo?.data?.afipModalidadContrato || "")));
+    setServicio(pad3(String(tipo?.data?.afipTipoServicio || "")));
+    setLiquidacion(pad1(String(tipo?.data?.afipModalidadLiquidacion || "")));
+    setGrupo("");
+  }, [abierto, tipo]);
+
+  /** El grupo solo recorta la lista de tipos de servicio. No se guarda ni viaja al TXT. */
+  const hayGrupos = useMemo(() => tiposServicio.some((t) => String((t as { grupo?: unknown }).grupo ?? "").trim()), [tiposServicio]);
+  const serviciosFiltrados = useMemo(() => {
+    if (!hayGrupos || !grupo) return tiposServicio;
+    return tiposServicio.filter((t) => String((t as { grupo?: unknown }).grupo ?? "") === grupo);
+  }, [tiposServicio, grupo, hayGrupos]);
+
+  const guardar = async () => {
+    if (!tipo) return sweetAlert.error("Error", "No se encontró el tipo de contrato de este contrato.");
+    setGuardando(true);
+    try {
+      /*
+        Se manda el ITEM COMPLETO: `update` reemplaza, así que mandar solo los códigos borraría el
+        nombre, las jornadas y el resto de la configuración del tipo.
+      */
+      await contratosAPI.update(tipo._id, {
+        nombre: tipo.name,
+        cantidadJornadas: tipo.data?.cantidadJornadas,
+        multiplicadorDiario: tipo.data?.multiplicadorDiario,
+        esTiempoIndeterminado: tipo.data?.esTiempoIndeterminado,
+        requiereFirma: tipo.data?.requiereFirma,
+        isActive: tipo.isActive,
+        afipModalidadContrato: modalidad,
+        afipTipoServicio: servicio,
+        afipModalidadLiquidacion: liquidacion,
+      } as never);
+      onGuardado();
+      onCerrar();
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudieron guardar los códigos.");
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  if (!abierto) return null;
+
+  return (
+    <Modal
+      isOpen={abierto}
+      onClose={onCerrar}
+      title="Códigos ARCA del tipo de contrato"
+      subtitle={`«${nombreTipo}» · se aplican a todos los contratos de este tipo`}
+      size="md"
+      /* Por encima del modal de Datos ARCA (70) y de sus pickers (95): éste se abre desde adentro. */
+      zIndex={96}
+      footer={
+        <div className="flex items-center justify-end gap-3 w-full">
+          <button type="button" onClick={onCerrar} disabled={guardando} className="btn-secondary">
+            Cancelar
+          </button>
+          <button type="button" onClick={guardar} disabled={guardando} className="btn-primary inline-flex items-center gap-2">
+            {guardando && <FontAwesomeIcon icon={faRotate} spin className="h-3 w-3" />}
+            {guardando ? "Guardando…" : "Guardar"}
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-3">
+        <p className="rounded-md border border-amber-300 dark:border-amber-800/70 bg-amber-50/70 dark:bg-amber-950/20 px-3 py-2.5 text-[12px] text-amber-800 dark:text-amber-300 flex items-start gap-2">
+          <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+          <span>
+            Estos códigos viven en el <strong>tipo de contrato «{nombreTipo}»</strong>, no en esta persona. Al guardarlos se aplican a <strong>todos los contratos</strong> que usan ese tipo.
+          </span>
+        </p>
+
+        <SelectorCodigoArca
+          label="Modalidad de contrato"
+          sufijoLabel="(3 díg.)"
+          items={modalidadesContrato}
+          value={modalidad}
+          onChange={setModalidad}
+          formatCodigo={pad3}
+          placeholder="Sin elegir — ej. 008 tiempo completo indeterminado"
+          ayuda="Posiciones 17-19 del registro. Define además si la fecha de fin corresponde: las de plazo determinado la exigen y las indeterminadas la prohíben."
+          vacioHint="El catálogo de Modalidades de Contrato está vacío. Se siembra en Configuración → ARCA → Modalidades de Contrato."
+        />
+
+        <SelectorCodigoArca
+          label="Tipo de servicio"
+          sufijoLabel={grupo && hayGrupos ? `(3 díg. · ${serviciosFiltrados.length} del grupo)` : "(3 díg.)"}
+          items={serviciosFiltrados}
+          value={servicio}
+          onChange={setServicio}
+          formatCodigo={pad3}
+          placeholder="Sin elegir — ej. 000 servicios comunes continuos"
+          ayuda="Posiciones 107-109 del registro."
+          vacioHint="El catálogo de Tipos de Servicio está vacío. Se siembra en Configuración → ARCA → Tipos de Servicio."
+          filtro={
+            <label className="flex items-center gap-2 min-w-0">
+              <span className="text-[11px] text-gray-500 dark:text-gray-400 shrink-0">Grupo</span>
+              <select value={grupo} onChange={(e) => setGrupo(e.target.value)} className="min-w-0 flex-1 text-[12px] rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 px-2 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/30">
+                <option value="">Todos los tipos de servicio</option>
+                {gruposTipoServicio.map((g) => {
+                  const codigo = String(g.externalId || "").trim();
+                  return (
+                    <option key={codigo} value={codigo}>
+                      {codigo} · {g.name}
+                    </option>
+                  );
+                })}
+              </select>
+              <span className="text-[10.5px] text-gray-400 dark:text-gray-500 shrink-0 hidden sm:inline">no va al TXT</span>
+            </label>
+          }
+        />
+
+        <SelectorCodigoArca
+          label="Modalidad de liquidación"
+          sufijoLabel="(1 díg.)"
+          items={modalidadesLiq}
+          value={liquidacion}
+          onChange={setLiquidacion}
+          formatCodigo={pad1}
+          placeholder="Sin elegir — ej. 1 por mes"
+          ayuda="Posición 73 del registro."
+          vacioHint="El catálogo de Modalidades de Liquidación está vacío. Se siembra en Configuración → ARCA → Modalidades de Liquidación."
+        />
+      </div>
+    </Modal>
+  );
+};
+
 const CodigosDelTipo: React.FC<{
   nombreTipo: string;
-  tipoId?: string;
   modalidadContrato: string;
   nombreModalidadContrato?: string;
   tipoServicio: string;
@@ -82,7 +254,11 @@ const CodigosDelTipo: React.FC<{
   nombreModalidadLiq?: string;
   /** Relee el tipo de contrato sin cerrar el modal. Es el mismo camino que usa guardar un código. */
   onRefrescar?: () => void;
-}> = ({ nombreTipo, tipoId, modalidadContrato, nombreModalidadContrato, tipoServicio, nombreTipoServicio, modalidadLiq, nombreModalidadLiq, onRefrescar }) => {
+  /** El tipo entero y los catálogos, para poder editar los códigos sin salir de esta pantalla. */
+  tipo?: ContratoItem;
+  catalogos: { modalidadesContrato: SimpleCatalogItem[]; tiposServicio: SimpleCatalogItem[]; modalidadesLiq: SimpleCatalogItem[]; gruposTipoServicio: SimpleCatalogItem[] };
+}> = ({ nombreTipo, modalidadContrato, nombreModalidadContrato, tipoServicio, nombreTipoServicio, modalidadLiq, nombreModalidadLiq, onRefrescar, tipo, catalogos }) => {
+  const [editando, setEditando] = useState(false);
   const faltantes = [!modalidadContrato && "modalidad de contrato", !tipoServicio && "tipo de servicio", !modalidadLiq && "modalidad de liquidación"].filter(Boolean) as string[];
 
   /*
@@ -100,8 +276,6 @@ const CodigosDelTipo: React.FC<{
     return () => window.removeEventListener("focus", alVolver);
   }, [onRefrescar]);
 
-  /* `/contratos` no tenía forma de abrir UN tipo: lee `?tab=` y nada más. El `tipo` es nuevo. */
-  const href = tipoId ? `/contratos?tab=types&tipo=${encodeURIComponent(tipoId)}` : "/contratos?tab=types";
 
   return (
     <section className="mt-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 px-3 py-2.5" aria-label={`Códigos del tipo de contrato ${nombreTipo}`}>
@@ -115,11 +289,22 @@ const CodigosDelTipo: React.FC<{
               <FontAwesomeIcon icon={faRotate} className="h-3 w-3" />
             </button>
           )}
-          <a href={href} target="_blank" rel="noopener noreferrer" className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
-            Editar en el contrato
-            <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
-            <span className="sr-only">(se abre en una pestaña nueva)</span>
-          </a>
+          {/*
+            BOTÓN, y no un link con una flechita.
+
+            Como texto azul con «↗» se leía como una nota al pie, no como algo que se puede apretar —
+            y encima mandaba a otra pestaña. Ahora tiene forma de botón porque es una acción, y lo que
+            abre es un modal encima de éste: no se pierde nada de lo que hay cargado atrás.
+          */}
+          <button
+            type="button"
+            onClick={() => setEditando(true)}
+            title={`Editar los códigos ARCA del tipo de contrato «${nombreTipo}»`}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+          >
+            <FontAwesomeIcon icon={faPenToSquare} className="h-3 w-3" />
+            Editar códigos
+          </button>
         </div>
       </div>
 
@@ -139,6 +324,19 @@ const CodigosDelTipo: React.FC<{
         <FilaArca rotulo="Tipo Servicio" campo="tipoServicio" info="tipoServicio" etiqueta="107–109" valor={tipoServicio} nombre={nombreTipoServicio} vacio="— sin cargar en el tipo de contrato" faltaEsError />
         <FilaArca rotulo="Mod. Liquidación" campo="modalidadLiq" info="modalidadLiq" etiqueta="73" valor={modalidadLiq} nombre={nombreModalidadLiq} vacio="— sin cargar en el tipo de contrato" faltaEsError />
       </div>
+
+      {/* Se abre ENCIMA: el de atrás no se cierra y no se pierde nada de lo que haya cargado. */}
+      <EditarCodigosDelTipo
+        abierto={editando}
+        onCerrar={() => setEditando(false)}
+        tipo={tipo}
+        nombreTipo={nombreTipo}
+        modalidadesContrato={catalogos.modalidadesContrato}
+        tiposServicio={catalogos.tiposServicio}
+        modalidadesLiq={catalogos.modalidadesLiq}
+        gruposTipoServicio={catalogos.gruposTipoServicio}
+        onGuardado={() => onRefrescar?.()}
+      />
     </section>
   );
 };
@@ -216,6 +414,8 @@ export const FormularioArca: React.FC<{
   const [tiposServicio, setTiposServicio] = useState<SimpleCatalogItem[]>([]);
   const [modalidadesContrato, setModalidadesContrato] = useState<SimpleCatalogItem[]>([]);
   const [modalidadesLiq, setModalidadesLiq] = useState<SimpleCatalogItem[]>([]);
+  /** Solo para el FILTRO del selector de tipo de servicio en el modal de códigos. No se guarda. */
+  const [gruposTipoServicio, setGruposTipoServicio] = useState<SimpleCatalogItem[]>([]);
 
   /**
    * Filtro de convenio para el picker de categoría. NO ES UN DATO DEL ALTA.
@@ -314,6 +514,10 @@ export const FormularioArca: React.FC<{
       .list()
       .then(setModalidadesLiq)
       .catch(() => setModalidadesLiq([]));
+    gruposTipoServicioApi
+      .list()
+      .then(setGruposTipoServicio)
+      .catch(() => setGruposTipoServicio([]));
   }, []);
 
   /*
@@ -794,7 +998,7 @@ export const FormularioArca: React.FC<{
               recuadro del convenio, debajo de la Categoría, que es la que la define. */}
         </div>
 
-        <CodigosDelTipo nombreTipo={nombreTipo} tipoId={tipo?._id} modalidadContrato={valores.modalidadContrato} nombreModalidadContrato={nombreDe(modalidadesContrato, valores.modalidadContrato)} tipoServicio={valores.tipoServicio} nombreTipoServicio={nombreDe(tiposServicio, valores.tipoServicio)} modalidadLiq={valores.modalidadLiq} nombreModalidadLiq={nombreDe(modalidadesLiq, valores.modalidadLiq)} onRefrescar={onCambioNivel} />
+        <CodigosDelTipo nombreTipo={nombreTipo} modalidadContrato={valores.modalidadContrato} nombreModalidadContrato={nombreDe(modalidadesContrato, valores.modalidadContrato)} tipoServicio={valores.tipoServicio} nombreTipoServicio={nombreDe(tiposServicio, valores.tipoServicio)} modalidadLiq={valores.modalidadLiq} nombreModalidadLiq={nombreDe(modalidadesLiq, valores.modalidadLiq)} onRefrescar={onCambioNivel} tipo={tipo} catalogos={{ modalidadesContrato, tiposServicio, modalidadesLiq, gruposTipoServicio }} />
 
         <ValoresFijos />
       </div>

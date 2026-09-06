@@ -336,12 +336,35 @@ export const BotonConsultarAfipBulk: React.FC<{
   onConsultado: () => void;
 }> = ({ rows, onConsultado }) => {
   const [consultando, setConsultando] = useState(false);
-  const pendientes = rows.filter((r) => constanciaPendiente(r) && cuitEsValido(r.cuit));
+  /*
+    LA EMPLEADORA ES UN REQUISITO, igual que el CUIT válido. Mismo motivo que en el botón de la fila:
+    el comprobante que se archiva lleva el CUIT de la empleadora en el nombre, y sin ella el archivo
+    queda con ese lugar vacío en Dropbox — donde ya no se corrige salvo volviéndolo a subir.
+  */
+  const elegibles = rows.filter((r) => constanciaPendiente(r) && cuitEsValido(r.cuit));
+  const sinEmpresa = elegibles.filter((r) => !r.empresaContratoId);
+  const pendientes = elegibles.filter((r) => r.empresaContratoId);
 
   const handleClick = async () => {
     if (pendientes.length === 0) {
+      // Se distingue «no hay nada» de «hay, pero les falta la empresa»: son dos acciones distintas.
+      if (sinEmpresa.length > 0) {
+        sweetAlert.error(
+          "Falta la Empresa del Contrato",
+          `${sinEmpresa.length === 1 ? "El contrato tildado no tiene" : `Los ${sinEmpresa.length} contratos tildados no tienen`} empleadora asignada.\n\nElegila en la columna «Empresa Contrato» —o asignala en masa con el selector de arriba— y volvé a intentar. Su CUIT va en el nombre del comprobante que se archiva en Dropbox: sin ella, el archivo sale con ese lugar vacío.`,
+        );
+        return;
+      }
       sweetAlert.info("Nada pendiente", "No hay contratos pendientes con CUIT cargado para consultar.");
       return;
+    }
+    if (sinEmpresa.length > 0) {
+      const r = await sweetAlert.confirm(
+        `${sinEmpresa.length} sin Empresa del Contrato`,
+        `Se van a consultar ${pendientes.length}. Los otros ${sinEmpresa.length} quedan afuera porque no tienen empleadora asignada, y su comprobante saldría con el CUIT de la empresa vacío en el nombre.\n\n¿Seguimos con los ${pendientes.length}?`,
+        "Sí, consultar",
+      );
+      if (!r.isConfirmed) return;
     }
     setConsultando(true);
     try {
@@ -419,6 +442,26 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
       sweetAlert.error("CUIT inválido", `${cuit} no es un CUIT/CUIL válido (no pasa el dígito verificador). Corregilo en los datos personales de la persona antes de consultar a ARCA.`);
       return;
     }
+    /*
+      SIN EMPLEADORA NO SE VALIDA, porque el archivo saldría con el nombre incompleto.
+
+      Validar no es solo preguntarle a ARCA: cuando el CUIT da activo se archiva el comprobante en
+      Dropbox, y su nombre lo arma la nomenclatura. Ahí va `{{empresaCuit}}`, que sale de la empresa
+      del contrato — sin empresa, `datosEmpresa` devuelve cadena vacía y el archivo queda nombrado con
+      un hueco donde va el CUIT de la empleadora.
+
+      Eso después no se arregla solo: el archivo ya está en Dropbox con ese nombre, el escaneo lo lee
+      de ahí, y corregirlo es volver a subirlo a mano. Más barato es no dejar empezar — es el mismo
+      criterio con el que se corta arriba por un CUIT inválido, y por el mismo motivo: lo que falta se
+      sabe ANTES de llamar al organismo.
+    */
+    if (!row.empresaContratoId) {
+      sweetAlert.error(
+        "Falta la Empresa del Contrato",
+        "Elegí con qué empleadora se hace este trámite antes de validar.\n\nNo es un dato de forma: el comprobante que se archiva en Dropbox lleva el CUIT de la empleadora en el nombre del archivo, y sin ella saldría con ese lugar vacío. Corregirlo después obliga a volver a subirlo a mano.",
+      );
+      return;
+    }
     setConsultando(true);
     try {
       const resp = await afipAPI.consultarPadronBulk([{ projectId: row.projectId, userId: row.userId, contractIndex: row.contractIndex }]);
@@ -477,8 +520,9 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
       <button
         type="button"
         onClick={handleClick}
-        disabled={consultando || !cuit}
-        title={cuit ? `Validar ${cuit} en el Padrón de ARCA` : "Falta el CUIT/CUIL de esta persona"}
+        disabled={consultando || !cuit || !row.empresaContratoId}
+        /* El motivo, en el botón: gris y sin explicación se lee como que la pantalla está rota. */
+        title={!cuit ? "Falta el CUIT/CUIL de esta persona" : !row.empresaContratoId ? "Elegí la Empresa del Contrato: su CUIT va en el nombre del comprobante que se archiva en Dropbox" : `Validar ${cuit} en el Padrón de ARCA`}
         className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
       >
         <FontAwesomeIcon icon={consultando ? faSpinner : faLandmark} spin={consultando} className="h-3 w-3" />
