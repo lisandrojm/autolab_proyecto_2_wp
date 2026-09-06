@@ -33,6 +33,7 @@ import { requirePermission } from "../middleware/permissions.js";
 import { toObjectIdArray } from "../utils/mongoIds.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 import { esContratoVigente, getContratoActivo } from "../utils/contratoVigencia.js";
+import { claveEstado } from "../utils/estadoClave.js";
 const router = Router();
 /* ------------------- Filtros del equipo de un proyecto (client-side → server) -------------------
  * Estos filtros dependen del ÚLTIMO contrato del miembro en el proyecto o de su asignación de
@@ -40,17 +41,15 @@ const router = Router();
  * listado como `_id in [...]`: de esa forma la paginación devuelve los resultados correlativos en
  * vez de filtrar solo la página ya cargada. Replican exactamente el criterio que usaba el front.
  */
-const normalizarEstado = (s) => (s || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim();
-// "Falta pedido de AFIP" y "Pedido de AFIP" son el mismo estado (igual que `estadoLabel` en el front).
-const ESTADO_ALIAS = { "falta pedido de afip": "pedido de afip", "pedido servicios": "pedido de servicios" };
-const estadoCanonico = (s) => {
-    const n = normalizarEstado(s);
-    return ESTADO_ALIAS[n] || n;
-};
+/*
+  La clave can\u00f3nica del estado sale de `utils/estadoClave.ts`, no de una copia local.
+
+  Estaba escrita ac\u00e1 con sus alias (\u00abFalta pedido de AFIP\u00bb y \u00abPedido de AFIP\u00bb son el mismo estado) y
+  la misma tabla viv\u00eda adem\u00e1s en el front. Con tres copias, agregar un alias en una y olvidarlo en
+  otra hace que un contrato se encuentre desde una pantalla y no desde la otra \u2014 que es exactamente
+  el tipo de bug que no se ve hasta que un filtro devuelve de menos.
+*/
+const estadoCanonico = claveEstado;
 async function resolveProjectTeamFilterIds(projectId, filtros) {
     const project = await Project.findById(projectId).select("teamConfig coordinatorAssignments").lean();
     if (!project)

@@ -6,6 +6,9 @@ import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../api/categoriasSat";
 import { Project } from "../../api/projects";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { infoAPI, InfoItem } from "../../api/info";
+import { EstadoBadge } from "../EstadoSelect";
+import { estadoImpositivoPorTipo, esTipoImpositivo } from "../../utils/tramiteImpositivo";
 
 type EstadoSolicitud = "pendiente" | "aprobada" | "rechazada" | "cancelada";
 
@@ -32,13 +35,15 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFrames, setRoleFrames] = useState<RoleFrameItem[]>([]);
   const [categoriasSat, setCategoriasSat] = useState<CategoriaSatItem[]>([]);
+  const [estados, setEstados] = useState<InfoItem[]>([]);
 
   const fetchSolicitudes = async () => {
     try {
       setLoading(true);
-      const [allSolicitudes, frames, cats] = await Promise.all([usersAPI.listSolicitudes(), roleFrameAPI.list(), categoriaSatAPI.list()]);
+      const [allSolicitudes, frames, cats, infos] = await Promise.all([usersAPI.listSolicitudes(), roleFrameAPI.list(), categoriaSatAPI.list(), infoAPI.listByType("estado-empleado").catch(() => [] as InfoItem[])]);
       setRoleFrames(frames);
       setCategoriasSat(cats);
+      setEstados(infos);
       setSolicitudes(allSolicitudes);
     } catch (error) {
       console.error("Error fetching solicitudes:", error);
@@ -82,6 +87,14 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
     if (typeof raw === "object") return raw.name || roleFrames.find((rf) => rf._id === String(raw._id))?.name || "Sin rol";
     return roleFrames.find((rf) => rf._id === String(raw))?.name || "Sin rol";
   };
+
+  /**
+   * El estado impositivo que declaró la solicitud. `null` si no declaró ninguno.
+   *
+   * Se resuelve contra el ABM en vez de guardar el nombre en la solicitud: así el badge sigue el
+   * color y el texto que tenga el estado hoy, y no el que tenía el día que se pidió el alta.
+   */
+  const estadoDeLaSolicitud = (m?: any): InfoItem | null => (esTipoImpositivo(m?.tipoImpositivo) ? estadoImpositivoPorTipo(estados, m.tipoImpositivo) : null);
 
   const getCategoriaName = (id?: string) => {
     if (!id) return "Sin categoría";
@@ -179,6 +192,7 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
                   <th className="px-4 py-3 font-semibold">Nombre</th>
                   <th className="px-4 py-3 font-semibold">Rol/es Empresa</th>
                   <th className="px-4 py-3 font-semibold">Categoría</th>
+                  <th className="px-4 py-3 font-semibold">Tipo de alta</th>
                   <th className="px-4 py-3 font-semibold">Fechas</th>
                   <th className="px-4 py-3 font-semibold">Horario</th>
                   <th className="px-4 py-3 font-semibold">Valor Jornada</th>
@@ -207,6 +221,18 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{getRolFrameFromMeta(meta)}</td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{getCategoriaName(meta?.categoriaSatId)}</td>
+                      {/*
+                        POR QUÉ VÍA SE PIDIÓ CONTRATAR: alta temprana ante ARCA o servicios.
+
+                        Con el mismo badge que se ve en Contratos, no con un texto propio: quien
+                        aprueba tiene que reconocerlo de un vistazo como lo mismo que después va a
+                        ver en el contrato.
+
+                        «Sin definir» es literal y no un valor por defecto: las solicitudes cargadas
+                        antes de que este campo existiera no lo declararon, y suponerles un trámite
+                        sería inventar el dato del que depende el TXT de ARCA.
+                      */}
+                      <td className="px-4 py-3">{estadoDeLaSolicitud(meta) ? <EstadoBadge name={estadoDeLaSolicitud(meta)!.name} /> : <span className="text-xs text-gray-400 italic">Sin definir</span>}</td>
                       <td className="px-4 py-3">
                         <div className="text-xs text-gray-600 dark:text-gray-400">
                           <span>{formatDate(meta?.startDate)}</span>

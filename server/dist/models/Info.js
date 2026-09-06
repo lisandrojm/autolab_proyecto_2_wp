@@ -13,6 +13,7 @@ const infoSchema = new Schema({
         etiquetaSecundaria: { type: String },
         colorEtiquetaSecundaria: { type: String },
         tipoImpositivo: { type: String },
+        esSistema: { type: Boolean },
         aceptaSinCuit: { type: Boolean },
         orden: { type: Number },
         ordenDependencia: { type: Number },

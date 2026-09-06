@@ -5,8 +5,8 @@ import { requireTenant } from "../middleware/tenant.js";
 import { PROPOSITOS, esProposito } from "../utils/propositosCarpeta.js";
 import { Tenant } from "../models/Tenant.js";
 import { getTenantDropboxConfig, listFolder } from "../services/dropboxService.js";
+import { ESTADO_TYPE, esEstadoDeSistema, ensureEstadosImpositivosSistema } from "../utils/estadosImpositivosSistema.js";
 const router = Router();
-const ESTADO_TYPE = "estado-empleado";
 const normalizarNombre = (s) => (s || "")
     .toLowerCase()
     .normalize("NFD")
@@ -72,6 +72,9 @@ router.get("/", requireTenant, authenticateToken, async (req, res) => {
             filter.type = type;
         }
         if (type === ESTADO_TYPE) {
+            // Mismo patrón que el backfill de orden: se dispara solo, sin correr nada en el VPS. El seed
+            // del arranque también lo hace; acá cubre el caso de una base que ya estaba levantada.
+            await ensureEstadosImpositivosSistema();
             await ensureEstadosOrdenBackfilled();
             const items = await Info.find(filter)
                 .sort({ "data.orden": 1, name: 1 })
@@ -110,7 +113,7 @@ function tieneOrdenDependencia(parsedData, estadoActual) {
     const valor = parsedData.ordenDependencia !== undefined ? parsedData.ordenDependencia : estadoActual?.data?.ordenDependencia;
     return typeof valor === "number";
 }
-function parseEstadoBody(body) {
+function parseEstadoBody(body, estadoActual) {
     const name = String(body?.name ?? "").trim();
     if (!name)
         return { error: "El nombre es obligatorio" };
@@ -118,10 +121,25 @@ function parseEstadoBody(body) {
     if (color && !/^#[0-9a-f]{6}$/i.test(color))
         return { error: "El color debe ser hexadecimal, por ejemplo #16a34a" };
     const contratoFrameIds = Array.isArray(body?.contratoFrameIds) ? body.contratoFrameIds.map((id) => String(id)).filter(Boolean) : [];
-    const esImpositivo = body?.esImpositivo === true || body?.esImpositivo === "true";
-    // Un estado impositivo sin tipos aplicaría a TODOS y chocaría con cualquier otro impositivo,
-    // así que se le exige elegir a cuáles corresponde.
-    if (esImpositivo && contratoFrameIds.length === 0) {
+    /*
+      UN ESTADO DE SISTEMA ES IMPOSITIVO SIEMPRE, aunque el formulario mande lo contrario.
+  
+      Existe justamente para representar uno de los dos trámites; destildarle la casilla lo dejaría
+      como un estado común y el siguiente arranque se lo volvería a marcar (`ensureEstadosImpositivos
+      Sistema`). En vez de ese ida y vuelta, acá no se puede apagar.
+    */
+    const esDeSistema = estadoActual?.data?.esSistema === true;
+    const esImpositivo = esDeSistema || body?.esImpositivo === true || body?.esImpositivo === "true";
+    /*
+      Un estado impositivo sin tipos aplicaría a TODOS y chocaría con cualquier otro impositivo, así
+      que se le exige elegir a cuáles corresponde.
+  
+      LOS DE SISTEMA ESTÁN EXENTOS: nacen sin ningún tipo de contrato asociado —el sistema garantiza
+      que los dos trámites existan, no a qué se aplican— y con esta regla no se los podría ni guardar
+      ni editar hasta asignarles uno. Sin tipos no chocan con nadie (`conflictoImpositivo` compara
+      justamente esa lista) y el wizard no los elige solo, así que la exención no abre ningún agujero.
+    */
+    if (esImpositivo && contratoFrameIds.length === 0 && !esDeSistema) {
         return { error: "Un estado impositivo tiene que indicar a qué tipos de contrato corresponde" };
     }
     // El badge secundario (texto + color) solo tiene sentido para estados impositivos: si se destilda
@@ -329,14 +347,16 @@ router.patch("/estados/reorder-dependencia", requireTenant, authenticateToken, a
 // PATCH /info/estados/:id - editar estado
 router.patch("/estados/:id", requireTenant, authenticateToken, async (req, res) => {
     try {
-        const parsed = parseEstadoBody(req.body);
-        if (parsed.error) {
-            res.status(400).json({ error: parsed.error });
-            return;
-        }
+        // El estado se busca ANTES de parsear: las reglas de un estado de sistema dependen de lo que ya
+        // está guardado, no de lo que manda el formulario (que no puede convertir uno en otro).
         const estado = await Info.findOne({ _id: req.params.id, type: ESTADO_TYPE });
         if (!estado) {
             res.status(404).json({ error: "Estado no encontrado" });
+            return;
+        }
+        const parsed = parseEstadoBody(req.body, estado);
+        if (parsed.error) {
+            res.status(400).json({ error: parsed.error });
             return;
         }
         if (parsed.data.transicionAutomatica && !tieneOrdenDependencia(parsed.data, estado)) {
@@ -498,6 +518,18 @@ router.delete("/sede/:id", requireTenant, authenticateToken, async (req, res) =>
 // DELETE /info/estados/:id
 router.delete("/estados/:id", requireTenant, authenticateToken, async (req, res) => {
     try {
+        /*
+          LOS DE SISTEMA NO SE BORRAN, y el corte va acá y no solo en el botón.
+    
+          Ocultarlo en el ABM alcanza para que no se toque por accidente, pero el endpoint sigue siendo
+          un DELETE con un id: cualquier cosa que lo llame —una pestaña vieja abierta, un script— dejaría
+          a la instalación sin uno de los dos trámites, y eso no se ve hasta que sale mal un TXT de ARCA.
+        */
+        const actual = await Info.findOne({ _id: req.params.id, type: ESTADO_TYPE }).lean();
+        if (actual && esEstadoDeSistema(actual.data)) {
+            res.status(409).json({ error: "Este estado es del sistema: se puede editar, pero no eliminar." });
+            return;
+        }
         const borrado = await Info.findOneAndDelete({ _id: req.params.id, type: ESTADO_TYPE }).lean();
         if (!borrado) {
             res.status(404).json({ error: "Estado no encontrado" });

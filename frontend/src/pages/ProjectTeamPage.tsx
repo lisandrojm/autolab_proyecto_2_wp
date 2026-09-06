@@ -27,6 +27,7 @@ import { EstadoSelect, EstadoBadge, EstadoSecundarioBadge, estadoLabel } from ".
 import { estadoImpositivoDelContrato } from "../components/team/ContractCard";
 import { esContratoVigente, getContratoActivo } from "../utils/contratoVigencia";
 import { contratoFrameAPI, ContratoFrameItem } from "../api/contratosFrame";
+import { TipoImpositivo, esTipoImpositivo, estadosImpositivos, estadoImpositivoPorTipo, tipoImpositivoDeContrato } from "../utils/tramiteImpositivo";
 import { contratosAPI, ContratoItem } from "../api/contratos";
 import { releasesAPI, Release } from "../api/release";
 import { companiesAPI, Company } from "../api/companies";
@@ -318,6 +319,20 @@ export const ProjectTeamPage: React.FC = () => {
   const [verTodasDelConvenio, setVerTodasDelConvenio] = useState(false);
   /** Aviso inline cuando el cambio de convenio dejó sin efecto la categoría que estaba elegida. */
   const [avisoConvenio, setAvisoConvenio] = useState("");
+
+  /*
+    POR QUÉ VÍA SE CONTRATA: filtra los tipos de contrato por su trámite impositivo.
+
+    La lista de tipos mezcla los que van por alta temprana ante ARCA con los que van por locación de
+    servicios, y de un vistazo no se distinguen: son todos nombres de contrato. Quien viene
+    aprobando una solicitud ya sabe por cuál de las dos vías se pidió contratar —lo declaró quien la
+    cargó desde mobile—, así que el filtro arranca en esa, y el resto de los tipos queda fuera de la
+    lista en vez de estar ahí para elegirse por error.
+
+    Vacío = sin filtrar. No es lo mismo que «ninguno de los dos»: es no haber filtrado.
+  */
+  const [filtroTramite, setFiltroTramite] = useState<TipoImpositivo | "">("");
+  const [filtroTramiteOpen, setFiltroTramiteOpen] = useState(false);
   const [wizardData, setWizardData] = useState({
     // Step 1: Contrato
     rol_frame_id: "",
@@ -808,6 +823,38 @@ export const ProjectTeamPage: React.FC = () => {
     const nuevoId = String(estadoImpositivoAuto.data.id);
     setWizardData((prev) => (prev.estado_id === nuevoId ? prev : { ...prev, estado_id: nuevoId }));
   }, [esAltaNueva, estadoImpositivoAuto, wizardData.contrato_frame_id]);
+
+  /*
+    QUÉ TRÁMITE DECLARA CADA TIPO DE CONTRATO.
+
+    El estado impositivo se vincula a la PLANTILLA, no al tipo de contrato, así que hay que ir por
+    ese camino en cada fila de la lista. Se calcula una vez para todos en vez de una por opción.
+  */
+  const tramitePorContrato = useMemo(() => {
+    const m = new Map<string, TipoImpositivo>();
+    for (const c of contratos) {
+      const t = tipoImpositivoDeContrato(c._id, contratoFrames, allEstados);
+      if (t) m.set(c._id, t);
+    }
+    return m;
+  }, [contratos, contratoFrames, allEstados]);
+
+  const impositivosDelAbm = useMemo(() => estadosImpositivos(allEstados), [allEstados]);
+
+  /** Nombre corto del trámite, para el texto del <option> (que no puede llevar un badge adentro). */
+  const etiquetaTramite = (tipo: TipoImpositivo): string => estadoImpositivoPorTipo(allEstados, tipo)?.name || tipo;
+
+  /*
+    La lista de tipos que se ofrece.
+
+    Con filtro puesto se muestran solo los de ese trámite… MÁS el que ya está elegido, aunque no
+    coincida: si no, cambiar de filtro haría desaparecer de la lista el tipo que el contrato tiene
+    guardado y el select quedaría mostrando un valor que no está entre sus opciones.
+  */
+  const contratosFiltradosPorTramite = useMemo(() => {
+    if (!filtroTramite) return contratos;
+    return contratos.filter((c) => tramitePorContrato.get(c._id) === filtroTramite || c._id === wizardData.contrato_id);
+  }, [contratos, filtroTramite, tramitePorContrato, wizardData.contrato_id]);
 
   const sedeName = useMemo(() => {
     if (!project) return null;
@@ -1599,6 +1646,19 @@ export const ProjectTeamPage: React.FC = () => {
 
       Sin categoría todavía, queda en «todos»: no hay nada de dónde deducirlo.
     */
+    /*
+      El filtro de trámite arranca en el que ya está declarado, mirando dos lugares en este orden:
+
+        1. el tipo de contrato que se precargó (viene de un contrato anterior: ese ya lo decidió);
+        2. lo que declaró la solicitud desde mobile.
+
+      El contrato pesa más que la solicitud porque es un hecho consumado y la solicitud es un pedido.
+      Si no hay ninguno de los dos, queda sin filtrar: no se inventa una vía.
+    */
+    const tramiteDelContrato = tipoImpositivoDeContrato(initialContratoId, contratoFrames, allEstados);
+    const tramiteDeLaSolicitud = esTipoImpositivo((user.metadata as any)?.tipoImpositivo) ? ((user.metadata as any).tipoImpositivo as TipoImpositivo) : null;
+    setFiltroTramite(tramiteDelContrato || tramiteDeLaSolicitud || "");
+
     const catInicial = initialCatId ? allCategoriasSat.find((c) => String(c.data?.id) === String(initialCatId)) : undefined;
     setConvenioFiltro(String(catInicial?.data?.convenio || "").trim());
     setVerTodasDelConvenio(false);
@@ -3384,9 +3444,13 @@ export const ProjectTeamPage: React.FC = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
-                        Categoría <span className="text-red-500">*</span>
-                      </label>
+                      {/* Alto fijo, igual que el rótulo de «Tipo de contrato»: es lo que mantiene
+                          los dos desplegables alineados aunque el de al lado muestre un badge. */}
+                      <div className="h-6 flex items-center ml-1">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
+                          Categoría <span className="text-red-500">*</span>
+                        </label>
+                      </div>
                       <select
                         className="input-field w-full"
                         value={wizardData.categoria_sat_id}
@@ -3441,9 +3505,44 @@ export const ProjectTeamPage: React.FC = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
-                        Tipo de contrato <span className="text-red-500">*</span>
-                      </label>
+                      {/*
+                        RÓTULO, FILTRO Y BADGE, TODO EN UNA FILA DE ALTO FIJO.
+
+                        Antes los tres trámites estaban como botones sueltos entre el rótulo y el
+                        desplegable: además de ser tres cosas para elegir una, esa fila empujaba el
+                        select hacia abajo y lo desalineaba de «Categoría», que está a la izquierda en
+                        la misma grilla. Y como la fila aparecía o no según el caso, la desalineación
+                        cambiaba sola.
+
+                        Ahora el filtro se elige en una ventana aparte —el mismo patrón de «Filtros
+                        avanzados»— y acá arriba queda solo el que está aplicado, como badge con una X
+                        para sacarlo. El `h-6` es lo que garantiza la alineación: la fila mide siempre
+                        lo mismo, haya badge o no, igual que la de «Categoría».
+                      */}
+                      <div className="h-6 flex items-center gap-2 ml-1">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
+                          Tipo de contrato <span className="text-red-500">*</span>
+                        </label>
+                        {impositivosDelAbm.length > 0 && (
+                          <button type="button" onClick={() => setFiltroTramiteOpen(true)} title="Filtrar por trámite (ARCA / Servicios)" className="text-gray-400 hover:text-blue-500 transition-colors">
+                            <FontAwesomeIcon icon={faFilter} className="h-3 w-3" />
+                          </button>
+                        )}
+                        {estadoImpositivoPorTipo(allEstados, filtroTramite) && (
+                          <span className="inline-flex items-center gap-1">
+                            <EstadoBadge name={estadoImpositivoPorTipo(allEstados, filtroTramite)!.name} className="text-[10px] whitespace-nowrap" />
+                            <button type="button" onClick={() => setFiltroTramite("")} title="Quitar el filtro" className="text-gray-400 hover:text-red-500 transition-colors">
+                              <FontAwesomeIcon icon={faXmark} className="h-3 w-3" />
+                            </button>
+                          </span>
+                        )}
+                      </div>
+
+                      {/*
+                        Lista propia y no un <select> nativo: un <option> solo admite texto, y acá
+                        cada tipo tiene que mostrar SU badge de trámite al lado del nombre. Es el
+                        mismo badge de Contratos, para que se lea como lo mismo.
+                      */}
                       <select
                         className="input-field w-full"
                         value={wizardData.contrato_id}
@@ -3466,13 +3565,19 @@ export const ProjectTeamPage: React.FC = () => {
                         required
                       >
                         <option value="">Selecciona tipo...</option>
-                        {contratos.map((c) => (
+                        {contratosFiltradosPorTramite.map((c) => (
                           <option key={c._id} value={c._id}>
                             {c.name}
                             {c.isActive === false ? " (inactivo)" : ""}
+                            {tramitePorContrato.get(c._id) ? ` · ${etiquetaTramite(tramitePorContrato.get(c._id)!)}` : ""}
                           </option>
                         ))}
                       </select>
+
+
+                      {filtroTramite && contratosFiltradosPorTramite.length === 0 && (
+                        <p className="text-[11px] text-amber-600 dark:text-amber-400 ml-1">Ningún tipo de contrato está configurado para este trámite. Vinculalo desde el ABM de Estados, o mirá todos.</p>
+                      )}
                     </div>
 
                     {(() => {
@@ -3930,6 +4035,66 @@ export const ProjectTeamPage: React.FC = () => {
           </Modal>
         </div>
       ) : null}
+
+      {/*
+        FILTRO DE TRÁMITE — ventana aparte, como «Filtros avanzados».
+
+        Elegir entre ARCA y Servicios es una decisión de filtrado, no un campo del contrato: metida
+        en el formulario competía visualmente con lo que sí se está cargando y desalineaba la fila.
+        Acá tiene lugar para mostrarse con los badges de color de verdad —que en una ventana de
+        filtros ayudan a reconocerlos, mientras que en el medio del formulario distraían—.
+      */}
+      <Modal
+        isOpen={filtroTramiteOpen}
+        onClose={() => setFiltroTramiteOpen(false)}
+        title="Filtrar tipos de contrato"
+        subtitle="Por el trámite que declaran ante ARCA"
+        size="sm"
+        zIndex={120}
+        footer={
+          <div className="flex items-center justify-between w-full gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setFiltroTramite("");
+                setFiltroTramiteOpen(false);
+              }}
+              className="btn-secondary"
+            >
+              Ver todos
+            </button>
+            <button type="button" onClick={() => setFiltroTramiteOpen(false)} className="btn-primary">
+              Cerrar
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-2">
+          {impositivosDelAbm.map((e) => {
+            const tipo = e.data?.tipoImpositivo;
+            if (!esTipoImpositivo(tipo)) return null;
+            const activo = filtroTramite === tipo;
+            const cuantos = contratos.filter((c) => tramitePorContrato.get(c._id) === tipo).length;
+            return (
+              <button
+                key={e._id}
+                type="button"
+                onClick={() => {
+                  setFiltroTramite(activo ? "" : tipo);
+                  setFiltroTramiteOpen(false);
+                }}
+                className={`w-full flex items-center justify-between gap-3 p-3 rounded-lg border text-left transition-colors ${activo ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500/20" : "border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600"}`}
+              >
+                <EstadoBadge name={e.name} />
+                {/* Cuántos tipos de contrato quedan de cada lado: evita elegir un filtro que deja
+                    la lista vacía y después no entender por qué no hay nada para seleccionar. */}
+                <span className="text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap">{cuantos === 1 ? "1 tipo" : `${cuantos} tipos`}</span>
+              </button>
+            );
+          })}
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 pt-1">El filtro solo acota la lista de tipos de contrato. No cambia nada de lo que se guarda.</p>
+        </div>
+      </Modal>
 
       {/* Modal de detalle del empleado: contratos del proyecto + descargas */}
       <EmployeeContractsModal

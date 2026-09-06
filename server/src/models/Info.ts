@@ -19,6 +19,11 @@ export interface IInfo extends Document {
     colorEtiquetaSecundaria?: string;
     /** Estados impositivos: trámite excluyente que representa. */
     tipoImpositivo?: "alta_temprana_afip" | "constancia_cuit";
+    /**
+     * Estado creado por el sistema (ver `utils/estadosImpositivosSistema.ts`): NO se puede borrar.
+     * Los dos trámites impositivos existen siempre; el ABM los edita, pero no los da de baja.
+     */
+    esSistema?: boolean;
     /** El estado admite también personas SIN CUIT/CUIL argentino (badge "Sin CUIT" en vez del trámite). */
     aceptaSinCuit?: boolean;
     /** Estados: orden visual en el ABM y en el dropdown del wizard (guía, no bloquea transiciones). */
@@ -65,6 +70,7 @@ const infoSchema = new Schema<IInfo>(
       etiquetaSecundaria: { type: String },
       colorEtiquetaSecundaria: { type: String },
       tipoImpositivo: { type: String },
+      esSistema: { type: Boolean },
       aceptaSinCuit: { type: Boolean },
       orden: { type: Number },
       ordenDependencia: { type: Number },

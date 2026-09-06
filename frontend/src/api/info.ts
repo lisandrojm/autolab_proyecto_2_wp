@@ -19,6 +19,8 @@ export interface InfoItem {
     colorEtiquetaSecundaria?: string;
     /** Estados impositivos: trámite que representa (excluyente). */
     tipoImpositivo?: "alta_temprana_afip" | "constancia_cuit";
+    /** Estado creado por el sistema: se puede editar, pero no eliminar. */
+    esSistema?: boolean;
     /** El estado admite personas SIN CUIT/CUIL argentino (badge "Sin CUIT" en vez del trámite). */
     aceptaSinCuit?: boolean;
     /** Estados: orden visual en el ABM y en el dropdown del wizard (guía, no bloquea transiciones). */

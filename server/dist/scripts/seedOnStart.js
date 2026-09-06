@@ -13,6 +13,7 @@ import { Area } from "../models/Area.js";
 import { VacationConfig } from "../models/VacationConfig.js";
 import { Vacation } from "../models/Vacation.js";
 import { RequestConfig } from "../models/RequestConfig.js";
+import { ensureEstadosImpositivosSistema } from "../utils/estadosImpositivosSistema.js";
 import { Types } from "mongoose";
 /* ----------------------------- helpers ----------------------------- */
 const PdfsList = [
@@ -824,6 +825,22 @@ export async function seedOnStart() {
         }
         // ---- PDF TEMPLATES ----
         await ensurePdfs(tenantId);
+        /*
+          ---- ESTADOS IMPOSITIVOS (los dos, de sistema) ----
+    
+          Van en el seed y no en el ABM porque no son una preferencia de cada productora: todo contrato
+          declara o un alta temprana ante ARCA o una locación de servicios. Sin ellos, el wizard no tiene
+          ningún trámite que ofrecer y las altas entran sin declarar cuál es.
+    
+          `infos` no está particionada por tenant, así que esto corre una sola vez para toda la base.
+        */
+        const estadosSistema = await ensureEstadosImpositivosSistema();
+        if (estadosSistema.creados.length > 0)
+            console.log(`  ✓ Estados impositivos creados: ${estadosSistema.creados.join(", ")}`);
+        if (estadosSistema.adoptados.length > 0)
+            console.log(`  ✓ Estados impositivos existentes marcados como de sistema: ${estadosSistema.adoptados.join(", ")}`);
+        if (estadosSistema.creados.length === 0 && estadosSistema.adoptados.length === 0)
+            console.log("  ✓ Estados impositivos de sistema ya estaban en orden");
         // ================= REPAIR LOGIC (ALWAYS RUNS) =================
         console.log("🔧 Validating OrderCategory PDF Templates configuration...");
         const repairMap = [

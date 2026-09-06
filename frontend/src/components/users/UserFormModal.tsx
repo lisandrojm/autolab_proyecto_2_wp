@@ -547,6 +547,18 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
       setModalActiveTab("general");
       return;
     }
+    /*
+      El rol empresa es obligatorio: es el oficio con el que la persona trabaja en una producción.
+
+      Sin él la ficha no sirve para lo que existe —armar equipos, buscar por especialidad, encuadrar
+      un contrato—, y como no bloqueaba nada al guardar, se completaba «después» y ese después no
+      llegaba. Se pide acá, igual que en el link de registro.
+    */
+    if ((formData.rolesFrameIds || []).length === 0) {
+      sweetAlert.error("Falta el rol empresa", "Elegí al menos un rol empresa: es el oficio con el que la persona trabaja en una producción.");
+      setModalActiveTab("general");
+      return;
+    }
     if (bloqueadoHastaValidar) {
       sweetAlert.error("Falta validar el CUIT", "Apretá «Validar CUIT»: nombre, apellido y documento los trae ARCA, y así el alta queda confirmada contra el organismo.");
       setModalActiveTab("general");
@@ -1222,6 +1234,60 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     Ahora el formulario muestra solo lo elegido y la elección pasa a una ventana dedicada,
                     donde hay lugar para buscar y ver la lista completa.
                   */}
+                <div>
+                  {/*
+                    Los botones van FUERA del <label>, en una fila propia.
+
+                    Un <label> que contiene un control se asocia a él, y este es `block`: con el ⓘ
+                    adentro, TODA la fila —los 100% de ancho, incluido el vacío a la derecha—
+                    quedaba como área activa de ese botón. Un <span> nombra el campo sin capturar
+                    clicks; el campo real de acá abajo es un botón que abre una ventana, no un input
+                    al que un label pueda dar foco.
+                  */}
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Rol/es Empresa <span className="text-red-500">*</span>
+                    </span>
+                    <button type="button" onClick={() => setRolesEmpresaInfoOpen(true)} title="¿Qué son los roles empresa?" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                      <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+                    </button>
+                    {/* Solo con algo elegido: sin nada, abajo está el buscador ancho y este [+]
+                        sería un segundo camino a lo mismo. */}
+                    {(formData.rolesFrameIds || []).length > 0 && <BotonAgregar onClick={() => setRolesEmpresaOpen(true)} title="Agregar otro rol" />}
+                  </div>
+                  <div>
+                    {(formData.rolesFrameIds || []).length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {(formData.rolesFrameIds || []).map((id) => {
+                          const rf = allRoleFrames.find((x) => x._id === id);
+                          return (
+                            <span key={id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                              {rf?.name || "Rol"}
+                              <button type="button" onClick={() => setFormData((prev) => ({ ...prev, rolesFrameIds: (prev.rolesFrameIds || []).filter((x) => x !== id) }))} title={`Quitar ${rf?.name || "rol"}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
+                                <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+                              </button>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {/*
+                    El buscador ancho SOLO cuando no hay nada elegido.
+
+                    Con roles ya puestos, ese campo repetía la invitación a elegir debajo de lo que
+                    ya estaba elegido y se llevaba el alto de una fila entera para eso. Con algo
+                    seleccionado alcanza un «+ Más» al lado de los badges, que abre la misma
+                    ventana. Lo elegido va ARRIBA y no adentro del input: badges dentro de un campo
+                    lo hacen crecer y se leen como texto escrito en el buscador.
+                  */}
+                    {(formData.rolesFrameIds || []).length === 0 && (
+                      <button type="button" onClick={() => setRolesEmpresaOpen(true)} className="input-field text-left flex items-center gap-2 hover:border-blue-400 dark:hover:border-blue-600 transition-colors">
+                        <span className="text-gray-400 dark:text-gray-500">Elegí uno o más roles…</span>
+                        <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400 ml-auto shrink-0" />
+                      </button>
+                    )}
+                  </div>
+                </div>
                 </fieldset>
               </div>
             )}
@@ -1478,59 +1544,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                     <input type="number" min="0" value={formData.extraVacationDays} onChange={(e) => setFormData((prev) => ({ ...prev, extraVacationDays: parseInt(e.target.value) || 0 }))} className="input-field" />
                   </div>
                 </div>
-                <div>
-                  {/*
-                    Los botones van FUERA del <label>, en una fila propia.
-
-                    Un <label> que contiene un control se asocia a él, y este es `block`: con el ⓘ
-                    adentro, TODA la fila —los 100% de ancho, incluido el vacío a la derecha—
-                    quedaba como área activa de ese botón. Un <span> nombra el campo sin capturar
-                    clicks; el campo real de acá abajo es un botón que abre una ventana, no un input
-                    al que un label pueda dar foco.
-                  */}
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Rol/es Empresa</span>
-                    <button type="button" onClick={() => setRolesEmpresaInfoOpen(true)} title="¿Qué son los roles empresa?" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                      <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
-                    </button>
-                    {/* Solo con algo elegido: sin nada, abajo está el buscador ancho y este [+]
-                        sería un segundo camino a lo mismo. */}
-                    {(formData.rolesFrameIds || []).length > 0 && <BotonAgregar onClick={() => setRolesEmpresaOpen(true)} title="Agregar otro rol" />}
-                  </div>
-                  <div>
-                    {(formData.rolesFrameIds || []).length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mb-2">
-                        {(formData.rolesFrameIds || []).map((id) => {
-                          const rf = allRoleFrames.find((x) => x._id === id);
-                          return (
-                            <span key={id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
-                              {rf?.name || "Rol"}
-                              <button type="button" onClick={() => setFormData((prev) => ({ ...prev, rolesFrameIds: (prev.rolesFrameIds || []).filter((x) => x !== id) }))} title={`Quitar ${rf?.name || "rol"}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
-                                <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
-                              </button>
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
-                    {/*
-                    El buscador ancho SOLO cuando no hay nada elegido.
-
-                    Con roles ya puestos, ese campo repetía la invitación a elegir debajo de lo que
-                    ya estaba elegido y se llevaba el alto de una fila entera para eso. Con algo
-                    seleccionado alcanza un «+ Más» al lado de los badges, que abre la misma
-                    ventana. Lo elegido va ARRIBA y no adentro del input: badges dentro de un campo
-                    lo hacen crecer y se leen como texto escrito en el buscador.
-                  */}
-                    {(formData.rolesFrameIds || []).length === 0 && (
-                      <button type="button" onClick={() => setRolesEmpresaOpen(true)} className="input-field text-left flex items-center gap-2 hover:border-blue-400 dark:hover:border-blue-600 transition-colors">
-                        <span className="text-gray-400 dark:text-gray-500">Elegí uno o más roles…</span>
-                        <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400 ml-auto shrink-0" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Legajo Tango</label>

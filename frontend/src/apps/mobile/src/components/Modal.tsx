@@ -37,19 +37,32 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, 
 
   const isFullscreen = size === "fullscreen";
 
+  /*
+    UNA SOLA BARRA DE SCROLL.
+
+    Había dos, una adentro de la otra: scrolleaba el contenedor de afuera (`fixed inset-0` con
+    `overflow-y-auto`) Y el panel (`max-h-[95vh] overflow-y-auto`). Con 95vh de alto más el padding
+    de 16px, el panel siempre superaba la pantalla por unos pocos píxeles, así que el contenedor
+    externo también tenía algo que scrollear: dos barras al costado, y la rueda del mouse moviendo
+    una u otra según dónde estuviera el puntero.
+
+    Ahora el panel NO crece más que el espacio disponible (`max-h-full` dentro de un contenedor con
+    el padding ya descontado) y el que scrollea es el cuerpo, no el panel entero. Efecto de arrastre
+    buscado: el encabezado y el pie quedan fijos de verdad, por estructura y no por `sticky`.
+  */
   return (
-    <div className="fixed inset-0 overflow-y-auto" style={{ zIndex }}>
-      <div className={`flex min-h-screen items-center justify-center ${isFullscreen ? "p-2" : "p-4"}`}>
+    <div className="fixed inset-0 overflow-hidden" style={{ zIndex }}>
+      <div className={`flex h-full items-center justify-center ${isFullscreen ? "p-2" : "p-4"}`}>
         {/* Backdrop */}
         <div className="fixed inset-0 bg-black/50 dark:bg-black/70 transition duration-200 h-vh" />
 
         {/* Panel */}
-        <div className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full ${getSizeClasses()} ${isFullscreen ? "overflow-hidden flex flex-col" : "max-h-[95vh] overflow-y-auto"}`} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={subtitleId}>
+        <div className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full flex flex-col overflow-hidden ${getSizeClasses()} ${isFullscreen ? "" : "max-h-full"}`} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={subtitleId}>
           {/* Header */}
           {customHeader ? (
             customHeader
           ) : (
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 sticky top-0 py-3 z-50">
+            <div className="shrink-0 flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 py-3">
               <div>
                 <h2 id={titleId} className="text-xl font-bold text-gray-900 dark:text-white">
                   {title}
@@ -71,11 +84,12 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, 
             </div>
           )}
 
-          {/* Content */}
-          <div className={isFullscreen ? "flex-1 overflow-hidden" : "p-6"}>{children}</div>
+          {/* Content — el único que scrollea. `min-h-0` es lo que se lo permite: sin eso, un hijo
+              flex no se encoge por debajo de su contenido y el scroll se vuelve a ir al panel. */}
+          <div className={isFullscreen ? "flex-1 min-h-0 overflow-hidden" : "flex-1 min-h-0 overflow-y-auto p-6"}>{children}</div>
 
-          {/* Footer */}
-          {footer && <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 sticky bottom-0 py-3 z-50">{footer}</div>}
+          {/* Footer — hermano del cuerpo, así que queda abajo sin necesidad de `sticky`. */}
+          {footer && <div className="shrink-0 flex items-center justify-end space-x-3 p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 py-3">{footer}</div>}
         </div>
       </div>
     </div>

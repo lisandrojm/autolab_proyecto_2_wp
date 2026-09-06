@@ -8,7 +8,7 @@ import { InfoModal } from '../ui/InfoModal';
 import { SelectorBadges } from '../ui/SelectorBadges';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash, faTags, faFileContract, faGrip, faTable, faFileInvoiceDollar, faGripVertical, faCheck, faMultiply, faCircleInfo, faSitemap, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faTrash, faTags, faFileContract, faGrip, faTable, faFileInvoiceDollar, faGripVertical, faCheck, faMultiply, faCircleInfo, faSitemap, faTriangleExclamation, faLock } from '@fortawesome/free-solid-svg-icons';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -17,6 +17,7 @@ import { contratoFrameAPI, ContratoFrameItem } from '../../api/contratosFrame';
 import { useEstadoCatalogStore } from '../../stores/estadoCatalogStore';
 import { estadoColorPorDefecto, colorTextoBadge, EstadoSecundarioBadge } from '../EstadoSelect';
 import { useThemeStore } from '../../stores/themeStore';
+import { TipoImpositivo, TRAMITES_IMPOSITIVOS } from '../../utils/tramiteImpositivo';
 
 /** Paleta sugerida: solo se elige el color de la tipografía; el fondo es ese color con transparencia. */
 const COLORES = [
@@ -79,6 +80,20 @@ const ChipImpositivo: React.FC = () => (
  * Mismo violeta pero invertido: "Alta temprana de ARCA" en positivo (relleno) y "Constancia de CUIT"
  * en negativo (contorno), para distinguirlos de un vistazo.
  */
+/**
+ * Marca de estado creado por el sistema. No se puede eliminar.
+ *
+ * Los dos trámites impositivos —alta temprana ante ARCA y locación de servicios— existen siempre:
+ * no son una preferencia de cada productora sino cómo se declara el vínculo ante el organismo. El
+ * chip está para que quien mira el ABM entienda por qué a ese estado le falta el botón de borrar.
+ */
+const ChipSistema: React.FC = () => (
+  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-100 dark:bg-slate-200 dark:text-slate-800 border border-slate-800 dark:border-slate-200 whitespace-nowrap" title="Estado del sistema: se puede editar, pero no eliminar">
+    <FontAwesomeIcon icon={faLock} className="h-2.5 w-2.5" />
+    Sistema
+  </span>
+);
+
 /** Badge del paso del flujo de dependencias ("Paso N"). No muestra nada si el estado no está en el flujo. */
 const ChipPasoDependencia: React.FC<{ estado: InfoItem }> = ({ estado }) => {
   const n = estado.data?.ordenDependencia;
@@ -149,20 +164,9 @@ const GRUPOS_ESTADOS: { key: string; titulo: string; descripcion: string; icono:
   },
 ];
 
-/** Trámite impositivo que representa un estado impositivo. Excluyentes: siempre uno solo. */
-type TipoImpositivo = 'alta_temprana_afip' | 'constancia_cuit';
-const TIPOS_IMPOSITIVO: { value: TipoImpositivo; label: string; descripcion: string }[] = [
-  {
-    value: 'alta_temprana_afip',
-    label: 'Alta temprana de ARCA',
-    descripcion: 'Registro anticipado de la relación laboral en ARCA, que se hace ANTES de que la persona empiece a trabajar. Da de alta al trabajador en tiempo y forma.',
-  },
-  {
-    value: 'constancia_cuit',
-    label: 'Constancia de CUIT',
-    descripcion: 'Comprobante de inscripción que emite ARCA acreditando el CUIT y la situación fiscal de la persona.',
-  },
-];
+/* El tipo y la lista de trámites viven en `utils/tramiteImpositivo.ts`: los usan también la
+   solicitud de mobile, la tabla de Solicitudes y el wizard de Agregar Miembro. */
+const TIPOS_IMPOSITIVO = TRAMITES_IMPOSITIVOS;
 
 interface FormState {
   name: string;
@@ -898,6 +902,7 @@ const SortableEstadoRow: React.FC<SortableEstadoProps & { index: number; onEnabl
         {estado.data?.esImpositivo ? (
           <div className="flex flex-wrap items-center gap-1">
             <ChipImpositivo />
+            {estado.data?.esSistema ? <ChipSistema /> : null}
             <ChipTipoImpositivo estado={estado} />
             <ChipAceptaSinCuit estado={estado} />
           </div>
@@ -923,7 +928,7 @@ const SortableEstadoRow: React.FC<SortableEstadoProps & { index: number; onEnabl
       <td className="px-4 py-3">
         <div className={`flex items-center justify-end gap-1 ${isReorderMode ? 'opacity-20 pointer-events-none' : ''}`}>
           <CardFooterAction icon={faEdit} title="Editar estado" onClick={() => abrirEditar(estado)} />
-          <CardFooterAction icon={faTrash} title="Eliminar estado" onClick={() => eliminar(estado)} />
+          {estado.data?.esSistema ? null : <CardFooterAction icon={faTrash} title="Eliminar estado" onClick={() => eliminar(estado)} />}
         </div>
       </td>
     </tr>
@@ -964,6 +969,7 @@ const SortableEstadoCard: React.FC<SortableEstadoProps> = ({ estado, isReorderMo
               ({tipos.length || 'Todos'})
             </span>
             {estado.data?.esImpositivo ? <ChipImpositivo /> : null}
+            {estado.data?.esSistema ? <ChipSistema /> : null}
             {estado.data?.esImpositivo ? <ChipTipoImpositivo estado={estado} /> : null}
             {estado.data?.esImpositivo ? <ChipAceptaSinCuit estado={estado} /> : null}
             <ChipPasoDependencia estado={estado} />
@@ -988,7 +994,7 @@ const SortableEstadoCard: React.FC<SortableEstadoProps> = ({ estado, isReorderMo
 
         <div className={`flex items-center justify-end gap-1 pt-2 mt-auto border-t border-gray-100 dark:border-gray-700/60 ${isReorderMode ? 'opacity-20 pointer-events-none' : ''}`}>
           <CardFooterAction icon={faEdit} title="Editar estado" onClick={() => abrirEditar(estado)} />
-          <CardFooterAction icon={faTrash} title="Eliminar estado" onClick={() => eliminar(estado)} />
+          {estado.data?.esSistema ? null : <CardFooterAction icon={faTrash} title="Eliminar estado" onClick={() => eliminar(estado)} />}
         </div>
       </div>
     </div>

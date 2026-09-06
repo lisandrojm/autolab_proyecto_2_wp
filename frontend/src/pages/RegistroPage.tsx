@@ -530,13 +530,13 @@ export const RegistroPage: React.FC = () => {
   // El CUIL solo es obligatorio para argentinos: un extranjero puede no tenerlo (lo declara con el
   // checkbox y en ese caso el campo ni se muestra).
   const REQUIRED_BY_STEP: Record<"general" | "domicilio", { key: keyof RegistroForm; label: string }[]> = {
-    general: [{ key: "firstName", label: "Nombre" }, { key: "lastName", label: "Apellido" }, { key: "email", label: "Email" }, { key: "nacionalidadId", label: "Nacionalidad" }, ...(cuilObligatorio ? [{ key: "cuit" as keyof RegistroForm, label: "CUIT / CUIL" }] : []), ...(form.nacionalizado ? [{ key: "paisNacimientoId" as keyof RegistroForm, label: "País de nacimiento" }] : []), { key: "documento", label: "Documento" }, { key: "password", label: "Contraseña" }, { key: "fechaNac", label: "Fecha de nacimiento" }, { key: "telefono", label: "Teléfono" }],
+    general: [{ key: "firstName", label: "Nombre" }, { key: "lastName", label: "Apellido" }, { key: "email", label: "Email" }, { key: "nacionalidadId", label: "Nacionalidad" }, ...(cuilObligatorio ? [{ key: "cuit" as keyof RegistroForm, label: "CUIT / CUIL" }] : []), ...(form.nacionalizado ? [{ key: "paisNacimientoId" as keyof RegistroForm, label: "País de nacimiento" }] : []), { key: "documento", label: "Documento" }, { key: "password", label: "Contraseña" }, { key: "fechaNac", label: "Fecha de nacimiento" }, { key: "telefono", label: "Teléfono" }, { key: "rolesFrameIds", label: "Rol/es Empresa" }],
     domicilio: [
       { key: "pais", label: "País" },
       { key: "localidad", label: "Localidad" },
       { key: "calle", label: "Calle" },
       { key: "altura", label: "Altura" },
-      { key: "pisoDepto", label: "Piso / Depto" },
+      { key: "codigoPostal", label: "Código postal" },
     ],
   };
 
@@ -569,7 +569,19 @@ export const RegistroPage: React.FC = () => {
   // Faltantes de un paso: devuelve [{key,label}] de los obligatorios vacíos.
   const getMissingForStep = (step: Tab): { key: string; label: string }[] => {
     if (step === "bancarios") return getMissingBancarios();
-    return (REQUIRED_BY_STEP[step] || []).filter((r) => !String((form as any)[r.key] ?? "").trim()).map((r) => ({ key: r.key as string, label: r.label }));
+    return (REQUIRED_BY_STEP[step] || [])
+      .filter((r) => {
+        /*
+          Los obligatorios no son todos texto: Rol/es Empresa es una lista.
+
+          `String([])` da "" y por casualidad caía del lado correcto, pero `String(["a","b"])` da
+          "a,b" y una lista de un solo id vacío pasaría como cargada. Se pregunta por el largo, que
+          es lo que realmente significa «no eligió ninguno».
+        */
+        const v = form[r.key] as unknown;
+        return Array.isArray(v) ? v.length === 0 : !String(v ?? "").trim();
+      })
+      .map((r) => ({ key: r.key as string, label: r.label }));
   };
 
   // Marca los faltantes en rojo y arma el mensaje de error del paso.
@@ -1042,11 +1054,13 @@ export const RegistroPage: React.FC = () => {
                 */}
                     <div>
                       <label className={labelClass}>
-                        Rol/es Empresa
+                        Rol/es Empresa <span className="text-red-500">*</span>
                         <InfoRolesEmpresa />
                       </label>
-                      {/* El campo abre el selector; lo elegido va DEBAJO, no adentro. */}
-                      <button type="button" onClick={() => setRolesEmpresaOpen(true)} className={`${fieldClass} text-left flex items-center gap-2 hover:border-blue-500 transition-colors`}>
+                      {/* El campo abre el selector; lo elegido va DEBAJO, no adentro.
+                          Usa `inputClass` y no `fieldClass` para que se pinte de rojo como el resto
+                          de los obligatorios cuando se intenta avanzar sin elegir ninguno. */}
+                      <button type="button" onClick={() => setRolesEmpresaOpen(true)} className={`${inputClass("rolesFrameIds")} text-left flex items-center gap-2 hover:border-blue-500 transition-colors`}>
                         <span className="text-gray-500">Elegí uno o más roles…</span>
                         <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400 ml-auto shrink-0" />
                       </button>
@@ -1204,14 +1218,16 @@ export const RegistroPage: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className={labelClass}>
-                        Piso / Depto <span className="text-red-500">*</span>
-                      </label>
-                      <input className={inputClass("pisoDepto")} autoComplete="off" placeholder="Ej: 4B" value={form.pisoDepto} onChange={(e) => set("pisoDepto", e.target.value)} />
+                      {/* No lleva `*`: una casa a la calle no tiene piso ni depto, y pedirlo obligaba
+                          a inventar algo para poder seguir. */}
+                      <label className={labelClass}>Piso / Depto</label>
+                      <input className={fieldClass} autoComplete="off" placeholder="Ej: 4B" value={form.pisoDepto} onChange={(e) => set("pisoDepto", e.target.value)} />
                     </div>
                     <div>
-                      <label className={labelClass}>Código postal</label>
-                      <input className={fieldClass} autoComplete="off" placeholder="Ej: 1425" value={form.codigoPostal} onChange={(e) => set("codigoPostal", e.target.value)} />
+                      <label className={labelClass}>
+                        Código postal <span className="text-red-500">*</span>
+                      </label>
+                      <input className={inputClass("codigoPostal")} autoComplete="off" placeholder="Ej: 1425" value={form.codigoPostal} onChange={(e) => set("codigoPostal", e.target.value)} />
                     </div>
                   </div>
                 </div>
