@@ -32,6 +32,21 @@ type ModalTab = "general" | "domicilio" | "bancarios" | "sistema";
 const ORDEN_TABS: ModalTab[] = ["general", "domicilio", "bancarios", "sistema"];
 
 const sindicatosApi = createSimpleCatalogApi("/sindicatos");
+/**
+ * LAS ENTIDADES FINANCIERAS SALEN DEL ABM, no de «infos?type=banco».
+ *
+ * Hay DOS catálogos con lo mismo y no son iguales: la colección `infos` es de donde salía este
+ * select, y la colección `bancos` es la que administra Configuración → Entidades Financieras, con su
+ * alta, su import de Excel y —lo que importa acá— el campo `tipoEntidad`.
+ *
+ * Mientras se pidió solo el nombre la diferencia no se veía. Al filtrar por tipo sí: los de `infos`
+ * no tienen `tipoEntidad`, así que elegir «Billetera Virtual» dejaba la lista VACÍA. El registro
+ * público ya leía del ABM (ver `routes/auth.ts`), y por eso allá funcionaba y acá no.
+ *
+ * Es el mismo problema que tenían los centros de costo: la pantalla que administra un catálogo y la
+ * que lo usa mirando lugares distintos.
+ */
+const bancosApi = createSimpleCatalogApi("/bancos");
 
 /**
  * El [+] que abre el selector de un campo de elección múltiple.
@@ -265,7 +280,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   const [countries, setCountries] = useState<InfoItem[]>([]);
   const [nationalities, setNationalities] = useState<InfoItem[]>([]);
   const [educationLevels, setEducationLevels] = useState<InfoItem[]>([]);
-  const [banks, setBanks] = useState<InfoItem[]>([]);
+  const [banks, setBanks] = useState<SimpleCatalogItem[]>([]);
   const [sindicatos, setSindicatos] = useState<SimpleCatalogItem[]>([]);
   // El catálogo de obras sociales ya no se carga acá: el campo se mudó al contrato.
   const [catalogsLoaded, setCatalogsLoaded] = useState(false);
@@ -316,7 +331,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
           dist commiteado—. Sin el catch, un 404 suyo dejaría el formulario entero sin nacionalidades,
           sin bancos y sin tipos de documento. Que falte la lista de gremios vacía un solo select.
         */
-        const [rolesRes, rf, g, dt, c, n, el, b, sind] = await Promise.all([rolesAPI.list({ limit: 100 }), roleFrameAPI.list(), infoAPI.listByType("genero"), infoAPI.listByType("tipo-documento"), infoAPI.listByType("pais"), infoAPI.listByType("nacionalidad"), infoAPI.listByType("nivel-estudio"), infoAPI.listByType("banco"), sindicatosApi.list().catch(() => [] as SimpleCatalogItem[])]);
+        const [rolesRes, rf, g, dt, c, n, el, b, sind] = await Promise.all([rolesAPI.list({ limit: 100 }), roleFrameAPI.list(), infoAPI.listByType("genero"), infoAPI.listByType("tipo-documento"), infoAPI.listByType("pais"), infoAPI.listByType("nacionalidad"), infoAPI.listByType("nivel-estudio"), bancosApi.list(), sindicatosApi.list().catch(() => [] as SimpleCatalogItem[])]);
         if (cancelled) return;
         setRoles(rolesRes.roles);
         const rfArray = Array.isArray(rf) ? rf : rf && Array.isArray((rf as any).data) ? (rf as any).data : [];
@@ -477,6 +492,19 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
    * «CBU / CVU» daba a entender que acepta dos cosas distintas cuando el formato es uno solo.
    */
   const cbuIncompleto = esCbuIncompleto(formData.cbu || "");
+
+  /**
+   * DATOS BANCARIOS: LA CASCADA MUESTRA, PERO NUNCA ESCONDE LO QUE YA ESTÁ CARGADO.
+   *
+   * El registro va destapando los pasos —tipo, entidad, cuenta— porque del otro lado se carga de
+   * cero. Acá se abre gente que YA tiene datos, y muchas fichas viejas no tienen
+   * `tipoEntidadFinanciera` (el campo es nuevo). Si se copiara la cascada tal cual, esa gente
+   * abriría la pestaña vacía, con su CBU guardado y ninguna manera de verlo ni corregirlo.
+   *
+   * Por eso todo paso condicionado lleva un «…o ya hay algo cargado».
+   */
+  const bancariosFiltrados = banks.filter((it) => !formData.tipoEntidadFinanciera || String((it as { tipoEntidad?: string }).tipoEntidad || "banco") === formData.tipoEntidadFinanciera);
+  const hayDatosDeCuenta = !!(formData.cbu || formData.bancoId || formData.nroDeCuentaBancaria || formData.tipoDeCuentaBancaria || formData.aliasBancario);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1287,30 +1315,74 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                   </select>
                 </div>
 
-                {/* Con «No tengo Banco» no hay ningún dato de cuenta que cargar: la cascada entera se
-                    apaga en vez de mostrar campos que no se pueden completar. */}
-                {declaraSinBanco(formData.tipoEntidadFinanciera || "") ? (
+                {/* El mismo aviso que ve quien se registra: la cuenta tiene que ser de la persona,
+                    no de un familiar ni de la productora. Acá lo carga otro, así que corresponde
+                    igual —o más—, porque quien tipea el CBU no es el titular. */}
+                {formData.tipoEntidadFinanciera && !declaraSinBanco(formData.tipoEntidadFinanciera) && (
+                  <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 text-[12.5px] text-blue-800 dark:text-blue-300">
+                    <span className="font-semibold">IMPORTANTE:</span> La cuenta debe estar a nombre de la persona.
+                  </div>
+                )}
+
+                {/*
+                  Con «No tengo Banco» no hay dato de cuenta que cargar y la cascada entera se apaga…
+                  salvo que YA tenga algo cargado. Ese caso existe —alguien declaró no tener banco y
+                  después le cargaron la cuenta— y esconderlo dejaría un CBU guardado que no se puede
+                  ni ver ni corregir desde la única pantalla que lo edita.
+                */}
+                {declaraSinBanco(formData.tipoEntidadFinanciera || "") && !hayDatosDeCuenta ? (
                   <p className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-3 py-2.5 text-[12.5px] text-blue-800 dark:text-blue-300">
                     Declarado <strong>sin banco</strong>: no hay datos de cuenta para cargar. Si la persona autorizó que se le abra una, el pedido se ve en su ficha del listado.
                   </p>
                 ) : (
                   <>
+                {/* Paso 2: la entidad. El rótulo lo pone el tipo elegido —«Billetera Virtual», no
+                    «Banco»—, igual que en el registro: pedir «Banco» y listar Mercado Pago confunde. */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{labelTipo(formData.tipoEntidadFinanciera || "")}</label>
                     {/* Solo las entidades de ESE tipo: ofrecer los bancos cuando se eligió billetera
-                        virtual es ofrecer un error, y el listado es largo. */}
+                        virtual es ofrecer un error, y el listado es largo.
+
+                        Sin `tipoEntidad` cargado se asume banco: es el default del ABM y lo que ya
+                        asume el registro, así que las entidades viejas siguen apareciendo. */}
                     <select value={formData.bancoId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, bancoId: parseInt(e.target.value) || undefined }))} className="input-field" disabled={!formData.tipoEntidadFinanciera}>
                       <option value="">{formData.tipoEntidadFinanciera ? "Seleccionar..." : "Elegí primero el tipo de entidad"}</option>
-                      {banks
-                        .filter((it) => !formData.tipoEntidadFinanciera || ((it as any).tipoEntidad || "banco") === formData.tipoEntidadFinanciera)
-                        .map((it) => (
-                          <option key={it._id} value={it.data.id}>
-                            {it.name}
-                          </option>
-                        ))}
+                      {bancariosFiltrados.map((it) => (
+                        <option key={it._id} value={it.data?.id}>
+                          {it.name}
+                        </option>
+                      ))}
                     </select>
+                    {/* El mismo aviso que el registro: la lista vacía no es un error de esta pantalla
+                        sino un ABM sin cargar, y sin decirlo se busca el problema donde no está. */}
+                    {formData.tipoEntidadFinanciera && bancariosFiltrados.length === 0 && <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">No hay entidades cargadas de este tipo. Cargalas en el ABM de Entidades Financieras.</p>}
                   </div>
+                </div>
+
+                {/*
+                  Paso 3: los datos de la cuenta, cuando ya hay entidad elegida —como en el registro—,
+                  O cuando la ficha ya trae algo cargado. Esa segunda mitad es lo que diferencia esta
+                  pantalla del alta: acá se abre gente que ya existe, y esconderle el CBU por no tener
+                  la entidad puesta lo volvería invisible e incorregible.
+
+                  El orden también es el del registro: Tipo de cuenta / CBU arriba, Alias / Nro. de
+                  cuenta abajo.
+                */}
+                {(formData.bancoId || hayDatosDeCuenta) && (
+                <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {(camposDe(formData.tipoEntidadFinanciera || "").tipoCuenta || !!formData.tipoDeCuentaBancaria) && (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tipo de cuenta</label>
+                      <select value={formData.tipoDeCuentaBancaria || ""} onChange={(e) => setFormData((prev) => ({ ...prev, tipoDeCuentaBancaria: e.target.value }))} className="input-field">
+                        <option value="">Seleccionar...</option>
+                        <option value="Caja de ahorro $">Caja de ahorro $</option>
+                        <option value="Cuenta Corriente $">Cuenta Corriente $</option>
+                        <option value="Caja de ahorro u$s">Caja de ahorro u$s</option>
+                      </select>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                       {/* CBU o CVU según la entidad: son los dos 22 dígitos, pero no se llaman igual y
@@ -1336,32 +1408,32 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                   </div>
                 </div>
 
-                {/* Tipo y número de cuenta solo existen en algunas entidades: una billetera virtual
-                    no tiene ninguno de los dos. Se ocultan en vez de mostrarse vacíos. */}
+                {/*
+                  SE OCULTA UN CAMPO VACÍO, NUNCA UNO CON DATO.
+
+                  El número de cuenta no existe en una billetera virtual, así que la cascada lo
+                  esconde. Pero las fichas viejas no tienen `tipoEntidadFinanciera` cargado: con la
+                  cascada sola, un usuario con su número de cuenta puesto abriría este modal sin verlo
+                  —y ese dato seguiría guardándose igual, invisible e incorregible—.
+
+                  Por eso la condición es «la cascada lo pide O ya tiene algo». Un campo con contenido
+                  se muestra siempre, aunque el tipo elegido diga que no corresponde: si sobra, que se
+                  vea y se borre a mano; esconderlo no lo hace desaparecer de la base.
+                */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {camposDe(formData.tipoEntidadFinanciera || "").tipoCuenta && (
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Alias</label>
+                    <input type="text" value={formData.aliasBancario || ""} onChange={(e) => setFormData((prev) => ({ ...prev, aliasBancario: e.target.value }))} className="input-field" placeholder="Ej: LUNES.MALETA.CUNA" />
+                  </div>
+                  {(camposDe(formData.tipoEntidadFinanciera || "").nroCuenta || !!formData.nroDeCuentaBancaria) && (
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tipo de Cuenta</label>
-                      <select value={formData.tipoDeCuentaBancaria || ""} onChange={(e) => setFormData((prev) => ({ ...prev, tipoDeCuentaBancaria: e.target.value }))} className="input-field">
-                        <option value="">Seleccionar...</option>
-                        <option value="Caja de ahorro $">Caja de ahorro $</option>
-                        <option value="Cuenta Corriente $">Cuenta Corriente $</option>
-                        <option value="Caja de ahorro u$s">Caja de ahorro u$s</option>
-                      </select>
-                    </div>
-                  )}
-                  {camposDe(formData.tipoEntidadFinanciera || "").nroCuenta && (
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Número de Cuenta</label>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nro. de cuenta</label>
                       <input type="text" value={formData.nroDeCuentaBancaria || ""} onChange={(e) => setFormData((prev) => ({ ...prev, nroDeCuentaBancaria: e.target.value }))} className="input-field" placeholder="Ej: 347-333020/7" />
                     </div>
                   )}
                 </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Alias Bancario</label>
-                  <input type="text" value={formData.aliasBancario || ""} onChange={(e) => setFormData((prev) => ({ ...prev, aliasBancario: e.target.value }))} className="input-field" placeholder="Ej: LUNES.MALETA.CUNA" />
-                </div>
+                </>
+                )}
                   </>
                 )}
               </div>
