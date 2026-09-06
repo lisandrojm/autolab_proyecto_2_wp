@@ -904,11 +904,6 @@ export const ClientProjectsPage: React.FC = () => {
                 header={{
                   title: `Proyecto | ${project.name}`,
                   subtitle: project.description,
-                  avatar: {
-                    src: client?.logo,
-                    fallback: (client?.name || 'C').charAt(0).toUpperCase(),
-                    alt: client?.name,
-                  },
                   badges: [
                     {
                       text: project.status === 'active' ? 'Activo' : project.status === 'on_hold' ? 'En Espera' : project.status === 'completed' ? 'Completado' : 'Archivado',
