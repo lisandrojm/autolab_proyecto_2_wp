@@ -8,6 +8,7 @@ const contractSchema = new Schema({
     fecha_baja_contrato: { type: String },
     tipo_contrato_id: { type: Number },
     cantidad_jornadas_laborales: { type: Number },
+    dias_por_semana: { type: Number },
     dias_semana: { type: [Number], default: undefined },
     dias_rotativos: { type: Boolean, default: false },
     sueldo_jornada: { type: Number },

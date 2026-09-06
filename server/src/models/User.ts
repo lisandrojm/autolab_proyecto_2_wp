@@ -19,6 +19,14 @@ export interface IExternalProject {
    * esquema ROTATIVO son los días ENTRE los que rota, y pueden ser más que las jornadas. Sin el
    * flag, «trabaja 3 días rotando entre 6» se leería como «trabaja 6 días».
    */
+  /**
+   * Cuántos días de la SEMANA trabaja (1 a 7).
+   *
+   * NO confundir con `cantidad_jornadas_laborales`, que son las jornadas TOTALES del contrato (22,
+   * 30…) y es lo que multiplica al sueldo por jornada. Son dos números distintos y por un rato
+   * compartieron campo: la pantalla llegó a mostrar «días por semana: 22».
+   */
+  dias_por_semana?: number;
   dias_semana?: number[];
   dias_rotativos?: boolean;
   sueldo_jornada: number;
@@ -138,6 +146,7 @@ export interface IUserMetadata {
   dueDate?: string;
   workdaysCount?: number;
   /** Días de la semana de la solicitud (0=domingo…6=sábado). Ver `dias_semana` del contrato. */
+  diasPorSemana?: number;
   diasSemana?: number[];
   diasRotativos?: boolean;
   schedule?: string;
@@ -262,6 +271,7 @@ const userSchema = new Schema<IUser>(
       startDate: String,
       dueDate: String,
       workdaysCount: Number,
+      diasPorSemana: { type: Number },
       diasSemana: { type: [Number], default: undefined },
       diasRotativos: { type: Boolean, default: false },
       schedule: String,

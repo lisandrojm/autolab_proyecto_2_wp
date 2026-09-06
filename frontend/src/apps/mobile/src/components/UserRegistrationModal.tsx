@@ -43,6 +43,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     startDate: "",
     dueDate: "",
     workdaysCount: "",
+    diasPorSemana: "",
     diasSemana: [] as number[],
     diasRotativos: false,
     inTime: "",
@@ -107,6 +108,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         workdaysCount: meta.workdaysCount?.toString() || "",
         // Las solicitudes anteriores a este campo no traen días: se abren vacías y hay que
         // elegirlos, en vez de inventar una semana que nadie declaró.
+        diasPorSemana: (meta as any).diasPorSemana?.toString() || "",
         diasSemana: Array.isArray((meta as any).diasSemana) ? ((meta as any).diasSemana as number[]) : [],
         diasRotativos: !!(meta as any).diasRotativos,
         inTime: inTime || "",
@@ -123,6 +125,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         startDate: "",
         dueDate: "",
         workdaysCount: "",
+        diasPorSemana: "",
         diasSemana: [],
         diasRotativos: false,
         inTime: "",
@@ -179,6 +182,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           startDate: formData.startDate,
           dueDate: formData.dueDate,
           workdaysCount: Number(formData.workdaysCount),
+          diasPorSemana: Number(formData.diasPorSemana) || undefined,
           diasSemana: formData.diasSemana,
           diasRotativos: formData.diasRotativos,
           schedule: `${formData.inTime} - ${formData.outTime}`,
@@ -205,6 +209,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         startDate: "",
         dueDate: "",
         workdaysCount: "",
+        diasPorSemana: "",
         diasSemana: [],
         diasRotativos: false,
         inTime: "",
@@ -534,21 +539,27 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/*
-            Los días de la semana. EL MISMO componente que «Agregar miembro» del escritorio.
+          {/* Las jornadas TOTALES del contrato (22, 30…). Es lo que multiplica al sueldo por jornada,
+              y NO es lo mismo que los días de la semana: son dos números distintos. */}
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Cantidad de Jornadas</label>
+            <input type="number" name="workdaysCount" value={formData.workdaysCount} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium" placeholder="Ej: 22" />
+          </div>
 
-            Antes acá había un número suelto —«Cantidad de Jornadas»— que no decía QUÉ días, así que
-            «trabaja 3» no distinguía entre tres días fijos y tres rotando entre seis.
-          */}
+          {/* Y los días de la SEMANA, con el mismo componente que el escritorio. */}
           <div className="md:col-span-3">
             <DiasDeTrabajo
               variante="mobile"
-              jornadas={Number(formData.workdaysCount) || 0}
-              onJornadas={(n) => setFormData((p) => ({ ...p, workdaysCount: n ? String(n) : "" }))}
+              jornadas={Number(formData.diasPorSemana) || 0}
+              onJornadas={(n) => setFormData((p) => ({ ...p, diasPorSemana: n ? String(n) : "" }))}
               rotativos={formData.diasRotativos}
               onRotativos={(v) => setFormData((p) => ({ ...p, diasRotativos: v }))}
               dias={formData.diasSemana}
               onDias={(d) => setFormData((p) => ({ ...p, diasSemana: d }))}
+              desde={formData.startDate}
+              hasta={formData.dueDate}
+              jornadasTotales={Number(formData.workdaysCount) || 0}
+              onJornadasTotales={(n) => setFormData((p) => ({ ...p, workdaysCount: String(n) }))}
             />
           </div>
           <div className="space-y-1 md:col-span-2">

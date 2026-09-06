@@ -49,6 +49,22 @@ export const problemaDeDias = (jornadas: number, rotativos: boolean, dias: numbe
   return null;
 };
 
+/**
+ * Las jornadas TOTALES que salen de trabajar `diasPorSemana` entre dos fechas.
+ *
+ * Es una ESTIMACIÓN de calendario: no sabe de feriados, licencias ni de que la última semana esté
+ * cortada al medio. Por eso se ofrece y no se impone — `cantidad_jornadas_laborales` multiplica al
+ * sueldo por jornada, y pisarla sola cambiaría lo que se le paga a alguien sin que nadie lo pidiera.
+ */
+export const jornadasEstimadas = (desde?: string, hasta?: string, diasPorSemana?: number): number | null => {
+  if (!desde || !hasta || !diasPorSemana) return null;
+  const d1 = new Date(desde + "T00:00:00");
+  const d2 = new Date(hasta + "T00:00:00");
+  if (Number.isNaN(d1.getTime()) || Number.isNaN(d2.getTime()) || d2 < d1) return null;
+  const dias = Math.floor((d2.getTime() - d1.getTime()) / 86400000) + 1;
+  return Math.max(1, Math.round((dias / 7) * diasPorSemana));
+};
+
 interface Props {
   jornadas: number;
   onJornadas: (n: number) => void;
@@ -56,12 +72,19 @@ interface Props {
   onRotativos: (v: boolean) => void;
   dias: number[];
   onDias: (d: number[]) => void;
+  /** Período del contrato, para estimar las jornadas totales. Sin él, no se sugiere nada. */
+  desde?: string;
+  hasta?: string;
+  /** Las jornadas totales cargadas hoy, y cómo cambiarlas si se acepta la sugerencia. */
+  jornadasTotales?: number;
+  onJornadasTotales?: (n: number) => void;
   /** `mobile` usa la paleta de esa app; `desk` usa las clases del formulario de escritorio. */
   variante?: 'desk' | 'mobile';
   className?: string;
 }
 
-export const DiasDeTrabajo: React.FC<Props> = ({ jornadas, onJornadas, rotativos, onRotativos, dias, onDias, variante = 'desk', className = '' }) => {
+export const DiasDeTrabajo: React.FC<Props> = ({ jornadas, onJornadas, rotativos, onRotativos, dias, onDias, desde, hasta, jornadasTotales, onJornadasTotales, variante = 'desk', className = '' }) => {
+  const estimadas = jornadasEstimadas(desde, hasta, jornadas);
   const mobile = variante === 'mobile';
   const maximo = maximoDiasElegibles(jornadas, rotativos);
   const problema = problemaDeDias(jornadas, rotativos, dias);
@@ -123,6 +146,22 @@ export const DiasDeTrabajo: React.FC<Props> = ({ jornadas, onJornadas, rotativos
           </span>
         </span>
       </label>
+
+      {/*
+        La relación con las jornadas TOTALES, dicha y no aplicada.
+
+        Las dos cosas están ligadas —las jornadas del contrato salen de los días por semana y del
+        período— pero la cuenta de calendario no sabe de feriados ni de semanas cortadas, y ese número
+        multiplica al sueldo por jornada. Se ofrece con un botón; aceptarla es una decisión.
+      */}
+      {estimadas !== null && onJornadasTotales && estimadas !== jornadasTotales && (
+        <p className={'text-[11px] text-blue-700 dark:text-blue-400 flex flex-wrap items-center gap-1.5'}>
+          Con {jornadas} día(s) por semana en este período serían <strong>~{estimadas} jornadas</strong> (hoy: {jornadasTotales ?? 0}).
+          <button type="button" onClick={() => onJornadasTotales(estimadas)} className="font-semibold underline underline-offset-2 hover:text-blue-900 dark:hover:text-blue-300">
+            Usar {estimadas}
+          </button>
+        </p>
+      )}
 
       <div className="space-y-1.5">
         <label className={etiqueta}>{rotativos ? 'Rota entre estos días' : 'Días que trabaja'}</label>

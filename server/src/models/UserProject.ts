@@ -17,6 +17,14 @@ interface IContract {
    * ROTATIVO son los días ENTRE los que rota, y pueden ser más que las jornadas. Sin el flag,
    * «trabaja 3 días rotando entre 6» se leería como «trabaja 6 días».
    */
+  /**
+   * Cuántos días de la SEMANA trabaja (1 a 7).
+   *
+   * NO confundir con `cantidad_jornadas_laborales`, que son las jornadas TOTALES del contrato (22,
+   * 30…) y es lo que multiplica al sueldo por jornada. Son dos números distintos y por un rato
+   * compartieron campo: la pantalla llegó a mostrar «días por semana: 22».
+   */
+  dias_por_semana?: number;
   dias_semana?: number[];
   dias_rotativos?: boolean;
   sueldo_jornada: number;
@@ -243,6 +251,7 @@ const contractSchema = new Schema<IContract>(
     fecha_baja_contrato: { type: String },
     tipo_contrato_id: { type: Number },
     cantidad_jornadas_laborales: { type: Number },
+    dias_por_semana: { type: Number },
     dias_semana: { type: [Number], default: undefined },
     dias_rotativos: { type: Boolean, default: false },
     sueldo_jornada: { type: Number },

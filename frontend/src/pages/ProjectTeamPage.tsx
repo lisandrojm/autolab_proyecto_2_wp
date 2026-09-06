@@ -335,9 +335,13 @@ export const ProjectTeamPage: React.FC = () => {
     fecha_alta_contrato: new Date().toISOString().split('T')[0],
     fecha_baja_contrato: '',
     /*
-      Los días del contrato. `cantidad_jornadas_laborales` ya existía —la usa el cálculo del
-      sueldo— pero no se editaba en ninguna parte del escritorio: se guardaba siempre 5.
+      Los días del contrato. CAMPO PROPIO, separado de `cantidad_jornadas_laborales`.
+
+      Ese otro son las jornadas TOTALES del contrato (22, 30…) y es lo que multiplica al sueldo por
+      jornada. Reusarlo hacía que la pantalla mostrara «días por semana: 22» y que editarlo desde acá
+      cambiara el sueldo sin que nadie lo pidiera.
     */
+    dias_por_semana: 5,
     dias_semana: [] as number[],
     dias_rotativos: false,
     // Step 2: Sueldo
@@ -1639,6 +1643,7 @@ export const ProjectTeamPage: React.FC = () => {
       cantidad_jornadas_laborales: lastContract?.cantidad_jornadas_laborales || 5,
       // Los contratos anteriores a este campo no traen días: se abren vacíos y hay que elegirlos,
       // en vez de inventar una semana que nadie declaró.
+      dias_por_semana: Number((lastContract as any)?.dias_por_semana) || 5,
       dias_semana: Array.isArray((lastContract as any)?.dias_semana) ? ((lastContract as any).dias_semana as number[]) : [],
       dias_rotativos: !!(lastContract as any)?.dias_rotativos,
       sueldo_jornada: lastContract?.sueldo_jornada || 0,
@@ -1748,6 +1753,7 @@ export const ProjectTeamPage: React.FC = () => {
           nombre_rol_frame: rfSel?.name || '',
           rol_frame_id: Number(wizardData.rol_frame_id),
           empleado_id_reemplezado: wizardData.empleado_id_reemplezado ? Number(wizardData.empleado_id_reemplezado) : null,
+          dias_por_semana: wizardData.dias_por_semana,
           dias_semana: wizardData.dias_semana,
           dias_rotativos: wizardData.dias_rotativos,
           // Enviar null (no "") para que Mongoose no falle al castear a ObjectId cuando no se elige empresa.
@@ -3654,12 +3660,16 @@ export const ProjectTeamPage: React.FC = () => {
                     */}
                     <div className="md:col-span-2">
                       <DiasDeTrabajo
-                        jornadas={wizardData.cantidad_jornadas_laborales}
-                        onJornadas={(n) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: n }))}
+                        jornadas={wizardData.dias_por_semana}
+                        onJornadas={(n) => setWizardData((prev) => ({ ...prev, dias_por_semana: n }))}
                         rotativos={wizardData.dias_rotativos}
                         onRotativos={(v) => setWizardData((prev) => ({ ...prev, dias_rotativos: v }))}
                         dias={wizardData.dias_semana}
                         onDias={(d) => setWizardData((prev) => ({ ...prev, dias_semana: d }))}
+                        desde={wizardData.fecha_alta_contrato}
+                        hasta={wizardData.fecha_baja_contrato}
+                        jornadasTotales={wizardData.cantidad_jornadas_laborales}
+                        onJornadasTotales={(n) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: n }))}
                       />
                     </div>
 

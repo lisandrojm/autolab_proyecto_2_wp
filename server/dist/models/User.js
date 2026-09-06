@@ -80,6 +80,7 @@ const userSchema = new Schema({
         startDate: String,
         dueDate: String,
         workdaysCount: Number,
+        diasPorSemana: { type: Number },
         diasSemana: { type: [Number], default: undefined },
         diasRotativos: { type: Boolean, default: false },
         schedule: String,
